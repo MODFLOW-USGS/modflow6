@@ -29,6 +29,7 @@ module DrnModule
     integer(I4B), pointer :: icubic_scaling => null()
 
   contains
+
     procedure :: allocate_scalars => drn_allocate_scalars
     procedure :: allocate_arrays => drn_allocate_arrays
     procedure :: source_options => drn_options
@@ -52,16 +53,10 @@ module DrnModule
 
 contains
 
+  !> @brief Create a New Drn Package and point packobj to the new package
+  !<
   subroutine drn_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! drn_create -- Create a New Drn Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -73,7 +68,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(DrnType), pointer :: drnobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (drnobj)
@@ -98,22 +92,17 @@ contains
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_create
 
+  !> @brief Deallocate memory
+  !<
   subroutine drn_da(this)
-! ******************************************************************************
-! drn_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(DrnType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -126,21 +115,17 @@ contains
     call mem_deallocate(this%elev, 'ELEV', this%memoryPath)
     call mem_deallocate(this%cond, 'COND', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_da
 
+  !> @brief Allocate package scalar members
+  !<
   subroutine drn_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(DrnType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call base type allocate scalars
     call this%BndExtType%allocate_scalars()
@@ -157,25 +142,19 @@ contains
       this%icubic_scaling = 0
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_allocate_scalars
 
+  !> @brief Allocate package arrays
+  !<
   subroutine drn_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! drn_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
     class(DrnType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call base type allocate arrays
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -190,22 +169,17 @@ contains
     call mem_checkin(this%cond, 'COND', this%memoryPath, &
                      'COND', this%input_mempath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_allocate_arrays
 
+  !> @brief Read and prepare
+  !<
   subroutine drn_rp(this)
-! ******************************************************************************
-! drn_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TdisModule, only: kper
     ! -- dummy
     class(DrnType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    !
     if (this%iper /= kper) return
     !
     ! -- Call the parent class read and prepare
@@ -221,17 +195,14 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_rp
 
+  !> @brief Source options specific to DrnType
+  !<
   subroutine drn_options(this)
-! ******************************************************************************
-! drn_options -- source options specific to DrnType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use InputOutputModule, only: urword
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
@@ -242,7 +213,6 @@ contains
     type(GwfDrnParamFoundType) :: found
     character(len=LENAUXNAME) :: ddrnauxname
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- source base class options
     call this%BndExtType%source_options()
@@ -290,7 +260,7 @@ contains
     ! -- log DRN specific options
     call this%log_drn_options(found)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_options
 
@@ -323,18 +293,13 @@ contains
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine log_drn_options
 
+  !> @brief Check drain boundary condition data
+  !<
   subroutine drn_ck(this)
-! ******************************************************************************
-! drn_ck -- Check drain boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(DrnType), intent(inout) :: this
     ! -- local
@@ -351,7 +316,6 @@ contains
     character(len=*), parameter :: fmtdrnerr = &
       "('DRN BOUNDARY (',i0,') ELEVATION (',f10.3,') IS LESS THAN CELL &
       &BOTTOM (',f10.3,')')"
-! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -378,19 +342,15 @@ contains
       call store_error_filename(this%input_fname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_ck
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip if no drains
+  !<
   subroutine drn_cf(this)
-! ******************************************************************************
-! drn_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no drains
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(DrnType) :: this
     ! -- local
@@ -399,7 +359,6 @@ contains
     real(DP) :: cdrn
     real(DP) :: drnbot
     real(DP) :: fact
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no drains
     if (this%nbound == 0) return
@@ -425,17 +384,13 @@ contains
       this%hcof(i) = -fact * cdrn
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine drn_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! drn_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(DrnType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -450,7 +405,6 @@ contains
     real(DP) :: drnbot
     real(DP) :: drncond
     real(DP) :: qdrn
-! --------------------------------------------------------------------------
     !
     ! -- packmvrobj fc
     if (this%imover == 1) then
@@ -476,17 +430,13 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_fc
 
+  !> @brief Fill newton terms
+  !<
   subroutine drn_fn(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! drn_fn -- Fill newton terms
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(DrnType) :: this
@@ -504,8 +454,6 @@ contains
     real(DP) :: drntop
     real(DP) :: drnbot
     real(DP) :: drterm
-! --------------------------------------------------------------------------
-
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     if (this%iauxddrncol /= 0) then
@@ -539,20 +487,16 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_fn
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(DrnType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -572,18 +516,14 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
+  !> @brief Define drain depth and the top and bottom elevations used to scale
+  !! the drain conductance
+  !<
   subroutine get_drain_elevations(this, i, drndepth, drntop, drnbot)
-! ******************************************************************************
-! get_drain_elevations -- Define drain depth and the top and bottom elevations
-!                         used to scale the drain conductance.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(DrnType), intent(inout) :: this
     integer(I4B), intent(in) :: i
@@ -593,7 +533,6 @@ contains
     ! -- local
     real(DP) :: drnelev
     real(DP) :: elev
-! ------------------------------------------------------------------------------
     !
     ! -- initialize dummy and local variables
     drndepth = DZERO
@@ -614,17 +553,13 @@ contains
       drnbot = drnelev
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine get_drain_elevations
 
+  !> @brief Get the drain conductance scale factor
+  !<
   subroutine get_drain_factor(this, i, factor, opt_drnbot)
-! ******************************************************************************
-! get_drain_factor -- Get the drain conductance scale factor.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(DrnType), intent(inout) :: this
     integer(I4B), intent(in) :: i
@@ -636,7 +571,6 @@ contains
     real(DP) :: drndepth
     real(DP) :: drntop
     real(DP) :: drnbot
-! ------------------------------------------------------------------------------
     !
     ! -- set local variables for this drain
     node = this%nodelist(i)
@@ -666,45 +600,38 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine get_drain_factor
 
   ! -- Procedures related to observations
 
+  !> @brief Return true because DRN package supports observations
+  !!
+  !! Overrides BndType%bnd_obs_supported()
+  !<
   logical function drn_obs_supported(this)
-! ******************************************************************************
-! drn_obs_supported
-!   -- Return true because DRN package supports observations.
-!   -- Overrides BndType%bnd_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
+    ! -- dummy
     class(DrnType) :: this
-! ------------------------------------------------------------------------------
+    !
     drn_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function drn_obs_supported
 
+  !> @brief Store observation type supported by DRN package
+  !!
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine drn_df_obs(this)
-! ******************************************************************************
-! drn_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by DRN package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(DrnType) :: this
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('drn', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -713,15 +640,16 @@ contains
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_df_obs
 
+  !> @brief Store user-specified drain conductance
+  !<
   subroutine drn_store_user_cond(this)
-    ! -- modules
-    ! -- dummy variables
+    ! -- dummy
     class(DrnType), intent(inout) :: this !< BndExtType object
-    ! -- local variables
+    ! -- local
     integer(I4B) :: n
     !
     ! -- store backup copy of conductance values
@@ -729,10 +657,12 @@ contains
       this%condinput(n) = this%cond_mult(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine drn_store_user_cond
 
+  !> @brief Apply multiplier to conductance value depending on user-selected option
+  !<
   function cond_mult(this, row) result(cond)
     ! -- modules
     use ConstantsModule, only: DZERO
@@ -748,16 +678,12 @@ contains
       cond = this%cond(row)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function cond_mult
 
-! ******************************************************************************
-! drn_bound_value -- return requested boundary value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Return requested boundary value
+  !<
   function drn_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
@@ -780,7 +706,7 @@ contains
       call store_error_filename(this%input_fname)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function drn_bound_value
 
