@@ -131,6 +131,31 @@ contains
 
   end subroutine split_mem_path
 
+  !> @brief Return the context from the memory path
+  !!
+  !! NB: when there is no context in the memory path, a
+  !! empty character string is returned.
+  !<
+  function get_mem_path_context(mem_path) result(res)
+    character(len=*), intent(in) :: mem_path !< path to the memory object
+    character(len=LENMEMPATH) :: res !< memory path context
+    ! local
+    integer(I4B) :: idx
+
+    ! initialize the memory path context
+    res = ' '
+
+    if (mem_path(1:2) == '__') then
+      idx = index(mem_path, memPathSeparator)
+      if (idx > 0) then
+        res = mem_path(:idx)
+      end if
+    end if
+
+    return
+
+  end function get_mem_path_context
+
   !> @brief Remove the context from the memory path
   !!
   !! NB: when there is no context in the memory path, the
@@ -141,16 +166,16 @@ contains
     character(len=LENMEMPATH), intent(inout) :: mem_path_no_context !< path to the memory object without the context
     ! local
     integer(I4B) :: idx
+    character(len=LENMEMPATH) :: context
 
     ! initialize the local mem_path
     mem_path_no_context = mem_path
 
-    if (mem_path(1:2) == '__') then
-      idx = index(mem_path, memPathSeparator)
-      if (idx > 0) then
-        mem_path_no_context = ' '
-        mem_path_no_context = mem_path(idx + 1:)
-      end if
+    context = get_mem_path_context(mem_path)
+
+    if (len_trim(context) > 0) then
+      idx = len_trim(context)
+      mem_path_no_context = mem_path(idx + 1:)
     end if
 
   end subroutine strip_context_mem_path
