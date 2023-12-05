@@ -356,11 +356,15 @@ contains
           !
           if (associated(gwfEx%model1, gwfModel) .or. &
               associated(gwfEx%model2, gwfModel)) then
-            ! again, connecting the same nodes nrs will be
+
+            ! check exchanges have same node counts
+            areEqual = size(gwfEx%nodem1) == size(gwtConn%prim_exchange%nodem1)
+            ! then, connecting the same nodes nrs will be
             ! sufficient evidence of equality
-            areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
-            areEqual = areEqual .and. &
-                       all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
+            if (areEqual) &
+              areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
+            if (areEqual) &
+              areEqual = all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
             if (areEqual) then
               ! link exchange to connection
               write (iout, '(/6a)') 'Linking exchange ', &
