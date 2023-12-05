@@ -10,7 +10,9 @@ module CircularGeometryModule
 
   type, extends(BaseGeometryType) :: CircularGeometryType
     real(DP) :: radius = DZERO
+
   contains
+
     procedure :: area_sat
     procedure :: perimeter_sat
     procedure :: area_wet
@@ -21,20 +23,15 @@ module CircularGeometryModule
 
 contains
 
+  !> @brief Return area as if geometry is fully saturated
+  !<
   function area_sat(this)
-! ******************************************************************************
-! area_sat -- return area as if geometry is fully saturated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DTWO, DPI
     ! -- return
     real(DP) :: area_sat
     ! -- dummy
     class(CircularGeometryType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
     area_sat = DPI * this%radius**DTWO
@@ -43,35 +40,26 @@ contains
     return
   end function area_sat
 
+  !> @brief Return perimeter as if geometry is fully saturated
+  !<
   function perimeter_sat(this)
-! ******************************************************************************
-! perimeter_sat -- return perimeter as if geometry is fully saturated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DTWO, DPI
     ! -- return
     real(DP) :: perimeter_sat
     ! -- dummy
     class(CircularGeometryType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
     perimeter_sat = DTWO * DPI * this%radius
     !
-    ! -- return
+    ! -- Return
     return
   end function perimeter_sat
 
+  !> @brief Return wetted area
+  !<
   function area_wet(this, depth)
-! ******************************************************************************
-! area_wet -- return wetted area
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DTWO, DPI, DZERO
     ! -- return
@@ -79,7 +67,6 @@ contains
     ! -- dummy
     class(CircularGeometryType) :: this
     real(DP), intent(in) :: depth
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
     if (depth <= DZERO) then
@@ -102,13 +89,9 @@ contains
     return
   end function area_wet
 
+  !> @brief Return wetted perimeter
+  !<
   function perimeter_wet(this, depth)
-! ******************************************************************************
-! perimeter_wet -- return wetted perimeter
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DTWO, DPI
     ! -- return
@@ -116,7 +99,6 @@ contains
     ! -- dummy
     class(CircularGeometryType) :: this
     real(DP), intent(in) :: depth
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate area
     if (depth <= DZERO) then
@@ -131,17 +113,13 @@ contains
       perimeter_wet = DTWO * DPI * this%radius
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function perimeter_wet
 
+  !> @brief Set a parameter for this circular object
+  !<
   subroutine set_attribute(this, line)
-! ******************************************************************************
-! set_attribute -- set a parameter for this circular object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use InputOutputModule, only: urword
     use ConstantsModule, only: LINELENGTH
@@ -153,7 +131,6 @@ contains
     ! -- local
     integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
-! ------------------------------------------------------------------------------
     !
     ! -- should change this and set id if uninitialized or store it
     lloc = 1
@@ -175,17 +152,13 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_attribute
 
+  !> @brief Print the attributes for this object
+  !<
   subroutine print_attributes(this, iout)
-! ******************************************************************************
-! print_attributes -- print the attributes for this object
-! *****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(CircularGeometryType) :: this
     ! -- local
@@ -193,7 +166,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtnm = "(4x,a,a)"
     character(len=*), parameter :: fmttd = "(4x,a,1(1PG15.6))"
-! ------------------------------------------------------------------------------
     !
     ! -- call parent to print parent attributes
     call this%BaseGeometryType%print_attributes(iout)
@@ -203,7 +175,7 @@ contains
     write (iout, fmttd) 'SATURATED AREA = ', this%area_sat()
     write (iout, fmttd) 'SATURATED WETTED PERIMETER = ', this%perimeter_sat()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine print_attributes
 
