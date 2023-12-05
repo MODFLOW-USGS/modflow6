@@ -4,6 +4,7 @@ module ArrayHandlersModule
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, DTEN
   use SimVariablesModule, only: iout
   use GenericUtilitiesModule, only: sim_message, stop_with_error
+  implicit none
   private
   public :: ExpandArray, ExpandArray2D, ExpandArrayWrapper, ExtendPtrArray
   public :: ConcatArray
@@ -19,7 +20,8 @@ module ArrayHandlersModule
     ! IMPORTANT: Do not use pointers to elements of arrays when using
     ! ExpandArray to increase the array size!  The locations of array
     ! elements in memory are changed when ExpandArray is invoked.
-    module procedure expand_integer, expand_double, expand_character
+    module procedure expand_integer, expand_double, expand_logical, &
+      expand_character
   end interface ExpandArray
 
   interface ExpandArray2D
@@ -47,7 +49,6 @@ module ArrayHandlersModule
 contains
 
   subroutine expand_integer_wrapper(nsize, array, minvalue, loginc)
-    implicit none
     ! -- dummy
     integer(I4B), intent(in) :: nsize
     integer(I4B), allocatable, intent(inout) :: array(:)
@@ -99,15 +100,12 @@ contains
         array(n) = 0
       end do
     end if
-    !
-    ! -- return
-    return
+
   end subroutine expand_integer_wrapper
 
   ! -- Specific procedures that implement ExpandArray for allocatable arrays
 
   subroutine expand_integer(array, increment)
-    implicit none
     ! -- dummy
     integer(I4B), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
@@ -134,12 +132,10 @@ contains
     else
       allocate (array(inclocal))
     end if
-    !
-    return
+
   end subroutine expand_integer
 
   subroutine expand_double(array, increment)
-    implicit none
     ! -- dummy
     real(DP), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
@@ -166,12 +162,40 @@ contains
     else
       allocate (array(inclocal))
     end if
-    !
-    return
+
   end subroutine expand_double
 
+  subroutine expand_logical(array, increment)
+    ! -- dummy
+    logical(LGP), allocatable, intent(inout) :: array(:)
+    integer(I4B), optional, intent(in) :: increment
+    ! -- local
+    integer(I4B) :: inclocal, isize, newsize
+    logical(LGP), allocatable, dimension(:) :: array_temp
+    !
+    ! -- initialize
+    if (present(increment)) then
+      inclocal = increment
+    else
+      inclocal = 1
+    end if
+    !
+    ! -- increase size of array by inclocal, retaining
+    !    contained data
+    if (allocated(array)) then
+      isize = size(array)
+      newsize = isize + inclocal
+      allocate (array_temp(newsize))
+      array_temp(1:isize) = array
+      deallocate (array)
+      call move_alloc(array_temp, array)
+    else
+      allocate (array(inclocal))
+    end if
+
+  end subroutine expand_logical
+
   subroutine expand_character(array, increment)
-    implicit none
     ! -- dummy
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
@@ -227,14 +251,12 @@ contains
     else
       allocate (array(inclocal))
     end if
-    !
-    return
+
   end subroutine expand_character
 
   ! -- Specific procedures that implement ExtendArray2D
 
   subroutine expand_integer_2d(array, increment1, increment2)
-    implicit none
     ! -- dummy
     integer(I4B), allocatable, intent(inout) :: array(:, :)
     integer(I4B), optional, intent(in) :: increment1
@@ -269,12 +291,10 @@ contains
     else
       allocate (array(inclocal1, inclocal2))
     end if
-    !
-    return
+
   end subroutine expand_integer_2d
 
   subroutine expand_double_2d(array, increment1, increment2)
-    implicit none
     ! -- dummy
     real(DP), allocatable, intent(inout) :: array(:, :)
     integer(I4B), optional, intent(in) :: increment1
@@ -309,14 +329,12 @@ contains
     else
       allocate (array(inclocal1, inclocal2))
     end if
-    !
-    return
+
   end subroutine expand_double_2d
 
   ! -- Specific procedures that implement ExtendPtrArray for pointer arrays
 
   subroutine extend_double(array, increment)
-    implicit none
     ! -- dummy
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
@@ -375,7 +393,6 @@ contains
   end subroutine extend_double
 
   subroutine extend_integer(array, increment)
-    implicit none
     ! -- dummy
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
@@ -433,8 +450,6 @@ contains
 
   end subroutine extend_integer
 
-  !> @brief Grows or allocates the array with the passed increment,
-  !< the old value of the array pointer is rendered invalid
   subroutine extend_string(array, increment)
     character(len=*), dimension(:), pointer, contiguous :: array
     integer(I4B), optional :: increment
@@ -464,6 +479,7 @@ contains
 
   end subroutine extend_string
 
+  !> @brief Concatenate integer arrays.
   subroutine concat_integer(array, array_to_add)
     integer(I4B), dimension(:), pointer, contiguous :: array
     integer(I4B), dimension(:), pointer, contiguous :: array_to_add
@@ -478,10 +494,8 @@ contains
 
   end subroutine concat_integer
 
+  !> @brief Find the 1st array element containing str, or -1 if not found.
   function ifind_character(array, str)
-    ! -- Find the first array element containing str
-    ! -- Return -1 if not found.
-    implicit none
     ! -- return
     integer(I4B) :: ifind_character
     ! -- dummy
@@ -496,13 +510,10 @@ contains
         exit findloop
       end if
     end do findloop
-    return
   end function ifind_character
 
+  !> @brief Find the first element containing str, or -1 if not found.
   function ifind_integer(iarray, ival)
-    ! -- Find the first array element containing str
-    ! -- Return -1 if not found.
-    implicit none
     ! -- return
     integer(I4B) :: ifind_integer
     ! -- dummy
@@ -517,12 +528,10 @@ contains
         exit findloop
       end if
     end do findloop
-    return
   end function ifind_integer
 
+  !> @brief Remove the element at ipos from the array.
   subroutine remove_character(array, ipos)
-    !remove the ipos position from array
-    implicit none
     ! -- dummy
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), intent(in) :: ipos
@@ -569,8 +578,7 @@ contains
       end if
     end do
     deallocate (array_temp)
-    !
-    return
+
   end subroutine remove_character
 
 end module ArrayHandlersModule
