@@ -146,10 +146,12 @@ contains
     call check(error, &
                array(1, 1) == 1 .and. &
                array(1, 2) == 2 .and. &
-               array(1, 3) == 0 .and. &
+               ! can't guarantee unassigned item value
+               ! array(1, 3) == 0 .and. &
                array(2, 1) == 2 .and. &
                array(2, 2) == 3 .and. &
-               array(2, 3) == 0 .and. &
+               ! can't guarantee unassigned item value
+               ! array(2, 3) == 0 .and. &
                array(3, 1) == 3 .and. &
                array(3, 2) == 4 .and. &
                array(3, 3) == 5, &
@@ -188,10 +190,12 @@ contains
     call check(error, &
                array(1, 1) == 1.0_DP .and. &
                array(1, 2) == 2.0_DP .and. &
-               array(1, 3) == 0.0_DP .and. &
+               ! can't guarantee unassigned item value
+               ! array(1, 3) == 0.0_DP .and. &
                array(2, 1) == 2.0_DP .and. &
                array(2, 2) == 3.0_DP .and. &
-               array(2, 3) == 0.0_DP .and. &
+               ! can't guarantee unassigned item value
+               ! array(2, 3) == 0.0_DP .and. &
                array(3, 1) == 3.0_DP .and. &
                array(3, 2) == 4.0_DP .and. &
                array(3, 3) == 5.0_DP, &
