@@ -15,6 +15,8 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
+  public :: idm_advanced_package
+  public :: idm_subpackage
   public :: idm_integrated
   public :: idm_component
 
@@ -89,6 +91,44 @@ contains
     end select
     return
   end function idm_multi_package
+
+  function idm_advanced_package(component, subcomponent) result(advanced_package)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    logical :: advanced_package
+    select case (component)
+    case ('GWF')
+      advanced_package = gwf_idm_advanced_package(subcomponent)
+    case ('GWT')
+      advanced_package = gwt_idm_advanced_package(subcomponent)
+    case ('SIM')
+      advanced_package = sim_idm_advanced_package(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_advanced_package
+
+  function idm_subpackage(component, subcomponent) result(subpackage)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    character(len=12) :: subpackage
+    select case (component)
+    case ('GWF')
+      subpackage = gwf_idm_subpackage(subcomponent)
+    case ('GWT')
+      subpackage = gwt_idm_subpackage(subcomponent)
+    case ('SIM')
+      subpackage = sim_idm_subpackage(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_subpackage
 
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component

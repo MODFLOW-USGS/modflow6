@@ -13,6 +13,8 @@ module IdmSimDfnSelectorModule
   public :: sim_aggregate_definitions
   public :: sim_block_definitions
   public :: sim_idm_multi_package
+  public :: sim_idm_advanced_package
+  public :: sim_idm_subpackage
   public :: sim_idm_integrated
 
 contains
@@ -78,6 +80,30 @@ contains
     end select
     return
   end function sim_idm_multi_package
+
+  function sim_idm_advanced_package(subcomponent) result(advanced_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: advanced_package
+    advanced_package = .false.
+    select case (subcomponent)
+    case ('NAM')
+      advanced_package = sim_nam_advanced_package
+    case default
+    end select
+    return
+  end function sim_idm_advanced_package
+
+  function sim_idm_subpackage(subcomponent) result(subpackage)
+    character(len=*), intent(in) :: subcomponent
+    character(len=12) :: subpackage
+    subpackage = ''
+    select case (subcomponent)
+    case ('NAM')
+      subpackage = sim_nam_subpackage
+    case default
+    end select
+    return
+  end function sim_idm_subpackage
 
   function sim_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

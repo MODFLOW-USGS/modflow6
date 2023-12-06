@@ -27,6 +27,8 @@ module IdmGwfDfnSelectorModule
   public :: gwf_aggregate_definitions
   public :: gwf_block_definitions
   public :: gwf_idm_multi_package
+  public :: gwf_idm_advanced_package
+  public :: gwf_idm_subpackage
   public :: gwf_idm_integrated
 
 contains
@@ -204,6 +206,86 @@ contains
     end select
     return
   end function gwf_idm_multi_package
+
+  function gwf_idm_advanced_package(subcomponent) result(advanced_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: advanced_package
+    advanced_package = .false.
+    select case (subcomponent)
+    case ('CHD')
+      advanced_package = gwf_chd_advanced_package
+    case ('DIS')
+      advanced_package = gwf_dis_advanced_package
+    case ('DISU')
+      advanced_package = gwf_disu_advanced_package
+    case ('DISV')
+      advanced_package = gwf_disv_advanced_package
+    case ('DRN')
+      advanced_package = gwf_drn_advanced_package
+    case ('EVT')
+      advanced_package = gwf_evt_advanced_package
+    case ('EVTA')
+      advanced_package = gwf_evta_advanced_package
+    case ('GHB')
+      advanced_package = gwf_ghb_advanced_package
+    case ('IC')
+      advanced_package = gwf_ic_advanced_package
+    case ('NPF')
+      advanced_package = gwf_npf_advanced_package
+    case ('RCH')
+      advanced_package = gwf_rch_advanced_package
+    case ('RCHA')
+      advanced_package = gwf_rcha_advanced_package
+    case ('RIV')
+      advanced_package = gwf_riv_advanced_package
+    case ('WEL')
+      advanced_package = gwf_wel_advanced_package
+    case ('NAM')
+      advanced_package = gwf_nam_advanced_package
+    case default
+    end select
+    return
+  end function gwf_idm_advanced_package
+
+  function gwf_idm_subpackage(subcomponent) result(subpackage)
+    character(len=*), intent(in) :: subcomponent
+    character(len=12) :: subpackage
+    subpackage = ''
+    select case (subcomponent)
+    case ('CHD')
+      subpackage = gwf_chd_subpackage
+    case ('DIS')
+      subpackage = gwf_dis_subpackage
+    case ('DISU')
+      subpackage = gwf_disu_subpackage
+    case ('DISV')
+      subpackage = gwf_disv_subpackage
+    case ('DRN')
+      subpackage = gwf_drn_subpackage
+    case ('EVT')
+      subpackage = gwf_evt_subpackage
+    case ('EVTA')
+      subpackage = gwf_evta_subpackage
+    case ('GHB')
+      subpackage = gwf_ghb_subpackage
+    case ('IC')
+      subpackage = gwf_ic_subpackage
+    case ('NPF')
+      subpackage = gwf_npf_subpackage
+    case ('RCH')
+      subpackage = gwf_rch_subpackage
+    case ('RCHA')
+      subpackage = gwf_rcha_subpackage
+    case ('RIV')
+      subpackage = gwf_riv_subpackage
+    case ('WEL')
+      subpackage = gwf_wel_subpackage
+    case ('NAM')
+      subpackage = gwf_nam_subpackage
+    case default
+    end select
+    return
+  end function gwf_idm_subpackage
 
   function gwf_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

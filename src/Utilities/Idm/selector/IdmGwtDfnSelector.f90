@@ -19,6 +19,8 @@ module IdmGwtDfnSelectorModule
   public :: gwt_aggregate_definitions
   public :: gwt_block_definitions
   public :: gwt_idm_multi_package
+  public :: gwt_idm_advanced_package
+  public :: gwt_idm_subpackage
   public :: gwt_idm_integrated
 
 contains
@@ -132,6 +134,54 @@ contains
     end select
     return
   end function gwt_idm_multi_package
+
+  function gwt_idm_advanced_package(subcomponent) result(advanced_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: advanced_package
+    advanced_package = .false.
+    select case (subcomponent)
+    case ('DIS')
+      advanced_package = gwt_dis_advanced_package
+    case ('DISU')
+      advanced_package = gwt_disu_advanced_package
+    case ('DISV')
+      advanced_package = gwt_disv_advanced_package
+    case ('DSP')
+      advanced_package = gwt_dsp_advanced_package
+    case ('CNC')
+      advanced_package = gwt_cnc_advanced_package
+    case ('IC')
+      advanced_package = gwt_ic_advanced_package
+    case ('NAM')
+      advanced_package = gwt_nam_advanced_package
+    case default
+    end select
+    return
+  end function gwt_idm_advanced_package
+
+  function gwt_idm_subpackage(subcomponent) result(subpackage)
+    character(len=*), intent(in) :: subcomponent
+    character(len=12) :: subpackage
+    subpackage = ''
+    select case (subcomponent)
+    case ('DIS')
+      subpackage = gwt_dis_subpackage
+    case ('DISU')
+      subpackage = gwt_disu_subpackage
+    case ('DISV')
+      subpackage = gwt_disv_subpackage
+    case ('DSP')
+      subpackage = gwt_dsp_subpackage
+    case ('CNC')
+      subpackage = gwt_cnc_subpackage
+    case ('IC')
+      subpackage = gwt_ic_subpackage
+    case ('NAM')
+      subpackage = gwt_nam_subpackage
+    case default
+    end select
+    return
+  end function gwt_idm_subpackage
 
   function gwt_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent
