@@ -23,10 +23,10 @@ module ModflowInputModule
   private
   public :: ModflowInputType, getModflowInput
 
-  !> @brief derived type for storing input definition for a file
+  !> @brief type for storing a description of a modflow input
   !!
-  !! This derived type contains the information needed to read
-  !! a specific modflow input file, including block definitions,
+  !! This type contains the information needed to read a
+  !! specific modflow input file, including block definitions,
   !! aggregate definitions (structarrays), and individual
   !! parameter definitions.
   !!
