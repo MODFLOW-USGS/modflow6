@@ -23,6 +23,7 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
+$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \
