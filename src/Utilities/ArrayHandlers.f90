@@ -2,8 +2,6 @@ module ArrayHandlersModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, DTEN
-  use SimVariablesModule, only: iout
-  use GenericUtilitiesModule, only: sim_message, stop_with_error
   implicit none
   private
   public :: ExpandArray, ExpandArray2D, ExpandArrayWrapper, ExtendPtrArray
@@ -209,16 +207,9 @@ contains
     ! -- check character length
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
-      write (line, '(a)') 'Error in ArrayHandlersModule: '// &
-        'Need to increase MAXCHARLEN'
-      call sim_message(line, iunit=iout, fmt=stdfmt)
-      call sim_message(line, fmt=stdfmt)
-      !
-      ! -- stop message
-      write (line, '(a)') 'Stopping...'
-      call sim_message(line, iunit=iout)
-      call sim_message(line)
-      call stop_with_error(138)
+      print *, 'Error in ArrayHandlersModule: '// &
+        'Need to increase MAXCHARLEN. Stopping...'
+      call exit(138)
     end if
     !
     ! -- initialize
@@ -375,20 +366,9 @@ contains
     ! -- Error reporting
 99  continue
 
-    write (line, '(a)') 'Error in ArrayHandlersModule: '// &
-      'Could not increase array size'
-    call sim_message(line, iunit=iout, fmt=stdfmt)
-    call sim_message(line, fmt=stdfmt)
-    !
-    ! -- error message
-    call sim_message(ermsg, iunit=iout)
-    call sim_message(ermsg)
-    !
-    ! -- stop message
-    write (line, '(a)') 'Stopping...'
-    call sim_message(line, iunit=iout)
-    call sim_message(line)
-    call stop_with_error(138)
+    print *, 'Error in ArrayHandlersModule: '// &
+      'Could not increase array size. Stopping...'
+    call exit(138)
 
   end subroutine extend_double
 
@@ -433,20 +413,9 @@ contains
     ! -- Error reporting
 99  continue
 
-    write (line, '(a)') 'Error in ArrayHandlersModule: '// &
-      'Could not increase array size'
-    call sim_message(line, iunit=iout, fmt=stdfmt)
-    call sim_message(line, fmt=stdfmt)
-    !
-    ! -- error message
-    call sim_message(ermsg, iunit=iout)
-    call sim_message(ermsg)
-    !
-    ! -- stop message
-    write (line, '(a)') 'Stopping...'
-    call sim_message(line, iunit=iout)
-    call sim_message(line)
-    call stop_with_error(138)
+    print *, 'Error in ArrayHandlersModule: '// &
+      'Could not increase array size. Stopping ...'
+    call exit(138)
 
   end subroutine extend_integer
 
@@ -546,16 +515,9 @@ contains
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
 
-      write (line, '(a)') 'Error in ArrayHandlersModule: '// &
-        'Need to increase MAXCHARLEN'
-      call sim_message(line, iunit=iout, fmt=stdfmt)
-      call sim_message(line, fmt=stdfmt)
-      !
-      ! -- stop message
-      write (line, '(a)') 'Stopping...'
-      call sim_message(line, iunit=iout)
-      call sim_message(line)
-      call stop_with_error(138)
+      print *, 'Error in ArrayHandlersModule: '// &
+        'Need to increase MAXCHARLEN. Stopping...'
+      call exit(138)
     end if
     !
     ! -- calculate sizes

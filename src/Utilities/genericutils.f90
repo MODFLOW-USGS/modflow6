@@ -19,7 +19,6 @@ module GenericUtilitiesModule
   public :: write_message
   public :: write_centered
   public :: is_same
-  public :: stop_with_error
 
 contains
 
@@ -386,28 +385,5 @@ contains
     ! -- return
     return
   end function is_same
-
-  !> @brief Subroutine to stop the program
-  !!
-  !! Subroutine to stop the program and issue the correct return code.
-  !!
-  !<
-  subroutine stop_with_error(ierr)
-    ! -- dummy variables
-    integer(I4B), intent(in), optional :: ierr !< optional error code to return (default=0)
-    ! -- local variables
-    integer(I4B) :: ireturn_err
-    !
-    ! -- process optional dummy variables
-    if (present(ierr)) then
-      ireturn_err = ierr
-    else
-      ireturn_err = 0
-    end if
-
-    ! -- return the correct return code
-    call exit(ireturn_err)
-
-  end subroutine stop_with_error
 
 end module GenericUtilitiesModule
