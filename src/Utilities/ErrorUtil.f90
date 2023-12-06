@@ -1,7 +1,7 @@
 module ErrorUtilModule
   use KindModule, only: I4B
   implicit none
-  contains
+contains
 
   !> @brief Stop the program with an optional status code.
   !!
@@ -13,7 +13,7 @@ module ErrorUtilModule
   subroutine pstop(status, message)
     integer(I4B), intent(in), optional :: status !< optional error code to return (default=0)
     character(len=*), intent(in), optional :: message !< optional message to print before stopping
-    
+
     if (present(message)) print *, message
     if (present(status)) then
       if (status == 0) stop

@@ -21,7 +21,7 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: errmsg
     integer(I4B), intent(in), optional :: iunit
-    
+
     ! -- store error and terminate if in release mode
     if (IDEVELOPMODE == 0) then
       if (present(iunit)) then
