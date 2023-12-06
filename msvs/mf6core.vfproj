@@ -385,6 +385,7 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\DevFeature.f90"/>
 		<File RelativePath="..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\src\Utilities\ErrorUtil.f90"/>
 		<File RelativePath="..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
