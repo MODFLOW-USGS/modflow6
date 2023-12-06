@@ -75,8 +75,6 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 2
-    packobj%iscloc = 2
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- Return

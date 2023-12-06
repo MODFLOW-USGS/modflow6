@@ -97,8 +97,6 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 3 ! Assumes NSEG = 1 and SURF_RATE_SPECIFIED=False
-    packobj%iscloc = 2 ! sfac applies to max. ET rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- Return
