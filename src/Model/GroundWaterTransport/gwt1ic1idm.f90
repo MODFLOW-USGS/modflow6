@@ -9,12 +9,16 @@ module GwtIcInputModule
   public gwt_ic_block_definitions
   public GwtIcParamFoundType
   public gwt_ic_multi_package
+  public gwt_ic_advanced_package
+  public gwt_ic_subpackage
 
   type GwtIcParamFoundType
     logical :: strt = .false.
   end type GwtIcParamFoundType
 
   logical :: gwt_ic_multi_package = .false.
+  logical :: gwt_ic_advanced_package = .false.
+  character(len=12) :: gwt_ic_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwtic_strt = InputParamDefinitionType &

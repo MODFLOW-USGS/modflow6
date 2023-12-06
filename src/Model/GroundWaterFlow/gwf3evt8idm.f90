@@ -9,6 +9,8 @@ module GwfEvtInputModule
   public gwf_evt_block_definitions
   public GwfEvtParamFoundType
   public gwf_evt_multi_package
+  public gwf_evt_advanced_package
+  public gwf_evt_subpackage
 
   type GwfEvtParamFoundType
     logical :: fixed_cell = .false.
@@ -40,6 +42,8 @@ module GwfEvtInputModule
   end type GwfEvtParamFoundType
 
   logical :: gwf_evt_multi_package = .true.
+  logical :: gwf_evt_advanced_package = .false.
+  character(len=12) :: gwf_evt_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfevt_fixed_cell = InputParamDefinitionType &

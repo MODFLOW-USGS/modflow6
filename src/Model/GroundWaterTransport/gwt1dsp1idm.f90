@@ -9,6 +9,8 @@ module GwtDspInputModule
   public gwt_dsp_block_definitions
   public GwtDspParamFoundType
   public gwt_dsp_multi_package
+  public gwt_dsp_advanced_package
+  public gwt_dsp_subpackage
 
   type GwtDspParamFoundType
     logical :: xt3d_off = .false.
@@ -22,6 +24,8 @@ module GwtDspInputModule
   end type GwtDspParamFoundType
 
   logical :: gwt_dsp_multi_package = .false.
+  logical :: gwt_dsp_advanced_package = .false.
+  character(len=12) :: gwt_dsp_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwtdsp_xt3d_off = InputParamDefinitionType &

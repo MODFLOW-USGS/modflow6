@@ -9,6 +9,8 @@ module GwfNamInputModule
   public gwf_nam_block_definitions
   public GwfNamParamFoundType
   public gwf_nam_multi_package
+  public gwf_nam_advanced_package
+  public gwf_nam_subpackage
 
   type GwfNamParamFoundType
     logical :: list = .false.
@@ -24,6 +26,8 @@ module GwfNamInputModule
   end type GwfNamParamFoundType
 
   logical :: gwf_nam_multi_package = .false.
+  logical :: gwf_nam_advanced_package = .false.
+  character(len=12) :: gwf_nam_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfnam_list = InputParamDefinitionType &

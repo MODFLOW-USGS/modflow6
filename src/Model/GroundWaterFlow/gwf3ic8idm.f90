@@ -9,12 +9,16 @@ module GwfIcInputModule
   public gwf_ic_block_definitions
   public GwfIcParamFoundType
   public gwf_ic_multi_package
+  public gwf_ic_advanced_package
+  public gwf_ic_subpackage
 
   type GwfIcParamFoundType
     logical :: strt = .false.
   end type GwfIcParamFoundType
 
   logical :: gwf_ic_multi_package = .false.
+  logical :: gwf_ic_advanced_package = .false.
+  character(len=12) :: gwf_ic_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfic_strt = InputParamDefinitionType &

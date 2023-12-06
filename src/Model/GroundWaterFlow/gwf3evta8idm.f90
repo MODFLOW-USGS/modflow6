@@ -9,6 +9,8 @@ module GwfEvtaInputModule
   public gwf_evta_block_definitions
   public GwfEvtaParamFoundType
   public gwf_evta_multi_package
+  public gwf_evta_advanced_package
+  public gwf_evta_subpackage
 
   type GwfEvtaParamFoundType
     logical :: readasarrays = .false.
@@ -33,6 +35,8 @@ module GwfEvtaInputModule
   end type GwfEvtaParamFoundType
 
   logical :: gwf_evta_multi_package = .true.
+  logical :: gwf_evta_advanced_package = .false.
+  character(len=12) :: gwf_evta_subpackage = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfevta_readasarrays = InputParamDefinitionType &
