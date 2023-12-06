@@ -17,13 +17,13 @@ OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/SimVariables.o \
+$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/genericutils.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
-$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \
