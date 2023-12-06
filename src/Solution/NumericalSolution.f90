@@ -2476,7 +2476,7 @@ contains
           end if
         end if
       else
-        lsame = is_same(l2norm, this%l2norm0)
+        lsame = is_close(l2norm, this%l2norm0)
         if (lsame) then
           iptc = 0
         end if

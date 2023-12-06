@@ -833,7 +833,7 @@ contains
                                    warnmsg, this%parser%GetUnit())
         case default
           read (keyword, *) rval
-          if (is_same(rval, DNODATA)) then
+          if (is_close(rval, DNODATA)) then
             is_lake_bed = .FALSE.
           else
             is_lake_bed = .TRUE.
@@ -1832,7 +1832,7 @@ contains
           end if
           length = this%connlength(j)
         end if
-        if (is_same(this%bedleak(j), DNODATA)) then
+        if (is_close(this%bedleak(j), DNODATA)) then
           clb(j) = DNODATA
         else if (this%bedleak(j) > DZERO) then
           clb(j) = DONE / this%bedleak(j)
@@ -1844,7 +1844,7 @@ contains
         else
           caq(j) = DZERO
         end if
-        if (is_same(this%bedleak(j), DNODATA)) then
+        if (is_close(this%bedleak(j), DNODATA)) then
           this%satcond(j) = area / caq(j)
         else if (clb(j) * caq(j) > DZERO) then
           this%satcond(j) = area / (clb(j) + caq(j))
@@ -1879,7 +1879,7 @@ contains
           nn = this%cellid(j)
           area = this%warea(j)
           c1 = DZERO
-          if (is_same(clb(j), DNODATA)) then
+          if (is_close(clb(j), DNODATA)) then
             cbedleak = '     NONE     '
             cbedcond = '     NONE     '
           else if (clb(j) > DZERO) then
@@ -2604,7 +2604,7 @@ contains
     call this%lak_calculate_sarea(ilak, stage, sa)
     ev = sa * this%evaporation(ilak)
     if (ev > avail) then
-      if (is_same(avail, DPREC)) then
+      if (is_close(avail, DPREC)) then
         ev = DZERO
       else
         ev = -avail

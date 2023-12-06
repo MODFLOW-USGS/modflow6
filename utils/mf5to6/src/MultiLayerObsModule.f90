@@ -2,7 +2,7 @@ module MultiLayerObs
 
   use ConstantsModule, only: DONE, MAXCHARLEN
   use ConstantsPHMFModule, only: LENOBSNAMENEW
-  use MathUtilModule, only: is_same
+  use MathUtilModule, only: is_close
   use ListModule, only: ListType
   use SimModule, only: store_error, ustop
 
@@ -153,7 +153,7 @@ contains
       weightsum = weightsum + layobs%weight
     end do
     !
-    if (.not. is_same(weightsum, DONE)) then
+    if (.not. is_close(weightsum, DONE)) then
       write (ermsg, 10) trim(this%mlobsname)
       call store_error(ermsg)
       call ustop()

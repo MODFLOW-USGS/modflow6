@@ -2,7 +2,7 @@ module GridSorting
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DHALF
   use CellWithNbrsModule, only: GlobalCellType
-  use MathUtilModule, only: is_same
+  use MathUtilModule, only: is_close
   use BaseDisModule, only: dis_transform_xy
   implicit none
   private
@@ -75,11 +75,11 @@ contains
                     dis_bot_m(gcm%index))
 
       ! compare
-      if (.not. is_same(zn, zm, 10 * epsilon(zn))) then
+      if (.not. is_close(zn, zm, 10 * epsilon(zn))) then
         isLess = zn > zm
-      else if (.not. is_same(yn, ym, 10 * epsilon(yn))) then
+      else if (.not. is_close(yn, ym, 10 * epsilon(yn))) then
         isLess = yn > ym
-      else if (.not. is_same(xn, xm, 10 * epsilon(xn))) then
+      else if (.not. is_close(xn, xm, 10 * epsilon(xn))) then
         isLess = xn < xm
       else
         isLess = .false.
