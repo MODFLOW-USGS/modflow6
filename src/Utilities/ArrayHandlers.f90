@@ -1,6 +1,7 @@
 module ArrayHandlersModule
 
   use KindModule, only: DP, I4B, LGP
+  use ErrorUtilModule, only: pstop
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, DTEN
   implicit none
   private
@@ -206,9 +207,8 @@ contains
     ! -- check character length
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
-      print *, 'Error in ArrayHandlersModule: '// &
-        'Need to increase MAXCHARLEN. Stopping...'
-      call exit(138)
+      call pstop(138, 'Error in ArrayHandlersModule: '// &
+                 'Need to increase MAXCHARLEN. Stopping...')
     end if
     !
     ! -- initialize
@@ -364,9 +364,8 @@ contains
     ! -- Error reporting
 99  continue
 
-    print *, 'Error in ArrayHandlersModule: '// &
-      'Could not increase array size. Stopping...'
-    call exit(138)
+    call pstop(138, 'Error in ArrayHandlersModule: '// &
+               'Could not increase array size. Stopping...')
 
   end subroutine extend_double
 
@@ -410,9 +409,8 @@ contains
     ! -- Error reporting
 99  continue
 
-    print *, 'Error in ArrayHandlersModule: '// &
-      'Could not increase array size. Stopping ...'
-    call exit(138)
+    call pstop(138, 'Error in ArrayHandlersModule: '// &
+               'Could not increase array size. Stopping ...')
 
   end subroutine extend_integer
 
@@ -511,9 +509,8 @@ contains
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
 
-      print *, 'Error in ArrayHandlersModule: '// &
-        'Need to increase MAXCHARLEN. Stopping...'
-      call exit(138)
+      call pstop(138, 'Error in ArrayHandlersModule: '// &
+                 'Need to increase MAXCHARLEN. Stopping...')
     end if
     !
     ! -- calculate sizes

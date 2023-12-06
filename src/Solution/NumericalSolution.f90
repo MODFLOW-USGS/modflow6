@@ -2,6 +2,7 @@
 
 module NumericalSolutionModule
   use KindModule, only: DP, I4B, LGP
+  use ErrorUtilModule, only: pstop
   use TimerModule, only: code_timer
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC, &
                              DPREC, DZERO, DEM20, DEM15, DEM6, &
@@ -1610,7 +1611,7 @@ contains
       WRITE (99, *) 'MATRIX SOLUTION FOLLOWS'
       WRITE (99, '(10(I8,G15.4))') (n, this%x(N), N=1, this%NEQ)
       close (99)
-      call exit(0)
+      call pstop()
     end if
     !-------------------------------------------------------
     !
