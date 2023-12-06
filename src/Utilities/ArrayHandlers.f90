@@ -198,7 +198,6 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
     integer(I4B) :: i, inclocal, isize, lenc, newsize
     ! -- format
@@ -330,7 +329,6 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    character(len=LINELENGTH) :: line
     character(len=100) :: ermsg
     integer(I4B) :: i, inclocal, isize, istat, newsize
     real(DP), dimension(:), pointer, contiguous :: array_temp => null()
@@ -377,7 +375,6 @@ contains
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    character(len=LINELENGTH) :: line
     character(len=100) :: ermsg
     integer(I4B) :: i, inclocal, isize, istat, newsize
     integer(I4B), dimension(:), pointer, contiguous :: array_temp => null()
@@ -505,7 +502,6 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), intent(in) :: ipos
     ! -- local
-    character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
     integer(I4B) :: i, isize, lenc, newsize, inew
     ! -- format

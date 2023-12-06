@@ -1,5 +1,6 @@
 module ListModule
   use KindModule, only: DP, I4B
+  use ErrorUtilModule, only: pstop
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -254,8 +255,7 @@ contains
         followingNode%prevNode => newNode
         this%nodeCount = this%nodeCount + 1
       else
-        print *, 'Programming error in ListType%insert_after'
-        error stop 1
+        call pstop(1, 'Programming error in ListType%insert_after')
       end if
     end if
 
@@ -270,10 +270,8 @@ contains
     ! -- local
     type(ListNodeType), pointer :: newNode => null()
     !
-    if (.not. associated(targetNode)) then
-      print *, "Programming error in ListType%InsertBefore"
-      error stop 1
-    end if
+    if (.not. associated(targetNode)) &
+      call pstop(1, 'Programming error in ListType%InsertBefore')
     !
     ! Allocate a new list node and point its Value member to the object
     allocate (newNode)

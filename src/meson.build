@@ -226,6 +226,7 @@ modflow_sources = files(
     'Utilities' / 'Constants.f90',
     'Utilities' / 'defmacro.F90',
     'Utilities' / 'DevFeature.f90',
+    'Utilities' / 'ErrorUtil.f90',
     'Utilities' / 'genericutils.f90',
     'Utilities' / 'GeomUtil.f90',
     'Utilities' / 'HashTable.f90',
