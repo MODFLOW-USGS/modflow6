@@ -83,6 +83,12 @@ contains
                ", eps="//to_string(eps))
     if (allocated(error)) return
 
+    ! +/-0
+    call check(error, is_same(0.0_DP, -0.0_DP), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps="//to_string(eps))
+
   end subroutine test_is_same
 
   subroutine test_is_same_near_0(error)
@@ -166,6 +172,12 @@ contains
                ", b="//to_string(b)// &
                ", rtol="//to_string(rtol))
     if (allocated(error)) return
+
+    ! +/-0
+    call check(error, is_close(0.0_DP, -0.0_DP), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps=default")
 
   end subroutine test_is_close_symmetric
 
