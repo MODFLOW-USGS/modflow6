@@ -7,27 +7,27 @@
 module InputDefinitionModule
 
   use KindModule, only: LGP
-  use ConstantsModule, only: LENVARNAME
+  use ConstantsModule, only: LINELENGTH, LENVARNAME, LENCOMPONENTNAME
 
   implicit none
   private
   public :: InputParamDefinitionType, &
             InputBlockDefinitionType
 
-  !> @brief derived type for storing input definition
+  !> @brief type for storing input definition
   !!
-  !! This derived type is used to store information for
+  !! This type is used to store information for
   !! each modflow input record
   !!
   !<
   type InputParamDefinitionType
-    character(len=100) :: component_type = ''
-    character(len=100) :: subcomponent_type = ''
-    character(len=100) :: blockname = ''
-    character(len=100) :: tagname = ''
+    character(len=LENCOMPONENTNAME) :: component_type = ''
+    character(len=LENCOMPONENTNAME) :: subcomponent_type = ''
+    character(len=LENCOMPONENTNAME) :: blockname = ''
+    character(len=LINELENGTH) :: tagname = ''
     character(len=LENVARNAME) :: mf6varname = ''
-    character(len=120) :: datatype = ''
-    character(len=100) :: shape = ''
+    character(len=LINELENGTH) :: datatype = ''
+    character(len=LINELENGTH) :: shape = ''
     logical(LGP) :: required = .false.
     logical(LGP) :: in_record = .false.
     logical(LGP) :: preserve_case = .false.
@@ -35,14 +35,14 @@ module InputDefinitionModule
     logical(LGP) :: timeseries = .false.
   end type InputParamDefinitionType
 
-  !> @brief derived type for storing block information
+  !> @brief type for storing block information
   !!
-  !! This derived type is used to store information for
+  !! This type is used to store information for
   !! how to read a modflow block
   !!
   !<
   type InputBlockDefinitionType
-    character(len=100) :: blockname = ''
+    character(len=LENCOMPONENTNAME) :: blockname = ''
     logical(LGP) :: required = .false.
     logical(LGP) :: aggregate = .false.
     logical(LGP) :: block_variable = .false.
