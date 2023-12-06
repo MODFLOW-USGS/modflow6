@@ -3,10 +3,10 @@ module ErrorUtilModule
   implicit none
 contains
 
-  !> @brief Stop the program with an optional status code.
+  !> @brief Stop the program, optionally specifying an error status code.
   !!
   !! If a non-zero status is specified, the program is terminated with the
-  !! given status code. If no status is specified or status=0, the program
+  !! error status code. If no status is specified or status=0, the program
   !! stops with code 0. A message may be provided to print before exiting,
   !! useful e.g. for "contact developer" messages upon programming errors.
   !<
