@@ -23,7 +23,8 @@ module LakModule
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
+  use GeomUtilModule, only: get_node
+  use InputOutputModule, only: URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        deprecation_warning

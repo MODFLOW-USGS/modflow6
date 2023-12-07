@@ -13,6 +13,7 @@ module RchModule
   use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
   use MatrixBaseModule
+  use GeomUtilModule, only: get_node
   !
   implicit none
   !
@@ -472,8 +473,6 @@ contains
   !! Equivalent to reading IRCH as CONSTANT 1
   !<
   subroutine default_nodelist(this)
-    ! -- modules
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(RchType) :: this
     ! -- local

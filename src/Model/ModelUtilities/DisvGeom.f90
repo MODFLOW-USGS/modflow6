@@ -1,7 +1,7 @@
 module DisvGeom
 
   use KindModule, only: DP, I4B
-  use InputOutputModule, only: get_node, get_jk
+  use GeomUtilModule, only: get_node, get_jk
   implicit none
   private
   public :: DisvGeomType

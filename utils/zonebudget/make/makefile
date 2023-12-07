@@ -37,6 +37,7 @@ $(OBJDIR)/Budget.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/grb.o \
 $(OBJDIR)/budgetdata.o \
+$(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/zbud6.o
 
 # Define the objects that make up the program

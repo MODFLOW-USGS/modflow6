@@ -2,7 +2,7 @@ module TestGeomUtil
   use KindModule, only: I4B, DP
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
-  use GeomUtilModule, only: point_in_polygon
+  use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -14,6 +14,8 @@ contains
   subroutine collect_geomutil(testsuite)
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
+                new_unittest("get_node_get_ijk", &
+                             test_get_node_get_ijk), &
                 new_unittest("point_in_polygon_sq", &
                              test_point_in_polygon_sq), &
                 new_unittest("point_in_polygon_tri", &
@@ -24,6 +26,51 @@ contains
   end subroutine collect_geomutil
 
   ! 2D arrays for polygons and check points use column-major indexing
+
+  subroutine test_get_node_get_ijk(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer :: ilay
+    integer :: irow
+    integer :: icol
+    integer :: nlay
+    integer :: nrow
+    integer :: ncol
+    integer :: nnum
+    integer :: ncls
+    integer :: k, i, j
+
+    ! trivial grid with 1 cell
+    nnum = get_node(1, 1, 1, 1, 1, 1)
+    call get_ijk(nnum, 1, 1, 1, ilay, irow, icol)
+    call check(error, nnum == 1)
+    call check(error, ilay == 1)
+    call check(error, irow == 1)
+    call check(error, icol == 1)
+    if (allocated(error)) return
+
+    ! small grid, 3x4x5
+    nlay = 3
+    nrow = 4
+    ncol = 5
+    ncls = nlay * nrow * ncol
+    do k = 1, nlay
+      do i = 1, nrow
+        do j = 1, ncol
+          ! node number from ijk
+          nnum = get_node(k, i, j, nlay, nrow, ncol)
+          call check(error, nnum == (k - 1) * nrow * ncol + (i - 1) * ncol + j)
+          if (allocated(error)) return
+
+          ! ijk from node number
+          call get_ijk(nnum, nrow, ncol, nlay, irow, icol, ilay)
+          call check(error, ilay == k)
+          call check(error, irow == i)
+          call check(error, icol == j)
+          if (allocated(error)) return
+        end do
+      end do
+    end do
+  end subroutine test_get_node_get_ijk
 
   subroutine test_point_in_polygon(error, shape, &
                                    poly, in_pts, out_pts, vert_pts, face_pts)
