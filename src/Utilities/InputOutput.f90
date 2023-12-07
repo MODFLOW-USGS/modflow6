@@ -11,7 +11,8 @@ module InputOutputModule
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: is_same, sim_message
+  use GenericUtilitiesModule, only: is_same
+  use MessageModule, only: write_message
   private
   public :: GetUnit,                                                           &
             UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
@@ -567,8 +568,8 @@ module InputOutputModule
       ELSE
         WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
       END IF
-      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+      call write_message(msg_line, iunit=IOUT, skipbefore=1)
+      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
 201   FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
              '" TO ',A,' IN LINE:')
 202   FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
@@ -581,8 +582,8 @@ module InputOutputModule
       ELSE
         WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
       END IF
-      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+      call write_message(msg_line, iunit=IOUT, skipbefore=1)
+      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
     END IF
     !
     ! -- STOP after storing error message.
@@ -1179,9 +1180,9 @@ END SUBROUTINE URWORD
     !
     ! -- write the results of the inquire statement
     write(line,fmta) iu, trim(fname), trim(ac), trim(act)
-    call sim_message(line)
+    call write_message(line)
     write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
-    call sim_message(line)
+    call write_message(line)
     !
     ! -- return
     return

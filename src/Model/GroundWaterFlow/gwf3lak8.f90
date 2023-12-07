@@ -28,7 +28,7 @@ module LakModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        deprecation_warning
-  use GenericUtilitiesModule, only: sim_message, is_same
+  use GenericUtilitiesModule, only: is_same
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use SimVariablesModule, only: errmsg, warnmsg

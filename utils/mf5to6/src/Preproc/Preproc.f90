@@ -20,7 +20,7 @@ module PreprocModule
                                        AddObsBlockToList, GetObsBlockFromList
   use OpenSpecModule,            only: ACCESS, ACTION, FORM
   use SimModule,                 only: count_errors, print_notes, store_error, &
-                                       store_error_unit, ustop, write_message
+                                       store_error_unit, ustop
   use UtilitiesModule,           only: get_extension, CalcContribFactors
 
   implicit none

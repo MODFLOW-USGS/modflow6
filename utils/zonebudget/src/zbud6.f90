@@ -4,7 +4,7 @@ program zonbudmf6
   use VersionModule, only: VERSION
   use SimVariablesModule, only: iout, errmsg
   use SimModule, only: store_error
-  use GenericUtilitiesModule, only: sim_message, write_centered
+  use MessageModule, only: write_message, write_message_centered
   use InputOutputModule, only: openfile
 
   implicit none
@@ -21,9 +21,9 @@ program zonbudmf6
   logical :: exists
 
   ! -- Write title to screen
-  call write_centered('ZONEBUDGET'//mfvnam, 80)
-  call write_centered('U.S. GEOLOGICAL SURVEY', 80)
-  call write_centered('VERSION '//VERSION, 80)
+  call write_message_centered('ZONEBUDGET'//mfvnam, 80)
+  call write_message_centered('U.S. GEOLOGICAL SURVEY', 80)
+  call write_message_centered('VERSION '//VERSION, 80)
   !
   ! -- Find name of zone budget name file and lst file
   fnam = 'zbud.nam'
@@ -37,9 +37,9 @@ program zonbudmf6
   ! -- Open list file and write title
   iout = iunit_lst
   call openfile(iunit_lst, 0, flst, 'LIST', filstat_opt='REPLACE')
-  call write_centered('ZONEBUDGET'//mfvnam, 80, iunit=iout)
-  call write_centered('U.S. GEOLOGICAL SURVEY', 80, iunit=iout)
-  call write_centered('VERSION '//VERSION, 80, iunit=iout)
+  call write_message_centered('ZONEBUDGET'//mfvnam, 80, iunit=iout)
+  call write_message_centered('U.S. GEOLOGICAL SURVEY', 80, iunit=iout)
+  call write_message_centered('VERSION '//VERSION, 80, iunit=iout)
   !
   ! -- Open name file, read name file, and open csv file
   call openfile(iunit_nam, iout, fnam, 'NAM')
@@ -54,7 +54,7 @@ program zonbudmf6
   close (iunit_lst)
   close (iunit_csv)
   write (line, '(a)') 'Normal Termination'
-  call sim_message(line, skipbefore=1)
+  call write_message(line, skipbefore=1)
   !
   ! -- end of program
 end program zonbudmf6
@@ -144,7 +144,6 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   use KindModule
   use ConstantsModule, only: LINELENGTH
   use SimVariablesModule, only: iout, errmsg
-  use GenericUtilitiesModule, only: sim_message
   use SimModule, only: store_error
   use BudgetDataModule, only: budgetdata_init, budgetdata_read, &
                               budgetdata_finalize, &
@@ -160,6 +159,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   use ZoneOutputModule, only: zoneoutput_init, zoneoutput_write, &
                               zoneoutput_finalize
   use GrbModule, only: read_grb
+  use MessageModule, only: write_message, write_message_centered
   implicit none
   ! -- dummy
   integer, intent(in) :: iunit_csv
@@ -245,7 +245,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       end if
       !
       ! -- write message and check
-      call sim_message(cdot, advance=.FALSE.)
+      call write_message(text=cdot, advance=.FALSE.)
       if (itime == 1) then
         budtxtarray(ibudterm) = budtxt
         packagenamearray(ibudterm) = dstpackagename
@@ -298,7 +298,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   end do timeloop
   !
   ! -- Finalize
-  call sim_message(cdot)
+  call write_message(text=cdot)
   call budgetdata_finalize()
   call zoneoutput_finalize()
   call zone_finalize()

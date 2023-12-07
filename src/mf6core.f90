@@ -235,7 +235,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
     use InputOutputModule, only: getunit, openfile, append_processor_id
-    use GenericUtilitiesModule, only: sim_message
+    use MessageModule, only: write_message
     use VersionModule, only: write_listfile_header
     character(len=LINELENGTH) :: line
     !
@@ -252,7 +252,7 @@ contains
     write (line, '(2(1x,A))') 'Writing simulation list file:', &
       trim(adjustl(simlstfile))
     !
-    call sim_message(line)
+    call write_message(line)
     call write_listfile_header(iout)
     !
     ! -- return
