@@ -6,6 +6,7 @@ module ConnectionsModule
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
+  use GeomUtilModule, only: get_node
 
   implicit none
   private
@@ -513,7 +514,6 @@ contains
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(ConnectionsType) :: this
     character(len=*), intent(in) :: name_model
@@ -762,7 +762,6 @@ contains
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
-    use InputOutputModule, only: get_node
     use DisvGeom, only: DisvGeomType
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
@@ -1196,7 +1195,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
-    use InputOutputModule, only: get_node
     use DisvGeom, only: DisvGeomType
     ! -- dummy
     integer(I4B), intent(in) :: nodes

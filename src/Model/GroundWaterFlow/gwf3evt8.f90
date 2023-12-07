@@ -12,6 +12,7 @@ module EvtModule
   use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
   use MatrixBaseModule
+  use GeomUtilModule, only: get_node
   !
   implicit none
   !
@@ -794,7 +795,6 @@ contains
   !<
   subroutine default_nodelist(this)
     ! -- modules
-    use InputOutputModule, only: get_node
     use SimModule, only: store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy

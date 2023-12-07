@@ -5,6 +5,7 @@ module DnmDisBaseModule
   use InputOutputModule,  only: URWORD
   use SimModule,          only: count_errors, store_error, store_error_unit, &
                                 ustop
+  use GeomUtilModule, only: get_node
   implicit none
   private
   public :: DisBaseType
@@ -504,7 +505,6 @@ module DnmDisBaseModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SimModule, only: ustop, store_error
-    use InputOutputModule, only: get_node
     implicit none
     ! Dummy arguments
     class(DisBaseType), intent(in) :: this

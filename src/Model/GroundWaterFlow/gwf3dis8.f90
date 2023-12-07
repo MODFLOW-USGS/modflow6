@@ -5,7 +5,8 @@ module GwfDisModule
   use ConstantsModule, only: LINELENGTH, DHALF, DONE, DZERO, &
                              LENMEMPATH, LENVARNAME
   use BaseDisModule, only: DisBaseType
-  use InputOutputModule, only: get_node, get_ijk, URWORD, ulasav, ulaprufw, &
+  use GeomUtilModule, only: get_node, get_ijk
+  use InputOutputModule, only: URWORD, ulasav, ulaprufw, &
                                ubdsv1, ubdsv06, urword, getunit, openfile
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename

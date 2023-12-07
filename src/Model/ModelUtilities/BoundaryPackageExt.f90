@@ -14,6 +14,7 @@ module BndExtModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors, store_error_filename
   use BndModule, only: BndType
+  use GeomUtilModule, only: get_node, get_ijk
 
   implicit none
 
@@ -466,7 +467,6 @@ contains
   subroutine nodelist_update(this)
     ! -- modules
     use SimVariablesModule, only: errmsg
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(BndExtType) :: this !< BndExtType object
     ! -- local
@@ -530,7 +530,6 @@ contains
   subroutine check_cellid(this, ii, cellid, mshape, ndim)
     ! -- modules
     use SimVariablesModule, only: errmsg
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(BndExtType) :: this !< BndExtType object
     ! -- local
@@ -596,7 +595,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, &
                                TABLEFT, TABCENTER, DZERO
-    use InputOutputModule, only: ulstlb, get_ijk
+    use InputOutputModule, only: ulstlb
     use TableModule, only: TableType, table_cr
     ! -- dummy
     class(BndExtType) :: this !< BndExtType object

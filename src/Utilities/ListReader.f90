@@ -7,6 +7,7 @@ module ListReaderModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors, store_error_unit
   use LongLineReaderModule, only: LongLineReaderType
+  use GeomUtilModule, only: get_ijk, get_jk, get_node
 
   implicit none
   private
@@ -288,7 +289,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBIGLINE
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -400,7 +400,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
-    use InputOutputModule, only: urword, get_node
+    use InputOutputModule, only: urword
     use ArrayHandlersModule, only: ExpandArray
     use TdisModule, only: kper
     ! -- dummy
@@ -636,7 +636,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, &
                                TABLEFT, TABCENTER
-    use InputOutputModule, only: ulstlb, get_ijk
+    use InputOutputModule, only: ulstlb
     use TableModule, only: TableType, table_cr
     ! -- dummy
     class(ListReaderType) :: this
