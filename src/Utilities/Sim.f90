@@ -286,7 +286,7 @@ contains
     !
     ! -- store warning
     call sim_warnings%store_message(message)
-    
+
   end subroutine deprecation_warning
 
   !> @brief Store note
@@ -345,7 +345,7 @@ contains
     ! -- print the accumulated messages
     if (isim_level >= VALL) then
       call sim_notes%print_message('NOTES:', 'note(s)', &
-                                  iunit=iout)
+                                   iunit=iout)
       call sim_warnings%print_message('WARNING REPORT:', 'warning(s)', &
                                       iunit=iout)
     end if
@@ -458,7 +458,7 @@ contains
     !
     if (simulation_mode == 'PARALLEL') then
       call write_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
-                       skipafter=1)
+                         skipafter=1)
     end if
     !
   end subroutine initial_message

@@ -10,7 +10,8 @@ module VersionModule
   use DefinedMacros, only: is_extended, using_petsc, using_netcdf
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, DZERO
   use SimVariablesModule, only: istdout
-  use MessageModule, only: write_message, write_message_centered, write_message_counter
+  use MessageModule, only: write_message, write_message_centered, &
+                           write_message_counter
   use CompilerVersion, only: get_compiler, get_compile_options
   implicit none
   public
@@ -116,26 +117,33 @@ contains
     end if
     !
     ! -- Write title to iout
-    call write_message_centered(text=cheader, linelen=iheader_width, iunit=iout)
-    call write_message_centered(text=MFTITLE, linelen=iheader_width, iunit=iout)
+    call write_message_centered(text=cheader, linelen=iheader_width, &
+                                iunit=iout)
+    call write_message_centered(text=MFTITLE, linelen=iheader_width, &
+                                iunit=iout)
     !
     ! -- Write model type to list file
     if (present(cmodel_type)) then
-      call write_message_centered(text=cmodel_type, linelen=iheader_width, iunit=iout)
+      call write_message_centered(text=cmodel_type, linelen=iheader_width, &
+                                  iunit=iout)
     end if
     !
     ! -- Write version
-    call write_message_centered(text='VERSION '//VERSION, linelen=iheader_width, iunit=iout)
+    call write_message_centered(text='VERSION '//VERSION, &
+                                linelen=iheader_width, iunit=iout)
     !
     ! -- Write if develop mode
     if (IDEVELOPMODE == 1) then
-      call write_message_centered(text='***DEVELOP MODE***', linelen=iheader_width, iunit=iout)
+      call write_message_centered(text='***DEVELOP MODE***', &
+                                  linelen=iheader_width, iunit=iout)
     end if
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_message_centered(text=' ', linelen=iheader_width, iunit=iout)
-    call write_message_centered(text=trim(adjustl(compiler)), linelen=iheader_width, iunit=iout)
+    call write_message_centered(text=' ', linelen=iheader_width, &
+                                iunit=iout)
+    call write_message_centered(text=trim(adjustl(compiler)), &
+                                linelen=iheader_width, iunit=iout)
     !
     ! -- Write disclaimer
     write (iout, FMTDISCLAIMER)
@@ -168,7 +176,7 @@ contains
       call write_kindinfo(iout)
     end if
     write (iout, *)
-    
+
   end subroutine write_listfile_header
 
   !> @ brief Write program license

@@ -166,12 +166,12 @@ contains
         ! -- write each message
         do i = 1, isize
           if (iu > 0) &
-            call write_message_counter(&
-              iunit=iu, &
-              text=this%messages(i), &
-              icount=i, &
-              iwidth=iwidth)
-          call write_message_counter(&
+            call write_message_counter( &
+            iunit=iu, &
+            text=this%messages(i), &
+            icount=i, &
+            iwidth=iwidth)
+          call write_message_counter( &
             text=this%messages(i), &
             icount=i, &
             iwidth=iwidth)
@@ -274,9 +274,9 @@ contains
   !! counter is passed in subsequent lines are indented.
   !<
   subroutine write_message_counter(text, iunit, icount, iwidth, &
-    skipbefore, skipafter)
+                                   skipbefore, skipafter)
     ! -- dummy
-    
+
     character(len=*), intent(in) :: text !< message to be written
     integer(I4B), intent(in), optional :: iunit !< the unit number to which the message is written
     integer(I4B), intent(in), optional :: icount !< counter to prepended to the message
@@ -367,12 +367,12 @@ contains
           line = amessage(j + 1:i)
         end if
         call write_message(text=line, iunit=iu, &
-                        fmt=fmt_first, &
-                        skipbefore=isb)
+                           fmt=fmt_first, &
+                           skipbefore=isb)
       else
         line = adjustl(amessage(j + 1:i))
         call write_message(text=line, iunit=iu, &
-                        fmt=fmt_cont)
+                           fmt=fmt_cont)
       end if
       j = i
       go to 5
@@ -385,12 +385,12 @@ contains
       line = amessage(j + 1:jend)
     end if
     call write_message(text=line, iunit=iu, &
-                    fmt=fmt_first, &
-                    skipbefore=isb)
+                       fmt=fmt_first, &
+                       skipbefore=isb)
     else
     line = amessage(j + 1:jend)
     call write_message(text=line, iunit=iu, &
-                    fmt=fmt_cont)
+                       fmt=fmt_cont)
     end if
     j = jend
     go to 5
@@ -405,12 +405,12 @@ contains
         line = amessage(j + 1:jend)
       end if
       call write_message(text=line, iunit=iu, &
-                      fmt=fmt_first, &
-                      skipbefore=isb, skipafter=isa)
-      else
-        line = amessage(j + 1:jend)
-        call write_message(text=line, iunit=iu, fmt=fmt_cont, &
-                        skipafter=isa)
+                         fmt=fmt_first, &
+                         skipbefore=isb, skipafter=isa)
+    else
+      line = amessage(j + 1:jend)
+      call write_message(text=line, iunit=iu, fmt=fmt_cont, &
+                         skipafter=isa)
     end if
   end subroutine write_message_counter
 
