@@ -52,6 +52,7 @@ $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ConstantsPHMF.o \
 $(OBJDIR)/MemoryManager.o \
+$(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReadersMF5.o \
 $(OBJDIR)/precutls.o \
