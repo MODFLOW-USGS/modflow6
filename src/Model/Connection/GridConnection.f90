@@ -9,7 +9,7 @@ module GridConnectionModule
   use CharacterStringModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use ListModule, only: ListType, isEqualIface, arePointersEqual
+  use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
@@ -218,11 +218,9 @@ contains
     class(VirtualModelType), pointer :: v_model !< the model to add to the region
     ! local
     class(*), pointer :: vm_obj
-    procedure(isEqualIface), pointer :: areEqualMethod
 
     vm_obj => v_model
-    areEqualMethod => arePointersEqual
-    if (.not. this%regionalModels%ContainsObject(vm_obj, areEqualMethod)) then
+    if (.not. this%regionalModels%ContainsObject(vm_obj)) then
       call this%regionalModels%Add(vm_obj)
     end if
 

@@ -9,7 +9,7 @@ module DevFeatureModule
 
 contains
 
-  !> @ brief Development feature, terminate if in release mode
+  !> @brief Terminate if in release mode (guard development features)
   !!
   !! Terminate the program with an error if the IDEVELOPMODE flag
   !! is set to 0. This allows developing features on the mainline
@@ -21,7 +21,7 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: errmsg
     integer(I4B), intent(in), optional :: iunit
-    !
+
     ! -- store error and terminate if in release mode
     if (IDEVELOPMODE == 0) then
       if (present(iunit)) then
@@ -31,9 +31,7 @@ contains
         call store_error(errmsg, terminate=.true.)
       end if
     end if
-    !
-    ! -- return
-    return
+
   end subroutine dev_feature
 
 end module DevFeatureModule

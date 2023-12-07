@@ -2,7 +2,7 @@ module ConnectionBuilderModule
   use KindModule, only: I4B, LGP
   use SimModule, only: store_error, count_errors, ustop
   use SimVariablesModule, only: iout
-  use ListModule, only: ListType, arePointersEqual, isEqualIface, ListNodeType
+  use ListModule, only: ListType, isEqualIface, ListNodeType
   use BaseSolutionModule, only: BaseSolutionType
   use NumericalSolutionModule, only: NumericalSolutionType
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList

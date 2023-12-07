@@ -10,6 +10,7 @@
 module SimModule
 
   use KindModule, only: DP, I4B
+  use ErrorUtilModule, only: pstop
   use DefinedMacros, only: get_os
   use ConstantsModule, only: MAXCHARLEN, LINELENGTH, &
                              DONE, &
@@ -19,7 +20,7 @@ module SimModule
   use SimVariablesModule, only: istdout, iout, isim_level, ireturnerr, &
                                 iforcestop, iunext, &
                                 warnmsg
-  use GenericUtilitiesModule, only: sim_message, stop_with_error
+  use GenericUtilitiesModule, only: sim_message
   use MessageModule, only: MessageType
 
   implicit none
@@ -370,8 +371,8 @@ contains
     ! -- print the final message
     call print_final_message(stopmess, ioutlocal)
     !
-    ! -- return appropriate error codes when terminating the program
-    call stop_with_error(ireturnerr)
+    ! -- terminate with the appropriate error code
+    call pstop(ireturnerr)
 
   end subroutine ustop
 
@@ -569,7 +570,7 @@ contains
     !
     ! -- return or halt
     if (iforcestop == 1) then
-      call stop_with_error(ireturnerr)
+      call pstop(ireturnerr)
     end if
 
   end subroutine final_message
