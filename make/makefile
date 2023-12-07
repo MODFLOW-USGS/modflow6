@@ -76,17 +76,16 @@ ${SOURCEDIR32}
 OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
-$(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ErrorUtil.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/SimVariables.o \
+$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/Message.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
-$(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
-$(OBJDIR)/Message.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/MathUtil.o \
+$(OBJDIR)/genericutils.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
@@ -325,6 +324,7 @@ $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/MemorySetHandler.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/ilut.o \
 $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
