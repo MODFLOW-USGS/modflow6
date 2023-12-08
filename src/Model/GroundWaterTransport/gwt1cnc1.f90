@@ -87,8 +87,6 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 1
-    packobj%iscloc = 1
     !
     ! -- Store the appropriate label based on the dependent variable
     cncobj%depvartype = depvartype
