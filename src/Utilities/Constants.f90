@@ -92,7 +92,7 @@ module ConstantsModule
   real(DP), parameter :: DHNOFLO = 1.e30_DP !< real no flow constant
   real(DP), parameter :: DHDRY = -1.e30_DP !< real dry cell constant
   real(DP), parameter :: DNODATA = 3.0e30_DP !< real no data constant
-  
+
   real(DP), parameter :: DSECPERHR = 3.6e3_DP !< real constant representing number of seconds per hour (used in tdis)
   real(DP), parameter :: DHRPERDAY = 2.4e1_DP !< real constant representing number of hours per day (used in tdis)
   real(DP), parameter :: DDYPERYR = 3.6525e2_DP !< real constant representing the average number of days per year (used in tdis)

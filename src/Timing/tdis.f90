@@ -226,7 +226,7 @@ contains
   !> @brief Reset delt and update timing variables and indicators
   !!
   !! This routine is called when a timestep fails to converge, and so it is
-  !! retried using a smaller time step (deltnew). 
+  !! retried using a smaller time step (deltnew).
   !<
   subroutine tdis_delt_reset(deltnew)
     ! -- modules
@@ -736,7 +736,7 @@ contains
 
   !> @brief Check the tdis timing information
   !!
-  !! Return back to tdis_read_timing if an error condition is found and let the 
+  !! Return back to tdis_read_timing if an error condition is found and let the
   !! ustop routine be called there instead so the StoreErrorUnit routine can be
   !! called to assign the correct file name.
   !<
