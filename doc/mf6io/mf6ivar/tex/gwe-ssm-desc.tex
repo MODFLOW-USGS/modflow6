@@ -1,0 +1,35 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{PRINT\_FLOWS}---keyword to indicate that the list of SSM flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period.
+
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that SSM flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+
+\end{description}
+\item \textbf{Block: SOURCES}
+
+\begin{description}
+\item \texttt{pname}---name of the flow package for which an auxiliary variable contains a source temperature.  If this flow package is represented using an advanced transport package (SFE, LKE, MWE, or UZE), then the advanced transport package will override SSM terms specified here.
+
+\item \texttt{srctype}---keyword indicating how temperature will be assigned for sources and sinks.  Keyword must be specified as either AUX or AUXMIXED.  For both options the user must provide an auxiliary variable in the corresponding flow package.  The auxiliary variable must have the same name as the AUXNAME value that follows.  If the AUX keyword is specified, then the auxiliary variable specified by the user will be assigned as the concenration value for groundwater sources (flows with a positive sign).  For negative flow rates (sinks), groundwater will be withdrawn from the cell at the simulated temperature of the cell.  The AUXMIXED option provides an alternative method for how to determine the temperature of sinks.  If the cell temperature is larger than the user-specified auxiliary temperature, then the temperature of groundwater withdrawn from the cell will be assigned as the user-specified temperature.  Alternatively, if the user-specified auxiliary temperature is larger than the cell temperature, then groundwater will be withdrawn at the cell temperature.  Thus, the AUXMIXED option is designed to work with the Evapotranspiration (EVT) and Recharge (RCH) Packages where water may be withdrawn at a temperature that is less than the cell temperature.
+
+\item \texttt{auxname}---name of the auxiliary variable in the package PNAME.  This auxiliary variable must exist and be specified by the user in that package.  The values in this auxiliary variable will be used to set the temperature associated with the flows for that boundary package.
+
+\end{description}
+\item \textbf{Block: FILEINPUT}
+
+\begin{description}
+\item \texttt{pname}---name of the flow package for which an SPT6 input file contains a source temperature.  If this flow package is represented using an advanced transport package (SFE, LKE, MWE, or UZE), then the advanced transport package will override SSM terms specified here.
+
+\item \texttt{SPT6}---keyword to specify that record corresponds to a source sink mixing input file.
+
+\item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
+
+\item \texttt{spt6\_filename}---character string that defines the path and filename for the file containing source and sink input data for the flow package. The SPT6\_FILENAME file is a flexible input file that allows temperatures to be specified by stress period and with time series. Instructions for creating the SPT6\_FILENAME input file are provided in the next section on file input for boundary temperatures.
+
+\item \texttt{MIXED}---keyword to specify that these stress package boundaries will have the mixed condition.  The MIXED condition is described in the SOURCES block for AUXMIXED.  The MIXED condition allows for water to be withdrawn at a temperature that is less than the cell temperature.  It is intended primarily for representing evapotranspiration.
+
+\end{description}
+

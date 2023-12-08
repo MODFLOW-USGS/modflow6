@@ -1,0 +1,14 @@
+BEGIN OPTIONS
+  FLOW_IMBALANCE_CORRECTION
+END OPTIONS
+
+BEGIN PACKAGEDATA
+  GWFBUDGET FILEIN ../flow/mygwfmodel.bud
+  GWFHEAD FILEIN     ../flow/mygwfmodel.hds
+  GWFMOVER FILEIN    ../flow/mygwfmodel.hds
+  LAK-1 FILEIN       ../flow/mygwfmodel.lak.bud
+  SFR-1 FILEIN       ../flow/mygwfmodel.sfr.bud
+  MAW-1 FILEIN       ../flow/mygwfmodel.maw.bud
+  UZF-1 FILEIN       ../flow/mygwfmodel.uzf.bud
+  LAK-2 FILEIN       ../flow/mygwfmodel-2.lak.bud
+END PACKAGEDATA

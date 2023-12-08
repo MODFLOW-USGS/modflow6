@@ -16,6 +16,7 @@ module TspSsmModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
+  use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixBaseModule
@@ -45,6 +46,7 @@ module TspSsmModule
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     character(len=LENVARNAME) :: depvartype = ''
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
 
   contains
 
@@ -79,7 +81,7 @@ contains
   !!  and initializing the parser.
   !<
   subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, eqnsclfac, &
-                    depvartype)
+                    depvartype, gwecommon)
     ! -- dummy
     type(TspSsmType), pointer :: ssmobj !< TspSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
@@ -87,7 +89,8 @@ contains
     integer(I4B), intent(in) :: iout !< fortran unit for output
     type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
-    character(len=LENVARNAME), intent(in) :: depvartype
+    character(len=LENVARNAME), intent(in) :: depvartype !< dependent variable type ('concentration' or 'temperature')
+    type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -110,6 +113,11 @@ contains
     ! -- Store pointer to labels associated with the current model so that the
     !    package has access to the corresponding dependent variable type
     ssmobj%depvartype = depvartype
+    !
+    ! -- Give package access to the shared heat transport variables assigned in MST
+    if (present(gwecommon)) then
+      ssmobj%gwecommon => gwecommon
+    end if
     !
     ! -- Return
     return
@@ -717,6 +725,9 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%nbound)
+    !
+    ! -- Pointers
+    nullify (this%gwecommon)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

@@ -14,8 +14,11 @@ module ModelPackageInputModule
                        GWF_BASEPKG, GWF_MULTIPKG
   use GwtModule, only: GWT_NBASEPKG, GWT_NMULTIPKG, &
                        GWT_BASEPKG, GWT_MULTIPKG
+  use GweModule, only: GWE_NBASEPKG, GWE_NMULTIPKG, &
+                       GWE_BASEPKG, GWE_MULTIPKG
 
   implicit none
+
   private
   public :: supported_model_packages
   public :: multi_package_type
@@ -48,6 +51,11 @@ contains
       numpkgs = GWT_NBASEPKG + GWT_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
+      !
+    case ('GWE6')
+      numpkgs = GWE_NBASEPKG + GWE_NMULTIPKG
+      allocate (pkgtypes(numpkgs))
+      pkgtypes = [GWE_BASEPKG, GWE_MULTIPKG]
       !
     case default
     end select
@@ -84,6 +92,14 @@ contains
     case ('GWT')
       do n = 1, GWT_NMULTIPKG
         if (GWT_MULTIPKG(n) == pkgtype) then
+          multi_package = .true.
+          exit
+        end if
+      end do
+      !
+    case ('GWE')
+      do n = 1, GWE_NMULTIPKG
+        if (GWE_MULTIPKG(n) == pkgtype) then
           multi_package = .true.
           exit
         end if

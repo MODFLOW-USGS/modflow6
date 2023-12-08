@@ -1,0 +1,16 @@
+# This block is optional
+BEGIN OPTIONS
+END OPTIONS
+
+BEGIN PACKAGES
+  DIS6       heat_transport.dis
+  IC6        heat_transport.ic
+  MST6       heat_transport.mst
+  ADV6       heat_transport.adv
+  DSP6       heat_transport.dsp
+  SSM6       heat_transport.ssm
+  CNT6       heat_transport01.cnt LEFT
+  CNT6       heat_transport02.cnt RIGHT
+  OC6        heat_transport.oc
+END PACKAGES
+

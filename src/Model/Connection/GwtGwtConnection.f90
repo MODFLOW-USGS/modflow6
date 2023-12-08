@@ -154,7 +154,7 @@ contains
     ! determine advection scheme (the GWT-GWT exchange
     ! has been read at this point)
     this%iIfaceAdvScheme = this%gwtExchange%iAdvScheme
-
+    !
     ! determine xt3d setting on interface- (TODO_MJR: default is on?)
     this%iIfaceXt3d = this%gwtExchange%ixt3d
 
@@ -377,11 +377,11 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
-    ! local
+    !
 
     call this%SpatialModelConnectionType%spatialcon_fc( &
       kiter, matrix_sln, rhs_sln, inwtflag)
-
+    !
     ! FC the movers through the exchange
     if (this%owns_exchange) then
       if (this%gwtExchange%inmvt > 0) then

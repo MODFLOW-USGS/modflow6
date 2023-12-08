@@ -20,6 +20,7 @@ module TransportModelModule
   use TspOcModule, only: TspOcType
   use TspObsModule, only: TspObsType
   use BudgetModule, only: BudgetType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
 
   implicit none
@@ -91,7 +92,7 @@ contains
   !!
   !! Create a new transport model that will be further refined into GWT or GWE
   !<
-  subroutine tsp_cr(this, filename, id, modelname, macronym, indis)
+  subroutine tsp_cr(this, filename, id, modelname, macronym, indis, gwecommon)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
@@ -105,6 +106,7 @@ contains
     integer(I4B), intent(inout) :: indis
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: macronym
+    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: lst_fname
@@ -144,7 +146,11 @@ contains
     call budget_cr(this%budget, this%name)
     !
     ! -- create model packages
-    call this%create_tsp_packages(indis)
+    if (present(gwecommon)) then
+      call this%create_tsp_packages(indis, gwecommon)
+    else
+      call this%create_tsp_packages(indis)
+    end if
     !
     ! -- Return
     return
@@ -769,7 +775,7 @@ contains
 
   !> @brief Source package info and begin to process
   !<
-  subroutine create_tsp_packages(this, indis)
+  subroutine create_tsp_packages(this, indis, gwecommon)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
@@ -790,6 +796,7 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(inout) :: indis ! DIS enabled flag
+    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pkgtypes => null()
@@ -866,7 +873,7 @@ contains
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
                 this%eqnsclfac)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
-                this%eqnsclfac, this%depvartype)
+                this%eqnsclfac, this%depvartype, gwecommon)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
                 this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)

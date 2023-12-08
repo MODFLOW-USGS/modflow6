@@ -41,6 +41,10 @@ EXG & GWTGWT & OPTIONS & yes \\
 EXG & GWTGWT & DIMENSIONS & yes \\ 
 EXG & GWTGWT & EXCHANGEDATA & yes \\ 
 \hline
+EXG & GWEGWE & OPTIONS & yes \\ 
+EXG & GWEGWE & DIMENSIONS & yes \\ 
+EXG & GWEGWE & EXCHANGEDATA & yes \\ 
+\hline
 SLN & IMS & OPTIONS & yes \\ 
 SLN & IMS & NONLINEAR & yes \\ 
 SLN & IMS & LINEAR & yes \\ 
@@ -240,12 +244,64 @@ GWT & MVT & OPTIONS & yes \\
 GWT & API & OPTIONS & yes \\ 
 GWT & API & DIMENSIONS & yes \\ 
 \hline
+GWE & ADV & OPTIONS & yes \\ 
+\hline
+GWE & CNT & OPTIONS & yes \\ 
+GWE & CNT & DIMENSIONS & yes \\ 
+GWE & CNT & PERIOD & yes \\ 
+\hline
+GWE & DIS & OPTIONS & yes \\ 
+GWE & DIS & DIMENSIONS & yes \\ 
+GWE & DIS & GRIDDATA & no \\ 
+\hline
+GWE & DISV & OPTIONS & yes \\ 
+GWE & DISV & DIMENSIONS & yes \\ 
+GWE & DISV & GRIDDATA & no \\ 
+GWE & DISV & VERTICES & yes \\ 
+GWE & DISV & CELL2D & yes \\ 
+\hline
+GWE & DISU & OPTIONS & yes \\ 
+GWE & DISU & DIMENSIONS & yes \\ 
+GWE & DISU & GRIDDATA & no \\ 
+GWE & DISU & CONNECTIONDATA & yes \\ 
+GWE & DISU & VERTICES & yes \\ 
+GWE & DISU & CELL2D & yes \\ 
+\hline
+GWE & DSP & OPTIONS & yes \\ 
+GWE & DSP & GRIDDATA & no \\ 
+\hline
+GWE & IC & GRIDDATA & no \\ 
+\hline
+GWE & MST & OPTIONS & yes \\ 
+GWE & MST & GRIDDATA & no \\ 
+GWE & MST & PACKAGEDATA & yes \\ 
+\hline
+GWE & NAM & OPTIONS & yes \\ 
+GWE & NAM & PACKAGES & yes \\ 
+\hline
+GWE & OC & OPTIONS & yes \\ 
+GWE & OC & PERIOD & yes \\ 
+\hline
+GWE & SSM & OPTIONS & yes \\ 
+GWE & SSM & SOURCES & yes \\ 
+GWE & SSM & FILEINPUT & yes \\ 
+\hline
+GWE & FMI & OPTIONS & yes \\ 
+GWE & FMI & PACKAGEDATA & yes \\ 
+\hline
 UTL & SPC & OPTIONS & yes \\ 
 UTL & SPC & DIMENSIONS & yes \\ 
 UTL & SPC & PERIOD & yes \\ 
 \hline
 UTL & SPCA & OPTIONS & yes \\ 
 UTL & SPCA & PERIOD & yes \\ 
+\hline
+UTL & SPT & OPTIONS & yes \\ 
+UTL & SPT & DIMENSIONS & yes \\ 
+UTL & SPT & PERIOD & yes \\ 
+\hline
+UTL & SPTA & OPTIONS & yes \\ 
+UTL & SPTA & PERIOD & yes \\ 
 \hline
 UTL & OBS & OPTIONS & yes \\ 
 UTL & OBS & CONTINUOUS & yes \\ 

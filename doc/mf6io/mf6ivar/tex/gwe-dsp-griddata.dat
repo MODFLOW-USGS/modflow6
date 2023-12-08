@@ -1,0 +1,16 @@
+BEGIN GRIDDATA
+  [ALH [LAYERED]
+    <alh(nodes)> -- READARRAY]
+  [ALV [LAYERED]
+    <alv(nodes)> -- READARRAY]
+  [ATH1 [LAYERED]
+    <ath1(nodes)> -- READARRAY]
+  [ATH2 [LAYERED]
+    <ath2(nodes)> -- READARRAY]
+  [ATV [LAYERED]
+    <atv(nodes)> -- READARRAY]
+  [KTW [LAYERED]
+    <ktw(nodes)> -- READARRAY]
+  [KTS [LAYERED]
+    <kts(nodes)> -- READARRAY]
+END GRIDDATA

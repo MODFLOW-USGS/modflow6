@@ -1,0 +1,5 @@
+BEGIN FILEINPUT
+  <pname> SPT6 FILEIN <spt6_filename> [MIXED]
+  <pname> SPT6 FILEIN <spt6_filename> [MIXED]
+  ...
+END FILEINPUT

@@ -64,6 +64,13 @@ Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
   Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
   27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
 
+\bibitem[{Hecht-Mendez and others(2010)Hecht-Mendez, Molina-Giraldo, Blum, and
+  Bayer}]{hechtmendez}
+Hecht-Mendez, J., Molina-Giraldo, N., Blum, P., and Bayer, P., 2010, Evaluating
+  mt3dms for heat transport simulation of closed geothermal systems:
+  Groundwater, v.~48, no.~5, p.~741--756,
+  \url{https://doi.org/10.1111/j.1745-6584.2010.00678.x}.
+
 \bibitem[{Hill(1990)}]{hill1990preconditioned}
 Hill, M.C., 1990, Preconditioned Conjugate-Gradient 2 (PCG2), a computer
   program for solving ground-water flow equations: {U.S. Geological Survey
@@ -171,6 +178,11 @@ Leake, S.A., and Lilly, M.R., 1997, Documentation of computer program (FHB1)
   applications of the modular finite-diference ground-water flow model
   (MODFLOW): {U.S. Geological Survey Open-File Report 97--571, 50 p.}, accessed
   June 27, 2017, at \url{https://pubs.er.usgs.gov/publication/ofr97571}.
+
+\bibitem[{Ma and Zheng(2010)}]{mazheng2010}
+Ma, Rui, and Zheng, Chunmiao, 2010, Effects of density and viscosity in
+  modeling heat as a groundwater tracer: Groundwater, v.~48, no.~3,
+  p.~380--389, \url{https://doi.org/10.1111/j.1745-6584.2009.00660.x}.
 
 \bibitem[{Maddock and others(2012)Maddock, Baird, Hanson, Schmid, and
   Ajami}]{modflowripetpack}

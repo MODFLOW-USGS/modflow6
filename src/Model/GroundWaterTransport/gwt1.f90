@@ -155,7 +155,7 @@ contains
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%fmi%fmi_df(this%dis)
+    call this%fmi%fmi_df(this%dis, 1)
     if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
     if (this%inadv > 0) call this%adv%adv_df()
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
@@ -377,7 +377,6 @@ contains
     call this%fmi%fmi_ad(this%x)
     !
     ! -- Advance
-    !if(this%inmst > 0) call this%mst%mst_ad()
     if (this%indsp > 0) call this%dsp%dsp_ad()
     if (this%inssm > 0) call this%ssm%ssm_ad()
     do ip = 1, this%bndlist%Count()
