@@ -362,9 +362,8 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: iout
     ! -- local
-    real(DP) :: cnv, delsec, totsec, persec, sixty, hrday, dayyr, &
-                delmn, delhr, totmn, tothr, totdy, totyr, permn, perhr, &
-                perdy, peryr, deldy, delyr
+    real(DP) :: cnv, delsec, totsec, persec, delmn, delhr, totmn, tothr, &
+                totdy, totyr, permn, perhr, perdy, peryr, deldy, delyr
     ! -- format
     character(len=*), parameter :: fmttmsmry = "(1X, ///9X, &
       &'TIME SUMMARY AT END OF TIME STEP', I5,' IN STRESS PERIOD ', I4)"
