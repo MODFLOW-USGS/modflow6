@@ -1,5 +1,3 @@
-!Highest level model class.  All models inherit from this parent class.
-
 module BaseModelModule
 
   use KindModule, only: DP, I4B
@@ -11,9 +9,9 @@ module BaseModelModule
   public :: BaseModelType, CastAsBaseModelClass, AddBaseModelToList, &
             GetBaseModelFromList
 
+  !> @brief Highest level model type. All models extend this parent type.
   type :: BaseModelType
     character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
-
     character(len=LENMODELNAME), pointer :: name => null() !< name of the model
     character(len=3), pointer :: macronym => null() !< 3 letter model acronym (GWF, GWT, ...)
     integer(I4B), pointer :: idsoln => null() !< id of the solution model is in
@@ -37,90 +35,45 @@ module BaseModelModule
 
 contains
 
+  !> @brief Define the model
+  !<
   subroutine model_df(this)
-! ******************************************************************************
-! modeldf -- Define the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_df
 
+  !> @brief Allocate and read
+  !<
   subroutine model_ar(this)
-! ******************************************************************************
-! modelar -- Allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_ar
 
+  !> @brief Read and prepare
+  !<
   subroutine model_rp(this)
-! ******************************************************************************
-! model_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_rp
 
+  !> @brief Calculate time step length
+  !<
   subroutine model_calculate_delt(this)
-! ******************************************************************************
-! model_calculate_delt -- Calculate time step length
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_calculate_delt
 
+  !> @brief Output results
+  !<
   subroutine model_ot(this)
-! ******************************************************************************
-! model_ot -- output results
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_ot
 
+  !> @brief Write line to model iout
+  !<
   subroutine model_message(this, line, fmt)
-! ******************************************************************************
-! model_message -- write line to model iout
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BaseModelType) :: this
     character(len=*), intent(in) :: line
     character(len=*), intent(in), optional :: fmt
     ! -- local
     character(len=LINELENGTH) :: cfmt
-! ------------------------------------------------------------------------------
     !
     ! -- process optional variables
     if (present(fmt)) then
@@ -131,38 +84,22 @@ contains
     !
     ! -- write line
     write (this%iout, trim(cfmt)) trim(line)
-    !
-    ! -- return
-    return
   end subroutine model_message
 
+  !> @brief Final processing
+  !<
   subroutine model_fp(this)
-! ******************************************************************************
-! model_fp -- Final processing
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
   end subroutine model_fp
 
+  !> @brief Allocate scalar variables
+  !<
   subroutine allocate_scalars(this, modelname)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(BaseModelType) :: this
     character(len=*), intent(in) :: modelname
-! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%name, LENMODELNAME, 'NAME', this%memoryPath)
     call mem_allocate(this%macronym, 3, 'MACRONYM', this%memoryPath)
@@ -183,23 +120,15 @@ contains
     this%iprflow = 0
     this%ipakcb = 0
     this%inewton = 0 !default is standard formulation
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
+  !> @brief Deallocate
+  !<
   subroutine model_da(this)
-! ******************************************************************************
-! deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(BaseModelType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Strings
     call mem_deallocate(this%name, 'NAME', this%memoryPath)
@@ -213,13 +142,9 @@ contains
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%idsoln)
-    !
-    ! -- return
-    return
   end subroutine model_da
 
   function CastAsBaseModelClass(obj) result(res)
-    implicit none
     class(*), pointer, intent(inout) :: obj
     class(BaseModelType), pointer :: res
     !
@@ -230,11 +155,9 @@ contains
     class is (BaseModelType)
       res => obj
     end select
-    return
   end function CastAsBaseModelClass
 
   subroutine AddBaseModelToList(list, model)
-    implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     class(BaseModelType), pointer, intent(inout) :: model
@@ -243,12 +166,9 @@ contains
     !
     obj => model
     call list%Add(obj)
-    !
-    return
   end subroutine AddBaseModelToList
 
   function GetBaseModelFromList(list, idx) result(res)
-    implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
@@ -258,8 +178,6 @@ contains
     !
     obj => list%GetItem(idx)
     res => CastAsBaseModelClass(obj)
-    !
-    return
   end function GetBaseModelFromList
 
 end module BaseModelModule
