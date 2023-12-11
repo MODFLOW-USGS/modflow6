@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["newton01"]
 nlay = 2
@@ -22,7 +21,7 @@ oname = "head_obs.csv"
 obs_recarray = {oname: [("h1", "HEAD", (0, 1, 1)), ("h2", "HEAD", (1, 1, 1))]}
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     c6 = []
     for loc in chdloc:
         c6.append([loc, chd])
@@ -35,7 +34,7 @@ def build_model(idx, ws):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     flopy.mf6.ModflowTdis(
@@ -97,9 +96,9 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_head(sim):
+def eval_head(test):
     print("evaluating heads...")
-    fpth = os.path.join(sim.simpath, oname)
+    fpth = os.path.join(test.workspace, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
     msg = f"head in layer 1 != 8. ({v['H1']})"
@@ -114,7 +113,11 @@ def eval_head(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_head), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=eval_head,
+    )
+    test.run()

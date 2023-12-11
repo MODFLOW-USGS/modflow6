@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi set_value function, which is used update
 the Sy=0 value with same Sy used to calculate SC2 in
 the non-bmi simulation.
@@ -12,7 +11,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_sto01"]
 
@@ -138,14 +136,14 @@ def get_model(ws, name, sy):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
     sim = get_model(ws, name, sy=sy_val)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, sy=0.0)
 
     return sim, mc
@@ -185,7 +183,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # run the time step
         try:
             mf6.update()
@@ -214,11 +211,11 @@ def api_func(exe, idx, model_ws=None):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

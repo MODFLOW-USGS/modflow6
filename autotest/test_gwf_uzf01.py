@@ -1,7 +1,6 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
-
+Test the ability of a uzf to route waves through a simple 1d vertical
+column.
 """
 
 import os
@@ -10,14 +9,12 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_uzf01a"]
 nlay, nrow, ncol = 100, 1, 1
 
 
-def build_model(idx, exdir):
-
+def build_models(idx, test):
     name = ex[idx]
 
     perlen = [500.0]
@@ -40,7 +37,7 @@ def build_model(idx, exdir):
         tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
     # build MODFLOW 6 files
-    ws = exdir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -213,11 +210,11 @@ def build_model(idx, exdir):
     return sim, None
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
-    ws = sim.simpath
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -267,12 +264,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

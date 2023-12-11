@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "drn"
 budtol = 1e-2
@@ -108,32 +107,32 @@ def get_model(ws, name, uzf=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(ws, name)
 
     # build MODFLOW 6 files with UZF package
-    ws = os.path.join(dir, "mf6")
+    ws = os.path.join(test.workspace, "mf6")
     mc = get_model(ws, name, uzf=True)
 
     return sim, mc
 
 
-def eval_disch(sim):
+def check_output(test):
     print("evaluating drain discharge and uzf discharge to land surface...")
 
     # MODFLOW 6 drain discharge results
-    fpth = os.path.join(sim.simpath, "drn_obs.csv")
+    fpth = os.path.join(test.workspace, "drn_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 uzf discharge results
-    fpth = os.path.join(sim.simpath, "mf6", "uzf_obs.csv")
+    fpth = os.path.join(test.workspace, "mf6", "uzf_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -147,7 +146,7 @@ def eval_disch(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.disc.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -164,11 +163,11 @@ def eval_disch(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
@@ -177,14 +176,11 @@ def eval_disch(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=str(function_tmpdir),
-            exe_dict=targets,
-            exfunc=eval_disch,
-            idxsim=idx,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

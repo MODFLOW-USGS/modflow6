@@ -4,7 +4,6 @@ import sys
 import pytest
 from common_regression import get_mf6_ftypes, get_namefiles
 from framework import TestFramework
-from simulation import TestSimulation
 
 exdir = os.path.join("..", "tmp_simulations")
 testpaths = os.path.join("..", exdir)
@@ -101,7 +100,6 @@ def run_mf6(sim, ws):
     appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
 
     """
-    print(os.getcwd())
     src = os.path.join(exdir, sim.name)
     dst = os.path.join(ws, sim.name)
     sim.setup(src, dst)
@@ -114,5 +112,9 @@ def run_mf6(sim, ws):
     list(enumerate(get_mf6_models())),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    run_mf6(TestSimulation(name=name, exe_dict=targets), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+    )
+    run_mf6(test, function_tmpdir)

@@ -5,7 +5,6 @@ import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 include_NWT = False
 
@@ -223,7 +222,6 @@ uzf_spd = {
 
 
 def build_mf6_model(idx, ws):
-
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
@@ -343,7 +341,6 @@ def build_mf6_model(idx, ws):
 
 
 def build_mfnwt_model(idx, ws):
-
     name = ex[idx]
 
     # build MODFLOW-NWT files
@@ -435,25 +432,25 @@ def build_mfnwt_model(idx, ws):
     return mf
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     # Start by building the MF6 model
-    sim = build_mf6_model(idx, ws)
+    sim = build_mf6_model(idx, test.workspace)
 
     # Construct MF-NWT model for comparing water contents
     #   Commented out to avoid NWT dependency, but left behind for
     #   local testing if needed in the future.
     if include_NWT:
-        mc = build_mfnwt_model(idx, ws)
+        mc = build_mfnwt_model(idx, test.workspace)
     else:
         mc = None
     return sim, mc
 
 
-def eval_model(sim):
+def eval_model(test):
     print("evaluating model...")
 
-    name = sim.name
-    ws = sim.simpath
+    name = test.name
+    ws = test.workspace
 
     # Get the MF6 heads
     fpth = os.path.join(ws, "uzf_3lay_wc_chk.hds")
@@ -542,19 +539,15 @@ def eval_model(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=0,
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

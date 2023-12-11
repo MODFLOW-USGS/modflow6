@@ -1,13 +1,11 @@
 import flopy
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ts01"]
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 3, 3
     nper = 2
     perlen = [1.0, 14966]
@@ -29,7 +27,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -153,7 +151,10 @@ def build_model(idx, dir):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+    )
+    test.run()

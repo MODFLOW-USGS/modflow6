@@ -1,16 +1,18 @@
 import os
 from decimal import Decimal
+
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
-# This tests reuses the simulation data in test_gwf_newton_under_relaxation
-# and runs it in parallel on one and two cpus with
-#
-# so we can compare the parallel coupling of two models
-# with a serial model.
-#
-# This test also checks that Newton under_relaxation works in parallel.
+"""
+This tests reuses the simulation data in test_gwf_newton_under_relaxation
+and runs it in parallel on one and two cpus with
+
+so we can compare the parallel coupling of two models
+with a serial model.
+
+This test also checks that Newton under_relaxation works in parallel.
+"""
 
 ex = ["par_nr_ur01", "par_nr_ur02"]
 
@@ -29,18 +31,18 @@ def build_petsc_db(idx, exdir):
         petsc_file.write("-options_left no\n")
 
 
-def build_model(idx, exdir):
-    from test_gwf_newton_under_relaxation import build_model as build_model_ext
+def build_models(idx, test):
+    from test_gwf_newton_under_relaxation import build_models as build
 
-    build_petsc_db(idx, exdir)
-    sim, dummy = build_model_ext(idx, exdir)
+    build_petsc_db(idx, test.workspace)
+    sim, dummy = build(idx, test)
     return sim, dummy
 
 
-def eval_model(test_sim):
-    from test_gwf_newton_under_relaxation import eval_head as compare_to_ref
+def check_output(idx, test):
+    from test_gwf_newton_under_relaxation import check_output as check
 
-    compare_to_ref(test_sim)
+    check(idx, test)
 
 
 @pytest.mark.parallel
@@ -49,21 +51,15 @@ def eval_model(test_sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    if idx == 1:
-        ncpus = 2
-    else:
-        ncpus = 1
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-            make_comparison=False,
-            parallel=True,
-            ncpus=ncpus,
-        ),
-        str(function_tmpdir),
+    ncpus = 2 if idx == 1 else 1
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
+        parallel=True,
+        ncpus=ncpus,
     )
+    test.run()

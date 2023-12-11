@@ -5,7 +5,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["zbud6_zb01"]
 htol = [None for idx in range(len(ex))]
@@ -111,13 +110,13 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -217,21 +216,21 @@ def build_model(idx, dir, exe):
     return sim, None
 
 
-def eval_zb6(sim, exe):
+def check_output(test, zb6):
     print("evaluating zonebudget...")
-    simpath = Path(sim.simpath)
+    workspace = Path(test.workspace)
 
     # build zonebudget files
     zones = [-1000000, 1000000, 9999999]
     nzones = len(zones)
-    with open(simpath / "zonebudget.nam", "w") as f:
+    with open(workspace / "zonebudget.nam", "w") as f:
         f.write("BEGIN ZONEBUDGET\n")
-        f.write(f"  BUD {os.path.basename(sim.name)}.cbc\n")
-        f.write(f"  ZON {os.path.basename(sim.name)}.zon\n")
-        f.write(f"  GRB {os.path.basename(sim.name)}.dis.grb\n")
+        f.write(f"  BUD {os.path.basename(test.name)}.cbc\n")
+        f.write(f"  ZON {os.path.basename(test.name)}.zon\n")
+        f.write(f"  GRB {os.path.basename(test.name)}.dis.grb\n")
         f.write("END ZONEBUDGET\n")
 
-    with open(simpath / f"{os.path.basename(sim.name)}.zon", "w") as f:
+    with open(workspace / f"{os.path.basename(test.name)}.zon", "w") as f:
         f.write("BEGIN DIMENSIONS\n")
         f.write(f"  NCELLS {size3d}\n")
         f.write("END DIMENSIONS\n\n")
@@ -243,18 +242,20 @@ def eval_zb6(sim, exe):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        exe,
+        zb6,
         "zonebudget.nam",
-        model_ws=sim.simpath,
+        model_ws=test.workspace,
         silent=False,
         report=True,
     )
 
     assert success
-    sim.success = success
+    test.success = success
 
     # read data from csv file
-    zbd = np.genfromtxt(simpath / "zonebudget.csv", names=True, delimiter=",", deletechars="")
+    zbd = np.genfromtxt(
+        workspace / "zonebudget.csv", names=True, delimiter=",", deletechars=""
+    )
 
     # sum the data for all zones
     nentries = int(zbd.shape[0] / nzones)
@@ -276,7 +277,9 @@ def eval_zb6(sim, exe):
             ion = 0
 
     # get results from listing file
-    budl = flopy.utils.Mf6ListBudget(simpath / f"{os.path.basename(sim.name)}.lst")
+    budl = flopy.utils.Mf6ListBudget(
+        workspace / f"{os.path.basename(test.name)}.lst"
+    )
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
     dtype = d0.dtype
@@ -288,8 +291,8 @@ def eval_zb6(sim, exe):
     for key in bud_lst:
         d[key] = 0.0
     cobj = flopy.utils.CellBudgetFile(
-        simpath / f"{os.path.basename(sim.name)}.cbc",
-        precision="double")
+        workspace / f"{os.path.basename(test.name)}.cbc", precision="double"
+    )
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
     for idx, (k, t) in enumerate(zip(kk, times)):
@@ -325,7 +328,9 @@ def eval_zb6(sim, exe):
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    with open(simpath / f"{os.path.basename(sim.name)}.bud.cmp.out", "w") as f:
+    with open(
+        workspace / f"{os.path.basename(test.name)}.bud.cmp.out", "w"
+    ) as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
@@ -351,7 +356,9 @@ def eval_zb6(sim, exe):
     )
 
     # write summary
-    with open(simpath / f"{os.path.basename(sim.name)}.zbud.cmp.out", "w") as f:
+    with open(
+        workspace / f"{os.path.basename(test.name)}.zbud.cmp.out", "w"
+    ) as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
@@ -368,11 +375,11 @@ def eval_zb6(sim, exe):
             f.write(line + "\n")
 
     if diffmax > budtol or diffzbmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"\n...exceeds {budtol}"
         assert diffmax < budtol and diffzbmax < budtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
@@ -381,18 +388,12 @@ def eval_zb6(sim, exe):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets.mf6
-    zb6 = targets.zbud6
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=lambda s: eval_zb6(s, zb6),
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(t, targets.zbud6),
+        htol=htol[idx],
     )
+    test.run()

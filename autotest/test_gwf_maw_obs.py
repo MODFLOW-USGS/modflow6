@@ -1,9 +1,10 @@
-# Test for checking maw observation input.  The following observation types:
-# 'maw' and 'conductance,' require that ID2 be provided when
-# ID is an integer corresponding to a well number and not BOUNDNAME.
-# See table in MAW Package section of mf6io.pdf for an explanation of ID,
-# ID2, and Observation Type.
-
+"""
+Test for checking maw observation input.  The following observation types:
+'maw' and 'conductance,' require that ID2 be provided when
+ID is an integer corresponding to a well number and not BOUNDNAME.
+See table in MAW Package section of mf6io.pdf for an explanation of ID,
+ID2, and Observation Type.
+"""
 
 import os
 
@@ -209,5 +210,4 @@ def test_mf6model(function_tmpdir, targets):
 
     # rerun the model, should be no errors
     success, buff = sim.run_simulation()
-
-    assert success, "model rerun failed"
+    assert success, buff

@@ -1,15 +1,15 @@
-# Test maw package ability to equalize and the flow correction.
-# maw_06a - well start at .25, aquifer starts at 2
-# maw_06b - well starts at 2, aquifer starts at .25
+"""
+Test maw package ability to equalize the flow correction.
+maw_06a - well start at .25, aquifer starts at 2
+maw_06b - well starts at 2, aquifer starts at .25
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["maw_06a", "maw_06b"]
 
@@ -48,7 +48,7 @@ mawradius = np.sqrt(mawarea / np.pi)  # .65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nper = 1
     perlen = [10.0]
     nstp = [100]
@@ -64,7 +64,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -198,27 +198,27 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * mawarea
-    v0gwf = (gwfstrt[sim.idxsim] - bot) * sy * gwfarea
+    v0maw = mawstrt[idx] * mawarea
+    v0gwf = (gwfstrt[idx] - bot) * sy * gwfarea
     v0 = v0maw + v0gwf
 
     print(
@@ -258,13 +258,13 @@ def eval_results(sim):
 
     # compare the maw-gwf flows with the gwf-maw flows
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -285,12 +285,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare="mf6_regression",
     )
+    test.run()

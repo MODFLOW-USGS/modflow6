@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "drn"
 budtol = 1e-2
@@ -46,10 +45,10 @@ def initial_conditions():
     return np.sqrt(h0**2 + x * (h1**2 - h0**2) / (xlen - delr))
 
 
-def get_model(idxsim, ws, name):
+def get_model(idx, ws, name):
     strt = initial_conditions()
     hdsfile = f"{name}.hds"
-    if newton[idxsim]:
+    if newton[idx]:
         newtonoptions = "NEWTON"
     else:
         newtonoptions = None
@@ -111,28 +110,28 @@ def get_model(idxsim, ws, name):
     return sim
 
 
-def build_model(idx, dir):
+def build_model(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(idx, ws, name)
 
     return sim, None
 
 
-def eval_disch(sim):
+def eval_disch(idx, test):
     print("evaluating drain discharge...")
 
     # MODFLOW 6 drain discharge results
-    fpth = os.path.join(sim.simpath, "drn_obs.csv")
+    fpth = os.path.join(test.workspace, "drn_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 head results
-    fpth = os.path.join(sim.simpath, "head_obs.csv")
+    fpth = os.path.join(test.workspace, "head_obs.csv")
     try:
         th0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -140,7 +139,7 @@ def eval_disch(sim):
 
     # calculate the drain flux analytically
     xdiff = th0["H1_1_100"] - delev
-    f = drain_smoothing(xdiff, ddrn, newton=newton[sim.idxsim])
+    f = drain_smoothing(xdiff, ddrn, newton=newton[idx])
     tc0 = f * dcond * (delev - th0["H1_1_100"])
 
     # calculate maximum absolute error
@@ -151,7 +150,7 @@ def eval_disch(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.disc.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -168,14 +167,12 @@ def eval_disch(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
-
-    return
 
 
 def drain_smoothing(xdiff, xrange, newton=False):
@@ -196,11 +193,11 @@ def drain_smoothing(xdiff, xrange, newton=False):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_disch, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_model(idx, t),
+        check=lambda t: eval_disch(idx, t),
     )
+    test.run()

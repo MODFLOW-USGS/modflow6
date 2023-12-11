@@ -1,16 +1,17 @@
-# This is the Henry, Newton-Raphson problem described by Langevin et al (2020)
-# with a 20 by 40 grid instead of the 40 by 80 grid described in the paper.
-# There is freshwater inflow on the left and a sloping sea boundary on the
-# right with moves up and down according to a simple sine function.  GHBs
-# and DRNs alternate and move up and down along the boundary to represent
-# the effects of tides on the aquifer.
+"""
+The Henry, Newton-Raphson problem described by Langevin et al (2020)
+with a 20x40 grid instead of the 40x80 grid described in the paper.
+There is freshwater inflow on the left. A sloping sea boundary on the
+right moves up and down according to a simple sine function. GHBs and
+DRNs alternate and move up and down along the boundary to represent
+the effects of tides on the aquifer.
+"""
 
 import flopy
 import numpy as np
 import pytest
 from conftest import should_compare
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_henrynr01"]
 
@@ -65,8 +66,8 @@ def sinfunc(a, b, c, d, x):
     return a * np.sin(b * (x - c)) + d
 
 
-def build_model(idx, dir, exe):
-    ws = dir
+def build_models(idx, test):
+    ws = test.workspace
     name = ex[idx]
 
     nrow = 1
@@ -89,7 +90,7 @@ def build_model(idx, dir, exe):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     sim.name_file.continue_ = False
 
@@ -231,7 +232,6 @@ def build_model(idx, dir, exe):
     return sim, None
 
 
-# - No need to change any code below
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
@@ -240,17 +240,12 @@ def build_model(idx, dir, exe):
 def test_mf6model(idx, name, function_tmpdir, targets):
     name = "gwf-henry-nr"
     comparisons = {name: ("6.2.1",)}
-    mf6 = targets["mf6"]
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            idxsim=idx,
-            mf6_regression=True,
-            cmp_verbose=False,
-            make_comparison=should_compare(name, comparisons, targets),
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        compare="mf6_regression" if should_compare(name, comparisons, targets) else "auto",
+        verbose=False,
     )
+    test.run()

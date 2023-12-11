@@ -1,5 +1,4 @@
-# This is the reinjection problem described in the MT3D supplementary
-# information.
+"""This is the reinjection problem described in the MT3D supplementary information."""
 
 import os
 
@@ -7,12 +6,11 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["mwt_02"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay = 1
     nrow = 31
     ncol = 46
@@ -41,7 +39,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -395,7 +393,7 @@ def build_model(idx, dir):
 def make_plot(sim):
     print("making plots...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -428,18 +426,18 @@ def make_plot(sim):
     return
 
 
-def eval_results(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
     makeplot = False
     if makeplot:
-        make_plot(sim)
+        make_plot(test)
 
     # ensure concentrations were saved
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwtname = "gwt_" + name
     fname = gwtname + ".mwt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     # load and check the well concentrations
@@ -450,12 +448,12 @@ def eval_results(sim):
 
     # make sure concentrations can be loaded
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
 
     # make sure observations can be loaded
-    fpth = os.path.join(sim.simpath, gwtname + ".mwt.obs.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".mwt.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -479,12 +477,13 @@ def eval_results(sim):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(name, exe_dict=targets, exfunc=eval_results, idxsim=0),
-        ws,
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

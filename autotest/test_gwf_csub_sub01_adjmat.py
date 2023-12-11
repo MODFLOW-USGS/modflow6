@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
@@ -85,11 +84,11 @@ sub6 = [
 ]
 
 
-def build_model(idx, dir):
-    sim = get_model(idx, dir, adjustmat=True)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace, adjustmat=True)
 
     # build MODFLOW-6 with constant material properties
-    pth = os.path.join(dir, compdir)
+    pth = os.path.join(test.workspace, compdir)
     mc = get_model(idx, pth, None)
 
     return sim, mc
@@ -221,18 +220,18 @@ def calc_theta_thick(comp, thickini=1.0):
     return poro, b
 
 
-def eval_sub(sim):
+def check_output(test):
     print("evaluating subsidence...")
 
     # MODFLOW 6 compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 base compaction results
-    fpth = os.path.join(sim.simpath, compdir, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, compdir, "csub_obs.csv")
     try:
         tcb = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -246,7 +245,7 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -263,11 +262,11 @@ def eval_sub(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol:15.7g}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # calculate theta and porosity from total interbed compaction
@@ -287,11 +286,11 @@ def eval_sub(sim):
             + f"difference ({diffmax:15.7g}) "
         )
         if diffmax > dtol:
-            sim.success = False
+            test.success = False
             msg += f"exceeds {dtol:15.7g}"
             assert diffmax < dtol, msg
         else:
-            sim.success = True
+            test.success = True
             print("    " + msg)
 
     # calculate theta and porosity from interbed cell compaction
@@ -317,11 +316,11 @@ def eval_sub(sim):
                 + f"({diffmax:15.7g}) "
             )
             if diffmax > dtol:
-                sim.success = False
+                test.success = False
                 msg += f"exceeds {dtol:15.7g}"
                 assert diffmax < dtol, msg
             else:
-                sim.success = True
+                test.success = True
                 print("    " + msg)
         calci["THICK"] += calc["THICK"]
         calci["THETA"] += calc["THICK"] * calc["THETA"]
@@ -337,21 +336,21 @@ def eval_sub(sim):
         )
         msg += "calculated from individual interbed cell values "
         if diffmax > dtol:
-            sim.success = False
+            test.success = False
             msg += f"exceeds {dtol:15.7g}"
             assert diffmax < dtol, msg
         else:
-            sim.success = True
+            test.success = True
             print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
 
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -368,7 +367,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -415,7 +414,7 @@ def cbc_compare(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
@@ -445,11 +444,13 @@ def cbc_compare(sim):
         print("    " + msg)
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_sub, idxsim=0),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

@@ -5,9 +5,6 @@ import flopy
 import numpy as np
 import pytest
 
-from framework import TestFramework
-from simulation import TestSimulation
-
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
@@ -169,11 +166,11 @@ def build_model(idx, ws, mf6):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(workspace):
     print("evaluating MAW heads...")
 
     # MODFLOW 6 maw results
-    fpth = os.path.join(sim.simpath, "maw_obs.csv")
+    fpth = os.path.join(workspace, "maw_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     # create known results array
@@ -183,15 +180,9 @@ def eval_results(sim):
     diff = tc["MH1"] - tc0
     diffmax = np.abs(diff).max()
     dtol = 1e-9
-    msg = f"maximum absolute maw head difference ({diffmax}) "
-
-    if diffmax > dtol:
-        sim.success = False
-        msg += f"exceeds {dtol}"
-        assert diffmax < dtol, msg
-    else:
-        sim.success = True
-        print("    " + msg)
+    msg = f"maximum absolute maw head difference {diffmax}"
+    assert diffmax < dtol, msg + f" exceeds tolerance {dtol}"
+    print(msg)
 
 
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
@@ -200,14 +191,4 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     sim, _ = build_model(idx, ws, targets.mf6)
     sim.write_simulation()
     sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
-    )
+    eval_results(ws)

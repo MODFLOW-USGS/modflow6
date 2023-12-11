@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "csub_wtgeoa",
@@ -15,19 +14,19 @@ ex = [
     "csub_wtgeof",
     "csub_wtgeog",
 ]
-constantcv = [True for idx in range(len(ex))]
+constantcv = [True for _ in range(len(ex))]
 cmppth = "mf6_regression"
-compare = [True for idx in range(len(ex))]
+compare = [True for _ in range(len(ex))]
 tops = [0.0, 0.0, 150.0, 0.0, 0.0, 150.0, 150.0]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
-eslag = [True for idx in range(len(ex) - 2)] + 2 * [False]
+eslag = [True for _ in range(len(ex) - 2)] + 2 * [False]
 # eslag = [True, True, True, False, True, False, False]
 headformulation = [True, False, False, True, True, False, False]
 ndc = [None, None, None, 19, 19, 19, 19]
 delay = [False, False, False, True, True, True, True]
 # newton = ["", "", "", "", "", None, ""]
-newton = ["NEWTON" for idx in range(len(ex))]
+newton = ["NEWTON" for _ in range(len(ex))]
 
 htol = [None, None, None, 0.2, None, None, None]
 dtol = 1e-3
@@ -38,9 +37,9 @@ paktest = "csub"
 # temporal discretization
 nper = 31
 perlen = [1.0] + [365.2500000 for i in range(nper - 1)]
-nstp = [1] + [6 for i in range(nper - 1)]
-tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-steady = [True] + [False for i in range(nper - 1)]
+nstp = [1] + [6 for _ in range(nper - 1)]
+tsmult = [1.0] + [1.3 for _ in range(nper - 1)]
+steady = [True] + [False for _ in range(nper - 1)]
 tdis_rc = []
 for idx in range(nper):
     tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
@@ -472,25 +471,26 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-    sim = get_model(idx, dir)  # modflow6 files
-    mc = get_model(idx, os.path.join(dir, cmppth))  # build comparison files
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)  # modflow6 files
+    mc = get_model(
+        idx, os.path.join(test.workspace, cmppth)
+    )  # build comparison files
     return sim, mc
 
 
-def eval_comp(sim):
-
-    if compare[sim.idxsim]:
+def check_output(idx, test):
+    if compare[idx]:
         print("evaluating compaction...")
         # MODFLOW 6 total compaction results
-        fpth = os.path.join(sim.simpath, "csub_obs.csv")
+        fpth = os.path.join(test.workspace, "csub_obs.csv")
         try:
             tc = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
             assert False, f'could not load data from "{fpth}"'
 
         # comparision total compaction results
-        fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
+        fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
         try:
             tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
@@ -503,7 +503,7 @@ def eval_comp(sim):
 
         # write summary
         fpth = os.path.join(
-            sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+            test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
         )
         f = open(fpth, "w")
         line = f"{'TOTIM':>15s}"
@@ -520,23 +520,21 @@ def eval_comp(sim):
         f.close()
 
         if diffmax > dtol:
-            sim.success = False
+            test.success = False
             msg += f"exceeds {dtol}"
             assert diffmax < dtol, msg
         else:
-            sim.success = True
+            test.success = True
             print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
-
-    return
+    cbc_compare(test)
 
 
-def cbc_compare(sim):
+def cbc_compare(test):
     print("evaluating cbc and budget...")
     # open cbc file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -553,7 +551,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -600,7 +598,7 @@ def cbc_compare(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
@@ -620,28 +618,25 @@ def cbc_compare(sim):
     f.close()
 
     if diffmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_comp,
-            htol=htol[idx],
-            idxsim=idx,
-            mf6_regression=True,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        htol=htol[idx],
+        compare="mf6_regression",
+        verbose=False,
     )
+    test.run()

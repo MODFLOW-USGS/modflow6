@@ -1,8 +1,10 @@
-# Second problem described by Prudic et al (2004)
-# This problem involves transport through an aquifers, lakes and streams.
-# It requires the use of the Water Mover Package to send water from a stream,
-# into a lake, and then back into another stream. Solute is also transport
-# through the system.
+"""
+Second problem described by Prudic et al (2004)
+This problem involves transport through an aquifers, lakes and streams.
+It requires the use of the Water Mover Package to send water from a stream,
+into a lake, and then back into another stream. Solute is also transport
+through the system.
+"""
 
 import os
 import sys
@@ -12,7 +14,6 @@ import numpy as np
 import pytest
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["prudic2004t2"]
 data_path = project_root_path / "autotest" / "data"
@@ -21,9 +22,8 @@ fname = str(model_path / "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
-def build_model(idx, dir):
-
-    ws = dir
+def build_models(idx, test):
+    ws = test.workspace
     name = ex[idx]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -357,7 +357,6 @@ def build_model(idx, dir):
 
     transport = True
     if transport:
-
         gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
         # ims
@@ -587,7 +586,7 @@ def build_model(idx, dir):
 def make_concentration_vs_time(sim):
     print("making plot of concentration versus time...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -646,7 +645,7 @@ def make_concentration_map(sim):
     ]
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -685,7 +684,7 @@ def make_concentration_map(sim):
 def check_obs(sim):
     print("checking obs...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -814,10 +813,8 @@ def check_obs(sim):
 
     assert success, "One or more SFT-LKT obs checks did not pass"
 
-    return
 
-
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     makeplot = False
@@ -826,15 +823,15 @@ def eval_results(sim):
             makeplot = True
 
     if makeplot:
-        make_concentration_vs_time(sim)
-        make_concentration_map(sim)
+        make_concentration_vs_time(test)
+        make_concentration_map(test)
 
     # ensure concentrations were saved
-    ws = sim.simpath
-    name = sim.name
+    ws = test.workspace
+    name = test.name
     gwtname = "gwt_" + name
 
-    check_obs(sim)
+    check_obs(test)
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(ws, fname)
@@ -978,12 +975,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

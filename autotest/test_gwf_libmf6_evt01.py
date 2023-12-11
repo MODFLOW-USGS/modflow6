@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
-Test the bmi which is used update the calculate a head-based pumping rate that
-is equivalent to use of the evapotranspiration package in the
-non-bmi simulation.
+Test bmi with a head-based pumping rate equivalent to
+the evapotranspiration package in a non-bmi simulation.
 """
 
 import os
@@ -12,7 +10,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_evt01"]
 
@@ -128,14 +125,14 @@ def get_model(ws, name, bmi=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, bmi=True)
 
     return sim, mc
@@ -202,7 +199,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt and prepare for non-linear iterations
         dt = mf6.get_time_step()
         mf6.prepare_time_step(dt)
@@ -212,7 +208,6 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_solve()
 
         while kiter < max_iter:
-
             # update well rate
             twell[:] = head2et_wellrate(head[0])
             well[:] = twell[:]
@@ -259,11 +254,11 @@ def api_func(exe, idx, model_ws=None):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

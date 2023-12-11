@@ -5,7 +5,6 @@ Use a large offset for x and y vertices to ensure that the area
 calculation in MODFLOW 6 is correct.  For the second case, set
 one of the cells inactive and test to make sure connectivity
 in binary grid file is correct.
-
 """
 
 import os
@@ -14,16 +13,14 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["disv01a", "disv01b"]
 
 
-def build_model(idx, dir, mf6):
+def build_models(idx, test):
     name = ex[idx]
-    ws = dir
+    ws = test.workspace
     nlay = 3
     nrow = 3
     ncol = 3
@@ -53,7 +50,7 @@ def build_model(idx, dir, mf6):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=mf6,
+        exe_name="mf6",
         sim_ws=ws,
     )
     tdis = flopy.mf6.ModflowTdis(sim)
@@ -67,18 +64,18 @@ def build_model(idx, dir, mf6):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
-    name = sim.name
+    name = test.name
 
-    fname = os.path.join(sim.simpath, name + ".disv.grb")
+    fname = os.path.join(test.workspace, name + ".disv.grb")
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
     ncpl = grbobj._datadict["NCPL"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]
 
-    if sim.idxsim == 1:
+    if idx == 1:
         # assert ncpl == disvkwargs["ncpl"]
         assert np.array_equal(ia[0:4], np.array([1, 4, 4, 7]))
         assert np.array_equal(ja[:6], np.array([1, 4, 10, 3, 6, 12]))
@@ -89,18 +86,12 @@ def eval_results(sim):
 
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
-    sim.write_simulation()
-    sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
     )
+    test.run()

@@ -5,17 +5,16 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "chd02",
 ]
 
 
-def build_model(idx, workspace):
+def build_models(idx, test):
     name = ex[idx]
     nlay, nrow, ncol = 1, 1, 10
-    sim = flopy.mf6.MFSimulation(sim_ws=workspace, sim_name=name)
+    sim = flopy.mf6.MFSimulation(sim_ws=test.workspace, sim_name=name)
     flopy.mf6.ModflowTdis(sim)
     flopy.mf6.ModflowIms(sim, complexity="simple")
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, print_input=True)
@@ -38,8 +37,8 @@ def build_model(idx, workspace):
         strt=10.0,
     )
     chd_data = [
-        (0, 0, 0, 10.0, 1.0, 100.),
-        (0, 0, ncol - 1, 5.0, 0.0, 100.),
+        (0, 0, 0, 10.0, 1.0, 100.0),
+        (0, 0, ncol - 1, 5.0, 0.0, 100.0),
     ]
     chd_data = {
         0: {
@@ -63,12 +62,12 @@ def build_model(idx, workspace):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model...")
 
-    name = sim.name
+    name = test.name
 
-    fpth = os.path.join(sim.simpath, f"{name}.hds")
+    fpth = os.path.join(test.workspace, f"{name}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_data().flatten()
 
@@ -92,13 +91,13 @@ def eval_model(sim):
     ), "simulated head does not match with known solution."
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

@@ -4,9 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
-
 from framework import TestFramework
-from simulation import TestSimulation
 
 dis_types = (
     "disv",
@@ -253,8 +251,10 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), build_mf6(idx, ws / "mf6", gridgen)
+def build_model(idx, test, gridgen):
+    return build_mf6(idx, test.workspace, gridgen), build_mf6(
+        idx, test.workspace / "mf6", gridgen
+    )
 
 
 # build MODFLOW 6 files
@@ -447,10 +447,10 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_head(sim):
-    name = ex[sim.idxsim]
+def eval_head(idx, test):
+    name = ex[idx]
     sim_name = name[0:3]
-    ws = pl.Path(sim.simpath)
+    ws = pl.Path(test.workspace)
 
     print(f"evaluating {name} heads...")
 
@@ -552,9 +552,7 @@ def eval_head(sim):
     fpth0 = ws / f"{sim_name}.{extension}"
     # fpth1 = ws / f"mf6/{get_dis_name(name)}.{extension}"
     fpth1 = ws / f"mf6/{sim_name}.{extension}"
-    sim.compare_budget_files(0, extension, fpth0, fpth1)
-
-    return
+    test._compare_budget_files(0, extension, fpth0, fpth1)
 
 
 @pytest.mark.parametrize(
@@ -562,17 +560,12 @@ def eval_head(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, targets.gridgen), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_head,
-            cmp_verbose=False,
-            idxsim=idx,
-            make_comparison=True,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_model(idx, t, targets.gridgen),
+        check=lambda t: eval_head(idx, t),
+        verbose=False,
     )
+    test.run()

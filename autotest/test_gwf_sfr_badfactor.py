@@ -1,11 +1,12 @@
 import flopy
 import numpy as np
+from framework import TestFramework
 
 paktest = "sfr"
 testname = "ts_sfr01"
 
 
-def build_model(ws, exe, timeseries=False):
+def build_models(test, timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
@@ -36,7 +37,7 @@ def build_model(ws, exe, timeseries=False):
     # build MODFLOW 6 files
     name = testname
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -506,26 +507,28 @@ def build_model(ws, exe, timeseries=False):
     return sim
 
 
+def check_output(test):
+    print("Running surfdep check")
+    with open(test.workspace / "mfsim.lst", "r") as f:
+        lines = f.readlines()
+        error_count = 0
+        for line in lines:
+            if "cprior" and "divflow not within" in line:
+                error_count += 1
+
+        # ensure that error msg is in mfsim.lst file
+        assert error_count == 1, (
+            "error count = " + str(error_count) + "but should equal 1"
+        )
+
+
 def test_mf6model(function_tmpdir, targets):
-    mf6 = targets.mf6
-
-    # build and run the test model
-    sim = build_model(str(function_tmpdir), mf6)
-    sim.write_simulation()
-    sim.run_simulation()
-
-    # ensure that the error msg is contained in the mfsim.lst file
-    f = open(str(function_tmpdir / "mfsim.lst"), "r")
-    lines = f.readlines()
-    error_count = 0
-    expected_msg = False
-    for line in lines:
-        if "cprior" and "divflow not within" in line:
-            expected_msg = True
-            error_count += 1
-
-    assert error_count == 1, (
-        "error count = " + str(error_count) + "but should equal 1"
+    test = TestFramework(
+        name=testname,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=build_models,
+        check=check_output,
+        xfail=True,
     )
-
-    print("Finished running surfdep check")
+    test.run()

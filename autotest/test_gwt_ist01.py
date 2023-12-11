@@ -1,7 +1,6 @@
 """
 Test the IST Package with a one cell model with water added and then
 removed.
-
 """
 
 import os
@@ -10,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ist01"]
 laytyp = [1]
@@ -22,8 +20,7 @@ zetaim = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     perlen = [
         2.0,
     ]
@@ -47,7 +44,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -222,25 +219,25 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
     # head
-    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_alldata().flatten()
 
     # mobile concentration
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata().flatten()
 
     # immobile concentration
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ist.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ist.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CIM")
         cim = cobj.get_alldata().flatten()
@@ -248,7 +245,7 @@ def eval_transport(sim):
         assert False, f'could not load data from "{fpth}"'
 
     # budget
-    fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
         print(bobj.get_unique_record_names())
@@ -268,16 +265,15 @@ def eval_transport(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

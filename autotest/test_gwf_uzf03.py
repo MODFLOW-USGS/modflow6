@@ -10,13 +10,12 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_uzf03a"]
 nlay, nrow, ncol = 15, 1, 1
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [17.7]
     nper = len(perlen)
     nstp = [177]
@@ -49,7 +48,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -253,15 +252,15 @@ def make_plot(sim, obsvals):
     plt.legend()
 
     fname = "fig-xsect.pdf"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     plt.savefig(fname, bbox_inches="tight")
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
-    ws = sim.simpath
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -298,26 +297,24 @@ def eval_flow(sim):
         assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
 
     # Make plot of obs
-    fpth = os.path.join(sim.simpath, name + ".uzf.obs.csv")
+    fpth = os.path.join(test.workspace, name + ".uzf.obs.csv")
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
-    if False:
-        make_plot(sim, obsvals)
+    # make_plot(test, obsvals)
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

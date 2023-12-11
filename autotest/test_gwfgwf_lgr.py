@@ -28,8 +28,8 @@ There is no xt3d here or anything fancy. We just want to
 ensure that vertical flows and horizontal flows are added
 correctly to each model flowja diagonal terms.  This diagonal
 term contains the flow residual for the cell.
-
 """
+
 import os
 
 import flopy
@@ -37,7 +37,6 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
 ifmod = [False, True]
@@ -52,7 +51,7 @@ k11 = 1.0
 k33 = 1.0
 
 
-def get_model(idx, dir):
+def get_model(idx, test):
     global child_domain
     global hclose
 
@@ -109,7 +108,7 @@ def get_model(idx, dir):
     chd_spd = {0: chd_data}
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -238,30 +237,30 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
+def build_models(idx, exdir):
     sim = get_model(idx, exdir)
     return sim, None
 
 
-def eval_heads(sim):
+def check_output(sim):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
+    fpth = os.path.join(sim.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
+    fpth = os.path.join(sim.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # check flowja residual
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(sim.simpath, f"{mname}.dis.grb")
+        fpth = os.path.join(sim.workspace, f"{mname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
+        fpth = os.path.join(sim.workspace, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -282,12 +281,11 @@ def eval_heads(sim):
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

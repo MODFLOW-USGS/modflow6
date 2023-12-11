@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the interface model approach for an inhomogeneous coupling 
 of three gwf models using the API. One exchange will have XT3D
 enabled (Exg1) and the other one (Exg2) doesn't. And the top-left
@@ -43,7 +42,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_ifmod02"]
 
@@ -54,7 +52,6 @@ name_bl = "bottomleft"
 
 
 def get_model(dir, name):
-
     # parameters and spd
     # tdis
     nper = 1
@@ -291,14 +288,14 @@ def get_model(dir, name):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     sim_compare = get_model(ws, name)
 
     return sim, sim_compare
@@ -409,11 +406,11 @@ def check_interface_models(mf6):
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

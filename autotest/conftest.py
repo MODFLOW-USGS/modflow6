@@ -1,4 +1,3 @@
-import platform
 import sys
 from os import PathLike
 from pathlib import Path
@@ -6,8 +5,9 @@ from typing import Optional
 from warnings import warn
 
 import pytest
-from modflow_devtools.executables import Executables, get_suffixes
+from modflow_devtools.executables import Executables
 from modflow_devtools.misc import run_cmd
+from modflow_devtools.ostags import get_binary_suffixes
 
 pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).resolve().parent.parent
@@ -44,7 +44,7 @@ _lib_exts = {
     "Linux": ".so",
     "Windows": ".dll",
 }
-_exe_ext, _lib_ext = get_suffixes(sys.platform)
+_exe_ext, _lib_ext = get_binary_suffixes(sys.platform)
 _binaries_path = project_root_path / "bin"
 _dl_bin_path = _binaries_path / "downloaded"
 _rb_bin_path = _binaries_path / "rebuilt"
@@ -88,11 +88,6 @@ def bin_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def libmf6_path() -> Path:
-    return _binaries_path / f"libmf6{_lib_exts[platform.system()]}"
-
-
-@pytest.fixture(scope="session")
 def targets() -> Executables:
     d = dict()
 
@@ -117,24 +112,13 @@ def try_get_target(targets: Executables, name: str) -> Path:
     is downloaded or rebuilt) the test is skipped. This is to allow testing
     without downloaded or rebuilt binaries, e.g. if the network is down."""
 
-    try:
-        # modflow-devtools >= 1.3
-        exe = targets.get(name)
-        if exe:
-            return exe
-        elif name in _binaries["development"]:
-            raise ValueError(f"Couldn't find binary '{name}'")
-        else:
-            pytest.skip(f"Couldn't find binary '{name}'")
-    except AttributeError:
-        # modflow-devtools < 1.3
-        try:
-            return targets[name]
-        except:
-            if name in _binaries["development"]:
-                raise ValueError(f"Couldn't find binary '{name}'")
-            else:
-                pytest.skip(f"Couldn't find binary 'gridgen'")
+    exe = targets.as_dict().get(name)
+    if exe:
+        return exe
+    elif name in _binaries["development"]:
+        raise ValueError(f"Couldn't find binary '{name}'")
+    else:
+        pytest.skip(f"Couldn't find binary '{name}'")
 
 
 @pytest.fixture

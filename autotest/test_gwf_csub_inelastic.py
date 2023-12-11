@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
@@ -185,16 +184,10 @@ def build_mf6(idx, ws, update=None):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
-    ws = dir
-
-    # build MODFLOW 6 files
-    sim = build_mf6(idx, ws)
-
-    ws = os.path.join(dir, "mf6")
-    mc = build_mf6(idx, ws, update=True)
-
+    sim = build_mf6(idx, test.workspace)
+    mc = build_mf6(idx, os.path.join(test.workspace, "mf6"), update=True)
     return sim, mc
 
 
@@ -208,13 +201,13 @@ def calc_void(theta):
     return theta / (1.0 - theta)
 
 
-def eval_void(sim):
+def check_output(test):
     print("evaluating void ratio...")
 
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     cd = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    fpth = os.path.join(sim.simpath, "mf6", "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "mf6", "csub_obs.csv")
     cd2 = np.genfromtxt(fpth, delimiter=",", names=True)
 
     v = calc_comp2void(cd["COMP"])
@@ -228,7 +221,7 @@ def eval_void(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -245,11 +238,11 @@ def eval_void(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
@@ -259,11 +252,11 @@ def eval_void(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_void, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

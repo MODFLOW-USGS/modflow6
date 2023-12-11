@@ -1,7 +1,6 @@
 """
 Test adaptive time step module with a one-d vertical column in which cells
 dry and then rewet based on a ghb in the bottom cell.
-
 """
 
 import os
@@ -10,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_ats02a"]
 nlay, nrow, ncol = 5, 1, 1
@@ -24,7 +22,7 @@ dtadj = 2.0
 dtfailadj = 5.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [10, 10]
     nper = len(perlen)
     nstp = [5, 5]
@@ -45,7 +43,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -172,11 +170,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def make_plot(sim):
+def make_plot(test):
     print("making plots...")
-    ws = sim.simpath
+    ws = test.workspace
 
-    fname = sim.name + ".hds"
+    fname = test.name + ".hds"
     fname = os.path.join(ws, fname)
     hobj = flopy.utils.HeadFile(fname, precision="double")
     head = hobj.get_alldata()[:, :, 0, 0]
@@ -206,11 +204,11 @@ def make_plot(sim):
     plt.show()
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{sim.name}.lst")
+    fpth = os.path.join(test.workspace, f"{test.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
@@ -220,7 +218,7 @@ def eval_flow(sim):
     assert v == 20.0, f"Last time should be 20.  Found {v}"
 
     # ensure obs results changing monotonically
-    fpth = os.path.join(sim.simpath, sim.name + ".obs.csv")
+    fpth = os.path.join(test.workspace, test.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -236,11 +234,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

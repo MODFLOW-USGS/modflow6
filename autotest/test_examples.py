@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import should_compare
-from simulation import TestSimulation
+from framework import TestFramework
 
 # skip nested models
 # ex-gwf-csub-p02c has subdirs like 'es-001', 'hb-100'
@@ -53,30 +53,26 @@ excluded_comparisons = {
 @pytest.mark.slow
 def test_scenario(function_tmpdir, example_scenario, targets):
     name, namefiles = example_scenario
-    exdirs = [nf.parent for nf in namefiles]
-
     if name in excluded_models:
         pytest.skip(f"Excluding mf6 model: {name}")
 
-    for exdir in exdirs:
-        model_name = f"{name}_{exdir.name}"
+    model_paths = [nf.parent for nf in namefiles]
+    for model_path in model_paths:
+        model_name = f"{name}_{model_path.name}"
         workspace = function_tmpdir / model_name
-        sim = TestSimulation(
+        test = TestFramework(
             name=model_name,
-            exe_dict=targets,
-            mf6_regression=True,
-            cmp_verbose=False,
-            make_comparison=should_compare(
-                name, excluded_comparisons, targets
-            ),
-            simpath=str(exdir),
+            workspace=model_path,
+            targets=targets,
+            compare="mf6_regression"
+            if should_compare(name, excluded_comparisons, targets)
+            else None,
+            verbose=False,
         )
 
-        src = sim.simpath
-        dst = str(workspace)
+        # setup temp dir as test workspace
+        test.setup(model_path, workspace)
 
         # Run the MODFLOW 6 simulation and compare to existing head file or
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-        sim.setup(src, dst)
-        sim.run()
-        sim.compare()
+        test.run()

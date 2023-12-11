@@ -1,3 +1,29 @@
+"""
+Test the interface model approach, when running
+with a GWF-GWF exchange and XT3D applied on it.
+It compares the result for a simple LGR configuration
+to the analytical values:
+
+        1 1 1 1 1 1 1
+        1 1 1 1 1 1 1
+        1 1 0 0 0 1 1
+(H=1.0) 1 1 0 0 0 1 1 (H=0.0)
+        1 1 0 0 0 1 1
+        1 1 1 1 1 1 1
+        1 1 1 1 1 1 1
+
+with the region with ibound == 0 being simulated on the
+a refined, 9x9 grid.
+
+This is also the first test problem presented in
+the MODFLOW-USG manual: 'test006_2models'
+
+When running without XT3D, the results will disagree
+with theory because the CVFD requirements are violated at the
+at the LGR interface. We compare heads, specific discharge, and
+confirm that there is no budget error.
+"""
+
 import os
 
 import flopy
@@ -5,31 +31,6 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
-
-# Test for the interface model approach, when running
-# with a GWF-GWF exchange and XT3D applied on it.
-# It compares the result for a simple LGR configuration
-# to the analytical values:
-#
-#         1 1 1 1 1 1 1
-#         1 1 1 1 1 1 1
-#         1 1 0 0 0 1 1
-# (H=1.0) 1 1 0 0 0 1 1 (H=0.0)
-#         1 1 0 0 0 1 1
-#         1 1 1 1 1 1 1
-#         1 1 1 1 1 1 1
-#
-# with the region with ibound == 0 being simulated on the
-# a refined, 9x9 grid.
-#
-# This is also the first test problem presented in
-# the MODFLOW-USG manual: 'test006_2models'
-#
-# When running without XT3D, the results will disagree
-# with theory because the CVFD requirements are violated at the
-# at the LGR interface. We compare heads, specific discharge, and
-# confirm that there is no budget error.
 
 ex = ["ifmod_xt3d01"]
 
@@ -274,8 +275,8 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
@@ -299,30 +300,30 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def eval_heads(sim):
+def check_output(test):
     print("comparing heads and spec. discharges to analytical result...")
 
-    fpth = os.path.join(sim.simpath, f"{parent_name}.hds")
+    fpth = os.path.join(test.workspace, f"{parent_name}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
+    fpth = os.path.join(test.workspace, f"{parent_name}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
+    fpth = os.path.join(test.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.cbc")
+    fpth = os.path.join(test.workspace, f"{child_name}.cbc")
     nlay, nrow, ncol = heads_c.shape
     qxb_c, qyb_c, qzb_c = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{parent_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{parent_name}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -406,7 +407,7 @@ def eval_heads(sim):
     # todo: mflistbudget
     # check cumulative balance error from .lst file
     for mname in [parent_name, child_name]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -419,7 +420,7 @@ def eval_heads(sim):
     # Check on residual, which is stored in diagonal position of
     # flow-ja-face.  Residual should be less than convergence tolerance,
     # or this means the residual term is not added correctly.
-    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
+    fpth = os.path.join(test.workspace, f"{parent_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth)
     flow_ja_face = cbb.get_data(idx=0)
     assert (
@@ -433,14 +434,14 @@ def eval_heads(sim):
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     # Read gwf-gwf observations values
-    fpth = os.path.join(sim.simpath, "gwf_obs.csv")
+    fpth = os.path.join(test.workspace, "gwf_obs.csv")
     with open(fpth) as f:
         lines = f.readlines()
     obsnames = [name for name in lines[0].strip().split(",")[1:]]
     obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
 
     # Extract the gwf-gwf flows stored in parent budget file
-    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
+    fpth = os.path.join(test.workspace, f"{parent_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
     parent_exchange_flows = cbb.get_data(
         kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
@@ -448,7 +449,7 @@ def eval_heads(sim):
     parent_exchange_flows = parent_exchange_flows["q"]
 
     # Extract the gwf-gwf flows stored in child budget file
-    fpth = os.path.join(sim.simpath, f"{child_name}.cbc")
+    fpth = os.path.join(test.workspace, f"{child_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
     child_exchange_flows = cbb.get_data(
         kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
@@ -464,7 +465,7 @@ def eval_heads(sim):
     ), "exchange observations do not match child exchange flows"
 
     # Read the lumped boundname observations values
-    fpth = os.path.join(sim.simpath, "gwf_obs_boundnames.csv")
+    fpth = os.path.join(test.workspace, "gwf_obs_boundnames.csv")
     with open(fpth) as f:
         lines = f.readlines()
     obsnames = [name for name in lines[0].strip().split(",")[1:]]
@@ -475,15 +476,15 @@ def eval_heads(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=0
-        ),
-        str(function_tmpdir),
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

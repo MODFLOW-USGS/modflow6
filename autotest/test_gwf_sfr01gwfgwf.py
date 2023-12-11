@@ -14,7 +14,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # from flopy.mf6.utils import Mf6Splitter
 
@@ -267,20 +266,18 @@ def build_exchanges(sim):
     )
 
 
-def build_model(idx, ws):
-    sim_ws = ws / "mf6"
+def build_models(idx, test):
+    sim_ws = test.workspace / "mf6"
     sim_base = build_simulation(idx, sim_ws)
-
-    sim = build_simulation(idx, ws, sim_type="split")
-
+    sim = build_simulation(idx, test.workspace, sim_type="split")
     return sim, sim_base
 
 
-def eval_results(sim):
+def check_output(sim):
     print("evaluating sfr stage results...")
 
     # base simulations stage
-    ws = sim.simpath
+    ws = sim.workspace
     fpth = ws / "mf6/single.sfr.stg"
     single_stage_obj = flopy.utils.HeadFile(fpth, text="STAGE")
     single_stage = single_stage_obj.get_data().squeeze()
@@ -306,17 +303,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-            run_comparison=True,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        compare="run_only",
     )
+    test.run()

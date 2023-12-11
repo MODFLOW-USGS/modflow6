@@ -15,15 +15,13 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["npf04"]
 namea = "a"
 nameb = "b"
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # grid properties
     nlay = 3
     nrow = 6
@@ -51,7 +49,7 @@ def build_model(idx, dir):
     # build MODFLOW 6 files
     # create simulation
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
 
     # create tdis package
@@ -175,14 +173,14 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def eval_mf6(sim):
+def check_output(test):
     print("evaluating head and qx in parent and child models...")
 
     # make sure parent head is same as child head in same column
-    fname = os.path.join(sim.simpath, f"{namea}.hds")
+    fname = os.path.join(test.workspace, f"{namea}.hds")
     hdobj = flopy.utils.HeadFile(fname)
     ha = hdobj.get_data()
-    fname = os.path.join(sim.simpath, f"{nameb}.hds")
+    fname = os.path.join(test.workspace, f"{nameb}.hds")
     hdobj = flopy.utils.HeadFile(fname)
     hb = hdobj.get_data()
     msg = f"Heads should be the same {ha[0, 1, 2]} {hb[0, 0, 0]}"
@@ -190,17 +188,17 @@ def eval_mf6(sim):
 
     # make sure specific discharge is calculated correctly for child and
     # parent models (even though child model has same resolution as parent
-    fname = os.path.join(sim.simpath, f"{namea}.cbc")
+    fname = os.path.join(test.workspace, f"{namea}.cbc")
     nlaya, nrowa, ncola = ha.shape
     qxa, qya, qza = qxqyqz(fname, nlaya, nrowa, ncola)
-    fname = os.path.join(sim.simpath, f"{nameb}.cbc")
+    fname = os.path.join(test.workspace, f"{nameb}.cbc")
     nlayb, nrowb, ncolb = hb.shape
     qxb, qyb, qzb = qxqyqz(fname, nlayb, nrowb, ncolb)
     msg = f"qx should be the same {qxa[0, 2, 1]} {qxb[0, 0, 0]}"
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
 
-    cbcpth = os.path.join(sim.simpath, f"{namea}.cbc")
-    grdpth = os.path.join(sim.simpath, f"{namea}.dis.grb")
+    cbcpth = os.path.join(test.workspace, f"{namea}.cbc")
+    grdpth = os.path.join(test.workspace, f"{namea}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(grdpth)
     cbb = flopy.utils.CellBudgetFile(cbcpth, precision="double")
     flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
@@ -217,12 +215,11 @@ def eval_mf6(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_mf6, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

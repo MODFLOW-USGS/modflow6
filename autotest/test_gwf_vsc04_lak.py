@@ -1,17 +1,18 @@
-# Simple single lake model.  Lake cut into top two layers of a 5 layer
-# model.  Model is loosely based on the first example problem in
-# Merritt and Konikow (2000) which also is one of the MT3D-USGS test
-# problems.  This test developed to isolate lake-aquifer interaction;
-# no SFR or other advanced packages.  Problem set up to have groundwater
-# pass through the lake: gw inflow on the left side, gw outflow on the
-# right side of the lake.  Uses constant stage boundary in the lake to
-# ensure desired flow conditions for testing budget changes with and
-# without VSC active.
-#
-# starting groundwater temperature: 30.0
-# left chd boundary inflow temperature: 30.0
-# starting lake temperature: 4.0
-#
+"""
+Simple single lake model.  Lake cut into top two layers of a 5 layer
+model.  Model is loosely based on the first example problem in
+Merritt and Konikow (2000) which also is one of the MT3D-USGS test
+problems.  This test developed to isolate lake-aquifer interaction;
+no SFR or other advanced packages.  Problem set up to have groundwater
+pass through the lake: gw inflow on the left side, gw outflow on the
+right side of the lake.  Uses constant stage boundary in the lake to
+ensure desired flow conditions for testing budget changes with and
+without VSC active.
+
+starting groundwater temperature: 30.0
+left chd boundary inflow temperature: 30.0
+starting lake temperature: 4.0
+"""
 
 import os
 
@@ -19,7 +20,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["no-vsc04-lak", "vsc04-lak"]
 viscosity_on = [False, True]
@@ -157,12 +157,8 @@ leftTemp = 30.0  # Temperature of inflow from left constant head ($C$)
 # Viscosity related parameters
 tviscref = 20.0
 
-#
-# MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
-#
 
-
-def build_model(idx, ws):
+def build_models(idx, test):
     global lak_lkup_dict
 
     # Base simulation and model name and workspace
@@ -175,7 +171,7 @@ def build_model(idx, ws):
     gwtname = "gwt-" + name
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
+        sim_name=name, sim_ws=test.workspace, exe_name="mf6", version="mf6"
     )
 
     tdis_rc = []
@@ -614,15 +610,15 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".lak.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GWF")
@@ -699,7 +695,7 @@ def eval_results(sim):
     left_chk_with_vsc = []
     right_chk_with_vsc = []
 
-    if sim.idxsim == 0:
+    if idx == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
         no_vsc_bud_np = np.array(no_vsc_bud_last.tolist())
 
@@ -737,7 +733,7 @@ def eval_results(sim):
             "solution."
         )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
         with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
 
@@ -779,12 +775,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

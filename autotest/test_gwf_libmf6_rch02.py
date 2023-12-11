@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi which is used to calculate a recharge rate that results in a
 simulated head in the center of the model domain to be equal to the
 simulated head in the non-bmi simulation.
@@ -12,7 +11,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_rch02"]
 
@@ -153,21 +151,20 @@ def get_model(ws, name, exe, rech=rch_spd):
     return sim
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
-    sim = get_model(ws, name, exe)
+    sim = get_model(ws, name, "mf6")
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
-    mc = get_model(ws, name, exe, rech=0.0)
+    ws = os.path.join(test.workspace, "libmf6")
+    mc = get_model(ws, name, "mf6", rech=0.0)
 
     return sim, mc
 
 
 def run_perturbation(mf6, max_iter, recharge, tag, rch):
-
     mf6.prepare_solve()
     kiter = 0
     while kiter < max_iter:
@@ -232,7 +229,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # target head
         htarget = hobs[idx]
 
@@ -313,15 +309,11 @@ def api_func(exe, idx, model_ws=None):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(
-        lambda i, d: build_model(i, d, targets["mf6"]),
-        idx,
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
-    )
+    test.run()

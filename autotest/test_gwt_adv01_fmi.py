@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
 Test the advection schemes in the gwt advection package for a one-dimensional
 model grid of square cells.
-
 """
 
 import os
@@ -13,13 +11,12 @@ import pytest
 from flopy.utils.binaryfile import write_budget, write_head
 from flopy.utils.gridutil import uniform_flow_field
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["adv01a_fmi", "adv01b_fmi", "adv01c_fmi"]
 scheme = ["upstream", "central", "tvd"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -44,7 +41,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -217,13 +214,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(idx, test):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -561,7 +558,7 @@ def eval_transport(sim):
     creslist = [cres1, cres2, cres3]
 
     assert np.allclose(
-        creslist[sim.idxsim], conc
+        creslist[idx], conc
     ), "simulated concentrations do not match with known solution."
 
 
@@ -570,12 +567,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

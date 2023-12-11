@@ -1,29 +1,29 @@
-# Test the buoyancy package and the variable density flows between maw
-# and the gwf model.  This model has 4 layers with a single maw.
-# The model is transient and has heads in the aquifer higher than the initial
-# stage in the well.  As the model runs, the well and aquifer equalize and
-# should end up at the same level.  The test ensures that the initial and
-# final water volumes in the entire system are the same.  There are three
-# different cases:
-#  1.  No buoyancy package
-#  2.  Buoyancy package with maw and aquifer density = 1000.
-#  3.  Buoyancy package with maw and aquifer density = 1024.5
+"""
+Test the buoyancy package and the variable density flows between maw
+and the gwf model.  This model has 4 layers with a single maw.
+The model is transient and has heads in the aquifer higher than the initial
+stage in the well.  As the model runs, the well and aquifer equalize and
+should end up at the same level.  The test ensures that the initial and
+final water volumes in the entire system are the same.  There are three
+different cases:
+ 1.  No buoyancy package
+ 2.  Buoyancy package with maw and aquifer density = 1000.
+ 3.  Buoyancy package with maw and aquifer density = 1024.5
+"""
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["buy_maw_01a"]  # , 'buy_maw_01b', 'buy_maw_01c']
 buy_on_list = [False]  # , True, True]
 concbuylist = [0.0]  # , 0., 35.]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -53,7 +53,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -185,19 +185,19 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    gwfname = "gwf_" + sim.name
+    gwfname = "gwf_" + test.name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
@@ -214,7 +214,6 @@ def eval_results(sim):
     # calculate current volume of water in well and aquifer and compare with
     # initial volume
     for kstp, mawstage in enumerate(stage):
-
         vgwf = 0
         for k in range(nlay):
             for j in range(ncol):
@@ -229,13 +228,13 @@ def eval_results(sim):
     # compare the maw-gwf flows in maw budget file with the gwf-maw flows in
     # gwf budget file.  Values should be the same but reversed in sign
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -256,11 +255,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
     )
+    test.run()

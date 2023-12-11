@@ -6,7 +6,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["sfr-evap"]
 
@@ -65,14 +64,10 @@ perlen = [1, 1]
 nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-3, 1e-4, 0.97
 
-#
-# MODFLOW 6 flopy GWF object
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
 
     print("Building model...{}".format(name))
@@ -378,16 +373,16 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname_t = "gwf-" + name + "-t"
     gwfname_r = "gwf-" + name + "-r"
 
     fname = gwfname_t + ".sfr.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
@@ -416,7 +411,7 @@ def eval_results(sim):
 
     # Now check results from standard rectangular x-section setup (not an n-point channel)
     fname2 = gwfname_r + ".sfr.cbc"
-    fname2 = os.path.join(sim.simpath, fname2)
+    fname2 = os.path.join(test.workspace, fname2)
     assert os.path.isfile(fname2)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname2, precision="double")
@@ -441,12 +436,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

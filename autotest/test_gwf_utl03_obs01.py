@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["utl03_obs"]
 
@@ -176,14 +175,13 @@ def hack_binary_obs(idx, dir):
                 line += "  BINARY"
             f.write(f"{line}\n")
         f.close()
-    return
 
 
-def eval_obs(sim):
+def eval_obs(test):
     print("evaluating observations...")
 
     # get results from the observation files
-    pth = sim.simpath
+    pth = test.workspace
     files = [fn for fn in os.listdir(pth) if ".csv" in fn]
     for file in files:
         pth0 = os.path.join(pth, file)
@@ -221,8 +219,11 @@ def eval_obs(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets["mf6"]
-    test = TestFramework()
-    build_models(ws, mf6)
-    test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_obs), ws)
+    build_models(function_tmpdir, targets.mf6)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        check=eval_obs,
+        targets=targets,
+    )
+    test.run()

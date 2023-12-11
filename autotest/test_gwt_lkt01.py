@@ -1,20 +1,21 @@
-# Simple one-layer model with a lak.  Purpose is to test a constant
-# stage and constant concentration lake with a value of 100.  The aquifer
-# starts with a concentration of zero, but the values grow as the lake
-# leaks into the aquifer.
+"""
+Simple one-layer model with a lak.  Purpose is to test a constant
+stage and constant concentration lake with a value of 100.  The aquifer
+starts with a concentration of zero, but the values grow as the lake
+leaks into the aquifer.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation, DNODATA
+from framework import DNODATA, TestFramework
 
 ex = ["lkt_01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 5.0
     lz = 1.0
     nlay = 1
@@ -48,7 +49,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -334,7 +335,7 @@ def build_model(idx, dir):
 
 
 def get_mfsim(testsim):
-    ws = testsim.simpath
+    ws = testsim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     return sim
 
@@ -355,17 +356,17 @@ def eval_csv_information(testsim):
     ), f"Lake package does not have zero mass balance error: {result}"
 
 
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     # eval csv files
-    eval_csv_information(sim)
+    eval_csv_information(test)
 
     # ensure lake concentrations were saved
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are 100.
@@ -376,7 +377,7 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
     answer = np.array(
@@ -387,7 +388,7 @@ def eval_results(sim):
     ), f"{caq[-1].flatten()} {answer}"
 
     # lkt observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".lkt.obs.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".lkt.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -438,12 +439,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

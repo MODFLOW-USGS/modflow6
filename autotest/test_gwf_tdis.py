@@ -26,7 +26,7 @@ def simple_sim(tmp_path):
 
 
 @pytest.mark.parametrize("tsmult", [1.0, 1.2])
-def test_tdis_tsmult(tsmult, libmf6_path, simple_sim):
+def test_tdis_tsmult(tsmult, simple_sim, targets):
     """Check totim values to ensure they avoid accumulation errors."""
     sim = simple_sim
 
@@ -43,7 +43,7 @@ def test_tdis_tsmult(tsmult, libmf6_path, simple_sim):
     tdis.write()
 
     # Run within libmf6
-    mf6 = XmiWrapper(lib_path=libmf6_path, working_directory=sim.sim_path)
+    mf6 = XmiWrapper(lib_path=targets.libmf6, working_directory=sim.sim_path)
 
     mf6.initialize()
     dt_list = []

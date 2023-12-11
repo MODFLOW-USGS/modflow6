@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from cross_section_functions import calculate_rectchan_mannings_discharge
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "sfr"
 ex = [
@@ -69,8 +68,8 @@ np_data = {
 # x: 0          1/3         2/3          1
 #
 
-def build_model(idx, ws, base=False):
 
+def build_model(idx, ws, base=False):
     if base:
         ws = os.path.join(ws, "mf6")
 
@@ -269,28 +268,32 @@ def build_model(idx, ws, base=False):
     return sim
 
 
-def build_models(idx, ws):
-    sim = build_model(idx, ws)
-    mc = build_model(idx, ws, base=True)
+def build_models(idx, test):
+    sim = build_model(idx, test.workspace)
+    mc = build_model(idx, test.workspace, base=True)
     return sim, mc
 
 
-def eval_npointdepth(sim):
-    print("evaluating n-point cross-section results..." f"({sim.name})")
+def check_output(test):
+    print("evaluating n-point cross-section results..." f"({test.name})")
 
-    obs_pth0 = os.path.join(sim.simpath, f"{sim.name}.sfr.obs.csv")
+    obs_pth0 = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
     obs0 = np.genfromtxt(obs_pth0, names=True, delimiter=",")
 
-    obs_pth1 = os.path.join(sim.simpath, "mf6", f"{sim.name}.sfr.obs.csv")
+    obs_pth1 = os.path.join(test.workspace, "mf6", f"{test.name}.sfr.obs.csv")
     obs1 = np.genfromtxt(obs_pth1, names=True, delimiter=",")
 
     q0 = obs0["OUTFLOW_DOWNSTREAM"]
     q1 = obs1["OUTFLOW_DOWNSTREAM"]
-    assert np.allclose(q0, q1), f"downstream outflows not equal ('{sim.name}')"
+    assert np.allclose(
+        q0, q1
+    ), f"downstream outflows not equal ('{test.name}')"
 
     d0 = obs0["DEPTH_UPSTREAM"]
     d1 = obs1["DEPTH_UPSTREAM"]
-    assert np.allclose(d0, d1), f"upstream depths are not equal ('{sim.name}')"
+    assert np.allclose(
+        d0, d1
+    ), f"upstream depths are not equal ('{test.name}')"
 
 
 @pytest.mark.parametrize(
@@ -298,15 +301,11 @@ def eval_npointdepth(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_models, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_npointdepth,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
+    test.run()

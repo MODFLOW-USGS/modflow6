@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
@@ -215,31 +214,29 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    sim = get_model(idx, ws)
+    sim = get_model(idx, test.workspace)
 
     # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf6_regression")
+    ws = os.path.join(test.workspace, "mf6_regression")
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_sub(sim):
+def check_output(test):
     print("evaluating subsidence...")
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # comparison total compaction results
-    fpth = os.path.join(sim.simpath, "mf6_regression", "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "mf6_regression", "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -253,7 +250,7 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -270,15 +267,15 @@ def eval_sub(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
     return
 
@@ -286,7 +283,7 @@ def eval_sub(sim):
 # compare cbc and lst budgets
 def cbc_compare(sim):
     # open cbc file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -303,7 +300,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -350,7 +347,7 @@ def cbc_compare(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
@@ -383,15 +380,12 @@ def cbc_compare(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_sub,
-            idxsim=idx,
-            mf6_regression=True,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
+        targets=targets,
+        compare="mf6_regression",
     )
+    test.run()

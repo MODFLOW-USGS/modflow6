@@ -3,7 +3,6 @@ import os
 import flopy
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "csub_sub02a",
@@ -200,11 +199,9 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
-    sim = get_model(idx, ws)
-
-    ws = os.path.join(dir, cmppth)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
+    ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
     return sim, mc
 
@@ -214,9 +211,11 @@ def build_model(idx, dir):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, mf6_regression=True),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+        compare="mf6_regression",
     )
+    test.run()

@@ -1,6 +1,5 @@
 """
 Test of budget table parsing
-
 """
 
 import os
@@ -9,7 +8,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_utl05"]
 laytyp = [1]
@@ -18,8 +16,7 @@ sy = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -41,7 +38,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -141,13 +138,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
+def eval_flow(test):
     print("evaluating flow...")
 
-    gwfname = "gwf_" + sim.name
+    gwfname = "gwf_" + test.name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
+    fpth = os.path.join(test.workspace, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     print(names)
@@ -160,16 +157,15 @@ def eval_flow(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=eval_flow,
+        targets=targets,
     )
+    test.run()

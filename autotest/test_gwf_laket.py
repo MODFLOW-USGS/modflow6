@@ -1,4 +1,4 @@
-# Test for checking lak evaporation.
+"""Test for checking lak evaporation."""
 
 
 import os
@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "gwf_laket01",
@@ -175,18 +174,16 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # build MODFLOW 6 files
-    sim = get_model(idx, dir)
-
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_laket(sim):
+def check_output(idx, test):
     msg = "Evaluating Lake ET. "
 
-    fpth = os.path.join(sim.simpath, f"{sim.name}.lak.obs.csv")
+    fpth = os.path.join(test.workspace, f"{test.name}.lak.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -206,7 +203,7 @@ def eval_laket(sim):
                 (8.000000000000, 5.2000000000000028, -0.1),
                 (9.000000000000, 5.1000000000000032, -0.1),
                 (10.00000000000, 5.0000000000000036, -0.1),
-                (11.00000000000, 5.0000000000000000,  0.0),
+                (11.00000000000, 5.0000000000000000, 0.0),
                 (12.00000000000, 5.0999999999999996, -0.1),
                 (13.00000000000, 5.1999999999999993, -0.1),
                 (14.00000000000, 5.2999999999999989, -0.1),
@@ -257,10 +254,10 @@ def eval_laket(sim):
                 (5.000000000000, 5.1402629856607369, -0.1),
                 (6.000000000000, 5.0345111305663464, -0.1),
                 (7.000000000000, 5.0000000000000000, -0.0345111305663464),
-                (8.000000000000, 5.0000000000000000,  0.0),
-                (9.000000000000, 5.0000000000000000,  0.0),
-                (10.00000000000, 5.0000000000000000,  0.0),
-                (11.00000000000, 5.0000000000000000,  0.0),
+                (8.000000000000, 5.0000000000000000, 0.0),
+                (9.000000000000, 5.0000000000000000, 0.0),
+                (10.00000000000, 5.0000000000000000, 0.0),
+                (11.00000000000, 5.0000000000000000, 0.0),
                 (12.00000000000, 5.0857142857142854, -0.1),
                 (13.00000000000, 5.1591836734693874, -0.1),
                 (14.00000000000, 5.2221574344023320, -0.1),
@@ -277,25 +274,25 @@ def eval_laket(sim):
         ),
     }
 
-    if sim.idxsim in (
+    if idx in (
         0,
         1,
         2,
     ):
-        evap_compare = np.allclose(obs[sim.idxsim]["evap"], tc["EVAP"])
-        stage_compare = np.allclose(obs[sim.idxsim]["stage"], tc["LAKESTAGE"])
+        evap_compare = np.allclose(obs[idx]["evap"], tc["EVAP"])
+        stage_compare = np.allclose(obs[idx]["stage"], tc["LAKESTAGE"])
     else:
         evap_compare = True
         stage_compare = True
 
-    sim.success = True
+    test.success = True
     if not evap_compare:
-        sim.success = False
+        test.success = False
         msg += f" Lake evaporation comparison failed."
     if not stage_compare:
-        sim.success = False
+        test.success = False
         msg += f" Lake stage comparison failed."
-    assert sim.success, msg
+    assert test.success, msg
 
 
 @pytest.mark.parametrize(
@@ -303,15 +300,11 @@ def eval_laket(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_laket,
-            idxsim=idx,
-            mf6_regression=False,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()
