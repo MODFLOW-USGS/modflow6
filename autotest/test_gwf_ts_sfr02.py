@@ -4,10 +4,11 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "sfr"
-ex = ["ts_sfr02"]
+cases = ["ts_sfr02"]
 
 
 def get_model(ws, name, timeseries=False):
@@ -15,7 +16,7 @@ def get_model(ws, name, timeseries=False):
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
     ts_times = np.arange(0.0, 2.0, 1.0, dtype=float)
 
@@ -505,7 +506,7 @@ def get_model(ws, name, timeseries=False):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -518,9 +519,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(test):
-    print("evaluating model budgets...")
-
+def check_output(idx, test):
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(test.name)}.dis.grb"
     fpth = os.path.join(test.workspace, fname)
@@ -562,9 +561,9 @@ def check_output(test):
     # FLOW-JA-FACE
     v0 = cobj0.get_data(totim=1.0, text="FLOW-JA-FACE")[0]
     q = []
-    for idx, node in enumerate(v0["node"]):
+    for i, node in enumerate(v0["node"]):
         if node in nodes:
-            q.append(v0["q"][idx])
+            q.append(v0["q"][i])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=float) * 5e-2
     check[1] = 0.76743
@@ -573,27 +572,27 @@ def check_output(test):
 
     v0 = cobj0.get_data(totim=1.0, text="EXT-OUTFLOW")[0]
     q = []
-    for idx, node in enumerate(v0["node"]):
+    for i, node in enumerate(v0["node"]):
         if node in nodes:
-            q.append(v0["q"][idx])
+            q.append(v0["q"][i])
     v0 = np.array(q)
     check = np.array([-2.5e-2, -0.80871, -5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), "EXT-OUTFLOW failed"
 
     v0 = cobj0.get_data(totim=1.0, text="FROM-MVR")[0]
     q = []
-    for idx, node in enumerate(v0["node"]):
+    for i, node in enumerate(v0["node"]):
         if node in nodes:
-            q.append(v0["q"][idx])
+            q.append(v0["q"][i])
     v0 = np.array(q)
     check = np.array([0.0, 4.5e-2, 0.0, 0.0, 0.0, 0.0])
     assert np.allclose(v0, check), "FROM-MVR failed"
 
     v0 = cobj0.get_data(totim=1.0, text="TO-MVR")[0]
     q = []
-    for idx, node in enumerate(v0["node"]):
+    for i, node in enumerate(v0["node"]):
         if node in nodes:
-            q.append(v0["q"][idx])
+            q.append(v0["q"][i])
     v0 = np.array(q)
     check = np.array([-2.5e-2, 0.0, 0.0, 0.0, -2.0e-2, 0.0])
     assert np.allclose(v0, check), "TO-MVR failed"
@@ -601,14 +600,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

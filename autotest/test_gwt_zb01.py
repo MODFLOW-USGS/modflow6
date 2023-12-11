@@ -1,5 +1,5 @@
 """
-test that zonebudget works on a cell budget file from GWT
+Test that zonebudget works on a cell budget file from GWT
 https://github.com/MODFLOW-USGS/modflow6/discussions/1181
 """
 
@@ -9,9 +9,10 @@ from pathlib import Path
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-name = "zbud6_zb01"
+cases = ["zbud6_zb01"]
 htol = None
 dtol = 1e-3
 budtol = 1e-2
@@ -40,7 +41,8 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 
 
-def build_models(test):
+def build_models(idx, test):
+    name = cases[idx]
     perlen = [timetoend]
     nstp = [50]
     tsmult = [1.0]
@@ -245,9 +247,8 @@ def build_models(test):
     return sim, None
 
 
-def check_output(sim, zb6):
-    print("evaluating zonebudget...")
-    ws = Path(sim.workspace)
+def check_output(idx, test, zb6):
+    ws = Path(test.workspace)
 
     # build zonebudget files
     # start with 1 since budget isn't calculated for zone 0
@@ -255,12 +256,12 @@ def check_output(sim, zb6):
     nzones = len(zones)
     with open(ws / "zonebudget.nam", "w") as f:
         f.write("BEGIN ZONEBUDGET\n")
-        f.write(f"  BUD gwt_{sim.name}.cbc\n")
-        f.write(f"  ZON {sim.name}.zon\n")
-        f.write(f"  GRB gwf_{sim.name}.dis.grb\n")
+        f.write(f"  BUD gwt_{test.name}.cbc\n")
+        f.write(f"  ZON {test.name}.zon\n")
+        f.write(f"  GRB gwf_{test.name}.dis.grb\n")
         f.write("END ZONEBUDGET\n")
 
-    with open(ws / f"{sim.name}.zon", "w") as f:
+    with open(ws / f"{test.name}.zon", "w") as f:
         f.write("BEGIN DIMENSIONS\n")
         f.write(f"  NCELLS {size3d}\n")
         f.write("END DIMENSIONS\n\n")
@@ -280,7 +281,7 @@ def check_output(sim, zb6):
     )
 
     assert success
-    sim.success = success
+    test.success = success
 
     # read data from csv file
     zbd = np.genfromtxt(
@@ -309,7 +310,7 @@ def check_output(sim, zb6):
     # get results from listing file
     # todo: should flopy have a subclass for GWT list file?
     budl = flopy.utils.mflistfile.ListBudget(
-        ws / f"gwt_{os.path.basename(sim.name)}.lst",
+        ws / f"gwt_{os.path.basename(test.name)}.lst",
         budgetkey="MASS BUDGET FOR ENTIRE MODEL",
     )
     names = list(bud_lst)
@@ -324,12 +325,12 @@ def check_output(sim, zb6):
     for key in bud_lst:
         d[key] = 0.0
     cobj = flopy.utils.CellBudgetFile(
-        ws / f"gwt_{os.path.basename(sim.name)}.cbc", precision="double"
+        ws / f"gwt_{os.path.basename(test.name)}.cbc", precision="double"
     )
     rec = cobj.list_records()
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -347,80 +348,81 @@ def check_output(sim, zb6):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     # calculate absolute difference
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    with open(ws / f"{os.path.basename(sim.name)}.bud.cmp.out", "w") as f:
+    with open(ws / f"{os.path.basename(test.name)}.bud.cmp.out", "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
-                for idx, key in enumerate(bud_lst):
+                for key in bud_lst:
                     line += f"{key + '_LST':>25s}"
                     line += f"{key + '_CBC':>25s}"
                     line += f"{key + '_DIF':>25s}"
                 f.write(line + "\n")
             line = f"{d['totim'][i]:10g}"
-            for idx, key in enumerate(bud_lst):
+            for ii, key in enumerate(bud_lst):
                 line += f"{d0[key][i]:25g}"
                 line += f"{d[key][i]:25g}"
-                line += f"{diff[i, idx]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
 
     # compare zone budget output to cbc output
     diffzb = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
-        diffzb[:, idx] = zbsum[key0] - d[key]
+    for i, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
+        diffzb[:, i] = zbsum[key0] - d[key]
     diffzbmax = np.abs(diffzb).max()
     msg += (
         f"\nmaximum absolute zonebudget-cell by cell difference ({diffzbmax}) "
     )
 
     # write summary
-    with open(ws / f"{os.path.basename(sim.name)}.zbud.cmp.out", "w") as f:
+    with open(ws / f"{os.path.basename(test.name)}.zbud.cmp.out", "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
-                for idx, key in enumerate(bud_lst):
+                for key in bud_lst:
                     line += f"{key + '_ZBUD':>25s}"
                     line += f"{key + '_CBC':>25s}"
                     line += f"{key + '_DIF':>25s}"
                 f.write(line + "\n")
             line = f"{d['totim'][i]:10g}"
-            for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
+            for ii, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
                 line += f"{zbsum[key0][i]:25g}"
                 line += f"{d[key][i]:25g}"
-                line += f"{diffzb[i, idx]:25g}"
+                line += f"{diffzb[i, ii]:25g}"
             f.write(line + "\n")
 
     if diffmax > budtol or diffzbmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"\n...exceeds {budtol}"
         assert diffmax < budtol and diffzbmax < budtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
-def test_mf6model(function_tmpdir, targets):
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(t),
-        check=lambda t: check_output(t, targets.zbud6),
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t, targets.zbud6),
         htol=htol,
     )
     test.run()

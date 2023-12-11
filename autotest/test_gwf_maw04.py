@@ -1,5 +1,5 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
@@ -91,7 +91,7 @@ def well4(label):
         [0, 1, (1, nhalf, nhalf), botm[0], botm[1], hks, sradius[label]],
     ]
     perioddata = {1: [[0, "RATE", wellq]]}
-    return Case(
+    return SimpleNamespace(
         print_input=True,
         no_well_storage=True,
         packagedata=packagedata,

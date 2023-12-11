@@ -30,9 +30,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-ex = ["ifmod_xt3d01"]
+cases = ["ifmod_xt3d01"]
 
 # globally for convenience...
 useXT3D = True
@@ -52,7 +53,7 @@ def get_model(idx, dir):
     global child_domain
     global hclose
 
-    name = ex[idx]
+    name = cases[idx]
 
     # tdis period data
     nper = 1
@@ -300,7 +301,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def check_output(test):
+def check_output(idx, test):
     print("comparing heads and spec. discharges to analytical result...")
 
     fpth = os.path.join(test.workspace, f"{parent_name}.hds")
@@ -477,7 +478,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -485,6 +486,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

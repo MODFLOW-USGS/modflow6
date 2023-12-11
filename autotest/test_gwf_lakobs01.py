@@ -13,7 +13,7 @@ import flopy
 import numpy as np
 import pytest
 
-ex = "gwf_lakobs_01a"
+cases = "gwf_lakobs_01a"
 gwf = None
 
 
@@ -52,7 +52,7 @@ def build_model(dir, exe):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex
+    name = cases
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -228,8 +228,8 @@ def test_mf6model(function_tmpdir, targets):
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = str(function_tmpdir / (ex + ".lak.obs"))
-    new_fl = str(function_tmpdir / (ex + ".lak.obs.new"))
+    orig_fl = str(function_tmpdir / (cases + ".lak.obs"))
+    new_fl = str(function_tmpdir / (cases + ".lak.obs.new"))
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 

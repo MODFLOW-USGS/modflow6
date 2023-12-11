@@ -10,9 +10,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import DNODATA, TestFramework
 
-ex = ["lkt_01"]
+cases = ["lkt_01"]
 
 
 def build_models(idx, test):
@@ -46,7 +47,7 @@ def build_models(idx, test):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -356,9 +357,7 @@ def eval_csv_information(testsim):
     ), f"Lake package does not have zero mass balance error: {result}"
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # eval csv files
     eval_csv_information(test)
 
@@ -430,13 +429,10 @@ def check_output(test):
     answer = np.ones(10) * -216.3934
     assert np.allclose(res, answer), f"{res} {answer}"
 
-    # uncomment when testing
-    # assert False
-
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -444,6 +440,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

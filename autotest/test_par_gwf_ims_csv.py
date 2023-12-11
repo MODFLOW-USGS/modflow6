@@ -1,5 +1,6 @@
 import flopy
 import pytest
+
 from framework import TestFramework
 
 """
@@ -30,7 +31,7 @@ def update_ims(idx, ims):
 
 
 def build_models(idx, test):
-    from test_par_gwf01 import ex as ex_ext
+    from test_par_gwf01 import cases as ex_ext
     from test_par_gwf01 import get_model
 
     sim = get_model(idx, test.workspace)

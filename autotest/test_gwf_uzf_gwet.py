@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["uzf_3lay"]
+cases = ["uzf_3lay"]
 name = "model"
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -254,11 +255,9 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating model...")
-
-    ws = sim.workspace
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+def check_output(idx, test):
+    ws = test.workspace
+    test = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     bpth = ws / f"{name}.cbc"
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
@@ -289,25 +288,25 @@ def check_output(sim):
 
     # convert ndarray to grid dimensions
     tot_stp = 0
-    tinfo = sim.tdis.perioddata.get_data()
+    tinfo = test.tdis.perioddata.get_data()
     for itm in tinfo:
         tot_stp += int(itm[1])
 
     gwet_arr = np.zeros(
         (
             tot_stp,
-            sim.model.dis.nlay.get_data(),
-            sim.model.dis.nrow.get_data(),
-            sim.model.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
     uzet_arr = np.zeros(
         (
             tot_stp,
-            sim.model.dis.nlay.get_data(),
-            sim.model.dis.nrow.get_data(),
-            sim.model.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
@@ -329,7 +328,7 @@ def check_output(sim):
 
             uzet_arr[tm, lay, row, col] = itm[2]
 
-    uzf_strsPerDat = sim.model.uzf.perioddata.get_data()
+    uzf_strsPerDat = test.model.uzf.perioddata.get_data()
     pet = 0
     for tm in range(tot_stp):
         nstps = 0
@@ -338,8 +337,8 @@ def check_output(sim):
             if tm < nstps:
                 break
 
-        for i in range(sim.model.dis.nrow.get_data()):
-            for j in range(sim.model.dis.ncol.get_data()):
+        for i in range(test.model.dis.nrow.get_data()):
+            for j in range(test.model.dis.ncol.get_data()):
                 if (0, i, j) in cell_iuz_dict:
                     iuz = cell_iuz_dict[
                         (0, i, j)
@@ -360,16 +359,14 @@ def check_output(sim):
                         + str(j + 1)
                     )
 
-    print("Finished running checks")
 
-
-@pytest.mark.parametrize("idx,name", enumerate(ex))
+@pytest.mark.parametrize("idx,name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

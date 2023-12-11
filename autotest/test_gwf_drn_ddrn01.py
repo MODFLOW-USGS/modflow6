@@ -3,11 +3,12 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
+cases = ["drn_ddrn01a", "drn_ddrn01b"]
 paktest = "drn"
 budtol = 1e-2
-ex = ["drn_ddrn01a", "drn_ddrn01b"]
 ddir = "data"
 newton = [False, True]
 
@@ -110,8 +111,8 @@ def get_model(idx, ws, name):
     return sim
 
 
-def build_model(idx, test):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -120,9 +121,7 @@ def build_model(idx, test):
     return sim, None
 
 
-def eval_disch(idx, test):
-    print("evaluating drain discharge...")
-
+def check_output(idx, test):
     # MODFLOW 6 drain discharge results
     fpth = os.path.join(test.workspace, "drn_obs.csv")
     try:
@@ -152,19 +151,18 @@ def eval_disch(idx, test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out"
     )
-    f = open(fpth, "w")
-    line = f"{'TOTIM':>15s}"
-    line += f" {'DRN':>15s}"
-    line += f" {'UZF':>15s}"
-    line += f" {'DIFF':>15s}"
-    f.write(line + "\n")
-    for i in range(diff.shape[0]):
-        line = f"{tc['time'][i]:15g}"
-        line += f" {tc['D1_1_100'][i]:15g}"
-        line += f" {tc0[i]:15g}"
-        line += f" {diff[i]:15g}"
+    with open(fpth, "w") as f:
+        line = f"{'TOTIM':>15s}"
+        line += f" {'DRN':>15s}"
+        line += f" {'UZF':>15s}"
+        line += f" {'DIFF':>15s}"
         f.write(line + "\n")
-    f.close()
+        for i in range(diff.shape[0]):
+            line = f"{tc['time'][i]:15g}"
+            line += f" {tc['D1_1_100'][i]:15g}"
+            line += f" {tc0[i]:15g}"
+            line += f" {diff[i]:15g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
         test.success = False
@@ -190,14 +188,14 @@ def drain_smoothing(xdiff, xrange, newton=False):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_model(idx, t),
-        check=lambda t: eval_disch(idx, t),
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

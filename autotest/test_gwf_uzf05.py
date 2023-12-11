@@ -2,7 +2,6 @@
 Test uzf for case where uzf is only in top cell.  There was a
 bug with this in the past in which case UZF would not send
 water to water table unless there was a uzf in each cell.
-
 """
 
 import os
@@ -10,9 +9,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwf_uzf05a"]
+cases = ["gwf_uzf05a"]
 nlay, nrow, ncol = 3, 1, 1
 
 thts = 0.30  # saturated water content
@@ -46,7 +46,7 @@ def build_models(idx, test):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -212,11 +212,9 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating flow...")
-
-    name = sim.name
-    ws = sim.workspace
+def check_output(idx, test):
+    name = test.name
+    ws = test.workspace
 
     fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
@@ -239,14 +237,14 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

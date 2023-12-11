@@ -4,10 +4,11 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "sfr"
-ex = ["ts_sfr01"]
+cases = ["ts_sfr01"]
 
 
 def get_model(ws, name, timeseries=False):
@@ -15,7 +16,7 @@ def get_model(ws, name, timeseries=False):
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
     ts_times = np.arange(0.0, 2.0, 1.0, dtype=float)
 
@@ -514,7 +515,7 @@ def get_model(ws, name, timeseries=False):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -527,9 +528,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_result(test):
-    print("evaluating model budgets...")
-
+def check_result(idx, test):
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(test.name)}.dis.grb"
     fpth = os.path.join(test.workspace, fname)
@@ -569,9 +568,9 @@ def check_result(test):
     # do some spot checks on the first sfr cbc file
     v0 = cobj0.get_data(totim=1.0, text="FLOW-JA-FACE")[0]
     q = []
-    for idx, node in enumerate(v0["node"]):
+    for i, node in enumerate(v0["node"]):
         if node > 5:
-            q.append(v0["q"][idx])
+            q.append(v0["q"][i])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=float) * 5e-2
     check[-2] = 4e-2
@@ -595,14 +594,14 @@ def check_result(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_result,
+        check=lambda t: check_result(idx, t),
         targets=targets,
     )
     test.run()

@@ -1,6 +1,4 @@
 """
-Test problem for VSC and HFB
-
 Uses constant head and general-head boundaries on the left and right
 sides of a 10 row by 10 column by 1 layer model to drive flow from left to
 right.  Tests that a horizontal flow barrier accounts for changes in
@@ -19,17 +17,16 @@ Model 3: VSC inactive, uses the lower K of model 2 and checks that flows
          to 16, etc.)
 """
 
-# Imports
-
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
+cases = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
-ex = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]
 viscosity_on = [False, True, False]
 hydraulic_conductivity = [hyd_cond[0], hyd_cond[1], hyd_cond[1]]
 
@@ -71,7 +68,7 @@ hclose, rclose, relax = 1e-10, 1e-6, 0.97
 def build_models(idx, test):
     # Base simulation and model name and workspace
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -278,10 +275,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
     sim1 = flopy.mf6.MFSimulation.load(
         sim_ws=test.workspace, load_only=["dis"]
@@ -336,7 +331,7 @@ def check_output(idx, test):
             no_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
         ), (
             "Flow in models "
-            + ex[0]
+            + cases[0]
             + " and the established answer should be approximately "
             "equal, but are not."
         )
@@ -348,7 +343,7 @@ def check_output(idx, test):
             with_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
         ), (
             "Flow in models "
-            + ex[1]
+            + cases[1]
             + " and the established answer should be approximately "
             "equal, but are not."
         )
@@ -361,7 +356,7 @@ def check_output(idx, test):
         assert np.less(no_vsc_low_k_bud_last[:, 2], stored_ans[:, 2]).all(), (
             "Exit flow from model the established answer "
             "should be greater than flow existing "
-            + ex[2]
+            + cases[2]
             + ", but it is not."
         )
 
@@ -369,7 +364,7 @@ def check_output(idx, test):
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

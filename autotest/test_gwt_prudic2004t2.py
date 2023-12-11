@@ -12,10 +12,11 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
-ex = ["prudic2004t2"]
+cases = ["prudic2004t2"]
 data_path = project_root_path / "autotest" / "data"
 model_path = data_path / "prudic2004test2"
 fname = str(model_path / "lakibd.dat")
@@ -24,7 +25,7 @@ lakibd = np.loadtxt(fname, dtype=int)
 
 def build_models(idx, test):
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
     sim = flopy.mf6.MFSimulation(
@@ -814,11 +815,9 @@ def check_obs(sim):
     assert success, "One or more SFT-LKT obs checks did not pass"
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     makeplot = False
-    for idx, arg in enumerate(sys.argv):
+    for arg in sys.argv:
         if arg.lower() == "--makeplot":
             makeplot = True
 
@@ -965,14 +964,11 @@ def check_output(test):
     # fname = os.path.join(ws, f"result_conc_sfr4.txt")
     # np.savetxt(fname, res_sfr4)
 
-    # uncomment when testing
-    # assert False
-
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -980,6 +976,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

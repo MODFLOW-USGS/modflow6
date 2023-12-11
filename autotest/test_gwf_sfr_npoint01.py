@@ -3,11 +3,12 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from cross_section_functions import get_depths
 from framework import TestFramework
 
 paktest = "sfr"
-ex = [
+cases = [
     "sfr_npt01a",
     "sfr_npt01b",
     "sfr_npt01c",
@@ -127,7 +128,7 @@ def build_models(idx, test):
     ts_flows = np.array([1000.0] + [float(q) for q in range(1000, -100, -100)])
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -297,8 +298,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating n-point cross-section results..." f"({test.name})")
-
     obs_pth = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
@@ -326,7 +325,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

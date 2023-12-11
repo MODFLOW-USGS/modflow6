@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import DNODATA, TestFramework
 
-ex = ["bedleak", "bedleak_fail", "bedleak_none"]
+cases = ["bedleak", "bedleak_fail", "bedleak_none"]
 
 
 def build_models(idx, test):
@@ -32,7 +33,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -152,9 +153,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating model...")
-
-    name = ex[idx]
+    name = cases[idx]
 
     # lak budget
     if "fail" not in name:
@@ -169,7 +168,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

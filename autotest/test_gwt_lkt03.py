@@ -8,12 +8,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import DNODATA, TestFramework
 
-ex = ["lkt_03"]
+cases = ["lkt_03"]
 
 
-def build_model(idx, test):
+def build_models(idx, test):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -42,7 +43,7 @@ def build_model(idx, test):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -333,9 +334,7 @@ def build_model(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # ensure lake concentrations were saved
     name = test.name
     gwtname = "gwt_" + name
@@ -379,20 +378,17 @@ def check_output(test):
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), f"{res} {answer}"
 
-    # uncomment when testing
-    # assert False
-
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_model(idx, t),
-        check=check_output,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

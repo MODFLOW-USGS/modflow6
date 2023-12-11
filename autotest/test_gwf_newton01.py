@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["newton01"]
+cases = ["newton01"]
 nlay = 2
 nrow, ncol = 3, 3
 top = 20
@@ -30,7 +31,7 @@ def build_models(idx, test):
     nper = 1
     tdis_rc = [(1.0, 1, 1.0)]
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -96,8 +97,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def eval_head(test):
-    print("evaluating heads...")
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
@@ -110,7 +110,7 @@ def eval_head(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -118,6 +118,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=eval_head,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

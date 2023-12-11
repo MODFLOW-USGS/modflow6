@@ -3,18 +3,19 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["csub_sk02a", "csub_sk02b", "csub_sk02c", "csub_sk02d"]
-constantcv = [True for idx in range(len(ex))]
-cmppths = ["mf6_regression" for idx in range(len(ex))]
-tops = [150.0 for idx in range(len(ex))]
-newtons = [True for idx in range(len(ex))]
+cases = ["csub_sk02a", "csub_sk02b", "csub_sk02c", "csub_sk02d"]
+constantcv = [True for _ in range(len(cases))]
+cmppths = ["mf6_regression" for _ in range(len(cases))]
+tops = [150.0 for _ in range(len(cases))]
+newtons = [True for _ in range(len(cases))]
 ump = [None, None, True, True]
 iump = [0, 0, 1, 1]
-eslag = [True for idx in range(len(ex))]
+eslag = [True for _ in range(len(cases))]
 icrcc = [0, 1, 0, 1]
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 dtol = 1e-3
 bud_lst = [
     "CSUB-CGELASTIC_IN",
@@ -26,10 +27,10 @@ bud_lst = [
 # static model data
 nlay, nrow, ncol = 3, 10, 10
 nper = 31
-perlen = [1.0] + [365.2500000 for i in range(nper - 1)]
-nstp = [1] + [6 for i in range(nper - 1)]
-tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-steady = [True] + [False for i in range(nper - 1)]
+perlen = [1.0] + [365.2500000 for _ in range(nper - 1)]
+nstp = [1] + [6 for _ in range(nper - 1)]
+tsmult = [1.0] + [1.3 for _ in range(nper - 1)]
+steady = [True] + [False for _ in range(nper - 1)]
 delr, delc = 1000.0, 2000.0
 top = 150.0
 botm = [-100, -150.0, -350.0]
@@ -59,8 +60,8 @@ nouter, ninner = 500, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # all cells are active
 ib = 1
@@ -176,7 +177,7 @@ ds17 = [
 
 
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     newton = newtons[idx]
     newtonoptions = None
     imsla = "CG"
@@ -331,8 +332,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating compaction...")
-
     # MODFLOW 6 total compaction results
     fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
@@ -357,14 +356,13 @@ def check_output(idx, test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        line = f"{tc0['time'][i]:10.2g}"
-        line += f"{tc['TCOMP3'][i]:10.2g}"
-        line += f"{tc0['TCOMP3'][i]:10.2g}"
-        line += f"{diff[i]:10.2g}"
-        f.write(line + "\n")
-    f.close()
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            line = f"{tc0['time'][i]:10.2g}"
+            line += f"{tc['TCOMP3'][i]:10.2g}"
+            line += f"{tc0['TCOMP3'][i]:10.2g}"
+            line += f"{diff[i]:10.2g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
         test.success = False
@@ -391,7 +389,7 @@ def check_output(idx, test):
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -404,13 +402,13 @@ def check_output(idx, test):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
@@ -422,22 +420,21 @@ def check_output(idx, test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for key in bud_lst:
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for ii, key in enumerate(bud_lst):
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > dtol:
         test.success = False
@@ -450,7 +447,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwtbuy"]
+cases = ["gwtbuy"]
 
 
 def build_models(idx, test):
@@ -33,7 +34,7 @@ def build_models(idx, test):
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-10, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -408,14 +409,12 @@ def make_plot(sim):
     return
 
 
-def check_output(sim):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     makeplot = False
     if makeplot:
-        make_plot(sim)
+        make_plot(test)
 
-    ws = sim.workspace
+    ws = test.workspace
     gwfname = "flow"
     gwtsname = "salinity"
     gwthname = "temperature"
@@ -461,7 +460,7 @@ def check_output(sim):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -469,6 +468,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

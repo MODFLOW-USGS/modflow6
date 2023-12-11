@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["tvk01"]
+cases = ["tvk01"]
 time_varying_k = [1.0, 10.0]
 
 
@@ -30,7 +31,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -137,9 +138,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating model...")
-
+def check_output(idx, test):
     gwfname = "gwf_" + test.name
 
     # head
@@ -171,16 +170,14 @@ def check_output(test):
         print(f"Calculated q is {flow_rate_calc}")
         for node, node2, q in bud:
             print(node, node2, q, flow_rate_calc)
-            errmsg = f"Expected flow rate {flow_rate_calc} but found {q}"
-            assert np.isclose(flow_rate_calc, abs(q))
-
-    # comment when done testing
-    # assert False
+            assert np.isclose(
+                flow_rate_calc, abs(q)
+            ), f"Expected flow rate {flow_rate_calc} but found {q}"
 
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -188,6 +185,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -1,10 +1,3 @@
-import pathlib as pl
-
-import flopy
-import numpy as np
-import pytest
-from framework import TestFramework
-
 """
 This tests reuses the simulation data in test_gwf_uzf_gwet
 and runs it in parallel on one and two cpus with
@@ -15,13 +8,21 @@ with a serial model.
 This test also checks that Newton under_relaxation works in parallel.
 """
 
-ex = ["par_uzf_3lay_1p", "par_uzf_3lay_2p"]
+import pathlib as pl
+
+import flopy
+import numpy as np
+import pytest
+
+from framework import TestFramework
+
+cases = ["par_uzf_3lay_1p", "par_uzf_3lay_2p"]
 
 
 def build_models(idx, test):
-    from test_gwf_uzf_gwet import build_models as build_model_ext
+    from test_gwf_uzf_gwet import build_models as build
 
-    sim, dummy = build_model_ext(idx, test)
+    sim, dummy = build(idx, test)
     if idx == 1:
         sim.set_sim_path(test.workspace / "working")
         sim.write_simulation(silent=True)
@@ -39,7 +40,7 @@ def build_models(idx, test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     ncpus = 2 if idx == 1 else 1

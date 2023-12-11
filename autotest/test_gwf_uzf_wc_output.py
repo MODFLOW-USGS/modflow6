@@ -4,11 +4,12 @@ import flopy
 import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 include_NWT = False
 
-ex = ["uzf_3lay_wc_chk"]
+cases = ["uzf_3lay_wc_chk"]
 
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -226,7 +227,7 @@ def build_mf6_model(idx, ws):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -341,7 +342,7 @@ def build_mf6_model(idx, ws):
 
 
 def build_mfnwt_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW-NWT files
     ws = os.path.join(ws, "mfnwt")
@@ -446,10 +447,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def eval_model(test):
-    print("evaluating model...")
-
-    name = test.name
+def check_output(idx, test):
     ws = test.workspace
 
     # Get the MF6 heads
@@ -458,7 +456,7 @@ def eval_model(test):
     hds = hobj.get_alldata()
 
     # Get the MF6 water contents
-    wcpth = os.path.join(ws, ex[0] + ".uzfwc.bin")
+    wcpth = os.path.join(ws, cases[0] + ".uzfwc.bin")
     mf6_wc_obj = bf.HeadFile(wcpth, text="   water-content")
 
     ckstpkper_wc = mf6_wc_obj.get_kstpkper()
@@ -540,14 +538,14 @@ def eval_model(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=eval_model,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

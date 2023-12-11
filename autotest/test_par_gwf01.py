@@ -1,10 +1,3 @@
-import os
-
-import flopy
-import numpy as np
-import pytest
-from framework import TestFramework
-
 """
 Test for parallel MODFLOW running on two cpus.
 It contains two coupled models with
@@ -17,7 +10,15 @@ constant head boundaries left=1.0, right=10.0.
 The result should be a uniform flow field.
 """
 
-ex = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
+import os
+
+import flopy
+import numpy as np
+import pytest
+
+from framework import TestFramework
+
+cases = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
 dis_shape = [(1, 1, 5), (1, 5, 5), (5, 5, 5)]
 
 # global convenience...
@@ -30,7 +31,7 @@ hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -199,7 +200,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     # two coupled models with a uniform flow field,
     # here we assert the known head values at the
     # cell centers
@@ -220,7 +221,7 @@ def check_output(test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -228,7 +229,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
         ncpus=2,

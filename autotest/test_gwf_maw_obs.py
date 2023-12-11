@@ -11,7 +11,7 @@ import os
 import flopy
 
 newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
-ex = "maw_obs"
+cases = "maw_obs"
 
 
 def build_model(dir, exe):
@@ -35,7 +35,7 @@ def build_model(dir, exe):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex
+    name = cases
 
     # build MODFLOW 6 files
     ws = dir
@@ -188,8 +188,8 @@ def test_mf6model(function_tmpdir, targets):
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = str(function_tmpdir / (ex + ".maw.obs"))
-    new_fl = str(function_tmpdir / (ex + ".maw.obs.new"))
+    orig_fl = str(function_tmpdir / (cases + ".maw.obs"))
+    new_fl = str(function_tmpdir / (cases + ".maw.obs.new"))
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 

@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]
+cases = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]
 ncols = [[15], [10, 5], [15], [10, 5]]
 nlays = [1, 1, 3, 3]
 
@@ -50,7 +51,7 @@ def get_local_data(idx):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
     nlay = nlays[idx]
 
     if nlay == 1:
@@ -207,8 +208,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating rewet heads...")
-
     hdata01lay = [
         [
             1.000000000000000000e02,
@@ -337,7 +336,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

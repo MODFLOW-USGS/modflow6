@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["utl03_obs"]
+cases = ["utl03_obs"]
 
 # temporal discretization
 nper = 2
@@ -48,7 +49,7 @@ hclose, rclose, relax = 1e-6, 0.01, 1.0
 
 
 def build_mf6(idx, ws, exe, binaryobs=True):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -153,7 +154,7 @@ def build_model(idx, dir, exe):
 
 
 def build_models(dir, exe):
-    for idx, name in enumerate(ex):
+    for idx, name in enumerate(cases):
         sim, mc = build_model(idx, dir, exe)
         sim.write_simulation()
         mc.write_simulation()
@@ -161,7 +162,7 @@ def build_models(dir, exe):
 
 
 def hack_binary_obs(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
     ws = dir
     wsc = os.path.join(ws, "mf6")
     fname = name + ".obs"
@@ -177,9 +178,7 @@ def hack_binary_obs(idx, dir):
         f.close()
 
 
-def eval_obs(test):
-    print("evaluating observations...")
-
+def check_output(idx, test):
     # get results from the observation files
     pth = test.workspace
     files = [fn for fn in os.listdir(pth) if ".csv" in fn]
@@ -216,14 +215,14 @@ def eval_obs(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     build_models(function_tmpdir, targets.mf6)
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        check=eval_obs,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

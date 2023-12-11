@@ -1,10 +1,3 @@
-import os
-
-import flopy
-import numpy as np
-import pytest
-from framework import TestFramework
-
 """
 General test for the interface model approach.
 It compares the result of a single reference model
@@ -23,7 +16,15 @@ We assert equality on the head values. All models are part of a single
 solution for convenience. Finally, the budget error is checked.
 """
 
-ex = ["ifmod_ibound"]
+import os
+
+import flopy
+import numpy as np
+import pytest
+
+from framework import TestFramework
+
+cases = ["ifmod_ibound"]
 
 # some global convenience...:
 # model names
@@ -104,7 +105,7 @@ chd_spd_right = {0: rchd_right}
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -329,7 +330,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     print("comparing heads to single model reference...")
 
     fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
@@ -374,7 +375,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -382,7 +383,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

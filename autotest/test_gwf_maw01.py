@@ -1,21 +1,13 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
 import pytest
 
+cases = ["maw01", "maw01nwt", "maw01nwtur"]
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
-
-well1 = Case(
-    observations={"maw_obs.csv": [("mh1", "head", 1)]},
-    packagedata=[[0, 0.1, 50.0, 100.0, "THIEM", 1]],
-    connectiondata=[[0, 0, (0, 0, 1), 100.0, 50.0, 1.0, 0.1]],
-    perioddata=[[0, "rate", 0.0]],
-)
-
-ex = ["maw01", "maw01nwt", "maw01nwtur"]
 krylov = ["CG", "BICGSTAB", "BICGSTAB"]
 newton = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
 nlay = 1
@@ -27,7 +19,12 @@ delc = 300
 perlen = 3 * [1]
 nstp = 3 * [1]
 tsmult = 3 * [1]
-well = well1
+well = SimpleNamespace(
+    observations={"maw_obs.csv": [("mh1", "head", 1)]},
+    packagedata=[[0, 0.1, 50.0, 100.0, "THIEM", 1]],
+    connectiondata=[[0, 0, (0, 0, 1), 100.0, 50.0, 1.0, 0.1]],
+    perioddata=[[0, "rate", 0.0]],
+)
 strt = 100
 hk = 1
 nouter = 100
@@ -39,7 +36,7 @@ compare = False
 
 
 def build_model(idx, ws, mf6):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -166,9 +163,7 @@ def build_model(idx, ws, mf6):
     return sim, None
 
 
-def eval_results(workspace):
-    print("evaluating MAW heads...")
-
+def check_output(workspace):
     # MODFLOW 6 maw results
     fpth = os.path.join(workspace, "maw_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
@@ -185,10 +180,10 @@ def eval_results(workspace):
     print(msg)
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     sim, _ = build_model(idx, ws, targets.mf6)
     sim.write_simulation()
     sim.run_simulation()
-    eval_results(ws)
+    check_output(ws)

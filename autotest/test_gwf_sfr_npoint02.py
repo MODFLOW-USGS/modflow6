@@ -3,12 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from cross_section_functions import get_depths
 from framework import TestFramework
 
 paktest = "sfr"
 
-ex = [
+cases = [
     "sfr_npt02a",
 ]
 
@@ -54,7 +55,7 @@ def flow_to_depth_wide(rwid, q):
 
 def build_models(idx, test):
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -207,11 +208,9 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    name = sim.name
-    print("evaluating n-point cross-section results..." f"({name})")
-
-    obs_pth = os.path.join(sim.workspace, f"{name}.sfr.obs.csv")
+def check_output(idx, test):
+    name = test.name
+    obs_pth = os.path.join(test.workspace, f"{name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
@@ -242,7 +241,7 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -250,6 +249,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

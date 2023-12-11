@@ -9,16 +9,15 @@ and more discharge of gw to the stream, compared to the same simulation
 with the VSC package inactive.
 """
 
-# Imports
-
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["no-vsc-sfr01", "vsc-sfr01"]
+cases = ["no-vsc-sfr01", "vsc-sfr01"]
 viscosity_on = [False, True]
 
 
@@ -90,9 +89,7 @@ K_d = C_s / (rho_water * C_p_w)  # Partitioning coefficient ($m^3/kg$)
 def build_models(idx, test):
     # Base simulation and model name and workspace
     ws = test.workspace
-    name = ex[idx]
-
-    print("Building model...{}".format(name))
+    name = cases[idx]
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -433,10 +430,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".sfr.cbc"
@@ -530,7 +525,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

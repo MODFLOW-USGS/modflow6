@@ -15,12 +15,11 @@ import os
 
 import flopy
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
 
-ex = ["libgwf_ifmod01"]
+from framework import TestFramework
 
-# global convenience...
+cases = ["libgwf_ifmod01"]
 name_left = "leftmodel"
 name_right = "rightmodel"
 
@@ -197,7 +196,7 @@ def get_model(dir, name):
 def build_models(idx, test):
     # build MODFLOW 6 files
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
     sim = get_model(ws, name)
 
     # build comparison model
@@ -306,7 +305,7 @@ def check_interface_models(mf6):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

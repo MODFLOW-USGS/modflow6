@@ -3,10 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "sfr"
-ex = [
+cases = [
     "sfr_dis",
     "sfr_dis_fail",
     "sfr_dis_none",
@@ -61,7 +62,7 @@ def build_model(idx, ws):
     ts_flows = np.array([1000.0] + [float(q) for q in range(1000, -100, -100)])
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     dis_type = dis_types[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -269,7 +270,7 @@ def build_models(idx, test):
     return sim, None
 
 
-@pytest.mark.parametrize("idx, name", enumerate(ex))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

@@ -10,10 +10,11 @@ the effects of tides on the aquifer.
 import flopy
 import numpy as np
 import pytest
+
 from conftest import should_compare
 from framework import TestFramework
 
-ex = ["gwf_henrynr01"]
+cases = ["gwf_henrynr01"]
 
 # global model variables
 nlay = 20
@@ -68,7 +69,7 @@ def sinfunc(a, b, c, d, x):
 
 def build_models(idx, test):
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     nrow = 1
     delr = lx / ncol
@@ -235,7 +236,7 @@ def build_models(idx, test):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     name = "gwf-henry-nr"
@@ -245,7 +246,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        compare="mf6_regression" if should_compare(name, comparisons, targets) else "auto",
+        compare="mf6_regression"
+        if should_compare(name, comparisons, targets)
+        else "auto",
         verbose=False,
     )
     test.run()

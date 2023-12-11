@@ -7,9 +7,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["mst02a", "mst02b"]
+cases = ["mst02a", "mst02b"]
 distcoef = [0.0, 1.0]
 nlay, nrow, ncol = 1, 1, 2
 
@@ -69,7 +70,7 @@ def build_models(idx, test):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -226,10 +227,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating transport...")
-
-    idx = idx
-    name = ex[idx]
+    name = cases[idx]
     gwtname = "gwt_" + name
 
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
@@ -257,7 +255,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -11,9 +11,10 @@ import flopy
 import flopy.utils.cvfdutil
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["dsp03a", "dsp03b"]
+cases = ["dsp03a", "dsp03b"]
 xt3d = [False, True]
 
 
@@ -90,7 +91,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -316,9 +317,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating transport...")
-
-    name = ex[idx]
+    name = cases[idx]
     gwtname = "gwt_" + name
 
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
@@ -439,7 +438,7 @@ def check_output(idx, test):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

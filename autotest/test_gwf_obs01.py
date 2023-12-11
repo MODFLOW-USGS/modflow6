@@ -3,10 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 cell_dimensions = (300,)
-ex = [f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))]
+cases = [
+    f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))
+]
 h0, h1 = 1.0, 0.0
 
 
@@ -22,11 +25,11 @@ def get_obs(idx):
         for j in range(ncol):
             node = i * ncol + j + 1
             obs_lst.append([node, "head", (0, i, j)])
-    return {f"{ex[idx]}.gwf.obs.csv": obs_lst}
+    return {f"{cases[idx]}.gwf.obs.csv": obs_lst}
 
 
 def get_obs_out(idx, test):
-    fpth = os.path.join(test.workspace, f"{ex[idx]}.gwf.obs.csv")
+    fpth = os.path.join(test.workspace, f"{cases[idx]}.gwf.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
         return tc.view((float, len(tc.dtype.names)))[1:]
@@ -61,7 +64,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -136,17 +139,15 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating model observations...")
     hres = get_strt_array(idx).flatten()
     obs = get_obs_out(idx, test)
-    msg = "simulated head observations do not match with known solution."
-    assert np.allclose(hres, obs), msg
+    assert np.allclose(hres, obs), "simulated head observations do not match with known solution."
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

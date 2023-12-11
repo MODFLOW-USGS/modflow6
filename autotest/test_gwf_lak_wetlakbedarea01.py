@@ -12,9 +12,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["lak-1cellkbd"]
+cases = ["lak-1cellkbd"]
 
 # Model units
 length_units = "feet"
@@ -153,7 +154,7 @@ def calc_qSat(top, bot, thk):
 def build_models(idx, test):
     # Base simulation and model name and workspace
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -349,10 +350,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     # read flow results from model
@@ -368,8 +367,8 @@ def check_output(idx, test):
     lkstg_val = lkstg["STAGE"].tolist()
 
     # Store only the values at the end of the time step
-    idx = [i for i, val in enumerate(lkstg_time) if not val.is_integer()]
-    for i in idx[::-1]:
+    indices = [i for i, val in enumerate(lkstg_time) if not val.is_integer()]
+    for i in indices[::-1]:
         lkstg_time.pop(i)
         lkstg_val.pop(i)
 
@@ -444,7 +443,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

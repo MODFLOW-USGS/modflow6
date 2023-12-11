@@ -1,33 +1,36 @@
+"""
+General test for the interface model approach.
+It compares the result of a single reference model
+to the equivalent case where the domain is decomposed
+and joined by a GWF-GWF exchange.
+
+       'refmodel'              'leftmodel'     'rightmodel'
+
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+
+We assert equality on the head values and the (components of)
+specific discharges. All models are part of the same solution
+for convenience. Finally, the budget error is checked.
+"""
+
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-# General test for the interface model approach.
-# It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed
-# and joined by a GWF-GWF exchange.
-#
-#        'refmodel'              'leftmodel'     'rightmodel'
-#
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#
-# We assert equality on the head values and the (components of)
-# specific discharges. All models are part of the same solution
-# for convenience. Finally, the budget error is checked.
-
-ex = ["ifmod_buy01"]
+cases = ["ifmod_buy01"]
 
 # some global convenience...:
 # model names
@@ -83,7 +86,7 @@ porosity = 0.30
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -534,7 +537,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def check_output(test):
+def check_output(idx, test):
     print("comparing heads and spec. discharge to single model reference...")
 
     fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
@@ -638,7 +641,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -647,6 +650,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -1,12 +1,13 @@
-import pytest
-from framework import TestFramework
-
 """
 This test reuses the simulation data and config in
 test_gwt_henry_gwtgwt.py and runs it in parallel mode.
 """
 
-ex = ["par-henry-ups", "par-henry-cen", "par-henry-tvd"]
+import pytest
+
+from framework import TestFramework
+
+cases = ["par-henry-ups", "par-henry-cen", "par-henry-tvd"]
 
 
 def build_models(idx, test):
@@ -16,16 +17,16 @@ def build_models(idx, test):
     return sim, dummy
 
 
-def check_output(test):
+def check_output(idx, test):
     from test_gwt_henry_gwtgwt import check_output as check
 
-    check(test)
+    check(idx, test)
 
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -33,7 +34,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
         ncpus=2,

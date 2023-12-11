@@ -1,23 +1,26 @@
-# Based on sft01 gwf model, but split into two gwf models test gwf-gwf and
-# mvr. The single base model is split using the model splitter into two models.
-# The single model is run as the regression model
+"""
+Based on sft01 gwf model, but split into two gwf models test gwf-gwf and
+mvr. The single base model is split using the model splitter into two models.
+The single model is run as the regression model
 
-# The final split model look like:
-#
-#       flow1                        flow2
-#  sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
-#       -------------                -------------
-#  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
+The final split model look like:
+
+      flow1                        flow2
+ sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
+      -------------                -------------
+ gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
+"""
 
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 # from flopy.mf6.utils import Mf6Splitter
 
-ex = ["sfr01gwfgwf"]
+cases = ["sfr01gwfgwf"]
 
 # properties for single model combination
 lx = 14.0
@@ -36,7 +39,7 @@ Kv = 20.0
 
 
 def build_simulation(idx, sim_ws, sim_type="single"):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         sim_ws=sim_ws,
@@ -273,11 +276,9 @@ def build_models(idx, test):
     return sim, sim_base
 
 
-def check_output(sim):
-    print("evaluating sfr stage results...")
-
+def check_output(idx, test):
     # base simulations stage
-    ws = sim.workspace
+    ws = test.workspace
     fpth = ws / "mf6/single.sfr.stg"
     single_stage_obj = flopy.utils.HeadFile(fpth, text="STAGE")
     single_stage = single_stage_obj.get_data().squeeze()
@@ -300,7 +301,7 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -308,7 +309,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         compare="run_only",
     )
     test.run()

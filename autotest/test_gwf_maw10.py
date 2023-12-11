@@ -11,9 +11,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["maw10a", "maw10b", "maw10c", "maw10d"]
+cases = ["maw10a", "maw10b", "maw10c", "maw10d"]
 mawsetting_a = {
     0: [
         [0, "rate", -2000.0],
@@ -78,7 +79,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -209,11 +210,9 @@ def build_models(idx, test):
 # 1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
 # 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
 #  (and all are reduction times present in the obs file)?
-def eval_results(idx, test):
-    print("evaluating MAW flow reduction outputs...")
-
+def check_output(idx, test):
     # MODFLOW 6 maw results
-    name = ex[idx]
+    name = cases[idx]
     fpthobs = os.path.join(test.workspace, f"{name}.maw.obs.csv")
     fpthmfr = os.path.join(test.workspace, f"{name}.maw-reduction.csv")
     try:
@@ -264,14 +263,14 @@ def eval_results(idx, test):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: eval_results(idx, t),
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

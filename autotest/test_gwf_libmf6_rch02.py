@@ -9,10 +9,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
 
-ex = ["libgwf_rch02"]
+from framework import TestFramework
+
+cases = ["libgwf_rch02"]
 
 # recharge package name
 rch_pname = "RCH-1"
@@ -154,7 +155,7 @@ def get_model(ws, name, exe, rech=rch_spd):
 def build_models(idx, test):
     # build MODFLOW 6 files
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
     sim = get_model(ws, name, "mf6")
 
     # build comparison model
@@ -182,7 +183,7 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
 def api_func(exe, idx, model_ws=None):
     print("\nBMI implementation test:")
 
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     init_wd = os.path.abspath(os.getcwd())
     if model_ws is not None:
         os.chdir(model_ws)
@@ -190,7 +191,7 @@ def api_func(exe, idx, model_ws=None):
     output_file_path = os.path.join(model_ws, "mfsim.stdout")
 
     # get the observations from the standard run
-    fpth = os.path.join("..", f"{ex[idx]}.head.obs.csv")
+    fpth = os.path.join("..", f"{cases[idx]}.head.obs.csv")
     hobs = np.genfromtxt(fpth, delimiter=",", names=True)["H1_6_6"]
 
     try:
@@ -306,7 +307,7 @@ def api_func(exe, idx, model_ws=None):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

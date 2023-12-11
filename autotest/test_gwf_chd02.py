@@ -4,15 +4,16 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "chd02",
 ]
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
     nlay, nrow, ncol = 1, 1, 10
     sim = flopy.mf6.MFSimulation(sim_ws=test.workspace, sim_name=name)
     flopy.mf6.ModflowTdis(sim)
@@ -62,9 +63,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating model...")
-
+def check_output(idx, test):
     name = test.name
 
     fpth = os.path.join(test.workspace, f"{name}.hds")
@@ -91,13 +90,13 @@ def check_output(test):
     ), "simulated head does not match with known solution."
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

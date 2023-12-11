@@ -312,6 +312,5 @@ def run_transport_model(dir, exe):
 
 
 def test_ssm01fmi(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(str(function_tmpdir), mf6)
-    run_transport_model(str(function_tmpdir), mf6)
+    run_flow_model(str(function_tmpdir), targets.mf6)
+    run_transport_model(str(function_tmpdir), targets.mf6)

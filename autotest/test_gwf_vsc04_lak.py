@@ -19,9 +19,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["no-vsc04-lak", "vsc04-lak"]
+cases = ["no-vsc04-lak", "vsc04-lak"]
 viscosity_on = [False, True]
 
 # Model units
@@ -162,7 +163,7 @@ def build_models(idx, test):
     global lak_lkup_dict
 
     # Base simulation and model name and workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -611,10 +612,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".lak.bud"
@@ -699,20 +698,20 @@ def check_output(idx, test):
         no_vsc_bud_last = np.array(outbud[-1].tolist())
         no_vsc_bud_np = np.array(no_vsc_bud_last.tolist())
 
-        for idx in np.arange(stored_ans.shape[0]):
-            k, i, j = lak_lkup_dict[idx]
+        for ii in np.arange(stored_ans.shape[0]):
+            k, i, j = lak_lkup_dict[ii]
 
             # left side of lake
             if j < 7:
-                if no_vsc_bud_np[idx, 2] > 0 and stored_ans[idx, 2] > 0:
-                    left_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                    left_chk_ans.append(stored_ans[idx, 2])
+                if no_vsc_bud_np[ii, 2] > 0 and stored_ans[ii, 2] > 0:
+                    left_chk_no_vsc.append(no_vsc_bud_np[ii, 2])
+                    left_chk_ans.append(stored_ans[ii, 2])
 
             # right side of lake
             if j > 9:
-                if no_vsc_bud_np[idx, 2] < 0 and stored_ans[idx, 2] < 0:
-                    right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                    right_chk_ans.append(stored_ans[idx, 2])
+                if no_vsc_bud_np[ii, 2] < 0 and stored_ans[ii, 2] < 0:
+                    right_chk_no_vsc.append(no_vsc_bud_np[ii, 2])
+                    right_chk_ans.append(stored_ans[ii, 2])
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
@@ -737,20 +736,20 @@ def check_output(idx, test):
         with_vsc_bud_last = np.array(outbud[-1].tolist())
         with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
 
-        for idx in np.arange(stored_ans.shape[0]):
-            k, i, j = lak_lkup_dict[idx]
+        for ii in np.arange(stored_ans.shape[0]):
+            k, i, j = lak_lkup_dict[ii]
 
             # left side of lake
             if j < 7:
-                if stored_ans[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
-                    left_chk_no_vsc.append(stored_ans[idx, 2])
-                    left_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
+                if stored_ans[ii, 2] > 0 and with_vsc_bud_np[ii, 2] > 0:
+                    left_chk_no_vsc.append(stored_ans[ii, 2])
+                    left_chk_with_vsc.append(with_vsc_bud_np[ii, 2])
 
             # right side of lake
             if j > 9:
-                if stored_ans[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
-                    right_chk_no_vsc.append(stored_ans[idx, 2])
-                    right_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
+                if stored_ans[ii, 2] < 0 and with_vsc_bud_np[ii, 2] < 0:
+                    right_chk_no_vsc.append(stored_ans[ii, 2])
+                    right_chk_with_vsc.append(with_vsc_bud_np[ii, 2])
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
@@ -772,7 +771,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

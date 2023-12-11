@@ -16,9 +16,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["buy_maw_01a"]  # , 'buy_maw_01b', 'buy_maw_01c']
+cases = ["buy_maw_01a"]  # , 'buy_maw_01b', 'buy_maw_01c']
 buy_on_list = [False]  # , True, True]
 concbuylist = [0.0]  # , 0., 35.]
 
@@ -50,7 +51,7 @@ def build_models(idx, test):
     nouter, ninner = 700, 10
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -185,9 +186,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # calculate volume of water and make sure it is conserved
     gwfname = "gwf_" + test.name
     fname = gwfname + ".maw.bin"
@@ -252,14 +251,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

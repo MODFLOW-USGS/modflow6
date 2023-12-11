@@ -3,10 +3,11 @@ import os
 import flopy
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "ims"
-ex = ["ims_rcm"]
+cases = ["ims_rcm"]
 cmp_prefix = "mf6"
 
 # spatial discretization data
@@ -26,7 +27,7 @@ def build_model(idx, ws):
     tdis_rc = [(1.0, 1, 1.0)]
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -117,10 +118,8 @@ def build_models(idx, test):
     )
 
 
-def check_output(test):
+def check_output(idx, test):
     name = test.name
-    print("evaluating flow results..." f"({name})")
-
     fpth = os.path.join(test.workspace, f"{name}.dis.grb")
     ia = flopy.mf6.utils.MfGrdFile(fpth).ia
 
@@ -140,7 +139,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -148,6 +147,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

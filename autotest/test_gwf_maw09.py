@@ -8,9 +8,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ("maw_09a", "maw_09b", "maw_09c", "maw_09d")
+cases = ("maw_09a", "maw_09b", "maw_09c", "maw_09d")
 dis_option = ("dis", "dis", "disv", "disv")
 flow_correction = (None, True, None, True)
 
@@ -48,7 +49,7 @@ radius = np.sqrt(1.0 / np.pi)
 def build_models(idx, test):
     dvclose, rclose, relax = 1e-9, 1e-9, 1.0
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -222,9 +223,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf_" + name
 
     # get well observations
@@ -243,10 +242,10 @@ def check_output(idx, test):
     # volume comparisons can be made based on saturated thickness because
     # the cell area and well area are both equal to 1
     v0 = (maw_strt - 10.0) + (strt - 0.0)
-    for idx, w in enumerate(wobs):
+    for i, w in enumerate(wobs):
         vg = 0.0
         for jdx, tag in enumerate(("C1", "C2", "C3")):
-            g = gobs[tag][idx]
+            g = gobs[tag][i]
             ctop = zelevs[jdx]
             cbot = zelevs[jdx + 1]
             if g > ctop:
@@ -260,7 +259,7 @@ def check_output(idx, test):
         vt = vw + vg
 
         # write a message
-        msg = f"{idx}\n  well volume: {vw} "
+        msg = f"{i}\n  well volume: {vw} "
         msg += f"\n  groundwater volume: {vg}"
         msg += f"\n  total volume: {vt}"
         print(msg)
@@ -308,7 +307,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

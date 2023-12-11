@@ -30,20 +30,20 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["ifmod_xt3d02"]
+cases = ["ifmod_xt3d02"]
 mname_ref = "refmodel"
 mname_left = "leftmodel"
 mname_right = "rightmodel"
 hclose_check = 1e-9
 max_inner_it = 300
-
 useXT3D = True
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -309,7 +309,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def check_output(test):
+def check_output(idx, test):
     print("comparing heads and spec. discharge to single model reference...")
 
     fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
@@ -413,7 +413,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -421,6 +421,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

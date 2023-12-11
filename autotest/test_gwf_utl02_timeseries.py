@@ -1,8 +1,9 @@
 import flopy
 import pytest
+
 from framework import TestFramework
 
-ex = ["ts01"]
+cases = ["ts01"]
 
 
 def build_models(idx, test):
@@ -24,7 +25,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp, tsmult))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -148,7 +149,7 @@ def build_models(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

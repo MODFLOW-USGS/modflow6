@@ -1,17 +1,19 @@
 import flopy
 import numpy as np
+import pytest
+
 from framework import TestFramework
 
 paktest = "sfr"
-testname = "ts_sfr01"
+cases = ["ts_sfr01"]
 
 
-def build_models(test, timeseries=False):
+def build_models(idx, test, timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
     ts_times = np.arange(0.0, 2.0, 1.0, dtype=float)
 
@@ -35,7 +37,7 @@ def build_models(test, timeseries=False):
     imsla = "BICGSTAB"
 
     # build MODFLOW 6 files
-    name = testname
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
@@ -507,7 +509,7 @@ def build_models(test, timeseries=False):
     return sim
 
 
-def check_output(test):
+def check_output(idx, test):
     print("Running surfdep check")
     with open(test.workspace / "mfsim.lst", "r") as f:
         lines = f.readlines()
@@ -522,13 +524,14 @@ def check_output(test):
         )
 
 
-def test_mf6model(function_tmpdir, targets):
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
-        name=testname,
+        name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=build_models,
-        check=check_output,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
         xfail=True,
     )
     test.run()

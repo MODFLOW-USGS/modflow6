@@ -4,6 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
+
 from framework import TestFramework
 
 dis_types = (
@@ -19,9 +20,9 @@ problems = (
     "ps2d",
     "ps2e",
 )
-ex = []
+cases = []
 for problem in problems:
-    ex += [f"{problem}_{dis_type}" for dis_type in dis_types]
+    cases += [f"{problem}_{dis_type}" for dis_type in dis_types]
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 21, 20
@@ -251,7 +252,7 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_model(idx, test, gridgen):
+def build_models(idx, test, gridgen):
     return build_mf6(idx, test.workspace, gridgen), build_mf6(
         idx, test.workspace / "mf6", gridgen
     )
@@ -273,7 +274,7 @@ def build_mf6(idx, ws, gridgen):
     else:
         list_recharge = False
 
-    name = ex[idx]
+    name = cases[idx]
     if dis_type == "dis":
         name = get_dis_name(name)
     sim_name = name[0:3]
@@ -447,12 +448,10 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_head(idx, test):
-    name = ex[idx]
+def check_output(idx, test):
+    name = cases[idx]
     sim_name = name[0:3]
     ws = pl.Path(test.workspace)
-
-    print(f"evaluating {name} heads...")
 
     if name.startswith("ps1"):
         row_values = np.array(
@@ -557,15 +556,15 @@ def eval_head(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_model(idx, t, targets.gridgen),
-        check=lambda t: eval_head(idx, t),
+        build=lambda t: build_models(idx, t, targets.gridgen),
+        check=lambda t: check_output(idx, t),
         verbose=False,
     )
     test.run()

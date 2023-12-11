@@ -8,14 +8,15 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwf_uzf01a"]
+cases = ["gwf_uzf01a"]
 nlay, nrow, ncol = 100, 1, 1
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     perlen = [500.0]
     nper = len(perlen)
@@ -33,8 +34,8 @@ def build_models(idx, test):
     sy = 0.1
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for i in range(nper):
+        tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -210,9 +211,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating flow...")
-
+def check_output(idx, test):
     name = test.name
     ws = test.workspace
 
@@ -252,8 +251,8 @@ def check_output(test):
         names[-1]: obs_obj.get_data(obsname=names[-1]),
     }
     cbc = uobj.get_ts(idx=[[0, 0, 1], [0, 0, 49]], text="GWF")
-    for idx, key in enumerate(obs.keys()):
-        assert np.allclose(obs[key][key], -cbc[:, idx + 1]), (
+    for i, key in enumerate(obs.keys()):
+        assert np.allclose(obs[key][key], -cbc[:, i + 1]), (
             f"observation data for {key} is not the same as "
             "data in the cell-by-cell file."
         )
@@ -261,14 +260,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

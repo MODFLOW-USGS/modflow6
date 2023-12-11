@@ -3,11 +3,12 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
+cases = ["drn_ddrn02a"]
 paktest = "drn"
 budtol = 1e-2
-ex = ["drn_ddrn02a"]
 
 # static model data
 # spatial discretization
@@ -108,7 +109,7 @@ def get_model(ws, name, uzf=False):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -121,9 +122,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(test):
-    print("evaluating drain discharge and uzf discharge to land surface...")
-
+def check_output(idx, test):
     # MODFLOW 6 drain discharge results
     fpth = os.path.join(test.workspace, "drn_obs.csv")
     try:
@@ -148,19 +147,18 @@ def check_output(test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out"
     )
-    f = open(fpth, "w")
-    line = f"{'TOTIM':>15s}"
-    line += f" {'DRN':>15s}"
-    line += f" {'UZF':>15s}"
-    line += f" {'DIFF':>15s}"
-    f.write(line + "\n")
-    for i in range(diff.shape[0]):
-        line = f"{tc0['time'][i]:15g}"
-        line += f" {tc['D1_1_1'][i]:15g}"
-        line += f" {tc0['D1_1_1'][i]:15g}"
-        line += f" {diff[i]:15g}"
+    with open(fpth, "w") as f:
+        line = f"{'TOTIM':>15s}"
+        line += f" {'DRN':>15s}"
+        line += f" {'UZF':>15s}"
+        line += f" {'DIFF':>15s}"
         f.write(line + "\n")
-    f.close()
+        for i in range(diff.shape[0]):
+            line = f"{tc0['time'][i]:15g}"
+            line += f" {tc['D1_1_1'][i]:15g}"
+            line += f" {tc0['D1_1_1'][i]:15g}"
+            line += f" {diff[i]:15g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
         test.success = False
@@ -173,14 +171,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()
