@@ -1,11 +1,3 @@
-import os
-from decimal import Decimal
-
-import flopy
-import numpy as np
-import pytest
-from framework import TestFramework
-
 """
 Test for parallel MODFLOW running a simple
 multi-model setup with different numbers 
@@ -25,7 +17,13 @@ This constant head should reach all domains,
 no matter the topology of partitions
 """
 
-ex = [
+import flopy
+import numpy as np
+import pytest
+
+from framework import TestFramework
+
+cases = [
     "par_gwf02-a",
     "par_gwf02-b",
     "par_gwf02-c",
@@ -50,7 +48,7 @@ def get_model_name(ix, iy):
 
 
 def get_simulation(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     nr_models_x = domain_grid[idx][0]
     nr_models_y = domain_grid[idx][1]
 
@@ -230,7 +228,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     mf6_sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     for mname in mf6_sim.model_names:
         m = mf6_sim.get_model(mname)
@@ -242,7 +240,7 @@ def check_output(test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     ncpus = domain_grid[idx][0] * domain_grid[idx][1]
@@ -251,7 +249,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
         ncpus=ncpus,

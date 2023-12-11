@@ -1,4 +1,4 @@
-"""tests to ability to run flow model first followed by transport model"""
+"""Tests to ability to run flow model first followed by transport model"""
 
 import os
 from os.path import join
@@ -6,6 +6,7 @@ from os.path import join
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 
 data_path = project_root_path / "autotest" / "data"
@@ -784,6 +785,5 @@ def run_transport_model(dir, exe):
 
 @pytest.mark.slow
 def test_prudic2004t2fmi(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(str(function_tmpdir), mf6)
-    run_transport_model(str(function_tmpdir), mf6)
+    run_flow_model(str(function_tmpdir), targets.mf6)
+    run_transport_model(str(function_tmpdir), targets.mf6)

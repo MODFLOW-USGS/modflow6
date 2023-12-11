@@ -2,15 +2,14 @@
 
 
 import os
-import shutil
-import sys
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "gwf_laket01",
     "gwf_laket02",
     "gwf_laket03",
@@ -22,7 +21,7 @@ lakestage = [6.0, 5.0, 6.0]
 
 
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     nlay = 1
     nrow = 1
     ncol = 1
@@ -181,8 +180,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    msg = "Evaluating Lake ET. "
-
     fpth = os.path.join(test.workspace, f"{test.name}.lak.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
@@ -297,7 +294,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

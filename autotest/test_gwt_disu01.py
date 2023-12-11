@@ -10,9 +10,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disu_kwargs
+
 from framework import TestFramework
 
-ex = ["disu01a"]
+cases = ["disu01a"]
 
 
 def build_models(idx, test):
@@ -56,7 +57,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -217,9 +218,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     name = test.name
     gwtname = "gwt_" + name
 
@@ -249,7 +248,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -257,6 +256,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

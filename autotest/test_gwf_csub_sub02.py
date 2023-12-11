@@ -2,9 +2,10 @@ import os
 
 import flopy
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "csub_sub02a",
     "csub_sub02b",
     "csub_sub02c",
@@ -22,10 +23,10 @@ ndelaycells = [None, 19, None, 19, 19]
 # static model data
 nlay, nrow, ncol = 1, 1, 1
 nper = 10
-perlen = [182.625 for i in range(nper)]
-nstp = [10 for i in range(nper)]
-tsmult = [1.05 for i in range(nper)]
-steady = [False for i in range(nper)]
+perlen = [182.625 for _ in range(nper)]
+nstp = [10 for _ in range(nper)]
+tsmult = [1.05 for _ in range(nper)]
+steady = [False for _ in range(nper)]
 delr, delc = 1000.0, 1000.0
 top = -100.0
 botm = [-600.0]
@@ -40,8 +41,8 @@ nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 ib = 1
 
@@ -75,7 +76,7 @@ dp = [[kv, cr, cc]]
 
 
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     ss = 1.14e-3
     sc6 = True
     if not storagecoeff[idx]:
@@ -208,7 +209,7 @@ def build_models(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

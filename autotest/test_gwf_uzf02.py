@@ -1,6 +1,5 @@
 """
-# Test uzf for the vs2d comparison problem in the uzf documentation
-
+Test uzf for the vs2d comparison problem in the uzf documentation
 """
 
 import os
@@ -8,9 +7,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwf_uzf02a"]
+cases = ["gwf_uzf02a"]
 nlay, nrow, ncol = 1, 1, 1
 
 
@@ -44,7 +44,7 @@ def build_models(idx, test):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -228,10 +228,10 @@ def make_plot(sim, obsvals):
 
     # shows curves for times 2.5, 7.5, 12.6, 17.7
     # which are indices 24, 74, 125, and -1
-    idx = [24, 74, 125, -1]
+    indices = [24, 74, 125, -1]
 
     obsvals = [list(row) for row in obsvals]
-    obsvals = [obsvals[i] for i in idx]
+    obsvals = [obsvals[i] for i in indices]
     obsvals = np.array(obsvals)
 
     import matplotlib.pyplot as plt
@@ -255,11 +255,9 @@ def make_plot(sim, obsvals):
     plt.savefig(fname, bbox_inches="tight")
 
 
-def check_output(sim):
-    print("evaluating flow...")
-
-    name = sim.name
-    ws = sim.workspace
+def check_output(idx, test):
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -296,7 +294,7 @@ def check_output(sim):
         assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
 
     # Make plot of obs
-    fpth = os.path.join(sim.workspace, name + ".uzf.obs.csv")
+    fpth = os.path.join(test.workspace, name + ".uzf.obs.csv")
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -306,14 +304,14 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

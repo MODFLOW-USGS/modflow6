@@ -16,9 +16,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["ist02"]
+cases = ["ist02"]
 nlay, nrow, ncol = 1, 1, 300
 
 mt3d_times = np.arange(1.0, 51.0, 1.0)
@@ -97,7 +98,7 @@ def build_models(idx, test):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -343,12 +344,8 @@ def make_plot(sim):
     fname = os.path.join(ws, gwtname + ".png")
     plt.savefig(fname)
 
-    return
 
-
-def check_output(test):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     makeplot = False
     if makeplot:
         make_plot(test)
@@ -381,7 +378,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -389,6 +386,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

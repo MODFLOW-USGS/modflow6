@@ -9,9 +9,10 @@ import numpy as np
 import pytest
 from flopy.utils.binaryfile import write_budget, write_head
 from flopy.utils.gridutil import uniform_flow_field
+
 from framework import TestFramework
 
-ex = ["mst05a", "mst05b"]
+cases = ["mst05a", "mst05b"]
 isotherm = ["freundlich", "langmuir"]
 distcoef = [0.3, 100.0]
 sp2 = [0.7, 0.003]
@@ -45,7 +46,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -265,9 +266,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating transport...")
-
-    name = ex[idx]
+    name = cases[idx]
     gwtname = "gwt_" + name
 
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
@@ -307,7 +306,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -1,6 +1,4 @@
 """
-Test problem for VSC
-
 Uses constant head and general-head boundaries on the left and right
 sides of the model domain, respectively, to drive flow from left to
 right.  Tests that head-dependent boundary conditions are properly
@@ -15,10 +13,11 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
+cases = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
-ex = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
 viscosity_on = [False, True, False]
 hydraulic_conductivity = [hyd_cond[0], hyd_cond[1], hyd_cond[1]]
 
@@ -61,7 +60,7 @@ hclose, rclose, relax = 1e-10, 1e-6, 0.97
 def build_models(idx, test):
     # Base simulation and model name and workspace
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -250,10 +249,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".bud"
@@ -272,7 +269,7 @@ def check_output(idx, test):
         # Ensure latest simulated value hasn't changed from stored answer
         assert np.allclose(
             sim_val_1, stored_ans, atol=1e-4
-        ), "Flow in the " + ex[
+        ), "Flow in the " + cases[
             0
         ] + " test problem (doesn't simulate " "viscosity) has changed,\n should be " + str(
             stored_ans
@@ -287,7 +284,7 @@ def check_output(idx, test):
         # Ensure latest simulated value hasn't changed from stored answer
         assert np.allclose(
             sim_val_2, stored_ans, atol=1e-4
-        ), "Flow in the " + ex[
+        ), "Flow in the " + cases[
             1
         ] + " test problem (simulates " "viscosity) has changed,\n should be " + str(
             stored_ans
@@ -302,9 +299,9 @@ def check_output(idx, test):
         # Ensure the flow leaving model 3 is less than what leaves model 2
         assert abs(stored_ans) > abs(sim_val_3), (
             "Exit flow from model "
-            + ex[1]
+            + cases[1]
             + " should be greater than flow exiting "
-            + ex[2]
+            + cases[2]
             + ", but it is not."
         )
 
@@ -325,7 +322,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

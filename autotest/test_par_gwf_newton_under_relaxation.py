@@ -1,9 +1,3 @@
-import os
-from decimal import Decimal
-
-import pytest
-from framework import TestFramework
-
 """
 This tests reuses the simulation data in test_gwf_newton_under_relaxation
 and runs it in parallel on one and two cpus with
@@ -14,7 +8,14 @@ with a serial model.
 This test also checks that Newton under_relaxation works in parallel.
 """
 
-ex = ["par_nr_ur01", "par_nr_ur02"]
+import os
+from decimal import Decimal
+
+import pytest
+
+from framework import TestFramework
+
+cases = ["par_nr_ur01", "par_nr_ur02"]
 
 
 def build_petsc_db(idx, exdir):
@@ -48,7 +49,7 @@ def check_output(idx, test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     ncpus = 2 if idx == 1 else 1

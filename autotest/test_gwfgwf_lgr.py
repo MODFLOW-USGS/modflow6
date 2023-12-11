@@ -36,11 +36,11 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-ex = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
+cases = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
 ifmod = [False, True]
-
 parent_name = "parent"
 child_name = "child"
 h_left = 1.0
@@ -55,7 +55,7 @@ def get_model(idx, test):
     global child_domain
     global hclose
 
-    name = ex[idx]
+    name = cases[idx]
 
     # tdis period data
     nper = 1
@@ -242,25 +242,25 @@ def build_models(idx, exdir):
     return sim, None
 
 
-def check_output(sim):
+def check_output(idx, test):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.workspace, f"{child_name}.hds")
+    fpth = os.path.join(test.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.workspace, f"{child_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # check flowja residual
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(sim.workspace, f"{mname}.dis.grb")
+        fpth = os.path.join(test.workspace, f"{mname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.workspace, f"{mname}.cbc")
+        fpth = os.path.join(test.workspace, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -277,7 +277,7 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -286,6 +286,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

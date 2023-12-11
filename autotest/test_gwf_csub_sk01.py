@@ -6,6 +6,8 @@ import pytest
 
 from framework import TestFramework
 
+simname = "gwfcsubsk01"
+cases = [f"{simname}a", f"{simname}b", f"{simname}c"]
 dtol = 1e-3
 budtol = 0.01
 bud_lst = [
@@ -14,8 +16,6 @@ bud_lst = [
     "CSUB-WATERCOMP_IN",
     "CSUB-WATERCOMP_OUT",
 ]
-simname = "gwfcsubsk01"
-ex = [f"{simname}a", f"{simname}b", f"{simname}c"]
 cvopt = [None, None, None]
 constantcv = [True, True, True]
 ndelaybeds = [0, 0, 0]
@@ -31,7 +31,7 @@ def build_models(idx, test):
 
 
 def get_model(idx, workspace):
-    name = ex[idx]
+    name = cases[idx]
     newtonoptions = None
     imsla = "CG"
     if newton[idx]:
@@ -340,9 +340,7 @@ def get_model(idx, workspace):
     return sim
 
 
-def check_output(test):
-    print("evaluating compaction...")
-
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
     fpth = os.path.join(test.workspace, "csub_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
@@ -361,14 +359,13 @@ def check_output(test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        line = f"{tc0['time'][i]:10.2g}"
-        line += f"{tc['TCOMP3'][i]:10.2g}"
-        line += f"{tc0['TCOMP3'][i]:10.2g}"
-        line += f"{diff[i]:10.2g}"
-        f.write(line + "\n")
-    f.close()
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            line = f"{tc0['time'][i]:10.2g}"
+            line += f"{tc['TCOMP3'][i]:10.2g}"
+            line += f"{tc0['TCOMP3'][i]:10.2g}"
+            line += f"{diff[i]:10.2g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
         test.success = False
@@ -426,22 +423,21 @@ def check_output(test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for j, key in enumerate(bud_lst):
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
             for j, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, j]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for j, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, j]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol:
         test.success = False
@@ -452,13 +448,13 @@ def check_output(test):
         print("    " + msg)
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
         compare="mf6_regression",
     )

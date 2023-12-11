@@ -1,16 +1,19 @@
-# An adaptation of the LAK package problem 1 supplemented with an additional
-# layer that has variable thinkness to help test that the shared wetted area
-# between a lakebed and groundwater cells in contact with the lake are written
-# to the LAK cbc output file correctly.
+"""
+An adaptation of the LAK package problem 1 supplemented with an additional
+layer that has variable thinkness to help test that the shared wetted area
+between a lakebed and groundwater cells in contact with the lake are written
+to the LAK cbc output file correctly.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["lak-wetlkbd"]
+cases = ["lak-wetlkbd"]
 
 # Model units
 length_units = "feet"
@@ -203,7 +206,7 @@ def calc_qSat(top, bot, thk):
 def build_models(idx, test):
     # Base simulation and model name and workspace
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -330,10 +333,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # read flow results from model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     # read flow results from model
@@ -374,7 +375,7 @@ def check_output(idx, test):
         "The wetted interfacial areas saved in the binary output file "
         "(.cbc) do not match the values calculated in the autotest script"
     )
-    for idx, itm in enumerate(lak_con):
+    for ii, itm in enumerate(lak_con):
         k, i, j = itm[2]
         ctype = itm[3]
         if ctype[0] == "h":
@@ -394,12 +395,12 @@ def check_output(idx, test):
             width = delc[i]
             warea = length * width
 
-        assert np.isclose(warea, checks_out[idx], atol=1e-5), msg
+        assert np.isclose(warea, checks_out[ii], atol=1e-5), msg
 
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -13,8 +13,13 @@ from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
-from common_regression import (get_mf6_comparison, get_mf6_files,
-                               get_namefiles, setup_mf6, setup_mf6_comparison)
+from common_regression import (
+    get_mf6_comparison,
+    get_mf6_files,
+    get_namefiles,
+    setup_mf6,
+    setup_mf6_comparison,
+)
 
 DNODATA = 3.0e30
 EXTS = {
@@ -787,11 +792,12 @@ class TestFramework:
 
         """
 
-        # build/store models andd simulations and write input files
+        # build/store models and simulations and write input files
         if self.build:
             sims = self.build(self)
             sims = [sims] if not isinstance(sims, Iterable) else sims
             sims = [sim for sim in sims if sim]
+            # todo remove assert if/when arbitrary # of comparison models supported
             assert len(sims) <= 2, "expected at most 2 simulations/models"
             self.sims = {
                 (
@@ -801,11 +807,13 @@ class TestFramework:
                 ): sim
                 for sim in sims
             }
-            write_input(*sims)
+            write_input(*sims, verbose=self.verbose)
 
         # run main model(s) and get expected output files
         assert self.run_main_model(), "main model(s) failed"
-        _, self.outp = get_mf6_files(self.workspace / "mfsim.nam")
+        _, self.outp = get_mf6_files(
+            self.workspace / "mfsim.nam", self.verbose
+        )
 
         # setup and run comparison model(s), if enabled
         if self.compare:
@@ -826,55 +834,71 @@ class TestFramework:
 
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
+                if self.verbose:
+                    print("Auto-detecting comparison type")
                 self.compare = get_mf6_comparison(self.workspace)
-            if not self.compare:
+            if self.compare:
+                if self.verbose:
+                    print(f"Running comparison type: {self.compare}")
+
+                # copy reference model files if mf6 regression
+                if self.compare == "mf6_regression":
+                    cmp_path = self.workspace / self.compare
+                    if os.path.isdir(cmp_path):
+                        if self.verbose:
+                            print(f"Cleaning {cmp_path}")
+                        shutil.rmtree(cmp_path)
+                    if self.verbose:
+                        print(
+                            f"Copying reference model files from {self.workspace} to {cmp_path}"
+                        )
+                    shutil.copytree(self.workspace, cmp_path)
+
+                # run comparison model, don't compare results
+                run_only = self.compare == "run_only"
+
+                # todo: don't hardcode workspace / assume agreement with test case
+                # simulation workspace, store/access sim/model workspaces directly
+                workspace = (
+                    self.workspace / "mf6"
+                    if run_only
+                    else self.workspace / self.compare
+                )
+
+                # look up the target executable, can be
+                #   - mf2005
+                #   - mfnwt
+                #   - mfusg
+                #   - mflgr
+                #   - libmf6
+                #   - mf6
+                #   - mf6_regression
+                exe = self.targets.get(
+                    self.compare.lower().replace(".cmp", ""),
+                    self.targets.mf6,
+                )
+
+                # run comparison model
+                assert self.run_comparison_model(
+                    workspace=workspace,
+                    exe=exe,
+                ), "comparison model(s) failed"
+
+                # compare model results, if enabled
+                if not run_only:
+                    # if mf6 or mf6 regression test, get output files
+                    if "mf6" in self.compare:
+                        _, self.coutp = get_mf6_files(
+                            self.workspace / "mfsim.nam", self.verbose
+                        )
+                    if self.verbose:
+                        print("Comparing model outputs")
+                    self.compare_output(self.compare)
+            else:
                 warn("Could not detect comparison type, aborting comparison")
-                return
-
-            # copy reference model files if mf6 regression
-            if self.compare == "mf6_regression":
-                cmp_path = self.workspace / self.compare
-                if os.path.isdir(cmp_path):
-                    shutil.rmtree(cmp_path)
-                shutil.copytree(self.workspace, cmp_path)
-
-            # run comparison model, don't compare results
-            run_only = self.compare == "run_only"
-
-            # todo: don't hardcode workspace / assume agreement with test case
-            # simulation workspace, store/access sim/model workspaces directly
-            workspace = (
-                self.workspace / "mf6"
-                if run_only
-                else self.workspace / self.compare
-            )
-
-            # look up the target executable, can be
-            #   - mf2005
-            #   - mfnwt
-            #   - mfusg
-            #   - mflgr
-            #   - libmf6
-            #   - mf6
-            #   - mf6_regression
-            exe = self.targets.get(
-                self.compare.lower().replace(".cmp", ""),
-                self.targets.mf6,
-            )
-
-            # run comparison model
-            assert self.run_comparison_model(
-                workspace=workspace,
-                exe=exe,
-            ), "comparison model(s) failed"
-
-            # compare model results, if enabled
-            if not run_only:
-                # if mf6 or mf6 regression test, get output files
-                if "mf6" in self.compare:
-                    _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
-                self.compare_output(self.compare)
 
         # check results, if enabled
         if self.check:
+            if self.verbose:
+                print("Checking model outputs against expectation")
             self.check(self)

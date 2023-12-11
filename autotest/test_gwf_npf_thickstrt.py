@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "gwf_npf_thickstrt01",  # case 01 -- icelltype=0
     "gwf_npf_thickstrt02",  # case 02 -- icelltype=0, using thickstrt, but it has no effect
     "gwf_npf_thickstrt03",  # case 03 -- icelltype=-1, using thickstrt and strt = 5.
@@ -136,8 +137,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating model...")
-
     name = "flow"
 
     fpth = os.path.join(test.workspace, f"{name}.hds")
@@ -212,7 +211,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

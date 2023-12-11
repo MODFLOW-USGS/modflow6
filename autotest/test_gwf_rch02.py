@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that array based recharge is applied correctly when idomain
 is used to remove part of the grid.
 """
@@ -9,9 +8,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["rch02"]
+cases = ["rch02"]
 
 
 def build_models(idx, test):
@@ -108,9 +108,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating model...")
-
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, "rch.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="rch")[0]
@@ -133,14 +131,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

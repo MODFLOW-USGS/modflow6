@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "bndname01",
 ]
 
@@ -45,7 +46,7 @@ def get_model(idx, ws):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -138,7 +139,7 @@ def get_model(idx, ws):
 
 def replace_quotes(idx, exdir):
     ws = os.path.join(exdir, "mf6")
-    gwfname = f"gwf_{ex[idx]}"
+    gwfname = f"gwf_{cases[idx]}"
     extensions = (".chd", ".chd.obs")
     for ext in extensions:
         fpth = os.path.join(ws, f"{gwfname}{ext}")
@@ -149,9 +150,7 @@ def replace_quotes(idx, exdir):
                 f.write(line.replace("'", '"').replace('face"s', "face's"))
 
 
-def check_output(test):
-    print("evaluating observations results..." f"({test.name})")
-
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"gwf_{test.name}.chd.obs.csv")
     obs0 = np.genfromtxt(fpth, delimiter=",", names=True)
     names0 = obs0.dtype.names
@@ -166,14 +165,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

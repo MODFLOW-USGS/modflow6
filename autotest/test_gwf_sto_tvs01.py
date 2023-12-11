@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["tvs01"]
+cases = ["tvs01"]
 
 
 def build_models(idx, test):
@@ -36,7 +37,7 @@ def build_models(idx, test):
     for i in range(nper):
         transient[i] = True
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -161,13 +162,11 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating model...")
-
-    gwfname = "gwf_" + sim.name
+def check_output(idx, test):
+    gwfname = "gwf_" + test.name
 
     # head
-    fpth = os.path.join(sim.workspace, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_alldata()
@@ -192,21 +191,15 @@ def check_output(sim):
 
     for kper, expected_result in enumerate(expected_results):
         h = head[kper, ex_lay - 1, ex_row - 1, ex_col - 1]
-
         print(kper, h, expected_result)
-
-        errmsg = (
-            f"Expected head {expected_result} in period {kper} but found {h}"
-        )
-        assert np.isclose(h, expected_result)
-
-    # comment when done testing
-    # assert False
+        assert np.isclose(
+            h, expected_result
+        ), f"Expected head {expected_result} in period {kper} but found {h}"
 
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -214,6 +207,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

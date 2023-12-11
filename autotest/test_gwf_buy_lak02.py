@@ -22,7 +22,7 @@ import pytest
 from framework import TestFramework
 
 simname = "gwfbuylak02"
-ex = [
+cases = [
     f"{simname}a",
     f"{simname}b",
     f"{simname}c",
@@ -33,7 +33,7 @@ lak_conc = [0, 35, 0, 35]
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     lx = 7.0
     lz = 4.0
@@ -369,8 +369,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # calculate volume of water and make sure it is conserved
     gwfname = "gwf_" + test.name
     gwtname = "gwt_" + test.name
@@ -448,7 +446,7 @@ def check_output(idx, test):
     # todo: add a better check of the lake concentrations
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, targets, function_tmpdir):
     framework = TestFramework(
         name=name,

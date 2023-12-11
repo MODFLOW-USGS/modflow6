@@ -1,14 +1,24 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
 import pytest
 
+cases = ["maw02"]
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
-
-well2 = Case(
+krylov = "CG"
+nlay = 1
+nrow = 1
+ncol = 3
+nper = 5
+delr = 300
+delc = 300
+perlen = 5 * [1]
+nstp = 5 * [1]
+tsmult = 5 * [1]
+well = SimpleNamespace(
     observations={"maw_obs.csv": [("mh1", "head", 1)]},
     packagedata=[
         [0, 0.1, 0.0, 100.0, "THIEM", 1],
@@ -37,19 +47,6 @@ well2 = Case(
         4: [[0, "status", "active"]],
     },
 )
-
-ex = ["maw02"]
-krylov = "CG"
-nlay = 1
-nrow = 1
-ncol = 3
-nper = 5
-delr = 300
-delc = 300
-perlen = 5 * [1]
-nstp = 5 * [1]
-tsmult = 5 * [1]
-well = well2
 strt = 100
 hk = 1
 nouter = 100
@@ -61,7 +58,7 @@ compare = False
 
 
 def build_model(idx, ws, mf6):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=mf6, sim_ws=ws
     )
@@ -182,8 +179,6 @@ def build_model(idx, ws, mf6):
 
 
 def eval_results(name, workspace):
-    print("evaluating MAW budgets...")
-
     shape3d = (nlay, nrow, ncol)
     size3d = nlay * nrow * ncol
 
@@ -285,7 +280,7 @@ def eval_results(name, workspace):
     assert diffv < budtol, msg + f"diffv {diffv} exceeds tolerance {budtol}"
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     sim, _ = build_model(idx, ws, targets.mf6)

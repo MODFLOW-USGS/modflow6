@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["sfr_div"]
+cases = ["sfr_div"]
 inflows = np.array([10, 0, 10, 0, 10])
 diversion = np.array([0.5, 0.5, 0.5, 0.5, 0.0])
 
@@ -26,7 +27,7 @@ def build_models(idx, test):
     strt = 0.0
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -139,9 +140,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # check flow for indivdual reach
     fname = os.path.join(test.workspace, f"{test.name}.sfr.cbb")
     with flopy.utils.CellBudgetFile(fname) as cbb:
@@ -168,13 +167,13 @@ def check_output(test):
     ), "Large mass balance error in SFR"
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -2,11 +2,12 @@ import os
 
 import flopy
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
+cases = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
 no_ptcrecords = ["FIRST", "ALL", None]
-htol = [None for _ in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 
 # static model data
 # temporal discretization
@@ -48,7 +49,7 @@ rech = {0: 0.001}
 
 
 def get_model(idx, dir, no_ptcrecord):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -134,7 +135,7 @@ def build_models(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

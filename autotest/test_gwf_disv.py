@@ -13,13 +13,14 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
+
 from framework import TestFramework
 
-ex = ["disv01a", "disv01b"]
+cases = ["disv01a", "disv01b"]
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
     ws = test.workspace
     nlay = 3
     nrow = 3
@@ -65,8 +66,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     name = test.name
 
     fname = os.path.join(test.workspace, name + ".disv.grb")
@@ -84,7 +83,7 @@ def check_output(idx, test):
         assert ja.shape[0] == 126, "ja should have size of 126"
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

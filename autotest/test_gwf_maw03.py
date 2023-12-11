@@ -1,10 +1,11 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
 import pytest
 
+cases = ["maw03a", "maw03b", "maw03c"]
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
@@ -18,7 +19,7 @@ def well3(name):
         "maw03c": [(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)],
     }
     wellbottom = -1000
-    return Case(
+    return SimpleNamespace(
         observations={
             f"{name}.maw.obs.csv": [
                 ("m1head", "head", (0,)),
@@ -31,7 +32,6 @@ def well3(name):
     )
 
 
-ex = ["maw03a", "maw03b", "maw03c"]
 krylov = "CG"
 nlay = 1
 nrow = 101
@@ -60,7 +60,7 @@ def build_model(idx, ws, mf6):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=mf6)
 
     # create tdis package
@@ -175,8 +175,6 @@ def build_model(idx, ws, mf6):
 
 
 def eval_results(name, workspace):
-    print("evaluating MAW heads...")
-
     # MODFLOW 6 maw results
     test_name = name
     fpth = os.path.join(workspace, f"{test_name}.maw.obs.csv")
@@ -207,7 +205,7 @@ def eval_results(name, workspace):
         assert tc["M1RATE"].min() < 800.0 and tc["M1HEAD"].max() < 1.0, msg
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     sim = build_model(idx, ws, targets.mf6)

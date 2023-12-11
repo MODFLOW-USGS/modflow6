@@ -3,10 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 name = "gwf_mvr01"
-ex = [name]
+cases = [name]
 
 
 def build_models(idx, test):
@@ -14,7 +15,7 @@ def build_models(idx, test):
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
 
     # spatial discretization data
@@ -371,9 +372,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating model...")
-
+def check_output(idx, test):
     # mvr budget terms
     fpth = os.path.join(test.workspace, "gwf_mvr01.mvr.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
@@ -447,7 +446,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -455,6 +454,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -4,11 +4,12 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "lak"
 budtol = 1e-2
-ex = ["ts_lak01"]
+cases = ["ts_lak01"]
 
 # static model data
 # spatial discretization
@@ -313,7 +314,7 @@ def get_model(ws, name, timeseries=False):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -326,8 +327,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(test):
-    print("evaluating budgets...")
+def check_output(idx, test):
 
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(test.name)}.dis.grb"
@@ -354,14 +354,14 @@ def check_output(test):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

@@ -1,10 +1,13 @@
+"""
+This test reuses the simulation data and config in
+test_gwt_adv01_gwtgwt.py and runs it in parallel mode.
+"""
+
 import pytest
+
 from framework import TestFramework
 
-# This tests reuses the simulation data and config in
-# test_gwt_adv01_gwtgwt.py and runs it in parallel mode.
-
-ex = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
+cases = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
 
 
 def build_models(idx, test):
@@ -15,7 +18,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    from test_gwt_adv01_gwtgwt import eval_transport as check
+    from test_gwt_adv01_gwtgwt import check_output as check
 
     check(idx, test)
 
@@ -23,7 +26,7 @@ def check_output(idx, test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -7,9 +7,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["gwf_ats01a"]
+cases = ["gwf_ats01a"]
 nlay, nrow, ncol = 1, 1, 2
 
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
@@ -39,7 +40,7 @@ def build_models(idx, test):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -173,9 +174,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating flow...")
-
+def check_output(idx, test):
     # This will fail if budget numbers cannot be read
     fpth = os.path.join(test.workspace, f"{test.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
@@ -205,14 +204,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

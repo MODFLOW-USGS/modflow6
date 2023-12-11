@@ -3,9 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["henry01-gwtgwt-ups", "henry01-gwtgwt-cen", "henry01-gwtgwt-tvd"]
+cases = ["henry01-gwtgwt-ups", "henry01-gwtgwt-cen", "henry01-gwtgwt-tvd"]
 advection_scheme = ["UPSTREAM", "CENTRAL", "TVD"]
 
 lx = 2.0
@@ -223,7 +224,7 @@ def get_gwt_model(sim, model_shape, model_desc, adv_scheme):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
     print("RUINNING: ", name, advection_scheme[idx])
 
     # build MODFLOW 6 files
@@ -362,9 +363,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, "gwf_ref.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
@@ -429,7 +428,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -437,6 +436,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

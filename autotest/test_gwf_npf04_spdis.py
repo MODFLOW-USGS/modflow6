@@ -1,11 +1,9 @@
 """
-MODFLOW 6 Autotest
 Test the specific discharge calculation for an LGR-like simulation that has
 a parent model and a child model.  The child model is inset into the parent
 model, but they both have the same resolution, so it is essentially a simple
 3D grid.  The child qx velocity should be the same as the qx velocity in
 the parent grid.  The heads are also compared.
-
 """
 
 import os
@@ -14,9 +12,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-ex = ["npf04"]
+cases = ["npf04"]
 namea = "a"
 nameb = "b"
 
@@ -44,7 +43,7 @@ def build_models(idx, test):
     ncppl = [1, 1, 1]
     lgr = Lgr(nlay, nrow, ncol, delr, delc, top, botm, idomain, ncpp, ncppl)
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     # create simulation
@@ -173,9 +172,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def check_output(test):
-    print("evaluating head and qx in parent and child models...")
-
+def check_output(idx, test):
     # make sure parent head is same as child head in same column
     fname = os.path.join(test.workspace, f"{namea}.hds")
     hdobj = flopy.utils.HeadFile(fname)
@@ -212,7 +209,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -220,6 +217,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -1,22 +1,25 @@
-# Test the buoyancy package and the variable density flows between the lake
-# and the gwf model.  This model has 4 layers and a lake incised within it.
-# The model is transient and has heads in the aquifer higher than the initial
-# stage in the lake.  As the model runs, the lake and aquifer equalize and
-# should end up at the same level.  The test ensures that the initial and
-# final water volumes in the entire system are the same.  There are three
-# different cases:
-#  1.  No buoyancy package
-#  2.  Buoyancy package with lake and aquifer density = 1000.
-#  3.  Buoyancy package with lake and aquifer density = 1024.5
+"""
+Test the buoyancy package and the variable density flows between the lake
+and the gwf model.  This model has 4 layers and a lake incised within it.
+The model is transient and has heads in the aquifer higher than the initial
+stage in the lake.  As the model runs, the lake and aquifer equalize and
+should end up at the same level.  The test ensures that the initial and
+final water volumes in the entire system are the same.  There are three
+different cases:
+ 1.  No buoyancy package
+ 2.  Buoyancy package with lake and aquifer density = 1000.
+ 3.  Buoyancy package with lake and aquifer density = 1024.5
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["buy_lak_01a"]  # , 'buy_lak_01b', 'buy_lak_01c']
+cases = ["buy_lak_01a"]  # , 'buy_lak_01b', 'buy_lak_01c']
 buy_on_list = [False]  # , True, True]
 concbuylist = [0.0]  # , 0., 35.]
 
@@ -48,7 +51,7 @@ def build_models(idx, test):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -207,9 +210,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # calculate volume of water and make sure it is conserved
     gwfname = "gwf_" + test.name
     fname = gwfname + ".lak.bin"
@@ -253,14 +254,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

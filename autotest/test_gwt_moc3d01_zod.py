@@ -11,9 +11,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = [
+cases = [
     "moc3d01zoda",
     "moc3d01zodb",
     "moc3d01zodc",
@@ -52,7 +53,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -364,9 +365,7 @@ def make_plot_cd(cobj, fname=None):
 
 
 def check_output(idx, test):
-    print("evaluating transport...")
-
-    name = ex[idx]
+    name = cases[idx]
     gwtname = "gwt_" + name
 
     # get mobile domain concentration object
@@ -572,7 +571,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

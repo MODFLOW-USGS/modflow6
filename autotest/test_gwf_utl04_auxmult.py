@@ -7,9 +7,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["auxmult01"]
+cases = ["auxmult01"]
 
 
 def build_models(idx, test):
@@ -30,7 +31,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -156,10 +157,8 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating model...")
-
-    fpth = os.path.join(sim.workspace, "auxmult01.bud")
+def check_output(idx, test):
+    fpth = os.path.join(test.workspace, "auxmult01.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     records = bobj.get_data(text="wel")
 
@@ -173,19 +172,17 @@ def check_output(sim):
     msg = f"err {qlist} /= {answer}"
     assert np.allclose(qlist, answer), msg
 
-    # assert False
-
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

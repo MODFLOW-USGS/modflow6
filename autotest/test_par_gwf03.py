@@ -1,8 +1,3 @@
-import flopy
-import numpy as np
-import pytest
-from framework import TestFramework
-
 """
 Scaling parallel MODFLOW running a simple
 (multi-)model setup on different partitionings
@@ -19,11 +14,16 @@ In general, the test can be used to compare parallel
 vs. serial behavior on an identical problem.
 """
 
-ex = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c", "par_gwf03-d"]
+import flopy
+import numpy as np
+import pytest
+
+from framework import TestFramework
+
+cases = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c", "par_gwf03-d"]
 ncpus = [1, 1, 2, 4]
 domain_grid = [(1, 1), (2, 2), (2, 2), (2, 2)]
 dis_shape = [(2, 100, 100), (2, 50, 50), (2, 50, 50), (2, 50, 50)]
-
 delr = 100.0
 delc = 100.0
 head_initial = -1.0
@@ -36,7 +36,7 @@ def get_model_name(ix, iy):
 
 
 def get_simulation(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     nr_models_x = domain_grid[idx][0]
     nr_models_y = domain_grid[idx][1]
 
@@ -48,7 +48,7 @@ def get_simulation(idx, ws):
     # tdis
     nper = 1
     tdis_rc = []
-    for i in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
@@ -221,7 +221,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     mf6_sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     for mname in mf6_sim.model_names:
         m = mf6_sim.get_model(mname)
@@ -233,7 +233,7 @@ def check_output(test):
 @pytest.mark.parallel
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -241,7 +241,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
         ncpus=ncpus[idx],

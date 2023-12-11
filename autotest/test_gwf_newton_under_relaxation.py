@@ -1,14 +1,13 @@
-import os
 import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
-ex = ["nr_ur01", "nr_ur02"]
-
+cases = ["nr_ur01", "nr_ur02"]
 data_path = project_root_path / "autotest/data/ex-gwf-bump/"
 nper = 1
 nlay = 1
@@ -37,7 +36,7 @@ base_heads = flopy.utils.HeadFile(data_path / "results.hds.cmp").get_data()
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
     if idx == 1:
         sim_ws = pl.Path(f"{test.workspace}/working")
     else:
@@ -105,7 +104,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print(f"evaluating heads...{idx}")
     mf6sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     if idx == 1:
         mfsplit = flopy.mf6.utils.Mf6Splitter(mf6sim)
@@ -127,7 +125,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -8,10 +8,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
 
-ex = ["libgwf_evt01"]
+from framework import TestFramework
+
+cases = ["libgwf_evt01"]
 
 # et variables
 et_max = 0.1
@@ -128,7 +129,7 @@ def get_model(ws, name, bmi=False):
 def build_models(idx, test):
     # build MODFLOW 6 files
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
     sim = get_model(ws, name)
 
     # build comparison model
@@ -150,7 +151,7 @@ def head2et_wellrate(h):
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
     output_file_path = os.path.join(model_ws, "mfsim.stdout")
@@ -251,7 +252,7 @@ def api_func(exe, idx, model_ws=None):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

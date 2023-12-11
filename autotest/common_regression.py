@@ -423,7 +423,7 @@ def setup_mf6_comparison(
                     break
 
 
-def get_mf6_files(namefile):
+def get_mf6_files(namefile, verbose=False):
     """Get all MODFLOW 6 input and output files in this simulation.
 
     Parameters
@@ -499,6 +499,14 @@ def get_mf6_files(namefile):
         # if len(flist) < 1 and len(olist) < 1:
         if len(flist) < 1:
             break
+
+    if verbose:
+        from pprint import pprint
+
+        print(f"Found input files for {namefile}:")
+        pprint(pkg_files)
+        print(f"Expecting output files for {namefile}:")
+        pprint(out_files)
 
     return pkg_files, out_files
 

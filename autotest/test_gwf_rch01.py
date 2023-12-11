@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that recharge is passed to the highest active layer and
 verify that recharge is in the highest active layer by looking at the
 individual budget terms.  For this test, there are two layers and five
@@ -13,9 +12,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["rch01a", "rch01b", "rch01c"]
+cases = ["rch01a", "rch01b", "rch01c"]
 irch = [None, 0, [1, 1, 0, 1, 1]]
 
 
@@ -119,9 +119,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
-    print("evaluating model...")
-
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, "rch.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="rch")[0]
@@ -141,14 +139,14 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

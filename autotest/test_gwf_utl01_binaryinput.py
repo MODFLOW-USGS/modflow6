@@ -1,5 +1,5 @@
 """
-test reading of binary initial heads (float) and also binary icelltype (int).
+Test reading of binary initial heads (float) and also binary icelltype (int).
 1. Have binary data in a separate record for each layer
 2. Have binary data in a single record for all layers
 """
@@ -9,9 +9,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["binary01", "binary02"]
+cases = ["binary01", "binary02"]
 
 
 def build_models(idx, test):
@@ -32,10 +33,10 @@ def build_models(idx, test):
     hclose, rclose, relax = 1e-6, 1e-3, 1.0
 
     tdis_rc = []
-    for i in range(nper):
+    for _ in range(nper):
         tdis_rc.append((perlen, nstp, tsmult))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -429,7 +430,7 @@ def build_models(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

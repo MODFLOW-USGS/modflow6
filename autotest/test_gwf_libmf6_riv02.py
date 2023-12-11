@@ -7,10 +7,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
 
-ex = ["libgwf_riv02"]
+from framework import TestFramework
+
+cases = ["libgwf_riv02"]
 
 # temporal discretization
 nper = 10
@@ -133,7 +134,7 @@ def get_model(ws, name, riv_spd, api=False):
 def build_models(idx, test):
     # build MODFLOW 6 files
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     # create river data
     rd = [
@@ -166,7 +167,7 @@ def api_riv_pak(stage, h, hcof, rhs):
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
 
@@ -272,7 +273,7 @@ def api_func(exe, idx, model_ws=None):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

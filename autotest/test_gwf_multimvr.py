@@ -5,9 +5,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-mvr_scens = ["mltmvr", "mltmvr5050", "mltmvr7525"]
+cases = ["mltmvr", "mltmvr5050", "mltmvr7525"]
 sim_workspaces = []
 gwf_names = []
 
@@ -973,7 +974,7 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
 
 def build_models(idx, test):
     scen_nm, conns, frac = (
-        mvr_scens[idx],
+        cases[idx],
         scen_conns[idx],
         parent_mvr_frac[idx],
     )
@@ -1005,7 +1006,7 @@ def check_output(idx, test):
 
     # cur_ws, gwfparent = ex[idx], gwf_names[idx]
     cur_ws = test.workspace
-    gwfparent = "gwf_" + mvr_scens[idx] + "_p"
+    gwfparent = "gwf_" + cases[idx] + "_p"
     with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
         os.path.join(cur_ws, "mfsim.lst"), "r"
     ) as sim_lst:
@@ -1072,7 +1073,7 @@ def check_output(idx, test):
         rel_tol=0.1,
     ), (
         "Flow in the last reach of scenario "
-        + mvr_scens[idx]
+        + cases[idx]
         + " = "
         + str(parent_sfr_last_reach_flow)
         + ", whereas the target flow "
@@ -1118,7 +1119,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(mvr_scens)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

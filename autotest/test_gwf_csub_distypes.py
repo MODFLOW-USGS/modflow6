@@ -3,12 +3,13 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-from conftest import try_get_target
 from flopy.utils.gridgen import Gridgen
+
+from conftest import try_get_target
 from framework import TestFramework
 
-ex = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]
-ex_dict = {name: None for name in ex}
+cases = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]
+ex_dict = {name: None for name in cases}
 ex_dict["csub_disu01"] = 0
 ex_dict["csub_disu02"] = 2
 paktest = "csub"
@@ -19,8 +20,8 @@ perlen = [1.0, 100.0]
 nstp = [1, 10]
 tsmult = [1.0] * nper
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 9, 9
@@ -223,7 +224,7 @@ def build_models(idx, test, gridgen):
 
 # build MODFLOW 6 files
 def build_mf6(idx, ws, gridgen):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -342,9 +343,7 @@ def build_mf6(idx, ws, gridgen):
 
 
 def check_output(idx, test):
-    print("evaluating z-displacement...")
-
-    name = ex[idx]
+    name = cases[idx]
     ws = pl.Path(test.workspace)
     test = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
     gwf = test.get_model()
@@ -402,7 +401,7 @@ def check_output(idx, test):
                 if k == layer_refinement:
                     comp_temp = np.zeros(shape2d_refined, dtype=float)
                     zdis_temp = np.zeros(shape2d_refined, dtype=float)
-                    for key, value in map_dict.items():
+                    for value in map_dict.values():
                         comp_temp[value["cellid"]] = comp1d[value["node"]]
                         zdis_temp[value["cellid"]] = zdis1d[value["node"]]
                     comp[k] = comp_temp.reshape(
@@ -425,7 +424,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     gridgen = try_get_target(targets, "gridgen")

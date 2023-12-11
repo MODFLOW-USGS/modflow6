@@ -36,9 +36,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-ex = ["ifmod_vert"]
+cases = ["ifmod_vert"]
 
 parent_name = "parent"
 child_name = "child"
@@ -54,7 +55,7 @@ def get_model(idx, dir):
     global child_domain
     global hclose
 
-    name = ex[idx]
+    name = cases[idx]
 
     # tdis period data
     nper = 1
@@ -238,7 +239,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     print("comparing heads  for child model to analytical result...")
 
     fpth = os.path.join(test.workspace, f"{child_name}.hds")
@@ -282,7 +283,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -291,6 +292,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

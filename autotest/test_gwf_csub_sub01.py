@@ -3,13 +3,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
+cases = ["csub_sub01a", "csub_sub01b"]
 paktest = "csub"
 budtol = 1e-2
-ex = ["csub_sub01a", "csub_sub01b"]
 compression_indices = [None, True]
-ndcell = [19] * len(ex)
+ndcell = [19] * len(cases)
 
 # static model data
 # spatial discretization
@@ -22,10 +23,10 @@ botm = [-100.0]
 
 # temporal discretization
 nper = 1
-perlen = [1000.0 for i in range(nper)]
-nstp = [100 for i in range(nper)]
-tsmult = [1.05 for i in range(nper)]
-steady = [False for i in range(nper)]
+perlen = [1000.0 for _ in range(nper)]
+nstp = [100 for _ in range(nper)]
+tsmult = [1.05 for _ in range(nper)]
+steady = [False for _ in range(nper)]
 
 strt = 0.0
 strt6 = 1.0
@@ -40,8 +41,8 @@ nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 ib = 1
 
@@ -77,7 +78,7 @@ ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
 
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -225,9 +226,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(test):
-    print("evaluating subsidence...")
-
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
     fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
@@ -252,19 +251,18 @@ def check_output(test):
     fpth = os.path.join(
         test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
-    f = open(fpth, "w")
-    line = f"{'TOTIM':>15s}"
-    line += f" {'CSUB':>15s}"
-    line += f" {'MF':>15s}"
-    line += f" {'DIFF':>15s}"
-    f.write(line + "\n")
-    for i in range(diff.shape[0]):
-        line = f"{tc0['time'][i]:15g}"
-        line += f" {tc['TCOMP'][i]:15g}"
-        line += f" {tc0['TCOMP'][i]:15g}"
-        line += f" {diff[i]:15g}"
+    with open(fpth, "w") as f:
+        line = f"{'TOTIM':>15s}"
+        line += f" {'CSUB':>15s}"
+        line += f" {'MF':>15s}"
+        line += f" {'DIFF':>15s}"
         f.write(line + "\n")
-    f.close()
+        for i in range(diff.shape[0]):
+            line = f"{tc0['time'][i]:15g}"
+            line += f" {tc['TCOMP'][i]:15g}"
+            line += f" {tc0['TCOMP'][i]:15g}"
+            line += f" {diff[i]:15g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
         test.success = False
@@ -277,13 +275,11 @@ def check_output(test):
     # compare budgets
     cbc_compare(test)
 
-    return
-
 
 # compare cbc and lst budgets
-def cbc_compare(sim):
+def cbc_compare(test):
     # open cbc file
-    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -300,7 +296,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -313,7 +309,7 @@ def cbc_compare(sim):
     # get data from cbc dile
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -331,60 +327,59 @@ def cbc_compare(sim):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.workspace, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for key in bud_lst:
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for ii, key in enumerate(bud_lst):
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"diffmax {diffmax} exceeds tolerance {budtol}"
         assert diffmax < budtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         targets=targets,
         compare="mf6_regression",
     )

@@ -26,9 +26,10 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
-ex = ["ifmod_mult_exg"]
+cases = ["ifmod_mult_exg"]
 name_parent = "parent"
 name_child = "child"
 g_delr = 10.0
@@ -39,7 +40,7 @@ g_hclose = 10e-12
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -259,7 +260,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(test):
+def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
@@ -330,7 +331,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -339,6 +340,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

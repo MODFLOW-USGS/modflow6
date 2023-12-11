@@ -8,9 +8,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
+cases = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
 scheme = ["upstream", "central", "tvd"]
 gdelr = 1.0
 
@@ -329,9 +330,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def eval_transport(idx, test):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     gwtname = "transport1"
 
     fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
@@ -722,7 +721,7 @@ def eval_transport(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
@@ -731,6 +730,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: eval_transport(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

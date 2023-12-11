@@ -21,9 +21,10 @@ should match exactly with the gwf flows and the gwf concentrations.
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["sft01gwtgwt"]
+cases = ["sft01gwtgwt"]
 
 # properties for each model combination
 lx = 7.0
@@ -479,18 +480,16 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # load the simulations
-    ws = sim.workspace
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    ws = test.workspace
+    test = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     # construct head and conc for combined models
-    gwf1 = sim.gwf[0]
-    gwf2 = sim.gwf[1]
-    gwt1 = sim.gwt[0]
-    gwt2 = sim.gwt[1]
+    gwf1 = test.gwf[0]
+    gwf2 = test.gwf[1]
+    gwt1 = test.gwt[0]
+    gwt2 = test.gwt[1]
     head = list(gwf1.output.head().get_data().flatten()) + list(
         gwf2.output.head().get_data().flatten()
     )
@@ -513,7 +512,7 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -521,6 +520,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

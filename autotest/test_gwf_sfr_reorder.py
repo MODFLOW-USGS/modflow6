@@ -3,10 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "sfr"
-ex = ["sfr_reorder"]
+cases = ["sfr_reorder"]
 
 # spatial discretization data
 nlay, nrow, ncol = 1, 1, 1
@@ -36,7 +37,7 @@ def build_model(idx, ws):
     ts_flows = np.array([1000.0] + [float(q) for q in range(1000, -100, -100)])
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -199,14 +200,12 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(sim):
-    name = sim.name
-    print("evaluating flow results..." f"({name})")
-
-    obs_pth = os.path.join(sim.workspace, f"{name}.sfr.obs.csv")
+def check_output(idx, test):
+    name = test.name
+    obs_pth = os.path.join(test.workspace, f"{name}.sfr.obs.csv")
     obs0 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    obs_pth = os.path.join(sim.workspace, "mf6", f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(test.workspace, "mf6", f"{name}.sfr.obs.csv")
     obs1 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
@@ -215,16 +214,16 @@ def check_output(sim):
         obs0["OUTFLOW"], obs1["OUTFLOW"]
     ), "outflows are not equal"
 
-    fpth = os.path.join(sim.workspace, f"{name}.lst")
+    fpth = os.path.join(test.workspace, f"{name}.lst")
     with open(fpth, "r") as f:
         lines = f.read().splitlines()
 
     # check order in listing file
     order = np.zeros(nreaches, dtype=int)
-    for idx, line in enumerate(lines):
+    for i, line in enumerate(lines):
         if "SFR PACKAGE (SFR-1) REACH SOLUTION ORDER" in line:
             for jdx in range(nreaches):
-                ipos = idx + 4 + jdx
+                ipos = i + 4 + jdx
                 t = lines[ipos].split()
                 order[int(t[0]) - 1] = int(t[1])
             order -= 1
@@ -238,7 +237,7 @@ def check_output(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -246,6 +245,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

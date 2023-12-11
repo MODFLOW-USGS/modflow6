@@ -3,11 +3,12 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from cross_section_functions import calculate_rectchan_mannings_discharge
 from framework import TestFramework
 
 paktest = "sfr"
-ex = [
+cases = [
     "sfr_npt03a",
     "sfr_npt03b",
     "sfr_npt03c",
@@ -74,7 +75,7 @@ def build_model(idx, ws, base=False):
         ws = os.path.join(ws, "mf6")
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -274,9 +275,7 @@ def build_models(idx, test):
     return sim, mc
 
 
-def check_output(test):
-    print("evaluating n-point cross-section results..." f"({test.name})")
-
+def check_output(idx, test):
     obs_pth0 = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
     obs0 = np.genfromtxt(obs_pth0, names=True, delimiter=",")
 
@@ -298,7 +297,7 @@ def check_output(test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -306,6 +305,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

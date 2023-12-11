@@ -3,10 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
-ex = ["npf03_sfra", "npf03_sfrb"]
+cases = ["npf03_sfra", "npf03_sfrb"]
 fpth = str(project_root_path / "autotest" / "data" / "npf03_hk.ref")
 shape = (50, 108)
 hk = flopy.utils.Util2d.load_txt(shape, fpth, dtype=float, fmtin="(FREE)")
@@ -55,7 +56,7 @@ def get_local_data(idx):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # set local data for this model
     ncolst, nmodels, mnames = get_local_data(idx)
@@ -336,8 +337,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating mover test heads...")
-
     hdata = np.array(
         [
             1.200000000000000000e01,
@@ -5779,7 +5778,7 @@ def check_output(idx, test):
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

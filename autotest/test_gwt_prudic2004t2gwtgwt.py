@@ -12,12 +12,13 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
+cases = ["prudic2004t2gwtgwt"]
 data_path = project_root_path / "autotest" / "data"
 model_path = str(data_path / "prudic2004test2gwtgwt")
-ex = ["prudic2004t2gwtgwt"]
 gwfnames = ["flow1", "flow2"]
 gwtnames = ["transport1", "transport2"]
 
@@ -873,9 +874,7 @@ def make_concentration_map(sim, ws):
     plt.savefig(fname)
 
 
-def check_output(test):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # these answer files are results from autotest/prudic2004test2
     fname = os.path.join(model_path, "result_conc_lak1.txt")
     ans_lak1 = np.loadtxt(fname)
@@ -885,7 +884,7 @@ def check_output(test):
     ans_sfr4 = np.loadtxt(fname)
 
     makeplot = False
-    for idx, arg in enumerate(sys.argv):
+    for arg in sys.argv:
         if arg.lower() == "--makeplot":
             makeplot = True
 
@@ -949,14 +948,11 @@ def check_output(test):
         msg = f"{res_sfr4} {ans_sfr4} {d}"
         assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
-    # uncomment when testing
-    # assert False
-
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -964,6 +960,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -10,9 +10,10 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-ex = ["maw_05a", "maw_05b", "maw_05c"]
+cases = ["maw_05a", "maw_05b", "maw_05c"]
 mawstrt = [4.0, 3.5, 2.5]  # add 3.0
 
 
@@ -43,7 +44,7 @@ def build_models(idx, test):
     nouter, ninner = 700, 10
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -179,10 +180,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    print("evaluating results...")
-
     # calculate volume of water and make sure it is conserved
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
     fname = os.path.join(test.workspace, fname)
@@ -243,7 +242,7 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -9,9 +9,10 @@ import os
 
 import flopy
 import pytest
+
 from framework import TestFramework
 
-ex = ["ptc01"]
+cases = ["ptc01"]
 # static model data
 # temporal discretization
 nper = 1
@@ -54,7 +55,7 @@ rech = {0: 0.001}
 
 
 def build_mf6(idx, ws, storage=True):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -139,7 +140,7 @@ def build_models(idx, test):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

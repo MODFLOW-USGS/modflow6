@@ -14,9 +14,10 @@ import flopy.utils.cvfdutil
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
+
 from framework import TestFramework
 
-ex = ["disv_with_uzf"]
+cases = ["disv_with_uzf"]
 nlay = 5
 nrow = 10
 ncol = 10
@@ -127,7 +128,7 @@ for k in np.arange(3, 5, 1):
 
 
 def build_models(idx, test):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -241,17 +242,15 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(sim):
-    print("evaluating model...")
-
+def check_output(idx, test):
     # Next, get the binary printed heads
-    fpth = os.path.join(sim.workspace, sim.name + ".hds")
+    fpth = os.path.join(test.workspace, test.name + ".hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     hds = hobj.get_alldata()
     hds = hds.reshape((np.sum(nstp), 5, 10, 10))
 
     # Get the MF6 cell-by-cell fluxes
-    bpth = os.path.join(sim.workspace, sim.name + ".cbc")
+    bpth = os.path.join(test.workspace, test.name + ".cbc")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     bobj.get_unique_record_names()
     # '          STO-SS'
@@ -269,7 +268,7 @@ def check_output(sim):
     gwet = gwetv.reshape((np.sum(nstp), 5, 10, 10))
 
     # Also retrieve the binary UZET output
-    uzpth = os.path.join(sim.workspace, sim.name + ".uzf.bud")
+    uzpth = os.path.join(test.workspace, test.name + ".uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
     uzobj.get_unique_record_names()
     #  b'    FLOW-JA-FACE',
@@ -382,13 +381,13 @@ def check_output(sim):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
     )
     test.run()
