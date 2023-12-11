@@ -24,10 +24,10 @@ def build_models(idx, test):
     return sim, dummy
 
 
-def check_output(test):
+def check_output(idx, test):
     from test_gwf_ifmod_idomain import check_output as check
 
-    check(test)
+    check(idx, test)
 
 
 @pytest.mark.parallel
