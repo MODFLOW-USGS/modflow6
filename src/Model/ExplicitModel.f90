@@ -21,12 +21,7 @@ module ExplicitModelModule
             AddExplicitModelToList, &
             GetExplicitModelFromList
 
-  !> @brief Derived type for the Explicit Model Type
-  !!
-  !! This derived type describes a parent class for explicit
-  !! models.
-  !!
-  !<
+  !> @brief Base type for explicit models.
   type, extends(BaseModelType) :: ExplicitModelType
     type(ListType), pointer :: bndlist => null() !< array of boundary packages for this model
     class(DisBaseType), pointer :: dis => null() !< discretization object
@@ -45,18 +40,12 @@ contains
   !<
   subroutine model_ad(this)
     class(ExplicitModelType) :: this
-    !
-    ! -- return
-    return
   end subroutine model_ad
 
   !> @ brief Solve the model
   !<
   subroutine model_solve(this)
     class(ExplicitModelType) :: this
-    !
-    ! -- return
-    return
   end subroutine model_solve
 
   !> @ brief Calculate model flows
@@ -65,9 +54,6 @@ contains
     class(ExplicitModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-    !
-    ! -- return
-    return
   end subroutine model_cq
 
   !> @ brief Calculate model budget
@@ -76,9 +62,6 @@ contains
     class(ExplicitModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-    !
-    ! -- return
-    return
   end subroutine model_bd
 
   !> @ brief Deallocate the model
@@ -87,22 +70,13 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     class(ExplicitModelType) :: this
-
-    ! -- Scalars
-    !
-    ! -- Arrays
     !
     ! -- derived types
     call this%bndlist%Clear()
     deallocate (this%bndlist)
     !
-    ! -- nullify pointers
-    !
     ! -- BaseModelType
     call this%BaseModelType%model_da()
-    !
-    ! -- Return
-    return
   end subroutine model_da
 
   !> @ brief Allocate model scalar variables
@@ -117,11 +91,6 @@ contains
     !
     ! -- allocate members from this type
     allocate (this%bndlist)
-    !
-    ! -- initialize
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Cast a generic object into an explicit model
@@ -137,7 +106,6 @@ contains
     class is (ExplicitModelType)
       res => obj
     end select
-    return
   end function CastAsExplicitModelClass
 
   !> @ brief Add explicit model to a generic list
@@ -151,8 +119,6 @@ contains
     !
     obj => model
     call list%Add(obj)
-    !
-    return
   end subroutine AddExplicitModelToList
 
   !> @ brief Get generic object from list and return as explicit model
@@ -167,8 +133,6 @@ contains
     !
     obj => list%GetItem(idx)
     res => CastAsExplicitModelClass(obj)
-    !
-    return
   end function GetExplicitModelFromList
 
 end module ExplicitModelModule

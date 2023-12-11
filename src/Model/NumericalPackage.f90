@@ -60,11 +60,11 @@ module NumericalPackageModule
 contains
   !
   !> @ brief Set package names
-    !!
-    !!  Method to assign the filtyp (ftype), the model name, and package name for
-    !!  a package. This method also creates the memoryPath and memoryPathModel that
-    !!  is used by the memory manager when variables are allocated.
-    !!
+  !!
+  !!  Method to assign the filtyp (ftype), the model name, and package name for
+  !!  a package. This method also creates the memoryPath and memoryPathModel that
+  !!  is used by the memory manager when variables are allocated.
+  !!
   !<
   subroutine set_names(this, ibcnum, name_model, pakname, ftype, input_mempath)
     ! -- dummy variables
@@ -95,15 +95,12 @@ contains
     end if
     this%memoryPath = create_mem_path(name_model, this%packName)
     this%memoryPathModel = create_mem_path(name_model)
-    !
-    ! -- return
-    return
   end subroutine set_names
 
   !> @ brief Allocate package scalars
-    !!
-    !!  Allocate and initialize base numerical package scalars.
-    !!
+  !!
+  !!  Allocate and initialize base numerical package scalars.
+  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -166,15 +163,12 @@ contains
       call mem_set_value(this%input_fname, 'INPUT_FNAME', &
                          this%input_mempath, found)
     end if
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Deallocate package scalars
-    !!
-    !!  Deallocate and initialize base numerical package scalars.
-    !!
+  !!
+  !!  Deallocate and initialize base numerical package scalars.
+  !!
   !<
   subroutine da(this)
     ! -- modules
@@ -195,18 +189,15 @@ contains
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%ionper)
     call mem_deallocate(this%lastonper)
-    !
-    ! -- return
-    return
   end subroutine da
 
   !> @ brief Check ionper
-    !!
-    !!  Generic method to read and check ionperiod, which is used to determine
-    !!  if new period data should be read from the input file. The check of
-    !!  ionperiod also makes sure periods are increasing in subsequent period
-    !!  data blocks.
-    !!
+  !!
+  !!  Generic method to read and check ionperiod, which is used to determine
+  !!  if new period data should be read from the input file. The check of
+  !!  ionperiod also makes sure periods are increasing in subsequent period
+  !!  data blocks.
+  !!
   !<
   subroutine read_check_ionper(this)
     ! -- modules
@@ -227,15 +218,12 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine read_check_ionper
 
   !> @ brief Read griddata block for a package
-    !!
-    !!  Generic method to read data in the GRIDDATA block for a package.
-    !!
+  !!
+  !!  Generic method to read data in the GRIDDATA block for a package.
+  !!
   !<
   subroutine get_block_data(this, tags, lfound, varinames)
     ! -- modules
@@ -296,9 +284,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine get_block_data
 
 end module NumericalPackageModule
