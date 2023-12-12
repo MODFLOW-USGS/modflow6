@@ -39,7 +39,6 @@ contains
   subroutine init(this)
     class(MessagesType) :: this !< MessageType object
 
-    ! -- initialize variables
     this%num_messages = 0
     this%max_messages = 1000
     this%max_exceeded = 0
@@ -51,7 +50,6 @@ contains
     class(MessagesType) :: this !< MessageType object
     integer(I4B) :: nmessage
 
-    ! -- set nmessage
     if (allocated(this%messages)) then
       nmessage = this%num_messages
     else
@@ -64,7 +62,6 @@ contains
     class(MessagesType) :: this !< MessageType object
     integer(I4B), intent(in) :: imax !< maximum number of messages that will be stored
 
-    ! -- set max_message
     this%max_messages = imax
   end subroutine set_max
 
@@ -80,9 +77,8 @@ contains
     character(len=*), intent(in), optional :: substring !< duplicate pattern
     ! -- local variables
     logical(LGP) :: inc_array
-    logical(LGP) :: increment_message
     integer(I4B) :: i, n
-    !
+
     ! -- resize message array if needed
     inc_array = .TRUE.
     if (allocated(this%messages)) then
@@ -94,14 +90,14 @@ contains
       call ExpandArray(this%messages, increment=this%exp_messages)
       this%exp_messages = int(this%exp_messages * 1.1)
     end if
-    !
+
     ! -- don't store duplicate messages
     if (present(substring)) then
       do i = 1, this%num_messages
         if (index(this%messages(i), substring) > 0) return
       end do
     end if
-    !
+
     ! -- store message and update count unless
     !    at capacity, then update excess count
     n = this%num_messages + 1

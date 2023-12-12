@@ -23,7 +23,7 @@ contains
     messages = MessagesType()
     call messages%init()
     call check(error, messages%count() == 0)
-  end subroutine test_init
+  end subroutine test_init_and_count
 
   subroutine test_write_all(error)
     type(error_type), allocatable, intent(out) :: error
