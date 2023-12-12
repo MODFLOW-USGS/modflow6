@@ -107,7 +107,7 @@ contains
       conEx => GetDisConnExchangeFromList(exchanges, iex)
       if (.not. associated(conEx)) then
         ! if it is not DisConnExchangeType, we can skip it
-        continue
+        cycle
       end if
 
       ! for now, if we have XT3D on the interface, we use a connection,
