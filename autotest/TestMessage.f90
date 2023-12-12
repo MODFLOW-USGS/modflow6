@@ -13,7 +13,8 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
                 new_unittest("init_and_count", test_init_and_count), &
-                new_unittest("write_all", test_write_all) &
+                new_unittest("store_count_and_write_all", &
+                             test_store_count_and_write_all) &
                 ]
   end subroutine collect_message
 
@@ -25,15 +26,16 @@ contains
     call check(error, messages%count() == 0)
   end subroutine test_init_and_count
 
-  subroutine test_write_all(error)
+  subroutine test_store_count_and_write_all(error)
     type(error_type), allocatable, intent(out) :: error
     type(MessagesType) :: messages
     messages = MessagesType()
     call messages%init()
     call messages%store("1")
     call messages%store("2")
+    call check(error, messages%count() == 2)
     ! debug visually with e.g. `meson test --no-rebuild -C builddir --verbose Message`
     call messages%write_all()
-  end subroutine test_write_all
+  end subroutine test_store_count_and_write_all
 
 end module TestMessage
