@@ -6,7 +6,6 @@ MODULE IMSLinearModule
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1, &
                              DHALF, DONE, DTWO, &
                              VDEBUG
-  use GenericUtilitiesModule, only: sim_message
   use IMSLinearBaseModule, only: ims_base_cg, ims_base_bcgs, &
                                  ims_base_pccrs, ims_base_calc_order, &
                                  ims_base_scale, ims_base_pcu, &

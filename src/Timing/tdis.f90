@@ -5,7 +5,7 @@
 module TdisModule
 
   use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: iout
+  use SimVariablesModule, only: iout, isim_level
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: LINELENGTH, LENDATETIME, VALL
   !
@@ -113,7 +113,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DONE, DZERO, MNORMAL, MVALIDATE, DNODATA
     use SimVariablesModule, only: isim_mode
-    use GenericUtilitiesModule, only: sim_message
+    use MessageModule, only: write_message
     use AdaptiveTimeStepModule, only: isAdaptivePeriod, dtstable, &
                                       ats_period_message
     ! -- local
@@ -155,8 +155,9 @@ contains
     case (MNORMAL)
       write (line, fmtspts) cpref, kper, kstp, trim(cend)
     end select
-    call sim_message(line, level=VALL)
-    call sim_message(line, iunit=iout, skipbefore=1, skipafter=1)
+    if (isim_level >= VALL) &
+      call write_message(line)
+    call write_message(line, iunit=iout, skipbefore=1, skipafter=1)
     !
     ! -- Write message if first time step
     if (kstp == 1) then

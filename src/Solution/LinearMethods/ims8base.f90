@@ -9,7 +9,7 @@ MODULE IMSLinearBaseModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO, &
                              DZERO, DPREC, DEM6, DEM3, DHALF, DONE
-  use GenericUtilitiesModule, only: sim_message, is_same
+  use GenericUtilitiesModule, only: is_same
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
   use ConvergenceSummaryModule

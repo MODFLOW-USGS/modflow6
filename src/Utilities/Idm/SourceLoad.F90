@@ -145,7 +145,7 @@ contains
 
   subroutine load_simnam()
     use SimVariablesModule, only: simfile, iout
-    use GenericUtilitiesModule, only: sim_message
+    use MessageModule, only: write_message
     use IdmMf6FileModule, only: input_load
     type(ModflowInputType) :: mf6_input
     character(len=LINELENGTH) :: line
@@ -159,7 +159,7 @@ contains
       ! -- write name of namfile to stdout
       write (line, '(2(1x,a))') 'Using Simulation name file:', &
         trim(adjustl(simfile))
-      call sim_message(line, skipafter=1)
+      call write_message(line, skipafter=1)
       !
       ! -- create description of input
       mf6_input = getModflowInput('NAM6', 'SIM', 'NAM', 'SIM', 'NAM', simfile)

@@ -10,6 +10,7 @@
 ../../../src/Utilities/SimVariables.f90
 ../../../src/Utilities/compilerversion.F90
 ../../../src/Utilities/genericutils.f90
+../../../src/Utilities/Message.f90
 ../../../src/Utilities/ErrorUtil.f90
 ../../../src/Utilities/GeomUtil.f90
 ../../../src/Utilities/InputOutput.f90

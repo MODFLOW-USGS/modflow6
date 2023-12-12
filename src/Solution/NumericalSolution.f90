@@ -13,7 +13,8 @@ module NumericalSolutionModule
                              LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use TableModule, only: TableType, table_cr
-  use GenericUtilitiesModule, only: is_same, sim_message
+  use GenericUtilitiesModule, only: is_same
+  Use MessageModule, only: write_message
   use VersionModule, only: IDEVELOPMODE
   use BaseModelModule, only: BaseModelType
   use BaseExchangeModule, only: BaseExchangeType
@@ -3147,7 +3148,7 @@ contains
       if (iend /= 0) then
         write (errmsg, '(3a)') &
           'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-        call sim_message(errmsg)
+        call write_message(errmsg)
       end if
     end if
 

@@ -8,7 +8,6 @@ module SimulationCreateModule
   use SimVariablesModule, only: iout, simulation_mode, proc_id, &
                                 nr_procs, model_names, model_ranks, &
                                 model_loc_idx
-  use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_filename, MaxErrors
   use VersionModule, only: write_listfile_header

@@ -28,16 +28,17 @@ ${SOURCEDIR8}
 OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
+$(OBJDIR)/Global.o \
 $(OBJDIR)/SimVariables.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/Message.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/Global.o \
 $(OBJDIR)/GlobalVariables.o \
-$(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/SimPHMF.o \
+$(OBJDIR)/genericutils.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \

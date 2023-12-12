@@ -3,7 +3,7 @@ module ConnectionsModule
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENMEMPATH
-  use GenericUtilitiesModule, only: sim_message
+  use MessageModule, only: write_message
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use GeomUtilModule, only: get_node
@@ -457,7 +457,7 @@ contains
         m = this%ja(ii)
         if (n /= this%ja(this%isym(ii))) then
           write (line, fmtsymerr) aname(2), ii, this%isym(ii)
-          call sim_message(line)
+          call write_message(line)
           call this%parser%StoreErrorUnit()
         end if
       end do

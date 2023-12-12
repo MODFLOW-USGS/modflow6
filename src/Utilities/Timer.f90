@@ -2,7 +2,7 @@ module TimerModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, DZERO
-  use GenericUtilitiesModule, only: sim_message
+  use MessageModule, only: write_message
   implicit none
   private
   public :: print_start_time
@@ -32,7 +32,7 @@ contains
     ! -- Get current date and time, assign to IBDT, and write to screen
     call date_and_time(values=ibdt)
     write (line, fmtdt) (ibdt(i), i=1, 3), (ibdt(i), i=5, 7)
-    call sim_message(line, skipafter=1)
+    call write_message(line, skipafter=1)
     !
     ! -- return
     return
@@ -69,11 +69,11 @@ contains
     !
     ! -- write elapsed time to stdout
     write (line, fmtdt) (IEDT(I), I=1, 3), (IEDT(I), I=5, 7)
-    call sim_message(line, skipbefore=1)
+    call write_message(line, skipbefore=1)
     !
     ! -- write elapsted time to iout
     IF (IPRTIM .GT. 0) THEN
-      call sim_message(line, iunit=iout, skipbefore=1)
+      call write_message(line, iunit=iout, skipbefore=1)
     END IF
 !
 !     Calculate elapsed time in days and seconds
@@ -145,7 +145,7 @@ contains
       WRITE (line, 1040) NSECS, MSECS
 1040  FORMAT(1X, 'Elapsed run time: ', I2, '.', I3.3, ' Seconds')
     END IF
-    call sim_message(line, skipafter=1)
+    call write_message(line, skipafter=1)
 !
 !     Write times to file if requested
     IF (IPRTIM .GT. 0) THEN

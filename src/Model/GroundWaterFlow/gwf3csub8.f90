@@ -18,7 +18,8 @@ module GwfCsubModule
                              TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryHelperModule, only: create_mem_path
-  use GenericUtilitiesModule, only: is_same, sim_message
+  use GenericUtilitiesModule, only: is_same
+  use MessageModule, only: write_message
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQuadratic0sp, &
@@ -1924,7 +1925,7 @@ contains
         write (msg, '(1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
           'LARGEST', (i1 - i0 + 1), 'OF', this%ninterbeds, &
           'INTERBED STRAIN VALUES SHOWN'
-        call sim_message(msg, this%iout, skipbefore=1)
+        call write_message(msg, this%iout, skipbefore=1)
         !
         ! -- interbed strain data
         ! -- set title
@@ -2114,7 +2115,7 @@ contains
       write (msg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
         'LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes, &
         'CELL COARSE-GRAINED VALUES SHOWN'
-      call sim_message(msg, this%iout, skipbefore=1)
+      call write_message(msg, this%iout, skipbefore=1)
       !
       ! -- set title
       title = trim(adjustl(this%packName))// &
