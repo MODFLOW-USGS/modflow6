@@ -57,7 +57,7 @@ contains
   !<
   function count_errors() result(ncount)
     integer(I4B) :: ncount
-    ncount = sim_errors%count_message()
+    ncount = sim_errors%count()
   end function count_errors
 
   !> @brief Return number of warnings
@@ -69,21 +69,21 @@ contains
   !<
   function count_warnings() result(ncount)
     integer(I4B) :: ncount
-    ncount = sim_warnings%count_message()
+    ncount = sim_warnings%count()
   end function count_warnings
 
   !> @brief Return the number of notes stored.
   !<
   function count_notes() result(ncount)
     integer(I4B) :: ncount
-    ncount = sim_notes%count_message()
+    ncount = sim_notes%count()
   end function count_notes
 
   !> @brief Set the maximum number of errors to be stored.
   !<
   subroutine MaxErrors(imax)
     integer(I4B), intent(in) :: imax !< maximum number of error messages that will be stored
-    call sim_errors%set_max_message(imax)
+    call sim_errors%set_max(imax)
   end subroutine MaxErrors
 
   !> @brief Store an error message.
@@ -103,7 +103,7 @@ contains
     end if
     !
     ! -- store error
-    call sim_errors%store_message(msg)
+    call sim_errors%store(msg)
     !
     ! -- terminate the simulation
     if (lterminate) then
@@ -184,7 +184,7 @@ contains
     inquire (unit=iunit, name=fname)
     write (errmsg, '(3a)') &
       "Error occurred while reading file '", trim(adjustl(fname)), "'"
-    call sim_uniterrors%store_message(errmsg)
+    call sim_uniterrors%store(errmsg)
     !
     ! -- terminate the simulation
     if (lterminate) then
@@ -217,7 +217,7 @@ contains
     ! -- store error unit
     write (errmsg, '(3a)') &
       "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
-    call sim_uniterrors%store_message(errmsg)
+    call sim_uniterrors%store(errmsg)
     !
     ! -- terminate the simulation
     if (lterminate) then
@@ -240,9 +240,9 @@ contains
     !
     ! -- store warning
     if (present(substring)) then
-      call sim_warnings%store_message(msg, substring)
+      call sim_warnings%store(msg, substring)
     else
-      call sim_warnings%store_message(msg)
+      call sim_warnings%store(msg)
     end if
     !
     ! -- return
@@ -285,7 +285,7 @@ contains
     end if
     !
     ! -- store warning
-    call sim_warnings%store_message(message)
+    call sim_warnings%store(message)
 
   end subroutine deprecation_warning
 
@@ -301,7 +301,7 @@ contains
     character(len=*), intent(in) :: note !< note
     !
     ! -- store note
-    call sim_notes%store_message(note)
+    call sim_notes%store(note)
 
   end subroutine store_note
 
@@ -344,14 +344,14 @@ contains
     !
     ! -- print the accumulated messages
     if (isim_level >= VALL) then
-      call sim_notes%print_message('NOTES:', 'note(s)', &
-                                   iunit=iout)
-      call sim_warnings%print_message('WARNING REPORT:', 'warning(s)', &
-                                      iunit=iout)
+      call sim_notes%write_all('NOTES:', 'note(s)', &
+                               iunit=iout)
+      call sim_warnings%write_all('WARNING REPORT:', 'warning(s)', &
+                                  iunit=iout)
     end if
-    call sim_errors%print_message('ERROR REPORT:', 'error(s)', iunit=iout)
-    call sim_uniterrors%print_message('UNIT ERROR REPORT:', &
-                                      'file unit error(s)', iunit=iout)
+    call sim_errors%write_all('ERROR REPORT:', 'error(s)', iunit=iout)
+    call sim_uniterrors%write_all('UNIT ERROR REPORT:', &
+                                  'file unit error(s)', iunit=iout)
     !
     ! -- write a stop message, if one is passed
     if (present(stopmess)) then
@@ -371,7 +371,7 @@ contains
     flush (istdout)
     !
     ! -- determine if an error condition has occurred
-    if (sim_errors%count_message() > 0) then
+    if (sim_errors%count() > 0) then
       ireturnerr = 2
       if (present(ioutlocal)) then
         if (ioutlocal > 0 .and. ioutlocal /= iout) write (ioutlocal, fmt) msg
@@ -447,10 +447,10 @@ contains
     use SimVariablesModule, only: simulation_mode
     !
     ! -- initialize message lists
-    call sim_errors%init_message()
-    call sim_uniterrors%init_message()
-    call sim_warnings%init_message()
-    call sim_notes%init_message()
+    call sim_errors%init()
+    call sim_uniterrors%init()
+    call sim_warnings%init()
+    call sim_notes%init()
     !
     ! -- Write banner to screen (unit stdout)
     call write_listfile_header(istdout, write_kind_info=.false., &
@@ -481,9 +481,9 @@ contains
     if (numnoconverge > 0) then
       write (warnmsg, fmtnocnvg) numnoconverge
       if (isimcontinue == 0) then
-        call sim_errors%store_message(warnmsg)
+        call sim_errors%store(warnmsg)
       else
-        call sim_warnings%store_message(warnmsg)
+        call sim_warnings%store(warnmsg)
       end if
     end if
     !
@@ -505,10 +505,10 @@ contains
     end if
     !
     ! -- destroy messages
-    call sim_errors%deallocate_message()
-    call sim_uniterrors%deallocate_message()
-    call sim_warnings%deallocate_message()
-    call sim_notes%deallocate_message()
+    call sim_errors%deallocate()
+    call sim_uniterrors%deallocate()
+    call sim_warnings%deallocate()
+    call sim_notes%deallocate()
     !
     ! -- return or halt
     if (iforcestop == 1) then

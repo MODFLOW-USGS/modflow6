@@ -7,6 +7,7 @@ program tester
   use TestGeomUtil, only: collect_geomutil
   use TestInputOutput, only: collect_inputoutput
   use TestMathUtil, only: collect_mathutil
+  use TestMessage, only: collect_message
   use TestSim, only: collect_sim
   implicit none
   integer :: stat, is
@@ -21,6 +22,7 @@ program tester
                new_testsuite("GeomUtil", collect_geomutil), &
                new_testsuite("InputOutput", collect_inputoutput), &
                new_testsuite("MathUtil", collect_mathutil), &
+               new_testsuite("Message", collect_message), &
                new_testsuite("Sim", collect_sim) &
                ]
 

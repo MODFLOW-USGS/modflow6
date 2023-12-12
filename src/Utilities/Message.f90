@@ -1,4 +1,4 @@
-!> @brief Generic utilities to store and issue messages to an output unit.
+!> @brief Store and issue logging messages to output units.
 module MessageModule
 
   use KindModule, only: LGP, I4B, DP
@@ -13,125 +13,122 @@ module MessageModule
   public :: write_message_counter
   public :: write_message_centered
 
-  !> @brief Container for related messages sharing a name and title.
+  !> @brief Container for related messages.
   !!
-  !! A maximum number of messages may be configured. Message storage
-  !! arrays are dynamically reallocated up to the specified capacity.
+  !! A maximum capacity can be configured. Message storage
+  !! is dynamically resized up to the configured capacity.
   !<
   type :: MessagesType
-    character(len=LINELENGTH) :: title !< title of the message
-    character(len=LINELENGTH) :: name !< message name
-    integer(I4B) :: nmessage = 0 !< number of messages stored
-    integer(I4B) :: max_message = 1000 !< default maximum number of messages that can be stored
-    integer(I4B) :: max_exceeded = 0 !< flag indicating if the maximum number of messages has exceed the maximum number
-    integer(I4B) :: inc_message = 100 !< amount to increment message array by when calling ExpandArray
+    integer(I4B) :: num_messages = 0 !< number of messages currently stored
+    integer(I4B) :: max_messages = 1000 !< default max message storage capacity
+    integer(I4B) :: max_exceeded = 0 !< number of messages in excess of maximum
+    integer(I4B) :: exp_messages = 100 !< number of slots to expand message array
     character(len=MAXCHARLEN), allocatable, dimension(:) :: messages !< message array
   contains
-    procedure :: init_message
-    procedure :: count_message
-    procedure :: set_max_message
-    procedure :: store_message
-    procedure :: print_message
-    procedure :: deallocate_message
+    procedure :: init
+    procedure :: count
+    procedure :: set_max
+    procedure :: store
+    procedure :: write_all
+    procedure :: deallocate
   end type MessagesType
 
 contains
 
   !> @brief Initialize message storage.
-  subroutine init_message(this)
+  subroutine init(this)
     class(MessagesType) :: this !< MessageType object
 
-    ! -- initialize message variables
-    this%nmessage = 0
-    this%max_message = 1000
+    ! -- initialize variables
+    this%num_messages = 0
+    this%max_messages = 1000
     this%max_exceeded = 0
-    this%inc_message = 100
-  end subroutine init_message
+    this%exp_messages = 100
+  end subroutine init
 
   !> @brief Return the number of messages currently stored.
-  function count_message(this) result(nmessage)
+  function count(this) result(nmessage)
     class(MessagesType) :: this !< MessageType object
     integer(I4B) :: nmessage
 
     ! -- set nmessage
     if (allocated(this%messages)) then
-      nmessage = this%nmessage
+      nmessage = this%num_messages
     else
       nmessage = 0
     end if
-  end function count_message
+  end function count
 
   !> @brief Set the maximum number of messages.
-  subroutine set_max_message(this, imax)
+  subroutine set_max(this, imax)
     class(MessagesType) :: this !< MessageType object
     integer(I4B), intent(in) :: imax !< maximum number of messages that will be stored
 
     ! -- set max_message
-    this%max_message = imax
-  end subroutine set_max_message
+    this%max_messages = imax
+  end subroutine set_max
 
-  !> @brief Store a message for printing at the end of the simulation.
-  subroutine store_message(this, msg, substring)
+  !> @brief Add a message to storage.
+  !!
+  !! An optional string may be provided to filter out duplicate messages.
+  !! If any stored messages contain the string the message is not stored.
+  !<
+  subroutine store(this, msg, substring)
     ! -- dummy variables
     class(MessagesType) :: this !< MessageType object
     character(len=*), intent(in) :: msg !< message
-    character(len=*), intent(in), optional :: substring !< optional string that can be used
-                                                        !! to prevent storing duplicate messages
+    character(len=*), intent(in), optional :: substring !< duplicate pattern
     ! -- local variables
     logical(LGP) :: inc_array
     logical(LGP) :: increment_message
-    integer(I4B) :: i
-    integer(I4B) :: idx
+    integer(I4B) :: i, n
     !
-    ! -- determine if messages should be expanded
+    ! -- resize message array if needed
     inc_array = .TRUE.
     if (allocated(this%messages)) then
-      i = this%nmessage
-      if (i < size(this%messages)) then
+      if (this%num_messages >= size(this%messages)) then
         inc_array = .FALSE.
       end if
     end if
-    !
-    ! -- resize message
     if (inc_array) then
-      call ExpandArray(this%messages, increment=this%inc_message)
-      this%inc_message = int(this%inc_message * 1.1)
+      call ExpandArray(this%messages, increment=this%exp_messages)
+      this%exp_messages = int(this%exp_messages * 1.1)
     end if
     !
-    ! -- Determine if the substring exists in the passed message.
-    !    If substring is in passed message, do not add the duplicate
-    !    passed message.
-    increment_message = .TRUE.
+    ! -- don't store duplicate messages
     if (present(substring)) then
-      do i = 1, this%nmessage
-        idx = index(this%messages(i), substring)
-        if (idx > 0) then
-          increment_message = .FALSE.
-          exit
-        end if
+      do i = 1, this%num_messages
+        if (index(this%messages(i), substring) > 0) return
       end do
     end if
     !
-    ! -- store this message and calculate nmessage
-    if (increment_message) then
-      i = this%nmessage + 1
-      if (i <= this%max_message) then
-        this%nmessage = i
-        this%messages(i) = msg
-      else
-        this%max_exceeded = this%max_exceeded + 1
-      end if
+    ! -- store message and update count unless
+    !    at capacity, then update excess count
+    n = this%num_messages + 1
+    if (n <= this%max_messages) then
+      this%num_messages = n
+      this%messages(n) = msg
+    else
+      this%max_exceeded = this%max_exceeded + 1
     end if
-  end subroutine store_message
+  end subroutine store
 
-  !> @brief Print stored messages.
-  subroutine print_message(this, title, name, iunit)
+  !> @brief Write all stored messages to standard output.
+  !!
+  !! An optional title to precede the messages may be provided.
+  !! The title is printed on a separate line. An arbitrary kind
+  !! may be specified, e.g. 'note', 'warning' or 'error. A file
+  !! unit can also be specified to write in addition to stdout.
+  !<
+  subroutine write_all(this, title, kind, iunit)
     ! -- dummy variables
     class(MessagesType) :: this !< MessageType object
-    character(len=*), intent(in) :: title !< message title
-    character(len=*), intent(in) :: name !< message name
-    integer(I4B), intent(in), optional :: iunit !< optional file unit to save messages to
+    character(len=*), intent(in), optional :: title !< message title
+    character(len=*), intent(in), optional :: kind !< message kind
+    integer(I4B), intent(in), optional :: iunit !< file unit
     ! -- local
+    character(len=LINELENGTH) :: ltitle
+    character(len=LINELENGTH) :: lkind
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cerr
     integer(I4B) :: iu
@@ -140,29 +137,40 @@ contains
     integer(I4B) :: iwidth
     ! -- formats
     character(len=*), parameter :: stdfmt = "(/,A,/)"
-    !
+
     ! -- process optional variables
+    if (present(title)) then
+      ltitle = title
+    else
+      ltitle = ''
+    end if
+    if (present(kind)) then
+      lkind = kind
+    else
+      lkind = ''
+    end if
     if (present(iunit)) then
       iu = iunit
     else
-      iu = istdout
+      iu = 0
     end if
-    !
-    ! -- write the title and all message entries
+
+    ! -- write messages, if any
     if (allocated(this%messages)) then
-      isize = this%nmessage
+      isize = this%num_messages
       if (isize > 0) then
-        !
         ! -- calculate the maximum width of the prepended string
         !    for the counter
         write (cerr, '(i0)') isize
         iwidth = len_trim(cerr) + 1
-        !
+
         ! -- write title for message
-        if (iu > 0) &
-          call write_message(iunit=iu, text=title, fmt=stdfmt)
-        call write_message(text=title, fmt=stdfmt)
-        !
+        if (trim(ltitle) /= '') then
+          if (iu > 0) &
+            call write_message(iunit=iu, text=ltitle, fmt=stdfmt)
+          call write_message(text=ltitle, fmt=stdfmt)
+        end if
+
         ! -- write each message
         do i = 1, isize
           if (iu > 0) &
@@ -176,11 +184,11 @@ contains
             icount=i, &
             iwidth=iwidth)
         end do
-        !
+
         ! -- write the number of additional messages
         if (this%max_exceeded > 0) then
           write (errmsg, '(i0,3(1x,a))') &
-            this%max_exceeded, 'additional', trim(name), &
+            this%max_exceeded, 'additional', trim(kind), &
             'detected but not printed.'
           if (iu > 0) &
             call write_message(iunit=iu, text=trim(errmsg), fmt='(/,1x,a)')
@@ -188,15 +196,19 @@ contains
         end if
       end if
     end if
-  end subroutine print_message
+  end subroutine write_all
 
-  !> @ brief Deallocate message stored if needed.
-  subroutine deallocate_message(this)
+  !> @ brief Deallocate message storage.
+  subroutine deallocate (this)
     class(MessagesType) :: this
     if (allocated(this%messages)) deallocate (this%messages)
-  end subroutine deallocate_message
+  end subroutine deallocate
 
-  !> @brief Configurable routine to write a message to an output unit.
+  !> @brief Write a message to an output unit.
+  !!
+  !! Use `advance` to toggle advancing output. Use `skipbefore/after` to
+  !! configure the number of whitespace lines before/after the message.
+  !<
   subroutine write_message(text, iunit, fmt, &
                            skipbefore, skipafter, advance)
     ! -- dummy
@@ -266,17 +278,16 @@ contains
     end if
   end subroutine write_message
 
-  !> @brief Write a message, splitting across lines as needed.
+  !> @brief Write a message with configurable indentation and numbering.
   !!
-  !! Subroutine that formats and writes a single message that
-  !! may exceeed 78 characters in length. Messages longer than
-  !! 78 characters are written across multiple lines. When a
-  !! counter is passed in subsequent lines are indented.
+  !! The message may exceed 78 characters in length. Messages longer than
+  !! 78 characters are written across multiple lines. After icount lines,
+  !! subsequent lines are indented and numbered. Use skipbefore/after to
+  !! configure the number of empty lines before/after the message.
   !<
   subroutine write_message_counter(text, iunit, icount, iwidth, &
                                    skipbefore, skipafter)
     ! -- dummy
-
     character(len=*), intent(in) :: text !< message to be written
     integer(I4B), intent(in), optional :: iunit !< the unit number to which the message is written
     integer(I4B), intent(in), optional :: icount !< counter to prepended to the message
