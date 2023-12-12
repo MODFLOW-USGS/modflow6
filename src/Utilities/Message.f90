@@ -80,10 +80,10 @@ contains
     integer(I4B) :: i, n
 
     ! -- resize message array if needed
-    inc_array = .TRUE.
+    inc_array = .true.
     if (allocated(this%messages)) then
-      if (this%num_messages >= size(this%messages)) then
-        inc_array = .FALSE.
+      if (this%num_messages < size(this%messages)) then
+        inc_array = .false.
       end if
     end if
     if (inc_array) then
@@ -213,7 +213,7 @@ contains
     character(len=*), intent(in), optional :: fmt !< format to write the message (default='(a)')
     integer(I4B), intent(in), optional :: skipbefore !< number of empty lines before message (default=0)
     integer(I4B), intent(in), optional :: skipafter !< number of empty lines after message (default=0)
-    logical(LGP), intent(in), optional :: advance !< whether to use advancing output (default is .TRUE.)
+    logical(LGP), intent(in), optional :: advance !< whether to use advancing output (default is .true.)
     ! -- local
     character(len=3) :: cadvance
     integer(I4B) :: i
@@ -325,7 +325,7 @@ contains
     fmt_cont = '(A)'
     len_str1 = 0
     len_str2 = len_line
-    include_counter = .FALSE.
+    include_counter = .false.
     j = 0
 
     ! -- process optional arguments
@@ -343,7 +343,7 @@ contains
     ! -- create the counter to prepend to the start of the message,
     !    formats, and variables used to create strings
     if (present(iwidth) .and. present(icount)) then
-      include_counter = .TRUE.
+      include_counter = .true.
 
       ! -- write counter
       write (cfmt, '(A,I0,A)') '(1x,i', iwidth, ',".",1x)'
