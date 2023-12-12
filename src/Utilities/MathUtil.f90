@@ -119,7 +119,10 @@ contains
     logical(LGP) :: lsymmetric
 
     ! check for exact equality
-    if (a == b) is_close = .true.
+    if (a == b) then
+      is_close = .true.
+      return
+    end if
 
     ! process optional arguments
     if (.not. present(rtol)) then
@@ -138,7 +141,6 @@ contains
       lsymmetric = symmetric
     end if
 
-    ! approximate equality
     if (lsymmetric) then
       ! "weak" symmetric test, https://peps.python.org/pep-0485/#which-symmetric-test
       is_close = abs(a - b) <= max(lrtol * max(abs(a), abs(b)), latol)
