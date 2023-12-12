@@ -96,7 +96,7 @@ module ConstantsModule
   real(DP), parameter :: DSECPERHR = 3.6e3_DP !< real constant representing number of seconds per hour (used in tdis)
   real(DP), parameter :: DHRPERDAY = 2.4e1_DP !< real constant representing number of hours per day (used in tdis)
   real(DP), parameter :: DDYPERYR = 3.6525e2_DP !< real constant representing the average number of days per year (used in tdis)
-  real(DP), parameter :: DSECPERDY = 8.6e4_DP !< real constant representing the number of seconds per day (used in tdis)
+  real(DP), parameter :: DSECPERDY = 8.64e4_DP !< real constant representing the number of seconds per day (used in tdis)
   real(DP), parameter :: DSECPERYR = 3.1557600e7_DP !< real constant representing the average number of seconds per year (used in tdis)
 
   real(DP), parameter :: DEM1 = 1.0e-1_DP !< real constant 1e-1
