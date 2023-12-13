@@ -4,7 +4,7 @@ module TimeArraySeriesModule
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
                              LENTIMESERIESNAME, LENMODELNAME, DZERO, DONE
-  use GenericUtilitiesModule, only: is_same
+  use MathUtilModule, only: is_close
   use InputOutputModule, only: GetUnit, openfile
   use KindModule, only: DP, I4B
   use ListModule, only: ListType, ListNodeType
@@ -474,7 +474,7 @@ contains
           ierr = 1
         end if
       else
-        if (is_same(taEarlier%taTime, time)) then
+        if (is_close(taEarlier%taTime, time)) then
           values = taEarlier%taArray
         else
           ! -- Only earlier time is available, and it is not time of interest;
@@ -488,7 +488,7 @@ contains
       end if
     else
       if (associated(taLater)) then
-        if (is_same(taLater%taTime, time)) then
+        if (is_close(taLater%taTime, time)) then
           values = taLater%taArray
         else
           ! -- only later time is available, and it is not time of interest
@@ -717,7 +717,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           ta => CastAsTimeArrayType(obj)
-          if (ta%taTime < time .or. is_same(ta%taTime, time)) then
+          if (ta%taTime < time .or. is_close(ta%taTime, time)) then
             currNode => currNode%nextNode
           else
             exit

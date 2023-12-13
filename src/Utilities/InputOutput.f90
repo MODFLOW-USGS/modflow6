@@ -11,7 +11,6 @@ module InputOutputModule
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: is_same
   use MessageModule, only: write_message
   private
   public :: GetUnit,                                                           &

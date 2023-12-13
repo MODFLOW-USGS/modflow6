@@ -37,14 +37,14 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/GlobalVariables.o \
+$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/SimPHMF.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
-$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \

@@ -13,8 +13,8 @@ module NumericalSolutionModule
                              LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use TableModule, only: TableType, table_cr
-  use GenericUtilitiesModule, only: is_same
   Use MessageModule, only: write_message
+  use MathUtilModule, only: is_close
   use VersionModule, only: IDEVELOPMODE
   use BaseModelModule, only: BaseModelType
   use BaseExchangeModule, only: BaseExchangeType
@@ -2476,7 +2476,7 @@ contains
           end if
         end if
       else
-        lsame = is_same(l2norm, this%l2norm0)
+        lsame = is_close(l2norm, this%l2norm0)
         if (lsame) then
           iptc = 0
         end if
