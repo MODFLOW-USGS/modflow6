@@ -303,7 +303,7 @@ contains
     end if
   end subroutine compose
 
-  !> @brief Process optional arguments and set defaults/flags for transformations.
+  !> @brief Process arguments and set defaults. Internal use only.
   subroutine defaults(xorigin, yorigin, zorigin, &
                       sinrot, cosrot, &
                       invert, translate, rotate, &
