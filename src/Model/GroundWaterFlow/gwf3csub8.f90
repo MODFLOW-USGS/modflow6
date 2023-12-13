@@ -18,6 +18,7 @@ module GwfCsubModule
                              TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryHelperModule, only: create_mem_path
+  use MathUtilModule, only: is_close
   use MessageModule, only: write_message
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
@@ -2874,7 +2875,7 @@ contains
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          if (this%brg /= DZERO .and. idelay == 0) then
+          if (.not. is_close(this%brg, DZERO) .and. idelay == 0) then
             call this%csub_nodelay_wcomp_fc(ib, node, tled, area, &
                                             hnew(node), hold(node), &
                                             hcof, rhsterm)
