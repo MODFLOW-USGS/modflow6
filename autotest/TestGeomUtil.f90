@@ -292,13 +292,32 @@ contains
     deallocate (face_pts)
   end subroutine test_point_in_polygon_irr
 
-  !> @brief Test skew along the x-axis
   subroutine test_skew(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP) :: v(2)
+
+    ! shear to right
     v = (/1.0_DP, 1.0_DP/)
-    v = skew(v, 1.0_DP, 1.0_DP, 1.0_DP)
+    v = skew(v, (/1.0_DP, 1.0_DP, 1.0_DP/))
     call check(error, v(1) == 2.0_DP .and. v(2) == 1.0_DP)
+    v = (/2.0_DP, 2.0_DP/)
+    v = skew(v, (/1.0_DP, 0.5_DP, 1.0_DP/))
+    call check(error, v(1) == 3.0_DP .and. v(2) == 2.0_DP)
+
+    ! collapse x dim
+    v = (/2.0_DP, 2.0_DP/)
+    v = skew(v, (/0.0_DP, 0.5_DP, 1.0_DP/))
+    call check(error, v(1) == 1.0_DP .and. v(2) == 2.0_DP, to_string(v(1)))
+
+    ! mirror over x axis
+    v = (/2.0_DP, 2.0_DP/)
+    v = skew(v, (/-1.0_DP, 0.0_DP, 1.0_DP/))
+    call check(error, v(1) == -2.0_DP .and. v(2) == 2.0_DP, to_string(v(1)))
+
+    ! mirror over x and y axis
+    v = (/2.0_DP, 2.0_DP/)
+    v = skew(v, (/-1.0_DP, 0.0_DP, -1.0_DP/))
+    call check(error, v(1) == -2.0_DP .and. v(2) == -2.0_DP, to_string(v(1)))
   end subroutine test_skew
 
 end module TestGeomUtil

@@ -137,15 +137,15 @@ contains
   end subroutine get_jk
 
   !> @brief Skew a 2D vector along the x-axis.
-  pure function skew(vec, sxx, sxy, syy, invert) result(res)
+  pure function skew(v, s, invert) result(res)
     ! -- dummy
-    real(DP), intent(in) :: vec(2)
-    real(DP), intent(in) :: sxx, sxy, syy
+    real(DP), intent(in) :: v(2) !< vector
+    real(DP), intent(in) :: s(3) !< skew matrix entries (top left, top right, bottom left)
     logical(LGP), intent(in), optional :: invert
     real(DP) :: res(2)
     ! -- local
     logical(LGP) :: linvert
-    real(DP) :: old(2)
+    real(DP) :: sxx, sxy, syy
 
     ! -- process optional arguments
     if (present(invert)) then
@@ -154,13 +154,15 @@ contains
       linvert = .false.
     end if
 
-    old = vec
+    sxx = s(1)
+    sxy = s(2)
+    syy = s(3)
     if (.not. linvert) then
-      res(1) = sxx * old(1) + sxy * old(2)
-      res(2) = syy * old(2)
+      res(1) = sxx * v(1) + sxy * v(2)
+      res(2) = syy * v(2)
     else
-      res(2) = old(2) / syy
-      res(1) = (old(1) - sxy * res(2)) / sxx
+      res(2) = v(2) / syy
+      res(1) = (v(1) - sxy * res(2)) / sxx
     end if
   end function skew
 
