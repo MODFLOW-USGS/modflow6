@@ -322,7 +322,6 @@ $(OBJDIR)/comarg.o \
 $(OBJDIR)/mf6core.o \
 $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
-$(OBJDIR)/genericutils.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/MemorySetHandler.o \
 $(OBJDIR)/ilut.o \
