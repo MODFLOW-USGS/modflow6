@@ -136,12 +136,7 @@ contains
     end if
   end subroutine get_jk
 
-  !> @brief Skew a 2D vector (as an array, in-place) along the x-axis.
-  !!
-  !! Skew matrix entries sxx (upper left), sxy (upper right), and syy
-  !! (lower right) must be provided, and a 2-item array of the vector
-  !! components to skew. The transform can optionally be inverted.
-  !<
+  !> @brief Skew a 2D vector along the x-axis.
   pure function skew(vec, sxx, sxy, syy, invert) result(res)
     ! -- dummy
     real(DP), intent(in) :: vec(2)
@@ -169,7 +164,7 @@ contains
     end if
   end function skew
 
-  !> @brief Apply 3D translation and optional 2D rotation to coordinates.
+  !> @brief Apply a 3D translation and optional 2D rotation to coordinates.
   subroutine transform_coords(xin, yin, zin, &
                               xout, yout, zout, &
                               xorigin, yorigin, zorigin, &
