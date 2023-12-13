@@ -1,5 +1,6 @@
 module TestMathUtil
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DNODATA, DZERO
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use MathUtilModule, only: is_close, mod_offset
@@ -87,6 +88,24 @@ contains
                ", b="//to_string(b)// &
                ", eps=default")
 
+    ! DNODATA
+    call check(error, (.not. is_close(0.0_DP, DNODATA)), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps=default")
+    call check(error, is_close(DNODATA, DNODATA), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps=default")
+    call check(error, (.not. is_close(DNODATA, DNODATA / 10)), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps=default")
+    call check(error, (.not. is_close(DNODATA, DNODATA * 10)), &
+               "exp ne: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", eps=default")
+
   end subroutine test_is_close_symmetric
 
   subroutine test_is_close_symmetric_near_0(error)
@@ -95,6 +114,14 @@ contains
 
     a = 0.0_DP
     b = 0.0_DP
+    call check(error, is_close(a, b), &
+               "exp eq: a="//to_string(a)// &
+               ", b="//to_string(b)// &
+               ", rtol=default")
+    if (allocated(error)) return
+
+    a = DZERO
+    b = DZERO
     call check(error, is_close(a, b), &
                "exp eq: a="//to_string(a)// &
                ", b="//to_string(b)// &
