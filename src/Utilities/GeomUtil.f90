@@ -140,7 +140,7 @@ contains
   pure function skew(v, s, invert) result(res)
     ! -- dummy
     real(DP), intent(in) :: v(2) !< vector
-    real(DP), intent(in) :: s(3) !< skew matrix entries (top left, top right, bottom left)
+    real(DP), intent(in) :: s(3) !< skew matrix entries (top left, top right, bottom right)
     logical(LGP), intent(in), optional :: invert
     real(DP) :: res(2)
     ! -- local
