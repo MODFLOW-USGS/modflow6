@@ -19,7 +19,6 @@ module GwfCsubModule
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryHelperModule, only: create_mem_path
   use MessageModule, only: write_message
-  use MathUtilModule, only: is_close
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQuadratic0sp, &
