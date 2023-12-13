@@ -2,12 +2,12 @@ module TestGeomUtil
   use KindModule, only: I4B, DP
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
-  use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon
+  use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon, &
+                            skew
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
   public :: collect_geomutil
-  private :: test_point_in_polygon
 
 contains
 
@@ -21,7 +21,8 @@ contains
                 new_unittest("point_in_polygon_tri", &
                              test_point_in_polygon_tri), &
                 new_unittest("point_in_polygon_irr", &
-                             test_point_in_polygon_irr) &
+                             test_point_in_polygon_irr), &
+                new_unittest("skew", test_skew) &
                 ]
   end subroutine collect_geomutil
 
@@ -290,5 +291,14 @@ contains
     deallocate (vert_pts)
     deallocate (face_pts)
   end subroutine test_point_in_polygon_irr
+
+  !> @brief Test skew along the x-axis
+  subroutine test_skew(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP) :: v(2)
+    v = (/1.0_DP, 1.0_DP/)
+    v = skew(v, 1.0_DP, 1.0_DP, 1.0_DP)
+    call check(error, v(1) == 2.0_DP .and. v(2) == 1.0_DP)
+  end subroutine test_skew
 
 end module TestGeomUtil
