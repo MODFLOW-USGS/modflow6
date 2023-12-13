@@ -12,7 +12,6 @@ module InputOutputModule
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
   use MessageModule, only: write_message
-  use MathUtilModule, only: is_close
   private
   public :: GetUnit,                                                           &
             UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
