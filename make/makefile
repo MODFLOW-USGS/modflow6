@@ -85,7 +85,7 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
@@ -322,9 +322,9 @@ $(OBJDIR)/comarg.o \
 $(OBJDIR)/mf6core.o \
 $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
+$(OBJDIR)/genericutils.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/MemorySetHandler.o \
-$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/ilut.o \
 $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
