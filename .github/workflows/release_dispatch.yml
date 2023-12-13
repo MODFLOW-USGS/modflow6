@@ -232,7 +232,7 @@ jobs:
           cache-environment: true
 
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
 
       - name: Draft release
         working-directory: modflow6
