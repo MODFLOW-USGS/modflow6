@@ -6,8 +6,8 @@ module GeomUtilModule
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform_coords, &
-            modify_transf
+            skew, transform, &
+            compose
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -167,11 +167,11 @@ contains
   end function skew
 
   !> @brief Apply a 3D translation and optional 2D rotation to coordinates.
-  subroutine transform_coords(xin, yin, zin, &
-                              xout, yout, zout, &
-                              xorigin, yorigin, zorigin, &
-                              sinrot, cosrot, &
-                              invert)
+  subroutine transform(xin, yin, zin, &
+                       xout, yout, zout, &
+                       xorigin, yorigin, zorigin, &
+                       sinrot, cosrot, &
+                       invert)
     ! -- dummy
     real(DP) :: xin, yin, zin !< input coordinates
     real(DP) :: xout, yout, zout !< output coordinates
@@ -185,11 +185,11 @@ contains
     real(DP) :: lsinrot, lcosrot
 
     ! -- Process option arguments and set defaults and flags
-    call transf_opt_args_prep(lxorigin, lyorigin, lzorigin, &
-                              lsinrot, lcosrot, linvert, &
-                              ltranslate, lrotate, &
-                              xorigin, yorigin, zorigin, &
-                              sinrot, cosrot, invert)
+    call defaults(lxorigin, lyorigin, lzorigin, &
+                  lsinrot, lcosrot, linvert, &
+                  ltranslate, lrotate, &
+                  xorigin, yorigin, zorigin, &
+                  sinrot, cosrot, invert)
 
     ! -- Apply transformation or its inverse
     if (.not. linvert) then
@@ -224,14 +224,14 @@ contains
         zout = zin + lzorigin
       end if
     end if
-  end subroutine transform_coords
+  end subroutine transform
 
   !> @brief Apply a 3D translation and 2D rotation to an existing transformation.
-  subroutine modify_transf(xorigin, yorigin, zorigin, &
-                           sinrot, cosrot, &
-                           xorigin_new, yorigin_new, zorigin_new, &
-                           sinrot_new, cosrot_new, &
-                           invert)
+  subroutine compose(xorigin, yorigin, zorigin, &
+                     sinrot, cosrot, &
+                     xorigin_new, yorigin_new, zorigin_new, &
+                     sinrot_new, cosrot_new, &
+                     invert)
     ! -- dummy
     real(DP) :: xorigin, yorigin, zorigin !< origin coordinates (original)
     real(DP) :: sinrot, cosrot !< sine and cosine of rotation (original)
@@ -245,11 +245,11 @@ contains
     real(DP) :: x0, y0, z0, s0, c0
 
     ! -- Process option arguments and set defaults and flags
-    call transf_opt_args_prep(xorigin_add, yorigin_add, zorigin_add, &
-                              sinrot_add, cosrot_add, linvert, &
-                              ltranslate, lrotate, &
-                              xorigin_new, yorigin_new, zorigin_new, &
-                              sinrot_new, cosrot_new, invert)
+    call defaults(xorigin_add, yorigin_add, zorigin_add, &
+                  sinrot_add, cosrot_add, linvert, &
+                  ltranslate, lrotate, &
+                  xorigin_new, yorigin_new, zorigin_new, &
+                  sinrot_new, cosrot_new, invert)
 
     ! -- Copy existing transformation into working copy
     x0 = xorigin
@@ -266,9 +266,9 @@ contains
         ! -- XOrigin and XOrigin_add are the existing and additional origin
         ! -- vectors, respectively, and R^T is the transpose of the existing
         ! -- rotation matrix
-        call transform_coords(xorigin_add, yorigin_add, zorigin_add, &
-                              xorigin, yorigin, zorigin, &
-                              x0, y0, z0, s0, c0, .true.)
+        call transform(xorigin_add, yorigin_add, zorigin_add, &
+                       xorigin, yorigin, zorigin, &
+                       x0, y0, z0, s0, c0, .true.)
       end if
       if (lrotate) then
         ! -- Calculate modified rotation matrix (represented by sinrot
@@ -285,9 +285,9 @@ contains
       ! -- vectors, respectively, R^T is the transpose of the existing rotation
       ! -- matrix, and R_add is the additional rotation matrix
       if (ltranslate) then
-        call transform_coords(-xorigin_add, -yorigin_add, zorigin_add, &
-                              x0, y0, z0, xorigin, yorigin, zorigin, &
-                              -sinrot_add, cosrot_add, .true.)
+        call transform(-xorigin_add, -yorigin_add, zorigin_add, &
+                       x0, y0, z0, xorigin, yorigin, zorigin, &
+                       -sinrot_add, cosrot_add, .true.)
       end if
       xorigin = c0 * x0 - s0 * y0
       yorigin = s0 * x0 + c0 * y0
@@ -301,14 +301,14 @@ contains
         cosrot = cosrot_add * c0 + sinrot_add * s0
       end if
     end if
-  end subroutine modify_transf
+  end subroutine compose
 
   !> @brief Process optional arguments and set defaults/flags for transformations.
-  subroutine transf_opt_args_prep(xorigin, yorigin, zorigin, &
-                                  sinrot, cosrot, &
-                                  invert, translate, rotate, &
-                                  xorigin_opt, yorigin_opt, zorigin_opt, &
-                                  sinrot_opt, cosrot_opt, invert_opt)
+  subroutine defaults(xorigin, yorigin, zorigin, &
+                      sinrot, cosrot, &
+                      invert, translate, rotate, &
+                      xorigin_opt, yorigin_opt, zorigin_opt, &
+                      sinrot_opt, cosrot_opt, invert_opt)
     ! -- dummy
     real(DP) :: xorigin, yorigin, zorigin
     real(DP) :: sinrot, cosrot
@@ -355,6 +355,6 @@ contains
     end if
     invert = .false.
     if (present(invert_opt)) invert = invert_opt
-  end subroutine transf_opt_args_prep
+  end subroutine defaults
 
 end module GeomUtilModule
