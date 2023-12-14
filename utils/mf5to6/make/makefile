@@ -5,10 +5,10 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/NWT
-SOURCEDIR3=../src/LGR
-SOURCEDIR4=../src/Preproc
-SOURCEDIR5=../src/MF2005
+SOURCEDIR2=../src/LGR
+SOURCEDIR3=../src/Preproc
+SOURCEDIR4=../src/MF2005
+SOURCEDIR5=../src/NWT
 SOURCEDIR6=../../../src/Utilities/Memory
 SOURCEDIR7=../../../src/Utilities/TimeSeries
 SOURCEDIR8=../../../src/Utilities
@@ -37,14 +37,13 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/GlobalVariables.o \
-$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/SimPHMF.o \
-$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
+$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
@@ -57,6 +56,7 @@ $(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReadersMF5.o \
 $(OBJDIR)/precutls.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/GlobalVariablesPHMF.o \
 $(OBJDIR)/DiscretizationBasePHMF.o \
 $(OBJDIR)/File.o \
