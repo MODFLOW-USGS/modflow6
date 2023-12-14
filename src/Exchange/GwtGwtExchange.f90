@@ -11,7 +11,8 @@ module GwtGwtExchangeModule
 
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg, model_loc_idx
-  use SimModule, only: store_error
+  use SimModule, only: store_error, store_error_filename, &
+                       count_errors, ustop
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
@@ -26,10 +27,6 @@ module GwtGwtExchangeModule
   use VirtualModelModule, only: VirtualModelType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use SimModule, only: count_errors, store_error, &
-                       store_error_unit, ustop
-  use SimVariablesModule, only: errmsg
-  use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
 
@@ -59,8 +56,6 @@ module GwtGwtExchangeModule
     !
     ! -- GWT specific option block:
     integer(I4B), pointer :: inewton => null() !< unneeded newton flag allows for mvt to be used here
-    integer(I4B), pointer :: iprflow => null() !< print flag for cell by cell flows
-    integer(I4B), pointer :: ipakcb => null() !< save flag for cell by cell flows
     integer(I4B), pointer :: iAdvScheme !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
     !
@@ -95,8 +90,7 @@ module GwtGwtExchangeModule
     procedure :: use_interface_model
     procedure :: allocate_scalars
     procedure :: allocate_arrays
-    procedure :: read_options
-    procedure :: parse_option
+    procedure :: source_options
     procedure :: read_mvt
     procedure :: gwt_gwt_bdsav
     procedure, private :: gwt_gwt_bdsav_model
@@ -112,9 +106,8 @@ contains
   !!
   !! Create a new GWT to GWT exchange object.
   !<
-  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id)
+  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
@@ -125,6 +118,7 @@ contains
     character(len=*) :: name !< the exchange name
     integer(I4B), intent(in) :: m1_id !< id for model 1
     integer(I4B), intent(in) :: m2_id !< id for model 2
+    character(len=*), intent(in) :: input_mempath
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -140,6 +134,7 @@ contains
     exchange%id = id
     exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
+    exchange%input_mempath = input_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
@@ -207,14 +202,9 @@ contains
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
-    integer(I4B) :: inunit
     !
-    ! -- open the file
-    inunit = getunit()
+    ! -- log the exchange
     write (iout, '(/a,a)') ' Creating exchange: ', this%name
-    call openfile(inunit, iout, this%filename, 'GWT-GWT')
-    !
-    call this%parser%Initialize(inunit, iout)
     !
     ! -- Ensure models are in same solution
     if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
@@ -224,30 +214,27 @@ contains
                          'GWT models must be in same solution: '// &
                          trim(this%gwtmodel1%name)//' '// &
                          trim(this%gwtmodel2%name))
-        call this%parser%StoreErrorUnit()
+        call store_error_filename(this%filename)
       end if
     end if
     !
-    ! -- read options
-    call this%read_options(iout)
+    ! -- source options
+    call this%source_options(iout)
     !
-    ! -- read dimensions
-    call this%read_dimensions(iout)
+    ! -- source dimensions
+    call this%source_dimensions(iout)
     !
     ! -- allocate arrays
     call this%allocate_arrays()
     !
-    ! -- read exchange data
-    call this%read_data(iout)
+    ! -- source exchange data
+    call this%source_data(iout)
     !
     ! -- Read mover information
     if (this%inmvt > 0) then
       call this%read_mvt(iout)
       call this%mvt%mvt_df(this%gwtmodel1%dis)
     end if
-    !
-    ! -- close the file
-    close (inunit)
     !
     ! -- Store obs
     call this%gwt_gwt_df_obs()
@@ -656,7 +643,7 @@ contains
   subroutine gwt_gwt_ot(this)
     ! -- modules
     use SimVariablesModule, only: iout
-    use ConstantsModule, only: DZERO, LINELENGTH
+    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
@@ -706,195 +693,96 @@ contains
     return
   end subroutine gwt_gwt_ot
 
-  !> @ brief Read options
+  !> @ brief Source options
   !!
-  !! Read the options block
+  !! Source the options block
   !<
-  subroutine read_options(this, iout)
+  subroutine source_options(this, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENAUXNAME, DEM6
-    use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: store_error, store_error_unit
+    use ConstantsModule, only: LENVARNAME
+    use InputOutputModule, only: getunit, openfile
+    use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
+    use ExgGwtgwtInputModule, only: ExgGwtgwtParamFoundType
+    use SourceCommonModule, only: filein_fname
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: keyword
-    logical :: isfound
-    logical :: endOfBlock
-    integer(I4B) :: ierr
+    type(ExgGwtgwtParamFoundType) :: found
+    character(len=LENVARNAME), dimension(3) :: adv_scheme = &
+      &[character(len=LENVARNAME) :: 'UPSTREAM', 'CENTRAL', 'TVD']
+    character(len=LINELENGTH) :: mvt_fname
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- update defaults with values sourced from input context
+    call mem_set_value(this%gwfmodelname1, 'GWFMODELNAME1', this%input_mempath, &
+                       found%gwfmodelname1)
+    call mem_set_value(this%gwfmodelname2, 'GWFMODELNAME2', this%input_mempath, &
+                       found%gwfmodelname2)
+    call mem_set_value(this%iAdvScheme, 'ADV_SCHEME', this%input_mempath, &
+                       adv_scheme, found%adv_scheme)
+    call mem_set_value(this%ixt3d, 'DSP_XT3D_OFF', this%input_mempath, &
+                       found%dsp_xt3d_off)
+    call mem_set_value(this%ixt3d, 'DSP_XT3D_RHS', this%input_mempath, &
+                       found%dsp_xt3d_rhs)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (iout, '(1x,a)') 'PROCESSING GWT-GWT EXCHANGE OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) then
-          exit
-        end if
-        call this%parser%GetStringCaps(keyword)
-        !
-        ! first parse option in base
-        if (this%DisConnExchangeType%parse_option(keyword, iout)) then
-          cycle
-        end if
-        !
-        ! it's probably ours
-        if (this%parse_option(keyword, iout)) then
-          cycle
-        end if
-        !
-        ! unknown option
-        errmsg = "Unknown GWT-GWT exchange option '"//trim(keyword)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end do
-      !
-      write (iout, '(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
-    end if
+    write (iout, '(1x,a)') 'PROCESSING GWT-GWT EXCHANGE OPTIONS'
     !
-    ! -- Return
-    return
-  end subroutine read_options
-
-  !> @brief parse option from exchange file
-  !<
-  function parse_option(this, keyword, iout) result(parsed)
-    ! -- modules
-    use InputOutputModule, only: getunit, openfile
-    ! -- dummy
-    class(GwtExchangeType) :: this !<  GwtExchangeType
-    character(len=LINELENGTH), intent(in) :: keyword !< the option name
-    integer(I4B), intent(in) :: iout !< for logging
-    logical(LGP) :: parsed !< true when parsed
-    ! -- local
-    character(len=LINELENGTH) :: fname
-    integer(I4B) :: inobs, ilen
-    character(len=LINELENGTH) :: subkey
+    ! -- source base class options
+    call this%DisConnExchangeType%source_options(iout)
     !
-    parsed = .true.
-    !
-    select case (keyword)
-    case ('GWFMODELNAME1')
-      call this%parser%GetStringCaps(subkey)
-      ilen = len_trim(subkey)
-      if (ilen > LENMODELNAME) then
-        write (errmsg, '(a,a)') &
-          'Invalid model name: ', trim(subkey)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end if
-      if (this%gwfmodelname1 /= '') then
-        call store_error('GWFMODELNAME1 has already been set to ' &
-                         //trim(this%gwfmodelname1)// &
-                         '. Cannot set more than once.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%gwfmodelname1 = subkey(1:LENMODELNAME)
+    if (found%gwfmodelname1) then
       write (iout, '(4x,a,a)') &
         'GWFMODELNAME1 IS SET TO: ', trim(this%gwfmodelname1)
-    case ('GWFMODELNAME2')
-      call this%parser%GetStringCaps(subkey)
-      ilen = len_trim(subkey)
-      if (ilen > LENMODELNAME) then
-        write (errmsg, '(a,a)') &
-          'Invalid model name: ', trim(subkey)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end if
-      if (this%gwfmodelname2 /= '') then
-        call store_error('GWFMODELNAME2 has already been set to ' &
-                         //trim(this%gwfmodelname2)// &
-                         '. Cannot set more than once.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%gwfmodelname2 = subkey(1:LENMODELNAME)
+    end if
+    !
+    if (found%gwfmodelname2) then
       write (iout, '(4x,a,a)') &
         'GWFMODELNAME2 IS SET TO: ', trim(this%gwfmodelname2)
-    case ('PRINT_FLOWS')
-      this%iprflow = 1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
-    case ('SAVE_FLOWS')
-      this%ipakcb = -1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
-    case ('MVT6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('MVT6 keyword must be followed by '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('No MVT6 file specified.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%inmvt = getunit()
-      call openfile(this%inmvt, iout, fname, 'MVT')
-      write (iout, '(4x,a)') &
-        'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(fname)
-    case ('OBS6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('OBS8 keyword must be followed by '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%obs%active = .true.
-      call this%parser%GetString(this%obs%inputFilename)
-      inobs = GetUnit()
-      call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
-      this%obs%inUnitObs = inobs
-    case ('ADV_SCHEME')
-      call this%parser%GetStringCaps(subkey)
-      select case (subkey)
-      case ('UPSTREAM')
-        this%iAdvScheme = 0
-      case ('CENTRAL')
-        this%iAdvScheme = 1
-      case ('TVD')
-        this%iAdvScheme = 2
-      case default
-        errmsg = "Unknown weighting method for advection: '"//trim(subkey)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end select
+    end if
+    !
+    if (found%adv_scheme) then
+      ! -- count from 0
+      this%iAdvScheme = this%iAdvScheme - 1
       write (iout, '(4x,a,a)') &
-        'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('DSP_XT3D_OFF')
+        'ADVECTION SCHEME METHOD HAS BEEN SET TO: ', &
+        trim(adv_scheme(this%iAdvScheme + 1))
+    end if
+    !
+    if (found%dsp_xt3d_off .and. found%dsp_xt3d_rhs) then
+      errmsg = 'DSP_XT3D_OFF and DSP_XT3D_RHS cannot both be set as options.'
+      call store_error(errmsg)
+      call store_error_filename(this%filename)
+    else if (found%dsp_xt3d_off) then
       this%ixt3d = 0
       write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
-    case ('DSP_XT3D_RHS')
+    else if (found%dsp_xt3d_rhs) then
       this%ixt3d = 2
       write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
-    case ('ADVSCHEME')
-      errmsg = 'ADVSCHEME is no longer a valid keyword.  Use ADV_SCHEME &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case ('XT3D_OFF')
-      errmsg = 'XT3D_OFF is no longer a valid keyword.  Use DSP_XT3D_OFF &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case ('XT3D_RHS')
-      errmsg = 'XT3D_RHS is no longer a valid keyword.  Use DSP_XT3D_RHS &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case default
-      parsed = .false.
-    end select
+    end if
     !
-    ! -- Return
+    ! -- enforce 0 or 1 MVR6_FILENAME entries in option block
+    if (filein_fname(mvt_fname, 'MVT6_FILENAME', this%input_mempath, &
+                     this%filename)) then
+      this%inmvt = getunit()
+      call openfile(this%inmvt, iout, mvt_fname, 'MVT')
+      write (iout, '(4x,a)') &
+        'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(mvt_fname)
+    end if
+    !
+    ! -- enforce 0 or 1 OBS6_FILENAME entries in option block
+    if (filein_fname(this%obs%inputFilename, 'OBS6_FILENAME', &
+                     this%input_mempath, this%filename)) then
+      this%obs%active = .true.
+      this%obs%inUnitObs = GetUnit()
+      call openfile(this%obs%inUnitObs, iout, this%obs%inputFilename, 'OBS')
+    end if
+    !
+    write (iout, '(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
+    !
+    ! -- return
     return
-  end function parse_option
+  end subroutine source_options
 
   !> @ brief Read mover
   !!
@@ -934,14 +822,9 @@ contains
     call this%DisConnExchangeType%allocate_scalars()
     !
     call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
-    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
-    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
     this%inewton = 0
-    this%iprpak = 0
-    this%iprflow = 0
-    this%ipakcb = 0
     this%inobs = 0
     this%iAdvScheme = 0
     !
@@ -990,8 +873,6 @@ contains
     ! -- scalars
     deallocate (this%filename)
     call mem_deallocate(this%inewton)
-    call mem_deallocate(this%iprflow)
-    call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%inmvt)
@@ -1160,7 +1041,7 @@ contains
     !
     ! -- write summary of error messages
     if (count_errors() > 0) then
-      call store_error_unit(this%inobs)
+      call store_error_filename(this%obs%inputFilename)
     end if
     !
     ! -- Return
@@ -1233,7 +1114,6 @@ contains
   !<
   subroutine gwt_gwt_save_simvals(this)
     ! -- dummy
-    use SimModule, only: store_error, store_error_unit
     use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
@@ -1264,7 +1144,7 @@ contains
             errmsg = 'Unrecognized observation type: '// &
                      trim(obsrv%ObsTypeId)
             call store_error(errmsg)
-            call store_error_unit(this%inobs)
+            call store_error_filename(this%obs%inputFilename)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
