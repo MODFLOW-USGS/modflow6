@@ -943,6 +943,18 @@ if __name__ == "__main__":
             SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
         ],
         [
+            DFN_PATH / "exg-gwfgwf.dfn",
+            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwfgwt.dfn",
+            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwtgwt.dfn",
+            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
+        ],
+        [
             DFN_PATH / "sim-nam.dfn",
             SRC_PATH / "simnamidm.f90",
         ],
