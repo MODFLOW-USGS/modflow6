@@ -1,18 +1,12 @@
-!> @brief Explicit Model Module
-!!
-!! This module contains the Explicit Model, which is a parent
-!! class for models that solve themselves.  Explicit models are
-!! added to an Explicit Solution, which is simply a container
-!! that scrolls through a list of explicit models and calls
-!! methods in a prescribed sequence.
-!!
-!<
+!> @brief Models that solve themselves
 module ExplicitModelModule
 
-  use KindModule, only: I4B
+  use KindModule, only: I4B, DP
+  use ConstantsModule, only: LINELENGTH
   use ListModule, only: ListType
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
 
   implicit none
   private
@@ -21,17 +15,27 @@ module ExplicitModelModule
             AddExplicitModelToList, &
             GetExplicitModelFromList
 
-  !> @brief Base type for explicit models.
+  !> @brief Base type for models that solve themselves.
+  !!
+  !! An explicit solution simply scrolls through a list of explicit
+  !! models and calls solution procedures in a prescribed sequence.
+  !<
   type, extends(BaseModelType) :: ExplicitModelType
-    type(ListType), pointer :: bndlist => null() !< array of boundary packages for this model
+    character(len=LINELENGTH), pointer :: filename => null() !< input file name
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound array
+    type(ListType), pointer :: bndlist => null() !< array of boundary packages
     class(DisBaseType), pointer :: dis => null() !< discretization object
   contains
+    ! -- Overridden methods
     procedure :: model_ad
     procedure :: model_solve
     procedure :: model_cq
     procedure :: model_bd
     procedure :: model_da
+    ! -- Utility methods
     procedure :: allocate_scalars
+    procedure :: allocate_arrays
+    procedure :: set_idsoln
   end type ExplicitModelType
 
 contains
@@ -67,41 +71,59 @@ contains
   !> @ brief Deallocate the model
   !<
   subroutine model_da(this)
-    ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
     class(ExplicitModelType) :: this
-    !
-    ! -- derived types
+
+    ! -- deallocate scalars
+    deallocate (this%filename)
+
+    ! -- deallocate arrays
+    call mem_deallocate(this%ibound)
+
+    ! -- nullify pointers
+    if (associated(this%ibound)) &
+      call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
+
+    ! -- member derived types
     call this%bndlist%Clear()
     deallocate (this%bndlist)
-    !
-    ! -- BaseModelType
+
+    ! -- deallocate base tpye
     call this%BaseModelType%model_da()
   end subroutine model_da
 
-  !> @ brief Allocate model scalar variables
+  !> @ brief Allocate scalar variables
   !<
   subroutine allocate_scalars(this, modelname)
-    use MemoryManagerModule, only: mem_allocate
     class(ExplicitModelType) :: this
     character(len=*), intent(in) :: modelname
-    !
-    ! -- allocate basetype members
+
     call this%BaseModelType%allocate_scalars(modelname)
-    !
-    ! -- allocate members from this type
     allocate (this%bndlist)
+    allocate (this%filename)
+    this%filename = ''
   end subroutine allocate_scalars
+
+  !> @brief Allocate array variables
+  !<
+  subroutine allocate_arrays(this)
+    class(ExplicitModelType) :: this
+    integer(I4B) :: i
+
+    call mem_allocate(this%ibound, this%dis%nodes, 'IBOUND', this%memoryPath)
+    do i = 1, this%dis%nodes
+      this%ibound(i) = 1 ! active by default
+    end do
+  end subroutine allocate_arrays
 
   !> @ brief Cast a generic object into an explicit model
   !<
   function CastAsExplicitModelClass(obj) result(res)
     class(*), pointer, intent(inout) :: obj
     class(ExplicitModelType), pointer :: res
-    !
+
     res => null()
     if (.not. associated(obj)) return
-    !
+
     select type (obj)
     class is (ExplicitModelType)
       res => obj
@@ -116,7 +138,7 @@ contains
     class(ExplicitModelType), pointer, intent(inout) :: model
     ! -- local
     class(*), pointer :: obj
-    !
+
     obj => model
     call list%Add(obj)
   end subroutine AddExplicitModelToList
@@ -130,9 +152,17 @@ contains
     class(ExplicitModelType), pointer :: res
     ! -- local
     class(*), pointer :: obj
-    !
+
     obj => list%GetItem(idx)
     res => CastAsExplicitModelClass(obj)
   end function GetExplicitModelFromList
+
+  !> @brief Set the solution ID
+  !<
+  subroutine set_idsoln(this, id)
+    class(ExplicitModelType) :: this
+    integer(I4B), intent(in) :: id
+    this%idsoln = id
+  end subroutine set_idsoln
 
 end module ExplicitModelModule
