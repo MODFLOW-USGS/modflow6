@@ -332,6 +332,10 @@ class Dfn2F90:
 
             shape = ""
             shapelist = []
+            # workaround for Flopy shape issue with exg dfns:
+            if c.upper() == "EXG":
+                if vn == "CELLIDM1" or vn == "CELLIDM2":
+                    v["shape"] = "(ncelldim)"
             if "shape" in v:
                 shape = v["shape"]
                 shape = shape.replace("(", "")

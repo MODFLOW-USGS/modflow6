@@ -198,7 +198,6 @@ description
 block exchangedata
 name cellidm1
 type integer
-shape (ncelldim)
 in_record true
 tagged false
 reader urword
@@ -210,7 +209,6 @@ numeric_index true
 block exchangedata
 name cellidm2
 type integer
-shape (ncelldim)
 in_record true
 tagged false
 reader urword
