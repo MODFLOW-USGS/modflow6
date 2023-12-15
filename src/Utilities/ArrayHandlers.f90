@@ -109,29 +109,29 @@ contains
     integer(I4B), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    integer(I4B) :: inclocal, isize, newsize
-    integer(I4B), allocatable, dimension(:) :: array_temp
-    !
-    ! -- initialize
+    integer(I4B) :: inc, lb, n
+    integer(I4B), allocatable, dimension(:) :: temp
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
     else
-      inclocal = 1
-    end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
-    if (allocated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(newsize))
-      array_temp(1:isize) = array
-      deallocate (array)
-      call move_alloc(array_temp, array)
-    else
-      allocate (array(inclocal))
+      inc = 1
     end if
 
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
+    if (allocated(array)) then
+      lb = lbound(array, 1)
+      n = size(array)
+      allocate (temp(lb:(lb + n + inc - 1)))
+      temp(lb:(lb + n - 1)) = array
+      deallocate (array)
+      call move_alloc(temp, array)
+    else
+      allocate (array(inc))
+    end if
   end subroutine expand_integer
 
   subroutine expand_double(array, increment)
@@ -139,27 +139,28 @@ contains
     real(DP), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    integer(I4B) :: inclocal, isize, newsize
-    real(DP), allocatable, dimension(:) :: array_temp
-    !
-    ! -- initialize
+    integer(I4B) :: inc, lb, n
+    real(DP), allocatable, dimension(:) :: temp
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
     else
-      inclocal = 1
+      inc = 1
     end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
+
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
     if (allocated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(newsize))
-      array_temp(1:isize) = array
+      lb = lbound(array, 1)
+      n = size(array)
+      allocate (temp(lb:(lb + n + inc - 1)))
+      temp(lb:(lb + n - 1)) = array
       deallocate (array)
-      call move_alloc(array_temp, array)
+      call move_alloc(temp, array)
     else
-      allocate (array(inclocal))
+      allocate (array(inc))
     end if
 
   end subroutine expand_double
@@ -169,27 +170,28 @@ contains
     logical(LGP), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    integer(I4B) :: inclocal, isize, newsize
-    logical(LGP), allocatable, dimension(:) :: array_temp
-    !
-    ! -- initialize
+    integer(I4B) :: inc, lb, n
+    logical(LGP), allocatable, dimension(:) :: temp
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
     else
-      inclocal = 1
+      inc = 1
     end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
+
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
     if (allocated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(newsize))
-      array_temp(1:isize) = array
+      lb = lbound(array, 1)
+      n = size(array)
+      allocate (temp(lb:(lb + n + inc - 1)))
+      temp(lb:(lb + n - 1)) = array
       deallocate (array)
-      call move_alloc(array_temp, array)
+      call move_alloc(temp, array)
     else
-      allocate (array(inclocal))
+      allocate (array(inc))
     end if
 
   end subroutine expand_logical
@@ -199,47 +201,47 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), optional, intent(in) :: increment
     ! -- local
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
-    integer(I4B) :: i, inclocal, isize, lenc, newsize
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: temp
+    integer(I4B) :: i, inc, nold, nnew, lenc
     ! -- format
     character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
-    !
+
     ! -- check character length
     lenc = len(array)
-    if (lenc > MAXCHARLEN) then
+    if (lenc > MAXCHARLEN) &
       call pstop(138, 'Error in ArrayHandlersModule: '// &
                  'Need to increase MAXCHARLEN. Stopping...')
-    end if
-    !
-    ! -- initialize
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
     else
-      inclocal = 1
+      inc = 1
     end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
+
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
     ! [Ned TODO: may be able to use mold here, e.g.:
     !       allocate(values(num), mold=proto)]
     if (allocated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(isize))
-      do i = 1, isize
-        array_temp(i) = array(i)
+      nold = size(array)
+      nnew = nold + inc
+      allocate (temp(nold))
+      do i = 1, nold
+        temp(i) = array(i)
       end do
       deallocate (array)
-      allocate (array(newsize))
-      do i = 1, isize
-        array(i) = array_temp(i)
+      allocate (array(nnew))
+      do i = 1, nold
+        array(i) = temp(i)
       end do
-      do i = isize + 1, newsize
+      do i = nold + 1, nnew
         array(i) = ''
       end do
-      deallocate (array_temp)
+      deallocate (temp)
     else
-      allocate (array(inclocal))
+      allocate (array(inc))
     end if
 
   end subroutine expand_character
@@ -252,34 +254,39 @@ contains
     integer(I4B), optional, intent(in) :: increment1
     integer(I4B), optional, intent(in) :: increment2
     ! -- local
-    integer(I4B) :: inclocal1, inclocal2, isize1, isize2, newsize1, newsize2
-    integer(I4B), allocatable, dimension(:, :) :: array_temp
-    !
-    ! -- initialize
+    integer(I4B) :: inc1, inc2, lb1, lb2, n1, n2
+    integer(I4B), allocatable, dimension(:, :) :: temp
+
+    ! -- default to expanding by 1
     if (present(increment1)) then
-      inclocal1 = increment1
+      inc1 = increment1
     else
-      inclocal1 = 1
+      inc1 = 1
     end if
     if (present(increment2)) then
-      inclocal2 = increment2
+      inc2 = increment2
     else
-      inclocal2 = 1
+      inc2 = 1
     end if
-    !
-    ! -- increase size of array by inclocal corresponding to each dim,
-    !    retaining contained data
+    if (inc1 == 0 .and. inc2 == 0) return
+
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
     if (allocated(array)) then
-      isize1 = size(array, 1)
-      isize2 = size(array, 2)
-      newsize1 = isize1 + inclocal1
-      newsize2 = isize2 + inclocal2
-      allocate (array_temp(newsize1, newsize2))
-      array_temp(1:isize1, 1:isize2) = array
+      lb1 = lbound(array, 1)
+      lb2 = lbound(array, 2)
+      n1 = size(array, 1)
+      n2 = size(array, 2)
+      allocate (temp( &
+                lb1:(lb1 + n1 + inc1 - 1), &
+                lb2:(lb2 + n2 + inc2 - 1)))
+      temp( &
+        lb1:(lb1 + n1 - 1), &
+        lb2:(lb2 + n2 - 1)) = array
       deallocate (array)
-      call move_alloc(array_temp, array)
+      call move_alloc(temp, array)
     else
-      allocate (array(inclocal1, inclocal2))
+      allocate (array(inc1, inc2))
     end if
 
   end subroutine expand_integer_2d
@@ -290,34 +297,39 @@ contains
     integer(I4B), optional, intent(in) :: increment1
     integer(I4B), optional, intent(in) :: increment2
     ! -- local
-    integer(I4B) :: inclocal1, inclocal2, isize1, isize2, newsize1, newsize2
-    real(DP), allocatable, dimension(:, :) :: array_temp
-    !
-    ! -- initialize
+    integer(I4B) :: inc1, inc2, lb1, lb2, n1, n2
+    real(DP), allocatable, dimension(:, :) :: temp
+
+    ! -- default to expanding by 1
     if (present(increment1)) then
-      inclocal1 = increment1
+      inc1 = increment1
     else
-      inclocal1 = 1
+      inc1 = 1
     end if
     if (present(increment2)) then
-      inclocal2 = increment2
+      inc2 = increment2
     else
-      inclocal2 = 1
+      inc2 = 1
     end if
-    !
-    ! -- increase size of array by inclocal corresponding to each dim,
-    !    retaining contained data
+    if (inc1 == 0 .and. inc2 == 0) return
+
+    ! -- expand array to the requested size, keeping
+    !    existing items, or allocate if still needed
     if (allocated(array)) then
-      isize1 = size(array, 1)
-      isize2 = size(array, 2)
-      newsize1 = isize1 + inclocal1
-      newsize2 = isize2 + inclocal2
-      allocate (array_temp(newsize1, newsize2))
-      array_temp(1:isize1, 1:isize2) = array
+      lb1 = lbound(array, 1)
+      lb2 = lbound(array, 2)
+      n1 = size(array, 1)
+      n2 = size(array, 2)
+      allocate (temp( &
+                lb1:(lb1 + n1 + inc1 - 1), &
+                lb2:(lb2 + n2 + inc2 - 1)))
+      temp( &
+        lb1:(lb1 + n1 - 1), &
+        lb2:(lb2 + n2 - 1)) = array
       deallocate (array)
-      call move_alloc(array_temp, array)
+      call move_alloc(temp, array)
     else
-      allocate (array(inclocal1, inclocal2))
+      allocate (array(inc1, inc2))
     end if
 
   end subroutine expand_double_2d
