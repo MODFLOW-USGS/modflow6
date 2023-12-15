@@ -103,8 +103,10 @@ contains
     call mem_setptr(mempaths, 'EXGMEMPATHS', input_mempath)
     do n = 1, size(mempaths)
       mempath = mempaths(n)
-      call split_mem_path(mempath, exg_comp, exg_subcomp)
-      call memorylist_remove(exg_comp, exg_subcomp, idm_context)
+      if (mempath /= '') then
+        call split_mem_path(mempath, exg_comp, exg_subcomp)
+        call memorylist_remove(exg_comp, exg_subcomp, idm_context)
+      end if
     end do
     !
     ! -- return
@@ -266,11 +268,11 @@ contains
   subroutine load_exchanges(model_loadmask, iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr, mem_allocate
+    use MemoryManagerModule, only: mem_setptr, mem_allocate, mem_deallocate
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
-    use SourceCommonModule, only: idm_subcomponent_type
-    use SourceLoadModule, only: create_pkg_loader
+    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
+    use SourceLoadModule, only: create_pkg_loader, remote_model_ndim
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
@@ -285,78 +287,116 @@ contains
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: emnames_b !< model b names
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mnames !< model names
+      pointer :: emempaths !< exg mempaths
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mempaths
-    integer(I4B), pointer :: exgid
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mfnames !< model file names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    integer(I4B), pointer :: exgid, ncelldim
     character(len=LENMEMPATH) :: mempath
-    character(len=LINELENGTH) :: exgtype, fname
-    character(len=LENMODELNAME) :: mname, mname1, mname2
-    character(len=LENCOMPONENTNAME) :: sc_type, sc_name
+    character(len=LINELENGTH) :: exgtype, efname, mfname
+    character(len=LENMODELNAME) :: mname1, mname2, mname
+    character(len=LENCOMPONENTNAME) :: sc_type, sc_name, mtype
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m1_idx, m2_idx, irem
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
     !
-    ! -- set pointers to input context model attribute arrays
+    ! -- set pointers to input context exg and model attribute arrays
     call mem_setptr(etypes, 'EXGTYPE', input_mempath)
     call mem_setptr(efiles, 'EXGFILE', input_mempath)
     call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
     call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mfnames, 'MFNAME', input_mempath)
     call mem_setptr(mnames, 'MNAME', input_mempath)
     !
     ! -- allocate mempaths array for exchanges
-    call mem_allocate(mempaths, LENMEMPATH, size(etypes), 'EXGMEMPATHS', &
+    call mem_allocate(emempaths, LENMEMPATH, size(etypes), 'EXGMEMPATHS', &
                       input_mempath)
     !
+    ! -- load exchanges for local models
     do n = 1, size(etypes)
       !
       ! -- attributes for this exchange
       exgtype = etypes(n)
-      fname = efiles(n)
+      efname = efiles(n)
       mname1 = emnames_a(n)
       mname2 = emnames_b(n)
       !
       ! initialize mempath as no path
-      mempaths(n) = ''
+      emempaths(n) = ''
+      irem = 0
       !
-      do m = 1, size(mnames)
+      ! -- set indexes for exchange model names
+      m1_idx = ifind_charstr(mnames, mname1)
+      m2_idx = ifind_charstr(mnames, mname2)
+      !
+      if (m1_idx <= 0 .or. m2_idx <= 0) then
+        errmsg = 'Exchange has invalid (unrecognized) model name(s):'
+        if (m1_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname1)
+        if (m2_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname2)
+        call store_error(errmsg)
+        call store_error_filename(simfile)
+      end if
+      !
+      ! -- load the exchange input if either model local
+      if (model_loadmask(m1_idx) > 0 .or. model_loadmask(m2_idx) > 0) then
         !
-        mname = mnames(m)
-        if (model_loadmask(m) > 0 .and. &
-            (mname == mname1 .or. mname == mname2)) then
-          !
-          ! -- set subcomponent strings
-          sc_type = trim(idm_subcomponent_type('EXG', exgtype))
-          write (sc_name, '(a,i0)') trim(sc_type)//'_', n
-          !
-          ! -- create and set mempath
-          mempath = create_mem_path('EXG', sc_name, idm_context)
-          mempaths(n) = mempath
-          !
-          ! -- allocate and set exgid
-          call mem_allocate(exgid, 'EXGID', mempath)
-          exgid = n
-          !
-          ! -- create exchange loader
-          static_loader => create_pkg_loader('EXG', sc_type, sc_name, exgtype, &
-                                             fname, 'EXG', simfile)
-          ! -- load static input
-          dynamic_loader => static_loader%load(iout)
-          !
-          if (associated(dynamic_loader)) then
-            errmsg = 'IDM unimplemented. Dynamic Exchanges not supported.'
-            call store_error(errmsg)
-            call store_error_filename(fname)
-          else
-            call static_loader%destroy()
-            deallocate (static_loader)
-            exit
-          end if
+        ! -- set index if either model is remote
+        if (model_loadmask(m1_idx) == 0) then
+          irem = m1_idx
+        else if (model_loadmask(m2_idx) == 0) then
+          irem = m2_idx
         end if
-      end do
+        !
+        ! -- allocate and set remote model NCELLDIM
+        if (irem > 0) then
+          mtype = mtypes(irem)
+          mfname = mfnames(irem)
+          mname = mnames(irem)
+          mempath = create_mem_path(component=mname, context=idm_context)
+          call mem_allocate(ncelldim, 'NCELLDIM', mempath)
+          ncelldim = remote_model_ndim(mtype, mfname)
+        else
+          nullify (ncelldim)
+        end if
+        !
+        ! -- set subcomponent strings
+        sc_type = trim(idm_subcomponent_type('EXG', exgtype))
+        write (sc_name, '(a,i0)') trim(sc_type)//'_', n
+        !
+        ! -- create and set exchange mempath
+        mempath = create_mem_path('EXG', sc_name, idm_context)
+        emempaths(n) = mempath
+        !
+        ! -- allocate and set exgid
+        call mem_allocate(exgid, 'EXGID', mempath)
+        exgid = n
+        !
+        ! -- create exchange loader
+        static_loader => create_pkg_loader('EXG', sc_type, sc_name, exgtype, &
+                                           efname, 'EXG', simfile)
+        ! -- load static input
+        dynamic_loader => static_loader%load(iout)
+        !
+        if (associated(dynamic_loader)) then
+          errmsg = 'IDM unimplemented. Dynamic Exchanges not supported.'
+          call store_error(errmsg)
+          call store_error_filename(efname)
+        else
+          call static_loader%destroy()
+          deallocate (static_loader)
+        end if
+        !
+        ! -- deallocate ncelldim as all input has been loaded
+        if (associated(ncelldim)) call mem_deallocate(ncelldim)
+        !
+      end if
       !
     end do
     !

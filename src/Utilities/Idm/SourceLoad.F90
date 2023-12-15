@@ -19,6 +19,7 @@ module SourceLoadModule
   public :: create_pkg_loader
   public :: open_source_file
   public :: load_modelnam, load_simnam
+  public :: remote_model_ndim
 
 contains
 
@@ -171,5 +172,82 @@ contains
     ! -- return
     return
   end subroutine load_simnam
+
+  function remote_model_ndim(mtype, mfname) result(ncelldim)
+    use SourceCommonModule, only: package_source_type
+    use ConstantsModule, only: LINELENGTH
+    use InputOutputModule, only: openfile, getunit
+    use BlockParserModule, only: BlockParserType
+    character(len=*), intent(in) :: mtype
+    character(len=*), intent(in) :: mfname
+    integer(I4B) :: ncelldim
+    character(len=LENPACKAGENAME) :: source_type
+    type(BlockParserType) :: parser
+    integer(I4B) :: ierr, inunit
+    logical(LGP) :: isfound, endOfBlock
+    character(len=LINELENGTH) :: ptype
+    !
+    ! -- initialize
+    ncelldim = 0
+    !
+    ! -- set source type
+    source_type = package_source_type(mfname)
+    !
+    select case (source_type)
+    case ('MF6FILE')
+      !
+      ! -- open name file
+      inunit = getunit()
+      call openfile(inunit, 0, trim(adjustl(mfname)), mtype, &
+                    'FORMATTED', 'SEQUENTIAL', 'OLD')
+      !
+      ! -- initialize parser
+      call parser%Initialize(inunit, 0)
+      !
+      ! -- get options block
+      call parser%GetBlock('OPTIONS', isfound, ierr, &
+                           supportOpenClose=.true., blockRequired=.false.)
+      ! -- iterate through options
+      if (isfound) then
+        do
+          call parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+        end do
+      end if
+      !
+      ! -- get packages block
+      call parser%GetBlock('PACKAGES', isfound, ierr, &
+                           supportOpenClose=.true., blockRequired=.true.)
+      if (isfound) then
+        ! -- read through packages
+        do
+          call parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+          !
+          call parser%GetStringCaps(ptype)
+          !
+          select case (ptype)
+          case ('DIS6')
+            ncelldim = 3
+            exit
+          case ('DISV6')
+            ncelldim = 2
+            exit
+          case ('DISU6')
+            ncelldim = 1
+            exit
+          case default
+          end select
+        end do
+      end if
+      !
+      call parser%clear()
+      !
+    case default
+    end select
+    !
+    ! -- return
+    return
+  end function remote_model_ndim
 
 end module SourceLoadModule

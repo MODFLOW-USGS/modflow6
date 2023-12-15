@@ -303,8 +303,7 @@ contains
     if (sv%idt%shape == 'NCELLDIM') then
       !
       ! -- if EXCHANGE set to NCELLDIM of appropriate model
-      if (this%mf6_input%component_type == 'EXG' .and. &
-          (sv%idt%tagname == 'CELLIDM1' .or. sv%idt%tagname == 'CELLIDM2')) then
+      if (this%mf6_input%component_type == 'EXG') then
         !
         ! -- set pointer to EXGID
         call mem_setptr(exgid, 'EXGID', this%mf6_input%mempath)
