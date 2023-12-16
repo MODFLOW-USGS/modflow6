@@ -8,7 +8,6 @@ module ArrayHandlersModule
   public :: ExpandArray, ExpandArray2D, ExpandArrayWrapper, ExtendPtrArray
   public :: ConcatArray
   public :: ifind
-  public :: remove_character
 
   interface ExpandArrayWrapper
     module procedure expand_integer_wrapper
@@ -116,12 +115,14 @@ contains
     if (present(increment)) then
       inc = increment
       if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
       inc = 1
     end if
 
     ! -- expand array to the requested size, keeping
-    !    existing items, or allocate if still needed
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (allocated(array)) then
       lb = lbound(array, 1)
       n = size(array)
@@ -146,12 +147,14 @@ contains
     if (present(increment)) then
       inc = increment
       if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
       inc = 1
     end if
 
     ! -- expand array to the requested size, keeping
-    !    existing items, or allocate if still needed
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (allocated(array)) then
       lb = lbound(array, 1)
       n = size(array)
@@ -177,12 +180,14 @@ contains
     if (present(increment)) then
       inc = increment
       if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
       inc = 1
     end if
 
     ! -- expand array to the requested size, keeping
-    !    existing items, or allocate if still needed
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (allocated(array)) then
       lb = lbound(array, 1)
       n = size(array)
@@ -216,6 +221,7 @@ contains
     if (present(increment)) then
       inc = increment
       if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
       inc = 1
     end if
@@ -257,7 +263,7 @@ contains
     integer(I4B) :: inc1, inc2, lb1, lb2, n1, n2
     integer(I4B), allocatable, dimension(:, :) :: temp
 
-    ! -- default to expanding by 1
+    ! -- default to expanding both dimensions by 1
     if (present(increment1)) then
       inc1 = increment1
     else
@@ -269,9 +275,12 @@ contains
       inc2 = 1
     end if
     if (inc1 == 0 .and. inc2 == 0) return
+    if (inc1 < 0 .or. inc2 < 0) &
+      call pstop(1, "increments must be nonnegative")
 
     ! -- expand array to the requested size, keeping
-    !    existing items, or allocate if still needed
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (allocated(array)) then
       lb1 = lbound(array, 1)
       lb2 = lbound(array, 2)
@@ -300,7 +309,7 @@ contains
     integer(I4B) :: inc1, inc2, lb1, lb2, n1, n2
     real(DP), allocatable, dimension(:, :) :: temp
 
-    ! -- default to expanding by 1
+    ! -- default to expanding both dimensions by 1
     if (present(increment1)) then
       inc1 = increment1
     else
@@ -312,9 +321,12 @@ contains
       inc2 = 1
     end if
     if (inc1 == 0 .and. inc2 == 0) return
+    if (inc1 < 0 .or. inc2 < 0) &
+      call pstop(1, "increments must be nonnegative")
 
     ! -- expand array to the requested size, keeping
-    !    existing items, or allocate if still needed
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (allocated(array)) then
       lb1 = lbound(array, 1)
       lb2 = lbound(array, 2)
@@ -342,42 +354,38 @@ contains
     integer(I4B), optional, intent(in) :: increment
     ! -- local
     character(len=100) :: ermsg
-    integer(I4B) :: i, inclocal, isize, istat, newsize
-    real(DP), dimension(:), pointer, contiguous :: array_temp => null()
+    integer(I4B) :: i, inc, lb, n, istat
+    real(DP), dimension(:), pointer, contiguous :: temp => null()
     ! -- format
     character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
-    !
-    ! -- initialize
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
-      inclocal = 1
+      inc = 1
     end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
+
+    ! -- expand array to the requested size, keeping
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (associated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(newsize), stat=istat, errmsg=ermsg)
-      if (istat /= 0) goto 99
-      do i = 1, isize
-        array_temp(i) = array(i)
+      lb = lbound(array, 1)
+      n = size(array)
+      allocate (temp(lb:(lb + n + inc - 1)), stat=istat, errmsg=ermsg)
+      if (istat /= 0) &
+        call pstop(138, 'Error in ArrayHandlersModule, '// &
+                   'could not increase array size:'//ermsg)
+      do i = lb, lb + n - 1
+        temp(i) = array(i)
       end do
       deallocate (array)
-      array => array_temp
+      array => temp
     else
-      allocate (array(inclocal))
+      allocate (array(inc))
     end if
-    !
-    ! -- normal return
-    return
-    !
-    ! -- Error reporting
-99  continue
-
-    call pstop(138, 'Error in ArrayHandlersModule: '// &
-               'Could not increase array size. Stopping...')
 
   end subroutine extend_double
 
@@ -387,70 +395,67 @@ contains
     integer(I4B), optional, intent(in) :: increment
     ! -- local
     character(len=100) :: ermsg
-    integer(I4B) :: i, inclocal, isize, istat, newsize
-    integer(I4B), dimension(:), pointer, contiguous :: array_temp => null()
+    integer(I4B) :: i, inc, lb, n, istat
+    integer(I4B), dimension(:), pointer, contiguous :: temp => null()
     ! -- format
     character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
-    !
-    ! -- initialize
+
+    ! -- default to expanding by 1
     if (present(increment)) then
-      inclocal = increment
+      inc = increment
+      if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
-      inclocal = 1
+      inc = 1
     end if
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
+
+    ! -- expand array to the requested size, keeping
+    !    existing items and the existing lower bound,
+    !    or allocate the array if still unallocated
     if (associated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate (array_temp(newsize), stat=istat, errmsg=ermsg)
-      if (istat /= 0) goto 99
-      do i = 1, isize
-        array_temp(i) = array(i)
+      lb = lbound(array, 1)
+      n = size(array)
+      allocate (temp(lb:(lb + n + inc - 1)), stat=istat, errmsg=ermsg)
+      if (istat /= 0) &
+        call pstop(138, 'Error in ArrayHandlersModule, '// &
+                   'could not increase array size:'//ermsg)
+      do i = lb, lb + n - 1
+        temp(i) = array(i)
       end do
       deallocate (array)
-      array => array_temp
+      array => temp
     else
-      allocate (array(inclocal))
+      allocate (array(inc))
     end if
-    !
-    ! -- normal return
-    return
-    !
-    ! -- Error reporting
-99  continue
-
-    call pstop(138, 'Error in ArrayHandlersModule: '// &
-               'Could not increase array size. Stopping ...')
 
   end subroutine extend_integer
 
   subroutine extend_string(array, increment)
+    ! -- dummy
     character(len=*), dimension(:), pointer, contiguous :: array
     integer(I4B), optional :: increment
-    ! local
-    integer(I4B) :: inc_local
-    integer(I4B) :: i, old_size, new_size
-    character(len=len(array)), dimension(:), pointer, contiguous :: temp_array
+    ! -- local
+    integer(I4B) :: inc, i, n
+    character(len=len(array)), dimension(:), pointer, contiguous :: temp
 
     if (present(increment)) then
-      inc_local = increment
+      inc = increment
+      if (inc == 0) return
+      if (inc < 0) call pstop(1, "increment must be nonnegative")
     else
-      inc_local = 1
+      inc = 1
     end if
 
     if (associated(array)) then
-      old_size = size(array)
-      new_size = old_size + inc_local
-      temp_array => array
-      allocate (array(new_size))
-      do i = 1, old_size
-        array(i) = temp_array(i)
+      n = size(array)
+      temp => array
+      allocate (array(n + inc))
+      do i = 1, n
+        array(i) = temp(i)
       end do
-      deallocate (temp_array)
+      deallocate (temp)
     else
-      allocate (array(inc_local))
+      allocate (array(inc))
     end if
 
   end subroutine extend_string
@@ -460,12 +465,12 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: array
     integer(I4B), dimension(:), pointer, contiguous :: array_to_add
     ! local
-    integer(I4B) :: i, old_size
+    integer(I4B) :: i, n
 
-    old_size = size(array)
+    n = size(array)
     call ExtendPtrArray(array, increment=size(array_to_add))
     do i = 1, size(array_to_add)
-      array(old_size + i) = array_to_add(i)
+      array(n + i) = array_to_add(i)
     end do
 
   end subroutine concat_integer
@@ -479,6 +484,7 @@ contains
     character(len=*) :: str
     ! -- local
     integer(I4B) :: i
+
     ifind_character = -1
     findloop: do i = 1, size(array)
       if (array(i) == str) then
@@ -497,6 +503,7 @@ contains
     integer(I4B) :: ival
     ! -- local
     integer(I4B) :: i
+
     ifind_integer = -1
     findloop: do i = 1, size(iarray)
       if (iarray(i) == ival) then
@@ -505,47 +512,5 @@ contains
       end if
     end do findloop
   end function ifind_integer
-
-  !> @brief Remove the element at ipos from the array.
-  subroutine remove_character(array, ipos)
-    ! -- dummy
-    character(len=*), allocatable, intent(inout) :: array(:)
-    integer(I4B), intent(in) :: ipos
-    ! -- local
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
-    integer(I4B) :: i, isize, lenc, newsize, inew
-    ! -- format
-    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
-    !
-    ! -- check character length
-    lenc = len(array)
-    if (lenc > MAXCHARLEN) then
-
-      call pstop(138, 'Error in ArrayHandlersModule: '// &
-                 'Need to increase MAXCHARLEN. Stopping...')
-    end if
-    !
-    ! -- calculate sizes
-    isize = size(array)
-    newsize = isize - 1
-    !
-    ! -- copy array to array_temp
-    allocate (array_temp(isize))
-    do i = 1, isize
-      array_temp(i) = array(i)
-    end do
-    !
-    deallocate (array)
-    allocate (array(newsize))
-    inew = 1
-    do i = 1, isize
-      if (i /= ipos) then
-        array(inew) = array_temp(i)
-        inew = inew + 1
-      end if
-    end do
-    deallocate (array_temp)
-
-  end subroutine remove_character
 
 end module ArrayHandlersModule
