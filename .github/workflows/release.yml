@@ -144,7 +144,7 @@ jobs:
           meson test --verbose --no-rebuild -C builddir
 
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: bin-${{ runner.os }}
           path: modflow6/bin
@@ -316,7 +316,7 @@ jobs:
         run: python update_flopy.py
 
       - name: Download pre-built binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: bin-${{ runner.os }}
           path: bin
@@ -378,7 +378,7 @@ jobs:
         run: cat deprecations.md
 
       - name: Upload deprecations
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: deprecations
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
@@ -397,7 +397,7 @@ jobs:
           mv "doc/ReleaseNotes.pdf" "doc/release.pdf"
 
       - name: Upload documentation artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: doc
           path: doc
@@ -466,7 +466,7 @@ jobs:
           eval "$cmd"
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
       
@@ -620,14 +620,14 @@ jobs:
           eval "$cmd"
 
       - name: Upload distribution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
       - name: Upload release notes
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: release_notes
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}/doc/release.pdf"
