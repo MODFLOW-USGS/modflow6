@@ -78,8 +78,6 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 3 ! stage, conductance, rbot
-    packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- Return

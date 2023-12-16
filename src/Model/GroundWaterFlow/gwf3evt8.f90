@@ -97,8 +97,6 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 3 ! Assumes NSEG = 1 and SURF_RATE_SPECIFIED=False
-    packobj%iscloc = 2 ! sfac applies to max. ET rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- Return
@@ -348,18 +346,7 @@ contains
             call store_error(errmsg)
             call store_error_filename(this%input_fname)
           end if
-          ! -- Recalculate number of columns required in bound array.
-          if (this%surfratespecified) then
-            this%ncolbnd = 4 + 2 * (this%nseg - 1)
-          else
-            this%ncolbnd = 3 + 2 * (this%nseg - 1)
-          end if
           !
-        elseif (this%nseg == 1) then
-          ! if surf_rate_specified is true, will still read petm0
-          if (this%surfratespecified) then
-            this%ncolbnd = this%ncolbnd + 1
-          end if
         end if
       end if
       !
