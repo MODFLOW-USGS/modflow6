@@ -2,7 +2,7 @@ module TestArrayHandlers
   use KindModule, only: I4B, DP, LGP
   use testdrive, only: error_type, unittest_type, new_unittest, check, &
                        test_failed, to_string
-  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D
+  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D, ExtendPtrArray
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -23,6 +23,10 @@ contains
                              test_ExpandArray2D_int), &
                 new_unittest("ExpandArray2D_dbl", &
                              test_ExpandArray2D_dbl) &
+                ! new_unittest("ExtendPtrArray_int", &
+                !              test_ExtendPtrArray_int), &
+                ! new_unittest("ExtendPtrArray_dbl", &
+                !              test_ExtendPtrArray_dbl) &
                 ]
   end subroutine collect_arrayhandlers
 
@@ -61,7 +65,6 @@ contains
                  //" at i="//to_string(i))
       if (allocated(error)) return
     end do
-    deallocate (a)
   end subroutine test_ExpandArray_int
 
   !> @brief Test 1D dbl array expansion
@@ -99,7 +102,6 @@ contains
                  //" at i="//to_string(i))
       if (allocated(error)) return
     end do
-    deallocate (a)
   end subroutine test_ExpandArray_dbl
 
   !> @brief Test 1D logical array expansion
@@ -138,7 +140,6 @@ contains
                  //" at i="//to_string(i))
       if (allocated(error)) return
     end do
-    deallocate (a)
   end subroutine test_ExpandArray_lgp
 
   !> @brief Test 2D int array expansion
@@ -193,7 +194,6 @@ contains
       end if
       if (allocated(error)) return
     end do
-    deallocate (a)
   end subroutine test_ExpandArray2D_int
 
   !> @brief Test 2D dbl array expansion
@@ -248,7 +248,86 @@ contains
       end if
       if (allocated(error)) return
     end do
-    deallocate (a)
   end subroutine test_ExpandArray2D_dbl
+
+  !> @brief Test 1D int ptr array expansion
+  subroutine test_ExtendPtrArray_int(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer(I4B), allocatable, target :: aa(:)
+    integer(I4B), pointer, contiguous :: a(:)
+    integer(I4B) :: i, lb, n1, n2
+
+    lb = 1 ! lower bound
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+
+    ! allocate/populate array and set pointer
+    allocate (aa(lb:(lb + n1 - 1)))
+    aa(lb) = lb
+    aa(lb + 1) = lb + 1
+    a => aa
+
+    ! resize array and check new size and bounds
+    call ExtendPtrArray(a, n2 - n1)
+    call check(error, size(a, 1) == n2, &
+               "unexpected size: "//to_string(size(a, 1)))
+    call check(error, lbound(a, 1) == lb, &
+               "unexpected lower bound: "//to_string(lbound(a, 1)))
+    call check(error, ubound(a, 1) == lb + n2 - 1, &
+               "unexpected upper bound: "//to_string(ubound(a, 1)))
+    if (allocated(error)) return
+
+    ! set new array elements and check new/old contents
+    do i = lb + n1 - 1, n2
+      a(i) = i
+    end do
+    do i = lb, lb + n2 - 1
+      call check(error, a(i) == i, &
+                 "unexpected value "//to_string(a(i)) &
+                 //" at i="//to_string(i))
+      if (allocated(error)) return
+    end do
+    nullify(a)
+  end subroutine test_ExtendPtrArray_int
+
+  !> @brief Test 1D dbl ptr array expansion
+  subroutine test_ExtendPtrArray_dbl(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable, target :: aa(:)
+    real(DP), pointer, contiguous :: a(:)
+    integer(I4B) :: i, lb, n1, n2
+
+    lb = 1 ! lower bound
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+
+    ! allocate/populate array and set pointer
+    allocate (aa(lb:(lb + n1 - 1)))
+    aa(lb) = real(lb)
+    aa(lb + 1) = real(lb + 1)
+    a => aa
+
+    ! resize array and check new size and bounds
+    call ExtendPtrArray(a, n2 - n1)
+    call check(error, size(a, 1) == n2, &
+               "unexpected size: "//to_string(size(a, 1)))
+    call check(error, lbound(a, 1) == lb, &
+               "unexpected lower bound: "//to_string(lbound(a, 1)))
+    call check(error, ubound(a, 1) == lb + n2 - 1, &
+               "unexpected upper bound: "//to_string(ubound(a, 1)))
+    if (allocated(error)) return
+
+    ! set new array elements and check new/old contents
+    do i = lb + n1 - 1, n2
+      a(i) = real(i)
+    end do
+    do i = lb, lb + n2 - 1
+      call check(error, a(i) == real(i), &
+                 "unexpected value "//to_string(a(i)) &
+                 //" at i="//to_string(i))
+      if (allocated(error)) return
+    end do
+    nullify(a)
+  end subroutine test_ExtendPtrArray_dbl
 
 end module TestArrayHandlers

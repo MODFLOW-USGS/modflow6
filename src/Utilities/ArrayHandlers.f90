@@ -397,8 +397,6 @@ contains
     character(len=100) :: ermsg
     integer(I4B) :: i, inc, lb, n, istat
     integer(I4B), dimension(:), pointer, contiguous :: temp => null()
-    ! -- format
-    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
 
     ! -- default to expanding by 1
     if (present(increment)) then
@@ -472,7 +470,6 @@ contains
     do i = 1, size(array_to_add)
       array(n + i) = array_to_add(i)
     end do
-
   end subroutine concat_integer
 
   !> @brief Find the 1st array element containing str, or -1 if not found.
