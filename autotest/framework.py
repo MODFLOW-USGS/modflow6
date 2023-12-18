@@ -127,11 +127,9 @@ class TestFramework:
     __test__ = False
 
     """
-
     Defines a MODFLOW 6 test and drives its lifecycle. One harness
-    is recommended per test function. A harness consists minimally
-    of one or more MODFLOW 6 simulations. Hooks may be provided to
-    evaluate results or compare with results of other model codes:
+    is recommended per test function. Hooks can be configured to
+    evaluate results or compare output with other model codes:
 
         - MODFLOW-2005
         - MODFLOW-NWT
@@ -643,7 +641,7 @@ class TestFramework:
         """
 
         target = str(target)
-        if not (target in self.targets or shutil.which(target)):
+        if not (target in self.targets.as_dict() or shutil.which(target)):
             raise ValueError(f"Target executable not found: {target}")
 
         # needed in _compare_heads()... todo: inject explicitly?
