@@ -514,11 +514,10 @@ contains
     integer(I4B) :: ipos
     real(DP) :: crewet, tflow, flownm
     character(len=15) :: nodestr
-    character(len=LINELENGTH) :: cstr
     ! -- formats
     character(len=*), parameter :: fmtoutmsg1 = &
-      &"(1x,'WARNING: DRY CELL ENCOUNTERED AT', a,'; RESET AS INACTIVE WITH &
-      &DRY', a, '=', G13.5)"
+      "(1x,'WARNING: DRY CELL ENCOUNTERED AT ', a,'; RESET AS INACTIVE WITH &
+      &DRY ', a, '=', G13.5)"
     character(len=*), parameter :: fmtoutmsg2 = &
       &"(1x,'DRY CELL REACTIVATED AT', a, 'WITH STARTING', a, '=', G13.5)"
     !
@@ -538,9 +537,8 @@ contains
           this%ibound(n) = 0
           cnew(n) = DHDRY
           call this%dis%noder_to_string(n, nodestr)
-          write (cstr, fmtoutmsg1) trim(nodestr), &
-            trim(adjustl(this%depvartype)), DHDRY
-          write (this%iout, cstr)
+          write (this%iout, fmtoutmsg1) &
+            trim(nodestr), trim(adjustl(this%depvartype)), DHDRY
         end if
       end if
     end do
@@ -575,9 +573,8 @@ contains
           this%ibound(n) = 1
           cnew(n) = crewet
           call this%dis%noder_to_string(n, nodestr)
-          write (cstr, fmtoutmsg2) trim(nodestr), &
-            trim(adjustl(this%depvartype)), crewet
-          write (this%iout, cstr)
+          write (this%iout, fmtoutmsg2) &
+            trim(nodestr), trim(adjustl(this%depvartype)), crewet
         end if
       end if
     end do
