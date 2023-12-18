@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-import traceback
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from typing import Callable, Iterable, Optional, Union
@@ -129,7 +128,7 @@ class TestFramework:
     """
     Defines a MODFLOW 6 test and drives its lifecycle. One harness
     is recommended per test function. Hooks can be configured to
-    evaluate results or compare output with other model codes:
+    evaluate results or run other model codes for comparison:
 
         - MODFLOW-2005
         - MODFLOW-NWT
