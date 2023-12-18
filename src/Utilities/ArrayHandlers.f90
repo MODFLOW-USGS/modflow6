@@ -8,6 +8,7 @@ module ArrayHandlersModule
   public :: ExpandArray, ExpandArray2D, ExpandArrayWrapper, ExtendPtrArray
   public :: ConcatArray
   public :: ifind
+  public :: remove_character
 
   interface ExpandArrayWrapper
     module procedure expand_integer_wrapper
@@ -509,5 +510,47 @@ contains
       end if
     end do findloop
   end function ifind_integer
+
+  !> @brief Remove the element at ipos from the array.
+  subroutine remove_character(array, ipos)
+    ! -- dummy
+    character(len=*), allocatable, intent(inout) :: array(:)
+    integer(I4B), intent(in) :: ipos
+    ! -- local
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
+    integer(I4B) :: i, isize, lenc, newsize, inew
+    ! -- format
+    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
+    !
+    ! -- check character length
+    lenc = len(array)
+    if (lenc > MAXCHARLEN) then
+
+      call pstop(138, 'Error in ArrayHandlersModule: '// &
+                 'Need to increase MAXCHARLEN. Stopping...')
+    end if
+    !
+    ! -- calculate sizes
+    isize = size(array)
+    newsize = isize - 1
+    !
+    ! -- copy array to array_temp
+    allocate (array_temp(isize))
+    do i = 1, isize
+      array_temp(i) = array(i)
+    end do
+    !
+    deallocate (array)
+    allocate (array(newsize))
+    inew = 1
+    do i = 1, isize
+      if (i /= ipos) then
+        array(inew) = array_temp(i)
+        inew = inew + 1
+      end if
+    end do
+    deallocate (array_temp)
+
+  end subroutine remove_character
 
 end module ArrayHandlersModule

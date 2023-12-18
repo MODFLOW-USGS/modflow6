@@ -2,7 +2,8 @@ module TestArrayHandlers
   use KindModule, only: I4B, DP, LGP
   use testdrive, only: error_type, unittest_type, new_unittest, check, &
                        test_failed, to_string
-  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D, ExtendPtrArray
+  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D, ExtendPtrArray, &
+                                 remove_character
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -22,11 +23,13 @@ contains
                 new_unittest("ExpandArray2D_int", &
                              test_ExpandArray2D_int), &
                 new_unittest("ExpandArray2D_dbl", &
-                             test_ExpandArray2D_dbl) &
+                             test_ExpandArray2D_dbl), &
                 ! new_unittest("ExtendPtrArray_int", &
                 !              test_ExtendPtrArray_int), &
                 ! new_unittest("ExtendPtrArray_dbl", &
-                !              test_ExtendPtrArray_dbl) &
+                !              test_ExtendPtrArray_dbl), &
+                new_unittest("remove_character", &
+                             test_remove_character) &
                 ]
   end subroutine collect_arrayhandlers
 
@@ -287,7 +290,7 @@ contains
                  //" at i="//to_string(i))
       if (allocated(error)) return
     end do
-    nullify(a)
+    nullify (a)
   end subroutine test_ExtendPtrArray_int
 
   !> @brief Test 1D dbl ptr array expansion
@@ -327,7 +330,17 @@ contains
                  //" at i="//to_string(i))
       if (allocated(error)) return
     end do
-    nullify(a)
+    nullify (a)
   end subroutine test_ExtendPtrArray_dbl
+
+  subroutine test_remove_character(error)
+    type(error_type), allocatable, intent(out) :: error
+    character(len=11), allocatable :: s(:)
+    allocate (s(2))
+    s(1) = "hello world"
+    s(2) = "hello earth"
+    call remove_character(s, 1)
+    call check(error, s(1) == "hello earth")
+  end subroutine test_remove_character
 
 end module TestArrayHandlers
