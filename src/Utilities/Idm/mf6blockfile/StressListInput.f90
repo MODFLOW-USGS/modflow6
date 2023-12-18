@@ -264,7 +264,6 @@ contains
 
       if (associated(tsLinkAux)) then
         !
-        ! TODO
         ! -- set variable name
         tsLinkAux%Text = this%bndctx%auxname_cst(ts_strloc%col)
         !

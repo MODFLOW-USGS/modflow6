@@ -15,7 +15,7 @@ module SourceCommonModule
   implicit none
   private
   public :: package_source_type
-  public :: idm_component_type, idm_subcomponent_type, subcomponent_name
+  public :: idm_component_type, idm_subcomponent_type, idm_subcomponent_name
   public :: set_model_shape
   public :: get_shape_from_string
   public :: mem_allocate_naux
@@ -140,7 +140,8 @@ contains
   !! stress) types.
   !!
   !<
-  function subcomponent_name(component_type, subcomponent_type, sc_name)
+  function idm_subcomponent_name(component_type, subcomponent_type, sc_name) &
+    result(subcomponent_name)
     ! -- modules
     use IdmDfnSelectorModule, only: idm_multi_package
     ! -- dummy
@@ -163,7 +164,7 @@ contains
     !
     ! -- return
     return
-  end function subcomponent_name
+  end function idm_subcomponent_name
 
   !> @brief input file extension
   !!

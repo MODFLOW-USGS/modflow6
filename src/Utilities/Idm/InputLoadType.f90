@@ -7,7 +7,7 @@
 module InputLoadTypeModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENTIMESERIESNAME
+  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME
   use ModflowInputModule, only: ModflowInputType
   use ListModule, only: ListType
   use InputDefinitionModule, only: InputParamDefinitionType
@@ -28,9 +28,9 @@ module InputLoadTypeModule
   !<
   type StaticPkgLoadType
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
-    character(len=LENMODELNAME) :: modelname !< name of model
-    character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
+    character(len=LENCOMPONENTNAME) :: component_name !< name of component
+    character(len=LINELENGTH) :: component_input_name !< name of component input name, e.g. filename
+    character(len=LINELENGTH) :: input_name !< source name, e.g. name of input file
     integer(I4B) :: iperblock
   contains
     procedure :: init => static_init
@@ -119,18 +119,19 @@ contains
   !> @brief initialize static package loader
   !!
   !<
-  subroutine static_init(this, mf6_input, modelname, modelfname, source)
+  subroutine static_init(this, mf6_input, component_name, component_input_name, &
+                         input_name)
     class(StaticPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modelfname
-    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: component_input_name
+    character(len=*), intent(in) :: input_name
     integer(I4B) :: iblock
     !
     this%mf6_input = mf6_input
-    this%modelname = modelname
-    this%modelfname = modelfname
-    this%sourcename = source
+    this%component_name = component_name
+    this%component_input_name = component_input_name
+    this%input_name = input_name
     this%iperblock = 0
     !
     ! -- identify period block definition

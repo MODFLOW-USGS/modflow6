@@ -117,7 +117,7 @@ contains
   !<
   subroutine model_pkg_load(model_pkg_inputs, itype, ipkg, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceLoadModule, only: create_pkg_loader
+    use SourceLoadModule, only: create_input_loader
     type(ModelPackageInputsType), intent(in) :: model_pkg_inputs
     integer(I4B), intent(in) :: itype
     integer(I4B), intent(in) :: ipkg
@@ -128,13 +128,13 @@ contains
     !
     ! -- create model package loader
     static_loader => &
-      create_pkg_loader(model_pkg_inputs%component_type, &
-                        model_pkg_inputs%pkglist(itype)%subcomponent_type, &
-                        model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
-                        model_pkg_inputs%pkglist(itype)%pkgtype, &
-                        model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
-                        model_pkg_inputs%modelname, &
-                        model_pkg_inputs%modelfname)
+      create_input_loader(model_pkg_inputs%component_type, &
+                          model_pkg_inputs%pkglist(itype)%subcomponent_type, &
+                          model_pkg_inputs%modelname, &
+                          model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
+                          model_pkg_inputs%pkglist(itype)%pkgtype, &
+                          model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
+                          model_pkg_inputs%modelfname)
     !
     ! -- load static input and set dynamic loader
     dynamic_loader => static_loader%load(iout)
@@ -143,7 +143,7 @@ contains
       !
       ! -- set pointer to model dynamic packages list
       dynamic_pkgs => dynamic_model_pkgs(model_pkg_inputs%modelname, &
-                                         static_loader%modelfname)
+                                         static_loader%component_input_name)
       !
       ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
@@ -272,12 +272,11 @@ contains
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
     use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
-    use SourceLoadModule, only: create_pkg_loader, remote_model_ndim
+    use SourceLoadModule, only: create_input_loader, remote_model_ndim
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
     ! -- locals
-    character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< exg types
     type(CharacterStringType), dimension(:), contiguous, &
@@ -294,8 +293,8 @@ contains
       pointer :: mfnames !< model file names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mnames !< model names
+    character(len=LENMEMPATH) :: input_mempath, mempath
     integer(I4B), pointer :: exgid, ncelldim
-    character(len=LENMEMPATH) :: mempath
     character(len=LINELENGTH) :: exgtype, efname, mfname
     character(len=LENMODELNAME) :: mname1, mname2, mname
     character(len=LENCOMPONENTNAME) :: sc_type, sc_name, mtype
@@ -379,8 +378,8 @@ contains
         exgid = n
         !
         ! -- create exchange loader
-        static_loader => create_pkg_loader('EXG', sc_type, sc_name, exgtype, &
-                                           efname, 'EXG', simfile)
+        static_loader => create_input_loader('EXG', sc_type, 'EXG', sc_name, &
+                                             exgtype, efname, simfile)
         ! -- load static input
         dynamic_loader => static_loader%load(iout)
         !

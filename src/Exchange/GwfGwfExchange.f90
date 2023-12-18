@@ -1225,7 +1225,6 @@ contains
     character(len=LINELENGTH) :: gnc_fname, mvr_fname
     !
     ! -- update defaults with idm sourced values
-    ! TODO: the following is completely different than existing code
     call mem_set_value(this%icellavg, 'CELL_AVERAGING', this%input_mempath, &
                        cellavg_method, found%cell_averaging)
     call mem_set_value(this%inewton, 'NEWTON', this%input_mempath, found%newton)

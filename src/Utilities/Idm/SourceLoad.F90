@@ -16,7 +16,7 @@ module SourceLoadModule
 
   implicit none
   private
-  public :: create_pkg_loader
+  public :: create_input_loader
   public :: open_source_file
   public :: load_modelnam, load_simnam
   public :: remote_model_ndim
@@ -25,42 +25,43 @@ contains
 
   !> @brief factory function to create and setup model package static loader
   !<
-  function create_pkg_loader(component_type, subcomponent_type, pkgname, &
-                             pkgtype, filename, modelname, modelfname) &
-    result(loader)
-    use SourceCommonModule, only: package_source_type, subcomponent_name
+  function create_input_loader(component_type, subcomponent_type, &
+                               component_name, subcomponent_name, input_type, &
+                               input_fname, component_fname) result(loader)
+    use SourceCommonModule, only: package_source_type, idm_subcomponent_name
     use InputLoadTypeModule, only: StaticPkgLoadBaseType
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
-    character(len=*), intent(in) :: pkgname
-    character(len=*), intent(in) :: pkgtype
-    character(len=*), intent(in) :: filename
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: subcomponent_name
+    character(len=*), intent(in) :: input_type
+    character(len=*), intent(in) :: input_fname
+    character(len=*), intent(in) :: component_fname
     class(StaticPkgLoadBaseType), pointer :: loader
     type(ModflowInputType) :: mf6_input
     character(len=LENPACKAGENAME) :: source_type
     character(len=LENPACKAGENAME) :: sc_name
     !
     ! -- set subcomponent name
-    sc_name = subcomponent_name(component_type, subcomponent_type, pkgname)
+    sc_name = idm_subcomponent_name(component_type, subcomponent_type, &
+                                    subcomponent_name)
     !
     ! -- create description of input
-    mf6_input = getModflowInput(pkgtype, component_type, subcomponent_type, &
-                                modelname, sc_name, filename)
+    mf6_input = getModflowInput(input_type, component_type, subcomponent_type, &
+                                component_name, sc_name, input_fname)
     !
     ! -- set package source
-    source_type = package_source_type(filename)
+    source_type = package_source_type(input_fname)
     !
     ! -- set source loader for model package
     loader => package_loader(source_type)
     !
     ! -- initialize loader
-    call loader%init(mf6_input, modelname, modelfname, filename)
+    call loader%init(mf6_input, component_name, component_fname, input_fname)
     !
     ! -- return
     return
-  end function create_pkg_loader
+  end function create_input_loader
 
   !> @brief allocate source model package static loader
   !<

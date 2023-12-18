@@ -153,7 +153,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
-    use SourceCommonModule, only: subcomponent_name
+    use SourceCommonModule, only: idm_subcomponent_name
     ! -- dummy
     class(LoadablePackageType) :: this
     character(len=*), intent(in) :: modelname
@@ -189,8 +189,8 @@ contains
     if (idm_integrated(mtype_component, this%subcomponent_type)) then
       !
       ! -- set subcomponent name
-      sc_name = subcomponent_name(mtype_component, this%subcomponent_type, &
-                                  this%pkgnames(this%pnum))
+      sc_name = idm_subcomponent_name(mtype_component, this%subcomponent_type, &
+                                      this%pkgnames(this%pnum))
       !
       ! -- create and store the mempath
       this%mempaths(this%pnum) = &
