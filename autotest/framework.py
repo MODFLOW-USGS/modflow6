@@ -3,7 +3,7 @@ import shutil
 import time
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
-from typing import Callable, Iterable, Optional, Union
+from typing import Callable, Iterable, List, Optional, Tuple, Union
 from warnings import warn
 
 import flopy
@@ -12,13 +12,9 @@ from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
-from common_regression import (
-    get_mf6_comparison,
-    get_mf6_files,
-    get_namefiles,
-    setup_mf6,
-    setup_mf6_comparison,
-)
+from common_regression import (get_mf6_comparison, get_mf6_files,
+                               get_namefiles, get_regression_files, setup_mf6,
+                               setup_mf6_comparison)
 
 DNODATA = 3.0e30
 EXTS = {
@@ -30,7 +26,7 @@ EXTS = {
 }
 
 
-def api_return(success, model_ws):
+def api_return(success, model_ws) -> Tuple[bool, List[str]]:
     """
     parse libmf6 stdout shared object file
     """
@@ -38,7 +34,7 @@ def api_return(success, model_ws):
     return success, open(fpth).readlines()
 
 
-def get_dvclose(workspace):
+def get_dvclose(workspace) -> Optional[float]:
     """Get outer_dvclose value from MODFLOW 6 ims file"""
     dvclose = None
     files = os.listdir(workspace)
@@ -61,7 +57,7 @@ def get_dvclose(workspace):
     return dvclose
 
 
-def get_rclose(workspace):
+def get_rclose(workspace) -> Optional[float]:
     """Get inner_rclose value from MODFLOW 6 ims file"""
     rclose = None
     files = os.listdir(workspace)
@@ -82,6 +78,59 @@ def get_rclose(workspace):
                         break
 
     return rclose
+
+
+def get_mfsim_lst_tail(path: os.PathLike, lines=100) -> str:
+    """Get the tail of the mfsim.lst listing file"""
+    msg = ""
+    _lines = open(path).read().splitlines()
+    msg = "\n" + 79 * "-" + "\n"
+    i0 = -lines if len(_lines) > lines else 0
+    for line in _lines[i0:]:
+        if len(line) > 0:
+            msg += f"{line}\n"
+    msg += 79 * "-" + "\n\n"
+    return msg
+
+
+def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
+    if not is_in_ci() and get_ostag() in ["mac"]:
+        oversubscribed = ["--hostfile", "localhost"]
+        with open(f"{workspace}/localhost", "w") as f:
+            f.write(f"localhost slots={ncpus}\n")
+    else:
+        oversubscribed = ["--oversubscribe"]
+
+    normal_msg = "normal termination"
+    success = False
+    nr_success = 0
+    buff = []
+
+    # parallel commands
+    mpiexec_cmd = (
+        ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
+    )
+
+    proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=workspace)
+
+    while True:
+        line = proc.stdout.readline().decode("utf-8")
+        if line == "" and proc.poll() is not None:
+            break
+        if line:
+            # success is when the success message appears
+            # in every process of the parallel simulation
+            if normal_msg in line.lower():
+                nr_success += 1
+                if nr_success == ncpus:
+                    success = True
+            line = line.rstrip("\r\n")
+            print(line)
+            buff.append(line)
+        else:
+            break
+
+    return success, buff
 
 
 def write_input(*sims, verbose=True):
@@ -126,9 +175,8 @@ class TestFramework:
     __test__ = False
 
     """
-    Defines a MODFLOW 6 test and drives its lifecycle. One harness
-    is recommended per test function. Hooks can be configured to
-    evaluate results or run other model codes for comparison:
+    Defines a MODFLOW 6 test and its lifecycle, with configurable
+    hooks to evaluate results or run other models for comparison:
 
         - MODFLOW-2005
         - MODFLOW-NWT
@@ -234,77 +282,9 @@ class TestFramework:
 
     # private
 
-    def _run_parallel(workspace, target, ncpus):
-        if not is_in_ci() and get_ostag() in ["mac"]:
-            oversubscribed = ["--hostfile", "localhost"]
-            with open(f"{workspace}/localhost", "w") as f:
-                f.write(f"localhost slots={ncpus}\n")
-        else:
-            oversubscribed = ["--oversubscribe"]
-
-        normal_msg = "normal termination"
-        success = False
-        nr_success = 0
-        buff = []
-
-        # parallel commands
-        mpiexec_cmd = (
-            ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
-        )
-
-        proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=workspace)
-
-        while True:
-            line = proc.stdout.readline().decode("utf-8")
-            if line == "" and proc.poll() is not None:
-                break
-            if line:
-                # success is when the success message appears
-                # in every process of the parallel simulation
-                if normal_msg in line.lower():
-                    nr_success += 1
-                    if nr_success == ncpus:
-                        success = True
-                line = line.rstrip("\r\n")
-                print(line)
-                buff.append(line)
-            else:
-                break
-
-        return success, buff
-
-    def _get_mfsim_lst_tail(self, path, lines=100) -> str:
-        """Get the tail of the mfsim.lst listing file"""
-        msg = ""
-        _lines = open(path).read().splitlines()
-        msg = "\n" + 79 * "-" + "\n"
-        i0 = -lines if len(_lines) > lines else 0
-        for line in _lines[i0:]:
-            if len(line) > 0:
-                msg += f"{line}\n"
-        msg += 79 * "-" + "\n\n"
-        return msg
-
-    def _regression_files(self, extensions):
-        if isinstance(extensions, str):
-            extensions = [extensions]
-        files = os.listdir(self.workspace)
-        files0 = []
-        files1 = []
-        for file_name in files:
-            fpth0 = os.path.join(self.workspace, file_name)
-            if os.path.isfile(fpth0):
-                for extension in extensions:
-                    if file_name.lower().endswith(extension):
-                        files0.append(fpth0)
-                        fpth1 = os.path.join(
-                            self.workspace, "mf6_regression", file_name
-                        )
-                        files1.append(fpth1)
-                        break
-        return files0, files1
-
-    def _compare_heads(self, compare=None, cpth=None, extensions="hds"):
+    def _compare_heads(
+        self, compare=None, cpth=None, extensions="hds"
+    ) -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
 
@@ -411,7 +391,7 @@ class TestFramework:
             return True
 
         # otherwise it's a regression comparison
-        files0, files1 = self._regression_files(extensions)
+        files0, files1 = get_regression_files(self.workspace, extensions)
         extension = "hds"
         ipos = 0
         success = True
@@ -443,11 +423,11 @@ class TestFramework:
 
         return success
 
-    def _compare_concentrations(self, extensions="ucn"):
+    def _compare_concentrations(self, extensions="ucn") -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
         success = True
-        files0, files1 = self._regression_files(extensions)
+        files0, files1 = get_regression_files(self.workspace, extensions)
         extension = "ucn"
         ipos = 0
         for fpth0, fpth1 in zip(files0, files1):
@@ -478,11 +458,11 @@ class TestFramework:
 
         return success
 
-    def _compare_budgets(self, extensions="cbc"):
+    def _compare_budgets(self, extensions="cbc") -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
         success = True
-        files0, files1 = self._regression_files(extensions)
+        files0, files1 = get_regression_files(self.workspace, extensions)
         extension = "cbc"
         ipos = 0
         for fpth0, fpth1 in zip(files0, files1):
@@ -499,7 +479,7 @@ class TestFramework:
 
         return success
 
-    def _compare_budget_files(self, ipos, extension, fpth0, fpth1):
+    def _compare_budget_files(self, ipos, extension, fpth0, fpth1) -> bool:
         success = True
         if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
             return success, ""
@@ -629,14 +609,14 @@ class TestFramework:
             self.compare = get_mf6_comparison(src)
             setup_mf6_comparison(src, dst, self.compare, overwrite=True)
 
-    def run_simulation(self, workspace, target="mf6", xfail=False):
+    def run_sim_or_model(self, workspace, target="mf6", xfail=False) -> bool:
         """
-        Run comparison model(s).
+        Run a simulation or model with FloPy.
 
         workspace : str or path-like
-            The comparison workspace
+            The simulation or model workspace
         exe : str or path-like
-            The target executable to run
+            The executable to use
         """
 
         target = str(target)
@@ -667,7 +647,7 @@ class TestFramework:
                         f"Parallel test {self.name} on {self.ncpus} processes"
                     )
                     try:
-                        success, _ = self._run_parallel(
+                        success, _ = run_parallel(
                             workspace, target, self.ncpus
                         )
                     except Exception as exc:
@@ -713,7 +693,7 @@ class TestFramework:
             if "mf6" in target and not success and lst_file_path.is_file():
                 warn(
                     "MODFLOW 6 listing file ended with: \n"
-                    + self._get_mfsim_lst_tail(lst_file_path)
+                    + get_mfsim_lst_tail(lst_file_path)
                 )
         except Exception as exc:
             success = False
@@ -790,7 +770,7 @@ class TestFramework:
             write_input(*sims, verbose=self.verbose)
 
         # run main model(s) and get expected output files
-        assert self.run_simulation(
+        assert self.run_sim_or_model(
             self.workspace, self.targets.mf6, self.xfail
         ), f"MODFLOW 6 simulation failed: {self.workspace}"
         _, self.outp = get_mf6_files(
@@ -854,7 +834,7 @@ class TestFramework:
                     if run_only
                     else self.workspace / self.compare
                 )
-                assert self.run_simulation(
+                assert self.run_sim_or_model(
                     workspace,
                     self.targets.get(
                         self.compare.lower().replace(".cmp", ""),

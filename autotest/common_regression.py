@@ -1,6 +1,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import List, Tuple
 from warnings import warn
 
 COMPARE_PATTERNS = (
@@ -643,3 +644,25 @@ def get_mf6_ftypes(namefile, ftypekeys):
                 ftypes.append(ll[0])
 
     return ftypes
+
+
+def get_regression_files(
+    workspace: os.PathLike, extensions
+) -> Tuple[List[str], List[str]]:
+    if isinstance(extensions, str):
+        extensions = [extensions]
+    files = os.listdir(workspace)
+    files0 = []
+    files1 = []
+    for file_name in files:
+        fpth0 = os.path.join(workspace, file_name)
+        if os.path.isfile(fpth0):
+            for extension in extensions:
+                if file_name.lower().endswith(extension):
+                    files0.append(fpth0)
+                    fpth1 = os.path.join(
+                        workspace, "mf6_regression", file_name
+                    )
+                    files1.append(fpth1)
+                    break
+    return files0, files1
