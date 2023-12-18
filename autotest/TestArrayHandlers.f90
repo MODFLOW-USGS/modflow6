@@ -39,34 +39,35 @@ contains
     integer(I4B), allocatable :: a(:)
     integer(I4B) :: i, lb, n1, n2
 
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
+    do lb = -1, 1 ! test default lower bound (1) as well as 0 and -1
+      ! allocate/populate array
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = lb
+      a(lb + 1) = lb + 1
 
-    ! allocate/populate array
-    allocate (a(lb:(lb + n1 - 1)))
-    a(lb) = lb
-    a(lb + 1) = lb + 1
-
-    ! resize array and check new size and bounds
-    call ExpandArray(a, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected lower bound: "//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected upper bound: "//to_string(ubound(a, 1)))
-    if (allocated(error)) return
-
-    ! set new array elements and check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i) = i
-    end do
-    do i = lb, lb + n2 - 1
-      call check(error, a(i) == i, &
-                 "unexpected value "//to_string(a(i)) &
-                 //" at i="//to_string(i))
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
       if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = i
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == i, &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
     end do
   end subroutine test_ExpandArray_int
 
@@ -76,34 +77,35 @@ contains
     real(DP), allocatable :: a(:)
     integer(I4B) :: i, lb, n1, n2
 
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = real(lb)
+      a(lb + 1) = real(lb + 1)
 
-    ! allocate/populate array
-    allocate (a(lb:(lb + n1 - 1)))
-    a(lb) = real(lb)
-    a(lb + 1) = real(lb + 1)
-
-    ! resize array and check new size and bounds
-    call ExpandArray(a, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected lower bound: "//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected upper bound: "//to_string(ubound(a, 1)))
-    if (allocated(error)) return
-
-    ! set new array elements and check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i) = real(i)
-    end do
-    do i = lb, lb + n2 - 1
-      call check(error, a(i) == real(i), &
-                 "unexpected value "//to_string(a(i)) &
-                 //" at i="//to_string(i))
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
       if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == real(i), &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
     end do
   end subroutine test_ExpandArray_dbl
 
@@ -113,35 +115,36 @@ contains
     logical(LGP), allocatable :: a(:)
     integer(I4B) :: i, lb, n1, n2
 
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array (alternate T/F starting with false)
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = mod(lb, 2) == 0
+      a(lb + 1) = mod(lb + 1, 2) == 0
 
-    ! allocate/populate array (alternate T/F starting with false)
-    allocate (a(lb:(lb + n1 - 1)))
-    a(lb) = mod(lb, 2) == 0
-    a(lb + 1) = mod(lb + 1, 2) == 0
-
-    ! resize array and check new size and bounds
-    call ExpandArray(a, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected lower bound: "//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected upper bound: "//to_string(ubound(a, 1)))
-    if (allocated(error)) return
-
-    ! set new array elements and check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i) = mod(i, 2) == 0
-    end do
-    do i = lb, lb + n2 - 1
-      call check(error, a(i) .eqv. (mod(i, 2) == 0), &
-                 "unexpected value "// &
-                 merge('t', 'f', a(i)) &
-                 //" at i="//to_string(i))
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
       if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = mod(i, 2) == 0
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) .eqv. (mod(i, 2) == 0), &
+                   "unexpected value "// &
+                   merge('t', 'f', a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
     end do
   end subroutine test_ExpandArray_lgp
 
@@ -151,51 +154,52 @@ contains
     integer(I4B), allocatable :: a(:, :)
     integer(I4B) :: i, lb, n1, n2
 
-    ! use same lower bound and starting/expanded size for both dims
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
-
-    ! allocate/populate array and check initial size
-    allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
-    a(lb, :) = lb
-    a(lb + 1, :) = lb + 1
-    call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
-    if (allocated(error)) return
-
-    ! resize array and check new size and bounds
-    call ExpandArray2D(a, n2 - n1, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected dim1 size: "//to_string(size(a, 1)))
-    call check(error, size(a, 1) == n2, &
-               "unexpected dim2 size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
-    call check(error, lbound(a, 2) == lb, &
-               "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
-    call check(error, ubound(a, 2) == lb + n2 - 1, &
-               "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
-    if (allocated(error)) return
-
-    ! set new elements starting from the new region, check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i, :) = i
-    end do
-    do i = lb, lb + n2 - 1
-      if (i < (lb + n1 - 1)) then
-        ! old contents, expect uninitialized values in new slots
-        call check(error, all(a(i, lb:(lb + n1 - 1)) == i), &
-                   "unexpected value "//to_string(a(i, i)) &
-                   //" at i="//to_string(i))
-      else
-        ! new contents, expect all values as set in prior loop
-        call check(error, all(a(i, :) == i), &
-                   "unexpected value "//to_string(a(i, i)) &
-                   //" at i="//to_string(i))
-      end if
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and check initial size, with
+      ! same lower bound and starting/new size for both dims
+      allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
+      a(lb, :) = lb
+      a(lb + 1, :) = lb + 1
+      call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
       if (allocated(error)) return
+
+      ! resize array and check new size and bounds
+      call ExpandArray2D(a, n2 - n1, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim1 size: "//to_string(size(a, 1)))
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim2 size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
+      call check(error, lbound(a, 2) == lb, &
+                 "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
+      call check(error, ubound(a, 2) == lb + n2 - 1, &
+                 "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
+      if (allocated(error)) return
+
+      ! set new elements starting from the new region, check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i, :) = i
+      end do
+      do i = lb, lb + n2 - 1
+        if (i < (lb + n1 - 1)) then
+          ! old contents, expect uninitialized values in new slots
+          call check(error, all(a(i, lb:(lb + n1 - 1)) == i), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        else
+          ! new contents, expect all values as set in prior loop
+          call check(error, all(a(i, :) == i), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        end if
+        if (allocated(error)) return
+      end do
+      deallocate (a)
     end do
   end subroutine test_ExpandArray2D_int
 
@@ -205,51 +209,52 @@ contains
     real(DP), allocatable :: a(:, :)
     integer(I4B) :: i, lb, n1, n2
 
-    ! use same lower bound and starting/expanded size for both dims
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
-
-    ! allocate/populate array and check initial size
-    allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
-    a(lb, :) = real(lb)
-    a(lb + 1, :) = real(lb + 1)
-    call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
-    if (allocated(error)) return
-
-    ! resize array and check new size and bounds
-    call ExpandArray2D(a, n2 - n1, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected dim1 size: "//to_string(size(a, 1)))
-    call check(error, size(a, 1) == n2, &
-               "unexpected dim2 size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
-    call check(error, lbound(a, 2) == lb, &
-               "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
-    call check(error, ubound(a, 2) == lb + n2 - 1, &
-               "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
-    if (allocated(error)) return
-
-    ! set new elements starting from the new region, check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i, :) = real(i)
-    end do
-    do i = lb, lb + n2 - 1
-      if (i < (lb + n1 - 1)) then
-        ! old contents, expect uninitialized values in new slots
-        call check(error, all(a(i, lb:(lb + n1 - 1)) == real(i)), &
-                   "unexpected value "//to_string(a(i, i)) &
-                   //" at i="//to_string(i))
-      else
-        ! new contents, expect all values as set in prior loop
-        call check(error, all(a(i, :) == real(i)), &
-                   "unexpected value "//to_string(a(i, i)) &
-                   //" at i="//to_string(i))
-      end if
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and check initial size, with
+      ! same lower bound and starting/new size for both dims
+      allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
+      a(lb, :) = real(lb)
+      a(lb + 1, :) = real(lb + 1)
+      call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
       if (allocated(error)) return
+
+      ! resize array and check new size and bounds
+      call ExpandArray2D(a, n2 - n1, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim1 size: "//to_string(size(a, 1)))
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim2 size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
+      call check(error, lbound(a, 2) == lb, &
+                 "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
+      call check(error, ubound(a, 2) == lb + n2 - 1, &
+                 "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
+      if (allocated(error)) return
+
+      ! set new elements starting from the new region, check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i, :) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        if (i < (lb + n1 - 1)) then
+          ! old contents, expect uninitialized values in new slots
+          call check(error, all(a(i, lb:(lb + n1 - 1)) == real(i)), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        else
+          ! new contents, expect all values as set in prior loop
+          call check(error, all(a(i, :) == real(i)), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        end if
+        if (allocated(error)) return
+      end do
+      deallocate (a)
     end do
   end subroutine test_ExpandArray2D_dbl
 
@@ -260,37 +265,38 @@ contains
     integer(I4B), pointer, contiguous :: a(:)
     integer(I4B) :: i, lb, n1, n2
 
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and set pointer
+      allocate (aa(lb:(lb + n1 - 1)))
+      aa(lb) = lb
+      aa(lb + 1) = lb + 1
+      a => aa
 
-    ! allocate/populate array and set pointer
-    allocate (aa(lb:(lb + n1 - 1)))
-    aa(lb) = lb
-    aa(lb + 1) = lb + 1
-    a => aa
-
-    ! resize array and check new size and bounds
-    call ExtendPtrArray(a, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected lower bound: "//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected upper bound: "//to_string(ubound(a, 1)))
-    if (allocated(error)) return
-
-    ! set new array elements and check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i) = i
-    end do
-    do i = lb, lb + n2 - 1
-      call check(error, a(i) == i, &
-                 "unexpected value "//to_string(a(i)) &
-                 //" at i="//to_string(i))
+      ! resize array and check new size and bounds
+      call ExtendPtrArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
       if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = i
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == i, &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      nullify (a)
+      deallocate (aa)
     end do
-    nullify (a)
   end subroutine test_ExtendPtrArray_int
 
   !> @brief Test 1D dbl ptr array expansion
@@ -300,37 +306,38 @@ contains
     real(DP), pointer, contiguous :: a(:)
     integer(I4B) :: i, lb, n1, n2
 
-    lb = 1 ! lower bound
     n1 = 2 ! starting size
     n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and set pointer
+      allocate (aa(lb:(lb + n1 - 1)))
+      aa(lb) = real(lb)
+      aa(lb + 1) = real(lb + 1)
+      a => aa
 
-    ! allocate/populate array and set pointer
-    allocate (aa(lb:(lb + n1 - 1)))
-    aa(lb) = real(lb)
-    aa(lb + 1) = real(lb + 1)
-    a => aa
-
-    ! resize array and check new size and bounds
-    call ExtendPtrArray(a, n2 - n1)
-    call check(error, size(a, 1) == n2, &
-               "unexpected size: "//to_string(size(a, 1)))
-    call check(error, lbound(a, 1) == lb, &
-               "unexpected lower bound: "//to_string(lbound(a, 1)))
-    call check(error, ubound(a, 1) == lb + n2 - 1, &
-               "unexpected upper bound: "//to_string(ubound(a, 1)))
-    if (allocated(error)) return
-
-    ! set new array elements and check new/old contents
-    do i = lb + n1 - 1, n2
-      a(i) = real(i)
-    end do
-    do i = lb, lb + n2 - 1
-      call check(error, a(i) == real(i), &
-                 "unexpected value "//to_string(a(i)) &
-                 //" at i="//to_string(i))
+      ! resize array and check new size and bounds
+      call ExtendPtrArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
       if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, n2
+        a(i) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == real(i), &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      nullify (a)
+      deallocate (aa)
     end do
-    nullify (a)
   end subroutine test_ExtendPtrArray_dbl
 
   subroutine test_remove_character(error)
