@@ -1,7 +1,9 @@
 module TestArrayHandlers
   use KindModule, only: I4B, DP, LGP
-  use testdrive, only: error_type, unittest_type, new_unittest, check, test_failed
-  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D
+  use testdrive, only: error_type, unittest_type, new_unittest, check, &
+                       test_failed, to_string
+  use ArrayHandlersModule, only: ExpandArray, ExpandArray2D, ExtendPtrArray, &
+                                 remove_character
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -12,196 +14,340 @@ contains
   subroutine collect_arrayhandlers(testsuite)
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
-                new_unittest("ExpandArray_int", test_ExpandArray_int), &
-                new_unittest("ExpandArray_dbl", test_ExpandArray_dbl), &
-                new_unittest("ExpandArray_log", test_ExpandArray_log), &
-                new_unittest("ExpandArray2D_int", test_ExpandArray2D_int), &
-                new_unittest("ExpandArray2D_dbl", test_ExpandArray2D_dbl) &
+                new_unittest("ExpandArray_int", &
+                             test_ExpandArray_int), &
+                new_unittest("ExpandArray_dbl", &
+                             test_ExpandArray_dbl), &
+                new_unittest("ExpandArray_lgp", &
+                             test_ExpandArray_lgp), &
+                new_unittest("ExpandArray2D_int", &
+                             test_ExpandArray2D_int), &
+                new_unittest("ExpandArray2D_dbl", &
+                             test_ExpandArray2D_dbl), &
+                ! new_unittest("ExtendPtrArray_int", &
+                !              test_ExtendPtrArray_int), &
+                ! new_unittest("ExtendPtrArray_dbl", &
+                !              test_ExtendPtrArray_dbl), &
+                new_unittest("remove_character", &
+                             test_remove_character) &
                 ]
   end subroutine collect_arrayhandlers
 
+  !> @brief Test 1D int array expansion
   subroutine test_ExpandArray_int(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), allocatable :: array(:)
+    integer(I4B), allocatable :: a(:)
+    integer(I4B) :: i, lb, n1, n2
 
-    ! allocate array
-    allocate (array(2))
-    array(1) = 0
-    array(2) = 1
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test default lower bound (1) as well as 0 and -1
+      ! allocate/populate array
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = lb
+      a(lb + 1) = lb + 1
 
-    ! resize array
-    call ExpandArray(array, 3)
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
+      if (allocated(error)) return
 
-    ! check that array has been resized
-    call check(error, size(array, 1) == 5, "1d int array resize failed")
-    if (allocated(error)) return
-
-    ! set new array elements
-    array(3) = 2
-    array(4) = 3
-    array(5) = 4
-
-    ! check array contents
-    call check(error, &
-               array(1) == 0 .and. &
-               array(2) == 1 .and. &
-               array(3) == 2 .and. &
-               array(4) == 3 .and. &
-               array(5) == 4, &
-               "1d int array repopulation failed")
-    if (allocated(error)) return
-
-    deallocate (array)
-
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = i
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == i, &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
+    end do
   end subroutine test_ExpandArray_int
 
+  !> @brief Test 1D dbl array expansion
   subroutine test_ExpandArray_dbl(error)
     type(error_type), allocatable, intent(out) :: error
-    real(DP), allocatable :: array(:)
+    real(DP), allocatable :: a(:)
+    integer(I4B) :: i, lb, n1, n2
 
-    ! allocate array
-    allocate (array(2))
-    array(1) = 0.5_DP
-    array(2) = 0.7_DP
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = real(lb)
+      a(lb + 1) = real(lb + 1)
 
-    ! resize array
-    call ExpandArray(array, 1)
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
+      if (allocated(error)) return
 
-    ! check that array has been resized
-    call check(error, size(array, 1) == 3, "1d dbl array resize failed")
-    if (allocated(error)) return
-
-    ! set new array element
-    array(3) = 0.1_DP
-
-    ! check array contents
-    call check(error, &
-               array(1) == 0.5_DP .and. &
-               array(2) == 0.7_DP .and. &
-               array(3) == 0.1_DP, &
-               "1d dbl array repopulation failed")
-    if (allocated(error)) return
-
-    deallocate (array)
-
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == real(i), &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
+    end do
   end subroutine test_ExpandArray_dbl
 
-  subroutine test_ExpandArray_log(error)
+  !> @brief Test 1D logical array expansion
+  subroutine test_ExpandArray_lgp(error)
     type(error_type), allocatable, intent(out) :: error
-    logical(LGP), allocatable :: array(:)
+    logical(LGP), allocatable :: a(:)
+    integer(I4B) :: i, lb, n1, n2
 
-    ! allocate array
-    allocate (array(2))
-    array(1) = .true.
-    array(2) = .false.
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array (alternate T/F starting with false)
+      allocate (a(lb:(lb + n1 - 1)))
+      a(lb) = mod(lb, 2) == 0
+      a(lb + 1) = mod(lb + 1, 2) == 0
 
-    ! resize array
-    call ExpandArray(array, 1)
+      ! resize array and check new size and bounds
+      call ExpandArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
+      if (allocated(error)) return
 
-    ! check that array has been resized
-    call check(error, size(array, 1) == 3, "1d logical array resize failed")
-    if (allocated(error)) return
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = mod(i, 2) == 0
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) .eqv. (mod(i, 2) == 0), &
+                   "unexpected value "// &
+                   merge('t', 'f', a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      deallocate (a)
+    end do
+  end subroutine test_ExpandArray_lgp
 
-    ! set an element in the array
-    array(3) = .true.
-
-    ! check array contents
-    call check(error, &
-               array(1) .and. &
-               .not. array(2) .and. &
-               array(3), &
-               "1d logical array repopulation failed")
-    if (allocated(error)) return
-
-    deallocate (array)
-
-  end subroutine test_ExpandArray_log
-
+  !> @brief Test 2D int array expansion
   subroutine test_ExpandArray2D_int(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), allocatable :: array(:, :)
+    integer(I4B), allocatable :: a(:, :)
+    integer(I4B) :: i, lb, n1, n2
 
-    ! allocate array
-    allocate (array(2, 2))
-    array(1, :) = (/1, 2/)
-    array(2, :) = (/2, 3/)
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and check initial size, with
+      ! same lower bound and starting/new size for both dims
+      allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
+      a(lb, :) = lb
+      a(lb + 1, :) = lb + 1
+      call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
+      if (allocated(error)) return
 
-    ! check initial array size
-    call check(error, size(array, 1) == 2 .and. size(array, 2) == 2)
-    if (allocated(error)) return
+      ! resize array and check new size and bounds
+      call ExpandArray2D(a, n2 - n1, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim1 size: "//to_string(size(a, 1)))
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim2 size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
+      call check(error, lbound(a, 2) == lb, &
+                 "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
+      call check(error, ubound(a, 2) == lb + n2 - 1, &
+                 "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
+      if (allocated(error)) return
 
-    ! resize array
-    call ExpandArray2D(array, 1, 1)
-
-    ! check that array has been resized
-    call check(error, &
-               size(array, 1) == 3 .and. size(array, 2) == 3, &
-               "2d int array resize failed")
-    if (allocated(error)) return
-
-    ! add new array elements
-    array(3, :) = (/3, 4, 5/)
-
-    ! check array contents
-    call check(error, &
-               array(1, 1) == 1 .and. &
-               array(1, 2) == 2 .and. &
-               ! can't guarantee unassigned item value
-               ! array(1, 3) == 0 .and. &
-               array(2, 1) == 2 .and. &
-               array(2, 2) == 3 .and. &
-               ! can't guarantee unassigned item value
-               ! array(2, 3) == 0 .and. &
-               array(3, 1) == 3 .and. &
-               array(3, 2) == 4 .and. &
-               array(3, 3) == 5, &
-               "2d int array repopulation failed")
-
-    deallocate (array)
-
+      ! set new elements starting from the new region, check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i, :) = i
+      end do
+      do i = lb, lb + n2 - 1
+        if (i < (lb + n1 - 1)) then
+          ! old contents, expect uninitialized values in new slots
+          call check(error, all(a(i, lb:(lb + n1 - 1)) == i), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        else
+          ! new contents, expect all values as set in prior loop
+          call check(error, all(a(i, :) == i), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        end if
+        if (allocated(error)) return
+      end do
+      deallocate (a)
+    end do
   end subroutine test_ExpandArray2D_int
 
+  !> @brief Test 2D dbl array expansion
   subroutine test_ExpandArray2D_dbl(error)
     type(error_type), allocatable, intent(out) :: error
-    real(DP), allocatable :: array(:, :)
+    real(DP), allocatable :: a(:, :)
+    integer(I4B) :: i, lb, n1, n2
 
-    ! allocate array
-    allocate (array(2, 2))
-    array(1, :) = (/1.0_DP, 2.0_DP/)
-    array(2, :) = (/2.0_DP, 3.0_DP/)
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and check initial size, with
+      ! same lower bound and starting/new size for both dims
+      allocate (a(lb:(lb + n1 - 1), lb:(lb + n1 - 1)))
+      a(lb, :) = real(lb)
+      a(lb + 1, :) = real(lb + 1)
+      call check(error, size(a, 1) == n1 .and. size(a, 2) == n1)
+      if (allocated(error)) return
 
-    ! check initial array size
-    call check(error, size(array, 1) == 2 .and. size(array, 2) == 2)
-    if (allocated(error)) return
+      ! resize array and check new size and bounds
+      call ExpandArray2D(a, n2 - n1, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim1 size: "//to_string(size(a, 1)))
+      call check(error, size(a, 1) == n2, &
+                 "unexpected dim2 size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected dim1 lower bound:"//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected dim1 upper bound:"//to_string(ubound(a, 1)))
+      call check(error, lbound(a, 2) == lb, &
+                 "unexpected dim2 lower bound:"//to_string(lbound(a, 2)))
+      call check(error, ubound(a, 2) == lb + n2 - 1, &
+                 "unexpected dim2 upper bound:"//to_string(ubound(a, 2)))
+      if (allocated(error)) return
 
-    ! resize array
-    call ExpandArray2D(array, 1, 1)
-
-    ! check that array has been resized
-    call check(error, &
-               size(array, 1) == 3 .and. size(array, 2) == 3, &
-               "2d dbl array resize failed")
-    if (allocated(error)) return
-
-    ! set new array elements
-    array(3, :) = (/3.0_DP, 4.0_DP, 5.0_DP/)
-
-    ! check array contents
-    call check(error, &
-               array(1, 1) == 1.0_DP .and. &
-               array(1, 2) == 2.0_DP .and. &
-               ! can't guarantee unassigned item value
-               ! array(1, 3) == 0.0_DP .and. &
-               array(2, 1) == 2.0_DP .and. &
-               array(2, 2) == 3.0_DP .and. &
-               ! can't guarantee unassigned item value
-               ! array(2, 3) == 0.0_DP .and. &
-               array(3, 1) == 3.0_DP .and. &
-               array(3, 2) == 4.0_DP .and. &
-               array(3, 3) == 5.0_DP, &
-               "2d dbl array repopulation failed")
-
-    deallocate (array)
-
+      ! set new elements starting from the new region, check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i, :) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        if (i < (lb + n1 - 1)) then
+          ! old contents, expect uninitialized values in new slots
+          call check(error, all(a(i, lb:(lb + n1 - 1)) == real(i)), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        else
+          ! new contents, expect all values as set in prior loop
+          call check(error, all(a(i, :) == real(i)), &
+                     "unexpected value "//to_string(a(i, i)) &
+                     //" at i="//to_string(i))
+        end if
+        if (allocated(error)) return
+      end do
+      deallocate (a)
+    end do
   end subroutine test_ExpandArray2D_dbl
+
+  !> @brief Test 1D int ptr array expansion
+  subroutine test_ExtendPtrArray_int(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer(I4B), allocatable, target :: aa(:)
+    integer(I4B), pointer, contiguous :: a(:)
+    integer(I4B) :: i, lb, n1, n2
+
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and set pointer
+      allocate (aa(lb:(lb + n1 - 1)))
+      aa(lb) = lb
+      aa(lb + 1) = lb + 1
+      a => aa
+
+      ! resize array and check new size and bounds
+      call ExtendPtrArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
+      if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, lb + n2 - 1
+        a(i) = i
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == i, &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      nullify (a)
+      deallocate (aa)
+    end do
+  end subroutine test_ExtendPtrArray_int
+
+  !> @brief Test 1D dbl ptr array expansion
+  subroutine test_ExtendPtrArray_dbl(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable, target :: aa(:)
+    real(DP), pointer, contiguous :: a(:)
+    integer(I4B) :: i, lb, n1, n2
+
+    n1 = 2 ! starting size
+    n2 = 5 ! expanded size
+    do lb = -1, 1 ! test with default lower bound (1) as well as 0 and -1
+      ! allocate/populate array and set pointer
+      allocate (aa(lb:(lb + n1 - 1)))
+      aa(lb) = real(lb)
+      aa(lb + 1) = real(lb + 1)
+      a => aa
+
+      ! resize array and check new size and bounds
+      call ExtendPtrArray(a, n2 - n1)
+      call check(error, size(a, 1) == n2, &
+                 "unexpected size: "//to_string(size(a, 1)))
+      call check(error, lbound(a, 1) == lb, &
+                 "unexpected lower bound: "//to_string(lbound(a, 1)))
+      call check(error, ubound(a, 1) == lb + n2 - 1, &
+                 "unexpected upper bound: "//to_string(ubound(a, 1)))
+      if (allocated(error)) return
+
+      ! set new array elements and check new/old contents
+      do i = lb + n1 - 1, n2
+        a(i) = real(i)
+      end do
+      do i = lb, lb + n2 - 1
+        call check(error, a(i) == real(i), &
+                   "unexpected value "//to_string(a(i)) &
+                   //" at i="//to_string(i))
+        if (allocated(error)) return
+      end do
+      nullify (a)
+      deallocate (aa)
+    end do
+  end subroutine test_ExtendPtrArray_dbl
+
+  subroutine test_remove_character(error)
+    type(error_type), allocatable, intent(out) :: error
+    character(len=11), allocatable :: s(:)
+    allocate (s(2))
+    s(1) = "hello world"
+    s(2) = "hello earth"
+    call remove_character(s, 1)
+    call check(error, s(1) == "hello earth")
+  end subroutine test_remove_character
+
 end module TestArrayHandlers
