@@ -189,7 +189,7 @@ jobs:
       
       - name: Upload build log
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: meson-log.txt
           path: modflow6/builddir/meson-logs/meson-log.txt
@@ -248,7 +248,7 @@ jobs:
 
       - name: Upload reports
         if: success() || failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: compat
           path: compat/*.csv
@@ -298,7 +298,7 @@ jobs:
 
       # only upload wide CSVs and Markdown tables
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: compat
           path: |

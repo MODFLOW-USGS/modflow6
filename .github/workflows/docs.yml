@@ -109,7 +109,7 @@ jobs:
         run: cat run-time-comparison.md
     
       - name: Upload benchmarks
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: run-time-comparison
           path: modflow6/distribution/run-time-comparison.md
@@ -123,7 +123,7 @@ jobs:
         run: cat deprecations.md
 
       - name: Upload deprecations
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deprecations
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
@@ -133,7 +133,7 @@ jobs:
         run: make html
       
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
