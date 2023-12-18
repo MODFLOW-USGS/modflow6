@@ -209,8 +209,6 @@ contains
     ! -- local
     character(len=MAXCHARLEN), allocatable, dimension(:) :: temp
     integer(I4B) :: i, inc, nold, nnew, lenc
-    ! -- format
-    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
 
     ! -- check character length
     lenc = len(array)
@@ -357,8 +355,6 @@ contains
     character(len=100) :: ermsg
     integer(I4B) :: i, inc, lb, n, istat
     real(DP), dimension(:), pointer, contiguous :: temp => null()
-    ! -- format
-    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
 
     ! -- default to expanding by 1
     if (present(increment)) then
@@ -517,39 +513,35 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), intent(in) :: ipos
     ! -- local
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
-    integer(I4B) :: i, isize, lenc, newsize, inew
-    ! -- format
-    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
-    !
-    ! -- check character length
-    lenc = len(array)
-    if (lenc > MAXCHARLEN) then
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: temp
+    integer(I4B) :: i, inew, n
 
+    ! -- check character length
+    if (len(array) > MAXCHARLEN) &
       call pstop(138, 'Error in ArrayHandlersModule: '// &
                  'Need to increase MAXCHARLEN. Stopping...')
-    end if
-    !
-    ! -- calculate sizes
-    isize = size(array)
-    newsize = isize - 1
-    !
-    ! -- copy array to array_temp
-    allocate (array_temp(isize))
-    do i = 1, isize
-      array_temp(i) = array(i)
+
+    ! -- calculate size
+    n = size(array)
+
+    ! -- copy array to temp
+    allocate (temp(n))
+    do i = 1, n
+      temp(i) = array(i)
     end do
-    !
+
+    ! -- de/reallocate and copy back to array,
+    !    omitting the specified element
     deallocate (array)
-    allocate (array(newsize))
+    allocate (array(n - 1))
     inew = 1
-    do i = 1, isize
+    do i = 1, n
       if (i /= ipos) then
-        array(inew) = array_temp(i)
+        array(inew) = temp(i)
         inew = inew + 1
       end if
     end do
-    deallocate (array_temp)
+    deallocate (temp)
 
   end subroutine remove_character
 
