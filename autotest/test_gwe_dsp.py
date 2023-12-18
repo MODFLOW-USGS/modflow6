@@ -12,8 +12,6 @@
 # Imports
 
 import os
-import sys
-
 import numpy as np
 import pytest
 
@@ -35,7 +33,6 @@ except:
 
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 # Base simulation and model name and workspace
 
@@ -124,9 +121,9 @@ c0 = 40.0
 ctpspd = [[(0, 0, 0), c0]]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base MF6 GWE model type
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
 
     print("Building MF6 model...()".format(name))
@@ -357,14 +354,14 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read transport results from GWE model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwename = "gwe-" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwename}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwename}.ucn")
     try:
         # load temperatures
         cobj = flopy.utils.HeadFile(
@@ -489,12 +486,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()
