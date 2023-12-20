@@ -449,7 +449,7 @@ contains
     end if
     !
     ! -- create a structured array
-    struct_array => constructStructArray(ncol, nrows, blocknum, &
+    struct_array => constructStructArray(mf6_input, ncol, nrows, blocknum, &
                                          mf6_input%mempath, &
                                          mf6_input%component_mempath)
     !

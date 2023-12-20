@@ -14,6 +14,7 @@ module BaseExchangeModule
   type, abstract :: BaseExchangeType
     character(len=LENEXCHANGENAME) :: name !< the name of this exchange
     character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
+    character(len=LENMEMPATH) :: input_mempath
     integer(I4B) :: id
 
   contains

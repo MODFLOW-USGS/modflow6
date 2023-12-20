@@ -9,13 +9,13 @@ module SourceCommonModule
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
-                             LENPACKAGETYPE, LENPACKAGENAME
+                             LENPACKAGETYPE, LENPACKAGENAME, LENCOMPONENTNAME
   use SimModule, only: store_error, store_error_filename
 
   implicit none
   private
   public :: package_source_type
-  public :: idm_component_type, idm_subcomponent_type, subcomponent_name
+  public :: idm_component_type, idm_subcomponent_type, idm_subcomponent_name
   public :: set_model_shape
   public :: get_shape_from_string
   public :: mem_allocate_naux
@@ -64,20 +64,22 @@ contains
     ! -- modules
     use IdmDfnSelectorModule, only: idm_component
     ! -- dummy
-    character(len=LENPACKAGETYPE), intent(in) :: component
+    character(len=*), intent(in) :: component
     ! -- return
-    character(len=LENFTYPE) :: component_type
+    character(len=LENCOMPONENTNAME) :: component_type
     ! -- local
-    integer(I4B) :: i, ilen
+    integer(I4B) :: i, ilen, idx
     !
     ! -- initialize
     component_type = ''
+    idx = 0
     !
     ilen = len_trim(component)
     do i = 1, ilen
-      if (component(i:i) == '6') then
-        component_type = ''
-        write (component_type, '(a)') trim(component(1:i - 1))
+      if (component(i:i) == '6' .or. component(i:i) == '-') then
+      else
+        idx = idx + 1
+        component_type(idx:idx) = component(i:i)
       end if
     end do
     !
@@ -103,25 +105,27 @@ contains
     result(subcomponent_type)
     ! -- modules
     ! -- dummy
-    character(len=LENPACKAGETYPE), intent(in) :: component !< component, e.g. GWF6
-    character(len=LENPACKAGETYPE), intent(in) :: subcomponent !< subcomponent, e.g. CHD6
+    character(len=*), intent(in) :: component !< component, e.g. GWF6
+    character(len=*), intent(in) :: subcomponent !< subcomponent, e.g. CHD6
     ! -- return
-    character(len=LENFTYPE) :: subcomponent_type
+    character(len=LENCOMPONENTNAME) :: subcomponent_type
     ! -- local
-    character(len=LENFTYPE) :: component_type
-    integer(I4B) :: i, ilen
+    character(len=LENCOMPONENTNAME) :: component_type
+    integer(I4B) :: i, ilen, idx
     !
     ! -- initialize
     subcomponent_type = ''
+    idx = 0
     !
     ! -- verify component
     component_type = idm_component_type(component)
     !
     ilen = len_trim(subcomponent)
     do i = 1, ilen
-      if (subcomponent(i:i) == '6') then
-        subcomponent_type = ''
-        write (subcomponent_type, '(a)') trim(subcomponent(1:i - 1))
+      if (subcomponent(i:i) == '6' .or. subcomponent(i:i) == '-') then
+      else
+        idx = idx + 1
+        subcomponent_type(idx:idx) = subcomponent(i:i)
       end if
     end do
     !
@@ -136,13 +140,14 @@ contains
   !! stress) types.
   !!
   !<
-  function subcomponent_name(component_type, subcomponent_type, pkgname)
+  function idm_subcomponent_name(component_type, subcomponent_type, sc_name) &
+    result(subcomponent_name)
     ! -- modules
     use IdmDfnSelectorModule, only: idm_multi_package
     ! -- dummy
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
-    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: sc_name
     ! -- return
     character(len=LENPACKAGENAME) :: subcomponent_name
     ! -- local
@@ -151,7 +156,7 @@ contains
     !
     if (idm_multi_package(component_type, subcomponent_type)) then
       !
-      subcomponent_name = pkgname
+      subcomponent_name = sc_name
     else
       !
       subcomponent_name = subcomponent_type
@@ -159,7 +164,7 @@ contains
     !
     ! -- return
     return
-  end function subcomponent_name
+  end function idm_subcomponent_name
 
   !> @brief input file extension
   !!

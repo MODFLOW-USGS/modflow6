@@ -332,6 +332,10 @@ class Dfn2F90:
 
             shape = ""
             shapelist = []
+            # workaround for Flopy shape issue with exg dfns:
+            if c.upper() == "EXG":
+                if vn == "CELLIDM1" or vn == "CELLIDM2":
+                    v["shape"] = "(ncelldim)"
             if "shape" in v:
                 shape = v["shape"]
                 shape = shape.replace("(", "")
@@ -941,6 +945,18 @@ if __name__ == "__main__":
         [
             DFN_PATH / "gwt-nam.dfn",
             SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwfgwf.dfn",
+            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwfgwt.dfn",
+            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwtgwt.dfn",
+            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
         ],
         [
             DFN_PATH / "sim-nam.dfn",

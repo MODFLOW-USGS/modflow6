@@ -264,7 +264,6 @@ contains
 
       if (associated(tsLinkAux)) then
         !
-        ! TODO
         ! -- set variable name
         tsLinkAux%Text = this%bndctx%auxname_cst(ts_strloc%col)
         !
@@ -326,8 +325,9 @@ contains
     integer(I4B) :: icol
     !
     ! -- construct and set up the struct array object
-    this%structarray => constructStructArray(this%ncol, this%bndctx%maxbound, &
-                                             0, this%mf6_input%mempath, &
+    this%structarray => constructStructArray(this%mf6_input, this%ncol, &
+                                             this%bndctx%maxbound, 0, &
+                                             this%mf6_input%mempath, &
                                              this%mf6_input%component_mempath)
     !
     ! -- set up struct array

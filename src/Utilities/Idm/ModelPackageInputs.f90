@@ -9,7 +9,7 @@ module ModelPackageInputsModule
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
-                             LENPACKAGETYPE, LENPACKAGENAME
+                             LENPACKAGETYPE, LENPACKAGENAME, LENCOMPONENTNAME
   use SimModule, only: store_error, store_error_filename
   use SimVariablesModule, only: iout
   use ArrayHandlersModule, only: expandarray
@@ -29,7 +29,7 @@ module ModelPackageInputsModule
     ! -- package type, e.g. 'DIS6' or 'CHD6'
     character(len=LENPACKAGETYPE) :: pkgtype
     ! -- component type, e.g. 'DIS' or 'CHD'
-    character(len=LENFTYPE) :: subcomponent_type
+    character(len=LENCOMPONENTNAME) :: subcomponent_type
     ! -- package instance attribute arrays
     character(len=LINELENGTH), dimension(:), allocatable :: filenames
     character(len=LENPACKAGENAME), dimension(:), allocatable :: pkgnames
@@ -55,7 +55,7 @@ module ModelPackageInputsModule
     character(len=LINELENGTH) :: modelfname
     character(len=LENMODELNAME) :: modelname
     ! -- component type
-    character(len=LENFTYPE) :: component_type ! -- e.g. 'GWF'
+    character(len=LENCOMPONENTNAME) :: component_type ! -- e.g. 'GWF'
     ! -- mempaths
     character(len=LENMEMPATH) :: input_mempath
     character(len=LENMEMPATH) :: model_mempath
@@ -95,8 +95,8 @@ contains
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
     use ModelPackageInputModule, only: multi_package_type
     ! -- dummy
-    character(len=LENFTYPE), intent(in) :: mtype_component
-    character(len=LENFTYPE), intent(in) :: ptype_component
+    character(len=LENCOMPONENTNAME), intent(in) :: mtype_component
+    character(len=LENCOMPONENTNAME), intent(in) :: ptype_component
     character(len=LENFTYPE), intent(in) :: pkgtype
     ! -- return
     logical(LGP) :: multi_pkg
@@ -153,7 +153,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
-    use SourceCommonModule, only: subcomponent_name
+    use SourceCommonModule, only: idm_subcomponent_name
     ! -- dummy
     class(LoadablePackageType) :: this
     character(len=*), intent(in) :: modelname
@@ -189,8 +189,8 @@ contains
     if (idm_integrated(mtype_component, this%subcomponent_type)) then
       !
       ! -- set subcomponent name
-      sc_name = subcomponent_name(mtype_component, this%subcomponent_type, &
-                                  this%pkgnames(this%pnum))
+      sc_name = idm_subcomponent_name(mtype_component, this%subcomponent_type, &
+                                      this%pkgnames(this%pnum))
       !
       ! -- create and store the mempath
       this%mempaths(this%pnum) = &

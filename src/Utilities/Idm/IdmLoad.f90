@@ -8,7 +8,8 @@ module IdmLoadModule
 
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
-  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, &
+                             LENEXCHANGENAME, LENCOMPONENTNAME
   use SimModule, only: store_error, store_error_filename
   use ListModule, only: ListType
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, &
@@ -21,6 +22,7 @@ module IdmLoadModule
   private
   public :: simnam_load
   public :: load_models
+  public :: load_exchanges
   public :: idm_df
   public :: idm_rp
   public :: idm_ad
@@ -81,9 +83,31 @@ contains
   !> @brief idm deallocate routine
   !<
   subroutine idm_da(iout)
+    use SimVariablesModule, only: idm_context
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
+    use MemoryManagerExtModule, only: memorylist_remove
+    use CharacterStringModule, only: CharacterStringType
     integer(I4B), intent(in) :: iout
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mempaths
+    character(len=LENCOMPONENTNAME) :: exg_comp, exg_subcomp
+    character(len=LENMEMPATH) :: input_mempath, mempath
+    integer(I4B) :: n
     !
+    ! -- deallocate dynamic loaders
     call dynamic_da(iout)
+    !
+    ! -- deallocate EXG mempaths
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(mempaths, 'EXGMEMPATHS', input_mempath)
+    do n = 1, size(mempaths)
+      mempath = mempaths(n)
+      if (mempath /= '') then
+        call split_mem_path(mempath, exg_comp, exg_subcomp)
+        call memorylist_remove(exg_comp, exg_subcomp, idm_context)
+      end if
+    end do
     !
     ! -- return
     return
@@ -93,7 +117,7 @@ contains
   !<
   subroutine model_pkg_load(model_pkg_inputs, itype, ipkg, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceLoadModule, only: create_pkg_loader
+    use SourceLoadModule, only: create_input_loader
     type(ModelPackageInputsType), intent(in) :: model_pkg_inputs
     integer(I4B), intent(in) :: itype
     integer(I4B), intent(in) :: ipkg
@@ -104,13 +128,13 @@ contains
     !
     ! -- create model package loader
     static_loader => &
-      create_pkg_loader(model_pkg_inputs%component_type, &
-                        model_pkg_inputs%pkglist(itype)%subcomponent_type, &
-                        model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
-                        model_pkg_inputs%pkglist(itype)%pkgtype, &
-                        model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
-                        model_pkg_inputs%modelname, &
-                        model_pkg_inputs%modelfname)
+      create_input_loader(model_pkg_inputs%component_type, &
+                          model_pkg_inputs%pkglist(itype)%subcomponent_type, &
+                          model_pkg_inputs%modelname, &
+                          model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
+                          model_pkg_inputs%pkglist(itype)%pkgtype, &
+                          model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
+                          model_pkg_inputs%modelfname)
     !
     ! -- load static input and set dynamic loader
     dynamic_loader => static_loader%load(iout)
@@ -119,7 +143,7 @@ contains
       !
       ! -- set pointer to model dynamic packages list
       dynamic_pkgs => dynamic_model_pkgs(model_pkg_inputs%modelname, &
-                                         static_loader%modelfname)
+                                         static_loader%component_input_name)
       !
       ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
@@ -238,6 +262,146 @@ contains
     ! -- return
     return
   end subroutine load_models
+
+  !> @brief load exchange files
+  !<
+  subroutine load_exchanges(model_loadmask, iout)
+    ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr, mem_allocate, mem_deallocate
+    use CharacterStringModule, only: CharacterStringType
+    use SimVariablesModule, only: idm_context, simfile
+    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
+    use SourceLoadModule, only: create_input_loader, remote_model_ndim
+    ! -- dummy
+    integer(I4B), dimension(:), intent(in) :: model_loadmask
+    integer(I4B), intent(in) :: iout
+    ! -- locals
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: etypes !< exg types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: efiles !< exg file names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_a !< model a names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_b !< model b names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emempaths !< exg mempaths
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mfnames !< model file names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    character(len=LENMEMPATH) :: input_mempath, mempath
+    integer(I4B), pointer :: exgid, ncelldim
+    character(len=LINELENGTH) :: exgtype, efname, mfname
+    character(len=LENMODELNAME) :: mname1, mname2, mname
+    character(len=LENCOMPONENTNAME) :: sc_type, sc_name, mtype
+    class(StaticPkgLoadBaseType), pointer :: static_loader
+    class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
+    integer(I4B) :: n, m1_idx, m2_idx, irem
+    !
+    ! -- set input memory path
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    !
+    ! -- set pointers to input context exg and model attribute arrays
+    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
+    call mem_setptr(efiles, 'EXGFILE', input_mempath)
+    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
+    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mfnames, 'MFNAME', input_mempath)
+    call mem_setptr(mnames, 'MNAME', input_mempath)
+    !
+    ! -- allocate mempaths array for exchanges
+    call mem_allocate(emempaths, LENMEMPATH, size(etypes), 'EXGMEMPATHS', &
+                      input_mempath)
+    !
+    ! -- load exchanges for local models
+    do n = 1, size(etypes)
+      !
+      ! -- attributes for this exchange
+      exgtype = etypes(n)
+      efname = efiles(n)
+      mname1 = emnames_a(n)
+      mname2 = emnames_b(n)
+      !
+      ! initialize mempath as no path
+      emempaths(n) = ''
+      irem = 0
+      !
+      ! -- set indexes for exchange model names
+      m1_idx = ifind_charstr(mnames, mname1)
+      m2_idx = ifind_charstr(mnames, mname2)
+      !
+      if (m1_idx <= 0 .or. m2_idx <= 0) then
+        errmsg = 'Exchange has invalid (unrecognized) model name(s):'
+        if (m1_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname1)
+        if (m2_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname2)
+        call store_error(errmsg)
+        call store_error_filename(simfile)
+      end if
+      !
+      ! -- load the exchange input if either model local
+      if (model_loadmask(m1_idx) > 0 .or. model_loadmask(m2_idx) > 0) then
+        !
+        ! -- set index if either model is remote
+        if (model_loadmask(m1_idx) == 0) then
+          irem = m1_idx
+        else if (model_loadmask(m2_idx) == 0) then
+          irem = m2_idx
+        end if
+        !
+        ! -- allocate and set remote model NCELLDIM
+        if (irem > 0) then
+          mtype = mtypes(irem)
+          mfname = mfnames(irem)
+          mname = mnames(irem)
+          mempath = create_mem_path(component=mname, context=idm_context)
+          call mem_allocate(ncelldim, 'NCELLDIM', mempath)
+          ncelldim = remote_model_ndim(mtype, mfname)
+        else
+          nullify (ncelldim)
+        end if
+        !
+        ! -- set subcomponent strings
+        sc_type = trim(idm_subcomponent_type('EXG', exgtype))
+        write (sc_name, '(a,i0)') trim(sc_type)//'_', n
+        !
+        ! -- create and set exchange mempath
+        mempath = create_mem_path('EXG', sc_name, idm_context)
+        emempaths(n) = mempath
+        !
+        ! -- allocate and set exgid
+        call mem_allocate(exgid, 'EXGID', mempath)
+        exgid = n
+        !
+        ! -- create exchange loader
+        static_loader => create_input_loader('EXG', sc_type, 'EXG', sc_name, &
+                                             exgtype, efname, simfile)
+        ! -- load static input
+        dynamic_loader => static_loader%load(iout)
+        !
+        if (associated(dynamic_loader)) then
+          errmsg = 'IDM unimplemented. Dynamic Exchanges not supported.'
+          call store_error(errmsg)
+          call store_error_filename(efname)
+        else
+          call static_loader%destroy()
+          deallocate (static_loader)
+        end if
+        !
+        ! -- deallocate ncelldim as all input has been loaded
+        if (associated(ncelldim)) call mem_deallocate(ncelldim)
+        !
+      end if
+      !
+    end do
+    !
+    ! -- return
+    return
+  end subroutine load_exchanges
 
   !> @brief MODFLOW 6 mfsim.nam input load routine
   !<

@@ -92,6 +92,9 @@
 		<File RelativePath="..\src\Distributed\VirtualModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualSolution.f90"/></Filter>
 		<Filter Name="Exchange">
+		<File RelativePath="..\src\Exchange\gwfgwfidm.f90"/>
+		<File RelativePath="..\src\Exchange\gwfgwtidm.f90"/>
+		<File RelativePath="..\src\Exchange\gwtgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
@@ -292,6 +295,7 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmExgDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>

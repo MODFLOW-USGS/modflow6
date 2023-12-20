@@ -25,7 +25,6 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
@@ -37,6 +36,7 @@ $(OBJDIR)/Budget.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/grb.o \
 $(OBJDIR)/budgetdata.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/zbud6.o
 
