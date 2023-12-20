@@ -16,6 +16,8 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
+  public :: idm_advanced_package
+  public :: idm_subpackages
   public :: idm_integrated
   public :: idm_component
 
@@ -98,6 +100,48 @@ contains
     end select
     return
   end function idm_multi_package
+
+  function idm_advanced_package(component, subcomponent) result(advanced_package)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    logical :: advanced_package
+    select case (component)
+    case ('GWF')
+      advanced_package = gwf_idm_advanced_package(subcomponent)
+    case ('GWT')
+      advanced_package = gwt_idm_advanced_package(subcomponent)
+    case ('EXG')
+      advanced_package = exg_idm_advanced_package(subcomponent)
+    case ('SIM')
+      advanced_package = sim_idm_advanced_package(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_advanced_package
+
+  function idm_subpackages(component, subcomponent) result(subpackages)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (component)
+    case ('GWF')
+      subpackages => gwf_idm_subpackages(subcomponent)
+    case ('GWT')
+      subpackages => gwt_idm_subpackages(subcomponent)
+    case ('EXG')
+      subpackages => exg_idm_subpackages(subcomponent)
+    case ('SIM')
+      subpackages => sim_idm_subpackages(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_subpackages
 
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component

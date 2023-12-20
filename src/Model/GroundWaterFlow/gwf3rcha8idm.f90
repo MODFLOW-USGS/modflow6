@@ -9,6 +9,8 @@ module GwfRchaInputModule
   public gwf_rcha_block_definitions
   public GwfRchaParamFoundType
   public gwf_rcha_multi_package
+  public gwf_rcha_advanced_package
+  public gwf_rcha_subpackages
 
   type GwfRchaParamFoundType
     logical :: readasarrays = .false.
@@ -31,6 +33,13 @@ module GwfRchaInputModule
   end type GwfRchaParamFoundType
 
   logical :: gwf_rcha_multi_package = .true.
+  logical :: gwf_rcha_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_rcha_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfrcha_readasarrays = InputParamDefinitionType &

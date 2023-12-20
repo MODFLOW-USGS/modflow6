@@ -9,6 +9,8 @@ module GwfChdInputModule
   public gwf_chd_block_definitions
   public GwfChdParamFoundType
   public gwf_chd_multi_package
+  public gwf_chd_advanced_package
+  public gwf_chd_subpackages
 
   type GwfChdParamFoundType
     logical :: auxiliary = .false.
@@ -33,6 +35,13 @@ module GwfChdInputModule
   end type GwfChdParamFoundType
 
   logical :: gwf_chd_multi_package = .true.
+  logical :: gwf_chd_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_chd_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfchd_auxiliary = InputParamDefinitionType &

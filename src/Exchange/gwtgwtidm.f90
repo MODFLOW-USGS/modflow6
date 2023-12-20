@@ -9,6 +9,8 @@ module ExgGwtgwtInputModule
   public exg_gwtgwt_block_definitions
   public ExgGwtgwtParamFoundType
   public exg_gwtgwt_multi_package
+  public exg_gwtgwt_advanced_package
+  public exg_gwtgwt_subpackages
 
   type ExgGwtgwtParamFoundType
     logical :: gwfmodelname1 = .false.
@@ -41,6 +43,13 @@ module ExgGwtgwtInputModule
   end type ExgGwtgwtParamFoundType
 
   logical :: exg_gwtgwt_multi_package = .true.
+  logical :: exg_gwtgwt_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    exg_gwtgwt_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exggwtgwt_gwfmodelname1 = InputParamDefinitionType &
