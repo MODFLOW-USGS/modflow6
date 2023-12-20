@@ -127,6 +127,8 @@ $(OBJDIR)/gwe1cnt1idm.o \
 $(OBJDIR)/gwtgwtidm.o \
 $(OBJDIR)/gwfgwtidm.o \
 $(OBJDIR)/gwfgwfidm.o \
+$(OBJDIR)/gwfgweidm.o \
+$(OBJDIR)/gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \

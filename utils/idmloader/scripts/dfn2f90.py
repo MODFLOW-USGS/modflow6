@@ -1042,8 +1042,16 @@ if __name__ == "__main__":
             SRC_PATH / "Exchange" / "gwfgwtidm.f90",
         ],
         [
+            DFN_PATH / "exg-gwfgwe.dfn",
+            SRC_PATH / "Exchange" / "gwfgweidm.f90",
+        ],
+        [
             DFN_PATH / "exg-gwtgwt.dfn",
             SRC_PATH / "Exchange" / "gwtgwtidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwegwe.dfn",
+            SRC_PATH / "Exchange" / "gwegweidm.f90",
         ],
         [
             DFN_PATH / "sim-nam.dfn",

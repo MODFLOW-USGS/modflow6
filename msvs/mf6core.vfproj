@@ -108,8 +108,10 @@
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
 		<File RelativePath="..\src\Exchange\GweGweExchange.f90"/>
+		<File RelativePath="..\src\Exchange\gwegweidm.f90"/>
 		<File RelativePath="..\src\Exchange\GwfExchangeMover.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGweExchange.f90"/>
+		<File RelativePath="..\src\Exchange\gwfgweidm.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
 		<File RelativePath="..\src\Exchange\gwfgwfidm.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwtExchange.f90"/>

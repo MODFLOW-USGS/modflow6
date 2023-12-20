@@ -444,7 +444,8 @@ contains
       case ('GWE6-GWE6')
         write (exg_name, '(a,i0)') 'GWE-GWE_', exg_id
         if (.not. both_remote) then
-          call gweexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+          call gweexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
+                                  exg_mempath)
         end if
         call add_virtual_gwe_exchange(exg_name, exg_id, m1_id, m2_id)
       case default
