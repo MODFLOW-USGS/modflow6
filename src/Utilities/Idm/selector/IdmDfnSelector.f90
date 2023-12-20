@@ -7,8 +7,8 @@ module IdmDfnSelectorModule
                                    InputBlockDefinitionType
   use IdmGwfDfnSelectorModule
   use IdmGwtDfnSelectorModule
-  use IdmExgDfnSelectorModule
   use IdmGweDfnSelectorModule
+  use IdmExgDfnSelectorModule
   use IdmSimDfnSelectorModule
 
   implicit none
