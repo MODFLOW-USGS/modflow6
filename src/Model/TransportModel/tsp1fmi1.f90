@@ -149,10 +149,6 @@ contains
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: m
-    integer(I4B) :: ipos
-    real(DP) :: crewet, tflow, flownm
-    character(len=15) :: nodestr
     character(len=*), parameter :: fmtdry = &
      &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
      &WITH DRY CONCENTRATION = ', G13.5)"
