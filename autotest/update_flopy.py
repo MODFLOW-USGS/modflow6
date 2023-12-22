@@ -8,6 +8,7 @@ from pathlib import Path
 
 import flopy
 import pytest
+
 from conftest import project_root_path
 
 dfn_path = project_root_path / "doc" / "mf6io" / "mf6ivar" / "dfn"

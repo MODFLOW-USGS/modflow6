@@ -1,6 +1,5 @@
 import pytest
 
-from conftest import should_compare
 from framework import TestFramework
 
 # skip nested models
@@ -30,31 +29,21 @@ excluded_models = [
     "ex-gwt-mt3dsupp82",
     "ex-gwt-prudic2004t2",
 ]
-excluded_comparisons = {
-    "ex-gwf-capture": ["6.2.1"],
-    "ex-gwf-sagehen": ["6.2.1"],
-    "ex-gwf-sfr-p01b": ["6.2.1"],
-    "ex-gwf-nwt-p02a": ["6.2.1"],
-    "ex-gwf-lak-p01": ["6.2.1"],
-    "ex-gwf-lak-p02": ["6.2.1"],
-    "ex-gwf-nwt-p02b": ["6.2.1"],
-    "ex-gwf-advtidal": ["6.2.1"],
-    "ex-gwf-sfr-p01": ["6.2.1"],
-    "ex-gwf-lgr": ["6.2.2"],
-    "ex-gwt-rotate": ["6.2.2"],
-    "ex-gwt-gwtgwt-mt3dms-p10": ["6.3.0"],
-    "ex-gwf-lak-p01": ["6.4.1"],
-}
 
 
 @pytest.mark.large
 @pytest.mark.repo
 @pytest.mark.regression
 @pytest.mark.slow
-def test_scenario(function_tmpdir, example_scenario, targets):
+def test_scenario(
+    # https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#example-scenarios
+    function_tmpdir,
+    example_scenario,
+    targets,
+):
     name, namefiles = example_scenario
     if name in excluded_models:
-        pytest.skip(f"Excluding mf6 model: {name}")
+        pytest.skip(f"Skipping: {name} (excluded)")
 
     model_paths = [nf.parent for nf in namefiles]
     for model_path in model_paths:
@@ -64,15 +53,8 @@ def test_scenario(function_tmpdir, example_scenario, targets):
             name=model_name,
             workspace=model_path,
             targets=targets,
-            compare="mf6_regression"
-            if should_compare(name, excluded_comparisons, targets)
-            else None,
+            compare="mf6_regression",
             verbose=False,
         )
-
-        # setup temp dir as test workspace
         test.setup(model_path, workspace)
-
-        # Run the MODFLOW 6 simulation and compare to existing head file or
-        # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
         test.run()

@@ -3,7 +3,7 @@ import shutil
 import time
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
-from typing import Callable, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from warnings import warn
 
 import flopy
@@ -17,13 +17,27 @@ from common_regression import (get_mf6_comparison, get_mf6_files,
                                setup_mf6_comparison)
 
 DNODATA = 3.0e30
-EXTS = {
+EXTTEXT = {
     "hds": "head",
     "hed": "head",
     "bhd": "head",
     "ucn": "concentration",
     "cbc": "cell-by-cell",
 }
+
+
+def adjust_htol(
+    workspace: Union[str, os.PathLike], htol: float = 0.001
+) -> Optional[float]:
+    """Get outer_dvclose value from MODFLOW 6 ims file"""
+
+    dvclose = get_dvclose(workspace)
+    if not dvclose:
+        return htol
+
+    # adjust htol if < IMS outer_dvclose
+    dvclose *= 5.0
+    return dvclose if (htol is None or htol < dvclose) else htol
 
 
 def api_return(success, model_ws) -> Tuple[bool, List[str]]:
@@ -34,7 +48,33 @@ def api_return(success, model_ws) -> Tuple[bool, List[str]]:
     return success, open(fpth).readlines()
 
 
-def get_dvclose(workspace) -> Optional[float]:
+def get_matching_files(
+    workspace: Union[str, os.PathLike], extensions: Union[str, Iterator[str]]
+) -> Iterator[str]:
+    """
+    Get MF6 regression files in the specified workspace,
+    optionally filtering by one or more file extensions.
+    Parameters
+    ----------
+    workspace : str or PathLike
+        MODFLOW 6 simulation workspace path
+    extensions : str or list of str
+        file extensions to filter
+    Returns
+    -------
+    An iterator of regression files found
+    """
+
+    workspace = Path(workspace).expanduser().absolute()
+    if isinstance(extensions, str):
+        extensions = [extensions]
+
+    for ext in extensions:
+        for file in workspace.glob(f"*.{ext}"):
+            yield file
+
+
+def get_dvclose(workspace: Union[str, os.PathLike]) -> Optional[float]:
     """Get outer_dvclose value from MODFLOW 6 ims file"""
     dvclose = None
     files = os.listdir(workspace)
@@ -57,26 +97,26 @@ def get_dvclose(workspace) -> Optional[float]:
     return dvclose
 
 
-def get_rclose(workspace) -> Optional[float]:
+def get_rclose(workspace: Union[str, os.PathLike]) -> Optional[float]:
     """Get inner_rclose value from MODFLOW 6 ims file"""
-    rclose = None
-    files = os.listdir(workspace)
-    for file_name in files:
-        pth = os.path.join(workspace, file_name)
-        if os.path.isfile(pth):
-            if file_name.lower().endswith(".ims"):
-                with open(pth) as f:
-                    lines = f.read().splitlines()
-                for line in lines:
-                    if "inner_rclose" in line.lower():
-                        v = float(line.split()[1])
-                        if rclose is None:
-                            rclose = v
-                        else:
-                            if v > rclose:
-                                rclose = v
-                        break
 
+    rclose = None
+    for pth in workspace.glob("*.ims"):
+        with open(pth, "r") as f:
+            for line in f:
+                if "inner_rclose" in line.lower():
+                    v = float(line.split()[1])
+                    if rclose is None:
+                        rclose = v
+                    else:
+                        if v > rclose:
+                            rclose = v
+                    break
+
+    if rclose is None:
+        return 0.5
+
+    rclose *= 5.0
     return rclose
 
 
@@ -141,13 +181,14 @@ def write_input(*sims, verbose=True):
     ----------
 
     sims : arbitrary list
-        simulations or models
-    verbose : bool
+        Simulations or models
+    verbose : bool, optional
         whether to show verbose output
     """
 
     if sims is None:
-        raise ValueError(f"Simulations or models required")
+        warn("No simulations or models!")
+        return
 
     # write input files for each model or simulation
     for sim in sims:
@@ -278,9 +319,7 @@ class TestFramework:
 
     # private
 
-    def _compare_heads(
-        self, cpth=None, extensions="hds"
-    ) -> bool:
+    def _compare_heads(self, cpth=None, extensions="hds") -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
 
@@ -344,7 +383,7 @@ class TestFramework:
                     None,
                     pth,
                     precision="double",
-                    text=EXTS[ext],
+                    text=EXTTEXT[ext],
                     outfile=outfile,
                     files1=file1,
                     files2=file2,
@@ -353,7 +392,7 @@ class TestFramework:
                     verbose=self.verbose,
                     exfile=exfile,
                 )
-                print(f"{EXTS[ext]} comparison {i + 1}", self.name)
+                print(f"{EXTTEXT[ext]} comparison {i + 1}", self.name)
                 if not success:
                     return False
             return True
@@ -371,16 +410,18 @@ class TestFramework:
                 None,
                 precision="double",
                 htol=self.htol,
-                text=EXTS[extension],
+                text=EXTTEXT[extension],
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
                 verbose=self.verbose,
             )
-            print((
-                f"{EXTS[extension]} comparison {i + 1}"
-                + f"{self.name} ({os.path.basename(fpth0)})"
-            ))
+            print(
+                (
+                    f"{EXTTEXT[extension]} comparison {i + 1}"
+                    + f"{self.name} ({os.path.basename(fpth0)})"
+                )
+            )
             if not success:
                 return False
         return True
@@ -401,16 +442,18 @@ class TestFramework:
                 None,
                 precision="double",
                 htol=self.htol,
-                text=EXTS[extension],
+                text=EXTTEXT[extension],
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
                 verbose=self.verbose,
             )
-            print((
-                f"{EXTS[extension]} comparison {i + 1}"
-                + f"{self.name} ({os.path.basename(fpth0)})",
-            ))
+            print(
+                (
+                    f"{EXTTEXT[extension]} comparison {i + 1}"
+                    + f"{self.name} ({os.path.basename(fpth0)})",
+                )
+            )
             if not success:
                 return False
         return True
@@ -422,7 +465,7 @@ class TestFramework:
         extension = "cbc"
         for i, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             print(
-                f"{EXTS[extension]} comparison {i + 1}",
+                f"{EXTTEXT[extension]} comparison {i + 1}",
                 f"{self.name} ({os.path.basename(fpth0)})",
             )
             success = self._compare_budget_files(
@@ -535,25 +578,11 @@ class TestFramework:
         time.sleep(0.5)
 
         # adjust htol if it is smaller than IMS outer_dvclose
-        dvclose = get_dvclose(dst)
-        if dvclose is not None:
-            dvclose *= 5.0
-            if self.htol < dvclose:
-                self.htol = dvclose
-
-        # get rclose to use with budget comparisons
-        rclose = get_rclose(dst)
-        if rclose is None:
-            rclose = 0.5
-        else:
-            rclose *= 5.0
-        self.rclose = rclose
+        self.htol = adjust_htol(self.workspace)
+        self.rclose = get_rclose(self.workspace)
 
         if self.compare == "mf6_regression":
-            pth = os.path.join(dst, self.compare)
-            if os.path.isdir(pth):
-                shutil.rmtree(pth)
-            shutil.copytree(dst, pth)
+            shutil.copytree(self.workspace, self.workspace / self.compare)
         else:
             # get the type of comparison to use
             self.compare = get_mf6_comparison(src)
@@ -737,12 +766,7 @@ class TestFramework:
                     self.htol = dvclose
 
             # adjust rclose for budget comparisons
-            rclose = get_rclose(self.workspace)
-            if rclose is None:
-                rclose = 0.5
-            else:
-                rclose *= 5.0
-            self.rclose = rclose
+            self.rclose = get_rclose(self.workspace)
 
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
@@ -774,7 +798,7 @@ class TestFramework:
                 #   - mfnwt
                 #   - mfusg
                 #   - mflgr
-                
+
                 # todo: don't hardcode workspace & assume agreement with test case
                 # simulation workspace, store & access workspaces directly
                 run_only = (
