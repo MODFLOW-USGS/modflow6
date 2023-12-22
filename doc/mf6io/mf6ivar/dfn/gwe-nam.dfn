@@ -7,7 +7,7 @@ reader urword
 optional true
 preserve_case true
 longname name of listing file
-description is name of the listing file to create for this GWE model.  If not specified, then the name of the list file will be the basename of the GWE model name file and the '.lst' extension.  For example, if the GWE name file is called ``my.model.nam'' then the list file will be called ``my.model.lst''.
+description is name of the listing file to create for this GWE model.  If not specified, then the name of the list file will be the basename of the GWE model name file and the ``.lst'' extension.  For example, if the GWE name file is called ``my.model.nam'' then the list file will be called ``my.model.lst''.
 
 block options
 name print_input
