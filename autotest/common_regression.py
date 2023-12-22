@@ -4,20 +4,14 @@ from pathlib import Path
 from typing import List, Tuple
 from warnings import warn
 
-COMPARE_PATTERNS = (
-    ".cmp",
+COMPARE_PROGRAMS = (
     "mf2005",
-    "mf2005.cmp",
     "mfnwt",
-    "mfnwt.cmp",
     "mfusg",
-    "mfusg.cmp",
     "mflgr",
-    "mflgr.cmp",
     "libmf6",
-    "libmf6.cmp",
     "mf6",
-    "mf6.cmp",
+    # todo: "mp7"
 )
 IGNORE_EXTENSIONS = (
     ".hds",
@@ -120,8 +114,6 @@ def model_setup(namefile, dst, remove_existing=True, extrafiles=None):
             shutil.copy(srcf, dstf)
         else:
             print(f"{srcf} does not exist")
-
-    return
 
 
 def get_input_files(namefile):
@@ -332,13 +324,13 @@ def get_mf6_comparison(src):
     # Construct src pth from namefile
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
-        for pattern in COMPARE_PATTERNS:
+        for pattern in COMPARE_PROGRAMS:
             if any(pattern in s for s in dl):
                 return pattern
 
 
 def setup_mf6_comparison(
-    src, dst, compare="auto", overwrite=True, verbose=False
+    src, dst, cmp_exe="mf6", overwrite=True, verbose=False
 ):
     """Setup comparison for MODFLOW 6 simulation.
 
@@ -348,10 +340,8 @@ def setup_mf6_comparison(
         Directory with original MODFLOW 6 input files.
     dst : path-like
         Directory to copy MODFLOW 6 input files to.
-    compare : str, optional
-        Type of comparison, e.g. 'auto', 'mf6', 'mf2005'. Use "auto" to include all
-        files in the source folder whose name includes "cmp". If not "auto", selects
-        the subdirectory of `src` containing reference files (default is "auto").
+    cmp_exe : str or PathLike, optional
+        Program to compare with, for supported see `COMPARE_PROGRAMSa.
     overwrite : bool, optional
         Whether to overwrite the destination directory if it exists (default is True).
     verbose : bool, optional
@@ -364,12 +354,12 @@ def setup_mf6_comparison(
 
     """
 
-    if compare is None:
+    if cmp_exe is None:
         warn(f"No action provided, aborting")
         return
 
     # create and/or clean dest dir if needed
-    dst = Path(dst) / compare
+    dst = Path(dst) / cmp_exe
     dst.mkdir(exist_ok=True)
     dls = list(os.walk(dst))
     if overwrite and any(dls):
@@ -390,38 +380,25 @@ def setup_mf6_comparison(
         raise ValueError(f"Destination exists but overwrite disabled: {dst}")
 
     # copy files
-    cmppth = os.path.join(src, compare)
+    cmppth = os.path.join(src, cmp_exe)
     files = os.listdir(cmppth)
     files2copy = []
-    if compare.lower() == "auto":
+    if "mf6" in cmp_exe.lower():
         for file in files:
-            if ".cmp" in os.path.splitext(file)[1].lower():
-                files2copy.append(os.path.join(cmppth, file))
-        for srcf in files2copy:
-            f = os.path.basename(srcf)
-            dstf = os.path.join(dst, f)
-            if os.path.exists(srcf):
-                print(f"Copying file '{srcf}' -> '{dstf}'")
-                shutil.copy(srcf, dstf)
-            else:
-                print(srcf + " does not exist")
+            if "mfsim.nam" in file.lower():
+                srcf = os.path.join(cmppth, os.path.basename(file))
+                files2copy.append(srcf)
+                srcdir = os.path.join(src, cmp_exe)
+                setup_mf6(srcdir, dst, remove_existing=overwrite)
+                break
     else:
-        if "mf6" in compare.lower():
-            for file in files:
-                if "mfsim.nam" in file.lower():
-                    srcf = os.path.join(cmppth, os.path.basename(file))
-                    files2copy.append(srcf)
-                    srcdir = os.path.join(src, compare)
-                    setup_mf6(srcdir, dst, remove_existing=overwrite)
-                    break
-        else:
-            for file in files:
-                if ".nam" in os.path.splitext(file)[1].lower():
-                    srcf = os.path.join(cmppth, os.path.basename(file))
-                    files2copy.append(srcf)
-                    nf = os.path.join(src, compare, os.path.basename(file))
-                    model_setup(nf, dst, remove_existing=overwrite)
-                    break
+        for file in files:
+            if ".nam" in os.path.splitext(file)[1].lower():
+                srcf = os.path.join(cmppth, os.path.basename(file))
+                files2copy.append(srcf)
+                nf = os.path.join(src, cmp_exe, os.path.basename(file))
+                model_setup(nf, dst, remove_existing=overwrite)
+                break
 
 
 def get_mf6_files(namefile, verbose=False):
