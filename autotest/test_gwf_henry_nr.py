@@ -11,7 +11,6 @@ import flopy
 import numpy as np
 import pytest
 
-from conftest import should_compare
 from framework import TestFramework
 
 cases = ["gwf_henrynr01"]
@@ -240,15 +239,12 @@ def build_models(idx, test):
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     name = "gwf-henry-nr"
-    comparisons = {name: ("6.2.1",)}
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        compare="mf6_regression"
-        if should_compare(name, comparisons, targets)
-        else "auto",
+        compare="mf6_regression",
         verbose=False,
     )
     test.run()

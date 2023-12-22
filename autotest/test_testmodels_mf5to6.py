@@ -5,25 +5,9 @@ import flopy
 import pytest
 
 from common_regression import get_namefiles, model_setup
-from conftest import should_compare
 from framework import TestFramework
 
-sfmt = "{:25s} - {}"
 excluded_models = ["alt_model", "mf2005"]
-excluded_comparisons = {
-    "testPr2": [
-        "6.2.1",
-    ],
-    "testUzfLakSfr": [
-        "6.2.1",
-    ],
-    "testUzfLakSfr_laketable": [
-        "6.2.1",
-    ],
-    "testWetDry": [
-        "6.2.1",
-    ],
-}
 
 
 def setup_mf5to6(src, dst) -> Path:
@@ -61,23 +45,22 @@ def setup_mf5to6(src, dst) -> Path:
 @pytest.mark.repo
 @pytest.mark.regression
 def test_model(
-    function_tmpdir, test_model_mf5to6, targets, original_regression
+    function_tmpdir,
+    original_regression,
+    targets,
+    # https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#modflow-2005-test-models
+    test_model_mf5to6,
 ):
     model_path = test_model_mf5to6.parent
     model_name = model_path.name
-
     if model_name in excluded_models:
-        pytest.skip(f"Excluding mf5to6 model: {model_name}")
+        pytest.skip(f"Skipping: {model_name} (excluded)")
 
     test = TestFramework(
         name=model_path.name,
         workspace=model_path,
         targets=targets,
-        compare="auto"
-        if original_regression
-        else "mf6_regression"
-        if should_compare(model_name, excluded_comparisons, targets)
-        else None,
+        compare="auto" if original_regression else "mf6_regression",
         verbose=False,
     )
 
@@ -96,10 +79,7 @@ def test_model(
     )
     assert success
 
-    # setup temp dir as test workspace
+    # run mf6
     mf6_workspace = function_tmpdir / "mf6"
     test.setup(mf5to6_workspace, mf6_workspace)
-
-    # Run the MODFLOW 6 simulation and compare to existing head file or
-    # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     test.run()

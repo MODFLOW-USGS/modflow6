@@ -49,7 +49,6 @@ def test_rebuild_from_dfn():
     pth = "./"
 
     with cwd(npth):
-
         # get list of TeX files
         files = [
             f

@@ -12,7 +12,7 @@ def calculate_rectchan_mannings_discharge(
 
     """
     area = width * depth
-    return conversion_factor * area * depth ** mpow * slope ** 0.5 / roughness
+    return conversion_factor * area * depth**mpow * slope**0.5 / roughness
 
 
 # n-point cross-section functions
@@ -82,7 +82,7 @@ def get_wetted_perimeter(
         else:
             dlen = 0.0
 
-    return np.sqrt(xlen ** 2.0 + dlen ** 2.0)
+    return np.sqrt(xlen**2.0 + dlen**2.0)
 
 
 def get_wetted_area(x0, x1, h0, h1, depth):
@@ -257,7 +257,7 @@ def manningsq(
             if perimeter > 0.0:
                 radius = area / perimeter
                 q += (
-                    conv * area * radius ** mpow * slope ** 0.5 / roughness[i0]
+                    conv * area * radius**mpow * slope**0.5 / roughness[i0]
                 )
     else:
         perimeter = wetted_perimeter(x, h, depth)
@@ -265,7 +265,7 @@ def manningsq(
         radius = 0.0
         if perimeter > 0.0:
             radius = area / perimeter
-        q = conv * area * radius ** mpow * slope ** 0.5 / roughness[0]
+        q = conv * area * radius**mpow * slope**0.5 / roughness[0]
     return q
 
 

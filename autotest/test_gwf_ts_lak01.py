@@ -328,7 +328,6 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(test.name)}.dis.grb"
     fpth = os.path.join(test.workspace, fname)

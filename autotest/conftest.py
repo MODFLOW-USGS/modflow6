@@ -1,49 +1,15 @@
 import sys
-from os import PathLike
 from pathlib import Path
-from typing import Optional
 from warnings import warn
 
 import pytest
 from modflow_devtools.executables import Executables
-from modflow_devtools.misc import run_cmd
 from modflow_devtools.ostags import get_binary_suffixes
 
 pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).resolve().parent.parent
 
 
-def get_version(path: PathLike = None, flag: str = "-v") -> Optional[str]:
-    out, err, ret = run_cmd(str(path), flag)
-    if ret == 0:
-        out = "".join(out).strip()
-        return out.split(":")[1].strip().split(" ")[0]
-    else:
-        raise ValueError(f"Failed to parse version from:\n{out + err}")
-
-
-def should_compare(
-    test: str, comparisons: dict, executables: Executables
-) -> bool:
-    if test in comparisons.keys():
-        dev_ver = get_version(path=executables.mf6)
-        reg_ver = get_version(path=executables.mf6_regression)
-        print(f"MODFLOW 6 development version: {dev_ver}")
-        print(f"MODFLOW 6 regression version: {reg_ver}")
-        excluded = list(comparisons[test])
-        if reg_ver in excluded:
-            print(
-                f"Regression version {reg_ver} not supported for test {test}, skipping comparison"
-            )
-            return False
-    return True
-
-
-_lib_exts = {
-    "Darwin": ".dylib",
-    "Linux": ".so",
-    "Windows": ".dll",
-}
 _exe_ext, _lib_ext = get_binary_suffixes(sys.platform)
 _binaries_path = project_root_path / "bin"
 _dl_bin_path = _binaries_path / "downloaded"
@@ -89,20 +55,23 @@ def bin_path() -> Path:
 
 @pytest.fixture(scope="session")
 def targets() -> Executables:
-    d = dict()
+    """
+    Target executables for tests. These include local development builds as
+    well as binaries 1) downloaded from GitHub and 2) rebuilt from the last
+    official release.
+    """
 
-    # require development binaries
+    d = dict()
     for k, v in _binaries["development"]:
+        # require development binaries
         assert v.is_file(), f"Couldn't find binary '{k}' expected at: {v}"
         d[k] = v
-
-    # downloaded/rebuilt binaries are optional
     for k, v in _binaries["downloaded"] + _binaries["rebuilt"]:
+        # downloaded/rebuilt binaries are optional
         if v.is_file():
             d[k] = v
         else:
             warn(f"Couldn't find binary '{k}' expected at: {v}")
-
     return Executables(**d)
 
 
@@ -136,7 +105,7 @@ def pytest_addoption(parser):
         "--original-regression",
         action="store_true",
         default=False,
-        help="TODO",
+        help="use non-MF6 models for regression tests",
     )
     parser.addoption(
         "--parallel",
