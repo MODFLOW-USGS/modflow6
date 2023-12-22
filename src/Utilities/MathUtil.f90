@@ -120,8 +120,18 @@ contains
   !! Simulation of Classical and Quantum Systems," 2nd ed., Springer, New York.
   !!
   !<
-  function zeroch(x0, x1, f, epsa)
+  function zeroch(x0, x1, f, epsa) result(z)
     implicit double precision(a - h, o - z)
+    ! -- local
+    real(DP) :: epsm
+    real(DP) :: a, b, c, t
+    real(DP) :: aminusb, cminusb
+    real(DP) :: fa, fb, fc, fm, ft
+    real(DP) :: faminusfb, fcminusfb
+    real(DP) :: phi, philo, phihi
+    real(DP) :: racb, rcab, rbca
+    real(DP) :: tol, tl, tlc
+    real(DP) :: xm, xt
 
     epsm = epsilon(x0)
     b = x0
@@ -164,7 +174,7 @@ contains
       ! tl = tol/dabs(b - c)
       tl = tol / dabs(cminusb)
       if ((tl > 5d-1) .or. (fm == 0d0)) then
-        zeroch = xm
+        z = xm
         return
       end if
       ! xi = (a - b)/(c - b)
@@ -230,8 +240,14 @@ contains
   !! the algol 60 procedure  zero  given in  richard brent, algorithms for
   !! minimization without derivatives, prentice-hall, inc. (1973).
   !<
-  function zeroin(ax, bx, f, tol)
+  function zeroin(ax, bx, f, tol) result(z)
     implicit double precision(a - h, o - z)
+    ! -- local
+    real(DP) :: eps
+    real(DP) :: a, b, c, d, e, s, p, q
+    real(DP) :: fa, fb, fc
+    real(DP) :: tol1
+    logical(LGP) :: rs
 
     eps = epsilon(ax)
     tol1 = eps + 1.0d0
@@ -246,76 +262,99 @@ contains
                (fa * (fb / dabs(fb)) .le. 0.0d0))) &
       call pstop(1, 'f(ax) and f(bx) do not have different signs,')
 
-20  c = a
-    fc = fa
-    d = b - a
-    e = d
+    rs = .true. ! var reset
+    do while (.true.)
+      if (rs) then
+        c = a
+        fc = fa
+        d = b - a
+        e = d
+      end if
 
-30  if (dabs(fc) .ge. dabs(fb)) go to 40
-    a = b
-    b = c
-    c = a
-    fa = fb
-    fb = fc
-    fc = fa
-40  tol1 = 2.0d0 * eps * dabs(b) + 0.5d0 * tol
-    xm = 0.5d0 * (c - b)
-    if ((dabs(xm) .le. tol1) .or. (fb .eq. 0.0d0)) go to 150
+      if (.not. (dabs(fc) .ge. dabs(fb))) then
+        a = b
+        b = c
+        c = a
+        fa = fb
+        fb = fc
+        fc = fa
+      end if
 
-    ! see if a bisection is forced
-    if ((dabs(e) .ge. tol1) .and. (dabs(fa) .gt. dabs(fb))) go to 50
-    d = xm
-    e = d
-    go to 110
-50  s = fb / fa
-    if (a .ne. c) go to 60
-    ! linear interpolation
-    p = 2.0d0 * xm * s
-    q = 1.0d0 - s
-    go to 70
+      tol1 = 2.0d0 * eps * dabs(b) + 0.5d0 * tol
+      xm = 0.5d0 * (c - b)
+      if ((dabs(xm) .le. tol1) .or. (fb .eq. 0.0d0)) then
+        z = b
+        return
+      end if
 
-    ! inverse quadratic interpolation
-60  q = fa / fc
-    r = fb / fc
-    p = s * (2.0d0 * xm * q * (q - r) - (b - a) * (r - 1.0d0))
-    q = (q - 1.0d0) * (r - 1.0d0) * (s - 1.0d0)
-70  if (p .le. 0.0d0) go to 80
-    q = -q
-    go to 90
-80  p = -p
-90  s = e
-    e = d
-    if (((2.0d0 * p) .ge. (3.0d0 * xm * q - dabs(tol1 * q))) .or. &
-        (p .ge. dabs(0.5d0 * s * q))) go to 100
-    d = p / q
-    go to 110
-100 d = xm
-    e = d
-110 a = b
-    fa = fb
-    if (dabs(d) .le. tol1) go to 120
-    b = b + d
-    go to 140
-120 if (xm .le. 0.0d0) go to 130
-    b = b + tol1
-    go to 140
-130 b = b - tol1
-140 fb = f(b)
-    if ((fb * (fc / dabs(fc))) .gt. 0.0d0) go to 20
-    go to 30
-150 zeroin = b
-    return
+      ! see if a bisection is forced
+      if ((dabs(e) .ge. tol1) .and. (dabs(fa) .gt. dabs(fb))) then
+        s = fb / fa
+        if (a .ne. c) then
+          ! inverse quadratic interpolation
+          q = fa / fc
+          r = fb / fc
+          p = s * (2.0d0 * xm * q * (q - r) - (b - a) * (r - 1.0d0))
+          q = (q - 1.0d0) * (r - 1.0d0) * (s - 1.0d0)
+        else
+          ! linear interpolation
+          p = 2.0d0 * xm * s
+          q = 1.0d0 - s
+        end if
+
+        if (p .le. 0.0d0) then
+          p = -p
+        else
+          q = -q
+        end if
+        s = e
+        e = d
+        if (((2.0d0 * p) .ge. (3.0d0 * xm * q - dabs(tol1 * q))) .or. &
+            (p .ge. dabs(0.5d0 * s * q))) then
+          d = xm
+          e = d
+        else
+          d = p / q
+        end if
+      else
+        d = xm
+        e = d
+      end if
+
+      a = b
+      fa = fb
+
+      if (dabs(d) .le. tol1) then
+        if (xm .le. 0.0d0) then
+          b = b - tol1
+        else
+          b = b + tol1
+        end if
+      else
+        b = b + d
+      end if
+
+      fb = f(b)
+      rs = (fb * (fc / dabs(fc))) .gt. 0.0d0
+    end do
   end function zeroin
 
   !> @brief Compute a zero of the function f(x) in the interval (x0, x1)
-  function zerotest(x0, x1, f, epsa)
+  function zerotest(x0, x1, f, epsa) result(z)
     implicit double precision(a - h, o - z)
+    ! -- local
+    real(DP) :: epsm
+    real(DP) :: ema, emb
+    real(DP) :: f0
+    real(DP) :: tol
+    real(DP) :: xa, xb, xl
+    real(DP) :: ya, yb, yl
     logical(LGP) :: retainedxa, retainedxb
 
     epsm = epsilon(x0)
     f0 = f(x0)
     if (f0 .eq. 0d0) then
-      zerotest = x0
+      z = x0
       return
     else if (f0 .lt. 0d0) then
       ya = x0
@@ -338,12 +377,12 @@ contains
       yl = (ya * xb * emb - yb * xa * ema) / (xb * emb - xa * ema)
       tol = 4d0 * epsm * dabs(yl) + epsa
       if (dabs(yb - ya) .le. tol) then
-        zerotest = yl
+        z = yl
         return
       else
         xl = f(yl)
         if (xl .eq. 0d0) then
-          zerotest = yl
+          z = yl
           return
         else if (xl .gt. 0d0) then
           if (retainedxa) then
