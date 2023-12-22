@@ -39,6 +39,7 @@ import flopy
 
 from framework import TestFramework
 
+
 # Monotonicity function
 def isMonotonic(A):
     x, y = [], []
@@ -56,7 +57,7 @@ def isMonotonic(A):
 scheme = "UPSTREAM"
 # scheme = "TVD"
 
-ex = [
+cases = [
     "drycell2-a",  # 2-cell model, horizontally connected with tops and bots aligned
     "drycell2-b",  # 2-cell model, vertically connected
     "drycell2-c",  # 2-cell model, horizontally connected with staggered alignment (reduced shared cell face area)
@@ -151,7 +152,7 @@ def build_models(idx, test):
 
     # Base MF6 GWF model type
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building MF6 model...()".format(name))
 
@@ -397,7 +398,7 @@ def check_output(idx, test):
     print("evaluating results...")
 
     # read transport results from GWE model
-    name = ex[idx]
+    name = cases[idx]
     gwename = "gwe-" + name
 
     # All indices are 0 based
@@ -468,7 +469,7 @@ def check_output(idx, test):
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
@@ -476,6 +477,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t)
+        check=lambda t: check_output(idx, t),
     )
     test.run()

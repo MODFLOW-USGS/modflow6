@@ -37,10 +37,7 @@ from framework import TestFramework
 # Base simulation and model name and workspace
 
 viscosity_on = [False]
-ex = ["dsp01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
+cases = ["dsp01"]
 
 # Model units
 
@@ -124,7 +121,7 @@ ctpspd = [[(0, 0, 0), c0]]
 def build_models(idx, test):
     # Base MF6 GWE model type
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building MF6 model...()".format(name))
 
@@ -358,7 +355,7 @@ def check_output(idx, test):
     print("evaluating results...")
 
     # read transport results from GWE model
-    name = ex[idx]
+    name = cases[idx]
     gwename = "gwe-" + name
 
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
@@ -483,7 +480,7 @@ def check_output(idx, test):
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

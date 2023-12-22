@@ -53,6 +53,7 @@ from framework import TestFramework
 
 # Base simulation and model name and workspace
 
+
 def my_ceil(a, precision=0):
     return np.round(a + 0.5 * 10 ** (-precision), precision)
 
@@ -76,10 +77,7 @@ def isMonotonic(A):
 scheme = "UPSTREAM"
 # scheme = "TVD"
 
-ex = ["drycl-cnduct"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
+cases = ["drycl-cnduct"]
 
 # Model units
 length_units = "meters"
@@ -192,7 +190,7 @@ ghbspd = {
 def build_models(idx, test):
     # Base MF6 GWF model type
     ws = test.workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building MF6 model...()".format(name))
 
@@ -537,7 +535,7 @@ def check_output(idx, test):
     print("evaluating results...")
 
     # read transport results from GWE model
-    name = ex[idx]
+    name = cases[idx]
     gwfname = "gwf-" + name
     gwtname = "gwt-" + name
     gwename = "gwe-" + name
@@ -618,10 +616,10 @@ def check_output(idx, test):
     assert np.all(
         np.diff(temp1[-1, :, 0, :-1]) < 0
     ), "Temperature change in the downstream direction should be negative"
-    assert isMonotonic(
-        np.diff(temp1[-1, :, 0, :-1])
-    ), "A monotonic increase in the amount of heat lost to neighboring dry " \
-       "cells is expected"
+    assert isMonotonic(np.diff(temp1[-1, :, 0, :-1])), (
+        "A monotonic increase in the amount of heat lost to neighboring dry "
+        "cells is expected"
+    )
 
     # Check temporal changes in temperature in the most upstream and downstream
     # dry cells. Cell bottoms in row 2 were calculated using a rounding function
@@ -631,32 +629,34 @@ def check_output(idx, test):
     # also conduction among its two dry neighbors (also with variable thickness
     colid = 0
     m_arr = np.diff(temp1[1:, 0, 1, colid])
-    assert isMonotonic(
-        m_arr
-    ), "Temperatures should be monotonically tapering-off in their " \
-       "relative temperature increase with time in the upstream-most" \
-       "dry cell"
+    assert isMonotonic(m_arr), (
+        "Temperatures should be monotonically tapering-off in their "
+        "relative temperature increase with time in the upstream-most"
+        "dry cell"
+    )
 
     colid = 11
     m_arr = np.diff(temp1[1:, 0, 1, colid])
-    assert isMonotonic(
-        m_arr
-    ), "Temperatures should be monotonically tapering-off in their " \
-       "relative temperature increase with time in the downstream-most" \
-       "dry cell"
+    assert isMonotonic(m_arr), (
+        "Temperatures should be monotonically tapering-off in their "
+        "relative temperature increase with time in the downstream-most"
+        "dry cell"
+    )
 
     # Run a few checks between GWE and its GWT counterpart
     # In GWT there is no solute interaction with a dry cell, so concentrations
     # in the dry cell should remain inactive (i.e., no "molecular diffusion")
     # and greater than their GWE counterpart temperatures since there is
     # no "retardation" of concentration (temperature) owing to conduction
-    assert np.all(conc1[:, :, 1, :] < 0), "The dry cells should never have a non-inactive concentration value"
+    assert np.all(
+        conc1[:, :, 1, :] < 0
+    ), "The dry cells should never have a non-inactive concentration value"
 
 
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
