@@ -153,7 +153,6 @@ def parse_mf6var_file(fname):
     vd = {}
 
     for line in lines:
-
         # skip blank lines
         if len(line.strip()) == 0:
             if len(vd) > 0:
@@ -682,7 +681,6 @@ def write_appendix(texdir, allblocks):
 
 
 if __name__ == "__main__":
-
     file_order = [
         "sim-nam",  # dfn completed  tex updated
         "sim-tdis",  # dfn completed  tex updated
