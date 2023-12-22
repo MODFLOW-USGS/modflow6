@@ -1,46 +1,47 @@
-# ## Test problem for GWE
-#
-# Test conduction from a partially saturated group of cells into their dry
-# neighbors.  Referring to this test as a flowing trough problem.
-#
-#
-#  Profile (side) view w/ approximate water table profile shown
-#     +-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
-#     |-------|_______|_______|       |       |       |       |       |       |       |       |       |
-#     |       |       |       |-------|_______|       |       |       |       |       |       |       |
-#     |       |       |       |       |       |-------|_______|       |       |       |       |       |
-#     |       |       |       |       |       |       |       |-------|       |       |       |       |
-#     |       |       |       |       |       |       |       |       |-------|       |       |       |
-#     |       |       |       |       |       |       |       |       |       |-------|       |       |
-#     |       |       |       |       |       |       |       |       |       |       |-------|       |
-#     |       |       |       |       |       |       |       |       |       |       |       |-------|
-#     |       |       |       |       |       |       |       |       |       |       |       |       |
-#     |       |       |       |       |       |       |       |       |       |       |       |       |
-#     |       |       |       |       |       |       |       |       |       |       |       |       |
-#     |       |       |       |       |       |       |       |       |       |       |       |       |
-#     +-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
-#
-#         ^
-#         |
-#         v
-#
-#  Profile view (all rows)
-#     +-------+-------+
-#     |       |       |
-#     |       |       | <- dry cell that's checked for warming owing to increasing
-#     |  v    +-------+                          temperature of neighboring cell
-#     |-------| <- water table
-#     |       |
-#     |       |
-#     |       |
-#     |       |
-#     |       |
-#     |       |
-#     |       |
-#     |       |
-#     +-------+
-#
-#
+"""
+Test problem for GWE
+
+Test conduction from a partially saturated group of cells into their dry
+neighbors.  Referring to this test as a flowing trough problem.
+
+
+  Profile view of columns w/ approximate water table profile shown
+     +-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+     |-------|_______|_______|       |       |       |       |       |       |       |       |       |
+     |       |       |       |-------|_______|       |       |       |       |       |       |       |
+     |       |       |       |       |       |-------|_______|       |       |       |       |       |
+     |       |       |       |       |       |       |       |-------|       |       |       |       |
+     |       |       |       |       |       |       |       |       |-------|       |       |       |
+     |       |       |       |       |       |       |       |       |       |-------|       |       |
+     |       |       |       |       |       |       |       |       |       |       |-------|       |
+     |       |       |       |       |       |       |       |       |       |       |       |-------|
+     |       |       |       |       |       |       |       |       |       |       |       |       |
+     |       |       |       |       |       |       |       |       |       |       |       |       |
+     |       |       |       |       |       |       |       |       |       |       |       |       |
+     |       |       |       |       |       |       |       |       |       |       |       |       |
+     +-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
+
+         ^
+         |
+         v
+
+  Profile view of rows
+     +-------+-------+
+     |       |       |
+     |       |       | <- dry cell that's checked for warming owing to increasing
+     |  v    +-------+                          temperature of neighboring cell
+     |-------| <- water table
+     |       |
+     |       |
+     |       |
+     |       |
+     |       |
+     |       |
+     |       |
+     |       |
+     +-------+
+"""
+
 # Imports
 
 import os

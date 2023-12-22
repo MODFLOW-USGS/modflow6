@@ -1,22 +1,24 @@
-# ## Test problem for GWE
-#
-# Test the energy "flowing" through a dry cell. The test checks for
-# some of the flow-through energy being left behind and warming the
-# cell it passes through.  Based on the model appearing in the
-# MT3D-USGS documention, pages 13-14.  Dry cell is in layer 1, row 1
-# column 4.
-#
-#     +-------+-------+-------+-------+-------+-------+
-#  -> |   ->  |       |       | DRY   |       |       |
-#     |       |  ->   |       |   CELL|       |       |
-#     |       |       |  ->  -+-> |   |       |       |
-#     +-------+-------+-------+---+---+-------+-------+
-#     |       |       |       |   v   |       |       |
-#  -> |   ->  |  ->   |  ->   |  ->   |  ->   |  ->   | ->
-#     |       |       |       |       |       |       |
-#     +-------+-------+-------+-------+-------+-------+
-#
-#              --->  Direction of flow  --->
+"""
+Test problem for GWE
+
+Test the energy "flowing" through a dry cell. The test checks for
+some of the flow-through energy being left behind and warming the
+cell it passes through.  Based on the model appearing in the
+MT3D-USGS documention, pages 13-14.  Dry cell is in layer 1, row 1
+column 4.
+
+     +-------+-------+-------+-------+-------+-------+
+  -> |   ->  |       |       | DRY   |       |       |
+     |       |  ->   |       |   CELL|       |       |
+     |       |       |  ->  -+-> |   |       |       |
+     +-------+-------+-------+---+---+-------+-------+
+     |       |       |       |   v   |       |       |
+  -> |   ->  |  ->   |  ->   |  ->   |  ->   |  ->   | ->
+     |       |       |       |       |       |       |
+     +-------+-------+-------+-------+-------+-------+
+
+              --->  Direction of flow  --->
+"""
 
 # Imports
 

@@ -1,13 +1,15 @@
-# ## Test problem for GWE
-#
-# One-Dimensional Transport in a Uniform Flow Field.
-# The purpose of this script is to test the new heat transport model developed
-# for MODFLOW 6.  To that end, this problem uses the setup of the first MT3DMS
-# test problem but adapts it for heat. MODFLOW 6 is setup using the new GWE
-# model with input parameters entered in their native units.
-#
-# It may be possible to find a 1D heat transport analytical solution in the
-# future.
+"""
+Test problem for GWE
+
+One-Dimensional Transport in a Uniform Flow Field.
+The purpose of this script is to test the new heat transport model developed
+for MODFLOW 6.  To that end, this problem uses the setup of the first MT3DMS
+test problem but adapts it for heat. MODFLOW 6 is setup using the new GWE
+model with input parameters entered in their native units.
+
+It may be possible to find a 1D heat transport analytical solution in the
+future.
+"""
 
 # Imports
 

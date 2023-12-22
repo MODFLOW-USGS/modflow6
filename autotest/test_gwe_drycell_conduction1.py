@@ -1,35 +1,37 @@
-# ## Test problem for GWE
-#
-# Test the energy "flowing" between two dry cells via conduction
-# only using a temperature gradient
-#
-#   ~: Represents conduction
-#
-# A) 1st model configuration
-#
-#       +---------+---------+
-#       |         |~        |
-#       |         |~        |
-#       +---------+---------+
-#
-# B) 2nd model configuration
-#
-#       +---------+
-#       |         |
-#       |  ~   ~  |
-#       +---------+
-#       |         |
-#       |         |
-#       +---------+
-#
-# C) 3rd model configuration
-#
-#                 +---------+
-#       +---------+         |
-#       |         |~        |
-#       |         +---------+
-#       +---------+
-#
+"""
+Test problem for GWE
+
+Test the energy "flowing" between two dry cells via conduction
+only using a temperature gradient
+
+   ~: Represents conduction
+
+ A) 1st model configuration
+
+       +---------+---------+
+       |         |~        |
+       |         |~        |
+       +---------+---------+
+
+ B) 2nd model configuration
+
+       +---------+
+       |         |
+       |  ~   ~  |
+       +---------+
+       |         |
+       |         |
+       +---------+
+
+ C) 3rd model configuration
+
+                 +---------+
+       +---------+         |
+       |         |~        |
+       |         +---------+
+       +---------+
+"""
+
 # Imports
 
 import os
