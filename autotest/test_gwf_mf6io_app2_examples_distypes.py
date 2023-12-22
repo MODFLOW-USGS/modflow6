@@ -551,7 +551,7 @@ def check_output(idx, test):
     fpth0 = ws / f"{sim_name}.{extension}"
     # fpth1 = ws / f"mf6/{get_dis_name(name)}.{extension}"
     fpth1 = ws / f"mf6/{sim_name}.{extension}"
-    test._compare_budget_files(0, extension, fpth0, fpth1)
+    test._compare_budget_files(extension, fpth0, fpth1)
 
 
 @pytest.mark.parametrize(
