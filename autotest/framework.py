@@ -3,6 +3,7 @@ import shutil
 import time
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
+from traceback import format_exc
 from typing import Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from warnings import warn
 
@@ -246,8 +247,6 @@ class TestFramework:
         Number of CPUs for mf6 parallel testing.
     htol : float, optional
         Tolerance for result comparisons.
-    pdtol : float, optional
-        Percent difference tolerance for result comparisons.
     rclose : float, optional
         Residual tolerance for convergence
     verbose: bool, optional
@@ -277,7 +276,6 @@ class TestFramework:
         parallel=False,
         ncpus=1,
         htol=None,
-        pdtol=None,
         rclose=None,
         verbose=False,
         xfail=False,
@@ -309,7 +307,6 @@ class TestFramework:
         self.outp = None
         self.coutp = None
         self.htol = 0.001 if htol is None else htol
-        self.pdtol = 0.001 if pdtol is None else pdtol
         self.rclose = 0.001 if rclose is None else rclose
         self.verbose = verbose
         self.xfail = xfail
@@ -629,11 +626,11 @@ class TestFramework:
                         success, _ = run_parallel(
                             workspace, target, self.ncpus
                         )
-                    except Exception as exc:
+                    except Exception:
                         warn(
                             "MODFLOW 6 parallel test",
                             self.name,
-                            f"failed with error:\n{exc}",
+                            f"failed with error:\n{format_exc()}",
                         )
                         success = False
                 else:
@@ -644,11 +641,11 @@ class TestFramework:
                             self.workspace / "mfsim.nam",
                             model_ws=workspace,
                         )
-                    except Exception as exc:
+                    except Exception:
                         warn(
                             "MODFLOW 6 serial test",
                             self.name,
-                            f"failed with error:\n{exc}",
+                            f"failed with error:\n{format_exc()}",
                         )
                         success = False
             else:
@@ -657,8 +654,8 @@ class TestFramework:
                     success, _ = flopy.run_model(
                         target, self.cmp_namefile, workspace
                     )
-                except Exception as exc:
-                    warn(f"{target} model failed:\n{exc}")
+                except Exception:
+                    warn(f"{target} model failed:\n{format_exc()}")
                     success = False
 
             if xfail:
@@ -674,9 +671,11 @@ class TestFramework:
                     "MODFLOW 6 listing file ended with: \n"
                     + get_mfsim_lst_tail(lst_file_path)
                 )
-        except Exception as exc:
+        except Exception:
             success = False
-            warn(f"Unhandled error in comparison model {self.name}:\n{exc}")
+            warn(
+                f"Unhandled error in comparison model {self.name}:\n{format_exc()}"
+            )
 
         return success
 
@@ -758,14 +757,8 @@ class TestFramework:
 
         # setup and run comparison model(s), if enabled
         if self.compare:
-            # adjust htol if < IMS outer_dvclose
-            dvclose = get_dvclose(self.workspace)
-            if dvclose is not None:
-                dvclose *= 5.0
-                if self.htol < dvclose:
-                    self.htol = dvclose
-
-            # adjust rclose for budget comparisons
+            # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
+            self.htol = adjust_htol(self.workspace, self.htol)
             self.rclose = get_rclose(self.workspace)
 
             # try to autodetect comparison type if enabled
