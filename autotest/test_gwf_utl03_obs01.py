@@ -153,12 +153,12 @@ def build_model(idx, dir, exe):
     return sim, mc
 
 
-def build_models(dir, exe):
-    for idx, name in enumerate(cases):
-        sim, mc = build_model(idx, dir, exe)
-        sim.write_simulation()
-        mc.write_simulation()
-        hack_binary_obs(idx, dir)
+def build_models(idx, test, exe):
+    sim, mc = build_model(idx, test.workspace, exe)
+    sim.write_simulation()
+    mc.write_simulation()
+    hack_binary_obs(idx, test.workspace)
+    return sim, mc
 
 
 def hack_binary_obs(idx, dir):
@@ -218,11 +218,12 @@ def check_output(idx, test):
     list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    build_models(function_tmpdir, targets.mf6)
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t, targets.mf6),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        overwrite=False,
     )
     test.run()

@@ -2,7 +2,15 @@ import pytest
 
 from framework import TestFramework
 
-excluded_models = ["alt_model", "test205_gwtbuy-henrytidal"]
+excluded_models = [
+    "alt_model",
+    "test205_gwtbuy-henrytidal",
+    # todo reinstate when flopy fixed: https://github.com/modflowpy/flopy/issues/2053
+    "test001a_Tharmonic_tabs",
+    "test004_bcfss",
+    "test014_NWTP3Low_dev",
+    "test041_flowdivert_nwt_dev",
+]
 
 
 @pytest.mark.repo

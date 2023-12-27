@@ -11,6 +11,7 @@ COMPARE_PROGRAMS = (
     "mflgr",
     "libmf6",
     "mf6",
+    "mf6_regression"
     # todo: "mp7"
 )
 IGNORE_EXTENSIONS = (
@@ -306,7 +307,7 @@ def get_mf6_comparison(src):
     Determine the comparison type for a MODFLOW 6 simulation
     based on files present in the simulation workspace. Some
     files take precedence over others according to the order
-    specified in `COMPARE_PATTERNS`.
+    specified in `COMPARE_PROGRAMS`.
 
     Parameters
     ----------
@@ -319,9 +320,7 @@ def get_mf6_comparison(src):
         comparison type
 
     """
-    # Possible comparison - the order matters
 
-    # Construct src pth from namefile
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
         for pattern in COMPARE_PROGRAMS:
