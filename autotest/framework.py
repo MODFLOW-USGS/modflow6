@@ -656,10 +656,11 @@ class TestFramework:
             print(f"Running {target} in {workspace}")
 
         # needed in _compare_heads()... todo: inject explicitly?
+        nf = next(iter(get_namefiles(workspace)), None)
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(get_namefiles(workspace)[0])
+            else os.path.basename(nf) if nf else None
         )
 
         # run the model
