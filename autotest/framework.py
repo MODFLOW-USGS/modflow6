@@ -10,12 +10,20 @@ from warnings import warn
 import flopy
 import numpy as np
 from flopy.utils.compare import compare_heads
+from flopy.mf6 import MFSimulation
+from flopy.mbase import BaseModel
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
-from common_regression import (get_mf6_comparison, get_mf6_files,
-                               get_namefiles, get_regression_files, setup_mf6,
-                               setup_mf6_comparison)
+from common_regression import (
+    COMPARE_PROGRAMS,
+    get_mf6_comparison,
+    get_mf6_files,
+    get_namefiles,
+    get_regression_files,
+    setup_mf6,
+    setup_mf6_comparison,
+)
 
 DNODATA = 3.0e30
 EXTTEXT = {
@@ -134,6 +142,15 @@ def get_mfsim_lst_tail(path: os.PathLike, lines=100) -> str:
     return msg
 
 
+def get_workspace(sim_or_model) -> Path:
+    if isinstance(sim_or_model, MFSimulation):
+        return sim_or_model.sim_path
+    elif isinstance(sim_or_model, BaseModel):
+        return Path(sim_or_model.model_ws)
+    else:
+        raise ValueError(f"Unsupported model type: {type(sim_or_model)}")
+
+
 def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
     if not is_in_ci() and get_ostag() in ["mac"]:
         oversubscribed = ["--hostfile", "localhost"]
@@ -174,7 +191,7 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
     return success, buff
 
 
-def write_input(*sims, verbose=True):
+def write_input(*sims, overwrite: bool = True, verbose: bool = True):
     """
     Write input files for `flopy.mf6.MFSimulation` or `flopy.mbase.BaseModel`.
 
@@ -197,12 +214,20 @@ def write_input(*sims, verbose=True):
             continue
 
         if isinstance(sim, flopy.mf6.MFSimulation):
+            workspace = Path(sim.sim_path)
+            if any(workspace.glob("*")) and not overwrite:
+                warn(f"Workspace is not empty, not writing input files")
+                return
             if verbose:
                 print(
                     f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}"
                 )
             sim.write_simulation()
         elif isinstance(sim, flopy.mbase.BaseModel):
+            workspace = Path(sim.model_ws)
+            if any(workspace.glob("*")) and not overwrite:
+                warn(f"Workspace is not empty, not writing input files")
+                return
             if verbose:
                 print(
                     f"Writing {type(sim)} model '{sim.name}' to: {sim.model_ws}"
@@ -235,9 +260,8 @@ class TestFramework:
     build : function, optional
         User defined function returning one or more simulations/models.
         Takes `self` as input. This is the place to build simulations.
-        The first simulation is taken to be the reference, any further
-        simulations/models are for comparison. If no build function is
-        provided, input files must be written before calling `run()`.
+        If no build function is provided, input files must be written
+        to the test `workspace` prior to calling `run()`.
     check : function, optional
         User defined function to evaluate results of the simulation.
         Takes `self` as input. This is a good place for assertions.
@@ -257,8 +281,12 @@ class TestFramework:
         User defined function invoking the MODFLOW API, accepting
         the MF6 library path and the test workspace as parameters
     compare: str, optional
-        String selecting the comparison type to perform: 'auto',
-        'mf6_regression', or 'run_only'
+        String selecting the comparison executable. Must be a key
+        into the `targets` dictionary, i.e. the name of a program
+        to use for the comparison model. Acceptable values: auto,
+        mf6, mf6_regression, libmf6, mf2005, mfnwt, mflgr, mfnwt.
+        If 'auto', the program to use is determined automatically
+        by contents of the comparison model/simulation workspace.
     """
 
     # tell pytest this class doesn't contain tests, don't collect it
@@ -277,6 +305,7 @@ class TestFramework:
         ncpus=1,
         htol=None,
         rclose=None,
+        overwrite=True,
         verbose=False,
         xfail=False,
     ):
@@ -308,6 +337,7 @@ class TestFramework:
         self.coutp = None
         self.htol = 0.001 if htol is None else htol
         self.rclose = 0.001 if rclose is None else rclose
+        self.overwrite = overwrite
         self.verbose = verbose
         self.xfail = xfail
 
@@ -561,6 +591,18 @@ class TestFramework:
         fcmp.close()
         return success
 
+    def _try_resolve(
+        self,
+        target: Union[str, os.PathLike],
+        default: Optional[Union[str, os.PathLike]] = None,
+    ) -> Optional[Path]:
+        if not target:
+            return None
+        tgt = shutil.which(target)
+        if tgt:
+            return Path(tgt)
+        return self.targets.as_dict().get(target, default)
+
     # public
 
     def setup(self, src, dst):
@@ -585,38 +627,48 @@ class TestFramework:
             self.compare = get_mf6_comparison(src)
             setup_mf6_comparison(src, dst, self.compare, overwrite=True)
 
-    def run_sim_or_model(self, workspace, target="mf6", xfail=False) -> bool:
+    def run_sim_or_model(
+        self,
+        workspace: Union[str, os.PathLike],
+        target: Union[str, os.PathLike] = "mf6",
+        xfail: bool = False,
+    ) -> bool:
         """
         Run a simulation or model with FloPy.
 
         workspace : str or path-like
             The simulation or model workspace
         exe : str or path-like
-            The executable to use
+            The target executable to use
+        xfail : bool
+            Whether to expect failure
         """
 
-        target = str(target)
-        if not (target in self.targets.as_dict() or shutil.which(target)):
-            raise ValueError(f"Target executable not found: {target}")
+        # make sure workspace exists
+        workspace = Path(workspace).expanduser().absolute()
+        assert workspace.is_dir(), f"Workspace not found: {workspace}"
+
+        # make sure executable exists
+        target = self._try_resolve(target)
+        assert target, f"Target executable not found: {target}"
+
+        if self.verbose:
+            print(f"Running {target} in {workspace}")
 
         # needed in _compare_heads()... todo: inject explicitly?
         self.cmp_namefile = (
             None
-            if "mf6" in target
-            or "libmf6" in target
-            or "mf6_regression" in target
+            if "mf6" in target.name or "libmf6" in target.name
             else os.path.basename(get_namefiles(workspace)[0])
         )
-        if self.verbose:
-            print(f"Running {target} in {workspace}")
 
         # run the model
         try:
             # via MODFLOW API
-            if "libmf6" in target and self.api_func:
+            if "libmf6" in target.name and self.api_func:
                 success, _ = self.api_func(target, workspace)
             # via MF6 executable
-            elif "mf6" in target:
+            elif "mf6" in target.name:
                 # parallel test if configured
                 if self.parallel:
                     print(
@@ -666,7 +718,11 @@ class TestFramework:
                     success = True
 
             lst_file_path = Path(workspace) / "mfsim.lst"
-            if "mf6" in target and not success and lst_file_path.is_file():
+            if (
+                "mf6" in target.name
+                and not success
+                and lst_file_path.is_file()
+            ):
                 warn(
                     "MODFLOW 6 listing file ended with: \n"
                     + get_mfsim_lst_tail(lst_file_path)
@@ -679,22 +735,20 @@ class TestFramework:
 
         return success
 
-    def compare_output(self, compare="auto"):
+    def compare_output(self, compare):
         """
-        Compare the main model's output with a reference or regression model's output.
+        Compare the main simulation's output with that of another simulation or model.
 
-        comparison : str
-            The comparison type: "auto", "mf6", "mf6_regression", etc
+        compare : str
+            The comparison executable name: mf6, mf6_regression, libmf6, mf2005,
+            mfnwt, mflgr, or mfusg.
         """
 
-        if compare is None:
-            raise ValueError(f"Comparison type not specified")
-        elif compare == "run_only":
-            raise ValueError(
-                f"Comparison type 'run_only' specified, skipping comparison"
-            )
+        if compare not in COMPARE_PROGRAMS:
+            raise ValueError(f"Unsupported comparison program: {compare}")
 
-        print("Comparison test", self.name)
+        if self.verbose:
+            print("Comparison test", self.name)
 
         hds_ext = (
             "hds",
@@ -731,26 +785,25 @@ class TestFramework:
 
         """
 
-        # build models/simulations, store keyed by
-        # workspace path, and write input files
+        # if build fn provided, build models/simulations and write input files
         if self.build:
             sims = self.build(self)
             sims = sims if isinstance(sims, Iterable) else [sims]
             sims = [sim for sim in sims if sim]  # filter Nones
-            self.sims = {
-                (
-                    sim.sim_path
-                    if isinstance(sim, flopy.mf6.MFSimulation)
-                    else sim.model_ws
-                ): sim
-                for sim in sims
-            }
-            write_input(*sims, verbose=self.verbose)
+            self.sims = sims
+            write_input(*sims, overwrite=self.overwrite, verbose=self.verbose)
+        else:
+            self.sims = [MFSimulation.load(sim_ws=self.workspace)]
 
-        # run main model(s) and get expected output files
-        assert self.run_sim_or_model(
-            self.workspace, self.targets.mf6, self.xfail
-        ), f"MODFLOW 6 simulation failed: {self.workspace}"
+        # run models/simulations
+        for sim_or_model in self.sims:
+            workspace = get_workspace(sim_or_model)
+            target = self._try_resolve(sim_or_model.exe_name, self.targets.mf6)
+            assert self.run_sim_or_model(
+                workspace, target, self.xfail
+            ), f"{'Simulation' if 'mf6' in str(target) else 'Model'} failed: {workspace}"
+
+        # get expected output files from main simulation
         _, self.outp = get_mf6_files(
             self.workspace / "mfsim.nam", self.verbose
         )
@@ -770,7 +823,7 @@ class TestFramework:
                 if self.verbose:
                     print(f"Using comparison type: {self.compare}")
 
-                # copy reference model files if mf6 regression
+                # copy simulation files to comparison workspace if mf6 regression
                 if self.compare == "mf6_regression":
                     cmp_path = self.workspace / self.compare
                     if os.path.isdir(cmp_path):
@@ -779,44 +832,27 @@ class TestFramework:
                         shutil.rmtree(cmp_path)
                     if self.verbose:
                         print(
-                            f"Copying reference model files from {self.workspace} to {cmp_path}"
+                            f"Copying simulation files from {self.workspace} to {cmp_path}"
                         )
                     shutil.copytree(self.workspace, cmp_path)
 
-                # run comparison model(s) with the comparison executable, key can be
-                #   - mf6
-                #   - mf6_regression
-                #   - libmf6
-                #   - mf2005
-                #   - mfnwt
-                #   - mfusg
-                #   - mflgr
-
-                # todo: don't hardcode workspace & assume agreement with test case
-                # simulation workspace, store & access workspaces directly
-                run_only = (
-                    self.compare == "run_only"
-                )  # just run, don't compare results
-                workspace = (
-                    self.workspace / "mf6"
-                    if run_only
-                    else self.workspace / self.compare
-                )
-                assert self.run_sim_or_model(
-                    workspace,
-                    self.targets.get(self.compare, self.targets.mf6),
-                ), f"Comparison model failed: {workspace}"
+                # run comparison simulation if libmf6 or mf6 regression
+                if self.compare in ["mf6_regression", "libmf6"]:
+                    # todo: don't hardcode workspace or assume agreement with test case
+                    # simulation workspace, set & access simulation workspaces directly
+                    workspace = self.workspace / self.compare
+                    assert self.run_sim_or_model(
+                        workspace,
+                        self.targets.get(self.compare, self.targets.mf6),
+                    ), f"Comparison model failed: {workspace}"
 
                 # compare model results, if enabled
-                if not run_only:
-                    if self.verbose:
-                        print("Comparing model outputs")
-                    self.compare_output(self.compare)
-            else:
-                warn("Could not detect comparison type, aborting comparison")
+                if self.verbose:
+                    print("Comparing outputs")
+                self.compare_output(self.compare)
 
         # check results, if enabled
         if self.check:
             if self.verbose:
-                print("Checking model outputs against expectation")
+                print("Checking outputs")
             self.check(self)

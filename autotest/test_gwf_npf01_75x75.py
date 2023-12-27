@@ -13,7 +13,7 @@ ss = [0.0, 1.0e-4]
 sy = [0.1, 0.0]
 
 
-def build_models(idx, test):
+def build_models(idx, test, targets):
     nlay, nrow, ncol = 1, 75, 75
     nper = 3
     perlen = [1.0, 1000.0, 1.0]
@@ -149,7 +149,7 @@ def build_models(idx, test):
 
     # build MODFLOW-2005 files
     ws = os.path.join(test.workspace, "mf2005")
-    mc = flopy.modflow.Modflow(name, model_ws=ws)
+    mc = flopy.modflow.Modflow(name, model_ws=ws, exe_name=targets.mf2005)
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
@@ -199,6 +199,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, targets),
     )
     test.run()

@@ -96,7 +96,7 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_models(idx, test):
+def build_models(idx, test, targets):
     name = cases[idx]
 
     # build MODFLOW 6 files
@@ -202,7 +202,9 @@ def build_models(idx, test):
     # build MODFLOW-NWT files
     cpth = cmppth
     ws = os.path.join(test.workspace, cpth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
+    mc = flopy.modflow.Modflow(
+        name, model_ws=ws, version=cpth, exe_name=targets.mfnwt
+    )
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
@@ -343,7 +345,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, targets),
         check=lambda t: check_output(idx, t),
         targets=targets,
         htol=htol[idx],
