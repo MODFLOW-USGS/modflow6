@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from traceback import format_exc
@@ -313,13 +314,7 @@ class TestFramework:
         workspace = Path(workspace).expanduser().absolute()
         assert workspace.is_dir(), f"{workspace} is not a valid directory"
         if verbose:
-            from pprint import pprint
-
             print("Initializing test", name, "in workspace", workspace)
-            contents = list(workspace.glob("*"))
-            if any(contents):
-                print(f"Workspace is not empty:")
-                pprint(contents)
 
         self.name = name
         self.workspace = workspace
@@ -339,7 +334,7 @@ class TestFramework:
         self.rclose = 0.001 if rclose is None else rclose
         self.overwrite = overwrite
         self.verbose = verbose
-        self.xfail = xfail
+        self.xfail = [xfail] if isinstance(xfail, bool) else xfail
 
     def __repr__(self):
         return self.name
@@ -632,7 +627,7 @@ class TestFramework:
         workspace: Union[str, os.PathLike],
         target: Union[str, os.PathLike] = "mf6",
         xfail: bool = False,
-    ) -> bool:
+    ) -> Tuple[bool, List[str]]:
         """
         Run a simulation or model with FloPy.
 
@@ -660,14 +655,16 @@ class TestFramework:
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(nf) if nf else None
+            else os.path.basename(nf)
+            if nf
+            else None
         )
 
         # run the model
         try:
             # via MODFLOW API
             if "libmf6" in target.name and self.api_func:
-                success, _ = self.api_func(target, workspace)
+                success, buff = self.api_func(target, workspace)
             # via MF6 executable
             elif "mf6" in target.name:
                 # parallel test if configured
@@ -676,7 +673,7 @@ class TestFramework:
                         f"Parallel test {self.name} on {self.ncpus} processes"
                     )
                     try:
-                        success, _ = run_parallel(
+                        success, buff = run_parallel(
                             workspace, target, self.ncpus
                         )
                     except Exception:
@@ -689,10 +686,11 @@ class TestFramework:
                 else:
                     # otherwise serial run
                     try:
-                        success, _ = flopy.run_model(
+                        success, buff = flopy.run_model(
                             target,
                             self.workspace / "mfsim.nam",
                             model_ws=workspace,
+                            report=True,
                         )
                     except Exception:
                         warn(
@@ -704,8 +702,8 @@ class TestFramework:
             else:
                 # non-MF6 model
                 try:
-                    success, _ = flopy.run_model(
-                        target, self.cmp_namefile, workspace
+                    success, buff = flopy.run_model(
+                        target, self.cmp_namefile, workspace, report=True
                     )
                 except Exception:
                     warn(f"{target} model failed:\n{format_exc()}")
@@ -734,7 +732,7 @@ class TestFramework:
                 f"Unhandled error in comparison model {self.name}:\n{format_exc()}"
             )
 
-        return success
+        return success, buff
 
     def compare_output(self, compare):
         """
@@ -792,17 +790,33 @@ class TestFramework:
             sims = sims if isinstance(sims, Iterable) else [sims]
             sims = [sim for sim in sims if sim]  # filter Nones
             self.sims = sims
+            nsims = len(sims)
+            self.buffs = list(repeat(None, nsims))
+            assert len(self.xfail) in [
+                1,
+                nsims,
+            ], f"Invalid xfail: expected a single boolean or one for each model"
+            if len(self.xfail) == 1 and nsims:
+                self.xfail = list(repeat(self.xfail[0], nsims))
             write_input(*sims, overwrite=self.overwrite, verbose=self.verbose)
         else:
             self.sims = [MFSimulation.load(sim_ws=self.workspace)]
+            self.buffs = [None]
+            assert (
+                len(self.xfail) == 1
+            ), f"Invalid xfail: expected a single boolean or one for each model"
 
         # run models/simulations
-        for sim_or_model in self.sims:
+        for i, sim_or_model in enumerate(self.sims):
             workspace = get_workspace(sim_or_model)
             target = self._try_resolve(sim_or_model.exe_name, self.targets.mf6)
-            assert self.run_sim_or_model(
-                workspace, target, self.xfail
-            ), f"{'Simulation' if 'mf6' in str(target) else 'Model'} failed: {workspace}"
+            xfail = self.xfail[i]
+            success, buff = self.run_sim_or_model(workspace, target, xfail)
+            self.buffs[i] = buff  # store model output for assertions later
+            assert success, (
+                f"{'Simulation' if 'mf6' in str(target) else 'Model'} "
+                f"{'should have failed' if xfail else 'failed'}: {workspace}"
+            )
 
         # get expected output files from main simulation
         _, self.outp = get_mf6_files(
@@ -842,10 +856,11 @@ class TestFramework:
                     # todo: don't hardcode workspace or assume agreement with test case
                     # simulation workspace, set & access simulation workspaces directly
                     workspace = self.workspace / self.compare
-                    assert self.run_sim_or_model(
+                    success, _ = self.run_sim_or_model(
                         workspace,
                         self.targets.get(self.compare, self.targets.mf6),
-                    ), f"Comparison model failed: {workspace}"
+                    )
+                    assert success, f"Comparison model failed: {workspace}"
 
                 # compare model results, if enabled
                 if self.verbose:
