@@ -182,10 +182,7 @@ def check_output(idx, test):
     assert 2.0 * sp_x[0][8] < sp_x[1][8], errmsg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

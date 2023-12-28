@@ -4,6 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
+from conftest import try_get_target
 
 from framework import TestFramework
 
@@ -252,7 +253,8 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_models(idx, test, gridgen):
+def build_models(idx, test):
+    gridgen = try_get_target(test.targets, "gridgen")
     return build_mf6(idx, test.workspace, gridgen), build_mf6(
         idx, test.workspace / "mf6", gridgen
     )
@@ -554,16 +556,13 @@ def check_output(idx, test):
     test._compare_budget_files(extension, fpth0, fpth1)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t, targets.gridgen),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         verbose=False,
     )

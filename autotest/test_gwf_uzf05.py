@@ -235,10 +235,7 @@ def check_output(idx, test):
     assert np.isclose(q, -4.0), "Flow from UZF to node 1 should be -4."
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

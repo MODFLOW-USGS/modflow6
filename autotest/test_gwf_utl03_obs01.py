@@ -48,13 +48,11 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 0.01, 1.0
 
 
-def build_mf6(idx, ws, exe, binaryobs=True):
+def build_mf6(idx, ws, binaryobs=True):
     name = cases[idx]
 
     # build MODFLOW 6 files
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=name, version="mf6", sim_ws=ws)
     # create tdis package
     flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
@@ -137,14 +135,14 @@ def build_mf6(idx, ws, exe, binaryobs=True):
     return sim
 
 
-def build_model(idx, dir, exe):
+def build_model(idx, dir):
     ws = dir
     # build mf6 with ascii observation output
-    sim = build_mf6(idx, ws, exe=exe, binaryobs=False)
+    sim = build_mf6(idx, ws, binaryobs=False)
 
     # build mf6 with binary observation output
     wsc = os.path.join(ws, "mf6")
-    mc = build_mf6(idx, wsc, exe=exe, binaryobs=True)
+    mc = build_mf6(idx, wsc, binaryobs=True)
 
     sim.write_simulation()
     mc.write_simulation()
@@ -153,8 +151,8 @@ def build_model(idx, dir, exe):
     return sim, mc
 
 
-def build_models(idx, test, exe):
-    sim, mc = build_model(idx, test.workspace, exe)
+def build_models(idx, test):
+    sim, mc = build_model(idx, test.workspace)
     sim.write_simulation()
     mc.write_simulation()
     hack_binary_obs(idx, test.workspace)
@@ -213,15 +211,12 @@ def check_output(idx, test):
             assert np.allclose(d0[name], d1[name], rtol=1e-5), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t, targets.mf6),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         targets=targets,
         overwrite=False,

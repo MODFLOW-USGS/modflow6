@@ -247,7 +247,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test, zb6):
+def check_output(idx, test):
     ws = Path(test.workspace)
 
     # build zonebudget files
@@ -273,7 +273,7 @@ def check_output(idx, test, zb6):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        zb6,
+        test.targets.zbud6,
         "zonebudget.nam",
         model_ws=ws,
         silent=False,
@@ -415,14 +415,14 @@ def check_output(idx, test, zb6):
         print("    " + msg)
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t, targets.zbud6),
+        check=lambda t: check_output(idx, t),
         htol=htol,
     )
     test.run()

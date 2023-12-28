@@ -362,10 +362,7 @@ def check_output(idx, test):
 
 
 # - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

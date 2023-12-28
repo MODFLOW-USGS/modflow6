@@ -218,7 +218,8 @@ def build_well_data(modelgrid):
     return {1: well_spd}
 
 
-def build_models(idx, test, gridgen):
+def build_models(idx, test):
+    gridgen = try_get_target(test.targets, "gridgen")
     return build_mf6(idx, test.workspace, gridgen), None
 
 
@@ -422,18 +423,13 @@ def check_output(idx, test):
         )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    gridgen = try_get_target(targets, "gridgen")
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t, gridgen),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         targets=targets,
-        verbose=False,
     )
     test.run()

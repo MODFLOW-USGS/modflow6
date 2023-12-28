@@ -280,7 +280,7 @@ def eval_results(name, workspace):
     assert diffv < budtol, msg + f"diffv {diffv} exceeds tolerance {budtol}"
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     sim, _ = build_model(idx, ws, targets.mf6)

@@ -202,10 +202,7 @@ def check_output(idx, test):
     assert v == 10.0, f"Last time should be 10.  Found {v}"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

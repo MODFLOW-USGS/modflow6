@@ -446,7 +446,7 @@ def check_output(idx, test):
     # todo: add a better check of the lake concentrations
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, targets, function_tmpdir):
     framework = TestFramework(
         name=name,

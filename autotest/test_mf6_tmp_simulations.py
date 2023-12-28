@@ -108,10 +108,7 @@ def run_mf6(sim, ws):
     sim.compare()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(get_mf6_models())),
-)
+@pytest.mark.parametrize("idx, name", enumerate(get_mf6_models()))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
