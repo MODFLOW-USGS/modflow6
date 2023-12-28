@@ -130,10 +130,7 @@ def check_output(idx, test):
     ), f"CHD2_OUT <> {q_out} ({q_out_sim})"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

@@ -544,10 +544,7 @@ def check_output(idx, test):
     assert np.allclose(d0["SFR-1_OUT"], d0["LAK-1_IN"])
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

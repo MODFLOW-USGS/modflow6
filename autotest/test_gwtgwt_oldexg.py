@@ -770,10 +770,7 @@ def compare_gwt_to_ref(test):
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

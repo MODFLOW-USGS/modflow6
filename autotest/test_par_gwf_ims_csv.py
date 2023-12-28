@@ -13,7 +13,7 @@ constant head boundaries left=1.0, right=10.0.
 The result should be a uniform flow field.
 """
 
-ex = ["par_gwf_csv"]
+cases = ["par_gwf_csv"]
 dis_shape = [(1, 1, 5)]
 
 # global convenience...
@@ -24,7 +24,7 @@ name_right = "rightmodel"
 def update_ims(idx, ims):
     from test_par_gwf01 import hclose, ninner, nouter, rclose
 
-    name = ex[idx]
+    name = cases[idx]
     ims.csv_outer_output_filerecord.set_data(f"{name}.outer.csv")
     ims.csv_inner_output_filerecord.set_data(f"{name}.inner.csv")
     return
@@ -46,10 +46,7 @@ def check_output(idx, test):
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

@@ -180,7 +180,7 @@ def check_output(workspace):
     print(msg)
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(cases)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     sim, _ = build_model(idx, ws, targets.mf6)

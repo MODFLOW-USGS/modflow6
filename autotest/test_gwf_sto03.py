@@ -258,10 +258,7 @@ def check_output(idx, test):
     assert max_diff.sum() == 0.0, "simulated storage is not the same"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,

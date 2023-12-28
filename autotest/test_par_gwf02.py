@@ -238,10 +238,7 @@ def check_output(idx, test):
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ncpus = domain_grid[idx][0] * domain_grid[idx][1]
     test = TestFramework(

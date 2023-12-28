@@ -38,10 +38,7 @@ def build_models(idx, test):
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(cases)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ncpus = 2 if idx == 1 else 1
     test = TestFramework(
