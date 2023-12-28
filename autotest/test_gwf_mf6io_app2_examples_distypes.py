@@ -4,6 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
+from conftest import try_get_target
 
 from framework import TestFramework
 
@@ -253,6 +254,7 @@ def build_rch_package(gwf, list_recharge):
 
 
 def build_models(idx, test, gridgen):
+    gridgen = try_get_target(test.targets, "gridgen")
     return build_mf6(idx, test.workspace, gridgen), build_mf6(
         idx, test.workspace / "mf6", gridgen
     )
@@ -560,7 +562,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t, targets.gridgen),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         verbose=False,
     )

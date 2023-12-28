@@ -243,6 +243,7 @@ class TestFramework:
     Defines a MODFLOW 6 test and its lifecycle, with configurable
     hooks to evaluate results or run other models for comparison:
 
+        - MODFLOW 6 (directly or via API)
         - MODFLOW-2005
         - MODFLOW-NWT
         - MODFLOW-USG

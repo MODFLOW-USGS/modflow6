@@ -192,7 +192,7 @@ ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 
 
 # variant SUB package problem 3
-def build_models(idx, test, targets):
+def build_models(idx, test):
     name = cases[idx]
 
     # build MODFLOW 6 files
@@ -330,7 +330,7 @@ def build_models(idx, test, targets):
     cpth = cmppth
     ws = os.path.join(test.workspace, cpth)
     mc = flopy.modflow.Modflow(
-        name, model_ws=ws, version=cpth, exe_name=targets.mfnwt
+        name, model_ws=ws, version=cpth, exe_name=test.targets.mfnwt
     )
     dis = flopy.modflow.ModflowDis(
         mc,
@@ -554,9 +554,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t, targets),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         htol=htol[idx],
-        verbose=False,
     )
     test.run()

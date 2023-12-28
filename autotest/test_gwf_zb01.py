@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import flopy
 import numpy as np
@@ -217,7 +216,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test, zb6):
+def check_output(idx, test):
     # build zonebudget files
     zones = [-1000000, 1000000, 9999999]
     nzones = len(zones)
@@ -240,7 +239,7 @@ def check_output(idx, test, zb6):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        zb6,
+        test.targets.zb6,
         "zonebudget.nam",
         model_ws=test.workspace,
         silent=False,
@@ -392,7 +391,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t, targets.zbud6),
+        check=lambda t: check_output(idx, t),
         htol=htol[idx],
     )
     test.run()
