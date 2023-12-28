@@ -253,7 +253,7 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_models(idx, test, gridgen):
+def build_models(idx, test):
     gridgen = try_get_target(test.targets, "gridgen")
     return build_mf6(idx, test.workspace, gridgen), build_mf6(
         idx, test.workspace / "mf6", gridgen
