@@ -1,0 +1,435 @@
+module IdmDfnSelectorModule
+
+  use ConstantsModule, only: LENVARNAME
+  use SimModule, only: store_error
+  use InputDefinitionModule, only: InputParamDefinitionType, &
+                                   InputBlockDefinitionType
+
+  use SimNamInputModule
+
+  #:for e in EXCHANGES
+  #:set l = e.split('-')[0]
+  #:set r = e.split('-')[1]
+  use Exg${l}$${r}$InputModule
+  #:endfor
+
+  #:for m in MODELS
+  #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+  use ${p.replace('-', '')}$InputModule
+  #:endfor
+  #:endfor
+
+  implicit none
+  private
+
+  public :: idm_param_definitions
+  public :: idm_aggregate_definitions
+  public :: idm_block_definitions
+  public :: idm_multi_package
+  public :: idm_integrated
+  public :: idm_component
+
+  public :: exg_param_definitions
+  public :: exg_aggregate_definitions
+  public :: exg_block_definitions
+  public :: exg_idm_multi_package
+  public :: exg_idm_integrated
+
+  public :: sim_param_definitions
+  public :: sim_aggregate_definitions
+  public :: sim_block_definitions
+  public :: sim_idm_multi_package
+  public :: sim_idm_integrated
+
+  #:for m in MODELS
+  public :: ${m}$_param_definitions
+  public :: ${m}$_aggregate_definitions
+  public :: ${m}$_block_definitions
+  public :: ${m}$_idm_multi_package
+  public :: ${m}$_idm_integrated
+  #:endfor
+
+contains
+
+  function idm_param_definitions(component, subcomponent) result(def)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (component)
+    case ('SIM')
+      def => sim_param_definitions(subcomponent)
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      def => ${m}$_param_definitions(subcomponent)
+    #:endfor
+    case ('EXG')
+      def => exg_param_definitions(subcomponent)
+    case default
+    end select
+    return
+  end function idm_param_definitions
+
+  function idm_aggregate_definitions(component, subcomponent) result(def)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (component)
+    case ('SIM')
+      def => sim_aggregate_definitions(subcomponent)
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      def => ${m}$_aggregate_definitions(subcomponent)
+    #:endfor
+    case ('EXG')
+      def => exg_aggregate_definitions(subcomponent)
+    case default
+    end select
+    return
+  end function idm_aggregate_definitions
+
+  function idm_block_definitions(component, subcomponent) result(def)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    type(InputBlockDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (component)
+    case ('SIM')
+      def => sim_block_definitions(subcomponent)
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      def => ${m}$_block_definitions(subcomponent)
+    #:endfor
+    case ('EXG')
+      def => exg_block_definitions(subcomponent)
+    case default
+    end select
+    return
+  end function idm_block_definitions
+
+  function idm_multi_package(component, subcomponent) result(multi_package)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    logical :: multi_package
+    select case (component)
+    case ('SIM')
+      multi_package = sim_idm_multi_package(subcomponent)
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      multi_package = ${m}$_idm_multi_package(subcomponent)
+    #:endfor
+    case ('EXG')
+      multi_package = exg_idm_multi_package(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_multi_package
+
+  function idm_integrated(component, subcomponent) result(integrated)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    logical :: integrated
+    integrated = .false.
+    select case (component)
+    case ('SIM')
+      integrated = sim_idm_integrated(subcomponent)
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      integrated = ${m}$_idm_integrated(subcomponent)
+    #:endfor
+    case ('EXG')
+      integrated = exg_idm_integrated(subcomponent)
+    case default
+    end select
+    return
+  end function idm_integrated
+
+  function idm_component(component) result(integrated)
+    character(len=*), intent(in) :: component
+    logical :: integrated
+    integrated = .false.
+    select case (component)
+    case ('SIM')
+      integrated = .true.
+    #:for m in MODELS
+    case ('${m.upper()}$')
+      integrated = .true.
+    #:endfor
+    case ('EXG')
+      integrated = .true.
+    case default
+    end select
+    return
+  end function idm_component
+
+  subroutine exg_set_param_pointer(input_dfn, input_dfn_target)
+    type(InputParamDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputParamDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine exg_set_param_pointer
+
+  subroutine exg_set_block_pointer(input_dfn, input_dfn_target)
+    type(InputBlockDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine exg_set_block_pointer
+
+  function exg_param_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for e in EXCHANGES
+    #:set l = e.split('-')[0]
+    #:set r = e.split('-')[1]
+    case ('${l.upper()}$${r.upper()}$')
+      call exg_set_param_pointer(def, exg_${l}$${r}$_param_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function exg_param_definitions
+
+  function exg_aggregate_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for e in EXCHANGES
+    #:set l = e.split('-')[0]
+    #:set r = e.split('-')[1]
+    case ('${l.upper()}$${r.upper()}$')
+      call exg_set_param_pointer(def, exg_${l}$${r}$_aggregate_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function exg_aggregate_definitions
+
+  function exg_block_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputBlockDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for e in EXCHANGES
+    #:set l = e.split('-')[0]
+    #:set r = e.split('-')[1]
+    case ('${l.upper()}$${r.upper()}$')
+      call exg_set_block_pointer(def, exg_${l}$${r}$_block_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function exg_block_definitions
+
+  function exg_idm_multi_package(subcomponent) result(multi_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: multi_package
+    select case (subcomponent)
+    #:for e in EXCHANGES
+    #:set l = e.split('-')[0]
+    #:set r = e.split('-')[1]
+    case ('${l.upper()}$${r.upper()}$')
+      multi_package = exg_${l}$${r}$_multi_package
+    #:endfor
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="EXG"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function exg_idm_multi_package
+
+  function exg_idm_integrated(subcomponent) result(integrated)
+    character(len=*), intent(in) :: subcomponent
+    logical :: integrated
+    integrated = .false.
+    select case (subcomponent)
+    #:for e in EXCHANGES
+    #:set l = e.split('-')[0]
+    #:set r = e.split('-')[1]
+    case ('${l.upper()}$${r.upper()}$')
+      integrated = .true.
+    #:endfor
+    case default
+    end select
+    return
+  end function exg_idm_integrated
+
+  subroutine sim_set_param_pointer(input_dfn, input_dfn_target)
+    type(InputParamDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputParamDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine sim_set_param_pointer
+
+  subroutine sim_set_block_pointer(input_dfn, input_dfn_target)
+    type(InputBlockDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine sim_set_block_pointer
+
+  function sim_param_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    case ('NAM')
+      call sim_set_param_pointer(def, sim_nam_param_definitions)
+    case default
+    end select
+    return
+  end function sim_param_definitions
+
+  function sim_aggregate_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    case ('NAM')
+      call sim_set_param_pointer(def, sim_nam_aggregate_definitions)
+    case default
+    end select
+    return
+  end function sim_aggregate_definitions
+
+  function sim_block_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputBlockDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    case ('NAM')
+      call sim_set_block_pointer(def, sim_nam_block_definitions)
+    case default
+    end select
+    return
+  end function sim_block_definitions
+
+  function sim_idm_multi_package(subcomponent) result(multi_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: multi_package
+    select case (subcomponent)
+    case ('NAM')
+      multi_package = sim_nam_multi_package
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="SIM"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function sim_idm_multi_package
+
+  function sim_idm_integrated(subcomponent) result(integrated)
+    character(len=*), intent(in) :: subcomponent
+    logical :: integrated
+    integrated = .false.
+    select case (subcomponent)
+    case ('NAM')
+      integrated = .true.
+    case default
+    end select
+    return
+  end function sim_idm_integrated
+
+  #:for m in MODELS
+  subroutine ${m}$_set_param_pointer(input_dfn, input_dfn_target)
+    type(InputParamDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputParamDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine ${m}$_set_param_pointer
+  #:endfor
+
+  #:for m in MODELS
+  subroutine ${m}$_set_block_pointer(input_dfn, input_dfn_target)
+    type(InputBlockDefinitionType), dimension(:), pointer :: input_dfn
+    type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
+    input_dfn => input_dfn_target
+  end subroutine ${m}$_set_block_pointer
+  #:endfor
+
+  #:for m in MODELS
+  function ${m}$_param_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+    case ('${p.replace('-', '').replace(m, '').upper()}$')
+      call ${m}$_set_param_pointer(def, ${p.replace('-', '_')}$_param_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function ${m}$_param_definitions
+  #:endfor
+
+  #:for m in MODELS
+  function ${m}$_aggregate_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputParamDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+    case ('${p.replace('-', '').replace(m, '').upper()}$')
+      call ${m}$_set_param_pointer(def, ${p.replace('-', '_')}$_aggregate_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function ${m}$_aggregate_definitions
+  #:endfor
+
+  #:for m in MODELS
+  function ${m}$_block_definitions(subcomponent) result(def)
+    character(len=*), intent(in) :: subcomponent
+    type(InputBlockDefinitionType), dimension(:), pointer :: def
+    nullify (def)
+    select case (subcomponent)
+    #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+    case ('${p.replace('-', '').replace(m, '').upper()}$')
+      call ${m}$_set_block_pointer(def, ${p.replace('-', '_')}$_block_definitions)
+    #:endfor
+    case default
+    end select
+    return
+  end function ${m}$_block_definitions
+  #:endfor
+
+  #:for m in MODELS
+  function ${m}$_idm_multi_package(subcomponent) result(multi_package)
+    character(len=*), intent(in) :: subcomponent
+    logical :: multi_package
+    select case (subcomponent)
+    #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+    case ('${p.replace('-', '').replace(m, '').upper()}$')
+      multi_package = ${p.replace('-', '_')}$_multi_package
+    #:endfor
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="GWF"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function ${m}$_idm_multi_package
+  #:endfor
+
+  #:for m in MODELS
+  function ${m}$_idm_integrated(subcomponent) result(integrated)
+    character(len=*), intent(in) :: subcomponent
+    logical :: integrated
+    integrated = .false.
+    select case (subcomponent)
+    #:for p in [pkg for pkg in PACKAGES if pkg.startswith(m)]
+    case ('${p.replace('-', '').replace(m, '').upper()}$')
+      integrated = .true.
+    #:endfor
+    case default
+    end select
+    return
+  end function ${m}$_idm_integrated
+  #:endfor
+
+end module IdmDfnSelectorModule

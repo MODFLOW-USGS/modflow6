@@ -1,13 +1,15 @@
+!> @brief General-purpose math utilities.
 module MathUtilModule
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use ConstantsModule, only: MAXCHARLEN, LENHUGELINE, &
-                             DZERO, DPREC, DSAME, &
+                             DZERO, DONE, DHALF, DPREC, DSAME, &
+                             DLNLOW, DLNHIGH, &
                              LINELENGTH, LENHUGELINE, VSUMMARY
 
   implicit none
   private
-  public :: f1d, is_close, mod_offset, zeroch, zeroin, zerotest
+  public :: between, f1d, is_close, logmean, mod_offset, zeroch, zeroin, zerotest
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
@@ -22,6 +24,12 @@ module MathUtilModule
   end interface
 
 contains
+
+  !> @brief Check if a value is between two other values (inclusive).
+  logical function between(x, a, b)
+    real(DP), intent(in) :: x, a, b
+    between = ((x >= a .and. x <= b) .or. (x <= a .and. x >= b))
+  end function between
 
   !> @brief Check if a real value is approximately equal to another.
   !!
@@ -83,6 +91,25 @@ contains
       is_close = (abs(a - b) <= (latol + lrtol * abs(b)))
     end if
   end function is_close
+
+  !> @brief Logarithmic mean, approximating if the ratio is near 1.
+  function logmean(d1, d2)
+    ! -- return
+    real(DP) :: logmean
+    ! -- dummy
+    real(DP), intent(in) :: d1
+    real(DP), intent(in) :: d2
+    ! -- local
+    real(DP) :: drat
+    !
+    drat = d2 / d1
+    if (drat <= DLNLOW .or. drat >= DLNHIGH) then
+      logmean = (d2 - d1) / log(drat)
+    else
+      logmean = DHALF * (d1 + d2)
+    end if
+
+  end function logmean
 
   !> @brief Modulo with offset for integer values.
   pure function mod_offset_int(a, n, d) result(mo)

@@ -29,12 +29,6 @@ module NumericalModelModule
     integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() !pointer to position in solution matrix
     real(DP), dimension(:), pointer, contiguous :: xold => null() !dependent variable for previous timestep
     real(DP), dimension(:), pointer, contiguous :: flowja => null() !intercell flows
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !ibound array
-    !
-    ! -- Derived types
-    type(ListType), pointer :: bndlist => null() !array of boundary packages for this model
-    class(DisBaseType), pointer :: dis => null() !discretization object
-
   contains
     !
     ! -- Required for all models (override procedures defined in BaseModelType)
@@ -48,7 +42,6 @@ module NumericalModelModule
     procedure :: model_mc
     procedure :: model_rp
     procedure :: model_ad
-    procedure :: model_reset
     procedure :: model_cf
     procedure :: model_fc
     procedure :: model_ptcchk
@@ -106,20 +99,6 @@ contains
   subroutine model_ad(this)
     class(NumericalModelType) :: this
   end subroutine model_ad
-
-  subroutine model_reset(this)
-    use BndModule, only: BndType, GetBndFromList
-    class(NumericalModelType) :: this
-    ! local
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_reset()
-    end do
-
-  end subroutine model_reset
 
   subroutine model_cf(this, kiter)
     class(NumericalModelType) :: this
@@ -229,14 +208,9 @@ contains
     call mem_deallocate(this%flowja)
     call mem_deallocate(this%idxglo)
     !
-    ! -- derived types
-    call this%bndlist%Clear()
-    deallocate (this%bndlist)
-    !
     ! -- nullify pointers
     call mem_deallocate(this%x, 'X', this%memoryPath)
     call mem_deallocate(this%rhs, 'RHS', this%memoryPath)
-    call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
     !
     ! -- BaseModelType
     call this%BaseModelType%model_da()
@@ -280,7 +254,6 @@ contains
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%moffset, 'MOFFSET', this%memoryPath)
     allocate (this%filename)
-    allocate (this%bndlist)
     !
     this%filename = ''
     this%neq = 0

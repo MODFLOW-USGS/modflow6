@@ -3,7 +3,7 @@ project(
   'fortran',
   version: '6.5.0.dev1',
   license: 'CC0',
-  meson_version: '>= 1.1.0',
+  meson_version: '== 1.3.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',

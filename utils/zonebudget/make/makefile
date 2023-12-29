@@ -33,10 +33,10 @@ $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/Budget.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/grb.o \
 $(OBJDIR)/budgetdata.o \
-$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/zbud6.o
 

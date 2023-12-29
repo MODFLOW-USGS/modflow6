@@ -1,0 +1,37 @@
+# Add a new DFN parameter set to MF6
+# by adding a new entry to this list
+# ----------------------------------
+
+# simulation
+sim-nam.dfn
+
+# gwf model
+gwf-nam.dfn
+gwf-chd.dfn
+gwf-dis.dfn
+gwf-disu.dfn
+gwf-disv.dfn
+gwf-drn.dfn
+gwf-evt.dfn
+gwf-evta.dfn
+gwf-ghb.dfn
+gwf-ic.dfn
+gwf-npf.dfn
+gwf-rch.dfn
+gwf-rcha.dfn
+gwf-riv.dfn
+gwf-wel.dfn
+
+# gwt model
+gwt-nam.dfn
+gwt-dis.dfn
+gwt-disu.dfn
+gwt-disv.dfn
+gwt-dsp.dfn
+gwt-cnc.dfn
+gwt-ic.dfn
+
+# exchanges
+exg-gwfgwf.dfn
+exg-gwfgwt.dfn
+exg-gwtgwt.dfn

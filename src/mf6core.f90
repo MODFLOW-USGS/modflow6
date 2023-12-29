@@ -69,7 +69,7 @@ contains
   subroutine Mf6Initialize()
     ! -- modules
     use RunControlFactoryModule, only: create_run_control
-    use SimulationCreateModule, only: simulation_cr
+    use SimulationModule, only: simulation_cr
 
     ! -- get the run controller for sequential or parallel builds
     run_ctrl => create_run_control()
@@ -128,7 +128,7 @@ contains
     ! -- modules
     use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule, only: lists_da
-    use SimulationCreateModule, only: simulation_da
+    use SimulationModule, only: simulation_da
     use TdisModule, only: tdis_da
     use IdmLoadModule, only: idm_da
     use SimVariablesModule, only: iout
@@ -272,7 +272,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
-    use SimulationCreateModule, only: create_load_mask
+    use SimulationModule, only: create_load_mask
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -435,11 +435,11 @@ contains
     !!   GWT-GWT => GwtGwtConecction
   !<
   subroutine connections_cr()
-    use ConnectionBuilderModule
+    use ConnectionFactoryModule, only: ConnectionFactoryType
     use SimVariablesModule, only: iout
     use VersionModule, only: IDEVELOPMODE
     integer(I4B) :: isol
-    type(ConnectionBuilderType) :: connectionBuilder
+    type(ConnectionFactoryType) :: cnxn_factory
     class(BaseSolutionType), pointer :: sol => null()
     integer(I4B) :: status
     character(len=16) :: envvar
@@ -456,14 +456,14 @@ contains
       call get_environment_variable('DEV_ALWAYS_USE_IFMOD', &
                                     value=envvar, status=status)
       if (status == 0 .and. envvar == '1') then
-        connectionBuilder%dev_always_ifmod = .true.
+        cnxn_factory%dev_always_ifmod = .true.
         write (iout, '(/a)') "Development option: forcing interface model"
       end if
     end if
 
     do isol = 1, basesolutionlist%Count()
       sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      call connectionBuilder%processSolution(sol)
+      call cnxn_factory%create_connections(sol)
     end do
 
     write (iout, '(a)') 'END OF MODEL CONNECTIONS'

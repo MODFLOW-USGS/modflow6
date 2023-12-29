@@ -3,3 +3,4 @@ option('parallel', type : 'boolean', value : false, description : 'Extended para
 option('mpich', type : 'boolean', value : false, description : 'Use MPICH version of MPI')
 option('cray', type : 'boolean', value : false, description : 'Extended build on CRAY with MPICH')
 option('buildname', type : 'string', value : 'mf6', description : 'Optional build name')
+option('models', type : 'array', value : ['gwf', 'gwt'], description : 'Models to support')

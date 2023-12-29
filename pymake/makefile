@@ -25,9 +25,9 @@ SOURCEDIR18=../src/Utilities/Libraries/sparsekit
 SOURCEDIR19=../src/Utilities/Libraries/sparskit2
 SOURCEDIR20=../src/Utilities/Libraries/blas
 SOURCEDIR21=../src/Utilities/Libraries/daglib
-SOURCEDIR22=../src/Utilities/Idm
-SOURCEDIR23=../src/Utilities/Idm/selector
-SOURCEDIR24=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR22=../src/Idm
+SOURCEDIR23=../src/Idm/selector
+SOURCEDIR24=../src/Idm/mf6blockfile
 SOURCEDIR25=../src/Utilities/Matrix
 SOURCEDIR26=../src/Utilities/Vector
 SOURCEDIR27=../src/Utilities/Observation
@@ -295,7 +295,7 @@ $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/ConnectionBuilder.o \
 $(OBJDIR)/GwfGwtExchange.o \
-$(OBJDIR)/SimulationCreate.o \
+$(OBJDIR)/Simulation.o \
 $(OBJDIR)/mf6core.o \
 $(OBJDIR)/mf6.o
 
