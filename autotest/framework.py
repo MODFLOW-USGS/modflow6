@@ -587,18 +587,6 @@ class TestFramework:
         fcmp.close()
         return success
 
-    def _try_resolve(
-        self,
-        target: Union[str, os.PathLike],
-        default: Optional[Union[str, os.PathLike]] = None,
-    ) -> Optional[Path]:
-        if not target:
-            return None
-        tgt = shutil.which(target)
-        if tgt:
-            return Path(tgt)
-        return self.targets.as_dict().get(target, default)
-
     # public
 
     def setup(self, src, dst):
@@ -626,7 +614,7 @@ class TestFramework:
     def run_sim_or_model(
         self,
         workspace: Union[str, os.PathLike],
-        target: Union[str, os.PathLike] = "mf6",
+        target: Union[str, os.PathLike],
         xfail: bool = False,
     ) -> Tuple[bool, List[str]]:
         """
@@ -634,7 +622,7 @@ class TestFramework:
 
         workspace : str or path-like
             The simulation or model workspace
-        exe : str or path-like
+        target : str or path-like
             The target executable to use
         xfail : bool
             Whether to expect failure
@@ -644,9 +632,12 @@ class TestFramework:
         workspace = Path(workspace).expanduser().absolute()
         assert workspace.is_dir(), f"Workspace not found: {workspace}"
 
-        # make sure executable exists
-        target = self._try_resolve(target)
-        assert target, f"Target executable not found: {target}"
+        # make sure executable exists and framework knows about it
+        tgt = Path(shutil.which(target))
+        assert tgt.is_file(), f"Target executable not found: {target}"
+        assert (
+            tgt in self.targets.as_dict().values()
+        ), f"Targets must be explicitly registered with the test framework"
 
         if self.verbose:
             print(f"Running {target} in {workspace}")
@@ -809,8 +800,18 @@ class TestFramework:
 
         # run models/simulations
         for i, sim_or_model in enumerate(self.sims):
+            tgts = self.targets.as_dict()
             workspace = get_workspace(sim_or_model)
-            target = self._try_resolve(sim_or_model.exe_name, self.targets.mf6)
+            exe_path = (
+                Path(sim_or_model.exe_name)
+                if sim_or_model.exe_name
+                else tgts["mf6"]
+            )
+            target = (
+                exe_path
+                if exe_path in tgts.values()
+                else tgts.get(exe_path.stem, tgts["mf6"])
+            )
             xfail = self.xfail[i]
             success, buff = self.run_sim_or_model(workspace, target, xfail)
             self.buffs[i] = buff  # store model output for assertions later
@@ -859,7 +860,9 @@ class TestFramework:
                     workspace = self.workspace / self.compare
                     success, _ = self.run_sim_or_model(
                         workspace,
-                        self.targets.get(self.compare, self.targets.mf6),
+                        self.targets.as_dict().get(
+                            self.compare, self.targets.mf6
+                        ),
                     )
                     assert success, f"Comparison model failed: {workspace}"
 
