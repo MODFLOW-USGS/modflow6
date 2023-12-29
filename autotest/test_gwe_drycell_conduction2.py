@@ -200,7 +200,6 @@ def build_models(idx, test):
     gwtname = "gwt-" + name
     gwename = "gwe-" + name
 
-    sim_ws = os.path.join(ws)
     sim = flopy.mf6.MFSimulation(
         sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
     )
