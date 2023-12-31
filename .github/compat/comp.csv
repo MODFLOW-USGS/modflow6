@@ -1,9 +1,9 @@
 compiler,gcc,gcc,gcc,gcc,gcc,gcc,gcc,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel-classic,intel,intel,intel,intel,intel,intel,intel,intel,intel,intel
 version,10,11,12,13,7,8,9,2021.1,2021.10,2021.2,2021.3,2021.4,2021.5,2021.6,2021.7,2021.8,2021.9,2021.1,2021.2,2021.4,2022.0,2022.1,2022.2.1,2022.2,2023.0,2023.1,2023.2
 runner,,,,,,,,,,,,,,,,,,,,,,,,,,,
-macos-11,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,,,,,
-macos-12,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,,,,,
-ubuntu-20.04,&check;,&check;,,,&check;,&check;,&check;,&check;,&check;,&check;,,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,&check;,&check;,,,&check;
-ubuntu-22.04,&check;,&check;,&check;,&check;,,,&check;,&check;,&check;,&check;,,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,&check;,&check;,,,&check;
-windows-2019,&check;,&check;,&check;,&check;,,,&check;,,&check;,,,,,&check;,&check;,&check;,&check;,,,,,,,&check;,,,&check;
+macos-11,,&check;,&check;,&check;,,,,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,,,,,
+macos-12,,&check;,&check;,&check;,,,,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,,,,,
+ubuntu-20.04,,&check;,,,,,,&check;,&check;,&check;,,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,&check;,&check;,,,&check;
+ubuntu-22.04,,&check;,&check;,&check;,,,,&check;,&check;,&check;,,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,&check;,&check;,,,&check;
+windows-2019,,,,&check;,,,,,&check;,,,,,&check;,&check;,&check;,&check;,,,,,,,&check;,,,&check;
 windows-2022,&check;,&check;,&check;,&check;,,,&check;,,&check;,,,,,&check;,&check;,&check;,&check;,,,,,,,&check;,,,&check;
