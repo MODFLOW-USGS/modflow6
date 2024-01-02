@@ -1054,6 +1054,42 @@ if __name__ == "__main__":
             SRC_PATH / "Exchange" / "gwegweidm.f90",
         ],
         [
+            DFN_PATH / "swf-nam.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-disl.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1disl1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-cxs.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1cxs1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-dfw.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1dfw1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-ic.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1ic1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-chd.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1chd1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-flw.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1flw1idm.f90",
+        ],
+        [
+            DFN_PATH / "swf-zdg.dfn",
+            SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf1zdg1idm.f90",
+        ],
+        [
+            DFN_PATH / "exg-swfgwf.dfn",
+            SRC_PATH / "Exchange" / "swfgwfidm.f90",
+        ],
+        [
             DFN_PATH / "sim-nam.dfn",
             SRC_PATH / "simnamidm.f90",
         ],

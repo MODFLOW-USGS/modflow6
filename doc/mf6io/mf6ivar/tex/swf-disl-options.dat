@@ -1,0 +1,9 @@
+BEGIN OPTIONS
+  [LENGTH_UNITS <length_units>]
+  [LENGTH_CONVERT <length_convert>]
+  [TIME_CONVERT <time_convert>]
+  [NOGRB]
+  [XORIGIN <xorigin>]
+  [YORIGIN <yorigin>]
+  [ANGROT <angrot>]
+END OPTIONS

@@ -1,0 +1,8 @@
+BEGIN OPTIONS
+  [CENTRAL_IN_SPACE]
+  [LENGTH_CONVERSION <length_conversion>]
+  [TIME_CONVERSION <time_conversion>]
+  [SAVE_FLOWS]
+  [PRINT_FLOWS]
+  [OBS6 FILEIN <obs6_filename>]
+END OPTIONS

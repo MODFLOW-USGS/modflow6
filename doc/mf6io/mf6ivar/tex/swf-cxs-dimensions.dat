@@ -1,0 +1,4 @@
+BEGIN DIMENSIONS
+  NSECTIONS <nsections>
+  NPOINTS <npoints>
+END DIMENSIONS

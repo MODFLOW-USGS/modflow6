@@ -2215,7 +2215,7 @@ contains
 
   !> @ brief Add a model
   !!
-  !!  Add a model to s solution.
+  !!  Add a model to solution.
   !!
   !<
   subroutine add_model(this, mp)
