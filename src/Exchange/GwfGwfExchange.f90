@@ -99,6 +99,7 @@ module GwfGwfExchangeModule
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
+    procedure, private :: gwf_gwf_chd_bd
     procedure :: gwf_gwf_bdsav
     procedure, private :: gwf_gwf_bdsav_model
     procedure, private :: gwf_gwf_df_obs
@@ -755,17 +756,21 @@ contains
     do i = 1, this%nexg
       !
       if (associated(this%gwfmodel1)) then
-        flow = this%simvals(i)
         n = this%nodem1(i)
-        idiag = this%gwfmodel1%ia(n)
-        this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+        if (this%gwfmodel1%ibound(n) > 0) then
+          flow = this%simvals(i)
+          idiag = this%gwfmodel1%ia(n)
+          this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+        end if
       end if
       !
       if (associated(this%gwfmodel2)) then
-        flow = -this%simvals(i)
         n = this%nodem2(i)
-        idiag = this%gwfmodel2%ia(n)
-        this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+        if (this%gwfmodel2%ibound(n) > 0) then
+          flow = -this%simvals(i)
+          idiag = this%gwfmodel2%ia(n)
+          this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+        end if
       end if
       !
     end do
@@ -928,12 +933,82 @@ contains
       call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
     end if
     !
+    ! -- Add any flows from one model into a constant head in another model
+    !    as a separate budget term called FLOW-JA-FACE-CHD
+    call this%gwf_gwf_chd_bd()
+    !
     ! -- Call mvr bd routine
     if (this%inmvr > 0) call this%mvr%mvr_bd()
     !
     ! -- Return
     return
   end subroutine gwf_gwf_bd
+
+  !> @ brief gwf-gwf-chd-bd
+  !!
+  !! Account for flow from an external model into a chd cell
+  !<
+  subroutine gwf_gwf_chd_bd(this)
+    ! -- modules
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
+    use BudgetModule, only: rate_accumulator
+    ! -- dummy
+    class(GwfExchangeType) :: this !<  GwfExchangeType
+    ! -- local
+    character(len=LENBUDTXT), dimension(1) :: budtxt
+    integer(I4B) :: n
+    integer(I4B) :: i
+    real(DP), dimension(2, 1) :: budterm
+    real(DP) :: ratin, ratout
+    real(DP) :: q
+    !
+    ! -- initialize
+    budtxt(1) = 'FLOW-JA-FACE-CHD'
+    !
+    ! -- Add the constant-head budget terms for flow from model 2 into model 1
+    if (associated(this%gwfmodel1)) then
+      ratin = DZERO
+      ratout = DZERO
+      do i = 1, this%nexg
+        n = this%nodem1(i)
+        if (this%gwfmodel1%ibound(n) < 0) then
+          q = this%simvals(i)
+          if (q > DZERO) then
+            ratout = ratout + q
+          else
+            ratin = ratin - q
+          end if
+        end if
+      end do
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
+    end if
+    !
+    ! -- Add the constant-head budget terms for flow from model 1 into model 2
+    if (associated(this%gwfmodel2)) then
+      ratin = DZERO
+      ratout = DZERO
+      do i = 1, this%nexg
+        n = this%nodem2(i)
+        if (this%gwfmodel2%ibound(n) < 0) then
+          ! -- flip flow sign as flow is relative to model 1
+          q = - this%simvals(i)
+          if (q > DZERO) then
+            ratout = ratout + q
+          else
+            ratin = ratin - q
+          end if
+        end if
+      end do
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine gwf_gwf_chd_bd
 
   !> @ brief Budget save
   !!
