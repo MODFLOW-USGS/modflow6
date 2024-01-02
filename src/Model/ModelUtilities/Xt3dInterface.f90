@@ -11,7 +11,7 @@ module Xt3dModule
   public :: xt3d_cr
 
   type Xt3dType
-  
+
     character(len=LENMEMPATH) :: memoryPath !< location in memory manager for storing package variables
     integer(I4B), pointer :: inunit => null() !< unit number from where xt3d was read
     integer(I4B), pointer :: iout => null() !< unit number for output
@@ -49,9 +49,9 @@ module Xt3dModule
     real(DP), dimension(:), pointer, contiguous :: angle2 => null() !< k ellipse rotation up from xy plane around y axis (pitch)
     real(DP), dimension(:), pointer, contiguous :: angle3 => null() !< k tensor rotation around x axis (roll)
     logical, pointer :: ldispersion => null() !< flag to indicate dispersion
-    
+
   contains
-  
+
     procedure :: xt3d_df
     procedure :: xt3d_ac
     procedure :: xt3d_mc
@@ -79,7 +79,7 @@ module Xt3dModule
     procedure, private :: xt3d_rhs
     procedure, private :: xt3d_fillrmatck
     procedure, private :: xt3d_qnbrs
-    
+
   end type Xt3dType
 
 contains
@@ -126,7 +126,7 @@ contains
   end subroutine xt3d_df
 
   !> @brief Add connections for extended neighbors to the sparse matrix
-  !< 
+  !<
   subroutine xt3d_ac(this, moffset, sparse)
     ! -- modules
     use SparseModule, only: sparsematrix
@@ -593,7 +593,7 @@ contains
   end subroutine xt3d_fcpc
 
   !> @brief Formulate HFB correction
-  !< 
+  !<
   subroutine xt3d_fhfb(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew, &
                        n, m, condhfb)
     ! -- modules
@@ -737,7 +737,7 @@ contains
     !
     ! -- Update amat and rhs with Newton terms
     do n = 1, nodes
-    	!
+      !
       ! -- Skip if inactive.
       if (this%ibound(n) .eq. 0) cycle
       !
@@ -788,10 +788,10 @@ contains
         ! -- Derivative term
         derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups))
         term = this%qsat(ii01) * derv
-        ! 
+        !
         ! -- Fill Jacobian for n being the upstream node
         if (iups == n) then
-        	!
+          !
           ! -- Fill in row of n
           call matrix_sln%add_value_pos(idxglo(ii00), term)
           rhs(n) = rhs(n) + term * hnew(n)
@@ -802,7 +802,7 @@ contains
           !
           ! -- Fill Jacobian for m being the upstream node
         else
-        	!
+          !
           ! -- Fill in row of n
           call matrix_sln%add_value_pos(idxglo(ii01), term)
           rhs(n) = rhs(n) + term * hnew(m)
@@ -845,7 +845,7 @@ contains
     ! -- Calculate the flow across each cell face and store in flowja
     nodes = this%dis%nodes
     do n = 1, nodes
-    	!
+      !
       ! -- Skip if inactive.
       if (this%ibound(n) .eq. 0) cycle
       nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
@@ -1283,8 +1283,8 @@ contains
     ck = matmul(ck, transpose(this%rmatck))
     !
     ! -- Load neighbors of cell. Set cell numbers for inactive neighbors to
-    !    zero so xt3d knows to ignore them. Compute direct connection lengths 
-    !    from perpendicular connection lengths. Also determine if all active 
+    !    zero so xt3d knows to ignore them. Compute direct connection lengths
+    !    from perpendicular connection lengths. Also determine if all active
     !    connections are horizontal.
     allhc = .true.
     do il = 1, nnbr
@@ -1323,7 +1323,7 @@ contains
   end subroutine xt3d_load
 
   !> @brief Load neighbor list for a cell.
-  !< 
+  !<
   subroutine xt3d_load_inbr(this, n, nnbr, inbr)
     ! -- dummy
     class(Xt3dType) :: this
@@ -1349,7 +1349,7 @@ contains
   end subroutine xt3d_load_inbr
 
   !> @brief Compute interfacial areas.
-  !< 
+  !<
   subroutine xt3d_areas(this, nodes, n, m, jjs01, lsat, ar01, ar10, hnew)
     ! -- dummy
     class(Xt3dType) :: this
@@ -1434,7 +1434,7 @@ contains
   end subroutine xt3d_areas
 
   !> @brief Add contributions from neighbors to amat.
-  !< 
+  !<
   subroutine xt3d_amat_nbrs(this, nodes, n, idiag, nnbr, nja, &
                             matrix_sln, inbr, idxglo, chat)
     ! -- dummy
@@ -1495,7 +1495,7 @@ contains
   end subroutine xt3d_amat_nbrnbrs
 
   !> @brief Add contributions from neighbors to amatpc.
-  !< 
+  !<
   subroutine xt3d_amatpc_nbrs(this, nodes, n, idiag, nnbr, inbr, chat)
     ! -- dummy
     class(Xt3dType) :: this
@@ -1545,7 +1545,7 @@ contains
     return
   end subroutine xt3d_amatpcx_nbrnbrs
 
-  !> @brief Get position of n-m connection in ja array (return 0 if not 
+  !> @brief Get position of n-m connection in ja array (return 0 if not
   !! connected)
   !<
   subroutine xt3d_get_iinm(this, n, m, iinm)
@@ -1621,7 +1621,7 @@ contains
   end subroutine xt3d_rhs
 
   !> @brief Add contributions to flow from neighbors
-  !< 
+  !<
   subroutine xt3d_qnbrs(this, nodes, n, m, nnbr, inbr, chat, hnew, &
                         qnbrs)
     ! -- dummy

@@ -21,7 +21,7 @@ contains
   !! vn0 = array of unit normal vectors for cell 0's interfaces.
   !! dl0 = array of lengths contributed by cell 0 to its connections with its
   !!    neighbors.
-  !! dl0n = array of lengths contributed by cell 0's neighbors to their 
+  !! dl0n = array of lengths contributed by cell 0's neighbors to their
   !!    connections with cell 0.
   !! ck0 = conductivity tensor for cell 0.
   !! nnbr1 = number of neighbors (local connections) for cell 1.
@@ -37,7 +37,7 @@ contains
   !! ar01 = area of interface (0,1).
   !! ar10 = area of interface (1,0).
   !! chat01 = "conductance" for connection (0,1).
-  !! chati0 = array of "conductances" for connections of cell 0. 
+  !! chati0 = array of "conductances" for connections of cell 0.
   !!    (zero for connection with cell 1, as this connection is
   !!    already covered by chat01.)
   !! chat1j = array of "conductances" for connections of cell 1.
@@ -84,13 +84,13 @@ contains
     real(DP), dimension(nnbrmx) :: bhat1
     real(DP) :: denom
     !
-    ! -- Set the global cell number for cell 1, as found in the neighbor list 
+    ! -- Set the global cell number for cell 1, as found in the neighbor list
     !    for cell 0.  It is assumed that cells 0 and 1 are both active, or else
     !    this subroutine would not have been called.
     i1 = inbr0(il01)
     !
-    ! -- If area ar01 is zero (in which case ar10 is also zero, since this can 
-    !    only happen here in the case of Newton), then the "conductances" are 
+    ! -- If area ar01 is zero (in which case ar10 is also zero, since this can
+    !    only happen here in the case of Newton), then the "conductances" are
     !    all zero.
     if (ar01 .eq. 0d0) then
       chat01 = 0d0
@@ -98,7 +98,7 @@ contains
         chati0(i) = 0d0
         chat1j(i) = 0d0
       end do
-    ! -- Else compute "conductances."
+      ! -- Else compute "conductances."
     else
       ! -- Compute contributions from cell 0.
       call abhats(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
@@ -169,15 +169,15 @@ contains
     !
     ! -- Determine the basis vectors for local "(c, d, e)" coordinates
     !    associated with the connection between cells 0 and 1, and set the
-    !    rotation matrix that transforms vectors from model coordinates to 
-    !    (c, d, e) coordinates.  (If no active connection is found that has a 
-    !    non-negligible component perpendicular to the primary connection, 
+    !    rotation matrix that transforms vectors from model coordinates to
+    !    (c, d, e) coordinates.  (If no active connection is found that has a
+    !    non-negligible component perpendicular to the primary connection,
     !    ilmo=0 is returned.)
     call getrot(nnbrmx, nnbr, inbr, vc, il01, rmat, iml0)
     !
     ! -- If no active connection with a non-negligible perpendicular
     !    component, assume no perpendicular gradient and base gradient solely
-    !    on the primary connection.  Otherwise, proceed with basing weights on 
+    !    on the primary connection.  Otherwise, proceed with basing weights on
     !    information from neighboring connections.
     if (iml0 .eq. 0) then
       !
@@ -198,8 +198,8 @@ contains
                  vcthresh, dl0, dln, acd, add, aed, bd)
       !
       ! -- If all neighboring connections are user-designated as horizontal, or
-      !    if none have a non-negligible component in the second perpendicular 
-      !    direction, assume zero gradient in the second perpendicular direction.  
+      !    if none have a non-negligible component in the second perpendicular
+      !    direction, assume zero gradient in the second perpendicular direction.
       !    Otherwise, get "a" and "b" weights for second perpendicular direction
       !    based on neighboring connections.
       if (allhc) then
@@ -255,7 +255,7 @@ contains
         bhat(il) = (sigma(2) * betad(il) + sigma(3) * betae(il)) / dl0il
       end do
       ! -- Set the bhat for connection (0,1) to zero here, since we have been
-      !    skipping it in our do loops to avoiding explicitly computing it.  
+      !    skipping it in our do loops to avoiding explicitly computing it.
       !    This will carry through to the corresponding chati0 and chat1j value,
       !    so that they too are zero.
       bhat(il01) = 0d0
@@ -270,7 +270,7 @@ contains
     return
   end subroutine abhats
 
-  !> @brief Compute the matrix that rotates the model-coordinate axes to the 
+  !> @brief Compute the matrix that rotates the model-coordinate axes to the
   !! "(c, d, e)-coordinate" axes associated with a connection.
   !!
   !! This is also the matrix that transforms the components of a vector
@@ -278,7 +278,7 @@ contains
   !! transforms from model to (c, d, e) coordinates.]
   !!
   !!    vcc = unit vector for the primary connection, in model coordinates.
-  !!    vcd = unit vector for the first perpendicular direction, in model 
+  !!    vcd = unit vector for the first perpendicular direction, in model
   !!       coordinates.
   !!    vce = unit vector for the second perpendicular direction, in model
   !!       coordinates.
@@ -310,7 +310,7 @@ contains
     vcc(:) = vc(il01, :)
     !
     ! -- Set vcmax. (If no connection has a perpendicular component greater
-    !    than some tiny threshold, return with iml0=0 and the first column of 
+    !    than some tiny threshold, return with iml0=0 and the first column of
     !    rmat set to vcc -- the other columns are not needed.)
     acmpmn = 1d0 - 1d-10
     iml0 = 0
@@ -389,7 +389,7 @@ contains
   !!
   !! nde1 = number that indicates the perpendicular direction of primary
   !!        interest on this call: "d" (2) or "e" (3).
-  !! vccde = array of connection unit-vectors with respect to (c, d, e) 
+  !! vccde = array of connection unit-vectors with respect to (c, d, e)
   !!         coordinates.
   !! bd = array of "b" weights.
   !! aed = "a" weight that goes on the matrix side of the 2x2 problem.
@@ -432,14 +432,14 @@ contains
     dsum = 0d0
     vcmx = 0d0
     do il = 1, nnbr
-    ! -- If this is connection (0,1) or inactive, skip.
+      ! -- If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
       vcmx = max(dabs(vccde(il, nde1)), vcmx)
       dlm = 5d-1 * (dl0(il) + dln(il))
       ! -- Distance-based weighting.  dl4wt is the distance between the point
       !    supplying the gradient information and the point at which the flux is
-      !    being estimated. Could be coded as a special case of resistance-based 
-      !    weighting (by setting the conductivity matrix to be the identity 
+      !    being estimated. Could be coded as a special case of resistance-based
+      !    weighting (by setting the conductivity matrix to be the identity
       !    matrix), but this is more efficient.
       cosang = vccde(il, 1)
       dl4wt = dsqrt(dlm * dlm + dl0(il01) * dl0(il01) &
@@ -448,9 +448,9 @@ contains
       dsum = dsum + omwt(il)
     end do
     !
-    ! -- Finish computing non-normalized "omega" weights.  [Add a tiny bit to 
-    !    dsum so that the normalized omega weight later evaluates to 
-    !    (essentially) 1 in the case of a single relevant connection, avoiding 
+    ! -- Finish computing non-normalized "omega" weights.  [Add a tiny bit to
+    !    dsum so that the normalized omega weight later evaluates to
+    !    (essentially) 1 in the case of a single relevant connection, avoiding
     !    0/0.]
     dsum = dsum + 1d-10 * dsum
     do il = 1, nnbr
