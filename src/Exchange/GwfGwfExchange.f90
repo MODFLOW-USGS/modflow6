@@ -993,7 +993,7 @@ contains
         n = this%nodem2(i)
         if (this%gwfmodel2%ibound(n) < 0) then
           ! -- flip flow sign as flow is relative to model 1
-          q = - this%simvals(i)
+          q = -this%simvals(i)
           if (q > DZERO) then
             ratout = ratout + q
           else
