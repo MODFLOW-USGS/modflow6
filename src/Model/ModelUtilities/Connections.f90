@@ -36,7 +36,9 @@ module ConnectionsModule
     integer(I4B), dimension(:), pointer, contiguous :: iausr => null() !< (size:nodesusr+1)
     integer(I4B), dimension(:), pointer, contiguous :: jausr => null() !< (size:nja)
     type(BlockParserType) :: parser !< block parser
+
   contains
+
     procedure :: con_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -53,18 +55,13 @@ module ConnectionsModule
 
 contains
 
+  !> @brief Deallocate connection variables
+  !<
   subroutine con_da(this)
-! ******************************************************************************
-! con_da -- Deallocate connection variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(ConnectionsType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Strings
     deallocate (this%name_model)
@@ -104,28 +101,23 @@ contains
     call mem_deallocate(this%cl1)
     call mem_deallocate(this%cl2)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine con_da
 
+  !> @brief Allocate scalars for ConnectionsType
+  !<
   subroutine allocate_scalars(this, name_model)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars for ConnectionsType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(ConnectionsType) :: this
     character(len=*), intent(in) :: name_model
-! ------------------------------------------------------------------------------
     !
     ! -- allocate
     allocate (this%name_model)
-
+    !
     this%memoryPath = create_mem_path(name_model, 'CON')
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
@@ -141,17 +133,12 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays for ConnectionsType
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- Allocate arrays for ConnectionsType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(ConnectionsType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate space for connection arrays
     call mem_allocate(this%ia, this%nodes + 1, 'IA', this%memoryPath)
@@ -174,13 +161,9 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @brief Finalize connection data
+  !<
   subroutine con_finalize(this, ihctemp, cl12temp, hwvatemp, angldegx)
-! ******************************************************************************
-! con_finalize -- Finalize connection data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -221,7 +204,6 @@ contains
     data aname(4)/'                    CL12'/
     data aname(5)/'                    HWVA'/
     data aname(6)/'                ANGLDEGX'/
-! ------------------------------------------------------------------------------
     !
     ! -- Convert any negative ja numbers to positive
     do ii = 1, this%nja
@@ -342,14 +324,10 @@ contains
     return
   end subroutine con_finalize
 
+  !> @brief Read and process IAC and JA from an an input block called
+  !! CONNECTIONDATA
+  !<
   subroutine read_connectivity_from_block(this, name_model, nodes, nja, iout)
-! ******************************************************************************
-! read_connectivity_from_block -- Read and process IAC and JA from an
-! an input block called CONNECTIONDATA
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors
@@ -378,7 +356,6 @@ contains
     ! -- data
     data aname(1)/'                     IAC'/
     data aname(2)/'                      JA'/
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate and initialize dimensions
     call this%allocate_scalars(name_model)
@@ -471,14 +448,9 @@ contains
     return
   end subroutine read_connectivity_from_block
 
+  !> @brief Using a vector of cell lengths, calculate the cl1 and cl2 arrays.
+  !<
   subroutine set_cl1_cl2_from_fleng(this, fleng)
-! ******************************************************************************
-! set_cl1_cl2_from_fleng -- Using a vector of cell lengths,
-! calculate the cl1 and cl2 arrays.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF
     ! -- dummy
@@ -486,7 +458,6 @@ contains
     real(DP), dimension(:), intent(in) :: fleng
     ! -- local
     integer(I4B) :: n, m, ii
-! ------------------------------------------------------------------------------
     !
     ! -- Fill symmetric arrays cl1 and cl2 from fleng of the node
     do n = 1, this%nodes
@@ -501,16 +472,12 @@ contains
     return
   end subroutine set_cl1_cl2_from_fleng
 
+  !> @brief Construct the connectivity arrays for a structured
+  !! three-dimensional grid.
+  !<
   subroutine disconnections(this, name_model, nodes, ncol, nrow, nlay, &
                             nrsize, delr, delc, top, bot, nodereduced, &
                             nodeuser)
-! ******************************************************************************
-! disconnections -- Construct the connectivity arrays for a structured
-!   three-dimensional grid.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
@@ -534,7 +501,6 @@ contains
     type(sparsematrix) :: sparse
     integer(I4B) :: i, j, k, kk, ierror, isympos, nodesuser
     integer(I4B) :: nr, mr
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
@@ -749,16 +715,11 @@ contains
     return
   end subroutine disconnections
 
+  !> @brief Construct the connectivity arrays using cell disv information
+  !<
   subroutine disvconnections(this, name_model, nodes, ncpl, nlay, nrsize, &
                              nvert, vertex, iavert, javert, cellxy, &
                              top, bot, nodereduced, nodeuser)
-! ******************************************************************************
-! disvconnections -- Construct the connectivity arrays using cell disv
-!   information.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
@@ -785,7 +746,6 @@ contains
     type(sparsematrix) :: sparse, vertcellspm
     integer(I4B) :: n, m, ipos, i, j, ierror, nodesuser
     type(DisvGeomType) :: cell1, cell2
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
@@ -856,17 +816,13 @@ contains
     return
   end subroutine disvconnections
 
+  !> @brief Construct the connectivity arrays using disu information.  Grid
+  !! may be reduced
+  !<
   subroutine disuconnections(this, name_model, nodes, nodesuser, nrsize, &
                              nodereduced, nodeuser, iainp, jainp, &
                              ihcinp, cl12inp, hwvainp, angldegxinp, &
                              iangledegx)
-! ******************************************************************************
-! disuconnections -- Construct the connectivity arrays using disu
-!   information.  Grid may be reduced
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
@@ -894,7 +850,6 @@ contains
     integer(I4B) :: nr, nu, mr, mu, ipos, iposr, ierror
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
@@ -996,14 +951,10 @@ contains
     return
   end subroutine disuconnections
 
+  !> @brief Fill iausr and jausr if reduced grid, otherwise point them to ia
+  !! and ja.
+  !<
   subroutine iajausr(this, nrsize, nodesuser, nodereduced, nodeuser)
-! ******************************************************************************
-! iajausr -- Fill iausr and jausr if reduced grid, otherwise point them
-!   to ia and ja.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate, mem_deallocate, mem_setptr
     ! -- dummy
@@ -1014,7 +965,6 @@ contains
     integer(I4B), dimension(:), intent(in) :: nodeuser
     ! -- local
     integer(I4B) :: n, nr, ipos
-! ------------------------------------------------------------------------------
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
     !    them to ia and ja.
@@ -1053,19 +1003,17 @@ contains
     return
   end subroutine iajausr
 
+  !> @brief Get the index in the JA array corresponding to the connection
+  !! between two nodes of interest.
+  !!
+  !! Node1 is used as the index in the IA array, and IA(Node1) is the row index
+  !! in the (nodes x nodes) matrix represented by the compressed sparse row
+  !! format.
+  !!
+  !! -1 is returned if either node number is invalid.
+  !!  0 is returned if the two nodes are not connected.
+  !<
   function getjaindex(this, node1, node2)
-! ******************************************************************************
-! Get the index in the JA array corresponding to the connection between
-! two nodes of interest.  Node1 is used as the index in the IA array, and
-! IA(Node1) is the row index in the (nodes x nodes) matrix represented by
-! the compressed sparse row format.
-!
-!   -1 is returned if either node number is invalid.
-!    0 is returned if the two nodes are not connected.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: getjaindex
     ! -- dummy
@@ -1073,7 +1021,6 @@ contains
     integer(I4B), intent(in) :: node1, node2 ! nodes of interest
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- error checking
     if (node1 < 1 .or. node1 > this%nodes .or. node2 < 1 .or. &
@@ -1102,13 +1049,9 @@ contains
     return
   end function getjaindex
 
+  !> @brief Function to fill the isym array
+  !<
   subroutine fillisym(neq, nja, ia, ja, isym)
-! ******************************************************************************
-! fillisym -- function to fill the isym array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     integer(I4B), intent(in) :: neq
     integer(I4B), intent(in) :: nja
@@ -1117,7 +1060,6 @@ contains
     integer(I4B), intent(in), dimension(neq + 1) :: ia
     integer(I4B), intent(in), dimension(nja) :: ja
     integer(I4B) :: n, m, ii, jj
-! ------------------------------------------------------------------------------
     !
     do n = 1, neq
       do ii = ia(n), ia(n + 1) - 1
@@ -1140,13 +1082,9 @@ contains
     return
   end subroutine fillisym
 
+  !> @brief Function to fill the jas array
+  !<
   subroutine filljas(neq, nja, ia, ja, isym, jas)
-! ******************************************************************************
-! fillisym -- function to fill the jas array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     integer(I4B), intent(in) :: neq
     integer(I4B), intent(in) :: nja
@@ -1156,7 +1094,6 @@ contains
     integer(I4B), intent(inout), dimension(nja) :: jas
     ! -- local
     integer(I4B) :: n, m, ii, ipos
-! ------------------------------------------------------------------------------
     !
     ! -- set diagonal to zero and fill upper
     ipos = 1
@@ -1185,14 +1122,10 @@ contains
     return
   end subroutine filljas
 
+  !> @brief Routine to make cell connections from vertices
+  !<
   subroutine vertexconnect(nodes, nrsize, maxnnz, nlay, ncpl, sparse, &
                            vertcellspm, cell1, cell2, nodereduced)
-! ******************************************************************************
-! vertexconnect -- routine to make cell connections from vertices
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     use DisvGeom, only: DisvGeomType
@@ -1209,7 +1142,6 @@ contains
     ! -- local
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     integer(I4B) :: i, j, k, kk, nr, mr, j1, j2, icol1, icol2, nvert
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate and fill the ia and ja arrays
     allocate (rowmaxnnz(nodes))
@@ -1282,25 +1214,22 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine vertexconnect
 
+  !> @brief routine to set a value in the mask array (which has the same shape
+  !! as this%ja)
+  !<
   subroutine set_mask(this, ipos, maskval)
-! ******************************************************************************
-! set_mask -- routine to set a value in the mask array
-! (which has the same shape as this%ja)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
     class(ConnectionsType) :: this
     integer(I4B), intent(in) :: ipos
     integer(I4B), intent(in) :: maskval
-    ! local
+    ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! if we still point to this%ja, we first need to allocate space
     if (associated(this%mask, this%ja)) then
@@ -1314,23 +1243,18 @@ contains
     ! -- set the mask value
     this%mask(ipos) = maskVal
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_mask
 
+  !> @brief Convert an iac array into an ia array
+  !<
   subroutine iac_to_ia(iac, ia)
-! ******************************************************************************
-! iac_to_ia -- convert an iac array into an ia array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
     integer(I4B), dimension(:), contiguous, intent(inout) :: ia
     ! -- local
     integer(I4B) :: n, nodes
-! ------------------------------------------------------------------------------
     !
     ! -- Convert iac to ia
     nodes = size(iac)
@@ -1347,7 +1271,7 @@ contains
     end do
     ia(1) = 1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine iac_to_ia
 
