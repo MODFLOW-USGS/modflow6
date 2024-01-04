@@ -4,7 +4,7 @@ module VirtualGwfModelModule
   use VirtualDataContainerModule, only: VDC_GWFMODEL_TYPE
   use VirtualModelModule
   use SimStagesModule
-  use NumericalModelModule, only: NumericalModelType
+  use BaseModelModule, only: BaseModelType
   implicit none
   private
 
@@ -45,7 +45,7 @@ contains
     use VirtualDataListsModule, only: virtual_model_list
     integer(I4B) :: model_id !< global model id
     character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+    class(BaseModelType), pointer :: model !< the actual model (can be null() when remote)
     ! local
     class(VirtualGwfModelType), pointer :: virtual_gwf_model
     class(*), pointer :: obj
@@ -62,7 +62,7 @@ contains
     class(VirtualGwfModelType) :: this
     character(len=*) :: name
     integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
+    class(BaseModelType), pointer :: model
 
     ! create base
     call this%VirtualModelType%create(name, id, model)

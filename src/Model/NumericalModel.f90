@@ -29,12 +29,6 @@ module NumericalModelModule
     integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() !pointer to position in solution matrix
     real(DP), dimension(:), pointer, contiguous :: xold => null() !dependent variable for previous timestep
     real(DP), dimension(:), pointer, contiguous :: flowja => null() !intercell flows
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !ibound array
-    !
-    ! -- Derived types
-    type(ListType), pointer :: bndlist => null() !array of boundary packages for this model
-    class(DisBaseType), pointer :: dis => null() !discretization object
-
   contains
     !
     ! -- Required for all models (override procedures defined in BaseModelType)
@@ -229,18 +223,12 @@ contains
     call mem_deallocate(this%flowja)
     call mem_deallocate(this%idxglo)
     !
-    ! -- derived types
-    call this%bndlist%Clear()
-    deallocate (this%bndlist)
-    !
     ! -- nullify pointers
     call mem_deallocate(this%x, 'X', this%memoryPath)
     call mem_deallocate(this%rhs, 'RHS', this%memoryPath)
-    call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
     !
     ! -- BaseModelType
     call this%BaseModelType%model_da()
-    !
     !
     ! -- Return
     return
@@ -280,7 +268,6 @@ contains
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%moffset, 'MOFFSET', this%memoryPath)
     allocate (this%filename)
-    allocate (this%bndlist)
     !
     this%filename = ''
     this%neq = 0

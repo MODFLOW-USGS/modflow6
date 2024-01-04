@@ -217,7 +217,7 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
-    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     use VirtualGwfModelModule, only: add_virtual_gwf_model
     use VirtualGwtModelModule, only: add_virtual_gwt_model
     use ConstantsModule, only: LENMODELNAME
@@ -231,7 +231,7 @@ contains
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mnames !< model names
     integer(I4B) :: im
-    class(NumericalModelType), pointer :: num_model
+    class(BaseModelType), pointer :: num_model
     character(len=LINELENGTH) :: model_type
     character(len=LINELENGTH) :: fname, model_name
     character(len=LINELENGTH) :: errmsg
@@ -282,7 +282,7 @@ contains
           write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
             n, ' will be created'
           call gwf_cr(fname, n, model_names(n))
-          num_model => GetNumericalModelFromList(basemodellist, im)
+          num_model => GetBaseModelFromList(basemodellist, im)
           model_loc_idx(n) = im
         end if
         call add_virtual_gwf_model(n, model_names(n), num_model)
@@ -292,7 +292,7 @@ contains
           write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
             n, ' will be created'
           call gwt_cr(fname, n, model_names(n))
-          num_model => GetNumericalModelFromList(basemodellist, im)
+          num_model => GetBaseModelFromList(basemodellist, im)
           model_loc_idx(n) = im
         end if
         call add_virtual_gwt_model(n, model_names(n), num_model)

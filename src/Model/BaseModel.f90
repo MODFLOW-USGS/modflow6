@@ -3,6 +3,9 @@ module BaseModelModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENMEMPATH
   use ListModule, only: ListType
+  use BaseDisModule, only: DisBaseType
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+
   implicit none
 
   private
@@ -21,6 +24,9 @@ module BaseModelModule
     integer(I4B), pointer :: iprpak => null() !< integer flag to echo input
     integer(I4B), pointer :: iprflow => null() !< flag to print simulated flows
     integer(I4B), pointer :: ipakcb => null() !< save_flows flag
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound array
+    type(ListType), pointer :: bndlist => null() !< array of boundary packages
+    class(DisBaseType), pointer :: dis => null() !< discretization object
   contains
     procedure :: model_df
     procedure :: model_ar
@@ -29,6 +35,7 @@ module BaseModelModule
     procedure :: model_ot
     procedure :: model_fp
     procedure :: model_da
+    procedure :: allocate_arrays
     procedure :: allocate_scalars
     procedure :: model_message
   end type BaseModelType
@@ -92,6 +99,18 @@ contains
     class(BaseModelType) :: this
   end subroutine model_fp
 
+  !> @brief Allocate array variables
+  !<
+  subroutine allocate_arrays(this)
+    class(BaseModelType) :: this
+    integer(I4B) :: i
+
+    call mem_allocate(this%ibound, this%dis%nodes, 'IBOUND', this%memoryPath)
+    do i = 1, this%dis%nodes
+      this%ibound(i) = 1 ! active by default
+    end do
+  end subroutine allocate_arrays
+
   !> @brief Allocate scalar variables
   !<
   subroutine allocate_scalars(this, modelname)
@@ -120,6 +139,9 @@ contains
     this%iprflow = 0
     this%ipakcb = 0
     this%inewton = 0 !default is standard formulation
+    !
+    allocate (this%bndlist)
+
   end subroutine allocate_scalars
 
   !> @brief Deallocate
@@ -129,6 +151,17 @@ contains
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(BaseModelType) :: this
+    !
+    ! -- deallocate arrays
+    call mem_deallocate(this%ibound)
+    !
+    ! -- nullify pointers
+    if (associated(this%ibound)) &
+      call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
+    !
+    ! -- member derived types
+    call this%bndlist%Clear()
+    deallocate (this%bndlist)
     !
     ! -- Strings
     call mem_deallocate(this%name, 'NAME', this%memoryPath)

@@ -5,7 +5,7 @@ module VirtualModelModule
   use KindModule, only: I4B, LGP
   use ListModule, only: ListType
   use SimStagesModule
-  use NumericalModelModule, only: NumericalModelType
+  use BaseModelModule, only: BaseModelType
   implicit none
   private
 
@@ -14,7 +14,7 @@ module VirtualModelModule
   public :: get_virtual_model
 
   type, public, extends(VirtualDataContainerType) :: VirtualModelType
-    class(NumericalModelType), pointer :: local_model
+    class(BaseModelType), pointer :: local_model
     ! CON
     type(VirtualIntType), pointer :: con_ianglex => null()
     type(VirtualInt1dType), pointer :: con_ia => null()
@@ -69,7 +69,7 @@ contains
     class(VirtualModelType) :: this
     character(len=*) :: name
     integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
+    class(BaseModelType), pointer :: model
     ! local
     logical(LGP) :: is_local
 
@@ -324,7 +324,7 @@ contains
 
   function eq_numerical_model(this, num_model) result(is_equal)
     class(VirtualModelType), intent(in) :: this
-    class(NumericalModelType), intent(in) :: num_model
+    class(BaseModelType), intent(in) :: num_model
     logical(LGP) :: is_equal
 
     is_equal = (this%id == num_model%id)
