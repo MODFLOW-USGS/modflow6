@@ -51,7 +51,6 @@ _full_dist_tex_paths = [
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
-_soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 
 # publications included in full dist docs
 _publication_urls = [
@@ -213,7 +212,9 @@ def build_deprecations_tex():
     assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
 
 
-def build_mf6io_tex_from_dfn(overwrite: bool = False):
+def build_mf6io_tex_from_dfn(
+        overwrite: bool = False,
+        models: Optional[List[str]] = None):
     if overwrite:
         clean_tex_files()
 
@@ -255,7 +256,10 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
                 f.unlink()
 
             # run python script
-            out, err, ret = run_cmd(sys.executable, "mf6ivar.py")
+            args = [sys.executable, "mf6ivar.py"]
+            for model in models:
+                args += ["--model", model]
+            out, err, ret = run_cmd(*args)
             assert not ret, out + err
 
             # check that dfn and tex files match
@@ -595,6 +599,12 @@ if __name__ == "__main__":
         default="MODFLOW-USGS",
         help="Repository owner (substitute your own for a fork)",
     )
+    parser.add_argument(
+        "--models",
+        required=False,
+        default=""
+    )
+    parser.add_argument()
     args = parser.parse_args()
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
