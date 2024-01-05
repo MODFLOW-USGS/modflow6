@@ -401,19 +401,22 @@ module GwtCncInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'PERIOD', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .true. & ! block_variable
+    .true., & ! block_variable
+    .true. & ! timeseries
     ) &
     ]
 

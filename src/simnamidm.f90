@@ -418,31 +418,36 @@ module SimNamInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'TIMING', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'MODELS', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'EXCHANGES', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'SOLUTIONGROUP', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .true. & ! block_variable
+    .true., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

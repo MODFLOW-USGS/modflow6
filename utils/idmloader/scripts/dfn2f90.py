@@ -214,7 +214,7 @@ class Dfn2F90:
         self._var_d = vardict
 
     def _construct_f90_block_statement(
-        self, blockname, required=False, aggregate=False, block_var=False
+        self, blockname, required=False, aggregate=False, block_var=False, timeseries=False
     ):
         f90statement = f"    InputBlockDefinitionType( &\n"
         f90statement += f"    '{blockname}', & ! blockname\n"
@@ -230,9 +230,14 @@ class Dfn2F90:
             f90statement += f"    .false., & ! aggregate\n"
 
         if block_var:
-            f90statement += f"    .true. & ! block_variable\n"
+            f90statement += f"    .true., & ! block_variable\n"
         else:
-            f90statement += f"    .false. & ! block_variable\n"
+            f90statement += f"    .false., & ! block_variable\n"
+
+        if timeseries:
+            f90statement += f"    .true. & ! timeseries\n"
+        else:
+            f90statement += f"    .false. & ! timeseries\n"
 
         f90statement += f"    ), &"
 
@@ -321,6 +326,7 @@ class Dfn2F90:
         required_l = []
         has_block_var = False
         is_aggregate_blk = False
+        is_timeseries_blk = False
         aggregate_required = False
 
         # comment
@@ -419,6 +425,7 @@ class Dfn2F90:
             if "time_series" in v:
                 if v["time_series"] == "true":
                     timeseries = ".true."
+                    is_timeseries_blk = True
                 else:
                     timeseries = ".false."
 
@@ -483,6 +490,7 @@ class Dfn2F90:
                 required=required,
                 aggregate=is_aggregate_blk,
                 block_var=has_block_var,
+                timeseries=is_timeseries_blk,
             )
             + "\n"
         )

@@ -46,6 +46,7 @@ module InputDefinitionModule
     logical(LGP) :: required = .false.
     logical(LGP) :: aggregate = .false.
     logical(LGP) :: block_variable = .false.
+    logical(LGP) :: timeseries = .false.
   end type InputBlockDefinitionType
 
 end module InputDefinitionModule
