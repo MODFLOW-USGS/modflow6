@@ -707,6 +707,7 @@ if __name__ == "__main__":
                 s = p.stem
                 if (
                     "sim" in s
+                    or "sln" in s
                     or "utl" in s
                     or any(e in s for e in exchanges)
                     or any(m in s for m in models)
