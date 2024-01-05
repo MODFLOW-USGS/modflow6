@@ -136,6 +136,8 @@ import re
 import shutil
 from typing import Iterable
 
+mf6ivar_dir = Path(__file__).parent
+
 
 def parse_mf6var_file(fname):
     f = open(fname, "r")
@@ -187,7 +189,7 @@ def parse_mf6var_file(fname):
     return vardict
 
 
-COMMONDESCRIPTIONS = parse_mf6var_file(os.path.join(".", "dfn", "common.dfn"))
+COMMONDESCRIPTIONS = parse_mf6var_file(mf6ivar_dir / "dfn" / "common.dfn")
 
 VALID_TYPES = [
     "integer",
@@ -494,7 +496,7 @@ def md_replace(s):
 
 
 def get_examples(component):
-    pth = os.path.join("examples")
+    pth = mf6ivar_dir / "examples"
     files = [
         filename
         for filename in sorted(os.listdir(pth))
@@ -518,7 +520,7 @@ def get_examples(component):
 
 
 def get_obs_examples(component):
-    pth = os.path.join("examples")
+    pth = mf6ivar_dir / "examples"
     files = [
         filename
         for filename in sorted(os.listdir(pth))
@@ -541,7 +543,7 @@ def get_obs_examples(component):
 
 
 def get_obs_table(component):
-    pth = os.path.join("..", "..", "Common")
+    pth = mf6ivar_dir.parent.parent / "Common"
     files = [
         filename
         for filename in sorted(os.listdir(pth))
@@ -682,7 +684,6 @@ if __name__ == "__main__":
     verbose = args.verbose
 
     # define directories
-    mf6ivar_dir = Path(__file__).parent
     dfndir = mf6ivar_dir / "dfn"
     texdir = mf6ivar_dir / "tex"
     mddir = mf6ivar_dir / "md"
