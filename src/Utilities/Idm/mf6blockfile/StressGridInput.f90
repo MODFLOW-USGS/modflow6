@@ -249,18 +249,17 @@ contains
                                   this%mf6_input%mempath, this%sourcename)
     end if
     !
-    ! -- reset input context memory for parameters
     do n = 1, this%nparam
       if (this%param_reads(n)%invar /= 0) then
         !
-        ! -- set definition
-        idt => this%mf6_input%param_dfns(this%idt_idxs(n))
-        !
         ! -- reset read state
         this%param_reads(n)%invar = 0
-
+        !
       end if
     end do
+    !
+    ! -- reset auxvar array each period
+    this%bndctx%auxvar = DZERO
     !
     ! -- return
     return
