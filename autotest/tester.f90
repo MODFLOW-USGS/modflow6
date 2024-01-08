@@ -5,6 +5,7 @@ program tester
   use TestArrayHandlers, only: collect_arrayhandlers
   use TestDevFeature, only: collect_dev_feature
   use TestGeomUtil, only: collect_geomutil
+  use TestHashTable, only: collect_hashtable
   use TestInputOutput, only: collect_inputoutput
   use TestMathUtil, only: collect_mathutil
   use TestMessage, only: collect_message
@@ -20,6 +21,7 @@ program tester
                new_testsuite("ArrayHandlers", collect_arrayhandlers), &
                new_testsuite("DevFeature", collect_dev_feature), &
                new_testsuite("GeomUtil", collect_geomutil), &
+               new_testsuite("HashTable", collect_hashtable), &
                new_testsuite("InputOutput", collect_inputoutput), &
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("Message", collect_message), &

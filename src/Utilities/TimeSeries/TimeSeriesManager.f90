@@ -490,7 +490,7 @@ contains
     ! Get index from hash table, get time series from TsContainers,
     !     and assign result to time series contained in link.
     res => null()
-    indx = this%BndTsHashTable%get_index(name)
+    indx = this%BndTsHashTable%get(name)
     if (indx > 0) then
       res => this%TsContainers(indx)%timeSeries
     end if
@@ -529,7 +529,7 @@ contains
         this%TsContainers(k)%timeSeries => tsfile%GetTimeSeries(j)
         if (associated(this%TsContainers(k)%timeSeries)) then
           name = this%TsContainers(k)%timeSeries%Name
-          call this%BndTsHashTable%add_entry(name, k)
+          call this%BndTsHashTable%add(name, k)
         end if
       end do
     end do
