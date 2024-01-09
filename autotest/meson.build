@@ -4,6 +4,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'ArrayHandlers',
     'DevFeature',
     'GeomUtil',
+    'HashTable',
     'InputOutput',
     'MathUtil',
     'Message',
