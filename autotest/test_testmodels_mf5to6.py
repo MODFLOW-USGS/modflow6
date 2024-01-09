@@ -4,7 +4,7 @@ from pathlib import Path
 import flopy
 import pytest
 
-from common_regression import get_namefiles, model_setup
+from common_regression import get_namefiles, setup_model
 from framework import TestFramework
 
 excluded_models = ["alt_model", "mf2005"]
@@ -28,7 +28,7 @@ def setup_mf5to6(src, dst) -> Path:
     # copy lgr files to working directory
     if lgrpth is not None:
         npth = lgrpth
-        model_setup(lgrpth, dst)
+        setup_model(lgrpth, dst)
     # copy MODFLOW-2005, MODFLOW-NWT, or MODFLOW-USG files to working directory
     else:
         npths = get_namefiles(src)
@@ -37,7 +37,7 @@ def setup_mf5to6(src, dst) -> Path:
             print(msg)
             assert False
         npth = npths[0]
-        model_setup(npth, dst)
+        setup_model(npth, dst)
 
     return Path(npth)
 

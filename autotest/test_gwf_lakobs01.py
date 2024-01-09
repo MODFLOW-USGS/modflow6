@@ -205,7 +205,7 @@ def build_model(dir, exe):
 
 def test_mf6model(function_tmpdir, targets):
     # build the models
-    sim = build_model(str(function_tmpdir), targets.mf6)
+    sim = build_model(str(function_tmpdir), targets["mf6"])
 
     # write model input
     sim.write_simulation()

@@ -5,26 +5,19 @@ from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from traceback import format_exc
-from typing import Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 from warnings import warn
 
 import flopy
 import numpy as np
-from flopy.utils.compare import compare_heads
-from flopy.mf6 import MFSimulation
+from common_regression import (COMPARE_PROGRAMS, adjust_htol,
+                               get_mf6_comparison, get_mf6_files,
+                               get_namefiles, get_rclose, get_regression_files,
+                               setup_mf6, setup_mf6_comparison)
 from flopy.mbase import BaseModel
-from modflow_devtools.executables import Executables
+from flopy.mf6 import MFSimulation
+from flopy.utils.compare import compare_heads
 from modflow_devtools.misc import get_ostag, is_in_ci
-
-from common_regression import (
-    COMPARE_PROGRAMS,
-    get_mf6_comparison,
-    get_mf6_files,
-    get_namefiles,
-    get_regression_files,
-    setup_mf6,
-    setup_mf6_comparison,
-)
 
 DNODATA = 3.0e30
 EXTTEXT = {
@@ -34,20 +27,17 @@ EXTTEXT = {
     "ucn": "concentration",
     "cbc": "cell-by-cell",
 }
-
-
-def adjust_htol(
-    workspace: Union[str, os.PathLike], htol: float = 0.001
-) -> Optional[float]:
-    """Get outer_dvclose value from MODFLOW 6 ims file"""
-
-    dvclose = get_dvclose(workspace)
-    if not dvclose:
-        return htol
-
-    # adjust htol if < IMS outer_dvclose
-    dvclose *= 5.0
-    return dvclose if (htol is None or htol < dvclose) else htol
+HDS_EXT = (
+    "hds",
+    "hed",
+    "bhd",
+    "ahd",
+    "bin",
+)
+CBC_EXT = (
+    "cbc",
+    "bud",
+)
 
 
 def api_return(success, model_ws) -> Tuple[bool, List[str]]:
@@ -56,78 +46,6 @@ def api_return(success, model_ws) -> Tuple[bool, List[str]]:
     """
     fpth = os.path.join(model_ws, "mfsim.stdout")
     return success, open(fpth).readlines()
-
-
-def get_matching_files(
-    workspace: Union[str, os.PathLike], extensions: Union[str, Iterator[str]]
-) -> Iterator[str]:
-    """
-    Get MF6 regression files in the specified workspace,
-    optionally filtering by one or more file extensions.
-    Parameters
-    ----------
-    workspace : str or PathLike
-        MODFLOW 6 simulation workspace path
-    extensions : str or list of str
-        file extensions to filter
-    Returns
-    -------
-    An iterator of regression files found
-    """
-
-    workspace = Path(workspace).expanduser().absolute()
-    if isinstance(extensions, str):
-        extensions = [extensions]
-
-    for ext in extensions:
-        for file in workspace.glob(f"*.{ext}"):
-            yield file
-
-
-def get_dvclose(workspace: Union[str, os.PathLike]) -> Optional[float]:
-    """Get outer_dvclose value from MODFLOW 6 ims file"""
-    dvclose = None
-    files = os.listdir(workspace)
-    for file_name in files:
-        pth = os.path.join(workspace, file_name)
-        if os.path.isfile(pth):
-            if file_name.lower().endswith(".ims"):
-                with open(pth) as f:
-                    lines = f.read().splitlines()
-                for line in lines:
-                    if "outer_dvclose" in line.lower():
-                        v = float(line.split()[1])
-                        if dvclose is None:
-                            dvclose = v
-                        else:
-                            if v > dvclose:
-                                dvclose = v
-                        break
-
-    return dvclose
-
-
-def get_rclose(workspace: Union[str, os.PathLike]) -> Optional[float]:
-    """Get inner_rclose value from MODFLOW 6 ims file"""
-
-    rclose = None
-    for pth in workspace.glob("*.ims"):
-        with open(pth, "r") as f:
-            for line in f:
-                if "inner_rclose" in line.lower():
-                    v = float(line.split()[1])
-                    if rclose is None:
-                        rclose = v
-                    else:
-                        if v > rclose:
-                            rclose = v
-                    break
-
-    if rclose is None:
-        return 0.5
-
-    rclose *= 5.0
-    return rclose
 
 
 def get_mfsim_lst_tail(path: os.PathLike, lines=100) -> str:
@@ -255,10 +173,12 @@ class TestFramework:
         The test name
     workspace : pathlike
         The test workspace
-    targets : Executables
+    targets : dict
         Binary targets to test against. Development binaries are
         required, downloads/rebuilt binaries are optional (if not
         found, comparisons and regression tests will be skipped).
+        Dictionary maps target names to paths. The test framework
+        will refuse to run a program if it is not a known target.
     build : function, optional
         User defined function returning one or more simulations/models.
         Takes `self` as input. This is the place to build simulations.
@@ -298,7 +218,7 @@ class TestFramework:
         self,
         name: str,
         workspace: Union[str, os.PathLike],
-        targets: Union[dict, Executables],
+        targets: Dict[str, Path],
         api_func: Optional[Callable] = None,
         build: Optional[Callable] = None,
         check: Optional[Callable] = None,
@@ -319,18 +239,14 @@ class TestFramework:
 
         self.name = name
         self.workspace = workspace
-        self.targets = (
-            Executables(**targets) if isinstance(targets, dict) else targets
-        )
+        self.targets = targets
         self.build = build
         self.check = check
         self.parallel = parallel
         self.ncpus = ncpus
         self.api_func = api_func
         self.compare = compare
-        self.inpt = None
         self.outp = None
-        self.coutp = None
         self.htol = 0.001 if htol is None else htol
         self.rclose = 0.001 if rclose is None else rclose
         self.overwrite = overwrite
@@ -342,7 +258,9 @@ class TestFramework:
 
     # private
 
-    def _compare_heads(self, cpth=None, extensions="hds") -> bool:
+    def _compare_heads(
+        self, cpth=None, extensions="hds", mf6=False, htol=0.001
+    ) -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
 
@@ -352,7 +270,6 @@ class TestFramework:
             exfiles = []
             for file1 in self.outp:
                 ext = os.path.splitext(file1)[1][1:]
-
                 if ext.lower() in extensions:
                     # simulation file
                     pth = os.path.join(self.workspace, file1)
@@ -360,19 +277,17 @@ class TestFramework:
 
                     # look for an exclusion file
                     pth = os.path.join(self.workspace, file1 + ".ex")
-                    if os.path.isfile(pth):
-                        exfiles.append(pth)
-                    else:
-                        exfiles.append(None)
+                    exfiles.append(pth if os.path.isfile(pth) else None)
 
-                    # Check to see if there is a corresponding compare file
-                    if self.coutp is not None:
-                        for file2 in self.coutp:
+                    # look for a comparison file
+                    coutp = None
+                    if mf6:
+                        _, coutp = get_mf6_files(cpth / "mfsim.nam")
+                    if coutp is not None:
+                        for file2 in coutp:
                             ext = os.path.splitext(file2)[1][1:]
                             if ext.lower() in extensions:
-                                # simulation file
-                                pth = os.path.join(cpth, file2)
-                                files2.append(pth)
+                                files2.append(os.path.join(cpth, file2))
                     else:
                         files2.append(None)
 
@@ -410,7 +325,7 @@ class TestFramework:
                     outfile=outfile,
                     files1=file1,
                     files2=file2,
-                    htol=self.htol,
+                    htol=htol,
                     difftol=True,
                     verbose=self.verbose,
                     exfile=exfile,
@@ -432,7 +347,7 @@ class TestFramework:
                 None,
                 None,
                 precision="double",
-                htol=self.htol,
+                htol=htol,
                 text=EXTTEXT[extension],
                 outfile=outfile,
                 files1=fpth0,
@@ -449,7 +364,7 @@ class TestFramework:
                 return False
         return True
 
-    def _compare_concentrations(self, extensions="ucn") -> bool:
+    def _compare_concentrations(self, extensions="ucn", htol=0.001) -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
 
@@ -464,7 +379,7 @@ class TestFramework:
                 None,
                 None,
                 precision="double",
-                htol=self.htol,
+                htol=htol,
                 text=EXTTEXT[extension],
                 outfile=outfile,
                 files1=fpth0,
@@ -481,7 +396,7 @@ class TestFramework:
                 return False
         return True
 
-    def _compare_budgets(self, extensions="cbc") -> bool:
+    def _compare_budgets(self, extensions="cbc", rclose=0.001) -> bool:
         if isinstance(extensions, str):
             extensions = [extensions]
         files0, files1 = get_regression_files(self.workspace, extensions)
@@ -492,15 +407,15 @@ class TestFramework:
                 f"{self.name} ({os.path.basename(fpth0)})",
             )
             success = self._compare_budget_files(
-                extension,
-                fpth0,
-                fpth1,
+                extension, fpth0, fpth1, rclose
             )
             if not success:
                 return False
         return True
 
-    def _compare_budget_files(self, extension, fpth0, fpth1) -> bool:
+    def _compare_budget_files(
+        self, extension, fpth0, fpth1, rclose=0.001
+    ) -> bool:
         success = True
         if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
             return success, ""
@@ -557,7 +472,7 @@ class TestFramework:
                 # skip empty vectors
                 if v0.size < 1:
                     continue
-                vmin = self.rclose
+                vmin = rclose
                 if vmin < 1e-6:
                     vmin = 1e-6
                 vmin_tol = 5.0 * vmin
@@ -595,20 +510,15 @@ class TestFramework:
         print("  Destination:", dst)
         self.workspace = dst
 
-        # setup expected input and output files
-        self.inpt, self.outp = setup_mf6(src=src, dst=dst)
+        # setup workspace and expected output files
+        _, self.outp = setup_mf6(src=src, dst=dst)
         print("waiting...")
         time.sleep(0.5)
-
-        # adjust htol if it is smaller than IMS outer_dvclose
-        self.htol = adjust_htol(self.workspace)
-        self.rclose = get_rclose(self.workspace)
 
         if self.compare == "mf6_regression":
             shutil.copytree(self.workspace, self.workspace / self.compare)
         else:
-            # get the type of comparison to use
-            self.compare = get_mf6_comparison(src)
+            self.compare = get_mf6_comparison(src)  # detect comparison
             setup_mf6_comparison(src, dst, self.compare, overwrite=True)
 
     def run_sim_or_model(
@@ -636,7 +546,7 @@ class TestFramework:
         tgt = Path(shutil.which(target))
         assert tgt.is_file(), f"Target executable not found: {target}"
         assert (
-            tgt in self.targets.as_dict().values()
+            tgt in self.targets.values()
         ), f"Targets must be explicitly registered with the test framework"
 
         if self.verbose:
@@ -741,33 +651,26 @@ class TestFramework:
         if self.verbose:
             print("Comparison test", self.name)
 
-        hds_ext = (
-            "hds",
-            "hed",
-            "bhd",
-            "ahd",
-            "bin",
-        )
-        cbc_ext = (
-            "cbc",
-            "bud",
-        )
+        # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
+        htol = adjust_htol(self.workspace, self.htol)
+        rclose = get_rclose(self.workspace)
         cmp_path = self.workspace / compare
-        if "mf6" in compare:
-            _, self.coutp = get_mf6_files(cmp_path / "mfsim.nam")
         if "mf6_regression" in compare:
             assert self._compare_heads(
-                extensions=hds_ext
+                extensions=HDS_EXT, htol=htol
             ), "head comparison failed"
             assert self._compare_budgets(
-                extensions=cbc_ext
+                extensions=CBC_EXT, rclose=rclose
             ), "budget comparison failed"
-            assert (
-                self._compare_concentrations()
+            assert self._compare_concentrations(
+                htol=htol
             ), "concentration comparison failed"
         else:
             assert self._compare_heads(
-                cpth=cmp_path, extensions=hds_ext
+                cpth=cmp_path,
+                extensions=HDS_EXT,
+                mf6="mf6" in compare,
+                htol=htol,
             ), "head comparison failed"
 
     def run(self):
@@ -800,7 +703,7 @@ class TestFramework:
 
         # run models/simulations
         for i, sim_or_model in enumerate(self.sims):
-            tgts = self.targets.as_dict()
+            tgts = self.targets
             workspace = get_workspace(sim_or_model)
             exe_path = (
                 Path(sim_or_model.exe_name)
@@ -827,10 +730,6 @@ class TestFramework:
 
         # setup and run comparison model(s), if enabled
         if self.compare:
-            # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
-            self.htol = adjust_htol(self.workspace, self.htol)
-            self.rclose = get_rclose(self.workspace)
-
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
                 if self.verbose:
@@ -860,9 +759,7 @@ class TestFramework:
                     workspace = self.workspace / self.compare
                     success, _ = self.run_sim_or_model(
                         workspace,
-                        self.targets.as_dict().get(
-                            self.compare, self.targets.mf6
-                        ),
+                        self.targets.get(self.compare, self.targets["mf6"]),
                     )
                     assert success, f"Comparison model failed: {workspace}"
 

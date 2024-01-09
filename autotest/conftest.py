@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
+from typing import Dict
 from warnings import warn
 
 import pytest
-from modflow_devtools.executables import Executables
 from modflow_devtools.ostags import get_binary_suffixes
 
 pytest_plugins = ["modflow_devtools.fixtures"]
@@ -54,7 +54,7 @@ def bin_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def targets() -> Executables:
+def targets() -> Dict[str, Path]:
     """
     Target executables for tests. These include local development builds as
     well as binaries 1) downloaded from GitHub and 2) rebuilt from the last
@@ -72,16 +72,16 @@ def targets() -> Executables:
             d[k] = v
         else:
             warn(f"Couldn't find binary '{k}' expected at: {v}")
-    return Executables(**d)
+    return d
 
 
-def try_get_target(targets: Executables, name: str) -> Path:
+def try_get_target(targets: Dict[str, Path], name: str) -> Path:
     """Try to retrieve the path to a binary. If the binary is a development
     target and can't be found, an error is raised. Otherwise (if the binary
     is downloaded or rebuilt) the test is skipped. This is to allow testing
     without downloaded or rebuilt binaries, e.g. if the network is down."""
 
-    exe = targets.as_dict().get(name)
+    exe = targets.get(name)
     if exe:
         return exe
     elif name in _binaries["development"]:

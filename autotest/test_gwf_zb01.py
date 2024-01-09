@@ -239,7 +239,7 @@ def check_output(idx, test):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        test.targets.zbud6,
+        test.targets["zbud6"],
         "zonebudget.nam",
         model_ws=test.workspace,
         silent=False,

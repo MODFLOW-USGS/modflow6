@@ -43,7 +43,7 @@ def test_tdis_tsmult(tsmult, simple_sim, targets):
     tdis.write()
 
     # Run within libmf6
-    mf6 = XmiWrapper(lib_path=targets.libmf6, working_directory=sim.sim_path)
+    mf6 = XmiWrapper(lib_path=targets["libmf6"], working_directory=sim.sim_path)
 
     mf6.initialize()
     dt_list = []

@@ -149,7 +149,7 @@ def build_models(idx, test):
 
     # build MODFLOW-2005 files
     ws = os.path.join(test.workspace, "mf2005")
-    mc = flopy.modflow.Modflow(name, model_ws=ws, exe_name=test.targets.mf2005)
+    mc = flopy.modflow.Modflow(name, model_ws=ws, exe_name=test.targets["mf2005"])
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
