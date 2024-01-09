@@ -853,5 +853,5 @@ def run_transport_model(dir, exe):
 
 @pytest.mark.slow
 def test_prudic2004t2fmiats(function_tmpdir, targets):
-    run_flow_model(dir=str(function_tmpdir), exe=targets.mf6)
-    run_transport_model(dir=str(function_tmpdir), exe=targets.mf6)
+    run_flow_model(dir=str(function_tmpdir), exe=targets["mf6"])
+    run_transport_model(dir=str(function_tmpdir), exe=targets["mf6"])

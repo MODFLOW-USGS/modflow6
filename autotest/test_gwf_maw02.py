@@ -283,7 +283,7 @@ def eval_results(name, workspace):
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
+    sim, _ = build_model(idx, ws, targets["mf6"])
     sim.write_simulation()
     sim.run_simulation()
     eval_results(name, ws)

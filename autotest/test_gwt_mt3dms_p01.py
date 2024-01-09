@@ -475,7 +475,7 @@ def p01mf6(
 
 def get_binaries(targets) -> Tuple[Path, Path, Path]:
     return (
-        targets.mf6,
+        targets["mf6"],
         try_get_target(targets, "mf2005s"),
         try_get_target(targets, "mt3dms"),
     )

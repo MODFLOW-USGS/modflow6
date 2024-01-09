@@ -348,4 +348,4 @@ def run_flw_and_trnprt_models(dir, exe):
 
 
 def test_ssm06(function_tmpdir, targets):
-    run_flw_and_trnprt_models(str(function_tmpdir), targets.mf6)
+    run_flw_and_trnprt_models(str(function_tmpdir), targets["mf6"])

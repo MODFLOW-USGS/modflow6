@@ -550,5 +550,5 @@ def eval_transport(wst):
 
 
 def test_ssm04fmi(function_tmpdir, targets):
-    run_flow_model(str(function_tmpdir), targets.mf6)
-    run_transport_model(str(function_tmpdir), targets.mf6)
+    run_flow_model(str(function_tmpdir), targets["mf6"])
+    run_transport_model(str(function_tmpdir), targets["mf6"])

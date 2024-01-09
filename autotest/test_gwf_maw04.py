@@ -266,6 +266,6 @@ def build_model(idx, ws, mf6):
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
+    sim, _ = build_model(idx, ws, targets["mf6"])
     sim.write_simulation()
     sim.run_simulation()
