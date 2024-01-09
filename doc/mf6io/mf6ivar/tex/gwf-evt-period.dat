@@ -1,5 +1,5 @@
 BEGIN PERIOD <iper>
-  <cellid(ncelldim)> <@surface@> <@rate@> <@depth@> <@pxdp(nseg-1)@> <@petm(nseg-1)@> [<@petm0@>] [<@aux(naux)@>] [<boundname>]
-  <cellid(ncelldim)> <@surface@> <@rate@> <@depth@> <@pxdp(nseg-1)@> <@petm(nseg-1)@> [<@petm0@>] [<@aux(naux)@>] [<boundname>]
+  <cellid(ncelldim)> <@surface@> <@rate@> <@depth@> [<@pxdp(nseg-1)@>] [<@petm(nseg-1)@>] [<@petm0@>] [<@aux(naux)@>] [<boundname>]
+  <cellid(ncelldim)> <@surface@> <@rate@> <@depth@> [<@pxdp(nseg-1)@>] [<@petm(nseg-1)@>] [<@petm0@>] [<@aux(naux)@>] [<boundname>]
   ...
 END PERIOD

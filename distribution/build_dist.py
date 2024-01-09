@@ -8,6 +8,7 @@ from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from shutil import copytree
+from typing import List, Optional
 
 import pytest
 from modflow_devtools.build import meson_build
@@ -22,7 +23,6 @@ from utils import get_project_root_path, run_command
 
 # default paths
 _project_root_path = get_project_root_path()
-_examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _build_path = _project_root_path / "builddir"
 
 # OS-specific extensions
@@ -95,38 +95,6 @@ def test_copy_sources(tmp_path):
     assert (tmp_path / "msvs" / "mf6.sln").is_file()
 
 
-def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
-
-    # create examples, but don't run them
-    examples_path = examples_repo_path / "examples"
-    examples_path.mkdir(parents=True, exist_ok=True)
-    if not overwrite and any(get_model_paths(examples_path)):
-        print(f"Examples already built")
-    else:
-        print(f"Building examples")
-        scripts_folder = examples_repo_path / "scripts"
-        exclude_list = ["ex-gwf-capture.py"]
-        scripts = [
-            fname
-            for fname in scripts_folder.glob("*")
-            if fname.suffix == ".py"
-            and fname.stem.startswith("ex-")
-            and fname.stem not in exclude_list
-        ]
-        for script in scripts:
-            argv = [
-                sys.executable,
-                script,
-                "--no_run",
-                "--no_plot",
-                "--destination",
-                examples_path,
-            ]
-            print(f"running {argv} in {scripts_folder}")
-            run_command(argv, scripts_folder)
-
-
 def setup_examples(
     bin_path: PathLike, examples_path: PathLike, overwrite: bool = False
 ):
@@ -197,7 +165,6 @@ def build_programs_meson(
 ):
     build_path = Path(build_path).expanduser().absolute()
     bin_path = Path(bin_path).expanduser().absolute()
-
     exe_paths = [
         bin_path / f"mf6{_eext}",
         bin_path / f"zbud6{_eext}",
@@ -285,7 +252,6 @@ def test_build_makefiles(tmp_path):
 def build_distribution(
     build_path: PathLike,
     output_path: PathLike,
-    examples_repo_path: PathLike,
     full: bool = False,
     overwrite: bool = False,
 ):
@@ -293,7 +259,6 @@ def build_distribution(
 
     build_path = Path(build_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
 
     # binaries
     build_programs_meson(
@@ -322,8 +287,6 @@ def build_distribution(
         build_documentation(
             bin_path=output_path / "bin",
             output_path=output_path / "doc",
-            examples_repo_path=examples_repo_path,
-            # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
             full=full,
             overwrite=overwrite,
         )
@@ -337,7 +300,6 @@ def test_build_distribution(tmp_path, full):
     build_distribution(
         build_path=tmp_path / "builddir",
         output_path=output_path,
-        examples_repo_path=_examples_repo_path,
         full=full,
         overwrite=True,
     )
@@ -396,13 +358,6 @@ if __name__ == "__main__":
         help="Path to create distribution artifacts",
     )
     parser.add_argument(
-        "-e",
-        "--examples-repo-path",
-        required=False,
-        default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models",
-    )
-    parser.add_argument(
         "--full",
         required=False,
         default=False,
@@ -420,20 +375,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     build_path = Path(args.build_path)
     out_path = Path(args.output_path)
-    examples_repo_path = (
-        Path(args.examples_repo_path)
-        if args.examples_repo_path
-        else _examples_repo_path
-    )
-    assert (
-        examples_repo_path.is_dir()
-    ), f"Examples repo not found at path: {examples_repo_path}"
     out_path.mkdir(parents=True, exist_ok=True)
-
     build_distribution(
         build_path=build_path,
         output_path=out_path,
-        examples_repo_path=examples_repo_path,
         full=args.full,
         overwrite=args.force,
     )
