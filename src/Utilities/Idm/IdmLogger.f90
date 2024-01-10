@@ -70,7 +70,7 @@ contains
 
     if (iparamlog > 0 .and. iout > 0) then
       write (iout, '(/1x,a,i0,a)') 'IDP PERIOD ', kper, &
-        ' LOAD for component: '//trim(component)
+        ' load for component: '//trim(component)
     end if
   end subroutine idm_log_period_header
 
@@ -81,7 +81,7 @@ contains
 
     if (iparamlog > 0 .and. iout > 0) then
       !backspace iout
-      write (iout, '(1x,a,/)') 'IDP component dynamic load commplete...'
+      write (iout, '(1x,a,/)') 'IDP component dynamic load complete...'
     end if
   end subroutine idm_log_period_close
 
