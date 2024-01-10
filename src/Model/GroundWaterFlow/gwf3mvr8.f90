@@ -113,7 +113,7 @@ module GwfMvrModule
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use GwfMvrPeriodDataModule, only: GwfMvrPeriodDataType
-  use PackageMoverModule, only: PackageMoverType
+  use PackageMoverModule, only: PackageMoverType, set_packagemover_pointer
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: urword
   use TableModule, only: TableType, table_cr
@@ -165,10 +165,10 @@ module GwfMvrModule
     procedure :: check_packages
     procedure :: assign_packagemovers
     procedure :: initialize_movers
+    procedure :: fill_budobj
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: mvr_setup_budobj
-    procedure, private :: mvr_fill_budobj
     procedure, private :: mvr_setup_outputtab
     procedure, private :: mvr_print_outputtab
   end type GwfMvrType
@@ -386,16 +386,16 @@ contains
       !
       ! -- Check to make sure all providers and receivers are properly stored
       do i = 1, this%nmvr
-        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%mem_path_src)
         if (ipos < 1) then
           write (errmsg, '(a,a,a)') 'Provider ', &
-            trim(this%mvr(i)%pckNameSrc), ' not listed in packages block.'
+            trim(this%mvr(i)%mem_path_src), ' not listed in packages block.'
           call store_error(errmsg)
         end if
-        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%mem_path_tgt)
         if (ipos < 1) then
           write (errmsg, '(a,a,a)') 'Receiver ', &
-            trim(this%mvr(i)%pckNameTgt), ' not listed in packages block.'
+            trim(this%mvr(i)%mem_path_tgt), ' not listed in packages block.'
           call store_error(errmsg)
         end if
       end do
@@ -410,8 +410,8 @@ contains
       !
       ! --
       do i = 1, this%nmvr
-        ii = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
-        jj = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
+        ii = ifind(this%pckMemPaths, this%mvr(i)%mem_path_src)
+        jj = ifind(this%pckMemPaths, this%mvr(i)%mem_path_tgt)
         ipos = (ii - 1) * this%maxpackages + jj
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
@@ -524,11 +524,22 @@ contains
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- locals
+    integer(I4B) :: i, mapped_id
+    class(PackageMoverType), pointer :: pkg_mvr
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
+    ! -- set the feature maps
+    allocate (pkg_mvr)
+    do i = 1, this%nmvr
+      call set_packagemover_pointer(pkg_mvr, this%mvr(i)%mem_path_src)
+      mapped_id = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
+      this%mvr(i)%iRchNrSrcMapped = mapped_id
+    end do
+    deallocate (pkg_mvr)
+    !
     ! -- fill the budget object
-    call this%mvr_fill_budobj()
+    call this%fill_budobj()
     !
     ! -- Return
     return
@@ -661,10 +672,10 @@ contains
     ! -- Accumulate the rates
     do i = 1, this%nmvr
       do j = 1, this%maxpackages
-        if (this%pckMemPaths(j) == this%mvr(i)%pckNameSrc) then
+        if (this%pckMemPaths(j) == this%mvr(i)%mem_path_src) then
           ratin(j) = ratin(j) + this%mvr(i)%qpactual
         end if
-        if (this%pckMemPaths(j) == this%mvr(i)%pckNameTgt) then
+        if (this%pckMemPaths(j) == this%mvr(i)%mem_path_tgt) then
           ratout(j) = ratout(j) + this%mvr(i)%qpactual
         end if
       end do
@@ -1277,7 +1288,7 @@ contains
     return
   end subroutine mvr_setup_budobj
 
-  subroutine mvr_fill_budobj(this)
+  subroutine fill_budobj(this)
 ! ******************************************************************************
 ! mvr_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -1341,15 +1352,14 @@ contains
           !
           ! -- pname1 is provider, pname2 is receiver
           !    flow is always negative because it is coming from provider
-          if (this%pckMemPaths(i) == this%mvr(n)%pckNameSrc) then
-            if (this%pckMemPaths(j) == this%mvr(n)%pckNameTgt) then
+          if (this%pckMemPaths(i) == this%mvr(n)%mem_path_src) then
+            if (this%pckMemPaths(j) == this%mvr(n)%mem_path_tgt) then
               !
               ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
               !
-              ! -- map from irch1 to feature (needed for lake to map outlet to lake number)
-              n1 = this%mvr(n)%iRchNrSrc
-              !n1 = this%pakmovers(i)%iprmap(n1) TODO_MJR: uncomment
+              ! -- use mapped index (needed for lake to map outlet to lake number)
+              n1 = this%mvr(n)%iRchNrSrcMapped
               !
               ! -- set receiver id to irch2
               n2 = this%mvr(n)%iRchNrTgt
@@ -1367,7 +1377,7 @@ contains
     !
     ! -- return
     return
-  end subroutine mvr_fill_budobj
+  end subroutine fill_budobj
 
   subroutine mvr_setup_outputtab(this)
 ! ******************************************************************************
@@ -1446,11 +1456,11 @@ contains
     call this%outputtab%set_maxbound(this%nmvr)
     do i = 1, this%nmvr
       call this%outputtab%add_term(i)
-      call this%outputtab%add_term(this%mvr(i)%pckNameSrc)
+      call this%outputtab%add_term(this%mvr(i)%mem_path_src)
       call this%outputtab%add_term(this%mvr(i)%iRchNrSrc)
       call this%outputtab%add_term(this%mvr(i)%qavailable)
       call this%outputtab%add_term(this%mvr(i)%qpactual)
-      call this%outputtab%add_term(this%mvr(i)%pckNameTgt)
+      call this%outputtab%add_term(this%mvr(i)%mem_path_tgt)
       call this%outputtab%add_term(this%mvr(i)%iRchNrTgt)
     end do
     !

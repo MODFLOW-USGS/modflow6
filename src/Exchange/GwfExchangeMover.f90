@@ -6,21 +6,27 @@ module GwfExgMoverModule
   use VirtualModelModule
   use BaseDisModule
   use GwfMvrModule
+  use PackageMoverModule, only: PackageMoverType, set_packagemover_pointer
   implicit none
   private
 
   public :: exg_mvr_cr
 
+  !> @brief Extends model mover for exchanges to also handle the
+  !< parallel case where the models are not on the same process.
   type, public, extends(GwfMvrType) :: GwfExgMoverType
-    class(VirtualModelType), pointer :: model1 => null()
-    class(VirtualModelType), pointer :: model2 => null()
-    logical(LGP), dimension(:), pointer, contiguous :: prov_is_m1 => null()
-    real(DP), dimension(:), pointer, contiguous :: qpactual_m1 => null()
-    real(DP), dimension(:), pointer, contiguous :: qpactual_m2 => null()
+    class(VirtualModelType), pointer :: model1 => null() !< virtual model 1
+    class(VirtualModelType), pointer :: model2 => null() !< virtual model 2
+    logical(LGP), dimension(:), pointer, contiguous :: prov_is_m1 => null() !< .true. when the providing package is part of model 1
+    real(DP), dimension(:), pointer, contiguous :: qpactual_m1 => null() !< stores qpactual for synchronization when provider is in model 1
+    real(DP), dimension(:), pointer, contiguous :: qpactual_m2 => null() !< stores qpactual for synchronization when provider is in model 2
+    integer(I4B), dimension(:), pointer, contiguous :: id_mapped_m1 => null() !< stores the mapped feature ids for synchronization when provider is in model 1
+    integer(I4B), dimension(:), pointer, contiguous :: id_mapped_m2 => null() !< stores the mapped feature ids for synchronization when provider is in model 2
   contains
     procedure :: mvr_da => xmvr_da
     procedure :: xmvr_cf
     procedure :: mvr_fc => xmvr_fc
+    procedure :: mvr_bd => xmvr_bd
     procedure :: check_packages => xmvr_check_packages
     procedure :: assign_packagemovers => xmvr_assign_packagemovers
     procedure :: initialize_movers => xmvr_initialize_movers
@@ -80,9 +86,10 @@ contains
 
   end subroutine xmvr_check_packages
 
+  !> @brief Overrides GWF MVR routine to skip assigning
+  !< pointers when the package is not local
   subroutine xmvr_assign_packagemovers(this)
-    use PackageMoverModule, only: set_packagemover_pointer
-    class(GwfExgMoverType), intent(inout) :: this
+    class(GwfExgMoverType), intent(inout) :: this !< this exchange mover
     ! local
     integer(I4B) :: i
     character(len=LENMODELNAME) :: mname
@@ -103,6 +110,9 @@ contains
     end do
   end subroutine xmvr_assign_packagemovers
 
+  !> @brief Overrides mover initialization in GWF MVR to
+  !! deactivate remote parts and build up sync. arrays
+  !< for mapped feature ids
   subroutine xmvr_initialize_movers(this, nr_active_movers)
     class(GwfExgMoverType) :: this
     integer(I4B) :: nr_active_movers
@@ -111,6 +121,7 @@ contains
     character(len=LENMODELNAME) :: mname
     character(len=LENPACKAGENAME) :: pname
     class(VirtualModelType), pointer :: vm
+    class(PackageMoverType), allocatable :: pkg_mvr
 
     call this%GwfMvrType%initialize_movers(nr_active_movers)
 
@@ -118,17 +129,37 @@ contains
 
     ! deactivate remote parts
     do i = 1, nr_active_movers
-      call split_mem_path(this%mvr(i)%pckNameSrc, mname, pname)
+      call split_mem_path(this%mvr(i)%mem_path_src, mname, pname)
       vm => get_virtual_model(mname)
       this%mvr(i)%is_provider_active = vm%is_local
       this%prov_is_m1(i) = associated(vm, this%model1)
-      call split_mem_path(this%mvr(i)%pckNameTgt, mname, pname)
+      call split_mem_path(this%mvr(i)%mem_path_tgt, mname, pname)
       vm => get_virtual_model(mname)
       this%mvr(i)%is_receiver_active = vm%is_local
     end do
 
+    ! loop over mvr's, if provider is active,
+    ! store mapped feature index in array for sync
+    allocate (pkg_mvr)
+
+    do i = 1, nr_active_movers
+      if (this%mvr(i)%is_provider_active) then
+        ! store mapped feature id in array (for synchronization when parallel)
+        call set_packagemover_pointer(pkg_mvr, this%mvr(i)%mem_path_src)
+        if (this%prov_is_m1(i)) then
+          this%id_mapped_m1(i) = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
+          this%id_mapped_m2(i) = -1
+        else
+          this%id_mapped_m1(i) = -1
+          this%id_mapped_m2(i) = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
+        end if
+      end if
+    end do
+
   end subroutine xmvr_initialize_movers
 
+  !> @brief Calculates qpactual and stores it for synchronization
+  !<
   subroutine xmvr_cf(this)
     class(GwfExgMoverType) :: this
     ! local
@@ -141,11 +172,9 @@ contains
 
         ! copy calculated rate to arrays for synchronization:
         if (this%prov_is_m1(i)) then
-          !write(*,*) proc_id, ", set m1: ", this%mvr(i)%qpactual
           this%qpactual_m1(i) = this%mvr(i)%qpactual
           this%qpactual_m2(i) = DNODATA
         else
-          !write(*,*) proc_id, ", set m2: ", this%mvr(i)%qpactual
           this%qpactual_m1(i) = DNODATA
           this%qpactual_m2(i) = this%mvr(i)%qpactual
         end if
@@ -154,20 +183,22 @@ contains
 
   end subroutine xmvr_cf
 
+  !> @brief Assign synced qpactual to mover and update receiver
+  !<
   subroutine xmvr_fc(this)
     class(GwfExgMoverType) :: this
     ! local
     integer(I4B) :: i
 
     do i = 1, this%nmvr
+      ! TODO_MJR: this should only be around the update call,
+      ! such that every mover has a valid qpactual ??!!
       if (this%mvr(i)%is_receiver_active) then
 
         ! copy from synchronization arrays back into movers:
         if (this%prov_is_m1(i)) then
-          !write(*,*) proc_id, ", read m1: ", this%qpactual_m1(i)
           this%mvr(i)%qpactual = this%qpactual_m1(i)
         else
-          !write(*,*) proc_id, ", read m2: ", this%qpactual_m2(i)
           this%mvr(i)%qpactual = this%qpactual_m2(i)
         end if
 
@@ -177,8 +208,30 @@ contains
 
   end subroutine xmvr_fc
 
+  !> @brief Overrides budget routine to first assign the
+  !< mapped features ids from the synchronization arrays
+  subroutine xmvr_bd(this)
+    class(GwfExgMoverType) :: this
+    ! local
+    integer(I4B) :: i
+
+    ! copy from synchronization arrays back into movers:
+    do i = 1, this%nmvr
+      if (this%prov_is_m1(i)) then
+        this%mvr(i)%iRchNrSrcMapped = this%id_mapped_m1(i)
+      else
+        this%mvr(i)%iRchNrSrcMapped = this%id_mapped_m2(i)
+      end if
+    end do
+
+    call this%fill_budobj()
+
+  end subroutine xmvr_bd
+
   subroutine xmvr_allocate_arrays(this)
     class(GwfExgMoverType) :: this
+    ! local
+    integer(I4B) :: i
 
     call this%GwfMvrType%allocate_arrays()
 
@@ -187,6 +240,15 @@ contains
                       this%memoryPath)
     call mem_allocate(this%qpactual_m2, this%maxmvr, 'QPACTUAL_M2', &
                       this%memoryPath)
+    call mem_allocate(this%id_mapped_m1, this%maxmvr, 'ID_MAPPED_M1', &
+                      this%memoryPath)
+    call mem_allocate(this%id_mapped_m2, this%maxmvr, 'ID_MAPPED_M2', &
+                      this%memoryPath)
+
+    do i = 1, this%maxmvr
+      this%id_mapped_m1(i) = 0
+      this%id_mapped_m2(i) = 0
+    end do
 
   end subroutine xmvr_allocate_arrays
 
@@ -198,6 +260,8 @@ contains
     deallocate (this%prov_is_m1)
     call mem_deallocate(this%qpactual_m1)
     call mem_deallocate(this%qpactual_m2)
+    call mem_deallocate(this%id_mapped_m1)
+    call mem_deallocate(this%id_mapped_m2)
 
   end subroutine xmvr_da
 

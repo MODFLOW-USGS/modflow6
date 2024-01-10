@@ -27,9 +27,10 @@ module MvrModule
   !!
   !<
   type MvrType
-    character(len=LENMEMPATH) :: pckNameSrc = '' !< provider package name
-    character(len=LENMEMPATH) :: pckNameTgt = '' !< receiver package name
+    character(len=LENMEMPATH) :: mem_path_src = '' !< provider package name
+    character(len=LENMEMPATH) :: mem_path_tgt = '' !< receiver package name
     integer(I4B), pointer :: iRchNrSrc => null() !< provider reach number
+    integer(I4B) :: iRchNrSrcMapped !< mapped provider reach number (currently for lake outlet)
     integer(I4B), pointer :: iRchNrTgt => null() !< receiver reach number
     integer(I4B), pointer :: imvrtype => null() !< mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP), pointer :: value => null() !< factor or rate depending on mvrtype
@@ -72,12 +73,15 @@ contains
     integer(I4B), intent(in), target :: imvrtype
     real(DP), intent(in), target :: value
 
-    this%pckNameSrc = create_mem_path(mname1, pname1)
+    this%mem_path_src = create_mem_path(mname1, pname1)
     this%iRchNrSrc => id1
-    this%pckNameTgt = create_mem_path(mname2, pname2)
+    this%mem_path_tgt = create_mem_path(mname2, pname2)
     this%iRchNrTgt => id2
     this%imvrtype => imvrtype
     this%value => value
+
+    ! to be set later
+    this%iRchNrSrcMapped = -1
 
     return
   end subroutine set_values
@@ -105,10 +109,10 @@ contains
     integer(I4B) :: ipakloc1, ipakloc2
     !
     ! -- Check to make sure provider and receiver are not the same
-    if (this%pckNameSrc == this%pckNameTgt .and. &
+    if (this%mem_path_src == this%mem_path_tgt .and. &
         this%iRchNrSrc == this%iRchNrTgt) then
       call store_error('Provider and receiver are the same: '// &
-                       trim(this%pckNameSrc)//' : '//trim(this%pckNameTgt))
+                       trim(this%mem_path_src)//' : '//trim(this%mem_path_tgt))
       call store_error_unit(inunit)
     end if
     !
@@ -117,27 +121,27 @@ contains
     found = .false.
     ipakloc1 = 0
     do i = 1, size(pckMemPaths)
-      if (this%pckNameSrc == pckMemPaths(i)) then
+      if (this%mem_path_src == pckMemPaths(i)) then
         found = .true.
         ipakloc1 = i
         exit
       end if
     end do
     if (.not. found) then
-      call store_error('Mover capability not activated in '//this%pckNameSrc)
+      call store_error('Mover capability not activated in '//this%mem_path_src)
       call store_error('Add "MOVER" keyword to package options block.')
     end if
     found = .false.
     ipakloc2 = 0
     do i = 1, size(pckMemPaths)
-      if (this%pckNameTgt == pckMemPaths(i)) then
+      if (this%mem_path_tgt == pckMemPaths(i)) then
         found = .true.
         ipakloc2 = i
         exit
       end if
     end do
     if (.not. found) then
-      call store_error('Mover capability not activated in '//this%pckNameTgt)
+      call store_error('Mover capability not activated in '//this%mem_path_tgt)
       call store_error('Add "MOVER" keyword to package options block.')
     end if
     if (count_errors() > 0) then
@@ -196,9 +200,9 @@ contains
     integer(I4B), intent(in) :: iout !< unit number for output file
     ! -- local
     !
-    write (iout, '(4x, a, a, a, i0)') 'FROM PACKAGE: ', trim(this%pckNameSrc), &
+    write (iout, '(4x, a, a, a, i0)') 'FROM PACKAGE: ', trim(this%mem_path_src), &
       ' FROM ID: ', this%iRchNrSrc
-    write (iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%pckNameTgt), &
+    write (iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%mem_path_tgt), &
       ' TO ID: ', this%iRchNrTgt
     write (iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ', &
       trim(mvrtypes(this%imvrtype)), ' ', this%value
@@ -339,8 +343,8 @@ contains
       "(1x, a, ' ID ', i0, ' AVAILABLE ', 1(1pg15.6), &
       &' PROVIDED ', 1(1pg15.6), ' TO ', a, ' ID ', i0)"
     !
-    write (iout, fmt) trim(this%pckNameSrc), this%iRchNrSrc, this%qavailable, &
-      this%qpactual, trim(this%pckNameTgt), this%iRchNrTgt
+    write (iout, fmt) trim(this%mem_path_src), this%iRchNrSrc, this%qavailable, &
+      this%qpactual, trim(this%mem_path_tgt), this%iRchNrTgt
     !
     ! -- return
     return

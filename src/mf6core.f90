@@ -534,6 +534,9 @@ contains
       call mc%exg_rp()
     end do
     !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_AFT_CON_RP)
+    !
     ! -- reset simulation convergence flag
     call converge_reset()
     !
