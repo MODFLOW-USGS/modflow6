@@ -520,6 +520,65 @@ Integration tests should ideally follow a few conventions for easier maintenance
 
 **Note:** If all three external model repositories are not installed as described above, some tests will be skipped. The full test suite includes >750 cases. All must pass before changes can be merged into this repository.
 
+##### Test framework
+
+A framework has been developed to streamline common testing patterns. The [`TestFramework`](autotest/framework.py) class, defined in `autotest/framework.py`, is used by most test scripts to configure, run and evaluate one or more MF6 simulations, optionally in comparison with another simulation or model.
+
+Generally, the recommended pattern for a test script is:
+
+```python
+import ...
+
+cases = ["a", "b", ...]
+variable = [1., 0., ...]
+expected = [-1., -1.1, ...]
+
+def build_models(idx, test):
+  v = variable[idx]
+  ...
+
+def check_output(idx, test):
+  e = expected[idx]
+  ...
+
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
+    )
+    test.run()
+```
+
+The framework has two hooks:
+
+- `build`: construct one or more MF6 simulations and/or non-MF6 models with FloPy
+- `check`: evaluate simulation/model output
+
+A test script conventionally contains one or more test cases, fed to the test function as `idx, name` pairs. `idx` can be used to index parameter values or expected results for a specific test case. The test case `name` is useful for model/subdirectory naming, etc.
+
+The framework will not run an unknown program. The path to any program under test (or used for a comparison) must be registered in the `targets` dictionary. Keys are strings. See `autotest/conftest.py` for the contents of `targets` &mdash; naming follows the [executables distribution](https://github.com/MODFLOW-USGS/executables).
+
+The `.run()` function
+
+1. builds simulations/models
+2. runs simulations/models
+3. compares simulation/model outputs
+4. checks outputs against expectations
+
+A `compare` parameter may be provided on initialization, which enables comparison of outputs against another program or the latest official release of MF6. The following values are supported:
+
+- `None`: disables comparison &mdash; the test simply runs/evaluates any registered simulations/models without comparing results
+- `auto`: attempt to detect the comparison type from contents of test workspace, otherwise skipping comparison
+- `mf6_regression`: compare results against the latest official release rebuilt in develop mode
+- `mf6`, `mf2005`, `mfnwt`, or `mflgr`: compare with results from the selected program &mdash; a corresponding model must be provided in `build_models()`
+
+After running the reference and comparison models, the framework will try to find correspondingly named output files to compare &mdash; comparison logic may need adjustment when writing tests for new packages or models.
+
 ## Generating makefiles
 
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
