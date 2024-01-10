@@ -253,10 +253,14 @@ def block_entry(varname, block, vardict, prefix='  '):
         shape = v['shape']
         reader = v['reader'].upper()
         layered = ''
+        echo = ''
         if 'layered' in v:
             if v['layered'] == 'true':
                 layered = ' [LAYERED]'
-        s = '{}{}\n{}{}<{}{}> -- {}'.format(s, layered, prefix, prefix,
+        if 'echo' in v:
+            if v['echo'] == 'true':
+                echo = ' [ECHO]'
+        s = '{}{}{}\n{}{}<{}{}> -- {}'.format(s, layered, echo, prefix, prefix,
                                             varname,
                                             shape, reader)
 

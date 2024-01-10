@@ -14,15 +14,25 @@ module IdmLoggerModule
   private
   public :: idm_log_header
   public :: idm_log_close
+  public :: idm_log_period_header
+  public :: idm_log_period_close
   public :: idm_log_var
+  public :: idm_print_array
 
   interface idm_log_var
     module procedure idm_log_var_logical, idm_log_var_int, &
       idm_log_var_int1d, idm_log_var_int2d, &
       idm_log_var_int3d, idm_log_var_dbl, &
       idm_log_var_dbl1d, idm_log_var_dbl2d, &
-      idm_log_var_dbl3d, idm_log_var_str
+      idm_log_var_dbl3d, idm_log_var_str, &
+      idm_log_var_ts
   end interface idm_log_var
+
+  interface idm_print_array
+    module procedure idm_print_array_int1d, idm_print_array_int2d, &
+      idm_print_array_int3d, idm_print_array_dbl1d, &
+      idm_print_array_dbl2d, idm_print_array_dbl3d
+  end interface idm_print_array
 
 contains
 
@@ -47,9 +57,52 @@ contains
     integer(I4B), intent(in) :: iout
 
     if (iparamlog > 0 .and. iout > 0) then
-      write (iout, '(1x,a,/)') 'Loading input complete...'
+      write (iout, '(1x,a)') 'Loading input complete...'
     end if
   end subroutine idm_log_close
+
+  !> @ brief log a dynamic header message
+  !<
+  subroutine idm_log_period_header(component, iout)
+    use TdisModule, only: kper
+    character(len=*), intent(in) :: component !< component name
+    integer(I4B), intent(in) :: iout
+
+    if (iparamlog > 0 .and. iout > 0) then
+      write (iout, '(/1x,a,i0,a)') 'IDP PERIOD ', kper, &
+        ' LOAD for component: '//trim(component)
+    end if
+  end subroutine idm_log_period_header
+
+  !> @ brief log the period closing message
+  !<
+  subroutine idm_log_period_close(iout)
+    integer(I4B), intent(in) :: iout
+
+    if (iparamlog > 0 .and. iout > 0) then
+      !backspace iout
+      write (iout, '(1x,a,/)') 'IDP component dynamic load commplete...'
+    end if
+  end subroutine idm_log_period_close
+
+  !> @ brief log the period closing message
+  !<
+  subroutine idm_log_var_ts(varname, mempath, iout, is_tas)
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    logical(LGP), intent(in) :: is_tas
+
+    if (iparamlog > 0 .and. iout > 0) then
+      if (is_tas) then
+        write (iout, '(3x, a, ": ", a)') &
+          'Time-array-series controlled dynamic variable detected', trim(varname)
+      else
+        write (iout, '(3x, a, ": ", a)') &
+          'Time-series controlled dynamic variable detected', trim(varname)
+      end if
+    end if
+  end subroutine idm_log_var_ts
 
   !> @brief Log type specific information logical
   !<
@@ -276,5 +329,131 @@ contains
         trim(description), trim(varname), trim(p_mem)
     end if
   end subroutine idm_log_var_str
+
+  subroutine idm_print_array_int1d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: inunit
+    !
+    write (inunit, *) p_mem
+    !
+    close (inunit)
+  end subroutine idm_print_array_int1d
+
+  subroutine idm_print_array_int2d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    do i = 1, size(p_mem, dim=2)
+      write (inunit, *) p_mem(:, i)
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_int2d
+
+  subroutine idm_print_array_int3d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    do i = 1, size(p_mem, dim=3)
+      write (inunit, '(a,i0)') 'LAYER ', i
+      do j = 1, size(p_mem, dim=2)
+        write (inunit, *) p_mem(:, j, i)
+      end do
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_int3d
+
+  subroutine idm_print_array_dbl1d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: inunit
+    !
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    write (inunit, *) p_mem
+    !
+    close (inunit)
+  end subroutine idm_print_array_dbl1d
+
+  subroutine idm_print_array_dbl2d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    do i = 1, size(p_mem, dim=2)
+      write (inunit, *) p_mem(:, i)
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_dbl2d
+
+  subroutine idm_print_array_dbl3d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    do i = 1, size(p_mem, dim=3)
+      write (inunit, '(a,i0)') 'LAYER ', i
+      do j = 1, size(p_mem, dim=2)
+        write (inunit, *) p_mem(:, j, i)
+      end do
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_dbl3d
+
+  function create_array_echofile(varname, mempath, iout) result(inunit)
+    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME
+    use InputOutputModule, only: openfile, getunit
+    use InputOutputModule, only: upcase, lowcase
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    integer(I4B) :: inunit
+    ! -- dummy
+    character(len=LENCOMPONENTNAME) :: comp, subcomp
+    character(len=LINELENGTH) :: filename
+    character(len=LENVARNAME) :: suffix
+    !
+    call split_mem_path(mempath, comp, subcomp)
+    suffix = varname
+    call lowcase(suffix)
+    filename = trim(comp)//'-'//trim(subcomp)//'.'//trim(suffix)
+    !
+    ! -- create the array file
+    inunit = getunit()
+    call openfile(inunit, iout, filename, 'ECHO', filstat_opt='REPLACE')
+  end function create_array_echofile
 
 end module IdmLoggerModule

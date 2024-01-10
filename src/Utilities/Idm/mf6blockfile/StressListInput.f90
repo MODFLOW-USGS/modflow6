@@ -137,6 +137,7 @@ contains
     ! -- modules
     use BlockParserModule, only: BlockParserType
     use StructVectorModule, only: StructVectorType
+    use IdmLoggerModule, only: idm_log_header, idm_log_close
     ! -- dummy
     class(StressListInputType), intent(inout) :: this
     type(BlockParserType), pointer, intent(inout) :: parser
@@ -147,10 +148,14 @@ contains
     !
     call this%read_control_record(parser)
     !
+    ! -- log lst file header
+    call idm_log_header(this%mf6_input%component_name, &
+                        this%mf6_input%subcomponent_name, this%iout)
+    !
     if (this%ibinary == 1) then
       !
       this%bndctx%nbound = &
-        this%structarray%read_from_binary(this%oc_inunit, 0)
+        this%structarray%read_from_binary(this%oc_inunit, this%iout)
       !
       call parser%terminateblock()
       !
@@ -164,13 +169,17 @@ contains
       !
       this%bndctx%nbound = &
         this%structarray%read_from_parser(parser, &
-                                          ts_active, 0)
+                                          ts_active, this%iout)
     end if
     !
     ! update ts links
     if (this%ts_active /= 0) then
       call this%ts_update()
     end if
+    !
+    ! -- close logging statement
+    call idm_log_close(this%mf6_input%component_name, &
+                       this%mf6_input%subcomponent_name, this%iout)
     !
     ! -- return
     return

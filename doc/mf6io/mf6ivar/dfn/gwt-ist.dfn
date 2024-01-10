@@ -225,6 +225,7 @@ type double precision
 shape (nodes)
 reader readarray
 layered true
+echo true
 longname porosity of the immobile domain
 description porosity of the immobile domain specified as the immobile domain pore volume per immobile domain volume.
 
@@ -234,6 +235,7 @@ type double precision
 shape (nodes)
 reader readarray
 layered true
+echo true
 longname volume fraction of this immobile domain
 description fraction of the cell volume that consists of this immobile domain.  The sum of all immobile domain volume fractions must be less than one.
 
@@ -243,6 +245,7 @@ type double precision
 shape (nodes)
 reader readarray
 layered true
+echo true
 longname mass transfer rate coefficient between the mobile and immobile domains
 description mass transfer rate coefficient between the mobile and immobile domains, in dimensions of per time.
 
@@ -253,6 +256,7 @@ shape (nodes)
 reader readarray
 optional true
 layered true
+echo true
 longname initial concentration of the immobile domain
 description initial concentration of the immobile domain in mass per length cubed.  If CIM is not specified, then it is assumed to be zero.
 
@@ -262,6 +266,7 @@ type double precision
 shape (nodes)
 reader readarray
 layered true
+echo true
 optional true
 longname first rate coefficient
 description is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  Decay will have no effect on simulation results unless either first- or zero-order decay is specified in the options block.
@@ -273,6 +278,7 @@ shape (nodes)
 reader readarray
 optional true
 layered true
+echo true
 longname second rate coefficient
 description is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  If decay\_sorbed is not specified and both decay and sorption are active, then the program will terminate with an error.  decay\_sorbed will have no effect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
 
@@ -283,6 +289,7 @@ shape (nodes)
 reader readarray
 optional true
 layered true
+echo true
 longname bulk density
 description is the bulk density of this immobile domain in mass per length cubed.  Bulk density is defined as the immobile domain solid mass per volume of the immobile domain.  bulk\_density is not required unless the SORPTION keyword is specified in the options block.  If the SORPTION keyword is not specified in the options block, bulk\_density will have no effect on simulation results.  
 
@@ -293,6 +300,7 @@ shape (nodes)
 reader readarray
 optional true
 layered true
+echo true
 longname distribution coefficient
 description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef is not required unless the SORPTION keyword is specified in the options block.  If the SORPTION keyword is not specified in the options block, distcoef will have no effect on simulation results. 
 
