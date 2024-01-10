@@ -570,6 +570,15 @@ The `.run()` function
 3. compares simulation/model outputs
 4. checks outputs against expectations
 
+A `compare` parameter may be provided on initialization, which enables comparison of outputs against another program or the latest official release of MF6. The following values are supported:
+
+- `None`: disables comparison &mdash; the test simply runs/evaluates any registered simulations/models without comparing results
+- `auto`: attempt to detect the comparison type from contents of test workspace, otherwise skipping comparison
+- `mf6_regression`: compare results against the latest official release rebuilt in develop mode
+- `mf6`, `mf2005`, `mfnwt`, or `mflgr`: compare with results from the selected program &mdash; a corresponding model must be provided in `build_models()`
+
+After running the reference and comparison models, the framework will try to find correspondingly named output files to compare &mdash; comparison logic may need adjustment when writing tests for new packages or models.
+
 ## Generating makefiles
 
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
