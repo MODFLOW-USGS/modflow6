@@ -1,15 +1,15 @@
 # Test evap in SFR reaches (no interaction with gwf)
 
+import math
 import os
 
 import flopy
 import numpy as np
 import pytest
-import math
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["sfr-wetperim"]
+from framework import TestFramework
+
+cases = ["sfr-wetperim"]
 
 
 def get_x_frac(x_coord1, rwid):
@@ -87,25 +87,27 @@ x_sec_tab3 = get_xy_pts(
 )
 x_sec_tab = [x_sec_tab1, x_sec_tab2, x_sec_tab3]
 
+
 def calc_wp(j, stg):
     if j < 2:
         rise = 1 / 3
         run = 2
-        bot_wid = 1.
+        bot_wid = 1.0
     elif j < 4:
         rise = 1 / 4
         run = 2
-        bot_wid = 2.
+        bot_wid = 2.0
     else:
         rise = 1 / 6
         run = 4
-        bot_wid = 4.
+        bot_wid = 4.0
 
     ang = math.atan2(rise, run)
     hyp_len = stg / math.sin(ang)
     wp = hyp_len * 2 + bot_wid
 
     return wp
+
 
 # time params
 steady = {0: True, 1: False}
@@ -117,15 +119,11 @@ perlen = [1, 1]
 nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-3, 1e-4, 0.97
 
-#
-# MODFLOW 6 flopy GWF object
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -331,22 +329,20 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".sfr.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
     sfr_wetted_interface_area = sfrobj.get_data(text="gwf")
 
     # Retrieve simulated stage of each reach
-    sfr_pth0 = os.path.join(sim.simpath, f"{gwfname}.sfr.obs.csv")
+    sfr_pth0 = os.path.join(test.workspace, f"{gwfname}.sfr.obs.csv")
     sfrstg = np.genfromtxt(sfr_pth0, names=True, delimiter=",")
 
     # Extract shared wetted interfacial areas
@@ -365,8 +361,9 @@ def eval_results(sim):
         wp = calc_wp(j, stg)
         wa = wp * delr
         msg = (
-            "Wetted streambed area for reach " + str(j) +
-            "in stress period 1 does not match explicitly-calculated answer"
+            "Wetted streambed area for reach "
+            + str(j)
+            + "in stress period 1 does not match explicitly-calculated answer"
         )
         assert np.isclose(wa, shared_area[0, j], atol=1e-4), msg
 
@@ -378,17 +375,13 @@ def eval_results(sim):
         assert val == 0.0, msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

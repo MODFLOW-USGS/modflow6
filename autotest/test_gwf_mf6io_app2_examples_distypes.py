@@ -4,9 +4,9 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
+from conftest import try_get_target
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 dis_types = (
     "disv",
@@ -21,9 +21,9 @@ problems = (
     "ps2d",
     "ps2e",
 )
-ex = []
+cases = []
 for problem in problems:
-    ex += [f"{problem}_{dis_type}" for dis_type in dis_types]
+    cases += [f"{problem}_{dis_type}" for dis_type in dis_types]
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 21, 20
@@ -253,8 +253,11 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), build_mf6(idx, ws / "mf6", gridgen)
+def build_models(idx, test):
+    gridgen = try_get_target(test.targets, "gridgen")
+    return build_mf6(idx, test.workspace, gridgen), build_mf6(
+        idx, test.workspace / "mf6", gridgen
+    )
 
 
 # build MODFLOW 6 files
@@ -273,7 +276,7 @@ def build_mf6(idx, ws, gridgen):
     else:
         list_recharge = False
 
-    name = ex[idx]
+    name = cases[idx]
     if dis_type == "dis":
         name = get_dis_name(name)
     sim_name = name[0:3]
@@ -447,12 +450,10 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_head(sim):
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
     sim_name = name[0:3]
-    ws = pl.Path(sim.simpath)
-
-    print(f"evaluating {name} heads...")
+    ws = pl.Path(test.workspace)
 
     if name.startswith("ps1"):
         row_values = np.array(
@@ -552,27 +553,17 @@ def eval_head(sim):
     fpth0 = ws / f"{sim_name}.{extension}"
     # fpth1 = ws / f"mf6/{get_dis_name(name)}.{extension}"
     fpth1 = ws / f"mf6/{sim_name}.{extension}"
-    sim.compare_budget_files(0, extension, fpth0, fpth1)
-
-    return
+    test._compare_budget_files(extension, fpth0, fpth1)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, targets.gridgen), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_head,
-            cmp_verbose=False,
-            idxsim=idx,
-            make_comparison=True,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        verbose=False,
     )
+    test.run()

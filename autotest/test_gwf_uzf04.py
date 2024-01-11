@@ -1,12 +1,11 @@
 """
-# Test uzf mass balance.  One cell model with starting water table at -20
-# and GHB with stage of -25.  Uzf infiltration is applied, but water table
-# still falls.  This test looks at the simulated unsat zone storage and
-# unsat volume (stored as an auxiliary variable) and compares the results
-# to calculated values.  Although the Uzf unsat storage and unsat volume
-# should probably be for total water instead of just mobile water (theta -
-# thetar), this is not how Uzf was designed.
-
+Test uzf mass balance.  One cell model with starting water table at -20
+and GHB with stage of -25.  Uzf infiltration is applied, but water table
+still falls.  This test looks at the simulated unsat zone storage and
+unsat volume (stored as an auxiliary variable) and compares the results
+to calculated values.  Although the Uzf unsat storage and unsat volume
+should probably be for total water instead of just mobile water (theta -
+thetar), this is not how Uzf was designed.
 """
 
 import os
@@ -14,10 +13,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_uzf04a"]
+from framework import TestFramework
+
+cases = ["gwf_uzf04a"]
 nlay, nrow, ncol = 1, 1, 1
 thts = 0.30  # saturated water content
 thtr = 0.05  # residual water content
@@ -25,8 +24,7 @@ thti = 0.10  # initial water content
 strt = -20.0
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     perlen = [1.0]
     nper = len(perlen)
     nstp = [1]
@@ -51,10 +49,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -215,11 +213,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
-    name = sim.name
-    ws = sim.simpath
+def check_output(idx, test):
+    name = test.name
+    ws = test.workspace
 
     fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
@@ -257,17 +253,13 @@ def eval_flow(sim):
     ), "Simulated mobile water volume in aux does not match known result"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

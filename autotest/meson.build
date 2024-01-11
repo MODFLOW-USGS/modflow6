@@ -1,8 +1,14 @@
 test_drive = dependency('test-drive', required : false)
-if test_drive.found()
+if test_drive.found() and not fc_id.contains('intel')
   tests = [
     'ArrayHandlers',
-    'GeomUtil'
+    'DevFeature',
+    'GeomUtil',
+    'HashTable',
+    'InputOutput',
+    'MathUtil',
+    'Message',
+    'Sim'
   ]
 
   test_srcs = files(

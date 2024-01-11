@@ -3,11 +3,12 @@ import os
 import flopy
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "ims"
-ex = ["ims_rcm"]
+cases = ["ims_rcm"]
+cmp_prefix = "mf6"
 
 # spatial discretization data
 nlay, nrow, ncol = 2, 5, 30
@@ -26,7 +27,7 @@ def build_model(idx, ws):
     tdis_rc = [(1.0, 1, 1.0)]
 
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -41,7 +42,7 @@ def build_model(idx, ws):
         perioddata=tdis_rc,
     )
 
-    if not ws.endswith("mf6"):
+    if not str(ws).endswith(cmp_prefix):
         reordering_method = "rcm"
     else:
         reordering_method = None
@@ -111,29 +112,24 @@ def build_model(idx, ws):
     return sim
 
 
-def build_models(idx, base_ws):
-    sim = build_model(idx, base_ws)
-
-    ws = os.path.join(base_ws, "mf6")
-    mc = build_model(idx, ws)
-
-    return sim, mc
+def build_models(idx, test):
+    return build_model(idx, test.workspace), build_model(
+        idx, os.path.join(test.workspace, cmp_prefix)
+    )
 
 
-def eval_flows(sim):
-    name = sim.name
-    print("evaluating flow results..." f"({name})")
-
-    fpth = os.path.join(sim.simpath, f"{name}.dis.grb")
+def check_output(idx, test):
+    name = test.name
+    fpth = os.path.join(test.workspace, f"{name}.dis.grb")
     ia = flopy.mf6.utils.MfGrdFile(fpth).ia
 
-    fpth = os.path.join(sim.simpath, f"{name}.cbc")
+    fpth = os.path.join(test.workspace, f"{name}.cbc")
     b0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
-    fpth = os.path.join(sim.simpath, "mf6", f"{name}.cbc")
+    fpth = os.path.join(test.workspace, cmp_prefix, f"{name}.cbc")
     b1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
-    fpth = os.path.join(sim.simpath, f"{name}.cbc.cmp.out")
+    fpth = os.path.join(test.workspace, f"{name}.cbc.cmp.out")
     eval_bud_diff(fpth, b0, b1, ia=ia)
 
     # close the budget files
@@ -141,20 +137,13 @@ def eval_flows(sim):
     b1.close()
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_models, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_flows,
-            idxsim=0,
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

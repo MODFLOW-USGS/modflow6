@@ -5,7 +5,7 @@ module ExchangeModule
   use FileWriterModule, only: FileWriterType
   use GLOBAL, only: NLAY, NROW, NCOL, IBOUND, BOTM, DELC, DELR, LBOTM, NBOTM
   use GlobalVariablesModule, only: LgrBilinear
-  use InputOutputModule, only: get_ijk, get_node
+  use GeomUtilModule, only: get_ijk, get_node
   use LGRMODULE, only: IBFLG, NPLBEG, NPRBEG, NPCBEG, NPLEND, &
                        NPREND, NPCEND, NCPP, NCPPL
   use ModelModule, only: ModelType

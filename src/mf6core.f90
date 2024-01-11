@@ -235,7 +235,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
     use InputOutputModule, only: getunit, openfile, append_processor_id
-    use GenericUtilitiesModule, only: sim_message
+    use MessageModule, only: write_message
     use VersionModule, only: write_listfile_header
     character(len=LINELENGTH) :: line
     !
@@ -252,7 +252,7 @@ contains
     write (line, '(2(1x,A))') 'Writing simulation list file:', &
       trim(adjustl(simlstfile))
     !
-    call sim_message(line)
+    call write_message(line)
     call write_listfile_header(iout)
     !
     ! -- return
@@ -268,7 +268,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use SimVariablesModule, only: iout
-    use IdmLoadModule, only: simnam_load, load_models
+    use IdmLoadModule, only: simnam_load, load_models, load_exchanges
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
@@ -290,9 +290,13 @@ contains
     ! -- initialize mask
     call create_load_mask(model_loadmask)
     !
-    ! -- load selected models
+    ! -- load in scope models
     call load_models(model_loadmask, iout)
     !
+    ! -- load in scope exchanges
+    call load_exchanges(model_loadmask, iout)
+    !
+    ! -- cleanup
     deallocate (model_loadmask)
     !
     ! -- return

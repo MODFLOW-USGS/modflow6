@@ -37,6 +37,8 @@ module TimeSeriesLinkModule
 
 contains
 
+  !> @brief Construct time series link
+  !<
   subroutine ConstructTimeSeriesLink(newTsLink, timeSeries, pkgName, &
                                      auxOrBnd, bndElem, iRow, jCol, iprpak, &
                                      text)
@@ -70,13 +72,17 @@ contains
       newTsLink%Text = text
     end if
     !
+    ! -- Return
     return
   end subroutine ConstructTimeSeriesLink
 
+  !> @brief Cast an unlimited polymorphic object as TimeSeriesLinkType
+  !<
   function CastAsTimeSeriesLinkType(obj) result(res)
-    ! Cast an unlimited polymorphic object as TimeSeriesLinkType
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     type(TimeSeriesLinkType), pointer :: res
     !
     res => null()
@@ -88,14 +94,19 @@ contains
     class default
       continue
     end select
+    !
+    ! -- Return
     return
   end function CastAsTimeSeriesLinkType
 
+  !> @brief Get time series link from a list
+  !<
   function GetTimeSeriesLinkFromList(list, indx) result(tsLink)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: indx
+    ! -- return
     type(TimeSeriesLinkType), pointer :: tsLink
     ! -- local
     class(*), pointer :: obj
@@ -104,9 +115,12 @@ contains
     obj => list%GetItem(indx)
     tsLink => CastAsTimeSeriesLinkType(obj)
     !
+    ! -- Return
     return
   end function GetTimeSeriesLinkFromList
 
+  !> @brief Add time series link to a list
+  !<
   subroutine AddTimeSeriesLinkToList(list, tslink)
     implicit none
     ! -- dummy
@@ -118,6 +132,7 @@ contains
     obj => tslink
     call list%Add(obj)
     !
+    ! -- Return
     return
   end subroutine AddTimeSeriesLinkToList
 

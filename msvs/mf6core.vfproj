@@ -92,6 +92,9 @@
 		<File RelativePath="..\src\Distributed\VirtualModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualSolution.f90"/></Filter>
 		<Filter Name="Exchange">
+		<File RelativePath="..\src\Exchange\gwfgwfidm.f90"/>
+		<File RelativePath="..\src\Exchange\gwfgwtidm.f90"/>
+		<File RelativePath="..\src\Exchange\gwtgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
@@ -139,6 +142,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3lak8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3maw8.f90"/>
@@ -163,13 +167,14 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8idm.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1apt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dis1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1disu1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1disv1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ist1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1lkt1.f90"/>
@@ -192,6 +197,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\GwfVscInputData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\ModelPackageInput.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>
@@ -203,6 +209,7 @@
 		<Filter Name="TransportModel">
 		<File RelativePath="..\src\Model\TransportModel\tsp1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1adv1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1apt1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1fmi1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1ic1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1mvt1.f90"/>
@@ -288,6 +295,7 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmExgDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
@@ -380,7 +388,7 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\DevFeature.f90"/>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\src\Utilities\ErrorUtil.f90"/>
 		<File RelativePath="..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
@@ -390,6 +398,7 @@
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
 		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
+		<File RelativePath="..\src\Utilities\MathUtil.f90"/>
 		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>

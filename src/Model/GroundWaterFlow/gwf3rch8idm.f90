@@ -9,7 +9,6 @@ module GwfRchInputModule
   public gwf_rch_block_definitions
   public GwfRchParamFoundType
   public gwf_rch_multi_package
-  public gwf_rch_aux_sfac_param
 
   type GwfRchParamFoundType
     logical :: fixed_cell = .false.
@@ -34,8 +33,6 @@ module GwfRchInputModule
   end type GwfRchParamFoundType
 
   logical :: gwf_rch_multi_package = .true.
-
-  character(len=LENVARNAME) :: gwf_rch_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfrch_fixed_cell = InputParamDefinitionType &

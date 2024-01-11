@@ -3,13 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_sto01"]
+from framework import TestFramework
+
+cases = ["gwf_sto01"]
 cmppth = "mfnwt"
 tops = [0.0]
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 dtol = 1e-3
 budtol = 1e-2
 bud_lst = ["STO-SS_IN", "STO-SS_OUT", "STO-SY_IN", "STO-SY_OUT"]
@@ -17,14 +17,14 @@ bud_lst = ["STO-SS_IN", "STO-SS_OUT", "STO-SY_IN", "STO-SY_OUT"]
 # static model data
 # temporal discretization
 nper = 31
-perlen = [1.0] + [365.2500000 for i in range(nper - 1)]
-nstp = [1] + [6 for i in range(nper - 1)]
-tsmult = [1.0] + [1.3 for i in range(nper - 1)]
+perlen = [1.0] + [365.2500000 for _ in range(nper - 1)]
+nstp = [1] + [6 for _ in range(nper - 1)]
+tsmult = [1.0] + [1.3 for _ in range(nper - 1)]
 # tsmult = [1.0] + [1.0 for i in range(nper - 1)]
-steady = [True] + [False for i in range(nper - 1)]
+steady = [True] + [False for _ in range(nper - 1)]
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # spatial discretization data
 nlay, nrow, ncol = 3, 10, 10
@@ -94,12 +94,13 @@ rech = {0: v}
 # storage and compaction data
 ske = [6e-4, 3e-4, 6e-4]
 
+
 # variant SUB package problem 3
-def build_model(idx, dir):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -200,8 +201,10 @@ def build_model(idx, dir):
 
     # build MODFLOW-NWT files
     cpth = cmppth
-    ws = os.path.join(dir, cpth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
+    ws = os.path.join(test.workspace, cpth)
+    mc = flopy.modflow.Modflow(
+        name, model_ws=ws, version=cpth, exe_name=test.targets["mfnwt"]
+    )
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
@@ -255,12 +258,9 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def eval_sto(sim):
-
-    print("evaluating storage...")
-
+def check_output(idx, test):
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -272,11 +272,11 @@ def eval_sto(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -294,65 +294,57 @@ def eval_sto(sim):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for key in bud_lst:
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for ii, key in enumerate(bud_lst):
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_sto,
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
+        htol=htol[idx],
     )
+    test.run()

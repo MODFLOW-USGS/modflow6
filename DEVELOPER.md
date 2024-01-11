@@ -293,7 +293,7 @@ The binaries can then be found in the `bin` folder. `meson install` also trigger
 
 MODFLOW 6 unit tests are written in Fortran with [`test-drive`](https://github.com/fortran-lang/test-drive).
 
-MODFLOW 6 integration tests are written in Python with [`pytest`](https://docs.pytest.org/en/7.1.x/), with the help of plugins like `pytest-xdist` and `pytest-cases`. Integration testing dependencies are included in the Conda environment `environment.yml`.
+MODFLOW 6 integration tests are written in Python with [`pytest`](https://docs.pytest.org/en/7.1.x/). Integration testing dependencies are included in the Conda environment `environment.yml`.
 
 **Note:** the entire test suite should pass before a pull request is submitted. Tests run in GitHub Actions CI and a PR can only be merged with passing tests. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more information.
 
@@ -450,22 +450,6 @@ The `large` marker is a subset of the `repo` marker. To test models excluded fro
 
 ```shell
 pytest -v -n auto -m "large"
-```
-
-Test scripts for external model repositories can also be run independently:
-
-```shell
-# MODFLOW 6 test models
-pytest -v -n auto test_z01_testmodels_mf6.py
-
-# MODFLOW 5 to 6 conversion test models
-pytest -v -n auto test_z02_testmodels_mf5to6.py
-
-# models from modflow6-examples repo
-pytest -v -n auto test_z03_examples.py
-
-# models from modflow6-largetestmodels repo
-pytest -v -n auto test_z03_largetestmodels.py
 ```
 
 Tests load external models from fixtures provided by `modflow-devtools`. External model tests can be selected by model or simulation name, or by packages used. See the [`modflow-devtools` documentation](https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#filtering) for usage examples. Note that filtering options only apply to tests using external models, and will not filter tests defining models in code &mdash; for that, the `pytest` built-in `-k` option may be used.

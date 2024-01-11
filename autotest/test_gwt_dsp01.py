@@ -3,14 +3,14 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["dsp01a", "dsp01b"]
+from framework import TestFramework
+
+cases = ["dsp01a", "dsp01b"]
 xt3d = [False, True]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -38,10 +38,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -240,13 +240,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -370,33 +368,26 @@ def eval_transport(sim):
 
     # load the gwt observation file
     fname = gwtname + ".obs.csv"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     gwtobs = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
     # load the cnc observation file
     fname = gwtname + ".cnc.obs.csv"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cncobs = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
     # ensure flow right face for first cell is equal to cnc flows
     errmsg = f"observations not equal:\n{gwtobs}\n{cncobs}"
     assert np.allclose(gwtobs["FLOW1"], -cncobs["CNC000"]), errmsg
 
-    # comment when done testing
-    # assert False
 
-
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

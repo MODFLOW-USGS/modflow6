@@ -1,19 +1,21 @@
-# A simple 2 layer by 1 row by 2 column model.  Upper-right cell is the only 
-# active LAK cell.  Lake starts out initially dry and then is wetted by a 
-# rising water table.  A constant head boundary in the lower left corner cell
-# is used to raise water table. This autotest checks to ensure that the wetted
-# areas between the lake and the 2 connected cells (1 vertical, 1 horizontal)
-# is correct.
+"""
+A simple 2 layer by 1 row by 2 column model.  Upper-right cell is the only
+active LAK cell.  Lake starts out initially dry and then is wetted by a
+rising water table.  A constant head boundary in the lower left corner cell
+is used to raise water table. This autotest checks to ensure that the wetted
+areas between the lake and the 2 connected cells (1 vertical, 1 horizontal)
+is correct.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["lak-1cellkbd"]
+from framework import TestFramework
+
+cases = ["lak-1cellkbd"]
 
 # Model units
 length_units = "feet"
@@ -29,15 +31,15 @@ k11 = 130.0
 k33 = [1179.0, 1179.0]
 ss = 3e-4
 sy = 0.2
-chd_lr = 9.0 
+chd_lr = 9.0
 lak_strt = 9.0  # Starting lake stage
 lak_bedleak = 10.0  # Lakebed leakance
 
-idomain = np.full((nlay, nrow, ncol), 1) 
+idomain = np.full((nlay, nrow, ncol), 1)
 idomain[0, 0, 1] = 0  # deactivate upper-right corner of 2x1x2 model
 
-top = 20.
-botm = [10., 0.]
+top = 20.0
+botm = [10.0, 0.0]
 
 # define delr and delc
 delr = 10.0
@@ -62,7 +64,18 @@ dtfailadj = 5.0
 
 # Prepare constant head boundary data information
 chd_spd = {}
-chd_inc = [9.999999, 10.0, 10.000001, 10.00001, 10.0001, 10.001, 10.01, 10.1, 10.11, 10.12]
+chd_inc = [
+    9.999999,
+    10.0,
+    10.000001,
+    10.00001,
+    10.0001,
+    10.001,
+    10.01,
+    10.1,
+    10.11,
+    10.12,
+]
 for i, t in enumerate(range(len(perlen))):
     chd_spd.update({i: [nlay - 1, nrow - 1, 0, chd_inc[i]]})
 
@@ -85,7 +98,7 @@ lak_tab = [
     [10.25, 0.0280716, 0.4, 0.4],
     [10.3, 0.068889924, 0.5, 0.5],
     [10.35, 0.1690610, 0.6, 0.6],
-    [10.4, 0.4148885490, 0.7, 0.7]
+    [10.4, 0.4148885490, 0.7, 0.7],
 ]
 
 # Set solver parameters
@@ -95,11 +108,13 @@ hclose = 1e-6
 rclose = 1e-6
 relax = 0.97
 
+
 def resolve_lvl(stg, hd, toplay):
     ss = min(stg, toplay)
     hh = min(hd, toplay)
     thk = max(ss, hh)
     return thk
+
 
 def calc_qSat(top, bot, thk):
     teps = 1e-6
@@ -135,13 +150,11 @@ def calc_qSat(top, bot, thk):
 
     return y
 
-#
-# MODFLOW 6 flopy GWF object
-#
-def build_model(idx, dir):
+
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -159,7 +172,7 @@ def build_model(idx, dir):
         ats_filerecord=ats_filerecord,
         nper=nper,
         perioddata=tdis_rc,
-        time_units=time_units
+        time_units=time_units,
     )
 
     if True:
@@ -231,18 +244,34 @@ def build_model(idx, dir):
 
     # Instantiate constant head boundary package
     flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
-    
+
     # Instantiate LAK package
     lak_conn = []
     if use_embedded_lak:
-        lak_conn.append([0, 0, (0, 0, 1), 'embeddedv', lak_bedleak, 0.0, 0.0, 1.0, 0.0])
+        lak_conn.append(
+            [0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0]
+        )
     else:
-        lak_conn.append([0, 0, (0, 0, 0), 'horizontal', lak_bedleak, 10.0, 20.0, 10.0, 10.0])
-        lak_conn.append([0, 1, (1, 0, 1), 'vertical', lak_bedleak, 0.0, 0.0, 0.0, 0.0])
+        lak_conn.append(
+            [
+                0,
+                0,
+                (0, 0, 0),
+                "horizontal",
+                lak_bedleak,
+                10.0,
+                20.0,
+                10.0,
+                10.0,
+            ]
+        )
+        lak_conn.append(
+            [0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0]
+        )
 
     lak_packagedata = [0, lak_strt, len(lak_conn)]
     budpth = f"{gwfname}.lak.cbc"
-    tab6_filename = '{}.laktab'.format(gwfname)
+    tab6_filename = "{}.laktab".format(gwfname)
     if use_embedded_lak:
         # LAK package input requires tables option when using embedded lakes.
         lak = flopy.mf6.ModflowGwflak(
@@ -277,7 +306,7 @@ def build_model(idx, dir):
             budget_filerecord=budpth,
             time_conversion=86400,
             length_conversion=3.28081,
-            #surfdep=0.05,
+            # surfdep=0.05,
             pname="LAK-1",
             filename="{}.lak".format(gwfname),
         )
@@ -289,23 +318,22 @@ def build_model(idx, dir):
         ]
     }
     lak.obs.initialize(
-        filename=obs_file,
-        digits=10,
-        print_input=True,
-        continuous=obs_dict
+        filename=obs_file, digits=10, print_input=True, continuous=obs_dict
     )
     if use_embedded_lak:
         tabinput = []
         for itm in lak_tab:
             tabinput.append([itm[0], itm[1], itm[2], itm[3]])
-    
-        laktab = flopy.mf6.ModflowUtllaktab(gwf,
-                                            nrow=len(tabinput),
-                                            ncol=len(tabinput[0]),
-                                            table=tabinput,
-                                            filename=tab6_filename,
-                                            pname='LAK_tab',
-                                            parent_file=lak)
+
+        laktab = flopy.mf6.ModflowUtllaktab(
+            gwf,
+            nrow=len(tabinput),
+            ncol=len(tabinput[0]),
+            table=tabinput,
+            filename=tab6_filename,
+            pname="LAK_tab",
+            parent_file=lak,
+        )
 
     # Instantiate output control package
     head_filerecord = "{}.hds".format(gwfname)
@@ -315,38 +343,38 @@ def build_model(idx, dir):
         head_filerecord=head_filerecord,
         budget_filerecord=budget_filerecord,
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-        printrecord=[("HEAD", "ALL")]
+        printrecord=[("HEAD", "ALL")],
     )
 
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath, load_only=["dis"])
+    sim1 = flopy.mf6.MFSimulation.load(
+        sim_ws=test.workspace, load_only=["dis"]
+    )
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage
-    lk_pth0 = os.path.join(sim.simpath, f"{gwfname}.lak.obs.csv")
+    lk_pth0 = os.path.join(test.workspace, f"{gwfname}.lak.obs.csv")
     lkstg = np.genfromtxt(lk_pth0, names=True, delimiter=",")
     lkstg_time = lkstg["time"].tolist()
     lkstg_val = lkstg["STAGE"].tolist()
 
     # Store only the values at the end of the time step
-    idx = [i for i, val in enumerate(lkstg_time) if not val.is_integer()]
-    for i in idx[::-1]:
+    indices = [i for i, val in enumerate(lkstg_time) if not val.is_integer()]
+    for i in indices[::-1]:
         lkstg_time.pop(i)
         lkstg_val.pop(i)
 
     # Get heads
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     hdobj = flopy.utils.binaryfile.HeadFile(fname, precision="double")
@@ -354,7 +382,7 @@ def eval_results(sim):
 
     # Get lake/gwf exchange information
     fname = gwfname + ".lak.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     lakobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
@@ -370,8 +398,10 @@ def eval_results(sim):
     wetted_out = np.array(wetted_out)
 
     # Compare MF6 output to answer calculated here
-    msg = 'Compare value written by MF6 to a value calculated here based on ' \
-          'either lake stage or gw head'
+    msg = (
+        "Compare value written by MF6 to a value calculated here based on "
+        "either lake stage or gw head"
+    )
     for tm in np.arange(wetted_out.shape[0]):
         for conn in np.arange(wetted_out.shape[1]):
             stg = lkstg_val[tm]
@@ -410,17 +440,14 @@ def eval_results(sim):
     monotonicIncrease = np.diff(wetted_out[2:, 0])
     assert np.all(monotonicIncrease > 0), msg
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

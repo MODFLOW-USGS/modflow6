@@ -9,7 +9,7 @@ module ModelPackageInputsModule
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
-                             LENPACKAGETYPE, LENPACKAGENAME
+                             LENPACKAGETYPE, LENPACKAGENAME, LENCOMPONENTNAME
   use SimModule, only: store_error, store_error_filename
   use SimVariablesModule, only: iout
   use ArrayHandlersModule, only: expandarray
@@ -17,45 +17,7 @@ module ModelPackageInputsModule
 
   implicit none
   private
-  public :: NIUNIT_GWF, NIUNIT_GWT
   public :: ModelPackageInputsType
-
-  ! -- GWF base package types, ordered for memload
-  integer(I4B), parameter :: GWF_NBASEPKG = 50
-  character(len=LENPACKAGETYPE), dimension(GWF_NBASEPKG) :: GWF_BASEPKG
-  data GWF_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
-                  &'NPF6 ', 'BUY6 ', 'VSC6 ', 'GNC6 ', '     ', & ! 10
-                  &'HFB6 ', 'STO6 ', 'IC6  ', '     ', '     ', & ! 15
-                  &'MVR6 ', 'OC6  ', 'OBS6 ', '     ', '     ', & ! 20
-                  &30*'     '/ ! 50
-
-  ! -- GWF multi package types, ordered for memload
-  integer(I4B), parameter :: GWF_NMULTIPKG = 50
-  character(len=LENPACKAGETYPE), dimension(GWF_NMULTIPKG) :: GWF_MULTIPKG
-  data GWF_MULTIPKG/'WEL6 ', 'DRN6 ', 'RIV6 ', 'GHB6 ', '     ', & !  5
-                   &'RCH6 ', 'EVT6 ', 'CHD6 ', 'CSUB6', '     ', & ! 10
-                   &'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', 'API6 ', & ! 15
-                   &35*'     '/ ! 50
-
-  ! -- GWT base package types, ordered for memload
-  integer(I4B), parameter :: GWT_NBASEPKG = 50
-  character(len=LENPACKAGETYPE), dimension(GWT_NBASEPKG) :: GWT_BASEPKG
-  data GWT_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
-                  &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
-                  &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
-                  &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
-                  &30*'     '/ ! 50
-
-  ! -- GWT multi package types, ordered for memload
-  integer(I4B), parameter :: GWT_NMULTIPKG = 50
-  character(len=LENPACKAGETYPE), dimension(GWT_NMULTIPKG) :: GWT_MULTIPKG
-  data GWT_MULTIPKG/'CNC6 ', 'SRC6 ', 'LKT6 ', 'IST6 ', '     ', & !  5
-                   &'SFT6 ', 'MWT6 ', 'UZT6 ', 'API6 ', '     ', & ! 10
-                   &40*'     '/ ! 50
-
-  ! -- size of supported model package arrays
-  integer(I4B), parameter :: NIUNIT_GWF = GWF_NBASEPKG + GWF_NMULTIPKG
-  integer(I4B), parameter :: NIUNIT_GWT = GWT_NBASEPKG + GWT_NMULTIPKG
 
   !> @brief derived type for loadable package type
   !!
@@ -64,10 +26,10 @@ module ModelPackageInputsModule
   !!
   !<
   type :: LoadablePackageType
-    ! -- package type, e.g. 'DIS6 or CHD6'
+    ! -- package type, e.g. 'DIS6' or 'CHD6'
     character(len=LENPACKAGETYPE) :: pkgtype
-    ! -- component type, e.g. 'DIS or CHD'
-    character(len=LENFTYPE) :: subcomponent_type
+    ! -- component type, e.g. 'DIS' or 'CHD'
+    character(len=LENCOMPONENTNAME) :: subcomponent_type
     ! -- package instance attribute arrays
     character(len=LINELENGTH), dimension(:), allocatable :: filenames
     character(len=LENPACKAGENAME), dimension(:), allocatable :: pkgnames
@@ -93,7 +55,7 @@ module ModelPackageInputsModule
     character(len=LINELENGTH) :: modelfname
     character(len=LENMODELNAME) :: modelname
     ! -- component type
-    character(len=LENFTYPE) :: component_type ! -- e.g. 'GWF'
+    character(len=LENCOMPONENTNAME) :: component_type ! -- e.g. 'GWF'
     ! -- mempaths
     character(len=LENMEMPATH) :: input_mempath
     character(len=LENMEMPATH) :: model_mempath
@@ -125,77 +87,29 @@ module ModelPackageInputsModule
 
 contains
 
-  !> @brief set supported package types for model
-  !<
-  subroutine supported_model_packages(mtype, pkgtypes, numpkgs)
-    ! -- modules
-    ! -- dummy
-    character(len=LENFTYPE), intent(in) :: mtype
-    character(len=LENPACKAGETYPE), dimension(:), allocatable, &
-      intent(inout) :: pkgtypes
-    integer(I4B), intent(inout) :: numpkgs
-    ! -- local
-    !
-    select case (mtype)
-    case ('GWF6')
-      numpkgs = GWF_NBASEPKG + GWF_NMULTIPKG
-      allocate (pkgtypes(numpkgs))
-      pkgtypes = [GWF_BASEPKG, GWF_MULTIPKG]
-      !
-    case ('GWT6')
-      numpkgs = GWT_NBASEPKG + GWT_NMULTIPKG
-      allocate (pkgtypes(numpkgs))
-      pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
-      !
-    case default
-    end select
-    !
-    ! -- return
-    return
-  end subroutine supported_model_packages
-
   !> @brief does model support multiple instances of this package type
   !<
   function multi_pkg_type(mtype_component, ptype_component, pkgtype) &
     result(multi_pkg)
     ! -- modules
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
+    use ModelPackageInputModule, only: multi_package_type
     ! -- dummy
-    character(len=LENFTYPE), intent(in) :: mtype_component
-    character(len=LENFTYPE), intent(in) :: ptype_component
+    character(len=LENCOMPONENTNAME), intent(in) :: mtype_component
+    character(len=LENCOMPONENTNAME), intent(in) :: ptype_component
     character(len=LENFTYPE), intent(in) :: pkgtype
     ! -- return
     logical(LGP) :: multi_pkg
     ! -- local
-    integer(I4B) :: n
     !
     multi_pkg = .false.
     !
     if (idm_integrated(mtype_component, ptype_component)) then
-      !
       multi_pkg = idm_multi_package(mtype_component, ptype_component)
       !
     else
+      multi_pkg = multi_package_type(mtype_component, ptype_component, pkgtype)
       !
-      select case (mtype_component)
-      case ('GWF')
-        do n = 1, GWF_NMULTIPKG
-          if (GWF_MULTIPKG(n) == pkgtype) then
-            multi_pkg = .true.
-            exit
-          end if
-        end do
-        !
-      case ('GWT')
-        do n = 1, GWT_NMULTIPKG
-          if (GWT_MULTIPKG(n) == pkgtype) then
-            multi_pkg = .true.
-            exit
-          end if
-        end do
-        !
-      case default
-      end select
     end if
     !
     ! -- return
@@ -239,7 +153,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
-    use SourceCommonModule, only: subcomponent_name
+    use SourceCommonModule, only: idm_subcomponent_name
     ! -- dummy
     class(LoadablePackageType) :: this
     character(len=*), intent(in) :: modelname
@@ -275,8 +189,8 @@ contains
     if (idm_integrated(mtype_component, this%subcomponent_type)) then
       !
       ! -- set subcomponent name
-      sc_name = subcomponent_name(mtype_component, this%subcomponent_type, &
-                                  this%pkgnames(this%pnum))
+      sc_name = idm_subcomponent_name(mtype_component, this%subcomponent_type, &
+                                      this%pkgnames(this%pnum))
       !
       ! -- create and store the mempath
       this%mempaths(this%pnum) = &
@@ -323,6 +237,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use SimVariablesModule, only: idm_context
     use SourceCommonModule, only: idm_component_type
+    use ModelPackageInputModule, only: supported_model_packages
     ! -- dummy
     class(ModelPackageInputsType) :: this
     character(len=*), intent(in) :: modeltype

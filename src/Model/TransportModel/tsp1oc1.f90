@@ -53,12 +53,15 @@ contains
 
   !> @ brief Allocate and read TspOcType
   !!
-  !!  Setup concentration and budget as output control variables.
+  !!  Setup dependent variable (e.g., concentration or temperature)
+  !!  and budget as output control variables.
+  !!
   !<
-  subroutine oc_ar(this, conc, dis, dnodata)
+  subroutine oc_ar(this, depvar, dis, dnodata, dvname)
     ! -- dummy
     class(TspOcType) :: this !< TspOcType object
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: conc !< model concentration
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: depvar !< model concentration
+    character(len=*), intent(in) :: dvname !< name of dependent variable solved by generalized transport model (concentration, temperature)
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
     real(DP), intent(in) :: dnodata !< no data value
     ! -- local
@@ -78,7 +81,7 @@ contains
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       case (2)
-        call ocdobjptr%init_dbl('CONCENTRATION', conc, dis, 'PRINT LAST ', &
+        call ocdobjptr%init_dbl(trim(dvname), depvar, dis, 'PRINT LAST ', &
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select

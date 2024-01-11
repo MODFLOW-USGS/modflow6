@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the interface model approach for coupling two DIS
 models where one is translated and rotated in space:
 
@@ -31,11 +30,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_ifmod03"]
+from framework import TestFramework
+
+cases = ["libgwf_ifmod03"]
 
 # global convenience...
 name_left = "left"
@@ -44,12 +43,11 @@ global_delr = 8.0
 
 
 def get_model(dir, name):
-
     # parameters and spd
     # tdis
     nper = 1
     tdis_rc = []
-    for i in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
@@ -208,14 +206,14 @@ def get_model(dir, name):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     sim_compare = get_model(ws, name)
 
     return sim, sim_compare
@@ -289,16 +287,13 @@ def check_interface_models(mf6):
     assert abs(ymax - ymin) < 1e-6
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

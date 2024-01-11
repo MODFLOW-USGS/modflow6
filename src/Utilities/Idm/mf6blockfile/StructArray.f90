@@ -18,6 +18,7 @@ module StructArrayModule
   use STLVecIntModule, only: STLVecInt
   use IdmLoggerModule, only: idm_log_var
   use BlockParserModule, only: BlockParserType
+  use ModflowInputModule, only: ModflowInputType
 
   implicit none
   private
@@ -40,7 +41,9 @@ module StructArrayModule
     character(len=LENMEMPATH) :: mempath
     character(len=LENMEMPATH) :: component_mempath
     type(StructVectorType), dimension(:), allocatable :: struct_vectors
-    integer(I4B), dimension(:), allocatable :: startidx, numcols
+    integer(I4B), dimension(:), allocatable :: startidx
+    integer(I4B), dimension(:), allocatable :: numcols
+    type(ModflowInputType) :: mf6_input
   contains
     procedure :: mem_create_vector
     procedure :: count
@@ -63,8 +66,9 @@ contains
 
   !> @brief constructor for a struct_array
   !<
-  function constructStructArray(ncol, nrow, blocknum, mempath, &
+  function constructStructArray(mf6_input, ncol, nrow, blocknum, mempath, &
                                 component_mempath) result(struct_array)
+    type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), intent(in) :: ncol !< number of columns in the StructArrayType
     integer(I4B), intent(in) :: nrow !< number of rows in the StructArrayType
     integer(I4B), intent(in) :: blocknum !< valid block number or 0
@@ -74,6 +78,9 @@ contains
     !
     ! -- allocate StructArrayType
     allocate (struct_array)
+    !
+    ! -- set description of input
+    struct_array%mf6_input = mf6_input
     !
     ! -- set number of arrays
     struct_array%ncol = ncol
@@ -280,15 +287,46 @@ contains
   !> @brief allocate int1d input type
   !<
   subroutine allocate_int1d_type(this, sv)
+    use ConstantsModule, only: LENMODELNAME
+    use MemoryHelperModule, only: create_mem_path
+    use SimVariablesModule, only: idm_context
     class(StructArrayType) :: this !< StructArrayType
     type(StructVectorType), intent(inout) :: sv
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d
     type(STLVecInt), pointer :: intvector
-    integer(I4B), pointer :: ncelldim
+    integer(I4B), pointer :: ncelldim, exgid
+    character(len=LENMEMPATH) :: input_mempath
+    character(len=LENMODELNAME) :: mname
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: charstr1d
     !
     if (sv%idt%shape == 'NCELLDIM') then
       !
-      call mem_setptr(ncelldim, sv%idt%shape, this%component_mempath)
+      ! -- if EXCHANGE set to NCELLDIM of appropriate model
+      if (this%mf6_input%component_type == 'EXG') then
+        !
+        ! -- set pointer to EXGID
+        call mem_setptr(exgid, 'EXGID', this%mf6_input%mempath)
+        !
+        ! -- set pointer to appropriate exchange model array
+        input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+        !
+        if (sv%idt%tagname == 'CELLIDM1') then
+          call mem_setptr(charstr1d, 'EXGMNAMEA', input_mempath)
+        else if (sv%idt%tagname == 'CELLIDM2') then
+          call mem_setptr(charstr1d, 'EXGMNAMEB', input_mempath)
+        end if
+        !
+        ! -- set the model name
+        mname = charstr1d(exgid)
+        !
+        ! -- set ncelldim pointer
+        input_mempath = create_mem_path(component=mname, context=idm_context)
+        call mem_setptr(ncelldim, sv%idt%shape, input_mempath)
+      else
+        !
+        call mem_setptr(ncelldim, sv%idt%shape, this%component_mempath)
+      end if
       !
       if (this%deferred_shape) then
         ! -- shape not known, allocate locally
@@ -685,7 +723,7 @@ contains
           this%struct_vectors(j)%int2d => p_int2d
           this%struct_vectors(j)%size = newsize
         end if
-        ! TODO: case (6)
+        !TODO: case (6)
       case default
         errmsg = 'Programming error. IDM check_reallocate unsupported memtype.'
         call store_error(errmsg, terminate=.TRUE.)

@@ -5,15 +5,13 @@ import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
 
+from conftest import try_get_target
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]
-# ex = ["csub_dis"]
-ex_dict = {name: None for name in ex}
+cases = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]
+ex_dict = {name: None for name in cases}
 ex_dict["csub_disu01"] = 0
 ex_dict["csub_disu02"] = 2
-
 paktest = "csub"
 
 # temporal discretization
@@ -22,8 +20,8 @@ perlen = [1.0, 100.0]
 nstp = [1, 10]
 tsmult = [1.0] * nper
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 9, 9
@@ -220,13 +218,14 @@ def build_well_data(modelgrid):
     return {1: well_spd}
 
 
-def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), None
+def build_models(idx, test):
+    gridgen = try_get_target(test.targets, "gridgen")
+    return build_mf6(idx, test.workspace, gridgen), None
 
 
 # build MODFLOW 6 files
 def build_mf6(idx, ws, gridgen):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -344,13 +343,11 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_zdis(sim):
-    print("evaluating z-displacement...")
-
-    name = ex[sim.idxsim]
-    ws = pl.Path(sim.simpath)
-    sim = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
-    gwf = sim.get_model()
+def check_output(idx, test):
+    name = cases[idx]
+    ws = pl.Path(test.workspace)
+    test = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
+    gwf = test.get_model()
     x0, x1, y0, y1 = gwf.modelgrid.extent
 
     comp_obj = flopy.utils.HeadFile(
@@ -405,7 +402,7 @@ def eval_zdis(sim):
                 if k == layer_refinement:
                     comp_temp = np.zeros(shape2d_refined, dtype=float)
                     zdis_temp = np.zeros(shape2d_refined, dtype=float)
-                    for key, value in map_dict.items():
+                    for value in map_dict.values():
                         comp_temp[value["cellid"]] = comp1d[value["node"]]
                         zdis_temp[value["cellid"]] = zdis1d[value["node"]]
                     comp[k] = comp_temp.reshape(
@@ -425,24 +422,14 @@ def eval_zdis(sim):
             + f"z-displacement at time {totim}"
         )
 
-    return
 
-
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, targets.gridgen), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_zdis,
-            cmp_verbose=False,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

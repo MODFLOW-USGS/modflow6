@@ -233,10 +233,8 @@ contains
     use MemoryManagerModule, only: mem_deallocate, mem_setptr, get_isize
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
-    use IdmDfnSelectorModule, only: idm_sfac_param
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
     type(InputParamDefinitionType), pointer :: idt
-    character(len=LENVARNAME) :: sfac_param
     integer(I4B) :: n
     !
     if (this%tas_active /= 0) then
@@ -257,18 +255,6 @@ contains
         !
         ! -- set definition
         idt => this%mf6_input%param_dfns(this%idt_idxs(n))
-        !
-        ! -- set sfac param (e.g. EVT6 'rate', RCH6 'recharge')
-        sfac_param = idm_sfac_param(this%mf6_input%component_type, &
-                                    this%mf6_input%subcomponent_type)
-        !
-        if (idt%mf6varname == sfac_param) then
-          if (this%tas_active == 0) then
-            ! -- reinit if TAS is not active
-            call this%bndctx%param_init(idt%datatype, idt%mf6varname, &
-                                        this%mf6_input%mempath, this%sourcename)
-          end if
-        end if
         !
         ! -- reset read state
         this%param_reads(n)%invar = 0

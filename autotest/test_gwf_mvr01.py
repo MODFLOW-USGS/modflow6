@@ -3,19 +3,19 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
 name = "gwf_mvr01"
-ex = [name]
+cases = [name]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # static model data
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
 
     # spatial discretization data
@@ -36,7 +36,7 @@ def build_model(idx, dir):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=str(dir)
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -372,11 +372,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
+def check_output(idx, test):
     # mvr budget terms
-    fpth = os.path.join(sim.simpath, "gwf_mvr01.mvr.bud")
+    fpth = os.path.join(test.workspace, "gwf_mvr01.mvr.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     times = bobj.get_times()
     records = bobj.get_data(totim=times[-1])
@@ -446,17 +444,13 @@ def eval_model(sim):
     assert records[24].shape == (0,)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

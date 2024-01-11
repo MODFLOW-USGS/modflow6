@@ -87,15 +87,17 @@ contains
                     &' VERSION 2, 8/17/2023')"
 
     ! --print a message identifying the FMI package.
-    if (this%inunit /= 0) then
-      write (this%iout, fmtfmi) this%inunit
-    else
-      write (this%iout, fmtfmi0)
-      if (this%flows_from_file) then
-        write (this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
+    if (this%iout > 0) then
+      if (this%inunit /= 0) then
+        write (this%iout, fmtfmi) this%inunit
       else
-        write (this%iout, '(a)') '  FLOWS PROVIDED BY A GWF MODEL IN THIS &
-          &SIMULATION'
+        write (this%iout, fmtfmi0)
+        if (this%flows_from_file) then
+          write (this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
+        else
+          write (this%iout, '(a)') '  FLOWS PROVIDED BY A GWF MODEL IN THIS &
+            &SIMULATION'
+        end if
       end if
     end if
     !

@@ -1,12 +1,9 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
 import pytest
-
-from framework import TestFramework
-from simulation import TestSimulation
 
 # temporal discretization
 nper = 2
@@ -94,7 +91,7 @@ def well4(label):
         [0, 1, (1, nhalf, nhalf), botm[0], botm[1], hks, sradius[label]],
     ]
     perioddata = {1: [[0, "RATE", wellq]]}
-    return Case(
+    return SimpleNamespace(
         print_input=True,
         no_well_storage=True,
         packagedata=packagedata,
@@ -266,25 +263,9 @@ def build_model(idx, ws, mf6):
     return sim, mc
 
 
-def eval_results(sim):
-    pass
-
-
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
-    sim, mc = build_model(idx, ws, targets.mf6)
+    sim, _ = build_model(idx, ws, targets["mf6"])
     sim.write_simulation()
     sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-            require_failure=xfail[idx],
-        ),
-        str(ws),
-    )

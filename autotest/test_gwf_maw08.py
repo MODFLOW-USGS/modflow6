@@ -1,5 +1,7 @@
-# test to evaluate Newton-Raphson solution for a single column steady-state
-# dry multi-aquifer well problem. Developed to address issue #546
+"""
+Test Newton-Raphson solution for a single column steady-state
+dry multi-aquifer well problem. Developed to address issue #546
+"""
 
 import os
 
@@ -8,9 +10,8 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ("maw_08a", "maw_08b")
+cases = ("maw_08a", "maw_08b")
 dis_option = ("dis", "disv")
 
 nlay = 3
@@ -43,13 +44,13 @@ Kv = 1.0
 radius = 0.05
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     dvclose, rclose, relax = 1e-9, 1e-9, 1.0
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -195,14 +196,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def eval_results(idx, test):
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
 
@@ -212,20 +211,20 @@ def eval_results(sim):
     ), f"simulated maw head ({well_head[0]}) does not equal 10."
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()[1:]
 
     # compare the maw-gwf flows with the gwf-maw flows
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -241,17 +240,13 @@ def eval_results(sim):
             assert np.allclose(qmaw, -qgwf), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

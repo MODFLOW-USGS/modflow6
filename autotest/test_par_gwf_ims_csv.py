@@ -1,20 +1,19 @@
-import os
-
 import flopy
-import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# Test for parallel MODFLOW running on two cpus.
-# It contains two coupled models with
-#
-# 1d:  (nlay,nrow,ncol) = (1,1,5),
-#
-# constant head boundaries left=1.0, right=10.0.
-# The result should be a uniform flow field.
+"""
+Test for parallel MODFLOW running on two cpus.
+It contains two coupled models with
 
-ex = ["par_gwf_csv"]
+1d:  (nlay,nrow,ncol) = (1,1,5),
+
+constant head boundaries left=1.0, right=10.0.
+The result should be a uniform flow field.
+"""
+
+cases = ["par_gwf_csv"]
 dis_shape = [(1, 1, 5)]
 
 # global convenience...
@@ -23,46 +22,40 @@ name_right = "rightmodel"
 
 
 def update_ims(idx, ims):
-    from test_par_gwf01 import hclose, rclose, nouter, ninner
+    from test_par_gwf01 import hclose, ninner, nouter, rclose
 
-    name = ex[idx]
+    name = cases[idx]
     ims.csv_outer_output_filerecord.set_data(f"{name}.outer.csv")
     ims.csv_inner_output_filerecord.set_data(f"{name}.inner.csv")
     return
 
 
-def build_model(idx, exdir):
-    from test_par_gwf01 import get_model as get_model_ext
-    from test_par_gwf01 import ex as ex_ext
+def build_models(idx, test):
+    from test_par_gwf01 import cases as ex_ext
+    from test_par_gwf01 import get_model
 
-    sim = get_model_ext(idx, exdir)
+    sim = get_model(idx, test.workspace)
     update_ims(idx, sim.get_solution_package(f"{ex_ext[idx]}.ims"))
     return sim, None
 
 
-def eval_model(sim):
-    from test_par_gwf01 import eval_model as eval_model_ext
+def check_output(idx, test):
+    from test_par_gwf01 import check_output as check
 
-    eval_model_ext(sim)
+    check(idx, test)
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-            make_comparison=False,
-            parallel=True,
-            ncpus=2,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
+        parallel=True,
+        ncpus=2,
     )
+    test.run()

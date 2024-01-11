@@ -2,6 +2,7 @@
 
 module NumericalSolutionModule
   use KindModule, only: DP, I4B, LGP
+  use ErrorUtilModule, only: pstop
   use TimerModule, only: code_timer
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC, &
                              DPREC, DZERO, DEM20, DEM15, DEM6, &
@@ -12,7 +13,8 @@ module NumericalSolutionModule
                              LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use TableModule, only: TableType, table_cr
-  use GenericUtilitiesModule, only: is_same, sim_message, stop_with_error
+  Use MessageModule, only: write_message
+  use MathUtilModule, only: is_close
   use VersionModule, only: IDEVELOPMODE
   use BaseModelModule, only: BaseModelType
   use BaseExchangeModule, only: BaseExchangeType
@@ -1222,6 +1224,10 @@ contains
     call this%cnvg_summary%destroy()
     deallocate (this%cnvg_summary)
     !
+    ! -- linear solver
+    call this%linear_solver%destroy()
+    deallocate (this%linear_solver)
+    !
     ! -- linear solver settings
     call this%linear_settings%destroy()
     deallocate (this%linear_settings)
@@ -1606,7 +1612,7 @@ contains
       WRITE (99, *) 'MATRIX SOLUTION FOLLOWS'
       WRITE (99, '(10(I8,G15.4))') (n, this%x(N), N=1, this%NEQ)
       close (99)
-      call stop_with_error()
+      call pstop()
     end if
     !-------------------------------------------------------
     !
@@ -2470,7 +2476,7 @@ contains
           end if
         end if
       else
-        lsame = is_same(l2norm, this%l2norm0)
+        lsame = is_close(l2norm, this%l2norm0)
         if (lsame) then
           iptc = 0
         end if
@@ -3142,7 +3148,7 @@ contains
       if (iend /= 0) then
         write (errmsg, '(3a)') &
           'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-        call sim_message(errmsg)
+        call write_message(errmsg)
       end if
     end if
 

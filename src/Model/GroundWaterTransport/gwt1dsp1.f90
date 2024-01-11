@@ -72,13 +72,9 @@ module GwtDspModule
 
 contains
 
+  !> @brief Create a DSP object
+  !<
   subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi)
-! ******************************************************************************
-! dsp_cr -- Create a new DSP object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -94,7 +90,6 @@ contains
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
       &' INPUT READ FROM MEMPATH: ', A, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (dspobj)
@@ -122,13 +117,9 @@ contains
     return
   end subroutine dsp_cr
 
+  !> @brief Define DSP object
+  !<
   subroutine dsp_df(this, dis, dspOptions)
-! ******************************************************************************
-! dsp_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -136,7 +127,6 @@ contains
     type(GwtDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
                                                                 !! creating DSP from file
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Store pointer to dis
     this%dis => dis
@@ -173,13 +163,11 @@ contains
     return
   end subroutine dsp_df
 
+  !> @brief Add connections to DSP
+  !!
+  !! Add connections for extended neighbors to the sparse matrix
+  !<
   subroutine dsp_ac(this, moffset, sparse)
-! ******************************************************************************
-! dsp_ac -- Add connections for extended neighbors to the sparse matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
@@ -188,7 +176,6 @@ contains
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
     if (this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
@@ -197,13 +184,11 @@ contains
     return
   end subroutine dsp_ac
 
+  !> @brief Map DSP connections
+  !!
+  !! Map connections and construct iax, jax, and idxglox
+  !<
   subroutine dsp_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! dsp_mc -- Map connections and construct iax, jax, and idxglox
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -211,7 +196,6 @@ contains
     integer(I4B), intent(in) :: moffset
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Call xt3d map connections
     if (this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
@@ -220,13 +204,11 @@ contains
     return
   end subroutine dsp_mc
 
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !<
   subroutine dsp_ar(this, ibound, thetam)
-! ******************************************************************************
-! dsp_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -237,7 +219,6 @@ contains
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- dsp pointers to arguments that were passed in
     this%ibound => ibound
@@ -247,19 +228,14 @@ contains
     return
   end subroutine dsp_ar
 
+  !> @brief Advance method for the package
+  !<
   subroutine dsp_ad(this)
-! ******************************************************************************
-! dsp_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- xt3d
     ! TODO: might consider adding a new mf6 level set pointers method, and
@@ -289,13 +265,11 @@ contains
     return
   end subroutine dsp_ad
 
+  !> @brief  Fill coefficient method for package
+  !!
+  !!  Method to calculate and fill coefficients for the package.
+  !<
   subroutine dsp_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
-! ******************************************************************************
-! dsp_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -309,7 +283,6 @@ contains
     ! -- local
     integer(I4B) :: n, m, idiag, idiagm, ipos, isympos, isymcon
     real(DP) :: dnm
-! ------------------------------------------------------------------------------
     !
     if (this%ixt3d > 0) then
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, cnew)
@@ -342,13 +315,11 @@ contains
     return
   end subroutine dsp_fc
 
+  !> @ brief Calculate flows for package
+  !!
+  !!  Method to calculate dispersion contribution to flowja
+  !<
   subroutine dsp_cq(this, cnew, flowja)
-! ******************************************************************************
-! dsp_cq -- Calculate dispersion contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -357,7 +328,6 @@ contains
     ! -- local
     integer(I4B) :: n, m, ipos, isympos
     real(DP) :: dnm
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
     if (this%ixt3d > 0) then
@@ -379,20 +349,17 @@ contains
     return
   end subroutine dsp_cq
 
+  !> @ brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -435,13 +402,11 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays for package
+  !!
+  !!  Method to allocate arrays for the package.
+  !<
   subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -449,7 +414,6 @@ contains
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate
     call mem_allocate(this%alh, nodes, 'ALH', trim(this%memoryPath))
@@ -477,13 +441,11 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @ brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine dsp_da(this)
-! ******************************************************************************
-! dsp_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
@@ -491,7 +453,6 @@ contains
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate input memory
     call memorylist_remove(this%name_model, 'DSP', idm_context)
@@ -555,15 +516,13 @@ contains
     write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
                                    &3=ACTIVE RHS] set to: ', this%ixt3d
     write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
+    ! -- Return
+    return
   end subroutine log_options
 
+  !> @brief Update simulation mempath options
+  !<
   subroutine source_options(this)
-! ******************************************************************************
-! source_options -- update simulation mempath options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     !use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -572,7 +531,6 @@ contains
     class(GwtDspType) :: this
     ! -- locals
     type(GwtDspParamFoundType) :: found
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%ixt3doff, 'XT3D_OFF', this%input_mempath, &
@@ -630,13 +588,9 @@ contains
 
   end subroutine log_griddata
 
+  !> @brief Update DSP simulation data from input mempath
+  !<
   subroutine source_griddata(this)
-! ******************************************************************************
-! source_griddata -- update dsp simulation data from input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
@@ -650,7 +604,6 @@ contains
     type(GwtDspParamFoundType) :: found
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- set map
     map => null()
@@ -719,13 +672,9 @@ contains
     return
   end subroutine source_griddata
 
+  !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispellipse(this)
-! ******************************************************************************
-! calcdispellipse -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -736,7 +685,6 @@ contains
     real(DP) :: al, at1, at2
     real(DP) :: qzoqsquared
     real(DP) :: dstar
-! ------------------------------------------------------------------------------
     !
     ! -- loop through and calculate dispersion coefficients and angles
     nodes = size(this%d11)
@@ -838,13 +786,9 @@ contains
     return
   end subroutine calcdispellipse
 
+  !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispcoef(this)
-! ******************************************************************************
-! calcdispcoef -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use GwfNpfModule, only: hyeff_calc
     ! -- dummy
@@ -858,7 +802,6 @@ contains
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
     real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
-! ------------------------------------------------------------------------------
     !
     ! -- set iavgmeth = 1 to use arithmetic averaging for effective dispersion
     iavgmeth = 1

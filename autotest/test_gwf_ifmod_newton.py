@@ -1,34 +1,36 @@
+"""
+General test for the interface model approach.
+It compares the result of a single reference model
+to the equivalent case where the domain is decomposed
+and joined by a GWF-GWF exchange.
+
+In this case we test newton option, which is also enabled in
+the interface model and should give identical results.
+
+period 1: The first stress period we start almost dry and have the
+          model fill up.
+period 2: The BC on the left is lowered such that a part of the top
+          layer is drained.
+
+                 'refmodel'               'leftmodel'    'rightmodel'
+
+   layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
+   layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
+   layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
+
+We assert equality on the head values. All models are part of the same
+solution for convenience. Finally, the budget error is checked.
+"""
+
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# General test for the interface model approach.
-# It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed
-# and joined by a GWF-GWF exchange.
-#
-# In this case we test newton option, which is also enabled in
-# the interface model and should give identical results.
-#
-# period 1: The first stress period we start almost dry and have the
-#           model fill up.
-# period 2: The BC on the left is lowered such that a part of the top
-#           layer is drained.
-#
-#                  'refmodel'               'leftmodel'    'rightmodel'
-#
-#    layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#    layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
-#    layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#
-# We assert equality on the head values. All models are part of the same
-# solution for convenience. Finally, the budget error is checked.
-
-ex = ["ifmod_newton01"]
+cases = ["ifmod_newton01"]
 
 # some global convenience...:
 # model names
@@ -109,8 +111,8 @@ chd_spd_left[1] = lchd2
 chd_spd_right[1] = rchd_right
 
 
-def get_model(idx, dir):
-    name = ex[idx]
+def get_model(idx, ws):
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -123,7 +125,7 @@ def get_model(idx, dir):
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
 
     tdis = flopy.mf6.ModflowTdis(
@@ -175,8 +177,9 @@ def add_refmodel(sim):
     global chd_spd
     global tops
 
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_ref, newtonoptions="NEWTON", 
-                               save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=mname_ref, newtonoptions="NEWTON", save_flows=True
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -226,8 +229,9 @@ def add_leftmodel(sim):
     global h_left
     global chd_spd_left
 
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_left, newtonoptions="NEWTON",
-                               save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=mname_left, newtonoptions="NEWTON", save_flows=True
+    )
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -268,8 +272,9 @@ def add_rightmodel(sim):
     global shift_x, shift_y
     global chd_spd_right
 
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_right, newtonoptions="NEWTON",
-                               save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=mname_right, newtonoptions="NEWTON", save_flows=True
+    )
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -336,19 +341,19 @@ def add_gwfexchange(sim):
     )
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def compare_to_ref(sim):
+def check_output(idx, test):
     print("comparing heads to single model reference...")
 
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_left}.hds")
     hds_l = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_right}.hds")
     hds_r = flopy.utils.HeadFile(fpth)
 
     times = hds.get_times()
@@ -369,7 +374,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -380,17 +385,14 @@ def compare_to_ref(sim):
                 )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

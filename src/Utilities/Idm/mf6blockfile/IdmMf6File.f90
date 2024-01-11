@@ -143,14 +143,16 @@ contains
 
   !> @brief static loader init
   !<
-  subroutine static_init(this, mf6_input, modelname, modelfname, source)
+  subroutine static_init(this, mf6_input, component_name, component_input_name, &
+                         input_name)
     class(Mf6FileStaticPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modelfname
-    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: component_input_name
+    character(len=*), intent(in) :: input_name
     !
-    call this%StaticPkgLoadType%init(mf6_input, modelname, modelfname, source)
+    call this%StaticPkgLoadType%init(mf6_input, component_name, &
+                                     component_input_name, input_name)
     !
   end subroutine static_init
 
@@ -173,12 +175,12 @@ contains
       allocate (mf6_loader)
       !
       ! -- load static input
-      call input_load(this%sourcename, this%mf6_input, &
-                      this%modelfname, iout, parser)
+      call input_load(this%input_name, this%mf6_input, &
+                      this%component_input_name, iout, parser)
       !
       ! -- initialize dynamic loader
-      call mf6_loader%init(this%mf6_input, this%modelname, &
-                           this%modelfname, this%sourcename, &
+      call mf6_loader%init(this%mf6_input, this%component_name, &
+                           this%component_input_name, this%input_name, &
                            this%iperblock, iout)
       !
       ! -- set parser
@@ -190,8 +192,8 @@ contains
     else
       !
       ! -- load static input
-      call input_load(this%sourcename, this%mf6_input, &
-                      this%modelfname, iout)
+      call input_load(this%input_name, this%mf6_input, &
+                      this%component_input_name, iout)
     end if
     !
     ! -- return

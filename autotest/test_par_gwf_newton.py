@@ -1,45 +1,48 @@
-import os
-from decimal import Decimal
+"""
+This tests reuses the simulation data in test_gwf_ifmod_newton.py
+and runs it in parallel on three cpus with
+
+cpu 0: 'refmodel'
+cpu 1: 'leftmodel'
+cpu 2: 'rightmodel'
+
+so we can compare the parallel coupling of 'leftmodel' + 'rightmodel'
+with a serial 'refmodel'.
+
+This test also checks that PTC works in parallel.
+"""
+
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# This tests reuses the simulation data in test_gwf_ifmod_newton.py
-# and runs it in parallel on three cpus with
-#
-# cpu 0: 'refmodel'
-# cpu 1: 'leftmodel'
-# cpu 2: 'rightmodel'
-#
-# so we can compare the parallel coupling of 'leftmodel' + 'rightmodel'
-# with a serial 'refmodel'.
-#
-# This test also checks that PTC works in parallel.
+cases = ["par_newton"]
 
-ex = ["par_newton"]
 
-def build_model(idx, exdir):
-    from test_gwf_ifmod_newton import build_model as build_model_ext
-    sim, dummy = build_model_ext(idx, exdir)
+def build_models(idx, test):
+    from test_gwf_ifmod_newton import build_models as build
+
+    sim, dummy = build(idx, test)
     return sim, dummy
 
-def eval_model(test_sim):
-    from test_gwf_ifmod_newton import compare_to_ref
-    compare_to_ref(test_sim)    
+
+def check_output(idx, test):
+    from test_gwf_ifmod_newton import check_output as check
+
+    check(idx, test)
+
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, 
-            idxsim=0, make_comparison=False,
-            parallel=True, ncpus=3,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
+        parallel=True,
+        ncpus=3,
     )
+    test.run()

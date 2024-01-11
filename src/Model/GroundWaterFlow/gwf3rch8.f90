@@ -13,6 +13,7 @@ module RchModule
   use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
   use MatrixBaseModule
+  use GeomUtilModule, only: get_node
   !
   implicit none
   !
@@ -28,7 +29,9 @@ module RchModule
     integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL() ! User provided cell numbers; nodelist is cells where recharge is applied)
     logical, pointer, private :: fixed_cell
     logical, pointer, private :: read_as_arrays
+
   contains
+
     procedure :: rch_allocate_scalars
     procedure :: allocate_arrays => rch_allocate_arrays
     procedure :: source_options => rch_source_options
@@ -46,20 +49,17 @@ module RchModule
     ! -- for observations
     procedure, public :: bnd_obs_supported => rch_obs_supported
     procedure, public :: bnd_df_obs => rch_df_obs
+
   end type RchType
 
 contains
 
+  !> @brief Create a New Recharge Package
+  !!
+  !! Create new RCH package and point packobj to the new package
+  !<
   subroutine rch_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! rch_create -- Create a New Recharge Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -71,7 +71,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(rchtype), pointer :: rchobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate recharge object and scalar variables
     allocate (rchobj)
@@ -86,30 +85,22 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 1
-    packobj%iscloc = 1 ! sfac applies to recharge rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_create
 
+  !> @brief Allocate scalar members
+  !<
   subroutine rch_allocate_scalars(this)
-! ******************************************************************************
-! rch_allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(RchType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate base scalars
     call this%BndExtType%allocate_scalars()
@@ -122,25 +113,19 @@ contains
     this%fixed_cell = .false.
     this%read_as_arrays = .false.
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_allocate_scalars
 
+  !> @brief Allocate package arrays
+  !<
   subroutine rch_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! rch_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr, mem_checkin
     ! -- dummy
     class(RchType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate base arrays
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -152,36 +137,32 @@ contains
     call mem_checkin(this%recharge, 'RECHARGE', this%memoryPath, &
                      'RECHARGE', this%input_mempath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_allocate_arrays
 
+  !> @brief Source options specific to RchType
+  !<
   subroutine rch_source_options(this)
-! ******************************************************************************
-! rch_source_options -- source options specific to RchType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
     ! -- local
-    type(GwfParamFoundType) :: found
-! ------------------------------------------------------------------------------
+    logical(LGP) :: found_fixed_cell = .false.
+    logical(LGP) :: found_readasarrays = .false.
     !
     ! -- source common bound options
     call this%BndExtType%source_options()
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%fixed_cell, 'FIXED_CELL', this%input_mempath, &
-                       found%fixed_cell)
+                       found_fixed_cell)
     call mem_set_value(this%read_as_arrays, 'READASARRAYS', this%input_mempath, &
-                       found%readasarrays)
+                       found_readasarrays)
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       if (this%dis%supports_layers()) then
         this%text = texta
       else
@@ -193,41 +174,35 @@ contains
     end if
     !
     ! -- log rch params
-    call this%log_rch_options(found)
+    call this%log_rch_options(found_fixed_cell, found_readasarrays)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_source_options
 
-  subroutine log_rch_options(this, found)
-! ******************************************************************************
-! log_rch_options -- log options specific to RchType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
+  !> @brief Log options specific to RchType
+  !<
+  subroutine log_rch_options(this, found_fixed_cell, found_readasarrays)
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
-    type(GwfParamFoundType), intent(in) :: found
-    ! -- local
+    logical(LGP), intent(in) :: found_fixed_cell
+    logical(LGP), intent(in) :: found_readasarrays
     ! -- formats
     character(len=*), parameter :: fmtfixedcell = &
       &"(4x, 'RECHARGE WILL BE APPLIED TO SPECIFIED CELL.')"
     character(len=*), parameter :: fmtreadasarrays = &
       &"(4x, 'RECHARGE INPUT WILL BE READ AS ARRAY(S).')"
-! ------------------------------------------------------------------------------
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
       //' OPTIONS'
     !
-    if (found%fixed_cell) then
+    if (found_fixed_cell) then
       write (this%iout, fmtfixedcell)
     end if
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       write (this%iout, fmtreadasarrays)
     end if
     !
@@ -235,26 +210,20 @@ contains
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine log_rch_options
 
+  !> @brief Source the dimensions for this package
+  !!
+  !! Dimensions block is not required if:
+  !!   (1) discretization is DIS or DISV, and
+  !!   (2) READASARRAYS option has been specified.
+  !<
   subroutine rch_source_dimensions(this)
-! ******************************************************************************
-! rch_source_dimensions -- Source the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(RchType), intent(inout) :: this
-    ! -- local
-    ! -- format
-! ------------------------------------------------------------------------------
     !
-    ! Dimensions block is not required if:
-    !   (1) discretization is DIS or DISV, and
-    !   (2) READASARRAYS option has been specified.
     if (this%read_as_arrays) then
       this%maxbound = this%dis%get_ncpl()
       !
@@ -276,43 +245,34 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_source_dimensions
 
+  !> @brief Part of allocate and read
+  !<
   subroutine rch_read_initial_attr(this)
-! ******************************************************************************
-! rch_read_initial_attr -- Part of allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(RchType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     if (this%read_as_arrays) then
       call this%default_nodelist()
     end if
     !
+    ! -- Return
     return
   end subroutine rch_read_initial_attr
 
+  !> @brief Read and Prepare
+  !!
+  !! Read itmp and read new boundaries if itmp > 0
+  !<
   subroutine rch_rp(this)
-! ******************************************************************************
-! rch_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: kper
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     if (this%iper /= kper) return
     !
@@ -336,24 +296,18 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_rp
 
+  !> @brief Store nodelist in nodesontop
+  !<
   subroutine set_nodesontop(this)
-! ******************************************************************************
-! set_nodesontop -- store nodelist in nodesontop
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- allocate if necessary
     if (.not. associated(this%nodesontop)) then
@@ -365,24 +319,19 @@ contains
       this%nodesontop(n) = this%nodelist(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_nodesontop
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip if no recharge. Otherwise, calculate hcof and rhs
+  !<
   subroutine rch_cf(this)
-! ******************************************************************************
-! rch_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no recharge
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(rchtype) :: this
     ! -- local
     integer(I4B) :: i, node
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no recharge
     if (this%nbound == 0) return
@@ -429,17 +378,13 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine rch_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! rch_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(RchType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -448,7 +393,6 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
-! --------------------------------------------------------------------------
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -465,22 +409,17 @@ contains
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_fc
 
+  !> @brief Deallocate memory
+  !<
   subroutine rch_da(this)
-! ******************************************************************************
-! rch_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(RchType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -493,20 +432,16 @@ contains
     if (associated(this%nodesontop)) deallocate (this%nodesontop)
     call mem_deallocate(this%recharge, 'RECHARGE', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_da
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine rch_define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(RchType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -527,25 +462,19 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_define_listlabel
 
+  !> @brief Assign default nodelist when READASARRAYS is specified.
+  !!
+  !! Equivalent to reading IRCH as CONSTANT 1
+  !<
   subroutine default_nodelist(this)
-! ******************************************************************************
-! default_nodelist -- Assign default nodelist when READASARRAYS is specified.
-!                     Equivalent to reading IRCH as CONSTANT 1
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(RchType) :: this
     ! -- local
     integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nodeu, noder, ipos
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     if (this%dis%ndim == 3) then
@@ -577,60 +506,52 @@ contains
     !    in the nodesontop array
     if (.not. this%fixed_cell) call this%set_nodesontop()
     !
-    ! -- return
+    ! -- Return
+    return
   end subroutine default_nodelist
 
   ! -- Procedures related to observations
+
+  !> @brief
+  !!
+  !! Overrides BndType%bnd_obs_supported()
+  !<
   logical function rch_obs_supported(this)
-    ! ******************************************************************************
-    ! rch_obs_supported
-    !   -- Return true because RCH package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
+    ! -- dummy
     class(RchType) :: this
-    ! ------------------------------------------------------------------------------
+    !
     rch_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function rch_obs_supported
 
+  !> @brief Implements bnd_df_obs
+  !!
+  !! Store observation type supported by RCH package. Overrides
+  !! BndType%bnd_df_obs
+  !<
   subroutine rch_df_obs(this)
-    ! ******************************************************************************
-    ! rch_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by RCH package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(RchType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('rch', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rch_df_obs
 
-! ******************************************************************************
-! rch_bound_value -- return requested boundary value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Return requested boundary value
+  !<
   function rch_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
-    ! -- dummy variables
+    ! -- dummy
     class(RchType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
@@ -651,7 +572,7 @@ contains
       call store_error_filename(this%input_fname)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function rch_bound_value
 
@@ -698,7 +619,7 @@ contains
                                    maxbound, nbound, aname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine nodelist_update
 

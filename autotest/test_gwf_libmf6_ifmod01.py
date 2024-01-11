@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the interface model approach for coupling two gwf models.
 We need the API for this, as the interface model is hidden and
 not present in any of the output. The setup is two coupled
@@ -16,19 +15,16 @@ import os
 
 import flopy
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_ifmod01"]
+from framework import TestFramework
 
-# global convenience...
+cases = ["libgwf_ifmod01"]
 name_left = "leftmodel"
 name_right = "rightmodel"
 
 
 def get_model(dir, name):
-
     useXT3D = True
 
     # parameters and spd
@@ -197,14 +193,14 @@ def get_model(dir, name):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     sim_compare = get_model(ws, name)
 
     return sim, sim_compare
@@ -307,17 +303,13 @@ def check_interface_models(mf6):
                 ), "AREA in interface model does not match"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

@@ -8,7 +8,6 @@ module SimulationCreateModule
   use SimVariablesModule, only: iout, simulation_mode, proc_id, &
                                 nr_procs, model_names, model_ranks, &
                                 model_loc_idx
-  use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_filename, MaxErrors
   use VersionModule, only: write_listfile_header
@@ -341,11 +340,14 @@ contains
       pointer :: emnames_a !< model a names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: emnames_b !< model b names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emempaths
     character(len=LINELENGTH) :: exgtype
     integer(I4B) :: exg_id
     integer(I4B) :: m1_id, m2_id
     character(len=LINELENGTH) :: fname, name1, name2
     character(len=LENEXCHANGENAME) :: exg_name
+    character(len=LENMEMPATH) :: exg_mempath
     integer(I4B) :: n
     character(len=LINELENGTH) :: errmsg
     logical(LGP) :: terminate = .true.
@@ -362,6 +364,7 @@ contains
     call mem_setptr(efiles, 'EXGFILE', input_mempath)
     call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
     call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+    call mem_setptr(emempaths, 'EXGMEMPATHS', input_mempath)
     !
     ! -- open exchange logging block
     write (iout, '(/1x,a)') 'READING SIMULATION EXCHANGES'
@@ -377,6 +380,7 @@ contains
       fname = efiles(n)
       name1 = emnames_a(n)
       name2 = emnames_b(n)
+      exg_mempath = emempaths(n)
 
       exg_id = exg_id + 1
 
@@ -407,7 +411,8 @@ contains
       case ('GWF6-GWF6')
         write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
         if (.not. both_remote) then
-          call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+          call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
+                                  exg_mempath)
         end if
         call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
       case ('GWF6-GWT6')
@@ -417,7 +422,8 @@ contains
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
         if (.not. both_remote) then
-          call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+          call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
+                                  exg_mempath)
         end if
         call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
       case default

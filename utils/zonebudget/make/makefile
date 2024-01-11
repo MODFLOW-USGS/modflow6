@@ -16,13 +16,13 @@ ${SOURCEDIR2}
 OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
+$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/SimVariables.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/Message.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
-$(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
-$(OBJDIR)/Message.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \
@@ -36,6 +36,8 @@ $(OBJDIR)/Budget.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/grb.o \
 $(OBJDIR)/budgetdata.o \
+$(OBJDIR)/MathUtil.o \
+$(OBJDIR)/GeomUtil.o \
 $(OBJDIR)/zbud6.o
 
 # Define the objects that make up the program

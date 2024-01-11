@@ -1,89 +1,93 @@
-import platform
 import sys
 from pathlib import Path
-from os import PathLike
 from typing import Dict
+from warnings import warn
 
 import pytest
-from modflow_devtools.executables import Executables, get_suffixes
+from modflow_devtools.ostags import get_binary_suffixes
 
 pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).resolve().parent.parent
 
 
-def should_compare(
-    test: str, comparisons: dict, executables: Executables
-) -> bool:
-    if test in comparisons.keys():
-        dev_ver = Executables.get_version(path=executables.mf6).split(" ")[0]
-        reg_ver = Executables.get_version(
-            path=executables.mf6_regression
-        ).split(" ")[0]
-        print(f"MODFLOW 6 development version: {dev_ver}")
-        print(f"MODFLOW 6 regression version: {reg_ver}")
-        excluded = list(comparisons[test])
-        if reg_ver in excluded:
-            print(
-                f"Regression version {reg_ver} not supported for test {test}, skipping comparison"
-            )
-            return False
-    return True
+_exe_ext, _lib_ext = get_binary_suffixes(sys.platform)
+_binaries_path = project_root_path / "bin"
+_dl_bin_path = _binaries_path / "downloaded"
+_rb_bin_path = _binaries_path / "rebuilt"
+_binaries = {
+    "development": [
+        ("mf6", _binaries_path / f"mf6{_exe_ext}"),
+        ("libmf6", _binaries_path / f"libmf6{_lib_ext}"),
+        ("mf5to6", _binaries_path / f"mf5to6{_exe_ext}"),
+        ("zbud6", _binaries_path / f"zbud6{_exe_ext}"),
+    ],
+    "downloaded": [
+        ("mf2000", _dl_bin_path / f"mf2000{_exe_ext}"),
+        ("mf2005", _dl_bin_path / f"mf2005dbl{_exe_ext}"),
+        ("mfnwt", _dl_bin_path / f"mfnwtdbl{_exe_ext}"),
+        ("mfusg", _dl_bin_path / f"mfusgdbl{_exe_ext}"),
+        ("mflgr", _dl_bin_path / f"mflgrdbl{_exe_ext}"),
+        ("mf2005s", _dl_bin_path / f"mf2005{_exe_ext}"),
+        ("mt3dms", _dl_bin_path / f"mt3dms{_exe_ext}"),
+        ("crt", _dl_bin_path / f"crt{_exe_ext}"),
+        ("gridgen", _dl_bin_path / f"gridgen{_exe_ext}"),
+        ("mp6", _dl_bin_path / f"mp6{_exe_ext}"),
+        ("mp7", _dl_bin_path / f"mp7{_exe_ext}"),
+        ("swtv4", _dl_bin_path / f"swtv4{_exe_ext}"),
+        ("sutra", _dl_bin_path / f"sutra{_exe_ext}"),
+        ("triangle", _dl_bin_path / f"triangle{_exe_ext}"),
+        ("vs2dt", _dl_bin_path / f"vs2dt{_exe_ext}"),
+        ("zonbudusg", _dl_bin_path / f"zonbudusg{_exe_ext}"),
+    ],
+    "rebuilt": [
+        ("mf6_regression", _rb_bin_path / f"mf6{_exe_ext}"),
+        ("libmf6_regression", _rb_bin_path / f"libmf6{_lib_ext}"),
+        ("mf5to6_regression", _rb_bin_path / f"mf5to6{_exe_ext}"),
+        ("zbud6_regression", _rb_bin_path / f"zbud6{_exe_ext}"),
+    ],
+}
 
 
 @pytest.fixture(scope="session")
 def bin_path() -> Path:
-    return project_root_path / "bin"
+    return _binaries_path
 
 
 @pytest.fixture(scope="session")
-def libmf6_path(bin_path) -> Path:
-    ext = {
-        "Darwin": ".dylib",
-        "Linux": ".so",
-        "Windows": ".dll",
-    }[platform.system()]
-    lib_name = bin_path / f"libmf6{ext}"
-    return lib_name
+def targets() -> Dict[str, Path]:
+    """
+    Target executables for tests. These include local development builds as
+    well as binaries 1) downloaded from GitHub and 2) rebuilt from the last
+    official release.
+    """
+
+    d = dict()
+    for k, v in _binaries["development"]:
+        # require development binaries
+        assert v.is_file(), f"Couldn't find binary '{k}' expected at: {v}"
+        d[k] = v
+    for k, v in _binaries["downloaded"] + _binaries["rebuilt"]:
+        # downloaded/rebuilt binaries are optional
+        if v.is_file():
+            d[k] = v
+        else:
+            warn(f"Couldn't find binary '{k}' expected at: {v}")
+    return d
 
 
-@pytest.fixture(scope="session")
-def targets(bin_path) -> Executables:
-    exe_ext, lib_ext = get_suffixes(sys.platform)
-    dl_bin = bin_path / "downloaded"
-    rb_bin = bin_path / "rebuilt"
-    tgts = dict()
+def try_get_target(targets: Dict[str, Path], name: str) -> Path:
+    """Try to retrieve the path to a binary. If the binary is a development
+    target and can't be found, an error is raised. Otherwise (if the binary
+    is downloaded or rebuilt) the test is skipped. This is to allow testing
+    without downloaded or rebuilt binaries, e.g. if the network is down."""
 
-    # downloaded executables
-    tgts["mf2000"] = dl_bin / f"mf2000{exe_ext}"
-    tgts["mf2005"] = dl_bin / f"mf2005dbl{exe_ext}"
-    tgts["mfnwt"] = dl_bin / f"mfnwtdbl{exe_ext}"
-    tgts["mfusg"] = dl_bin / f"mfusgdbl{exe_ext}"
-    tgts["mflgr"] = dl_bin / f"mflgrdbl{exe_ext}"
-    tgts["mf2005s"] = dl_bin / f"mf2005{exe_ext}"
-    tgts["mt3dms"] = dl_bin / f"mt3dms{exe_ext}"
-    tgts["crt"] = dl_bin / f"crt{exe_ext}"
-    tgts["gridgen"] = dl_bin / f"gridgen{exe_ext}"
-    tgts["mp6"] = dl_bin / f"mp6{exe_ext}"
-    tgts["mp7"] = dl_bin / f"mp7{exe_ext}"
-    tgts["swtv4"] = dl_bin / f"swtv4{exe_ext}"
-    tgts["sutra"] = dl_bin / f"sutra{exe_ext}"
-    tgts["triangle"] = dl_bin / f"triangle{exe_ext}"
-    tgts["vs2dt"] = dl_bin / f"vs2dt{exe_ext}"
-    tgts["zonbudusg"] = dl_bin / f"zonbudusg{exe_ext}"
-
-    # binaries rebuilt from last release
-    tgts["mf6_regression"] = rb_bin / f"mf6{exe_ext}"
-    tgts["libmf6_regression"] = rb_bin / f"libmf6{lib_ext}"
-    tgts["mf5to6_regression"] = rb_bin / f"mf5to6{exe_ext}"
-    tgts["zbud6_regression"] = rb_bin / f"zbud6{exe_ext}"
-
-    # local development binaries
-    tgts["mf6"] = bin_path / f"mf6{exe_ext}"
-    tgts["libmf6"] = bin_path / f"libmf6{lib_ext}"
-    tgts["mf5to6"] = bin_path / f"mf5to6{exe_ext}"
-    tgts["zbud6"] = bin_path / f"zbud6{exe_ext}"
-
-    return Executables(**tgts)
+    exe = targets.get(name)
+    if exe:
+        return exe
+    elif name in _binaries["development"]:
+        raise ValueError(f"Couldn't find binary '{name}'")
+    else:
+        pytest.skip(f"Couldn't find binary '{name}'")
 
 
 @pytest.fixture
@@ -93,7 +97,7 @@ def original_regression(request) -> bool:
 
 @pytest.fixture(scope="session")
 def markers(pytestconfig) -> str:
-    return pytestconfig.getoption('-m')
+    return pytestconfig.getoption("-m")
 
 
 def pytest_addoption(parser):
@@ -101,13 +105,13 @@ def pytest_addoption(parser):
         "--original-regression",
         action="store_true",
         default=False,
-        help="TODO",
+        help="use non-MF6 models for regression tests",
     )
     parser.addoption(
-        "--parallel", 
-        action="store_true", 
-        default=False, 
-        help="include parallel test cases"
+        "--parallel",
+        action="store_true",
+        default=False,
+        help="include parallel test cases",
     )
 
 

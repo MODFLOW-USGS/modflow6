@@ -4,7 +4,6 @@ a simple regular grid example, but using DISU instead of DIS.
 The first case is just a simple test.  For the second case, set
 one of the cells inactive and test to make sure connectivity
 in binary grid file is correct.
-
 """
 
 import os
@@ -15,14 +14,13 @@ import pytest
 from flopy.utils.gridutil import get_disu_kwargs
 
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["disu01a", "disu01b"]
+cases = ["disu01a", "disu01b"]
 
 
-def build_model(idx, dir, mf6):
-    name = ex[idx]
-    ws = dir
+def build_models(idx, test):
+    name = cases[idx]
+    ws = test.workspace
     nlay = 3
     nrow = 3
     ncol = 3
@@ -48,7 +46,7 @@ def build_model(idx, dir, mf6):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=mf6,
+        exe_name="mf6",
         sim_ws=ws,
     )
     tdis = flopy.mf6.ModflowTdis(sim)
@@ -62,18 +60,16 @@ def build_model(idx, dir, mf6):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
+def check_output(idx, test):
+    name = test.name
 
-    name = sim.name
-
-    fname = os.path.join(sim.simpath, name + ".disu.grb")
+    fname = os.path.join(test.workspace, name + ".disu.grb")
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
     nodes = grbobj._datadict["NODES"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]
 
-    if sim.idxsim == 1:
+    if idx == 1:
         assert np.array_equal(ia[0:4], np.array([1, 4, 4, 7]))
         assert np.array_equal(ja[:6], np.array([1, 4, 10, 3, 6, 12]))
         assert ia[-1] == 127
@@ -81,20 +77,14 @@ def eval_results(sim):
         assert ja.shape[0] == 126, "ja should have size of 126"
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
-    sim.write_simulation()
-    sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
     )
+    test.run()

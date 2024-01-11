@@ -1,22 +1,24 @@
-# Simple one-layer model with sfr on top.  Purpose is to test transport in a
-# one-d sfr network.  Flows in the sfr network were specified to exactly
-# match flows in the aquifer.  A constant concentration boundary is
-# specified upgradient for both the stream and aquifer, so concentrations
-# in the stream should exactly equal the concentrations in the aquifer.
-# There is no flow between the stream and the aquifer.
+"""
+Simple one-layer model with sfr on top.  Purpose is to test transport in a
+one-d sfr network.  Flows in the sfr network were specified to exactly
+match flows in the aquifer.  A constant concentration boundary is
+specified upgradient for both the stream and aquifer, so concentrations
+in the stream should exactly equal the concentrations in the aquifer.
+There is no flow between the stream and the aquifer.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["sft_01"]
+cases = ["sft_01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -46,10 +48,10 @@ def build_model(idx, dir):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -365,14 +367,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # ensure lake concentrations were saved
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     fname = gwtname + ".sft.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are correct
@@ -381,14 +381,14 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_data().flatten()
 
     assert np.allclose(csft, caq), f"{csft} {caq}"
 
     # sft observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".sft.obs.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".sft.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -402,7 +402,7 @@ def eval_results(sim):
 
     # load the sft budget file
     fname = gwtname + ".sft.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
 
@@ -421,21 +421,14 @@ def eval_results(sim):
     msg = f"{qs} /= {qa}"
     assert np.allclose(qs, qa), msg
 
-    # uncomment when testing
-    # assert False
 
-
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

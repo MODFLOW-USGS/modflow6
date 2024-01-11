@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]
+from framework import TestFramework
+
+cases = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]
 ncols = [[15], [10, 5], [15], [10, 5]]
 nlays = [1, 1, 3, 3]
 
@@ -50,8 +50,8 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def build_model(idx, dir):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
     nlay = nlays[idx]
 
     if nlay == 1:
@@ -80,7 +80,7 @@ def build_model(idx, dir):
     cd6left[1] = c6left
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -207,9 +207,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_hds(sim):
-    print("evaluating rewet heads...")
-
+def check_output(idx, test):
     hdata01lay = [
         [
             1.000000000000000000e02,
@@ -283,7 +281,6 @@ def eval_hds(sim):
         ],
     ]
 
-    idx = sim.idxsim
     ncolst, nmodels, mnames = get_local_data(idx)
     nlay = nlays[idx]
 
@@ -295,7 +292,7 @@ def eval_hds(sim):
     imid = int(nrow / 2)
 
     for j in range(nmodels):
-        fn = os.path.join(sim.simpath, f"{mnames[j]}.hds")
+        fn = os.path.join(test.workspace, f"{mnames[j]}.hds")
         hobj = flopy.utils.HeadFile(fn)
         times = hobj.get_times()
         ioff = 0
@@ -313,7 +310,7 @@ def eval_hds(sim):
             hval[n, ioff:i1] = ht.copy()
 
     # # save results if the know results change slightly
-    # fpth = os.path.join(sim.simpath, "results.dat")
+    # fpth = os.path.join(sim.workspace, "results.dat")
     # np.savetxt(fpth, hval, delimiter=",")
 
     # known results
@@ -329,25 +326,21 @@ def eval_hds(sim):
     msg = f"maximum absolute maw head difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_hds, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

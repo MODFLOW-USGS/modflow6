@@ -3,11 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
 cell_dimensions = (300,)
-ex = [f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))]
+cases = [
+    f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))
+]
 h0, h1 = 1.0, 0.0
 
 
@@ -23,11 +25,11 @@ def get_obs(idx):
         for j in range(ncol):
             node = i * ncol + j + 1
             obs_lst.append([node, "head", (0, i, j)])
-    return {f"{ex[idx]}.gwf.obs.csv": obs_lst}
+    return {f"{cases[idx]}.gwf.obs.csv": obs_lst}
 
 
-def get_obs_out(sim):
-    fpth = os.path.join(sim.simpath, f"{ex[sim.idxsim]}.gwf.obs.csv")
+def get_obs_out(idx, test):
+    fpth = os.path.join(test.workspace, f"{cases[idx]}.gwf.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
         return tc.view((float, len(tc.dtype.names)))[1:]
@@ -42,7 +44,7 @@ def get_chd(idx):
     return {0: c}
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, cell_dimensions[idx], cell_dimensions[idx]
     nper = 1
     perlen = [5.0]
@@ -62,10 +64,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -136,26 +138,22 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model observations...")
-    hres = get_strt_array(sim.idxsim).flatten()
-    obs = get_obs_out(sim)
-    msg = "simulated head observations do not match with known solution."
-    assert np.allclose(hres, obs), msg
+def check_output(idx, test):
+    hres = get_strt_array(idx).flatten()
+    obs = get_obs_out(idx, test)
+    assert np.allclose(
+        hres, obs
+    ), "simulated head observations do not match with known solution."
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

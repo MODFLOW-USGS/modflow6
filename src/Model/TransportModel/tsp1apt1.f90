@@ -12,12 +12,12 @@
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)   ! rhow*cpw is applied to various terms for heat transport
 ! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
 
 ! -- generalized source/sink terms (except ET?)
 ! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
+! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap  ! latent heat may be applied for evaporative cooling
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
@@ -33,14 +33,14 @@
 ! none                      none          CONSTANT              accumulate
 !
 !
-module GwtAptModule
+module TspAptModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE, DEP20, LENFTYPE, LINELENGTH, &
                              LENBOUNDNAME, LENPACKAGENAME, NAMEDBOUNDFLAG, &
                              DNODATA, TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
-                             LENAUXNAME
+                             LENAUXNAME, LENVARNAME
   use SimModule, only: store_error, store_error_unit, count_errors
   use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
@@ -49,25 +49,26 @@ module GwtAptModule
   use BudgetTermModule, only: BudgetTermType
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
-  use InputOutputModule, only: extract_idnum_or_bndname
+  use InputOutputModule, only: extract_idnum_or_bndname, str_pad_left
   use BaseDisModule, only: DisBaseType
   use MatrixBaseModule
 
   implicit none
 
-  public :: GwtAptType
+  public :: TspAptType
   public :: apt_process_obsID
   public :: apt_process_obsID12
 
   character(len=LENFTYPE) :: ftype = 'APT'
-  character(len=16) :: text = '             APT'
+  character(len=LENVARNAME) :: text = '             APT'
+  character(len=LENVARNAME) :: tsptype = 'GWT' !< to be removed once TSP refactor is further sorted out
 
-  type, extends(BndType) :: GwtAptType
+  type, extends(BndType) :: TspAptType
 
     character(len=LENPACKAGENAME) :: flowpackagename = '' !< name of corresponding flow package
     character(len=8), &
       dimension(:), pointer, contiguous :: status => null() !< active, inactive, constant
-    character(len=LENAUXNAME) :: cauxfpconc = '' !< name of aux column in flow package auxvar array for concentration
+    character(len=LENAUXNAME) :: cauxfpconc = '' !< name of aux column in flow package auxvar array for concentration (or temperature)
     integer(I4B), pointer :: iauxfpconc => null() !< column in flow package bound array to insert concs
     integer(I4B), pointer :: imatrows => null() !< if active, add new rows to matrix
     integer(I4B), pointer :: iprconc => null() !< print conc to listing file
@@ -76,7 +77,10 @@ module GwtAptModule
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: ncv => null() !< number of control volumes
     integer(I4B), pointer :: igwfaptpak => null() !< package number of corresponding this package
-    real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration
+    integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
+    integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
+    real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
+    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
@@ -86,16 +90,16 @@ module GwtAptModule
     integer(I4B), dimension(:), pointer, contiguous :: idxfjfdglo => null() !< map diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxfjfoffdglo => null() !< map off diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !< package ibound
-    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !< feature concentration for current time step
-    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !< feature concentration from previous time step
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !< feature concentration (or temperature) for current time step
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !< feature concentration (or temperature) from previous time step
     real(DP), dimension(:), pointer, contiguous :: dbuff => null() !< temporary storage array
     character(len=LENBOUNDNAME), &
       dimension(:), pointer, contiguous :: featname => null()
-    real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration of the feature
+    real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration (or temperature) of the feature
     real(DP), dimension(:, :), pointer, contiguous :: lauxvar => null() !< auxiliary variable
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
-    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass flux due to storage change
-    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass flux required to maintain constant concentration
+    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass (or energy) flux due to storage change
+    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass (or energy) flux required to maintain constant concentration (or temperature)
     integer(I4B), pointer :: idxbudfjf => null() !< index of flow ja face in flowbudptr
     integer(I4B), pointer :: idxbudgwf => null() !< index of gwf terms in flowbudptr
     integer(I4B), pointer :: idxbudsto => null() !< index of storage terms in flowbudptr
@@ -104,8 +108,12 @@ module GwtAptModule
     integer(I4B), pointer :: idxbudaux => null() !< index of auxiliary terms in flowbudptr
     integer(I4B), dimension(:), pointer, contiguous :: idxbudssm => null() !< flag that flowbudptr%buditem is a general solute source/sink
     integer(I4B), pointer :: nconcbudssm => null() !< number of concbudssm terms (columns)
-    real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations for flow terms
-    real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass flow coming from the mover that needs to be added
+    real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations (or temperatures) for flow terms
+    real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass or energy flow coming from the mover that needs to be added
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
+    character(len=LENVARNAME) :: depvartype = '' !< stores string identifying dependent variable type, depending on model type
+    character(len=LENVARNAME) :: depvarunit = '' !< "mass" or "energy"
+    character(len=LENVARNAME) :: depvarunitabbrev = '' !< "M" or "E"
     !
     ! -- pointer to flow package boundary
     type(BndType), pointer :: flowpackagebnd => null()
@@ -127,10 +135,10 @@ module GwtAptModule
     procedure :: bnd_ad => apt_ad
     procedure :: bnd_reset => apt_reset
     procedure :: bnd_fc => apt_fc
-    procedure, private :: apt_fc_expanded
+    procedure, public :: apt_fc_expanded ! Made public for uze
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
-    procedure, private :: apt_cfupdate
+    procedure, public :: apt_cfupdate ! Made public for uze
     procedure :: apt_check_valid
     procedure :: apt_set_stressperiod
     procedure :: pak_set_stressperiod
@@ -168,27 +176,24 @@ module GwtAptModule
     procedure :: pak_setup_budobj
     procedure :: apt_fill_budobj
     procedure :: pak_fill_budobj
-    procedure, private :: apt_stor_term
-    procedure, private :: apt_tmvr_term
-    procedure, private :: apt_fjf_term
+    procedure, public :: apt_stor_term
+    procedure, public :: apt_tmvr_term
+    procedure, public :: apt_fmvr_term ! Made public for uze
+    procedure, public :: apt_fjf_term ! Made public for uze
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
 
-  end type GwtAptType
+  end type TspAptType
 
 contains
 
+  !> @brief Add package connection to matrix
+  !<
   subroutine apt_ac(this, moffset, sparse)
-! ******************************************************************************
-! bnd_ac -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_setptr
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
@@ -196,7 +201,6 @@ contains
     integer(I4B) :: jj, jglo
     integer(I4B) :: nglo
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- Add package rows to sparse
     if (this%imatrows /= 0) then
@@ -229,28 +233,22 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_ac
 
+  !> @brief Advanced package transport map package connections to matrix
+  !<
   subroutine apt_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! apt_mc -- map package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: n, j, iglo, jglo
     integer(I4B) :: ipos
     ! -- format
-! ------------------------------------------------------------------------------
-    !
     !
     ! -- allocate memory for index arrays
     call this%apt_allocate_index_arrays()
@@ -299,20 +297,16 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_mc
 
+  !> @brief Advanced package transport allocate and read (ar) routine
+  !<
   subroutine apt_ar(this)
-! ******************************************************************************
-! apt_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: j
     logical :: found
@@ -320,7 +314,6 @@ contains
     character(len=*), parameter :: fmtapt = &
       "(1x,/1x,'APT -- ADVANCED PACKAGE TRANSPORT, VERSION 1, 3/5/2020', &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- Get obs setup
     call this%obs%obs_ar()
@@ -346,8 +339,8 @@ contains
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- If there is an associated flow package and the user wishes to put
-    !    simulated concentrations into a aux variable column, then find
-    !    the column number.
+    !    simulated concentrations (or temperatures) into a aux variable
+    !    column, then find the column number.
     if (associated(this%flowpackagebnd)) then
       if (this%cauxfpconc /= '') then
         found = .false.
@@ -376,18 +369,14 @@ contains
     return
   end subroutine apt_ar
 
+  !> @brief Advanced package transport read and prepare (rp) routine
+  !!
+  !! This subroutine calls the attached packages' read and prepare routines.
+  !<
   subroutine apt_rp(this)
-! ******************************************************************************
-! apt_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TdisModule, only: kper, nper
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr
     integer(I4B) :: n
@@ -401,7 +390,6 @@ contains
       &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtlsp = &
       &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-! ------------------------------------------------------------------------------
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -498,22 +486,20 @@ contains
       this%nodelist(n) = igwfnode
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_rp
 
+  !> @brief Advanced package transport set stress period routine.
+  !!
+  !! Set a stress period attribute for an advanced transport package feature
+  !! (itemno) using keywords.
+  !<
   subroutine apt_set_stressperiod(this, itemno)
-! ******************************************************************************
-! apt_set_stressperiod -- Set a stress period attribute for feature (itemno)
-!                         using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
     character(len=LINELENGTH) :: text
@@ -525,11 +511,10 @@ contains
     real(DP), pointer :: bndElem => null()
     logical :: found
     ! -- formats
-! ------------------------------------------------------------------------------
     !
-    ! -- Support these general options with apply to LKT, SFT, MWT, UZT
+    ! -- Support these general options in LKT, SFT, MWT, UZT
     ! STATUS <status>
-    ! CONCENTRATION <concentration>
+    ! CONCENTRATION <concentration> or TEMPERATURE <temperature>
     ! WITHDRAWAL <withdrawal>
     ! AUXILIARY <auxname> <auxval>
     !
@@ -554,7 +539,7 @@ contains
           'Unknown '//trim(this%text)//' status keyword: ', text//'.'
         call store_error(errmsg)
       end if
-    case ('CONCENTRATION')
+    case ('CONCENTRATION', 'TEMPERATURE')
       ierr = this%apt_check_valid(itemno)
       if (ierr /= 0) then
         goto 999
@@ -564,7 +549,7 @@ contains
       bndElem => this%concfeat(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
-                                         this%iprpak, 'CONCENTRATION')
+                                         this%iprpak, this%depvartype)
     case ('AUXILIARY')
       ierr = this%apt_check_valid(itemno)
       if (ierr /= 0) then
@@ -601,50 +586,46 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_set_stressperiod
 
+  !> @brief Advanced package transport set stress period routine.
+  !!
+  !! Set a stress period attribute for an individual package. This routine
+  !! must be overridden.
+  !<
   subroutine pak_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! pak_set_stressperiod -- Set a stress period attribute for individual package.
-!   This must be overridden.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
     ! -- local
 
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     found = .false.
     call store_error('Program error: pak_set_stressperiod not implemented.', &
                      terminate=.TRUE.)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_set_stressperiod
 
+  !> @brief Advanced package transport routine
+  !!
+  !! Determine if a valid feature number has been specified.
+  !<
   function apt_check_valid(this, itemno) result(ierr)
-! ******************************************************************************
-!  apt_check_valid -- Determine if a valid feature number has been
-!                     specified.
-! ******************************************************************************
     ! -- return
     integer(I4B) :: ierr
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
     ! -- formats
-! ------------------------------------------------------------------------------
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
       write (errmsg, '(a,1x,i6,1x,a,1x,i6)') &
@@ -654,21 +635,18 @@ contains
     end if
   end function apt_check_valid
 
+  !> @brief Advanced package transport routine
+  !!
+  !! Add package connections to matrix
+  !<
   subroutine apt_ad(this)
-! ******************************************************************************
-! apt_ad -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: j, iaux
-! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
@@ -685,8 +663,8 @@ contains
       end do
     end if
     !
-    ! -- copy xnew into xold and set xnewpak to specified concentration for
-    !    constant concentration features
+    ! -- copy xnew into xold and set xnewpak to specified concentration (or
+    !    temperature) for constant concentration/temperature features
     if (iFailedStepRetry == 0) then
       do n = 1, this%ncv
         this%xoldpak(n) = this%xnewpak(n)
@@ -713,39 +691,34 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_ad
 
   !> @brief Override bnd reset for custom mover logic
   !< TODO_MJR: check this
   subroutine apt_reset(this)
-    class(GwtAptType) :: this !< GwtAptType object
+    class(TspAptType) :: this !< GwtAptType object
     ! local
     integer(I4B) :: i
-
+    !
     do i = 1, size(this%qmfrommvr)
       this%qmfrommvr(i) = DZERO
     end do
-
+    !
+    ! -- Return
+    return
   end subroutine apt_reset
 
   subroutine apt_fc(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! apt_fc
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Call fc depending on whether or not a matrix is expanded or not
     if (this%imatrows == 0) then
@@ -758,26 +731,23 @@ contains
     return
   end subroutine apt_fc
 
+  !> @brief Advanced package transport fill coefficient (fc) method
+  !!
+  !! Routine to formulate the nonexpanded matrix case in which feature
+  !! concentrations (or temperatures) are solved explicitly
+  !<
   subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case in which
-!   feature concentrations are solved explicitly
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, igwfnode, idiag
-! ------------------------------------------------------------------------------
     !
-    ! -- solve for concentration in the features
+    ! -- solve for concentration (or temperatures) in the features
     call this%apt_solve()
     !
     ! -- add hcof and rhs terms (from apt_solve) to the gwf matrix
@@ -793,17 +763,15 @@ contains
     return
   end subroutine apt_fc_nonexpanded
 
+  !> @brief Advanced package transport fill coefficient (fc) method
+  !!
+  !! Routine to formulate the expanded matrix case in which new rows are added
+  !! to the system of equations for each advanced package transport feature
+  !<
   subroutine apt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! apt_fc_expanded -- formulate for the expanded matrix case in which new
-!   rows are added to the system of equations for each feature
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -814,12 +782,11 @@ contains
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: ipossymd, ipossymoffd
     real(DP) :: cold
-    real(DP) :: qbnd
+    real(DP) :: qbnd, qbnd_scaled
     real(DP) :: omega
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-! ------------------------------------------------------------------------------
     !
     ! -- call the specific method for the advanced transport package, such as
     !    what would be overridden by
@@ -828,7 +795,7 @@ contains
     !    specific to the package
     call this%pak_fc_expanded(rhs, ia, idxglo, matrix_sln)
     !
-    ! -- mass storage in features
+    ! -- mass (or energy) storage in features
     do n = 1, this%ncv
       cold = this%xoldpak(n)
       iloc = this%idxlocnode(n)
@@ -852,7 +819,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n = 1, this%ncv
-        rhsval = this%qmfrommvr(n)
+        rhsval = this%qmfrommvr(n) ! this will already be in terms of energy for heat transport
         iloc = this%idxlocnode(n)
         rhs(iloc) = rhs(iloc) - rhsval
       end do
@@ -869,18 +836,19 @@ contains
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
         if (qbnd < DZERO) omega = DONE
+        qbnd_scaled = qbnd * this%eqnsclfac
         !
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd_scaled)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd_scaled)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
-        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd_scaled)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd_scaled)
       end if
     end do
     !
@@ -895,10 +863,11 @@ contains
         else
           omega = DZERO
         end if
+        qbnd_scaled = qbnd * this%eqnsclfac
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd_scaled)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd_scaled)
       end do
     end if
     !
@@ -906,23 +875,20 @@ contains
     return
   end subroutine apt_fc_expanded
 
+  !> @brief Advanced package transport fill coefficient (fc) method
+  !!
+  !! Routine to allow a subclass advanced transport package to inject
+  !! terms into the matrix assembly.  This method must be overridden.
+  !<
   subroutine pak_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! pak_fc_expanded -- allow a subclass advanced transport package to inject
-!   terms into the matrix assembly.  This method must be overridden.
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_fc_expanded not implemented.', &
@@ -932,25 +898,23 @@ contains
     return
   end subroutine pak_fc_expanded
 
+  !> @brief Advanced package transport routine
+  !!
+  !! Calculate advanced package transport hcof and rhs so transport budget is
+  !! calculated.
+  !<
   subroutine apt_cfupdate(this)
-! ******************************************************************************
-! apt_cfupdate -- calculate package hcof and rhs so gwt budget is calculated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: j, n
     real(DP) :: qbnd
     real(DP) :: omega
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
     ! -- go through each apt-gwf connection and calculate
-    !    rhs and hcof terms for gwt matrix rows
+    !    rhs and hcof terms for gwt/gwe matrix rows
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
@@ -959,8 +923,8 @@ contains
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
         if (qbnd < DZERO) omega = DONE
-        this%hcof(j) = -(DONE - omega) * qbnd
-        this%rhs(j) = omega * qbnd * this%xnewpak(n)
+        this%hcof(j) = -(DONE - omega) * qbnd * this%eqnsclfac
+        this%rhs(j) = omega * qbnd * this%xnewpak(n) * this%eqnsclfac
       end if
     end do
     !
@@ -968,26 +932,23 @@ contains
     return
   end subroutine apt_cfupdate
 
+  !> @brief Advanced package transport calculate flows (cq) routine
+  !!
+  !! Calculate flows for the advanced package transport feature
+  !<
   subroutine apt_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! apt_cq -- Calculate flows for the feature
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: n, n1, n2
     real(DP) :: rrate
-! ------------------------------------------------------------------------------
     !
-    ! -- Solve the feature concentrations again or update the feature hcof
-    !    and rhs terms
+    ! -- Solve the feature concentrations (or temperatures) again or update
+    !    the feature hcof and rhs terms
     if (this%imatrows == 0) then
       call this%apt_solve()
     else
@@ -1006,19 +967,21 @@ contains
       this%qsto(n) = rrate
     end do
     !
-    ! -- Copy concentrations into the flow package auxiliary variable
+    ! -- Copy concentrations (or temperatures) into the flow package auxiliary variable
     call this%apt_copy2flowp()
     !
     ! -- fill the budget object
-    call this%apt_fill_budobj(x)
+    call this%apt_fill_budobj(x, flowja)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_cq
 
+  !> @brief Save advanced package flows routine
+  !<
   subroutine apt_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B) :: ibinun
@@ -1038,19 +1001,26 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine apt_ot_package_flows
 
   subroutine apt_ot_dv(this, idvsave, idvprint)
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
     use TdisModule, only: kstp, kper, pertim, totim
-    use ConstantsModule, only: DHNOFLO, DHDRY
+    use ConstantsModule, only: DHNOFLO, DHDRY, LENBUDTXT
     use InputOutputModule, only: ulasav
-    class(GwtAptType) :: this
+    ! -- dummy
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: idvsave
     integer(I4B), intent(in) :: idvprint
+    ! -- local
     integer(I4B) :: ibinun
     integer(I4B) :: n
     real(DP) :: c
+    character(len=LENBUDTXT) :: text
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -1068,7 +1038,8 @@ contains
         end if
         this%dbuff(n) = c
       end do
-      call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim, &
+      write (text, '(a)') str_pad_left(this%depvartype, LENVARNAME)
+      call ulasav(this%dbuff, text, kstp, kper, pertim, totim, &
                   this%ncv, 1, 1, ibinun)
     end if
     !
@@ -1087,14 +1058,18 @@ contains
         call this%dvtab%add_term(this%xnewpak(n))
       end do
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine apt_ot_dv
 
+  !> @brief Print advanced package transport dependent variables
+  !<
   subroutine apt_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(GwtAptType) :: this !< GwtAptType object
+    class(TspAptType) :: this !< TspAptType object
     integer(I4B), intent(in) :: kstp !< time step number
     integer(I4B), intent(in) :: kper !< period number
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
@@ -1102,20 +1077,19 @@ contains
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_ot_bdsummary
 
   !> @ brief Allocate scalars
   !!
-  !! Allocate scalar variables for this package
-  !!
+  !! Allocate scalar variables for an advanced package
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
@@ -1137,6 +1111,8 @@ contains
     call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%memoryPath)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%memoryPath)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%memoryPath)
+    call mem_allocate(this%idxprepak, 'IDXPREPAK', this%memoryPath)
+    call mem_allocate(this%idxlastpak, 'IDXLASTPAK', this%memoryPath)
     !
     ! -- Initialize
     this%iauxfpconc = 0
@@ -1154,6 +1130,8 @@ contains
     this%idxbudfmvr = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
+    this%idxprepak = 0
+    this%idxlastpak = 0
     !
     ! -- set this package as causing asymmetric matrix terms
     this%iasym = 1
@@ -1164,18 +1142,16 @@ contains
 
   !> @ brief Allocate index arrays
   !!
-  !! Allocate arrays that map to locations in the
-  !! numerical solution
-  !!
+  !! Allocate arrays that map to locations in the numerical solution
   !<
   subroutine apt_allocate_index_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
-
+    !
     if (this%imatrows /= 0) then
       !
       ! -- count number of flow-ja-face connections
@@ -1219,19 +1195,20 @@ contains
       call mem_allocate(this%idxfjfoffdglo, 0, 'IDXFJFOFFDGLO', &
                         this%memoryPath)
     end if
+    !
+    ! -- Return
     return
   end subroutine apt_allocate_index_arrays
 
   !> @ brief Allocate arrays
   !!
-  !! Allocate package arrays
-  !!
+  !! Allocate advanced package transport arrays
   !<
   subroutine apt_allocate_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
     !
@@ -1264,7 +1241,7 @@ contains
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%ncv, &
                       'CONCBUDSSM', this%memoryPath)
     !
-    ! -- mass added from the mover transport package
+    ! -- mass (or energy) added from the mover transport package
     call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%memoryPath)
     !
     ! -- initialize arrays
@@ -1284,13 +1261,12 @@ contains
   !> @ brief Deallocate memory
   !!
   !! Deallocate memory associated with this package
-  !!
   !<
   subroutine apt_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     !
     ! -- deallocate arrays
@@ -1349,6 +1325,8 @@ contains
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
+    call mem_deallocate(this%idxprepak)
+    call mem_deallocate(this%idxlastpak)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
@@ -1357,19 +1335,14 @@ contains
     return
   end subroutine apt_da
 
+  !> @brief Find corresponding advanced package transport package
+  !<
   subroutine find_apt_package(this)
-! ******************************************************************************
-! find corresponding flow package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_solve not implemented.', &
@@ -1379,20 +1352,16 @@ contains
     return
   end subroutine find_apt_package
 
+  !> @brief Set options specific to the TspAptType
+  !!
+  !! This routine overrides BndType%bnd_options
+  !<
   subroutine apt_options(this, option, found)
-! ******************************************************************************
-! apt_options -- set options specific to GwtAptType
-!
-! apt_options overrides BndType%bnd_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     character(len=*), intent(inout) :: option
     logical, intent(inout) :: found
     ! -- local
@@ -1401,7 +1370,6 @@ contains
     character(len=*), parameter :: fmtaptbin = &
       "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
       &/4x, 'OPENED ON UNIT: ', I0)"
-! ------------------------------------------------------------------------------
     !
     found = .true.
     select case (option)
@@ -1425,11 +1393,12 @@ contains
       write (this%iout, '(4x,a)') &
         trim(adjustl(this%text))// &
         ' WILL NOT ADD ADDITIONAL ROWS TO THE A MATRIX.'
-    case ('PRINT_CONCENTRATION')
+    case ('PRINT_CONCENTRATION', 'PRINT_TEMPERATURE')
       this%iprconc = 1
-      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
-        ' CONCENTRATIONS WILL BE PRINTED TO LISTING FILE.'
-    case ('CONCENTRATION')
+      write (this%iout, '(4x,a,1x,a,1x,a)') trim(adjustl(this%text))// &
+        trim(adjustl(this%depvartype))//'S WILL BE PRINTED TO LISTING &
+          &FILE.'
+    case ('CONCENTRATION', 'TEMPERATURE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
@@ -1437,10 +1406,12 @@ contains
         call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) &
-          trim(adjustl(this%text)), 'CONCENTRATION', trim(fname), this%iconcout
+          trim(adjustl(this%text)), trim(adjustl(this%depvartype)), &
+          trim(fname), this%iconcout
       else
-        call store_error('Optional CONCENTRATION keyword must &
-                         &be followed by FILEOUT')
+        write (errmsg, "('Optional', 1x, a, 1X, 'keyword must &
+                         &be followed by FILEOUT')") this%depvartype
+        call store_error(errmsg)
       end if
     case ('BUDGET')
       call this%parser%GetStringCaps(keyword)
@@ -1473,23 +1444,18 @@ contains
       found = .false.
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_options
 
+  !> @brief Determine dimensions for this advanced package
+  !<
   subroutine apt_read_dimensions(this)
-! ******************************************************************************
-! apt_read_dimensions -- Determine dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- Set a pointer to the GWF LAK Package budobj
     if (this%flowpackagename == '') then
@@ -1547,22 +1513,18 @@ contains
     ! -- setup the conc table object
     call this%apt_setup_tableobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_read_dimensions
 
+  !> @brief Read feature information for this advanced package
+  !<
   subroutine apt_read_cvs(this)
-! ******************************************************************************
-! apt_read_cvs -- Read feature information for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
@@ -1578,7 +1540,6 @@ contains
     integer(I4B) :: nconn
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     real(DP), pointer :: bndElem => null()
-! ------------------------------------------------------------------------------
     !
     ! -- initialize itmp
     itmp = 0
@@ -1641,13 +1602,13 @@ contains
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
-
+        !
         ! -- strt
         this%strt(n) = this%parser%GetDouble()
-
+        !
         ! -- get aux data
         do iaux = 1, this%naux
           call this%parser%GetString(caux(iaux))
@@ -1677,7 +1638,7 @@ contains
                                              this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
-
+        !
         nlak = nlak + 1
       end do
       !
@@ -1692,7 +1653,7 @@ contains
           call store_error(errmsg)
         end if
       end do
-
+      !
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else
@@ -1712,74 +1673,30 @@ contains
     ! -- deallocate local storage for nboundchk
     deallocate (nboundchk)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_read_cvs
 
+  !> @brief Read the initial parameters for an advanced package
+  !<
   subroutine apt_read_initial_attr(this)
-! ******************************************************************************
-! apt_read_initial_attr -- Read the initial parameters for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use BudgetModule, only: budget_cr
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     !character(len=LINELENGTH) :: text
     integer(I4B) :: j, n
-    !integer(I4B) :: nn
-    !integer(I4B) :: idx
-    !real(DP) :: endtim
-    !real(DP) :: top
-    !real(DP) :: bot
-    !real(DP) :: k
-    !real(DP) :: area
-    !real(DP) :: length
-    !real(DP) :: s
-    !real(DP) :: dx
-    !real(DP) :: c
-    !real(DP) :: sa
-    !real(DP) :: wa
-    !real(DP) :: v
-    !real(DP) :: fact
-    !real(DP) :: c1
-    !real(DP) :: c2
-    !real(DP), allocatable, dimension(:) :: clb, caq
-    !character (len=14) :: cbedleak
-    !character (len=14) :: cbedcond
-    !character (len=10), dimension(0:3) :: ctype
-    !character (len=15) :: nodestr
-    !!data
-    !data ctype(0) /'VERTICAL  '/
-    !data ctype(1) /'HORIZONTAL'/
-    !data ctype(2) /'EMBEDDEDH '/
-    !data ctype(3) /'EMBEDDEDV '/
-    ! -- format
-! ------------------------------------------------------------------------------
 
     !
-    ! -- initialize xnewpak and set lake concentration
+    ! -- initialize xnewpak and set feature concentration (or temperature)
     ! -- todo: this should be a time series?
     do n = 1, this%ncv
       this%xnewpak(n) = this%strt(n)
-      !write(text,'(g15.7)') this%strt(n)
-      !endtim = DZERO
-      !jj = 1    ! For STAGE
-      !call read_single_value_or_time_series(text, &
-      !                                      this%stage(n)%value, &
-      !                                      this%stage(n)%name, &
-      !                                      endtim, &
-      !                                      this%name, 'BND', this%TsManager, &
-      !                                      this%iprpak, n, jj, 'STAGE', &
-      !                                      this%featname(n), this%inunit)
-
+      !
       ! -- todo: read aux
-
+      !
       ! -- todo: read boundname
-
     end do
     !
     ! -- initialize status (iboundpak) of lakes to active
@@ -1804,21 +1721,20 @@ contains
     ! -- copy boundname into boundname_cst
     call this%copy_boundname()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_read_initial_attr
 
+  !> @brief Add terms specific to advanced package transport to the explicit
+  !! solve
+  !!
+  !! Explicit solve for concentration (or temperature) in advaced package
+  !! features, which is an alternative to the iterative implicit solve.
+  !<
   subroutine apt_solve(this)
-! ******************************************************************************
-! apt_solve -- explicit solve for concentration in features, which is an
-!   alternative to the iterative implicit solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n, j, igwfnode
     integer(I4B) :: n1, n2
@@ -1826,10 +1742,8 @@ contains
     real(DP) :: ctmp
     real(DP) :: c1, qbnd
     real(DP) :: hcofval, rhsval
-! ------------------------------------------------------------------------------
     !
-    !
-    ! -- first initialize dbuff
+    ! -- initialize dbuff
     do n = 1, this%ncv
       this%dbuff(n) = DZERO
     end do
@@ -1849,13 +1763,13 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n1 = 1, size(this%qmfrommvr)
-        rrate = this%qmfrommvr(n1)
+        rrate = this%qmfrommvr(n1) ! Will be in terms of energy for heat transport
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- go through each gwf connection and accumulate
-    !    total mass in dbuff mass
+    !    total mass (or energy) in dbuff mass
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
@@ -1864,17 +1778,17 @@ contains
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
       if (qbnd <= DZERO) then
         ctmp = this%xnewpak(n)
-        this%rhs(j) = qbnd * ctmp
+        this%rhs(j) = qbnd * ctmp * this%eqnsclfac
       else
         ctmp = this%xnew(igwfnode)
-        this%hcof(j) = -qbnd
+        this%hcof(j) = -qbnd * this%eqnsclfac
       end if
-      c1 = qbnd * ctmp
+      c1 = qbnd * ctmp * this%eqnsclfac
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
-    ! -- go through each lak-lak connection and accumulate
-    !    total mass in dbuff mass
+    ! -- go through each "within apt-apt" connection (e.g., lak-lak) and
+    !    accumulate total mass (or energy) in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
         call this%apt_fjf_term(j, n1, n2, rrate)
@@ -1883,7 +1797,7 @@ contains
       end do
     end if
     !
-    ! -- calulate the feature concentration
+    ! -- calculate the feature concentration/temperature
     do n = 1, this%ncv
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       !
@@ -1902,17 +1816,15 @@ contains
     return
   end subroutine apt_solve
 
+  !> @brief Add terms specific to advanced package transport features to the
+  !! explicit solve routine
+  !!
+  !! This routine must be overridden by the specific apt package
+  !<
   subroutine pak_solve(this)
-! ******************************************************************************
-! pak_solve -- must be overridden
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_solve not implemented.', &
@@ -1922,15 +1834,11 @@ contains
     return
   end subroutine pak_solve
 
+  !> @brief Accumulate constant concentration (or temperature) terms for budget
+  !<
   subroutine apt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
-! ******************************************************************************
-! apt_accumulate_ccterm -- Accumulate constant concentration terms for budget.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(in) :: rrate
     real(DP), intent(inout) :: ccratin
@@ -1939,7 +1847,6 @@ contains
     real(DP) :: q
     ! format
     ! code
-! ------------------------------------------------------------------------------
     !
     if (this%iboundpak(ilak) < 0) then
       q = -rrate
@@ -1956,20 +1863,16 @@ contains
         ccratin = ccratin + q
       end if
     end if
-    ! -- return
+    !
+    ! -- Return
     return
   end subroutine apt_accumulate_ccterm
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwtAptType), intent(inout) :: this
-! ------------------------------------------------------------------------------
+    class(TspAptType), intent(inout) :: this
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -1988,19 +1891,15 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
+  !> @brief Set pointers to model arrays and variables so that a package has
+  !! access to these items.
+  !<
   subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja)
-! ******************************************************************************
-! set_pointers -- Set pointers to model arrays and variables so that a package
-!                 has access to these things.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), pointer :: neq
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: xnew
@@ -2008,7 +1907,6 @@ contains
     real(DP), dimension(:), pointer, contiguous :: flowja
     ! -- local
     integer(I4B) :: istart, iend
-! ------------------------------------------------------------------------------
     !
     ! -- call base BndType set_pointers
     call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
@@ -2023,25 +1921,21 @@ contains
       this%xnewpak => this%xnew(istart:iend)
     end if
     !
-    ! -- return
+    ! -- Return
+    return
   end subroutine apt_set_pointers
 
+  !> @brief Return the feature new volume and old volume
+  !<
   subroutine get_volumes(this, icv, vnew, vold, delt)
-! ******************************************************************************
-! get_volumes -- return the feature new volume and old volume
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: icv
     real(DP), intent(inout) :: vnew, vold
     real(DP), intent(in) :: delt
     ! -- local
     real(DP) :: qss
-! ------------------------------------------------------------------------------
     !
     ! -- get volumes
     vold = DZERO
@@ -2056,39 +1950,34 @@ contains
     return
   end subroutine get_volumes
 
+  !> @brief Function to return the number of budget terms just for this package
+  !!
+  !! This function must be overridden.
+  !<
   function pak_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! pak_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  Must be overridden.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- return
     integer(I4B) :: nbudterms
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_get_nbudterms not implemented.', &
                      terminate=.TRUE.)
     nbudterms = 0
+    !
+    ! -- Return
+    return
   end function pak_get_nbudterms
 
+  !> @brief Set up the budget object that stores advanced package flow terms
+  !<
   subroutine apt_setup_budobj(this)
-! ******************************************************************************
-! apt_setup_budobj -- Set up the budget object that stores all the lake flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: nbudterm
     integer(I4B) :: nlen
@@ -2097,9 +1986,12 @@ contains
     integer(I4B) :: idx
     logical :: ordered_id1
     real(DP) :: q
-    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT) :: bddim_opt
+    character(len=LENBUDTXT) :: text, textt
     character(len=LENBUDTXT), dimension(1) :: auxtxt
-! ------------------------------------------------------------------------------
+    !
+    ! -- initialize nbudterm
+    nbudterm = 0
     !
     ! -- Determine if there are flow-ja-face terms
     nlen = 0
@@ -2107,16 +1999,17 @@ contains
       nlen = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
     end if
     !
-    ! -- Determine the number of lake budget terms. These are fixed for
-    !    the simulation and cannot change
-    ! -- the first 3 is for GWF, STORAGE, and CONSTANT
-    nbudterm = 3
+    ! -- Determine the number of budget terms associated with apt.
+    !    These are fixed for the simulation and cannot change
+    !
+    ! -- add one if flow-ja-face present
+    if (this%idxbudfjf /= 0) nbudterm = nbudterm + 1
+    !
+    ! -- All the APT packages have GWF, STORAGE, and CONSTANT
+    nbudterm = nbudterm + 3
     !
     ! -- add terms for the specific package
     nbudterm = nbudterm + this%pak_get_nbudterms()
-    !
-    ! -- add one for flow-ja-face
-    if (nlen > 0) nbudterm = nbudterm + 1
     !
     ! -- add for mover terms and auxiliary
     if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1
@@ -2125,8 +2018,10 @@ contains
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
+    !
+    bddim_opt = this%depvarunitabbrev
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
-                                     bddim_opt='M', ibudcsv=this%ibudcsv)
+                                     bddim_opt=bddim_opt, ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term
@@ -2175,14 +2070,17 @@ contains
     end do
     !
     ! -- Reserve space for the package specific terms
+    this%idxprepak = idx
     call this%pak_setup_budobj(idx)
+    this%idxlastpak = idx
     !
     ! --
     text = '         STORAGE'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsto)%maxlist
     naux = 1
-    auxtxt(1) = '            MASS'
+    write (textt, '(a)') str_pad_left(this%depvarunit, 16)
+    auxtxt(1) = textt ! '            MASS' or '          ENERGY'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%packName, &
@@ -2258,45 +2156,38 @@ contains
       call this%budobj%flowtable_df(this%iout)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_setup_budobj
 
+  !> @brief Set up a budget object that stores an advanced package flows
+  !!
+  !! Individual packages set up their budget terms.  Must be overridden.
+  !<
   subroutine pak_setup_budobj(this, idx)
-! ******************************************************************************
-! pak_setup_budobj -- Individual packages set up their budget terms.  Must
-!   be overridden
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_setup_budobj not implemented.', &
                      terminate=.TRUE.)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_setup_budobj
 
-  subroutine apt_fill_budobj(this, x)
-! ******************************************************************************
-! apt_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Copy flow terms into this%budobj
+  !<
+  subroutine apt_fill_budobj(this, x, flowja)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: naux
     real(DP), dimension(:), allocatable :: auxvartmp
@@ -2309,19 +2200,18 @@ contains
     real(DP) :: v0, v1
     real(DP) :: ccratin, ccratout
     ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- initialize counter
     idx = 0
     !
-    ! -- initialize ccterm, which is used to sum up all mass flows
-    !    into a constant concentration cell
+    ! -- initialize ccterm, which is used to sum up all mass (or energy) flows
+    !    into a constant concentration (or temperature) cell
     ccratin = DZERO
     ccratout = DZERO
     do n1 = 1, this%ncv
       this%ccterm(n1) = DZERO
     end do
-
+    !
     ! -- FLOW JA FACE
     nlen = 0
     if (this%idxbudfjf /= 0) then
@@ -2338,7 +2228,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- GWF (LEAKAGE)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -2353,23 +2243,24 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
-    ! -- individual package terms
-    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
-
+    !
+    ! -- skip individual package terms for now and process them last
+    ! -- in case they depend on the other terms (as for uze)
+    idx = this%idxlastpak
+    !
     ! -- STORAGE
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%ncv)
     allocate (auxvartmp(1))
     do n1 = 1, this%ncv
       call this%get_volumes(n1, v1, v0, delt)
-      auxvartmp(1) = v1 * this%xnewpak(n1)
+      auxvartmp(1) = v1 * this%xnewpak(n1) ! Note: When GWE is added, check if this needs a factor of eqnsclfac
       q = this%qsto(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     deallocate (auxvartmp)
-
+    !
     ! -- TO MOVER
     if (this%idxbudtmvr /= 0) then
       idx = idx + 1
@@ -2381,19 +2272,19 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- FROM MOVER
     if (this%idxbudfmvr /= 0) then
       idx = idx + 1
       nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
-      do n1 = 1, nlist
-        q = this%qmfrommvr(n1)
+      do j = 1, nlist
+        call this%apt_fmvr_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- CONSTANT FLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%ncv)
@@ -2401,7 +2292,7 @@ contains
       q = this%ccterm(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q)
     end do
-
+    !
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
@@ -2418,43 +2309,44 @@ contains
       deallocate (auxvartmp)
     end if
     !
+    ! -- individual package terms processed last
+    idx = this%idxprepak
+    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
+    !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_fill_budobj
 
+  !> @brief Copy flow terms into this%budobj, must be overridden
+  !<
   subroutine pak_fill_budobj(this, idx, x, ccratin, ccratout)
-! ******************************************************************************
-! pak_fill_budobj -- copy flow terms into this%budobj, must be overridden
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
     ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_fill_budobj not implemented.', &
                      terminate=.TRUE.)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_fill_budobj
 
+  !> @brief Account for mass or energy storage in advanced package features
+  !<
   subroutine apt_stor_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     use TdisModule, only: delt
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -2463,53 +2355,96 @@ contains
     real(DP), intent(inout), optional :: hcofval
     real(DP) :: v0, v1
     real(DP) :: c0, c1
+    !
     n1 = ientry
     n2 = ientry
     call this%get_volumes(n1, v1, v0, delt)
     c0 = this%xoldpak(n1)
     c1 = this%xnewpak(n1)
-    if (present(rrate)) rrate = -c1 * v1 / delt + c0 * v0 / delt
-    if (present(rhsval)) rhsval = -c0 * v0 / delt
-    if (present(hcofval)) hcofval = -v1 / delt
+    if (present(rrate)) then
+      rrate = (-c1 * v1 / delt + c0 * v0 / delt) * this%eqnsclfac
+    end if
+    if (present(rhsval)) rhsval = -c0 * v0 * this%eqnsclfac / delt
+    if (present(hcofval)) hcofval = -v1 * this%eqnsclfac / delt
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_stor_term
 
+  !> @brief Account for mass or energy transferred to the MVR package
+  !<
   subroutine apt_tmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-    class(GwtAptType) :: this
+    ! -- modules
+    ! -- dummy
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    !
+    ! -- Calculate MVR-related terms
     n1 = this%flowbudptr%budterm(this%idxbudtmvr)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudtmvr)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_tmvr_term
 
-  subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
-                          rhsval, hcofval)
-    class(GwtAptType) :: this
+  !> @brief Account for mass or energy transferred to this package from the
+  !! MVR package
+  !<
+  subroutine apt_fmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    !
+    ! -- Calculate MVR-related terms
+    n1 = ientry
+    n2 = n1
+    if (present(rrate)) rrate = this%qmfrommvr(n1) ! NOTE: When bringing in GWE, ensure this is in terms of energy. Might need to apply eqnsclfac here.
+    if (present(rhsval)) rhsval = this%qmfrommvr(n1)
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- Return
+    return
+  end subroutine apt_fmvr_term
+
+  !> @brief Go through each "within apt-apt" connection (e.g., lkt-lkt, or
+  !! sft-sft) and accumulate total mass (or energy) in dbuff mass
+  !<
+  subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
+                          rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(TspAptType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudfjf)%flow(ientry)
@@ -2518,27 +2453,23 @@ contains
     else
       ctmp = this%xnewpak(n2)
     end if
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rhsval)) rhsval = -rrate * this%eqnsclfac
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_fjf_term
 
+  !> @brief Copy concentrations (or temperatures) into flow package aux
+  !! variable
+  !<
   subroutine apt_copy2flowp(this)
-! ******************************************************************************
-! apt_copy2flowp -- copy concentrations into flow package aux variable
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n, j
-! ------------------------------------------------------------------------------
     !
     ! -- copy
     if (this%iauxfpconc /= 0) then
@@ -2552,82 +2483,73 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_copy2flowp
 
+  !> @brief Determine whether an obs type is supported
+  !!
+  !! This function:
+  !!   - returns true if APT package supports named observation.
+  !!   - overrides BndType%bnd_obs_supported()
+  !<
   logical function apt_obs_supported(this)
-! ******************************************************************************
-! apt_obs_supported -- obs are supported?
-!   -- Return true because APT package supports observations.
-!   -- Overrides BndType%bnd_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
-! ------------------------------------------------------------------------------
+    class(TspAptType) :: this
     !
     ! -- Set to true
     apt_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function apt_obs_supported
 
+  !> @brief Define observation type
+  !!
+  !! This routine:
+  !!   - stores observation types supported by APT package.
+  !!   - overrides BndType%bnd_df_obs
+  !<
   subroutine apt_df_obs(this)
-! ******************************************************************************
-! apt_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call additional specific observations for lkt, sft, mwt, and uzt
     call this%pak_df_obs()
     !
+    ! -- Return
     return
   end subroutine apt_df_obs
 
+  !> @brief Define apt observation type
+  !!
+  !! This routine:
+  !!   - stores observations supported by the APT package
+  !!   - must be overridden by child class
   subroutine pak_df_obs(this)
-! ******************************************************************************
-! pak_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- must be overridden by child class
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_df_obs not implemented.', &
                      terminate=.TRUE.)
     !
+    ! -- Return
     return
   end subroutine pak_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
   !<
   subroutine pak_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this !< package class
+    class(TspAptType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
     logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
@@ -2636,17 +2558,17 @@ contains
     call store_error('Program error: pak_rp_obs not implemented.', &
                      terminate=.TRUE.)
     !
+    ! -- Return
     return
   end subroutine pak_rp_obs
 
   !> @brief Prepare observation
-    !!
-    !! Find the indices for this observation assuming
-    !! they are indexed by feature number
-    !!
+  !!
+  !! Find the indices for this observation assuming they are indexed by
+  !! feature number
   !<
   subroutine rp_obs_byfeature(this, obsrv)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     integer(I4B) :: nn1
     integer(I4B) :: j
@@ -2681,18 +2603,18 @@ contains
       end if
       call obsrv%AddObsIndex(nn1)
     end if
+    !
+    ! -- Return
     return
   end subroutine rp_obs_byfeature
 
   !> @brief Prepare observation
-    !!
-    !! Find the indices for this observation assuming
-    !! they are first indexed by feature number and
-    !! secondly by a connection number
-    !!
+  !!
+  !! Find the indices for this observation assuming they are first indexed
+  !! by feature number and secondly by a connection number
   !<
   subroutine rp_obs_budterm(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
@@ -2756,18 +2678,18 @@ contains
         call store_error(errmsg)
       end if
     end if
+    !
+    ! -- Return
     return
   end subroutine rp_obs_budterm
 
   !> @brief Prepare observation
-    !!
-    !! Find the indices for this observation assuming
-    !! they are first indexed by a feature number and
-    !! secondly by a second feature number
-    !!
+  !!
+  !! Find the indices for this observation assuming they are first indexed
+  !! by a feature number and secondly by a second feature number
   !<
   subroutine rp_obs_flowjaface(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
@@ -2833,38 +2755,38 @@ contains
         call store_error(errmsg)
       end if
     end if
+    !
+    ! -- Return
     return
   end subroutine rp_obs_flowjaface
 
+  !> @brief Read and prepare apt-related observations
+  !!
+  !! Method to process specific observations for an apt package
+  !<
   subroutine apt_rp_obs(this)
-! ******************************************************************************
-! apt_rp_obs --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     logical :: found
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     if (kper == 1) then
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
         select case (obsrv%ObsTypeId)
-        case ('CONCENTRATION')
+        case ('CONCENTRATION', 'TEMPERATURE')
           call this%rp_obs_byfeature(obsrv)
           !
           ! -- catch non-cumulative observation assigned to observation defined
           !    by a boundname that is assigned to more than one element
           if (obsrv%indxbnds_count > 1) then
-            write (errmsg, '(a, a, a)') &
-              'CONCENTRATION for observation', trim(adjustl(obsrv%Name)), &
+            write (errmsg, '(a, a, a, a)') &
+              trim(adjustl(this%depvartype))// &
+              ' for observation', trim(adjustl(obsrv%Name)), &
               ' must be assigned to a feature with a unique boundname.'
             call store_error(errmsg)
           end if
@@ -2913,20 +2835,20 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine apt_rp_obs
 
+  !> @brief Calculate observation values
+  !!
+  !! Routine calculates observations common to SFT/LKT/MWT/UZT
+  !! (or SFE/LKE/MWE/UZE) for as many TspAptType observations that are common
+  !! among the advanced transport packages
+  !<
   subroutine apt_bd_obs(this)
-! ******************************************************************************
-! apt_bd_obs -- Calculate observations common to SFT/LKT/MWT/UZT
-!      ObsType%SaveOneSimval for each GwtAptType observation.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: igwfnode
@@ -2940,7 +2862,7 @@ contains
     logical :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Write simulated values for all LAK observations
+    ! -- Write simulated values for all Advanced Package observations
     if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
@@ -2949,7 +2871,7 @@ contains
           v = DNODATA
           jj = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
-          case ('CONCENTRATION')
+          case ('CONCENTRATION', 'TEMPERATURE')
             if (this%iboundpak(jj) /= 0) then
               v = this%xnewpak(jj)
             end if
@@ -2975,7 +2897,7 @@ contains
             end if
           case ('FROM-MVR')
             if (this%iboundpak(jj) /= 0 .and. this%idxbudfmvr > 0) then
-              v = this%qmfrommvr(jj)
+              call this%apt_fmvr_term(jj, n1, n2, v)
             end if
           case ('TO-MVR')
             if (this%idxbudtmvr > 0) then
@@ -3009,38 +2931,33 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine apt_bd_obs
 
+  !> @brief Check if observation exists in an advanced package
+  !<
   subroutine pak_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! pak_bd_obs --
-!   -- check for observations in concrete packages.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
     integer(I4B), intent(in) :: jj
     real(DP), intent(inout) :: v
     logical, intent(inout) :: found
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set found = .false. because obstypeid is not known
     found = .false.
     !
+    ! -- Return
     return
   end subroutine pak_bd_obs
 
-  !> @brief Process observation IDs for a package
-    !!
-    !! Method to process observation ID strings for an APT package.
-    !! This processor is only for observation types that support ID1
-    !! and not ID2.
-    !!
+  !> @brief Process observation IDs for an advanced package
+  !!
+  !! Method to process observation ID strings for an APT package.
+  !! This processor is only for observation types that support ID1
+  !! and not ID2.
   !<
   subroutine apt_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- dummy variables
@@ -3083,11 +3000,10 @@ contains
   end subroutine apt_process_obsID
 
   !> @brief Process observation IDs for a package
-    !!
-    !! Method to process observation ID strings for an APT package.
-    !! This processor is for the case where if ID1 is an integer
-    !! then ID2 must be provided.
-    !!
+  !!
+  !! Method to process observation ID strings for an APT package. This
+  !! processor is for the case where if ID1 is an integer then ID2 must be
+  !! provided.
   !<
   subroutine apt_process_obsID12(obsrv, dis, inunitobs, iout)
     ! -- dummy variables
@@ -3132,28 +3048,25 @@ contains
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_process_obsID12
 
+  !> @brief Setup a table object an advanced package
+  !!
+  !! Set up the table object that is used to write the apt concentration
+  !! (or temperature) data. The terms listed here must correspond in the
+  !! apt_ot method.
+  !<
   subroutine apt_setup_tableobj(this)
-! ******************************************************************************
-! apt_setup_tableobj -- Set up the table object that is used to write the apt
-!                       conc data. The terms listed here must correspond in
-!                       in the apt_ot method.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBUDTXT
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text_temp
-! ------------------------------------------------------------------------------
     !
     ! -- setup well head table
     if (this%iprconc > 0) then
@@ -3165,7 +3078,8 @@ contains
       ! -- set up table title
       title = trim(adjustl(this%text))//' PACKAGE ('// &
               trim(adjustl(this%packName))// &
-              ') CONCENTRATION FOR EACH CONTROL VOLUME'
+              ') '//trim(adjustl(this%depvartype))// &
+              &' FOR EACH CONTROL VOLUME'
       !
       ! -- set up dv tableobj
       call table_cr(this%dvtab, this%packName, title)
@@ -3183,7 +3097,7 @@ contains
       call this%dvtab%initialize_column(text_temp, 10, alignment=TABCENTER)
       !
       ! -- feature conc
-      text_temp = 'CONC'
+      text_temp = this%depvartype(1:4)
       call this%dvtab%initialize_column(text_temp, 12, alignment=TABCENTER)
     end if
     !
@@ -3191,4 +3105,4 @@ contains
     return
   end subroutine apt_setup_tableobj
 
-end module GwtAptModule
+end module TspAptModule

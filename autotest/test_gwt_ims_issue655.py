@@ -3,7 +3,6 @@ Test the GWT with initial concentration of 0 in the model domain and right-hand
 side GWT boundary conditions. Versions 6.2.1 and earlier failed because of a
 divide by zero error in IMS. This test confirms the fix implemented as part
 of the version 6.2.2 release that addressed Issue 655.
-
 """
 
 import os
@@ -11,10 +10,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["issue655a", "issue655b"]
+from framework import TestFramework
+
+cases = ["issue655a", "issue655b"]
 newton = [
     False,
     True,
@@ -25,7 +24,7 @@ sy = [0.1]
 nlay, nrow, ncol = 1, 11, 11
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     nper = 1
     perlen = [1000.0]
     nstp = [5]
@@ -65,11 +64,11 @@ def build_model(idx, ws):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -249,21 +248,19 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_alldata().flatten()
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -292,17 +289,13 @@ def eval_transport(sim):
     #     vold = v
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

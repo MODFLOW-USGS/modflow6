@@ -5,9 +5,8 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["uzf_3lay"]
+cases = ["uzf_3lay"]
 name = "model"
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -16,7 +15,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 3, 1, 10
     nper = 5
     perlen = [20.0, 20.0, 20.0, 500.0, 2000.0]
@@ -32,7 +31,7 @@ def build_model(idx, dir):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -256,11 +255,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
-    ws = sim.simpath
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+def check_output(idx, test):
+    ws = test.workspace
+    test = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     bpth = ws / f"{name}.cbc"
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
@@ -291,25 +288,25 @@ def eval_model(sim):
 
     # convert ndarray to grid dimensions
     tot_stp = 0
-    tinfo = sim.tdis.perioddata.get_data()
+    tinfo = test.tdis.perioddata.get_data()
     for itm in tinfo:
         tot_stp += int(itm[1])
 
     gwet_arr = np.zeros(
         (
             tot_stp,
-            sim.model.dis.nlay.get_data(),
-            sim.model.dis.nrow.get_data(),
-            sim.model.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
     uzet_arr = np.zeros(
         (
             tot_stp,
-            sim.model.dis.nlay.get_data(),
-            sim.model.dis.nrow.get_data(),
-            sim.model.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
@@ -331,7 +328,7 @@ def eval_model(sim):
 
             uzet_arr[tm, lay, row, col] = itm[2]
 
-    uzf_strsPerDat = sim.model.uzf.perioddata.get_data()
+    uzf_strsPerDat = test.model.uzf.perioddata.get_data()
     pet = 0
     for tm in range(tot_stp):
         nstps = 0
@@ -340,8 +337,8 @@ def eval_model(sim):
             if tm < nstps:
                 break
 
-        for i in range(sim.model.dis.nrow.get_data()):
-            for j in range(sim.model.dis.ncol.get_data()):
+        for i in range(test.model.dis.nrow.get_data()):
+            for j in range(test.model.dis.ncol.get_data()):
                 if (0, i, j) in cell_iuz_dict:
                     iuz = cell_iuz_dict[
                         (0, i, j)
@@ -362,20 +359,14 @@ def eval_model(sim):
                         + str(j + 1)
                     )
 
-    print("Finished running checks")
 
-
-@pytest.mark.parametrize("idx,name", enumerate(ex))
+@pytest.mark.parametrize("idx,name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

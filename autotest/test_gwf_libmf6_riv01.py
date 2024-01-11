@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi which is used update to set the river stages to
 the same values as they are in the non-bmi simulation.
 """
@@ -8,11 +7,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_riv01"]
+from framework import TestFramework
+
+cases = ["libgwf_riv01"]
 
 # temporal discretization
 nper = 10
@@ -129,10 +128,10 @@ def get_model(ws, name, riv_spd):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     # create river data
     rd = [
@@ -146,7 +145,7 @@ def build_model(idx, dir):
     sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
     mc = get_model(ws, name, riv_spd={0: rd_bmi})
 
@@ -154,7 +153,7 @@ def build_model(idx, dir):
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
 
@@ -188,7 +187,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt
         dt = mf6.get_time_step()
 
@@ -248,16 +246,13 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

@@ -41,13 +41,9 @@ module GwfGwtExchangeModule
 
 contains
 
+  !> @brief Create a new GWF to GWT exchange object
+  !<
   subroutine gwfgwt_cr(filename, id, m1_id, m2_id)
-! ******************************************************************************
-! gwfgwt_cr -- Create a new GWF to GWT exchange object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
@@ -59,7 +55,6 @@ contains
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGwtExchangeType), pointer :: exchange => null()
     character(len=20) :: cint
-! ------------------------------------------------------------------------------
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -82,25 +77,19 @@ contains
     ! -- set model pointers
     call exchange%set_model_pointers()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwfgwt_cr
 
+  !> @brief Allocate and read
+  !<
   subroutine set_model_pointers(this)
-! ******************************************************************************
-! set_model_pointers -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
     gwfmodel => null()
@@ -139,17 +128,13 @@ contains
     !    to look through the flow packages and establish a link to GWF flows
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_model_pointers
 
+  !> @brief Define GwfGwt Exchange object
+  !<
   subroutine exg_df(this)
-! ******************************************************************************
-! exg_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
@@ -158,8 +143,6 @@ contains
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
-! ------------------------------------------------------------------------------
-    !
     !
     ! -- set gwfmodel
     mb => GetBaseModelFromList(basemodellist, this%m1_idx)
@@ -198,17 +181,13 @@ contains
       gwfmodel%npf%icalcspdis = 1
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_df
 
+  !> @brief Allocate and read
+  !<
   subroutine exg_ar(this)
-! ******************************************************************************
-! exg_ar --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
@@ -224,7 +203,6 @@ contains
       &  GWF Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
       &  GWT Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
       &  Ensure discretization packages, including IDOMAIN, are identical.')"
-! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
     mb => GetBaseModelFromList(basemodellist, this%m1_idx)
@@ -301,20 +279,22 @@ contains
     ! -- connect Connections
     call this%gwfconn2gwtconn(gwfmodel, gwtmodel)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_ar
 
   !> @brief Link GWT connections to GWF connections or exchanges
   !<
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
+    ! -- modules
     use SimModule, only: store_error
     use SimVariablesModule, only: iout
     use MemoryManagerModule, only: mem_checkin
+    ! -- dummy
     class(GwfGwtExchangeType) :: this !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
-    ! local
+    ! -- local
     class(SpatialModelConnectionType), pointer :: conn => null()
     class(*), pointer :: objPtr => null()
     class(GwtGwtConnectionType), pointer :: gwtConn => null()
@@ -323,27 +303,27 @@ contains
     integer(I4B) :: ic1, ic2, iex
     integer(I4B) :: gwfConnIdx, gwfExIdx
     logical(LGP) :: areEqual
-
+    !
     ! loop over all connections
     gwtloop: do ic1 = 1, baseconnectionlist%Count()
-
+      !
       conn => get_smc_from_list(baseconnectionlist, ic1)
       if (.not. associated(conn%owner, gwtModel)) cycle gwtloop
-
+      !
       ! start with a GWT conn.
       objPtr => conn
       gwtConn => CastAsGwtGwtConnection(objPtr)
       gwfConnIdx = -1
       gwfExIdx = -1
-
+      !
       ! find matching GWF conn. in same list
       gwfloop: do ic2 = 1, baseconnectionlist%Count()
         conn => get_smc_from_list(baseconnectionlist, ic2)
-
+        !
         if (associated(conn%owner, gwfModel)) then
           objPtr => conn
           gwfConn => CastAsGwfGwfConnection(objPtr)
-
+          !
           ! for now, connecting the same nodes nrs will be
           ! sufficient evidence of equality
           areEqual = all(gwfConn%prim_exchange%nodem1 == &
@@ -363,24 +343,28 @@ contains
           end if
         end if
       end do gwfloop
-
+      !
       ! fallback option: coupling to old gwfgwf exchange,
       ! (this will go obsolete at some point)
       if (gwfConnIdx == -1) then
         gwfloopexg: do iex = 1, baseexchangelist%Count()
           gwfEx => GetGwfExchangeFromList(baseexchangelist, iex)
-
+          !
           ! -- There is no guarantee that iex is a gwfExg, in which case
           !    it will return as null.  cycle if so.
           if (.not. associated(gwfEx)) cycle gwfloopexg
-
+          !
           if (associated(gwfEx%model1, gwfModel) .or. &
               associated(gwfEx%model2, gwfModel)) then
-            ! again, connecting the same nodes nrs will be
+
+            ! check exchanges have same node counts
+            areEqual = size(gwfEx%nodem1) == size(gwtConn%prim_exchange%nodem1)
+            ! then, connecting the same nodes nrs will be
             ! sufficient evidence of equality
-            areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
-            areEqual = areEqual .and. &
-                       all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
+            if (areEqual) &
+              areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
+            if (areEqual) &
+              areEqual = all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
             if (areEqual) then
               ! link exchange to connection
               write (iout, '(/6a)') 'Linking exchange ', &
@@ -394,7 +378,7 @@ contains
                                  'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
                                  'SIMVALS', gwfEx%memoryPath)
               end if
-
+              !
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then
                 if (gwtConn%owns_exchange) then
@@ -403,17 +387,17 @@ contains
                     gwfEx%mvr%budobj)
                 end if
               end if
-
+              !
               if (associated(gwfEx%model2, gwfModel)) gwtConn%exgflowSign = -1
               gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
-
+              !
               exit gwfloopexg
             end if
           end if
-
+          !
         end do gwfloopexg
       end if
-
+      !
       if (gwfConnIdx == -1 .and. gwfExIdx == -1) then
         ! none found, report
         write (errmsg, '(/6a)') 'Missing GWF-GWF exchange when connecting GWT'// &
@@ -422,19 +406,23 @@ contains
           trim(gwfModel%name)
         call store_error(errmsg, terminate=.true.)
       end if
-
+      !
     end do gwtloop
-
+    !
+    ! -- Return
+    return
   end subroutine gwfconn2gwtconn
 
   !> @brief Links a GWT connection to its GWF counterpart
   !<
   subroutine link_connections(this, gwtConn, gwfConn)
+    ! -- modules
     use MemoryManagerModule, only: mem_checkin
+    ! -- dummy
     class(GwfGwtExchangeType) :: this !< this exchange
     class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
-
+    !
     !gwtConn%exgflowja => gwfConn%exgflowja
     if (gwtConn%owns_exchange) then
       gwtConn%gwtExchange%gwfsimvals => gwfConn%gwfExchange%simvals
@@ -442,7 +430,7 @@ contains
                        'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
                        'SIMVALS', gwfConn%gwfExchange%memoryPath)
     end if
-
+    !
     !cdl link up mvt to mvr
     if (gwfConn%gwfExchange%inmvr > 0) then
       if (gwtConn%owns_exchange) then
@@ -451,74 +439,60 @@ contains
           gwfConn%gwfExchange%mvr%budobj)
       end if
     end if
-
+    !
     if (associated(gwfConn%gwfExchange%model2, gwfConn%owner)) then
       gwtConn%exgflowSign = -1
     end if
-
+    !
     ! fmi flows are not read from file
     gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
-
+    !
     ! set concentration pointer for buoyancy
     ! call gwfConn%gwfInterfaceModel%buy%set_concentration_pointer( &
     !   gwtConn%gwtModel%name, &
     !   gwtConn%conc, &
     !   gwtConn%icbound)
-
+    !
+    ! -- Return
+    return
   end subroutine link_connections
 
+  !> @brief Deallocate memory
+  !<
   subroutine exg_da(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfGwtExchangeType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     call mem_deallocate(this%m1_idx)
     call mem_deallocate(this%m2_idx)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_da
 
+  !> @brief Allocate package scalars
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfGwtExchangeType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%m1_idx, 'M1ID', this%memoryPath)
     call mem_allocate(this%m2_idx, 'M2ID', this%memoryPath)
     this%m1_idx = 0
     this%m2_idx = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_scalars
 
+  !> @brief Call routines in FMI that will set pointers to the necessary flow
+  !! data
+  !<
   subroutine gwfbnd2gwtfmi(this)
-! ******************************************************************************
-! gwfbnd2gwtfmi
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -527,7 +501,6 @@ contains
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
     class(BndType), pointer :: packobj => null()
-! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
     mb => GetBaseModelFromList(basemodellist, this%m1_idx)
@@ -566,7 +539,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwfbnd2gwtfmi
 

@@ -1,19 +1,21 @@
-# This is the Henry, Newton-Raphson problem described by Langevin et al (2020)
-# with a 20 by 40 grid instead of the 40 by 80 grid described in the paper.
-# There is freshwater inflow on the left and a sloping sea boundary on the
-# right with moves up and down according to a simple sine function.  GHBs
-# and DRNs alternate and move up and down along the boundary to represent
-# the effects of tides on the aquifer.
+"""
+This is the Henry, Newton-Raphson problem described by Langevin et al (2020)
+with a 20 by 40 grid instead of the 40 by 80 grid described in the paper.
+There is freshwater inflow on the left and a sloping sea boundary on the
+right with moves up and down according to a simple sine function.  GHBs
+and DRNs alternate and move up and down along the boundary to represent
+the effects of tides on the aquifer.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["henrynr01"]
+from framework import TestFramework
+
+cases = ["henrynr01"]
 
 # global model variables
 nlay = 20
@@ -66,10 +68,9 @@ def sinfunc(a, b, c, d, x):
     return a * np.sin(b * (x - c)) + d
 
 
-def build_model(idx, dir):
-
-    ws = dir
-    name = ex[idx]
+def build_models(idx, test):
+    ws = test.workspace
+    name = cases[idx]
 
     nrow = 1
     delr = lx / ncol
@@ -377,7 +378,7 @@ def make_plot(sim, headall, concall):
     print("making plots...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -461,11 +462,9 @@ def make_plot(sim, headall, concall):
     plt.savefig(fname, bbox_inches="tight")
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
-    ws = sim.simpath
+def check_output(idx, test):
+    name = test.name
+    ws = test.workspace
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
 
@@ -523,22 +522,18 @@ def eval_transport(sim):
 
     makeplot = False
     if makeplot:
-        make_plot(sim, head, conc)
+        make_plot(test, head, conc)
         assert False
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

@@ -28,18 +28,18 @@ The exchange will have XT3D enabled so the head values in
 the child model should match the theory. In this case we
 just assert that they are equal for each column, something
 that is clearly not true when simulating without XT3D.
-
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["ifmod_vert"]
+from framework import TestFramework
+
+cases = ["ifmod_vert"]
 
 parent_name = "parent"
 child_name = "child"
@@ -55,7 +55,7 @@ def get_model(idx, dir):
     global child_domain
     global hclose
 
-    name = ex[idx]
+    name = cases[idx]
 
     # tdis period data
     nper = 1
@@ -234,19 +234,19 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_heads(sim):
+def check_output(idx, test):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
+    fpth = os.path.join(test.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # (note that without XT3D on the exchange, the 'error'
@@ -262,11 +262,11 @@ def eval_heads(sim):
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(sim.simpath, f"{mname}.dis.grb")
+        fpth = os.path.join(test.workspace, f"{mname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
+        fpth = os.path.join(test.workspace, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -281,17 +281,14 @@ def eval_heads(sim):
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

@@ -9,7 +9,7 @@ MODULE IMSLinearBaseModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO, &
                              DZERO, DPREC, DEM6, DEM3, DHALF, DONE
-  use GenericUtilitiesModule, only: sim_message, is_same
+  use MathUtilModule, only: is_close
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
   use ConvergenceSummaryModule
@@ -211,7 +211,7 @@ contains
       IF (ICNVG .NE. 0) EXIT INNER
       !
       ! -- CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT
-      lsame = is_same(rho, rho0)
+      lsame = is_close(rho, rho0)
       IF (lsame) THEN
         EXIT INNER
       END IF
@@ -513,15 +513,15 @@ contains
       !
       ! -- CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE
       !    DIFFERENT
-      lsame = is_same(rho, rho0)
+      lsame = is_close(rho, rho0)
       IF (lsame) THEN
         EXIT INNER
       END IF
-      lsame = is_same(alpha, alpha0)
+      lsame = is_close(alpha, alpha0)
       IF (lsame) THEN
         EXIT INNER
       END IF
-      lsame = is_same(omega, omega0)
+      lsame = is_close(omega, omega0)
       IF (lsame) THEN
         EXIT INNER
       END IF

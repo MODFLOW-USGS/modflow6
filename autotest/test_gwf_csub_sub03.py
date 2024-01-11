@@ -3,11 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["csub_sub03a", "csub_sub03b"]
+cases = ["csub_sub03a", "csub_sub03b"]
 cmppth = "mf6_regression"
 cvopt = [None, None, None]
 constantcv = [True, True]
@@ -25,10 +25,10 @@ bud_lst = [
 # static model data
 nlay, nrow, ncol = 3, 10, 10
 nper = 31
-perlen = [1.0] + [365.2500000 for i in range(nper - 1)]
-nstp = [1] + [6 for i in range(nper - 1)]
-tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-steady = [True] + [False for i in range(nper - 1)]
+perlen = [1.0] + [365.2500000 for _ in range(nper - 1)]
+nstp = [1] + [6 for _ in range(nper - 1)]
+tsmult = [1.0] + [1.3 for _ in range(nper - 1)]
+steady = [True] + [False for _ in range(nper - 1)]
 delr, delc = 1000.0, 2000.0
 top = 0.0
 botm = [-100, -150.0, -350.0]
@@ -59,8 +59,8 @@ nouter, ninner = 500, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # all cells are active
 ib = 1
@@ -140,7 +140,7 @@ for k in ldnd:
 
 # SUB package problem 3
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
     # ibc packagedata container counter
     sub6 = []
     ibcno = 0
@@ -344,28 +344,25 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
-    sim = get_model(idx, ws)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
 
-    ws = os.path.join(dir, cmppth)
+    ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_comp(sim):
-    print("evaluating compaction...")
-
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # Comparision total compaction results
-    fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -377,15 +374,15 @@ def eval_comp(sim):
     msg = f"maximum absolute total-compaction difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -397,11 +394,11 @@ def eval_comp(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -411,44 +408,39 @@ def eval_comp(sim):
                     qout -= vv
                 else:
                     qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_comp,
-            htol=htol[idx],
-            mf6_regression=True,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
+        htol=htol[idx],
+        compare="mf6_regression",
     )
+    test.run()

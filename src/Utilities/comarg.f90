@@ -9,8 +9,8 @@ module CommandArguments
   use SimVariablesModule, only: istdout, isim_level, &
                                 simfile, simlstfile, simstdout, &
                                 isim_mode, simulation_mode
-  use GenericUtilitiesModule, only: sim_message, write_message
   use SimModule, only: store_error, ustop
+  use MessageModule, only: write_message, write_message_counter
   use InputOutputModule, only: upcase, getunit
   !
   implicit none
@@ -144,25 +144,25 @@ contains
         lstop = .TRUE.
         write (line, '(2a,2(1x,a))') &
           trim(adjustl(cexe)), ':', trim(adjustl(VERSION))
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case ('-DEV', '--DEVELOP')
         lstop = .TRUE.
         write (line, '(2a,g0)') &
           trim(adjustl(cexe)), ': develop version ', ltyp
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case ('-C', '--COMPILER')
         lstop = .TRUE.
         call get_compiler(compiler)
         write (line, '(2a,1x,a)') &
           trim(adjustl(cexe)), ':', trim(adjustl(compiler))
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case ('-S', '--SILENT')
         write (line, '(2a,1x,a)') &
           trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case ('-D', '--DISCLAIMER')
         lstop = .TRUE.
-        call sim_message('', fmt=FMTDISCLAIMER)
+        call write_message('', fmt=FMTDISCLAIMER)
       case ('-P', '--PARALLEL')
         simulation_mode = 'PARALLEL'
       case ('-LIC', '--LICENSE')
@@ -171,7 +171,7 @@ contains
       case ('-CO', '--COMPILER-OPT')
         lstop = .TRUE.
         call get_compile_options(coptions)
-        call write_message(coptions, skipbefore=1, skipafter=1)
+        call write_message_counter(coptions, skipbefore=1, skipafter=1)
       case ('-L', '--LEVEL')
         if (len_trim(clevel) < 1) then
           iarg = iarg + 1
@@ -195,7 +195,7 @@ contains
         write (line, '(2a,2(1x,a))') &
           trim(adjustl(cexe)), ':', 'stdout output level', &
           trim(adjustl(clevel))
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case ('-M', '--MODE')
         if (len_trim(cmode) < 1) then
           iarg = iarg + 1
@@ -217,7 +217,7 @@ contains
                trim(adjustl(cmode))//'. Model input will be checked for all '// &
                'stress periods but the matrix equations will not be '// &
                'assembled or solved.'
-        call write_message(line, skipbefore=1, skipafter=1)
+        call write_message_counter(line, skipbefore=1, skipafter=1)
       case default
         lstop = .TRUE.
         call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
@@ -246,7 +246,7 @@ contains
     !
     ! -- write blank line to stdout
     if (icountcmd > 0) then
-      call sim_message('')
+      call write_message('')
     end if
     !
     ! -- return
@@ -296,16 +296,16 @@ contains
       &'[1] https://github.com/MODFLOW-USGS/modflow6/issues',/)"
     !
     ! -- write command line usage information to the screen
-    call sim_message(header)
+    call write_message(header)
     write (line, '(a,1x,a,15x,a,2(1x,a),2a)') &
       'usage:', cexe, 'run MODFLOW', trim(adjustl(MFVNAM)), &
       'using "', trim(adjustl(simfile)), '"'
-    call sim_message(line)
+    call write_message(line)
     write (line, '(a,1x,a,1x,a,5x,a)') &
       '   or:', cexe, '[options]', &
       'retrieve program information'
-    call sim_message(line)
-    call sim_message('', fmt=OPTIONSFMT)
+    call write_message(line)
+    call write_message('', fmt=OPTIONSFMT)
     !
     ! -- return
     return

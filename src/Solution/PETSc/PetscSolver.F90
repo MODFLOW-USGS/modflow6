@@ -419,14 +419,9 @@ contains
     deallocate (this%vec_residual)
 
     ! delete context
-    call VecDestroy(this%petsc_ctx%delta_x, ierr)
-    CHKERRQ(ierr)
-    call VecDestroy(this%petsc_ctx%x_old, ierr)
-    CHKERRQ(ierr)
+    call this%petsc_ctx%destroy()
     deallocate (this%petsc_ctx)
 
-    call VecDestroy(this%pc_context%diag, ierr)
-    CHKERRQ(ierr)
     deallocate (this%pc_context)
 
   end subroutine petsc_destroy

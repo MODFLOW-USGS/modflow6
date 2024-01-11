@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = [
+from framework import TestFramework
+
+cases = [
     "gwf_sto03a",
     "gwf_sto03b",
 ]
@@ -15,7 +15,7 @@ newton = (
     True,
 )
 cmppth = "mf6"
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 dtol = 1e-3
 budtol = 1e-2
 
@@ -31,8 +31,8 @@ perlen = [1.0 for i in range(nper)]
 nstp = [50 for i in range(nper)]
 tsmult = [1.1 for i in range(nper)]
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # spatial discretization data
 nlay, nrow, ncol = 1, 1, 1
@@ -62,12 +62,12 @@ hclose, rclose, relax, ur_gamma = 1e-9, 1e-6, 1.0, 0.95
 # pumping well data
 absrate = 1.1 * ss * (zelev[-2] - zelev[-1]) * 90.0
 well_spd = {}
-for idx in range(nper):
-    if idx % 2 == 0:
+for i in range(nper):
+    if i % 2 == 0:
         mult = 1.0
     else:
         mult = -1.0
-    well_spd[idx] = [[0, 0, 0, mult * absrate]]
+    well_spd[i] = [[0, 0, 0, mult * absrate]]
 
 
 def get_model(name, ws, newton_bool, offset=0.0):
@@ -172,16 +172,17 @@ def get_model(name, ws, newton_bool, offset=0.0):
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
-    name = ex[idx]
-    ws = dir
-
-    # build model with no offset
-    sim = get_model(name, ws, newton_bool=newton[idx])
-
-    # build model with offset
-    ws = os.path.join(dir, cmppth)
-    mc = get_model(name, ws, newton_bool=newton[idx], offset=cmp_offset)
+def build_models(idx, test):
+    name = cases[idx]
+    # model with no offset
+    sim = get_model(name, test.workspace, newton_bool=newton[idx])
+    # model with offset
+    mc = get_model(
+        name,
+        os.path.join(test.workspace, cmppth),
+        newton_bool=newton[idx],
+        offset=cmp_offset,
+    )
     return sim, mc
 
 
@@ -192,23 +193,21 @@ def eval_hmax(fpth):
     bv = np.zeros(ctimes.shape, dtype=float)
     bv[:] = b.get_data(totim=1.0)[obsname]
     sv = np.zeros(ctimes.shape, dtype=float)
-    for idx, t in enumerate(ctimes):
-        sv[idx] = b.get_data(totim=t)[obsname]
+    for i, t in enumerate(ctimes):
+        sv[i] = b.get_data(totim=t)[obsname]
 
     msg = (
         "maximum heads in {} exceed tolerance ".format(fpth)
         + f"- maximum difference {(bv - sv).max()}"
     )
     assert np.allclose(bv, sv), msg
-    return
 
 
-def eval_sto(sim):
-    print("evaluating head differences...")
-    fpth = os.path.join(sim.simpath, "head.obs.csv")
+def check_output(idx, test):
+    fpth = os.path.join(test.workspace, "head.obs.csv")
     base_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
 
-    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "head.obs.csv")
     offset_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
     offset_obs -= cmp_offset
 
@@ -218,10 +217,9 @@ def eval_sto(sim):
     )
     assert np.allclose(base_obs, offset_obs, atol=1e-6), msg
 
-    print("evaluating maximum heads...")
-    fpth = os.path.join(sim.simpath, "head.obs.csv")
+    fpth = os.path.join(test.workspace, "head.obs.csv")
     eval_hmax(fpth)
-    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "head.obs.csv")
     eval_hmax(fpth)
 
     base_obs = flopy.utils.Mf6Obs(fpth)
@@ -230,8 +228,8 @@ def eval_sto(sim):
     base_cmp = np.zeros(cmp_times.shape, dtype=float)
     base_cmp[:] = base_obs.get_data(totim=1.0)[obsname]
     offset_cmp = np.zeros(cmp_times.shape, dtype=float)
-    for idx, t in enumerate(cmp_times):
-        offset_cmp[idx] = base_obs.get_data(totim=t)[obsname]
+    for i, t in enumerate(cmp_times):
+        offset_cmp[i] = base_obs.get_data(totim=t)[obsname]
 
     msg = (
         "maximum heads exceed tolerance when offset removed "
@@ -239,11 +237,10 @@ def eval_sto(sim):
     )
     assert np.allclose(base_cmp, offset_cmp), msg
 
-    print("evaluating storage...")
-    name = ex[sim.idxsim]
-    fpth = os.path.join(sim.simpath, f"{name}.cbc")
+    name = cases[idx]
+    fpth = os.path.join(test.workspace, f"{name}.cbc")
     base_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
-    fpth = os.path.join(sim.simpath, cmppth, f"{name}.cbc")
+    fpth = os.path.join(test.workspace, cmppth, f"{name}.cbc")
     offset_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # get results from cbc file
@@ -251,31 +248,24 @@ def eval_sto(sim):
     kk = base_cbc.get_kstpkper()
     times = base_cbc.get_times()
     max_diff = np.zeros(len(times), dtype=float)
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             base_v = base_cbc.get_data(totim=t, text=text)[0]
             offset_v = offset_cbc.get_data(totim=t, text=text)[0]
             if not np.allclose(base_v, offset_v):
-                max_diff[idx] = np.abs(base_v - offset_v).max()
+                max_diff[i] = np.abs(base_v - offset_v).max()
 
     assert max_diff.sum() == 0.0, "simulated storage is not the same"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_sto,
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        htol=htol[idx],
     )
+    test.run()

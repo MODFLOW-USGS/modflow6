@@ -7,7 +7,6 @@ cell_iuz_dict = {}
 
 
 def build_model(dir, exe):
-
     nlay, nrow, ncol = 3, 1, 10
     nper = 1
     perlen = [20.0]
@@ -187,7 +186,7 @@ def build_model(dir, exe):
 
 def test_mf6model(function_tmpdir, targets):
     # build and run the test model
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
     sim = build_model(str(function_tmpdir), mf6)
     sim.write_simulation()
     sim.run_simulation()
@@ -196,10 +195,8 @@ def test_mf6model(function_tmpdir, targets):
     f = open(str(function_tmpdir / "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
-    expected_msg = False
     for line in lines:
         if "SURFDEP" and "cannot" in line:
-            expected_msg = True
             error_count += 1
 
     assert error_count == 8, (

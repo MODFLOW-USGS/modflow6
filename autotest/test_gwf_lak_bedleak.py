@@ -1,16 +1,15 @@
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation, DNODATA
 
-ex = ["bedleak", "bedleak_fail", "bedleak_none"]
+from framework import DNODATA, TestFramework
+
+cases = ["bedleak", "bedleak_fail", "bedleak_none"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 1
     perlen = [
@@ -34,10 +33,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -153,14 +152,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
 
     # lak budget
     if "fail" not in name:
-        fpth = os.path.join(sim.simpath, f"{name}.lak.bud")
+        fpth = os.path.join(test.workspace, f"{name}.lak.bud")
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
         bobj.list_unique_records()
         records = bobj.get_data(text="GWF")
@@ -169,25 +166,14 @@ def eval_model(sim):
             assert np.allclose(r["q"][1], -6.19237994e-12)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    if "fail" in ws:
-        require_fail = True
-    else:
-        require_fail = False
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-            require_failure=require_fail,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        xfail="fail" in str(function_tmpdir),
     )
+    test.run()

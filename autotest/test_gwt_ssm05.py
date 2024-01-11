@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
 Test the SSM package auxiliary variables for specifying source and sink
 concentrations for array based recharge.
-
 """
 
 import os
@@ -10,10 +8,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["ssm05"]
+from framework import TestFramework
+
+cases = ["ssm05"]
 
 nlay, nrow, ncol = 3, 5, 5
 idomain_lay0 = [
@@ -27,7 +25,7 @@ idomain = np.ones((nlay, nrow, ncol), dtype=int)
 idomain[0, :, :] = np.array(idomain_lay0)
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [5.0]
     nstp = [5]
     tsmult = [1.0]
@@ -47,10 +45,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -238,19 +236,17 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
 
     # load concentration file
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_data()
 
     # load transport budget file
-    fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(
         fpth,
         precision="double",
@@ -314,17 +310,13 @@ def eval_transport(sim):
             istart = istop
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

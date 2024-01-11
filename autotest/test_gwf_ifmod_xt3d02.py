@@ -1,49 +1,49 @@
+"""
+Test the interface model approach.
+It compares the result of a single, strongly anisotropic model
+with XT3D enabled to the equivalent case where the domain is
+decomposed and joined by a GWF-GWF exchange with XT3D applied.
+
+       'refmodel'              'leftmodel'     'rightmodel'
+
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+
+The head values should always be indentical. All models are
+part of the same solution for convenience.
+In addition, a check on the x,y,z components of specific discharge
+is present. The values of the left submodel are compared to
+the left part of the full model, and similar for right: they
+should be identical. Finally, the budget error is checked.
+"""
+
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# Test for the interface model approach.
-# It compares the result of a single, strongly anisotropic model
-# with XT3D enabled to the equivalent case where the domain is
-# decomposed and joined by a GWF-GWF exchange with XT3D applied.
-#
-#        'refmodel'              'leftmodel'     'rightmodel'
-#
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#
-# The head values should always be indentical. All models are
-# part of the same solution for convenience.
-# In addition, a check on the x,y,z components of specific discharge
-# is present. The values of the left submodel are compared to
-# the left part of the full model, and similar for right: they
-# should be identical. Finally, the budget error is checked.
-
-ex = ["ifmod_xt3d02"]
-# global convenience...
+cases = ["ifmod_xt3d02"]
 mname_ref = "refmodel"
 mname_left = "leftmodel"
 mname_right = "rightmodel"
 hclose_check = 1e-9
 max_inner_it = 300
-
 useXT3D = True
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -284,8 +284,8 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
@@ -309,27 +309,27 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def compare_to_ref(sim):
+def check_output(idx, test):
     print("comparing heads and spec. discharge to single model reference...")
 
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.cbc")
+    fpth = os.path.join(test.workspace, f"{mname_ref}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_left}.cbc")
+    fpth = os.path.join(test.workspace, f"{mname_left}.cbc")
     nlay, nrow, ncol = heads_left.shape
     qxb_left, qyb_left, qzb_left = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_right}.cbc")
+    fpth = os.path.join(test.workspace, f"{mname_right}.cbc")
     nlay, nrow, ncol = heads_right.shape
     qxb_right, qyb_right, qzb_right = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -400,7 +400,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -411,16 +411,13 @@ def compare_to_ref(sim):
                 )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

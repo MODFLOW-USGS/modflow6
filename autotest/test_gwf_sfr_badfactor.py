@@ -1,16 +1,19 @@
 import flopy
 import numpy as np
+import pytest
+
+from framework import TestFramework
 
 paktest = "sfr"
-testname = "ts_sfr01"
+cases = ["ts_sfr01"]
 
 
-def build_model(ws, exe, timeseries=False):
+def build_models(idx, test, timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
     tdis_rc = []
-    for idx in range(nper):
+    for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
     ts_times = np.arange(0.0, 2.0, 1.0, dtype=float)
 
@@ -34,9 +37,9 @@ def build_model(ws, exe, timeseries=False):
     imsla = "BICGSTAB"
 
     # build MODFLOW 6 files
-    name = testname
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -506,26 +509,29 @@ def build_model(ws, exe, timeseries=False):
     return sim
 
 
-def test_mf6model(function_tmpdir, targets):
-    mf6 = targets.mf6
+def check_output(idx, test):
+    print("Running surfdep check")
+    with open(test.workspace / "mfsim.lst", "r") as f:
+        lines = f.readlines()
+        error_count = 0
+        for line in lines:
+            if "cprior" and "divflow not within" in line:
+                error_count += 1
 
-    # build and run the test model
-    sim = build_model(str(function_tmpdir), mf6)
-    sim.write_simulation()
-    sim.run_simulation()
+        # ensure that error msg is in mfsim.lst file
+        assert error_count == 1, (
+            "error count = " + str(error_count) + "but should equal 1"
+        )
 
-    # ensure that the error msg is contained in the mfsim.lst file
-    f = open(str(function_tmpdir / "mfsim.lst"), "r")
-    lines = f.readlines()
-    error_count = 0
-    expected_msg = False
-    for line in lines:
-        if "cprior" and "divflow not within" in line:
-            expected_msg = True
-            error_count += 1
 
-    assert error_count == 1, (
-        "error count = " + str(error_count) + "but should equal 1"
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        xfail=True,
     )
-
-    print("Finished running surfdep check")
+    test.run()

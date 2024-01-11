@@ -10,6 +10,7 @@
 module SimModule
 
   use KindModule, only: DP, I4B
+  use ErrorUtilModule, only: pstop
   use DefinedMacros, only: get_os
   use ConstantsModule, only: MAXCHARLEN, LINELENGTH, &
                              DONE, &
@@ -19,8 +20,7 @@ module SimModule
   use SimVariablesModule, only: istdout, iout, isim_level, ireturnerr, &
                                 iforcestop, iunext, &
                                 warnmsg
-  use GenericUtilitiesModule, only: sim_message, stop_with_error
-  use MessageModule, only: MessageType
+  use MessageModule, only: MessagesType, write_message
 
   implicit none
 
@@ -41,89 +41,52 @@ module SimModule
   public :: store_error_filename
   public :: MaxErrors
 
-  type(MessageType) :: sim_errors
-  type(MessageType) :: sim_uniterrors
-  type(MessageType) :: sim_warnings
-  type(MessageType) :: sim_notes
+  type(MessagesType) :: sim_errors
+  type(MessagesType) :: sim_uniterrors
+  type(MessagesType) :: sim_warnings
+  type(MessagesType) :: sim_notes
 
 contains
 
   !> @brief Return number of errors
-    !!
-    !!  Function to return the number of errors messages that have been stored.
-    !!
-    !!  @return  ncount number of error messages stored
-    !!
+  !!
+  !! Function to return the number of errors messages that have been stored.
+  !!
+  !! @return  ncount number of error messages stored
+  !!
   !<
   function count_errors() result(ncount)
-    ! -- return variable
     integer(I4B) :: ncount
-    !
-    ! -- set ncount
-    ncount = sim_errors%count_message()
-    !
-    ! -- return
-    return
+    ncount = sim_errors%count()
   end function count_errors
 
   !> @brief Return number of warnings
-    !!
-    !!  Function to return the number of warning messages that have been stored.
-    !!
-    !!  @return  ncount number of warning messages stored
-    !!
+  !!
+  !! Function to return the number of warning messages that have been stored.
+  !!
+  !! @return  ncount number of warning messages stored
+  !!
   !<
   function count_warnings() result(ncount)
-    ! -- return variable
     integer(I4B) :: ncount
-    !
-    ! -- set ncount
-    ncount = sim_warnings%count_message()
-    !
-    ! -- return
-    return
+    ncount = sim_warnings%count()
   end function count_warnings
 
-  !> @brief Return number of notes
-    !!
-    !!  Function to return the number of notes that have been stored.
-    !!
-    !!  @return  ncount number of notes stored
-    !!
+  !> @brief Return the number of notes stored.
   !<
   function count_notes() result(ncount)
-    ! -- return variable
     integer(I4B) :: ncount
-    !
-    ! -- set ncount
-    ncount = sim_notes%count_message()
-    !
-    ! -- return
-    return
+    ncount = sim_notes%count()
   end function count_notes
 
-  !> @brief Set the maximum number of errors stored
-    !!
-    !!  Subroutine to set the maximum number of error messages that will be stored
-    !!  in a simulation.
-    !!
+  !> @brief Set the maximum number of errors to be stored.
   !<
   subroutine MaxErrors(imax)
-    ! -- dummy variables
     integer(I4B), intent(in) :: imax !< maximum number of error messages that will be stored
-    !
-    ! -- set the maximum number of error messages that will be saved
-    call sim_errors%set_max_message(imax)
-    !
-    ! -- return
-    return
+    call sim_errors%set_max(imax)
   end subroutine MaxErrors
 
-  !> @brief Store error message
-    !!
-    !!  Subroutine to store a error message for printing at the end of
-    !!  the simulation.
-    !!
+  !> @brief Store an error message.
   !<
   subroutine store_error(msg, terminate)
     ! -- dummy variable
@@ -140,24 +103,22 @@ contains
     end if
     !
     ! -- store error
-    call sim_errors%store_message(msg)
+    call sim_errors%store(msg)
     !
     ! -- terminate the simulation
     if (lterminate) then
       call ustop()
     end if
-    !
-    ! -- return
-    return
+
   end subroutine store_error
 
   !> @brief Get the file name
-    !!
-    !!  Subroutine to get the file name from the unit number for a open file.
-    !!  If the INQUIRE function returns the full path (for example, the INTEL
-    !!  compiler) then the returned file name (fname) is limited to the filename
-    !!  without the path.
-    !!
+  !!
+  !!  Subroutine to get the file name from the unit number for a open file.
+  !!  If the INQUIRE function returns the full path (for example, the INTEL
+  !!  compiler) then the returned file name (fname) is limited to the filename
+  !!  without the path.
+  !!
   !<
   subroutine get_filename(iunit, fname)
     ! -- dummy variables
@@ -193,17 +154,15 @@ contains
       ilen = len_trim(fname)
       write (fname, '(a)') fname(ipos + 1:ilen)//' '
     end if
-    !
-    ! -- return
-    return
+
   end subroutine get_filename
 
   !> @brief Store the file unit number
-    !!
-    !!  Subroutine to convert the unit number for a open file to a file name
-    !!  and indicate that there is an error reading from the file. By default,
-    !!  the simulation is terminated when this subroutine is called.
-    !!
+  !!
+  !!  Subroutine to convert the unit number for a open file to a file name
+  !!  and indicate that there is an error reading from the file. By default,
+  !!  the simulation is terminated when this subroutine is called.
+  !!
   !<
   subroutine store_error_unit(iunit, terminate)
     ! -- dummy variables
@@ -225,22 +184,20 @@ contains
     inquire (unit=iunit, name=fname)
     write (errmsg, '(3a)') &
       "Error occurred while reading file '", trim(adjustl(fname)), "'"
-    call sim_uniterrors%store_message(errmsg)
+    call sim_uniterrors%store(errmsg)
     !
     ! -- terminate the simulation
     if (lterminate) then
       call ustop()
     end if
-    !
-    ! -- return
-    return
+
   end subroutine store_error_unit
 
   !> @brief Store the erroring file name
-    !!
-    !!  Subroutine to store the file name issuing an error. By default,
-    !!  the simulation is terminated when this subroutine is called
-    !!
+  !!
+  !!  Subroutine to store the file name issuing an error. By default,
+  !!  the simulation is terminated when this subroutine is called
+  !!
   !<
   subroutine store_error_filename(filename, terminate)
     ! -- dummy variables
@@ -260,22 +217,20 @@ contains
     ! -- store error unit
     write (errmsg, '(3a)') &
       "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
-    call sim_uniterrors%store_message(errmsg)
+    call sim_uniterrors%store(errmsg)
     !
     ! -- terminate the simulation
     if (lterminate) then
       call ustop()
     end if
-    !
-    ! -- return
-    return
+
   end subroutine store_error_filename
 
   !> @brief Store warning message
-    !!
-    !!  Subroutine to store a warning message for printing at the end of
-    !!  the simulation.
-    !!
+  !!
+  !!  Subroutine to store a warning message for printing at the end of
+  !!  the simulation.
+  !!
   !<
   subroutine store_warning(msg, substring)
     ! -- dummy variables
@@ -285,9 +240,9 @@ contains
     !
     ! -- store warning
     if (present(substring)) then
-      call sim_warnings%store_message(msg, substring)
+      call sim_warnings%store(msg, substring)
     else
-      call sim_warnings%store_message(msg)
+      call sim_warnings%store(msg)
     end if
     !
     ! -- return
@@ -295,10 +250,10 @@ contains
   end subroutine store_warning
 
   !> @brief Store deprecation warning message
-    !!
-    !!  Subroutine to store a warning message for deprecated variables
-    !!  and printing at the end of simulation.
-    !!
+  !!
+  !!  Subroutine to store a warning message for deprecated variables
+  !!  and printing at the end of simulation.
+  !!
   !<
   subroutine deprecation_warning(cblock, cvar, cver, endmsg, iunit)
     ! -- modules
@@ -330,16 +285,14 @@ contains
     end if
     !
     ! -- store warning
-    call sim_warnings%store_message(message)
-    !
-    ! -- return
-    return
+    call sim_warnings%store(message)
+
   end subroutine deprecation_warning
 
   !> @brief Store note
-    !!
-    !!  Subroutine to store a note for printing at the end of the simulation.
-    !!
+  !!
+  !! Subroutine to store a note for printing at the end of the simulation.
+  !!
   !<
   subroutine store_note(note)
     ! -- modules
@@ -348,17 +301,15 @@ contains
     character(len=*), intent(in) :: note !< note
     !
     ! -- store note
-    call sim_notes%store_message(note)
-    !
-    ! -- return
-    return
+    call sim_notes%store(note)
+
   end subroutine store_note
 
   !> @brief Stop the simulation.
-    !!
-    !!  Subroutine to stop the simulations with option to print message
-    !!  before stopping with the active error code.
-    !!
+  !!
+  !!  Subroutine to stop the simulations with option to print message
+  !!  before stopping with the active error code.
+  !!
   !<
   subroutine ustop(stopmess, ioutlocal)
     ! -- dummy variables
@@ -370,16 +321,16 @@ contains
     ! -- print the final message
     call print_final_message(stopmess, ioutlocal)
     !
-    ! -- return appropriate error codes when terminating the program
-    call stop_with_error(ireturnerr)
+    ! -- terminate with the appropriate error code
+    call pstop(ireturnerr)
 
   end subroutine ustop
 
   !> @brief Print the final messages
-    !!
-    !!  Subroutine to print the notes, warnings, errors and the final message (if passed).
-    !!  The subroutine also closes all open files.
-    !!
+  !!
+  !!  Subroutine to print the notes, warnings, errors and the final message (if passed).
+  !!  The subroutine also closes all open files.
+  !!
   !<
   subroutine print_final_message(stopmess, ioutlocal)
     ! -- dummy variables
@@ -392,19 +343,21 @@ contains
     character(len=*), parameter :: msg = 'Stopping due to error(s)'
     !
     ! -- print the accumulated messages
-    call sim_notes%print_message('NOTES:', 'note(s)', &
-                                 iunit=iout, level=VALL)
-    call sim_warnings%print_message('WARNING REPORT:', 'warning(s)', &
-                                    iunit=iout, level=VALL)
-    call sim_errors%print_message('ERROR REPORT:', 'error(s)', iunit=iout)
-    call sim_uniterrors%print_message('UNIT ERROR REPORT:', &
-                                      'file unit error(s)', iunit=iout)
+    if (isim_level >= VALL) then
+      call sim_notes%write_all('NOTES:', 'note(s)', &
+                               iunit=iout)
+      call sim_warnings%write_all('WARNING REPORT:', 'warning(s)', &
+                                  iunit=iout)
+    end if
+    call sim_errors%write_all('ERROR REPORT:', 'error(s)', iunit=iout)
+    call sim_uniterrors%write_all('UNIT ERROR REPORT:', &
+                                  'file unit error(s)', iunit=iout)
     !
     ! -- write a stop message, if one is passed
     if (present(stopmess)) then
       if (stopmess .ne. ' ') then
-        call sim_message(stopmess, fmt=fmt, iunit=iout)
-        call sim_message(stopmess, fmt=fmt)
+        call write_message(stopmess, fmt=fmt, iunit=iout)
+        call write_message(stopmess, fmt=fmt)
         if (present(ioutlocal)) then
           if (ioutlocal > 0 .and. ioutlocal /= iout) then
             write (ioutlocal, fmt) trim(stopmess)
@@ -418,7 +371,7 @@ contains
     flush (istdout)
     !
     ! -- determine if an error condition has occurred
-    if (sim_errors%count_message() > 0) then
+    if (sim_errors%count() > 0) then
       ireturnerr = 2
       if (present(ioutlocal)) then
         if (ioutlocal > 0 .and. ioutlocal /= iout) write (ioutlocal, fmt) msg
@@ -427,34 +380,26 @@ contains
     !
     ! -- close all open files
     call sim_closefiles()
-    !
-    ! -- return
-    return
+
   end subroutine print_final_message
 
   !> @brief Reset the simulation convergence flag
-    !!
-    !!  Subroutine to reset the simulation convergence flag.
-    !!
+  !!
+  !!  Subroutine to reset the simulation convergence flag.
+  !!
   !<
   subroutine converge_reset()
-    ! -- modules
     use SimVariablesModule, only: isimcnvg
-    !
-    ! -- reset simulation convergence flag
     isimcnvg = 1
-    !
-    ! -- return
-    return
   end subroutine converge_reset
 
   !> @brief Simulation convergence check
-    !!
-    !!  Subroutine to check simulation convergence. If the continue option is
-    !!  set the simulation convergence flag is set to True if the simulation
-    !!  did not actually converge for a time step and the non-convergence counter
-    !!  is incremented.
-    !!
+  !!
+  !!  Subroutine to check simulation convergence. If the continue option is
+  !!  set the simulation convergence flag is set to True if the simulation
+  !!  did not actually converge for a time step and the non-convergence counter
+  !!  is incremented.
+  !!
   !<
   subroutine converge_check(hasConverged)
     ! -- modules
@@ -484,19 +429,17 @@ contains
     !
     ! -- save simulation failure message
     if (isimcnvg == 0) then
-      call sim_message('', fmt=fmtfail, iunit=iout)
+      call write_message('', fmt=fmtfail, iunit=iout)
       hasConverged = .false.
     end if
-    !
-    ! -- return
-    return
+
   end subroutine converge_check
 
   !> @brief Print the header and initializes messaging
-    !!
-    !! Subroutine that prints the initial message and initializes the notes,
-    !! warning messages, unit errors, and error messages.
-    !!
+  !!
+  !! Subroutine that prints the initial message and initializes the notes,
+  !! warning messages, unit errors, and error messages.
+  !!
   !<
   subroutine initial_message()
     ! -- modules
@@ -504,27 +447,27 @@ contains
     use SimVariablesModule, only: simulation_mode
     !
     ! -- initialize message lists
-    call sim_errors%init_message()
-    call sim_uniterrors%init_message()
-    call sim_warnings%init_message()
-    call sim_notes%init_message()
+    call sim_errors%init()
+    call sim_uniterrors%init()
+    call sim_warnings%init()
+    call sim_notes%init()
     !
     ! -- Write banner to screen (unit stdout)
     call write_listfile_header(istdout, write_kind_info=.false., &
                                write_sys_command=.false.)
     !
     if (simulation_mode == 'PARALLEL') then
-      call sim_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
-                       skipafter=1)
+      call write_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
+                         skipafter=1)
     end if
     !
   end subroutine initial_message
 
   !> @brief Create final message
-    !!
-    !! Subroutine that creates the appropriate final message and
-    !! terminates the program with an error message, if necessary.
-    !!
+  !!
+  !! Subroutine that creates the appropriate final message and
+  !! terminates the program with an error message, if necessary.
+  !!
   !<
   subroutine final_message()
     ! -- modules
@@ -538,9 +481,9 @@ contains
     if (numnoconverge > 0) then
       write (warnmsg, fmtnocnvg) numnoconverge
       if (isimcontinue == 0) then
-        call sim_errors%store_message(warnmsg)
+        call sim_errors%store(warnmsg)
       else
-        call sim_warnings%store_message(warnmsg)
+        call sim_warnings%store(warnmsg)
       end if
     end if
     !
@@ -562,26 +505,24 @@ contains
     end if
     !
     ! -- destroy messages
-    call sim_errors%deallocate_message()
-    call sim_uniterrors%deallocate_message()
-    call sim_warnings%deallocate_message()
-    call sim_notes%deallocate_message()
+    call sim_errors%deallocate()
+    call sim_uniterrors%deallocate()
+    call sim_warnings%deallocate()
+    call sim_notes%deallocate()
     !
     ! -- return or halt
     if (iforcestop == 1) then
-      call stop_with_error(ireturnerr)
+      call pstop(ireturnerr)
     end if
 
   end subroutine final_message
 
   !> @brief Close all open files
-    !!
-    !! Subroutine that closes all open files at the end of the simulation.
-    !!
+  !!
+  !! Subroutine that closes all open files at the end of the simulation.
+  !!
   !<
   subroutine sim_closefiles()
-    ! -- modules
-    ! -- dummy
     ! -- local variables
     integer(I4B) :: i
     logical :: opened
@@ -607,9 +548,7 @@ contains
       ! -- close file unit i
       close (i)
     end do
-    !
-    ! -- return
-    return
+
   end subroutine sim_closefiles
 
 end module SimModule

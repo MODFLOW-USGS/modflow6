@@ -2,12 +2,12 @@ import os
 
 import flopy
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
+from framework import TestFramework
+
+cases = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
 no_ptcrecords = ["FIRST", "ALL", None]
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 
 # static model data
 # temporal discretization
@@ -49,7 +49,7 @@ rech = {0: 0.001}
 
 
 def get_model(idx, dir, no_ptcrecord):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -123,22 +123,22 @@ def get_model(idx, dir, no_ptcrecord):
 
 
 # water table recharge problem
-def build_model(idx, dir):
-    sim = get_model(idx, dir, no_ptcrecords[idx])
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace, no_ptcrecords[idx])
 
     # build MODFLOW-6 without no_ptc option
-    pth = os.path.join(dir, "mf6")
+    pth = os.path.join(test.workspace, "mf6")
     mc = get_model(idx, pth, None)
 
     return sim, mc
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets, idxsim=idx), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+    )
+    test.run()

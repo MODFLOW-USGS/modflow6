@@ -9,7 +9,6 @@ module GwfEvtaInputModule
   public gwf_evta_block_definitions
   public GwfEvtaParamFoundType
   public gwf_evta_multi_package
-  public gwf_evta_aux_sfac_param
 
   type GwfEvtaParamFoundType
     logical :: readasarrays = .false.
@@ -34,8 +33,6 @@ module GwfEvtaInputModule
   end type GwfEvtaParamFoundType
 
   logical :: gwf_evta_multi_package = .true.
-
-  character(len=LENVARNAME) :: gwf_evta_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfevta_readasarrays = InputParamDefinitionType &

@@ -7,6 +7,7 @@ module IdmDfnSelectorModule
                                    InputBlockDefinitionType
   use IdmGwfDfnSelectorModule
   use IdmGwtDfnSelectorModule
+  use IdmExgDfnSelectorModule
   use IdmSimDfnSelectorModule
 
   implicit none
@@ -15,7 +16,6 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
-  public :: idm_sfac_param
   public :: idm_integrated
   public :: idm_component
 
@@ -31,6 +31,8 @@ contains
       input_definition => gwf_param_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_param_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_param_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_param_definitions(subcomponent)
     case default
@@ -48,6 +50,8 @@ contains
       input_definition => gwf_aggregate_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_aggregate_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_aggregate_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_aggregate_definitions(subcomponent)
     case default
@@ -65,6 +69,8 @@ contains
       input_definition => gwf_block_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_block_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_block_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_block_definitions(subcomponent)
     case default
@@ -81,6 +87,8 @@ contains
       multi_package = gwf_idm_multi_package(subcomponent)
     case ('GWT')
       multi_package = gwt_idm_multi_package(subcomponent)
+    case ('EXG')
+      multi_package = exg_idm_multi_package(subcomponent)
     case ('SIM')
       multi_package = sim_idm_multi_package(subcomponent)
     case default
@@ -90,25 +98,6 @@ contains
     end select
     return
   end function idm_multi_package
-
-  function idm_sfac_param(component, subcomponent) result(sfac_param)
-    character(len=*), intent(in) :: component
-    character(len=*), intent(in) :: subcomponent
-    character(len=LENVARNAME) :: sfac_param
-    select case (component)
-    case ('GWF')
-      sfac_param = gwf_idm_sfac_param(subcomponent)
-    case ('GWT')
-      sfac_param = gwt_idm_sfac_param(subcomponent)
-    case ('SIM')
-      sfac_param = sim_idm_sfac_param(subcomponent)
-    case default
-      call store_error('Idm selector component not found; '//&
-                       &'component="'//trim(component)//&
-                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
-    end select
-    return
-  end function idm_sfac_param
 
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component
@@ -120,6 +109,8 @@ contains
       integrated = gwf_idm_integrated(subcomponent)
     case ('GWT')
       integrated = gwt_idm_integrated(subcomponent)
+    case ('EXG')
+      integrated = exg_idm_integrated(subcomponent)
     case ('SIM')
       integrated = sim_idm_integrated(subcomponent)
     case default
@@ -135,6 +126,8 @@ contains
     case ('GWF')
       integrated = .true.
     case ('GWT')
+      integrated = .true.
+    case ('EXG')
       integrated = .true.
     case ('SIM')
       integrated = .true.

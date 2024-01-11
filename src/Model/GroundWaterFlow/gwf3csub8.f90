@@ -18,7 +18,8 @@ module GwfCsubModule
                              TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryHelperModule, only: create_mem_path
-  use GenericUtilitiesModule, only: is_same, sim_message
+  use MathUtilModule, only: is_close
+  use MessageModule, only: write_message
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQuadratic0sp, &
@@ -29,7 +30,8 @@ module GwfCsubModule
   use BlockParserModule, only: BlockParserType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use InputOutputModule, only: get_node, extract_idnum_or_bndname
+  use GeomUtilModule, only: get_node
+  use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
@@ -1923,7 +1925,7 @@ contains
         write (msg, '(1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
           'LARGEST', (i1 - i0 + 1), 'OF', this%ninterbeds, &
           'INTERBED STRAIN VALUES SHOWN'
-        call sim_message(msg, this%iout, skipbefore=1)
+        call write_message(msg, this%iout, skipbefore=1)
         !
         ! -- interbed strain data
         ! -- set title
@@ -2113,7 +2115,7 @@ contains
       write (msg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
         'LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes, &
         'CELL COARSE-GRAINED VALUES SHOWN'
-      call sim_message(msg, this%iout, skipbefore=1)
+      call write_message(msg, this%iout, skipbefore=1)
       !
       ! -- set title
       title = trim(adjustl(this%packName))// &
@@ -2873,7 +2875,7 @@ contains
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          if (this%brg /= DZERO .and. idelay == 0) then
+          if (.not. is_close(this%brg, DZERO) .and. idelay == 0) then
             call this%csub_nodelay_wcomp_fc(ib, node, tled, area, &
                                             hnew(node), hold(node), &
                                             hcof, rhsterm)

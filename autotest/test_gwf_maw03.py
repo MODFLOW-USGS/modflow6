@@ -1,13 +1,11 @@
 import os
-from types import SimpleNamespace as Case
+from types import SimpleNamespace
 
 import flopy
 import numpy as np
 import pytest
 
-from framework import TestFramework
-from simulation import TestSimulation
-
+cases = ["maw03a", "maw03b", "maw03c"]
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
@@ -21,7 +19,7 @@ def well3(name):
         "maw03c": [(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)],
     }
     wellbottom = -1000
-    return Case(
+    return SimpleNamespace(
         observations={
             f"{name}.maw.obs.csv": [
                 ("m1head", "head", (0,)),
@@ -34,7 +32,6 @@ def well3(name):
     )
 
 
-ex = ["maw03a", "maw03b", "maw03c"]
 krylov = "CG"
 nlay = 1
 nrow = 101
@@ -63,7 +60,7 @@ def build_model(idx, ws, mf6):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=mf6)
 
     # create tdis package
@@ -174,15 +171,13 @@ def build_model(idx, ws, mf6):
         continuous=obs_recarray,
     )
 
-    return sim, None
+    return sim
 
 
-def eval_results(sim):
-    print("evaluating MAW heads...")
-
+def eval_results(name, workspace):
     # MODFLOW 6 maw results
-    test_name = sim.name
-    fpth = os.path.join(sim.simpath, f"{test_name}.maw.obs.csv")
+    test_name = name
+    fpth = os.path.join(workspace, f"{test_name}.maw.obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     if test_name.endswith("a"):
@@ -210,20 +205,10 @@ def eval_results(sim):
         assert tc["M1RATE"].min() < 800.0 and tc["M1HEAD"].max() < 1.0, msg
 
 
-@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
+    sim = build_model(idx, ws, targets["mf6"])
     sim.write_simulation()
     sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
-    )
+    eval_results(name, ws)

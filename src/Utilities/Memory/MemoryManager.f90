@@ -4,15 +4,17 @@ module MemoryManagerModule
   use ConstantsModule, only: DZERO, DONE, &
                              DEM3, DEM6, DEM9, DEP3, DEP6, DEP9, &
                              LENMEMPATH, LENMEMSEPARATOR, LENVARNAME, &
-                             LENCOMPONENTNAME, LINELENGTH, LENMEMTYPE, &
-                             LENMEMADDRESS, TABSTRING, TABUCSTRING, &
+                             LENMEMADDRESS, LENCOMPONENTNAME, &
+                             LENMEMTYPE, LINELENGTH, &
+                             TABSTRING, TABUCSTRING, &
                              TABINTEGER, TABREAL, TABCENTER, TABLEFT, &
                              TABRIGHT
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
   use MemoryListModule, only: MemoryListType
-  use MemoryHelperModule, only: mem_check_length, split_mem_path
+  use MemoryHelperModule, only: mem_check_length, split_mem_path, &
+                                strip_context_mem_path, get_mem_path_context
   use TableModule, only: TableType, table_cr
   use CharacterStringModule, only: CharacterStringType
 
@@ -2828,7 +2830,12 @@ contains
     integer(I4B), intent(in) :: iout !< unit number for mfsim.lst
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique
+    character(len=LENMEMADDRESS), allocatable, dimension(:) :: cunique
+    ! character(len=LENMEMPATH) :: mem_path
+    character(len=LENMEMPATH) :: context
+    character(len=LENCOMPONENTNAME) :: component
+    character(len=LENCOMPONENTNAME) :: subcomponent
+    character(len=LENMEMADDRESS) :: context_component
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -2872,7 +2879,10 @@ contains
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%path(1:ilen)) cycle
+          call split_mem_path(mt%path, component, subcomponent)
+          context = get_mem_path_context(mt%path)
+          context_component = trim(context)//component
+          if (cunique(icomp) /= context_component(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize * mt%element_size
@@ -3004,11 +3014,14 @@ contains
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray, ifind
     ! -- dummy
-    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique !< array with unique first components
+    character(len=LENMEMADDRESS), allocatable, dimension(:), intent(inout) :: &
+      cunique !< array with unique first components
     ! -- local
     class(MemoryType), pointer :: mt
+    character(len=LENMEMPATH) :: context
     character(len=LENCOMPONENTNAME) :: component
     character(len=LENCOMPONENTNAME) :: subcomponent
+    character(len=LENMEMADDRESS) :: context_component
     integer(I4B) :: ipos
     integer(I4B) :: ipa
     ! -- code
@@ -3020,10 +3033,12 @@ contains
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       call split_mem_path(mt%path, component, subcomponent)
-      ipa = ifind(cunique, component)
+      context = get_mem_path_context(mt%path)
+      context_component = trim(context)//component
+      ipa = ifind(cunique, context_component)
       if (ipa < 1) then
         call ExpandArray(cunique, 1)
-        cunique(size(cunique)) = component
+        cunique(size(cunique)) = context_component
       end if
     end do
     !

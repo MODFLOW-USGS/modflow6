@@ -1,19 +1,20 @@
-# Simple one-layer model with sfr on top.  Purpose is to test buy package in a
-# one-d sfr network.
+"""
+Simple one-layer model with sfr on top.  Purpose is to test buy package in a
+one-d sfr network.
+"""
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["buy_sfr_01"]
+cases = ["buy_sfr_01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -44,10 +45,10 @@ def build_model(idx, dir):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -372,16 +373,14 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # assign names
-    gwtname = "gwt_" + sim.name
-    gwfname = "gwf_" + sim.name
+    gwtname = "gwt_" + test.name
+    gwfname = "gwf_" + test.name
 
     # load the sft concentrations and make sure all values are correct
     fname = gwtname + ".sft.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     csftall = cobj.get_alldata()
@@ -391,21 +390,21 @@ def eval_results(sim):
 
     # load the aquifer concentrations
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     cgwfall = cobj.get_alldata()
     cgwf = cgwfall[-2].flatten()
 
     # load the aquifer heads
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     hobj = flopy.utils.HeadFile(fname, text="HEAD")
     headall = hobj.get_alldata()
     head = headall[-1].flatten()
 
     # load the sfr budget file and get sfr/gwf flows
     fname = gwfname + ".sfr.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     qsfrgwfsimall = bobj.get_data(text="GWF")
@@ -415,7 +414,7 @@ def eval_results(sim):
     # load the sfr budget and check to make sure that concentrations are set
     # correctly from sft concentrations
     fname = gwfname + ".sfr.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     b = bobj.get_data(text="AUXILIARY")
@@ -427,7 +426,7 @@ def eval_results(sim):
     # load the sfr stage file
     # load the aquifer concentrations and make sure all values are correct
     fname = gwfname + ".sfr.stg"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     stgobj = flopy.utils.HeadFile(fname, text="STAGE")
     stageall = stgobj.get_alldata()
     stage = stageall[-1]
@@ -457,13 +456,13 @@ def eval_results(sim):
         ), f"reach {n} flow {qcalc} not equal {qsim}"
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

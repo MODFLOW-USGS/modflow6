@@ -18,7 +18,9 @@ module GwfObsModule
     type(GwfIcType), pointer, private :: ic => null() ! initial conditions
     real(DP), dimension(:), pointer, contiguous, private :: x => null() ! head
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
+
   contains
+
     ! -- Public procedures
     procedure, public :: gwf_obs_ar
     procedure, public :: obs_bd => gwf_obs_bd
@@ -31,20 +33,14 @@ module GwfObsModule
 
 contains
 
+  !> @brief Create a new GwfObsType object
+  !!
+  !! Create oseration object, allocate pointers, initialize values
+  !<
   subroutine gwf_obs_cr(obs, inobs)
-! ******************************************************************************
-! gwf_obs_cr -- Create a new GwfObsType object
-! Subroutine: (1) creates object
-!             (2) allocates pointers
-!             (3) initializes values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(GwfObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
-! ------------------------------------------------------------------------------
     !
     allocate (obs)
     call obs%allocate_scalars()
@@ -52,22 +48,18 @@ contains
     obs%inputFilename = ''
     obs%inUnitObs => inobs
     !
+    ! -- Return
     return
   end subroutine gwf_obs_cr
 
+  !> @brief Allocate and read
+  !<
   subroutine gwf_obs_ar(this, ic, x, flowja)
-! ******************************************************************************
-! gwf_obs_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfObsType), intent(inout) :: this
     type(GwfIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
-! ------------------------------------------------------------------------------
     !
     ! Call ar method of parent class
     call this%obs_ar()
@@ -75,16 +67,13 @@ contains
     ! set pointers
     call this%set_pointers(ic, x, flowja)
     !
+    ! -- Return
     return
   end subroutine gwf_obs_ar
 
+  !> @brief Define
+  !<
   subroutine gwf_obs_df(this, iout, pkgname, filtyp, dis)
-! ******************************************************************************
-! gwt_obs_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfObsType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
@@ -93,7 +82,6 @@ contains
     class(DisBaseType), pointer :: dis
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     ! Call overridden method of parent class
     call this%ObsType%obs_df(iout, pkgname, filtyp, dis)
@@ -113,16 +101,13 @@ contains
     call this%StoreObsType('flow-ja-face', .true., indx)
     this%obsData(indx)%ProcessIdPtr => gwf_process_intercell_obs_id
     !
+    ! -- Return
     return
   end subroutine gwf_obs_df
 
+  !> @brief Save obs
+  !<
   subroutine gwf_obs_bd(this)
-! ******************************************************************************
-! gwf_obs_bd -- save obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfObsType), intent(inout) :: this
     ! -- local
@@ -130,7 +115,6 @@ contains
     real(DP) :: v
     character(len=100) :: msg
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     call this%obs_bd_clear()
     !
@@ -160,49 +144,40 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine gwf_obs_bd
 
+  !> @brief Do GWF observations need any checking? If so, add checks here
+  !<
   subroutine gwf_obs_rp(this)
-! ******************************************************************************
-! gwf_obs_rp
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwfObsType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! Do GWF observations need any checking? If so, add checks here
+    !
+    ! -- Return
     return
   end subroutine gwf_obs_rp
 
+  !> @brief Deallocate memory
+  !<
   subroutine gwf_obs_da(this)
-! ******************************************************************************
-! gwf_obs_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfObsType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     nullify (this%ic)
     nullify (this%x)
     nullify (this%flowja)
     call this%ObsType%obs_da()
     !
+    ! -- Return
     return
   end subroutine gwf_obs_da
 
+  !> @brief Set pointers
+  !<
   subroutine set_pointers(this, ic, x, flowja)
-! ******************************************************************************
-! set_pointers
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfObsType), intent(inout) :: this
     type(GwfIcType), pointer, intent(in) :: ic
@@ -213,18 +188,15 @@ contains
     this%x => x
     this%flowja => flowja
     !
+    ! -- Return
     return
   end subroutine set_pointers
 
   ! -- Procedures related to GWF observations (NOT type-bound)
 
+  !> @brief Calculate drawdown obseration when requested
+  !<
   subroutine gwf_process_head_drawdown_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! gwf_process_head_drawdown_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -234,7 +206,6 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -253,16 +224,13 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
   end subroutine gwf_process_head_drawdown_obs_id
 
+  !> @brief Process flow between two cells when requested
+  !<
   subroutine gwf_process_intercell_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! gwf_process_intercell_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -274,7 +242,6 @@ contains
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
 70  format('Error: No connection exists between cells identified in text: ', a)
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -315,6 +282,7 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
   end subroutine gwf_process_intercell_obs_id
 

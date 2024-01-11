@@ -1,7 +1,6 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
-
+Test the ability of a uzf to route waves through a simple 1d vertical
+column.
 """
 
 import os
@@ -9,16 +8,15 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_uzf01a"]
+from framework import TestFramework
+
+cases = ["gwf_uzf01a"]
 nlay, nrow, ncol = 100, 1, 1
 
 
-def build_model(idx, exdir):
-
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     perlen = [500.0]
     nper = len(perlen)
@@ -36,11 +34,11 @@ def build_model(idx, exdir):
     sy = 0.1
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for i in range(nper):
+        tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = exdir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -213,11 +211,9 @@ def build_model(idx, exdir):
     return sim, None
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
-    name = sim.name
-    ws = sim.simpath
+def check_output(idx, test):
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -255,24 +251,20 @@ def eval_flow(sim):
         names[-1]: obs_obj.get_data(obsname=names[-1]),
     }
     cbc = uobj.get_ts(idx=[[0, 0, 1], [0, 0, 49]], text="GWF")
-    for idx, key in enumerate(obs.keys()):
-        assert np.allclose(obs[key][key], -cbc[:, idx + 1]), (
+    for i, key in enumerate(obs.keys()):
+        assert np.allclose(obs[key][key], -cbc[:, i + 1]), (
             f"observation data for {key} is not the same as "
             "data in the cell-by-cell file."
         )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

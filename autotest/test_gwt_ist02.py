@@ -16,10 +16,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["ist02"]
+from framework import TestFramework
+
+cases = ["ist02"]
 nlay, nrow, ncol = 1, 1, 300
 
 mt3d_times = np.arange(1.0, 51.0, 1.0)
@@ -79,7 +79,7 @@ mt3d_conc = np.array(
 )
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [20.0, 30.0]
     nper = len(perlen)
     nstp = [100, 100]
@@ -98,10 +98,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -321,7 +321,7 @@ def build_model(idx, dir):
 def make_plot(sim):
     print("making plots...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -344,22 +344,18 @@ def make_plot(sim):
     fname = os.path.join(ws, gwtname + ".png")
     plt.savefig(fname)
 
-    return
 
-
-def eval_transport(sim):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     makeplot = False
     if makeplot:
-        make_plot(sim)
+        make_plot(test)
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
     # load the observed concentrations in column 300
-    fname = os.path.join(sim.simpath, gwtname + ".obs.csv")
+    fname = os.path.join(test.workspace, gwtname + ".obs.csv")
     assert os.path.isfile(fname), f"file not found: {fname}"
     simvals = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
@@ -380,17 +376,13 @@ def eval_transport(sim):
     assert success, "Conc difference between mf6 and mt3d > 0.05"
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

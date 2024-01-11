@@ -9,7 +9,7 @@ module GwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
-                             LENPAKLOC, LENVARNAME
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
 
@@ -27,6 +27,8 @@ module GwtModule
   public :: gwt_cr
   public :: GwtModelType
   public :: CastAsGwtModel
+  public :: GWT_NBASEPKG, GWT_NMULTIPKG
+  public :: GWT_BASEPKG, GWT_MULTIPKG
   character(len=LENVARNAME), parameter :: dvt = 'CONCENTRATION   ' !< dependent variable type, varies based on model type
   character(len=LENVARNAME), parameter :: dvu = 'MASS            ' !< dependent variable unit of measure, either "mass" or "energy"
   character(len=LENVARNAME), parameter :: dvua = 'M               ' !< abbreviation of the dependent variable unit of measure, either "M" or "E"
@@ -62,6 +64,33 @@ module GwtModule
 
   end type GwtModelType
 
+  !> @brief GWT base package array descriptors
+  !!
+  !! GWT6 model base package types.  Only listed packages are candidates
+  !! for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWT_NBASEPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWT_NBASEPKG) :: GWT_BASEPKG
+  data GWT_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
+                  &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
+                  &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
+                  &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
+                  &30*'     '/ ! 50
+
+  !> @brief GWT multi package array descriptors
+  !!
+  !! GWT6 model multi-instance package types.  Only listed packages are
+  !! candidates for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWT_NMULTIPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWT_NMULTIPKG) :: GWT_MULTIPKG
+  data GWT_MULTIPKG/'CNC6 ', 'SRC6 ', 'LKT6 ', 'IST6 ', '     ', & !  5
+                   &'SFT6 ', 'MWT6 ', 'UZT6 ', 'API6 ', '     ', & ! 10
+                   &40*'     '/ ! 50
+
+  ! -- size of supported model package arrays
+  integer(I4B), parameter :: NIUNIT_GWT = GWT_NBASEPKG + GWT_NMULTIPKG
+
 contains
 
   !> @brief Create a new groundwater transport model object
@@ -73,8 +102,7 @@ contains
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
-    use GwfNamInputModule, only: GwfNamParamFoundType
+    use GwtNamInputModule, only: GwtNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -84,9 +112,6 @@ contains
     integer(I4B) :: indis
     type(GwtModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    character(len=LENMEMPATH) :: input_mempath
-    character(len=LINELENGTH) :: lst_fname
-    type(GwfNamParamFoundType) :: found
     !
     ! -- Allocate a new GWT Model (this)
     allocate (this)
@@ -103,33 +128,8 @@ contains
     model => this
     call AddBaseModelToList(basemodellist, model)
     !
-    ! -- Assign values
-    this%filename = filename
-    this%name = modelname
-    this%macronym = 'GWT'
-    this%id = id
-    !
-    ! -- set input model namfile memory path
-    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
-    !
-    ! -- copy option params from input context
-    call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
-    call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
-                       found%print_input)
-    call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
-                       found%print_flows)
-    call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
-    !
-    ! -- activate save_flows if found
-    if (found%save_flows) then
-      this%ipakcb = -1
-    end if
-    !
-    ! -- Create utility objects
-    call budget_cr(this%budget, this%name)
-    !
     ! -- Call parent class routine
-    call this%tsp_cr(filename, id, modelname, indis)
+    call this%tsp_cr(filename, id, modelname, 'GWT', indis)
     !
     ! -- create model packages
     call this%create_packages(indis)
@@ -146,7 +146,6 @@ contains
   !<
   subroutine gwt_df(this)
     ! -- modules
-    use ModelPackageInputsModule, only: NIUNIT_GWT
     use SimModule, only: store_error
     ! -- dummy
     class(GwtModelType) :: this
@@ -162,7 +161,8 @@ contains
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
-    call this%budget%budget_df(NIUNIT_GWT, 'MASS', 'M')
+    call this%budget%budget_df(NIUNIT_GWT, this%depvarunit, &
+                               this%depvarunitabbrev)
     !
     ! -- Check for SSM package
     if (this%inssm == 0) then
@@ -289,7 +289,7 @@ contains
     !call this%dis%dis_ar(this%npf%icelltype)
     !
     ! -- set up output control
-    call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%depvartype)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
@@ -484,6 +484,8 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
+    ! -- local
+    ! -- formats
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
@@ -756,8 +758,8 @@ contains
   !!
   !! Call the package create routines for packages activated by the user.
   !<
-  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
-                            iout)
+  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
+                            inunit, iout)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -776,6 +778,7 @@ contains
     integer(I4B), intent(in) :: ipakid
     integer(I4B), intent(in) :: ipaknum
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
@@ -786,21 +789,27 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, dvt, mempath)
     case ('SRC6')
-      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      this%depvartype, pakname)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac, this%depvartype, &
+                      this%depvarunit, this%depvarunitabbrev)
     case ('SFT6')
       call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac, this%depvartype, &
+                      this%depvarunit, this%depvarunitabbrev)
     case ('MWT6')
       call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac, this%depvartype, &
+                      this%depvarunit, this%depvarunitabbrev)
     case ('UZT6')
       call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac, this%depvartype, &
+                      this%depvarunit, this%depvarunitabbrev)
     case ('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%mst)
@@ -888,8 +897,8 @@ contains
           bndptype = pkgtype
         end if
         !
-        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, inunit, &
-                                 this%iout)
+        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, mempath, &
+                                 inunit, this%iout)
         ipakid = ipakid + 1
         ipaknum = ipaknum + 1
       end do

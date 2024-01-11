@@ -3,11 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["npf03_sfra", "npf03_sfrb"]
+cases = ["npf03_sfra", "npf03_sfrb"]
 fpth = str(project_root_path / "autotest" / "data" / "npf03_hk.ref")
 shape = (50, 108)
 hk = flopy.utils.Util2d.load_txt(shape, fpth, dtype=float, fmtin="(FREE)")
@@ -55,8 +55,8 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def build_model(idx, dir):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # set local data for this model
     ncolst, nmodels, mnames = get_local_data(idx)
@@ -73,7 +73,7 @@ def build_model(idx, dir):
     cd6right = {0: c6right}
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         memory_print_option="all",
@@ -336,9 +336,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_hds(sim):
-    print("evaluating mover test heads...")
-
+def check_output(idx, test):
     hdata = np.array(
         [
             1.200000000000000000e01,
@@ -5745,7 +5743,6 @@ def eval_hds(sim):
     )
     hdata = hdata.reshape((1, 50, 108))
 
-    idx = sim.idxsim
     ncolst, nmodels, mnames = get_local_data(idx)
 
     # make single head array
@@ -5756,7 +5753,7 @@ def eval_hds(sim):
 
     i0 = 0
     for j in range(nmodels):
-        fn = os.path.join(sim.simpath, f"{mnames[j]}.hds")
+        fn = os.path.join(test.workspace, f"{mnames[j]}.hds")
         hobj = flopy.utils.HeadFile(fn)
         h = hobj.get_data()
         i1 = i0 + h.shape[2]
@@ -5770,26 +5767,22 @@ def eval_hds(sim):
     msg = f"maximum absolute maw head difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_hds, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

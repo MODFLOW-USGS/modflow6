@@ -32,7 +32,7 @@ module ModflowInputModule
   !!
   !<
   type ModflowInputType
-    character(len=LENPACKAGETYPE) :: pkgtype
+    character(len=LENCOMPONENTNAME) :: pkgtype
     character(len=LENCOMPONENTNAME) :: component_type
     character(len=LENCOMPONENTNAME) :: subcomponent_type
     character(len=LENCOMPONENTNAME) :: component_name

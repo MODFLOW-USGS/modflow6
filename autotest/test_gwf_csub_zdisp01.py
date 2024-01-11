@@ -4,12 +4,12 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import compare_heads
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["csub_zdisp01"]
+from framework import TestFramework
+
+cases = ["csub_zdisp01"]
 cmppth = "mfnwt"
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(cases))]
 dtol = 1e-3
 budtol = 1e-2
 bud_lst = [
@@ -30,14 +30,14 @@ bud_lst = [
 # static model data
 # temporal discretization
 nper = 31
-perlen = [1.0] + [365.2500000 for i in range(nper - 1)]
-nstp = [1] + [6 for i in range(nper - 1)]
-tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-# tsmult = [1.0] + [1.0 for i in range(nper - 1)]
-steady = [True] + [False for i in range(nper - 1)]
+perlen = [1.0] + [365.2500000 for _ in range(nper - 1)]
+nstp = [1] + [6 for _ in range(nper - 1)]
+tsmult = [1.0] + [1.3 for _ in range(nper - 1)]
+# tsmult = [1.0] + [1.0 for _ in range(nper - 1)]
+steady = [True] + [False for _ in range(nper - 1)]
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # spatial discretization data
 nlay, nrow, ncol = 3, 20, 20
@@ -192,11 +192,11 @@ ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 
 
 # variant SUB package problem 3
-def get_model(idx, dir):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -328,8 +328,10 @@ def get_model(idx, dir):
 
     # build MODFLOW-NWT files
     cpth = cmppth
-    ws = os.path.join(dir, cpth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
+    ws = os.path.join(test.workspace, cpth)
+    mc = flopy.modflow.Modflow(
+        name, model_ws=ws, version=cpth, exe_name=test.targets["mfnwt"]
+    )
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
@@ -393,27 +395,24 @@ def get_model(idx, dir):
         idroptol=0,
     )
 
-    sim.write_simulation()
-    mc.write_input()
-
     return sim, mc
 
 
-def eval_zdisplacement(sim):
-    print("evaluating z-displacement...")
-
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW-2005 total compaction results
-    fn = f"{os.path.basename(sim.name)}.total_comp.hds"
-    fpth = os.path.join(sim.simpath, "mfnwt", fn)
+    fn = f"{os.path.basename(test.name)}.total_comp.hds"
+    fpth = os.path.join(test.workspace, "mfnwt", fn)
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
+        sobj = flopy.utils.HeadFile(
+            fpth, text="LAYER COMPACTION", verbose=False
+        )
         tc0 = sobj.get_ts((2, wrp[0], wcp[0]))
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -424,15 +423,15 @@ def eval_zdisplacement(sim):
     msg = f"maximum absolute total-compaction difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -451,11 +450,11 @@ def eval_zdisplacement(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
-    cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
+    cobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -473,60 +472,59 @@ def eval_zdisplacement(sim):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for key in bud_lst:
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for ii, key in enumerate(bud_lst):
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare z-displacement data
     fpth1 = os.path.join(
-        sim.simpath,
-        f"{os.path.basename(sim.name)}.zdisplacement.gridbin",
+        test.workspace,
+        f"{os.path.basename(test.name)}.zdisplacement.gridbin",
     )
-    fpth2 = os.path.join(sim.simpath, cmppth, "csub_zdisp01.vert_disp.hds")
+    fpth2 = os.path.join(test.workspace, cmppth, "csub_zdisp01.vert_disp.hds")
     text1 = "CSUB-ZDISPLACE"
     text2 = "Z DISPLACEMENT"
     fout = os.path.join(
-        sim.simpath,
-        f"{os.path.basename(sim.name)}.z-displacement.bin.out",
+        test.workspace,
+        f"{os.path.basename(test.name)}.z-displacement.bin.out",
     )
     success_tst = compare_heads(
         None,
@@ -542,28 +540,22 @@ def eval_zdisplacement(sim):
     )
     msg = f"z-displacement comparison success = {success_tst}"
     if success_tst:
-        sim.success = True
+        test.success = True
         print(msg)
     else:
-        sim.success = False
+        test.success = False
         assert success_tst, msg
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    sim, mc = get_model(idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_zdisplacement,
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        htol=htol[idx],
     )
+    test.run()

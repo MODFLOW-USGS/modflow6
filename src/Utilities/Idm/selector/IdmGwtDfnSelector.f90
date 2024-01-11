@@ -9,69 +9,17 @@ module IdmGwtDfnSelectorModule
   use GwtDisuInputModule
   use GwtDisvInputModule
   use GwtDspInputModule
+  use GwtCncInputModule
+  use GwtIcInputModule
   use GwtNamInputModule
 
   implicit none
   private
-  public :: GwtParamFoundType
   public :: gwt_param_definitions
   public :: gwt_aggregate_definitions
   public :: gwt_block_definitions
   public :: gwt_idm_multi_package
-  public :: gwt_idm_sfac_param
   public :: gwt_idm_integrated
-
-  type GwtParamFoundType
-    logical :: length_units = .false.
-    logical :: nogrb = .false.
-    logical :: xorigin = .false.
-    logical :: yorigin = .false.
-    logical :: angrot = .false.
-    logical :: nlay = .false.
-    logical :: nrow = .false.
-    logical :: ncol = .false.
-    logical :: delr = .false.
-    logical :: delc = .false.
-    logical :: top = .false.
-    logical :: botm = .false.
-    logical :: idomain = .false.
-    logical :: voffsettol = .false.
-    logical :: nodes = .false.
-    logical :: nja = .false.
-    logical :: nvert = .false.
-    logical :: bot = .false.
-    logical :: area = .false.
-    logical :: iac = .false.
-    logical :: ja = .false.
-    logical :: ihc = .false.
-    logical :: cl12 = .false.
-    logical :: hwva = .false.
-    logical :: angldegx = .false.
-    logical :: iv = .false.
-    logical :: xv = .false.
-    logical :: yv = .false.
-    logical :: icell2d = .false.
-    logical :: xc = .false.
-    logical :: yc = .false.
-    logical :: ncvert = .false.
-    logical :: icvert = .false.
-    logical :: ncpl = .false.
-    logical :: xt3d_off = .false.
-    logical :: xt3d_rhs = .false.
-    logical :: diffc = .false.
-    logical :: alh = .false.
-    logical :: alv = .false.
-    logical :: ath1 = .false.
-    logical :: ath2 = .false.
-    logical :: atv = .false.
-    logical :: list = .false.
-    logical :: print_input = .false.
-    logical :: print_flows = .false.
-    logical :: save_flows = .false.
-    logical :: ftype = .false.
-    logical :: fname = .false.
-    logical :: pname = .false.
-  end type GwtParamFoundType
 
 contains
 
@@ -100,6 +48,10 @@ contains
       call set_param_pointer(input_definition, gwt_disv_param_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_param_definitions)
+    case ('CNC')
+      call set_param_pointer(input_definition, gwt_cnc_param_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwt_ic_param_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwt_nam_param_definitions)
     case default
@@ -120,6 +72,10 @@ contains
       call set_param_pointer(input_definition, gwt_disv_aggregate_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_aggregate_definitions)
+    case ('CNC')
+      call set_param_pointer(input_definition, gwt_cnc_aggregate_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwt_ic_aggregate_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwt_nam_aggregate_definitions)
     case default
@@ -140,6 +96,10 @@ contains
       call set_block_pointer(input_definition, gwt_disv_block_definitions)
     case ('DSP')
       call set_block_pointer(input_definition, gwt_dsp_block_definitions)
+    case ('CNC')
+      call set_block_pointer(input_definition, gwt_cnc_block_definitions)
+    case ('IC')
+      call set_block_pointer(input_definition, gwt_ic_block_definitions)
     case ('NAM')
       call set_block_pointer(input_definition, gwt_nam_block_definitions)
     case default
@@ -159,6 +119,10 @@ contains
       multi_package = gwt_disv_multi_package
     case ('DSP')
       multi_package = gwt_dsp_multi_package
+    case ('CNC')
+      multi_package = gwt_cnc_multi_package
+    case ('IC')
+      multi_package = gwt_ic_multi_package
     case ('NAM')
       multi_package = gwt_nam_multi_package
     case default
@@ -168,28 +132,6 @@ contains
     end select
     return
   end function gwt_idm_multi_package
-
-  function gwt_idm_sfac_param(subcomponent) result(sfac_param)
-    character(len=*), intent(in) :: subcomponent
-    character(len=LENVARNAME) :: sfac_param
-    select case (subcomponent)
-    case ('DIS')
-      sfac_param = gwt_dis_aux_sfac_param
-    case ('DISU')
-      sfac_param = gwt_disu_aux_sfac_param
-    case ('DISV')
-      sfac_param = gwt_disv_aux_sfac_param
-    case ('DSP')
-      sfac_param = gwt_dsp_aux_sfac_param
-    case ('NAM')
-      sfac_param = gwt_nam_aux_sfac_param
-    case default
-      call store_error('Idm selector subcomponent not found; '//&
-                       &'component="GWT"'//&
-                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
-    end select
-    return
-  end function gwt_idm_sfac_param
 
   function gwt_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent
@@ -203,6 +145,10 @@ contains
     case ('DISV')
       integrated = .true.
     case ('DSP')
+      integrated = .true.
+    case ('CNC')
+      integrated = .true.
+    case ('IC')
       integrated = .true.
     case ('NAM')
       integrated = .true.

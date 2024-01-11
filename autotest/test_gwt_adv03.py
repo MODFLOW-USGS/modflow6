@@ -1,10 +1,8 @@
 """
-MODFLOW 6 Autotest
 Test the advection schemes in the gwt advection package for a three-dimensional
 model grid of triangular cells.  The cells are created by starting with a
 regular grid of squares and then cutting every cell into a triangle, except
 the first and last.
-
 """
 
 import os
@@ -13,10 +11,10 @@ import flopy
 import flopy.utils.cvfdutil
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["adv03a", "adv03b", "adv03c"]
+from framework import TestFramework
+
+cases = ["adv03a", "adv03b", "adv03c"]
 scheme = ["upstream", "central", "tvd"]
 
 
@@ -65,7 +63,7 @@ def cvfd_to_cell2d(verts, iverts):
     return vertices, cell2d
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 5, 10, 20
     nper = 1
     delr = 1.0
@@ -93,10 +91,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -331,13 +329,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -482,29 +478,25 @@ def eval_transport(sim):
     # dimensional
     creslist = [cres1, cres2, cres3]
     ncellsperrow = cres1.shape[0]
-    assert np.allclose(creslist[sim.idxsim], conc[0, 0, 0:ncellsperrow]), (
+    assert np.allclose(creslist[idx], conc[0, 0, 0:ncellsperrow]), (
         "simulated concentrations do not match with known solution.",
-        creslist[sim.idxsim],
+        creslist[idx],
         conc[0, 0, -ncellsperrow:],
     )
-    assert np.allclose(creslist[sim.idxsim], conc[0, 0, -ncellsperrow:]), (
+    assert np.allclose(creslist[idx], conc[0, 0, -ncellsperrow:]), (
         "simulated concentrations do not match with known solution.",
-        creslist[sim.idxsim],
+        creslist[idx],
         conc[0, 0, -ncellsperrow:],
     )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

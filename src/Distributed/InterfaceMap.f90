@@ -1,7 +1,7 @@
 module InterfaceMapModule
   use KindModule, only: I4B
   use ConstantsModule, only: LENMODELNAME, LENEXCHANGENAME
-  use ArrayHandlersModule, only: ExtendPtrArray, ifind
+  use ArrayHandlersModule, only: ifind
   use IndexMapModule
 
   implicit none

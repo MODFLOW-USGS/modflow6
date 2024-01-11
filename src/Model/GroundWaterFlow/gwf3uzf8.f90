@@ -10,7 +10,6 @@ module UzfModule
                              DHNOFLO, DHDRY, &
                              TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use GenericUtilitiesModule, only: sim_message
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
@@ -169,15 +168,9 @@ module UzfModule
 
 contains
 
+  !> @brief Create a New UZF Package and point packobj to the new package
+  !<
   subroutine uzf_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
-! ******************************************************************************
-! uzf_create -- Create a New UZF Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -190,7 +183,6 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(UzfType), pointer :: uzfobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (uzfobj)
@@ -215,17 +207,13 @@ contains
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_create
 
+  !> @brief Allocate and Read
+  !<
   subroutine uzf_ar(this)
-! ******************************************************************************
-! uzf_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_reallocate
     ! -- dummy
@@ -233,7 +221,6 @@ contains
     ! -- local
     integer(I4B) :: n, i
     real(DP) :: hgwf
-! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
@@ -269,24 +256,18 @@ contains
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_ar
 
+  !> @brief Allocate arrays used for uzf
+  !<
   subroutine uzf_allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- allocate arrays used for uzf
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars (now done from AR)
     !call this%BndType%allocate_arrays()
@@ -309,11 +290,11 @@ contains
     call mem_allocate(this%rch0, this%nodes, 'RCH0', this%memoryPath)
     call mem_allocate(this%qsto, this%nodes, 'QSTO', this%memoryPath)
     call mem_allocate(this%deriv, this%nodes, 'DERIV', this%memoryPath)
-
+    !
     ! -- integer vectors
     call mem_allocate(this%ia, this%dis%nodes + 1, 'IA', this%memoryPath)
     call mem_allocate(this%ja, this%nodes, 'JA', this%memoryPath)
-
+    !
     ! -- allocate timeseries aware variables
     call mem_allocate(this%sinf, this%nodes, 'SINF', this%memoryPath)
     call mem_allocate(this%pet, this%nodes, 'PET', this%memoryPath)
@@ -324,7 +305,7 @@ contains
     call mem_allocate(this%rootact, this%nodes, 'ROOTACT', this%memoryPath)
     call mem_allocate(this%uauxvar, this%naux, this%nodes, 'UAUXVAR', &
                       this%memoryPath)
-
+    !
     ! -- initialize
     do i = 1, this%nodes
       this%appliedinf(i) = DZERO
@@ -388,20 +369,16 @@ contains
       this%qauxcbc(i) = DZERO
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_allocate_arrays
-!
 
+  !> @brief Set options specific to UzfType
+  !!
+  !! Overrides BoundaryPackageType%child_class_options
+  !<
   subroutine uzf_options(this, option, found)
-! ******************************************************************************
-! uzf_options -- set options specific to UzfType
-!
-! uzf_options overrides BoundaryPackageType%child_class_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: store_error
@@ -436,8 +413,6 @@ contains
       &a, /4x, 'OPENED ON UNIT: ', I0)"
     character(len=*), parameter :: fmtuzfopt = &
       &"(4x, 'UZF ', a, ' VALUE (',g15.7,') SPECIFIED.')"
-
-! ------------------------------------------------------------------------------
     !
     !
     found = .true.
@@ -541,26 +516,20 @@ contains
       ! -- No options found
       found = .false.
     end select
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_options
 !
+  !> @brief Set dimensions specific to UzfType
+  !<
   subroutine uzf_readdimensions(this)
-! ******************************************************************************
-! uzf_readdimensions -- set dimensions specific to UzfType
-!
-! uzf_readdimensions BoundaryPackageType%readdimensions
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use InputOutputModule, only: urword
     use SimModule, only: store_error, count_errors
     class(uzftype), intent(inout) :: this
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
     this%nodes = -1
@@ -659,20 +628,17 @@ contains
     ! -- setup the budget object
     call this%uzf_setup_budobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_readdimensions
 
+  !> @brief Read stress data
+  !!
+  !!  - check if bc changes
+  !!  - read new bc for stress period
+  !!  - set kinematic variables to bc values
+  !<
   subroutine uzf_rp(this)
-! ******************************************************************************
-! uzf_rp -- Read stress data
-! Subroutine: (1) check if bc changes
-!             (2) read new bc for stress period
-!             (3) set kinematic variables to bc values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, nper
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
@@ -708,7 +674,6 @@ contains
       &WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtflow = &
       &"(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
-! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
@@ -958,17 +923,13 @@ contains
     ! -- Save old ss flag
     this%issflagold = this%issflag
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_rp
 
+  !> @brief Advance UZF Package
+  !<
   subroutine uzf_ad(this)
-! ******************************************************************************
-! uzf_ad -- Advance UZF Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
@@ -978,7 +939,6 @@ contains
     integer(I4B) :: ivertflag
     integer(I4B) :: n, iaux
     real(DP) :: rval1, rval2, rval3
-! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
@@ -1069,21 +1029,17 @@ contains
     return
   end subroutine uzf_ad
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !!   - skip if no UZF cells
+  !!   - calculate hcof and rhs
+  !<
   subroutine uzf_cf(this)
-! ******************************************************************************
-! uzf_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no UZF cells
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no UZF cells
     if (this%nodes == 0) return
@@ -1096,17 +1052,13 @@ contains
       this%gwd0(n) = this%gwd(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine uzf_fc(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! uzf_fc -- Copy rhs and hcof into solution rhs and amat
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -1115,7 +1067,6 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
-! ------------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if (this%imover == 1) then
@@ -1134,17 +1085,13 @@ contains
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_fc
-!
+
+  !> @brief Fill newton terms
+  !<
   subroutine uzf_fn(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! uzf_fn -- Fill newton terms
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -1154,7 +1101,6 @@ contains
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: ipos
-! --------------------------------------------------------------------------
     !
     ! -- Add derivative terms to rhs and amat
     do i = 1, this%nodes
@@ -1164,17 +1110,14 @@ contains
       rhs(n) = rhs(n) + this%deriv(i) * this%xnew(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_fn
 
+  !> @brief Final convergence check for package
+  !<
   subroutine uzf_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
-! **************************************************************************
-! uzf_cc -- Final convergence check for package
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(Uzftype), intent(inout) :: this
@@ -1208,8 +1151,6 @@ contains
     real(DP) :: dseepmax
     real(DP) :: dqfrommvr
     real(DP) :: dqfrommvrmax
-    ! format
-! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
     icheck = this%iconvchk
@@ -1400,17 +1341,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_cc
 
+  !> @brief Calculate flows
+  !<
   subroutine uzf_cq(this, x, flowja, iadv)
-! **************************************************************************
-! uzf_cq -- Calculate flows
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DHNOFLO, DHDRY
@@ -1431,7 +1368,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       &"(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
-! ------------------------------------------------------------------------------
     !
     ! -- Make uzf solution for budget calculations, and then reset waves.
     !    Final uzf solve will be done as part of ot().
@@ -1509,12 +1445,13 @@ contains
     ! -- fill the budget object
     call this%uzf_fill_budobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_cq
 
   function get_storage_change(top, bot, carea, hold, hnew, wcold, wcnew, &
                               thtr, delt, iss) result(qsto)
+    ! -- dummy
     real(DP), intent(in) :: top
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: hold
@@ -1525,7 +1462,9 @@ contains
     real(DP), intent(in) :: carea
     real(DP), intent(in) :: delt
     integer(I4B) :: iss
+    ! -- return
     real(DP) :: qsto
+    ! -- local
     real(DP) :: thknew
     real(DP) :: thkold
     if (iss == 0) then
@@ -1542,9 +1481,13 @@ contains
     else
       qsto = DZERO
     end if
+    !
+    ! -- Return
     return
   end function get_storage_change
 
+  !> @brief Add package ratin/ratout to model budget
+  !<
   subroutine uzf_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
@@ -1555,12 +1498,12 @@ contains
     real(DP) :: ratout
     integer(I4B) :: isuppress_output
     isuppress_output = 0
-
+    !
     ! -- Calculate flow from uzf to gwf (UZF-GWRCH)
     call rate_accumulator(this%rch, ratin, ratout)
     call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2), &
                                isuppress_output, this%packName)
-
+    !
     ! -- GW discharge and GW discharge to mover
     if (this%iseepflag == 1) then
       call rate_accumulator(-this%gwd, ratin, ratout)
@@ -1572,24 +1515,21 @@ contains
                                    isuppress_output, this%packName)
       end if
     end if
-
+    !
     ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
     if (this%igwetflag /= 0) then
       call rate_accumulator(-this%gwet, ratin, ratout)
       call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4), &
                                  isuppress_output, this%packName)
     end if
-
+    !
+    ! -- Return
     return
   end subroutine uzf_bd
 
+  !> @brief Write flows to binary file and/or print flows to budget
+  !<
   subroutine uzf_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
-! ******************************************************************************
-! bnd_ot_model_flows -- write flows to binary file and/or print flows to budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BndModule, only: save_print_model_flows
@@ -1602,8 +1542,6 @@ contains
     ! -- local
     character(len=LINELENGTH) :: title
     integer(I4B) :: itxt
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- UZF-GWRCH
     itxt = 2
@@ -1663,12 +1601,16 @@ contains
                                   this%boundname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_ot_model_flows
 
+  !> @brief Output UZF package flow terms
+  !<
   subroutine uzf_ot_package_flows(this, icbcfl, ibudfl)
+    ! -- modules
     use TdisModule, only: kstp, kper, delt, pertim, totim
+    ! -- dummy
     class(UzfType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
@@ -1689,15 +1631,22 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine uzf_ot_package_flows
 
+  !> @brief Save UZF-calculated values to binary file
+  !<
   subroutine uzf_ot_dv(this, idvsave, idvprint)
+    ! -- modules
     use TdisModule, only: kstp, kper, pertim, totim
+    ! -- dummy
     use InputOutputModule, only: ulasav
     class(UzfType) :: this
     integer(I4B), intent(in) :: idvsave
     integer(I4B), intent(in) :: idvprint
+    ! -- local
     integer(I4B) :: ibinun
     !
     ! -- set unit number for binary dependent variable output
@@ -1712,8 +1661,13 @@ contains
       call ulasav(this%wcnew, '   WATER-CONTENT', kstp, kper, pertim, &
                   totim, this%nodes, 1, 1, ibinun)
     end if
+    !
+    ! -- Return
+    return
   end subroutine uzf_ot_dv
 
+  !> @brief Write UZF budget to listing file
+  !<
   subroutine uzf_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
@@ -1726,17 +1680,13 @@ contains
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_ot_bdsummary
 
+  !> @brief Formulate the HCOF and RHS terms
+  !<
   subroutine uzf_solve(this, reset_state)
-! ******************************************************************************
-! uzf_solve -- Formulate the HCOF and RHS terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     logical, intent(in) :: reset_state !< flag indicating that waves should be reset after solution
@@ -1751,7 +1701,6 @@ contains
     real(DP) :: qformvr
     real(DP) :: wc
     real(DP) :: watabold
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     ierr = 0
@@ -1853,20 +1802,16 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_solve
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !!  option is used
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(UzfType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -1885,18 +1830,21 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
+  !> @brief Identify overlying cell ID based on user-specified mapping
+  !<
   subroutine findcellabove(this, n, nml)
+    ! -- dummy
     class(UzfType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(inout) :: nml
+    ! -- local
     integer(I4B) :: m, ipos
-! ------------------------------------------------------------------------------
-!
-    ! -- return nml = n if no cell is above it
+    !
+    ! -- Return nml = n if no cell is above it
     nml = n
     do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
       m = this%dis%con%ja(ipos)
@@ -1909,17 +1857,17 @@ contains
         end if
       end if
     end do
+    !
+    ! -- Return
     return
   end subroutine findcellabove
 
+  !> @brief Read UZF cell properties and set them for UzfCellGroup type
+  !<
   subroutine read_cell_properties(this)
-! ******************************************************************************
-! read_cell_properties -- Read UZF cell properties and set them for
-!                         UzfCellGroup type.
-! ******************************************************************************
+    ! -- modules
     use InputOutputModule, only: urword
     use SimModule, only: store_error, count_errors
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -1936,8 +1884,6 @@ contains
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
     integer(I4B), dimension(:), allocatable :: nboundchk
-! ------------------------------------------------------------------------------
-!
     !
     ! -- allocate space for node counter and initilize
     allocate (rowmaxnnz(this%dis%nodes))
@@ -2149,16 +2095,13 @@ contains
     deallocate (rowmaxnnz)
     deallocate (nboundchk)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_cell_properties
 
+  !> @brief Read UZF cell properties and set them for UZFCellGroup type
+  !<
   subroutine print_cell_properties(this)
-! ******************************************************************************
-! print_cell_properties -- Read UZF cell properties and set them for
-!                          UZFCellGroup type.
-! ******************************************************************************
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -2169,8 +2112,6 @@ contains
     integer(I4B) :: ntabcols
     integer(I4B) :: i
     integer(I4B) :: node
-! ------------------------------------------------------------------------------
-!
     !
     ! -- setup inputtab tableobj
     !
@@ -2238,17 +2179,16 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine print_cell_properties
 
+  !> @brief Check UZF cell areas
+  !<
   subroutine check_cell_area(this)
-! ******************************************************************************
-! check_cell_area -- Check UZF cell areas.
-! ******************************************************************************
+    ! -- modules
     use InputOutputModule, only: urword
     use SimModule, only: store_error, count_errors
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
     ! -- local
@@ -2266,8 +2206,6 @@ contains
     real(DP) :: sumarea
     real(DP) :: cellarea
     real(DP) :: d
-! ------------------------------------------------------------------------------
-!
     !
     ! -- check that the area of vertically connected uzf cells is the equal
     do i = 1, this%nodes
@@ -2322,40 +2260,36 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    ! -- return
+    ! -- Return
     return
   end subroutine check_cell_area
 
   ! -- Procedures related to observations (type-bound)
+
+  !> @brief Return true because uzf package supports observations
+  !!
+  !! Overrides BndType%bnd_obs_supported
+  !<
   logical function uzf_obs_supported(this)
-! ******************************************************************************
-! uzf_obs_supported
-!   -- Return true because uzf package supports observations.
-!   -- Overrides BndType%bnd_obs_supported
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(UzfType) :: this
-! ------------------------------------------------------------------------------
+    !
     uzf_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function uzf_obs_supported
 
+  !> @brief Implements bnd_df_obs
+  !!
+  !! Store observation type supported by uzf package.
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine uzf_df_obs(this)
-! ******************************************************************************
-! uzf_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by uzf package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !
@@ -2407,19 +2341,14 @@ contains
     call this%obs%StoreObsType('water-content', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => uzf_process_obsID
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_df_obs
-!
+
+  !> @brief Calculate observations this time step and call ObsType%SaveOneSimval
+  !! for each UzfType observation
+  !<
   subroutine uzf_bd_obs(this)
-    ! **************************************************************************
-    ! uzf_bd_obs
-    !   -- Calculate observations this time step and call
-    !      ObsType%SaveOneSimval for each UzfType observation.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy
     class(UzfType) :: this
     ! -- local
@@ -2428,7 +2357,6 @@ contains
     integer(I4B) :: n
     real(DP) :: v
     type(ObserveType), pointer :: obsrv => null()
-    !---------------------------------------------------------------------------
     !
     ! -- Make final uzf solution, and do not reset waves.  This will advance
     !    the waves to their new state at the end of the time step.  This should
@@ -2510,11 +2438,17 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_bd_obs
-!
+
+  !> @brief Process each observation
+  !!
+  !! Only done the first stress period since boundaries are fixed for the
+  !! simulation
+  !<
   subroutine uzf_rp_obs(this)
+    ! -- modules
     use TdisModule, only: kper
     ! -- dummy
     class(UzfType), intent(inout) :: this
@@ -2528,13 +2462,9 @@ contains
     real(DP) :: dmax
     character(len=LENBOUNDNAME) :: bname
     class(ObserveType), pointer :: obsrv => null()
-    ! --------------------------------------------------------------------------
     ! -- formats
 60  format('Invalid node number in OBS input: ', i0)
     !
-    ! -- process each package observation
-    !    only done the first stress period since boundaries are fixed
-    !    for the simulation
     if (kper == 1) then
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
@@ -2633,13 +2563,19 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine uzf_rp_obs
-  !
+
   ! -- Procedures related to observations (NOT type-bound)
+
+  !> @brief This procedure is pointed to by ObsDataType%ProcesssIdPtr
+  !!
+  !! Process the ID string of an observation definition for UZF-package
+  !! observations
+  !<
   subroutine uzf_process_obsID(obsrv, dis, inunitobs, iout)
-    ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-    !    the ID string of an observation definition for UZF-package observations.
+    ! -- .
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -2684,22 +2620,17 @@ contains
       obsrv%Obsdepth = obsdepth
     end if
     !
+    ! -- Return
     return
   end subroutine uzf_process_obsID
 
+  !> @brief Allocate scalar members
+  !<
   subroutine uzf_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(UzfType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -2727,7 +2658,7 @@ contains
     call mem_allocate(this%igwetflag, 'IGWETFLAG', this%memoryPath)
     call mem_allocate(this%iuzf2uzf, 'IUZF2UZF', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
-
+    !
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     !
     ! -- initialize scalars
@@ -2752,30 +2683,24 @@ contains
     ! -- convergence check
     this%iconvchk = 1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_allocate_scalars
-!
+
+  !> @brief Deallocate objects
+  !<
   subroutine uzf_da(this)
-! ******************************************************************************
-! uzf_da -- Deallocate objects
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(UzfType) :: this
-    ! -- locals
-    ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
     deallocate (this%uzfobj)
     nullify (this%uzfobj)
     call this%uzfobjwork%dealloc()
-
+    !
     call this%budobj%budgetobject_da()
     deallocate (this%budobj)
     nullify (this%budobj)
@@ -2862,15 +2787,12 @@ contains
     return
   end subroutine uzf_da
 
+  !> @brief Set up the budget object that stores all the uzf flows
+  !!
+  !! The terms listed here must correspond in number and order to the ones
+  !! listed in the uzf_fill_budobj routine
+  !<
   subroutine uzf_setup_budobj(this)
-! ******************************************************************************
-! uzf_setup_budobj -- Set up the budget object that stores all the uzf flows
-!   The terms listed here must correspond in number and order to the ones
-!   listed in the uzf_fill_budobj routine.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -2885,7 +2807,6 @@ contains
     real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
-! ------------------------------------------------------------------------------
     !
     ! -- Determine the number of uzf to uzf connections
     nlen = 0
@@ -3068,19 +2989,13 @@ contains
       call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
-    ! -- return
+    ! -- Return
     return
-
   end subroutine uzf_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine uzf_fill_budobj(this)
-! ******************************************************************************
-! uzf_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfType) :: this
     ! -- local
@@ -3096,8 +3011,6 @@ contains
     real(DP) :: thick
     real(DP) :: fm
     real(DP) :: v
-    ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- initialize counter
     idx = 0
@@ -3229,7 +3142,7 @@ contains
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzf_fill_budobj
 

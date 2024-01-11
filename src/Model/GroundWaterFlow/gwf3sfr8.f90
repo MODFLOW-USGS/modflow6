@@ -3836,6 +3836,10 @@ contains
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         this%qconn(i) = DZERO
+        idiv = this%idiv(i)
+        if (idiv == 0) cycle
+        jpos = this%iadiv(n) + idiv - 1
+        this%divq(jpos) = DZERO
       end do
     end if
     !

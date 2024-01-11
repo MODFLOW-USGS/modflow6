@@ -3,7 +3,13 @@ program tester
   use testdrive, only: run_testsuite, new_testsuite, testsuite_type, &
     & select_suite, run_selected, get_argument
   use TestArrayHandlers, only: collect_arrayhandlers
+  use TestDevFeature, only: collect_dev_feature
   use TestGeomUtil, only: collect_geomutil
+  use TestHashTable, only: collect_hashtable
+  use TestInputOutput, only: collect_inputoutput
+  use TestMathUtil, only: collect_mathutil
+  use TestMessage, only: collect_message
+  use TestSim, only: collect_sim
   implicit none
   integer :: stat, is
   character(len=:), allocatable :: suite_name, test_name
@@ -13,7 +19,13 @@ program tester
   stat = 0
   testsuites = [ &
                new_testsuite("ArrayHandlers", collect_arrayhandlers), &
-               new_testsuite("GeomUtil", collect_geomutil) &
+               new_testsuite("DevFeature", collect_dev_feature), &
+               new_testsuite("GeomUtil", collect_geomutil), &
+               new_testsuite("HashTable", collect_hashtable), &
+               new_testsuite("InputOutput", collect_inputoutput), &
+               new_testsuite("MathUtil", collect_mathutil), &
+               new_testsuite("Message", collect_message), &
+               new_testsuite("Sim", collect_sim) &
                ]
 
   call get_argument(1, suite_name)

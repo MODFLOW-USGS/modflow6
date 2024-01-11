@@ -1,23 +1,21 @@
 """
-MODFLOW 6 Autotest
 Test variable layer thicknesses with a diffusion problem and constant
 concentrations on the top and bottom to make sure the resulting concentration
 field is linear from top to bottom.
-
 """
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["dsp05a_noadv", "dsp01b_noadv"]
+from framework import TestFramework
+
+cases = ["dsp05a_noadv", "dsp01b_noadv"]
 xt3d = [False, True]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 5, 1, 1
     nper = 1
     perlen = [5.0]
@@ -36,10 +34,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -133,13 +131,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = ex[sim.idxsim]
+def check_output(idx, test):
+    name = cases[idx]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -161,17 +157,13 @@ def eval_transport(sim):
     assert np.allclose(cres, conc.flatten()), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

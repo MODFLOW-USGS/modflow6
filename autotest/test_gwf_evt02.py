@@ -3,14 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["evt02"]
+cases = ["evt02"]
 
 
-def build_model(idx, dir, exe):
-
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
     nper = len(chdheads)
@@ -28,12 +27,12 @@ def build_model(idx, dir, exe):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -151,25 +150,19 @@ def etfunc(h, qmax, surf, exdp, petm, pxdp, petm0=1.0):
     return q, hcof, rhs
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
+def check_output(idx, test):
     # The nature of the bug is that the model crashes with nseg=1
-    fpth = os.path.join(sim.simpath, "evt02.cbc")
+    fpth = os.path.join(test.workspace, "evt02.cbc")
     assert os.path.isfile(fpth), "model did not run with nseg=1 in EVT input"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    mf6 = targets["mf6"]
-    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

@@ -11,18 +11,18 @@ module InputOutputModule
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: is_same, sim_message
+  use MessageModule, only: write_message
   private
   public :: GetUnit,                                                           &
             UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
-            same_word, get_node, get_ijk, str_pad_left, unitinquire,           &
+            same_word, str_pad_left, unitinquire,           &
             ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
             read_line,                                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
-            get_jk, print_format, BuildFixedFormat,                            &
+            print_format, BuildFixedFormat,                            &
             BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
             get_nwords, u9rdcom,                                               &
             append_processor_id
@@ -567,8 +567,8 @@ module InputOutputModule
       ELSE
         WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
       END IF
-      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+      call write_message(msg_line, iunit=IOUT, skipbefore=1)
+      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
 201   FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
              '" TO ',A,' IN LINE:')
 202   FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
@@ -581,8 +581,8 @@ module InputOutputModule
       ELSE
         WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
       END IF
-      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+      call write_message(msg_line, iunit=IOUT, skipbefore=1)
+      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
     END IF
     !
     ! -- STOP after storing error message.
@@ -1144,62 +1144,6 @@ END SUBROUTINE URWORD
     return
   end function same_word
 
-  function get_node(ilay, irow, icol, nlay, nrow, ncol)
-    ! Return node number, given layer, row, and column indices
-    ! for a structured grid.  If any argument is invalid,
-    ! return -1.
-    implicit none
-    ! -- return
-    integer(I4B) :: get_node
-    ! -- dummy variables
-    integer(I4B), intent(in) :: ilay, irow, icol, nlay, nrow, ncol
-    !
-    if (nlay>0 .and. nrow>0 .and. ncol>0) then
-      if (ilay>0 .and. ilay<=nlay) then
-        if (irow>0 .and. irow<=nrow) then
-          if (icol>0 .and. icol<=ncol) then
-            get_node = icol + ncol*(irow-1) + (ilay-1)*nrow*ncol
-            return
-          endif
-        endif
-      endif
-    endif
-    get_node = -1
-    return
-  end function get_node
-
-  subroutine get_ijk(nodenumber, nrow, ncol, nlay, irow, icol, ilay)
-    ! Calculate irow, icol, and ilay from the nodenumber and grid
-    ! dimensions.  If nodenumber is invalid, set irow, icol, and
-    ! ilay to -1
-    implicit none
-    ! -- dummy variables
-    integer(I4B), intent(in) :: nodenumber
-    integer(I4B), intent(in) :: nrow
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nlay
-    integer(I4B), intent(out) :: irow
-    integer(I4B), intent(out) :: icol
-    integer(I4B), intent(out) :: ilay
-    ! -- local variables
-    integer(I4B) :: nodes
-    integer(I4B) :: ij
-    !
-    nodes = nlay * nrow * ncol
-    if(nodenumber < 1 .or. nodenumber > nodes) then
-      irow = -1
-      icol = -1
-      ilay = -1
-    else
-      ilay = (nodenumber - 1) / (ncol * nrow) + 1
-      ij = nodenumber - (ilay - 1) * ncol * nrow
-      irow = (ij - 1) / ncol + 1
-      icol = ij - (irow - 1) * ncol
-    endif
-    !
-    return
-  end subroutine get_ijk
-  
   !> @brief Function for string manipulation
   !<
   function str_pad_left(str, width) result(res)
@@ -1215,32 +1159,6 @@ END SUBROUTINE URWORD
     ! -- Return
     return
   end function
-
-  subroutine get_jk(nodenumber, ncpl, nlay, icpl, ilay)
-    ! Calculate icpl, and ilay from the nodenumber and grid
-    ! dimensions.  If nodenumber is invalid, set irow, icol, and
-    ! ilay to -1
-    implicit none
-    ! -- dummy variables
-    integer(I4B), intent(in) :: nodenumber
-    integer(I4B), intent(in) :: ncpl
-    integer(I4B), intent(in) :: nlay
-    integer(I4B), intent(out) :: icpl
-    integer(I4B), intent(out) :: ilay
-    ! -- local variables
-    integer(I4B) :: nodes
-    !
-    nodes = ncpl * nlay
-    if(nodenumber < 1 .or. nodenumber > nodes) then
-      icpl = -1
-      ilay = -1
-    else
-      ilay = (nodenumber - 1) / ncpl + 1
-      icpl = nodenumber - (ilay - 1) * ncpl
-    endif
-    !
-    return
-  end subroutine get_jk
 
   subroutine unitinquire(iu)
     ! -- dummy variables
@@ -1261,9 +1179,9 @@ END SUBROUTINE URWORD
     !
     ! -- write the results of the inquire statement
     write(line,fmta) iu, trim(fname), trim(ac), trim(act)
-    call sim_message(line)
+    call write_message(line)
     write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
-    call sim_message(line)
+    call write_message(line)
     !
     ! -- return
     return

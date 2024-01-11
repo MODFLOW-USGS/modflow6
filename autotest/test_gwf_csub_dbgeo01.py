@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["csub_dbgeo01a"]
+from framework import TestFramework
+
+cases = ["csub_dbgeo01a"]
 ndcell = [19]
 strt = [0.0]
 chdh = [0]
@@ -130,13 +130,13 @@ botm = [top] + bots
 
 # temporal discretization
 nper = 1
-perlen = [1000.0 for i in range(nper)]
-nstp = [100 for i in range(nper)]
-tsmult = [1.05 for i in range(nper)]
-steady = [False for i in range(nper)]
+perlen = [1000.0 for _ in range(nper)]
+nstp = [100 for _ in range(nper)]
+tsmult = [1.05 for _ in range(nper)]
+steady = [False for _ in range(nper)]
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 hnoflo = 1e30
 hdry = -1e30
@@ -190,7 +190,7 @@ def calc_stress(sgm0, sgs0, h, bt):
     return geo, es
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     c6 = []
     for j in range(0, ncol, 2):
         c6.append([(0, 0, j), chdh[idx]])
@@ -199,10 +199,10 @@ def build_model(idx, dir):
     geo, es = calc_stress(sgm, sgs, strt[idx], botm)
     sub6 = [[0, (0, 0, 1), "delay", -1.0, thick, 1.0, cc, cr, theta, kv, 1.0]]
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -312,11 +312,9 @@ def build_model(idx, dir):
     return sim, mc
 
 
-def eval_sub(sim):
-    print("evaluating subsidence...")
-
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -333,36 +331,37 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
-    f = open(fpth, "w")
-    line = f"{'TOTIM':>15s}"
-    line += f" {'CSUB':>15s}"
-    line += f" {'MF':>15s}"
-    line += f" {'DIFF':>15s}"
-    f.write(line + "\n")
-    for i in range(diff.shape[0]):
-        line = f"{tc0[i]:15g}"
-        line += f" {tc['TCOMP'][i]:15g}"
-        line += f" {tc0[i]:15g}"
-        line += f" {diff[i]:15g}"
+    with open(fpth, "w") as f:
+        line = f"{'TOTIM':>15s}"
+        line += f" {'CSUB':>15s}"
+        line += f" {'MF':>15s}"
+        line += f" {'DIFF':>15s}"
         f.write(line + "\n")
-    f.close()
+        for i in range(diff.shape[0]):
+            line = f"{tc0[i]:15g}"
+            line += f" {tc['TCOMP'][i]:15g}"
+            line += f" {tc0[i]:15g}"
+            line += f" {diff[i]:15g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_sub, idxsim=0),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

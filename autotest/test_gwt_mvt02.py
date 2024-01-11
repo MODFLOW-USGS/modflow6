@@ -1,21 +1,23 @@
-# Simple one-layer model with a drn and sfr network on top.  Purpose is to
-# test movement of solute between stress and advanced packages.  In this case
-# water from a drain is moved into the first sfr reach.  The test confirms
-# that the solute from the drain is moved into the sfr reach.
-# There is no flow between the stream and the aquifer.
+"""
+Simple one-layer model with a drn and sfr network on top.  Purpose is to
+test movement of solute between stress and advanced packages.  In this case
+water from a drain is moved into the first sfr reach.  The test confirms
+that the solute from the drain is moved into the sfr reach.
+There is no flow between the stream and the aquifer.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["mvt_02"]
+cases = ["mvt_02"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -44,10 +46,10 @@ def build_model(idx, dir):
     nouter, ninner = 20, 10
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -245,7 +247,6 @@ def build_model(idx, dir):
 
     transport = True
     if transport:
-
         # create gwt model
         gwtname = "gwt_" + name
         gwt = flopy.mf6.MFModel(
@@ -384,14 +385,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
 
     # Load csv budget and make sure names are correct
     fname = f"{gwtname}.bud.csv"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     budcsv = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
     answer = [
         "time",
@@ -414,19 +414,19 @@ def eval_results(sim):
 
     # ensure sfr concentrations were saved
     fname = gwtname + ".sft.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     csft = cobj.get_data().flatten()
 
     # load the aquifer concentrations
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_data().flatten()
 
     # sft observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".sft.obs.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".sft.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -457,13 +457,13 @@ def eval_results(sim):
 
     # load the mvt budget file
     fname = gwtname + ".mvt.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
 
     # load the sft budget file
     fname = gwtname + ".sft.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     # check the flow-ja-face terms
@@ -474,21 +474,14 @@ def eval_results(sim):
     res = bobj.get_data(text="storage")[-1]
     # print(res)
 
-    # uncomment when testing so files aren't deleted
-    # assert False
 
-
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

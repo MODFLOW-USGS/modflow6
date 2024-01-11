@@ -3,12 +3,12 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
-ex = ["csub_de01a"]
+cases = ["csub_de01a"]
 
 # static model data
 # spatial discretization
@@ -75,7 +75,7 @@ sub6 = [
 
 
 def build_mf6(idx, ws, update=None):
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -185,16 +185,10 @@ def build_mf6(idx, ws, update=None):
     return sim
 
 
-def build_model(idx, dir):
-    name = ex[idx]
-    ws = dir
-
-    # build MODFLOW 6 files
-    sim = build_mf6(idx, ws)
-
-    ws = os.path.join(dir, "mf6")
-    mc = build_mf6(idx, ws, update=True)
-
+def build_models(idx, test):
+    name = cases[idx]
+    sim = build_mf6(idx, test.workspace)
+    mc = build_mf6(idx, os.path.join(test.workspace, "mf6"), update=True)
     return sim, mc
 
 
@@ -208,13 +202,11 @@ def calc_void(theta):
     return theta / (1.0 - theta)
 
 
-def eval_void(sim):
-    print("evaluating void ratio...")
-
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+def check_output(idx, test):
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     cd = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    fpth = os.path.join(sim.simpath, "mf6", "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "mf6", "csub_obs.csv")
     cd2 = np.genfromtxt(fpth, delimiter=",", names=True)
 
     v = calc_comp2void(cd["COMP"])
@@ -228,42 +220,38 @@ def eval_void(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
-    f = open(fpth, "w")
-    line = f"{'TOTIM':>15s}"
-    line += f" {'VOID':>15s}"
-    line += f" {'MF':>15s}"
-    line += f" {'DIFF':>15s}"
-    f.write(line + "\n")
-    for i in range(diff.shape[0]):
-        line = f"{cd['time'][i]:15g}"
-        line += f" {v[i]:15g}"
-        line += f" {v[i]:15g}"
-        line += f" {diff[i]:15g}"
+    with open(fpth, "w") as f:
+        line = f"{'TOTIM':>15s}"
+        line += f" {'VOID':>15s}"
+        line += f" {'MF':>15s}"
+        line += f" {'DIFF':>15s}"
         f.write(line + "\n")
-    f.close()
+        for i in range(diff.shape[0]):
+            line = f"{cd['time'][i]:15g}"
+            line += f" {v[i]:15g}"
+            line += f" {v[i]:15g}"
+            line += f" {diff[i]:15g}"
+            f.write(line + "\n")
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_void, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

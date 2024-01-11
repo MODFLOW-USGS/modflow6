@@ -1,28 +1,30 @@
+"""
+General test for the interface model approach.
+It compares the result of a single reference model
+to the equivalent case where the domain is decomposed
+and joined by a GWF-GWF exchange.
+
+In this case we test the use of idomain at the interface
+
+                  'refmodel'                 'leftmodel'     'rightmodel'
+
+   layer 1:  1 1 1 1 0 0 1 1 1 1            1 1 1 1 0       0 1 1 1 1
+   layer 2:  1 1 1 1 1 1 1 1 1 1     VS     1 1 1 1 1   +   1 1 1 1 1
+   layer 3:  1 1 1 1 1 1 1 1 1 1            1 1 1 1 1       1 1 1 1 1
+
+We assert equality on the head values. All models are part of a single
+solution for convenience. Finally, the budget error is checked.
+"""
+
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# General test for the interface model approach.
-# It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed
-# and joined by a GWF-GWF exchange.
-#
-# In this case we test the use of idomain at the interface
-#
-#                   'refmodel'                 'leftmodel'     'rightmodel'
-#
-#    layer 1:  1 1 1 1 0 0 1 1 1 1            1 1 1 1 0       0 1 1 1 1
-#    layer 2:  1 1 1 1 1 1 1 1 1 1     VS     1 1 1 1 1   +   1 1 1 1 1
-#    layer 3:  1 1 1 1 1 1 1 1 1 1            1 1 1 1 1       1 1 1 1 1
-#
-# We assert equality on the head values. All models are part of a single
-# solution for convenience. Finally, the budget error is checked.
-
-ex = ["ifmod_ibound"]
+cases = ["ifmod_ibound"]
 
 # some global convenience...:
 # model names
@@ -73,7 +75,7 @@ h_left = 125.0
 h_right = 75.0
 
 # initial head
-h_start = 0.0 
+h_start = 0.0
 
 
 # head boundaries
@@ -103,7 +105,7 @@ chd_spd_right = {0: rchd_right}
 
 
 def get_model(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
 
     # parameters and spd
     # tdis
@@ -272,11 +274,7 @@ def add_rightmodel(sim):
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        save_specific_discharge=True,
-        save_flows=True,
-        icelltype=0,   
-        k=hk
+        gwf, save_specific_discharge=True, save_flows=True, icelltype=0, k=hk
     )
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
@@ -312,8 +310,8 @@ def add_gwfexchange(sim):
         ]
         for ilay in range(nlay)
         for irow in range(nrow)
-        if idomain_left[ilay, irow, ncol_left - 1] > 0 and 
-           idomain_right[ilay, irow, 0] > 0
+        if idomain_left[ilay, irow, ncol_left - 1] > 0
+        and idomain_right[ilay, irow, 0] > 0
     ]
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -327,31 +325,31 @@ def add_gwfexchange(sim):
     )
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def compare_to_ref(sim):
+def check_output(idx, test):
     print("comparing heads to single model reference...")
 
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_left}.hds")
     hds_l = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_right}.hds")
     hds_r = flopy.utils.HeadFile(fpth)
 
     times = hds.get_times()
     for t in times:
         heads = hds.get_data(totim=t)
-        heads_left = hds_l.get_data(totim=t)        
+        heads_left = hds_l.get_data(totim=t)
         heads_right = hds_r.get_data(totim=t)
         heads_2models = np.append(heads_left, heads_right, axis=2)
 
         # check idomain was used
-        assert heads[0, 0, 4] == 1.0e+30, "idomain was set to 0 for this cell"
-        assert heads[0, 0, 5] == 1.0e+30, "idomain was set to 0 for this cell"
+        assert heads[0, 0, 4] == 1.0e30, "idomain was set to 0 for this cell"
+        assert heads[0, 0, 5] == 1.0e30, "idomain was set to 0 for this cell"
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
@@ -364,7 +362,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -375,17 +373,14 @@ def compare_to_ref(sim):
                 )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()
