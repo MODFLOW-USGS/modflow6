@@ -234,7 +234,7 @@ contains
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    integer(I4B) :: n
+    integer(I4B) :: n, m
     !
     if (this%tas_active /= 0) then
       !
@@ -258,7 +258,11 @@ contains
     end do
     !
     ! -- explicitly reset auxvar array each period
-    this%bndctx%auxvar = DZERO
+    do m = 1, this%bndctx%ncpl
+      do n = 1, this%bndctx%naux
+        this%bndctx%auxvar(n, m) = DZERO
+      end do
+    end do
     !
     ! -- return
     return
