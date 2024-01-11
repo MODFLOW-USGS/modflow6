@@ -1358,7 +1358,7 @@ contains
     !
     ! -- enforce 0 or 1 MVR6_FILENAME entries in option block
     if (filein_fname(mvr_fname, 'MVR6_FILENAME', this%input_mempath, &
-                      this%filename)) then
+                     this%filename)) then
       this%inmvr = getunit()
       call openfile(this%inmvr, iout, mvr_fname, 'MVR')
       write (iout, '(4x,a)') &
