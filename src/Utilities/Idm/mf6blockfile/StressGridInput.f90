@@ -234,8 +234,7 @@ contains
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    type(InputParamDefinitionType), pointer :: idt
-    integer(I4B) :: n
+    integer(I4B) :: n, m
     !
     if (this%tas_active /= 0) then
       !
@@ -249,17 +248,20 @@ contains
                                   this%mf6_input%mempath, this%sourcename)
     end if
     !
-    ! -- reset input context memory for parameters
     do n = 1, this%nparam
       if (this%param_reads(n)%invar /= 0) then
         !
-        ! -- set definition
-        idt => this%mf6_input%param_dfns(this%idt_idxs(n))
-        !
         ! -- reset read state
         this%param_reads(n)%invar = 0
-
+        !
       end if
+    end do
+    !
+    ! -- explicitly reset auxvar array each period
+    do m = 1, this%bndctx%ncpl
+      do n = 1, this%bndctx%naux
+        this%bndctx%auxvar(n, m) = DZERO
+      end do
     end do
     !
     ! -- return
