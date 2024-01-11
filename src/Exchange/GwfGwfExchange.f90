@@ -1357,14 +1357,12 @@ contains
     end if
     !
     ! -- enforce 0 or 1 MVR6_FILENAME entries in option block
-    if (.not. this%is_datacopy) then
-      if (filein_fname(mvr_fname, 'MVR6_FILENAME', this%input_mempath, &
-                       this%filename)) then
-        this%inmvr = getunit()
-        call openfile(this%inmvr, iout, mvr_fname, 'MVR')
-        write (iout, '(4x,a)') &
-          'WATER MOVER INFORMATION WILL BE READ FROM ', trim(mvr_fname)
-      end if
+    if (filein_fname(mvr_fname, 'MVR6_FILENAME', this%input_mempath, &
+                      this%filename)) then
+      this%inmvr = getunit()
+      call openfile(this%inmvr, iout, mvr_fname, 'MVR')
+      write (iout, '(4x,a)') &
+        'WATER MOVER INFORMATION WILL BE READ FROM ', trim(mvr_fname)
     end if
     !
     ! -- enforce 0 or 1 OBS6_FILENAME entries in option block
