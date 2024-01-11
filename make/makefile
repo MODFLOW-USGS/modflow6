@@ -278,6 +278,7 @@ $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt1.o \
 $(OBJDIR)/gwf3.o \
+$(OBJDIR)/GwfExchangeMover.o \
 $(OBJDIR)/SerialRouter.o \
 $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
