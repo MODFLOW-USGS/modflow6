@@ -338,7 +338,9 @@ contains
     ! -- dummy
     integer(I4B) :: inunit
     !
-    write (inunit, *) p_mem
+    inunit = create_array_echofile(varname, mempath, iout)
+    !
+    write (inunit, '(*(i0, " "))') p_mem
     !
     close (inunit)
   end subroutine idm_print_array_int1d
@@ -354,7 +356,7 @@ contains
     inunit = create_array_echofile(varname, mempath, iout)
     !
     do i = 1, size(p_mem, dim=2)
-      write (inunit, *) p_mem(:, i)
+      write (inunit, '(*(i0, " "))') p_mem(:, i)
     end do
     !
     close (inunit)
@@ -373,7 +375,7 @@ contains
     do i = 1, size(p_mem, dim=3)
       write (inunit, '(a,i0)') 'LAYER ', i
       do j = 1, size(p_mem, dim=2)
-        write (inunit, *) p_mem(:, j, i)
+        write (inunit, '(*(i0, " "))') p_mem(:, j, i)
       end do
     end do
     !
@@ -390,7 +392,7 @@ contains
     !
     inunit = create_array_echofile(varname, mempath, iout)
     !
-    write (inunit, *) p_mem
+    write (inunit, '(*(G0.10, " "))') p_mem
     !
     close (inunit)
   end subroutine idm_print_array_dbl1d
@@ -406,7 +408,7 @@ contains
     inunit = create_array_echofile(varname, mempath, iout)
     !
     do i = 1, size(p_mem, dim=2)
-      write (inunit, *) p_mem(:, i)
+      write (inunit, '(*(G0.10, " "))') p_mem(:, i)
     end do
     !
     close (inunit)
@@ -425,7 +427,7 @@ contains
     do i = 1, size(p_mem, dim=3)
       write (inunit, '(a,i0)') 'LAYER ', i
       do j = 1, size(p_mem, dim=2)
-        write (inunit, *) p_mem(:, j, i)
+        write (inunit, '(*(G0.10, " "))') p_mem(:, j, i)
       end do
     end do
     !
