@@ -20,12 +20,15 @@ module VirtualGwfExchangeModule
     type(VirtualDbl1dType), pointer :: qpactual_m2 => null()
     type(VirtualInt1dType), pointer :: id_mapped_m1 => null()
     type(VirtualInt1dType), pointer :: id_mapped_m2 => null()
+    ! private
+    logical(LGP), private :: has_mvr !< backing field for function
   contains
     procedure :: create => vfx_create
     procedure :: prepare_stage => vfx_prepare_stage
     procedure :: destroy => vfx_destroy
     procedure :: get_send_items => vfx_get_send_items
     procedure :: get_recv_items => vfx_get_recv_items
+    procedure :: has_mover => vfx_has_mover
     ! private
     procedure, private :: allocate_data
     procedure, private :: deallocate_data
@@ -68,6 +71,8 @@ contains
     call this%allocate_data()
     call this%init_virtual_data()
 
+    this%has_mvr = .false.
+
   end subroutine vfx_create
 
   subroutine init_virtual_data(this)
@@ -105,6 +110,13 @@ contains
 
       call this%map(this%inmvr%base(), (/STG_AFT_EXG_DF/))
 
+    else if (stage == STG_AFT_CON_CR) then
+
+      ! at this point we know:
+      if (this%inmvr%get() > 0) then
+        this%has_mvr = .true.
+      end if
+
     else if (stage == STG_BFR_CON_AR) then
 
       ! only when MVR is active
@@ -117,10 +129,17 @@ contains
       ! only when MVR is active
       if (this%inmvr%get() > 0) then
         maxmvr = this%maxmvr%get()
-        call this%map(this%qpactual_m1%base(), maxmvr, (/STG_BFR_EXG_FC/))
-        call this%map(this%qpactual_m2%base(), maxmvr, (/STG_BFR_EXG_FC/))
-        call this%map(this%id_mapped_m1%base(), maxmvr, (/STG_AFT_CON_RP/))
-        call this%map(this%id_mapped_m2%base(), maxmvr, (/STG_AFT_CON_RP/))
+        if (maxmvr > 0) then
+          call this%map(this%qpactual_m1%base(), maxmvr, (/STG_BFR_EXG_FC/))
+          call this%map(this%qpactual_m2%base(), maxmvr, (/STG_BFR_EXG_FC/))
+          call this%map(this%id_mapped_m1%base(), maxmvr, (/STG_AFT_CON_RP/))
+          call this%map(this%id_mapped_m2%base(), maxmvr, (/STG_AFT_CON_RP/))
+        else
+          call this%map(this%qpactual_m1%base(), 0, (/STG_NEVER/))
+          call this%map(this%qpactual_m2%base(), 0, (/STG_NEVER/))
+          call this%map(this%id_mapped_m1%base(), 0, (/STG_NEVER/))
+          call this%map(this%id_mapped_m2%base(), 0, (/STG_NEVER/))
+        end if
       end if
 
     end if
@@ -220,6 +239,16 @@ contains
     end if
 
   end subroutine vfx_get_send_items
+
+  !> @brief Override
+  !<
+  function vfx_has_mover(this) result(has_mover)
+    class(VirtualGwfExchangeType) :: this
+    logical(LGP) :: has_mover
+
+    has_mover = this%has_mvr
+
+  end function vfx_has_mover
 
   subroutine allocate_data(this)
     class(VirtualGwfExchangeType) :: this

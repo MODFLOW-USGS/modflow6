@@ -60,29 +60,37 @@ contains
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
                                 'NODEM1', virt_mem_path, (/STG_BFR_CON_DF/))
-        local_mem_path = create_mem_path(virt_exg%name, 'MVR')
-        virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M1', 'MVR')
-        call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M1', &
-                                local_mem_path, 'QPACTUAL_M1', &
-                                virt_mem_path, (/STG_BFR_EXG_FC/))
-        virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M1', 'MVR')
-        call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M1', &
-                                local_mem_path, 'ID_MAPPED_M1', &
-                                virt_mem_path, (/STG_AFT_CON_RP/))
+
+        ! these are only present when there is a mover:
+        if (virt_exg%has_mover()) then
+          local_mem_path = create_mem_path(virt_exg%name, 'MVR')
+          virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M1', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M1', &
+                                  local_mem_path, 'QPACTUAL_M1', &
+                                  virt_mem_path, (/STG_BFR_EXG_FC/))
+          virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M1', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M1', &
+                                  local_mem_path, 'ID_MAPPED_M1', &
+                                  virt_mem_path, (/STG_AFT_CON_RP/))
+        end if
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
                                 'NODEM2', virt_mem_path, (/STG_BFR_CON_DF/))
-        local_mem_path = create_mem_path(virt_exg%name, 'MVR')
-        virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M2', 'MVR')
-        call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M2', &
-                                local_mem_path, 'QPACTUAL_M2', &
-                                virt_mem_path, (/STG_BFR_EXG_FC/))
-        virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M2', 'MVR')
-        call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M2', &
-                                local_mem_path, 'ID_MAPPED_M2', &
-                                virt_mem_path, (/STG_AFT_CON_RP/))
+
+        ! these are only present when there is a mover:
+        if (virt_exg%has_mover()) then
+          local_mem_path = create_mem_path(virt_exg%name, 'MVR')
+          virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M2', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M2', &
+                                  local_mem_path, 'QPACTUAL_M2', &
+                                  virt_mem_path, (/STG_BFR_EXG_FC/))
+          virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M2', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M2', &
+                                  local_mem_path, 'ID_MAPPED_M2', &
+                                  virt_mem_path, (/STG_AFT_CON_RP/))
+        end if
       end if
     end do
 
