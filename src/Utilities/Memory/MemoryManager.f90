@@ -23,7 +23,6 @@ module MemoryManagerModule
   public :: mem_allocate
   public :: mem_checkin
   public :: mem_reallocate
-  public :: mem_reset
   public :: mem_setptr
   public :: mem_copyptr
   public :: mem_reassignptr
@@ -85,16 +84,6 @@ module MemoryManagerModule
       reallocate_str1d, &
       reallocate_charstr1d
   end interface mem_reallocate
-
-  interface mem_reset
-    module procedure &
-      reset_int1d, &
-      reset_int2d, &
-      reset_dbl1d, &
-      reset_dbl2d, &
-      reset_str1d, &
-      reset_charstr1d
-  end interface mem_reset
 
   interface mem_setptr
     module procedure &
@@ -1186,15 +1175,16 @@ contains
 
   !> @brief Reallocate a 1-dimensional defined length string array
   !<
-  subroutine reallocate_str1d(astr, ilen, nrow, name, mem_path)
+  subroutine reallocate_str1d(astr, ilen, nrow, name, mem_path, copy)
     integer(I4B), intent(in) :: ilen !< string length
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr !< the reallocated string array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     character(len=ilen), dimension(:), allocatable :: astrtemp
     integer(I4B) :: istat
     integer(I4B) :: isize
@@ -1202,67 +1192,73 @@ contains
     integer(I4B) :: nrow_old
     integer(I4B) :: n
     !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
+    !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
     !
+    ! -- calculate isize
+    isize = nrow
+    !
     ! -- reallocate astr1d
-    if (found) then
-      isize_old = mt%isize
+    isize_old = mt%isize
+    nrow_old = 0
+    if (do_copy) then
       if (isize_old > 0) then
         nrow_old = size(astr)
-      else
-        nrow_old = 0
+        ! -- set error attempting to copy to smaller array
+        if (nrow_old > isize) then
+          errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                   "to copy existing values to reduced size array."
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
       end if
-      !
-      ! -- calculate isize
-      isize = nrow
-      !
-      ! -- allocate astrtemp
-      allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- copy existing values
-      do n = 1, nrow_old
-        astrtemp(n) = astr(n)
-      end do
-      !
-      ! -- fill new values with missing values
-      do n = nrow_old + 1, nrow
-        astrtemp(n) = ''
-      end do
-      !
-      ! -- deallocate mt pointer, repoint, recalculate isize
-      deallocate (astr)
-      !
-      ! -- allocate astr1d
-      allocate (astr(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- fill the reallocate character array
-      do n = 1, nrow
-        astr(n) = astrtemp(n)
-      end do
-      !
-      ! -- deallocate temporary storage
-      deallocate (astrtemp)
-      !
-      ! -- reset memory manager values
-      mt%element_size = ilen
-      mt%isize = isize
-      mt%nrealloc = mt%nrealloc + 1
-      mt%master = .true.
-      nvalues_astr = nvalues_astr + isize - isize_old
-      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
-    else
-      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
-               trim(mem_path)//"' is not defined in the memory manager. Use "// &
-               "mem_allocate instead."
-      call store_error(errmsg, terminate=.TRUE.)
     end if
+    !
+    ! -- allocate astrtemp
+    allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, mem_path, istat, isize)
+    end if
+    !
+    ! -- copy existing values
+    do n = 1, nrow_old
+      astrtemp(n) = astr(n)
+    end do
+    !
+    ! -- fill new values with missing values
+    do n = nrow_old + 1, nrow
+      astrtemp(n) = ''
+    end do
+    !
+    ! -- deallocate mt pointer, repoint, recalculate isize
+    deallocate (astr)
+    !
+    ! -- allocate astr1d
+    allocate (astr(nrow), stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, mem_path, istat, isize)
+    end if
+    !
+    ! -- fill the reallocate character array
+    do n = 1, nrow
+      astr(n) = astrtemp(n)
+    end do
+    !
+    ! -- deallocate temporary storage
+    deallocate (astrtemp)
+    !
+    ! -- reset memory manager values
+    mt%element_size = ilen
+    mt%isize = isize
+    mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
+    nvalues_astr = nvalues_astr + isize - isize_old
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- return
     return
@@ -1270,16 +1266,17 @@ contains
 
   !> @brief Reallocate a 1-dimensional deferred length string array
   !<
-  subroutine reallocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
+  subroutine reallocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path, copy)
     type(CharacterStringType), dimension(:), pointer, contiguous, &
       intent(inout) :: acharstr1d !< the reallocated charstring array
     integer(I4B), intent(in) :: ilen !< string length
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     type(CharacterStringType), dimension(:), allocatable :: astrtemp
     character(len=ilen) :: string
     integer(I4B) :: istat
@@ -1288,71 +1285,77 @@ contains
     integer(I4B) :: nrow_old
     integer(I4B) :: n
     !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
+    !
     ! -- Initialize string
     string = ''
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
     !
+    ! -- calculate isize
+    isize = nrow
+    !
     ! -- reallocate astr1d
-    if (found) then
-      isize_old = mt%isize
+    isize_old = mt%isize
+    nrow_old = 0
+    if (do_copy) then
       if (isize_old > 0) then
         nrow_old = size(acharstr1d)
-      else
-        nrow_old = 0
+        ! -- set error attempting to copy to smaller array
+        if (nrow_old > isize) then
+          errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                   "to copy existing values to reduced size array."
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
       end if
-      !
-      ! -- calculate isize
-      isize = nrow
-      !
-      ! -- allocate astrtemp
-      allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- copy existing values
-      do n = 1, nrow_old
-        astrtemp(n) = acharstr1d(n)
-      end do
-      !
-      ! -- fill new values with missing values
-      do n = nrow_old + 1, nrow
-        astrtemp(n) = string
-      end do
-      !
-      ! -- deallocate mt pointer, repoint, recalculate isize
-      deallocate (acharstr1d)
-      !
-      ! -- allocate astr1d
-      allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- fill the reallocated character array
-      do n = 1, nrow
-        acharstr1d(n) = astrtemp(n)
-      end do
-      !
-      ! -- deallocate temporary storage
-      deallocate (astrtemp)
-      !
-      ! -- reset memory manager values
-      mt%acharstr1d => acharstr1d
-      mt%element_size = ilen
-      mt%isize = isize
-      mt%nrealloc = mt%nrealloc + 1
-      mt%master = .true.
-      nvalues_astr = nvalues_astr + isize - isize_old
-      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
-    else
-      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
-               trim(mem_path)//"' is not defined in the memory manager. Use "// &
-               "mem_allocate instead."
-      call store_error(errmsg, terminate=.TRUE.)
     end if
+    !
+    ! -- allocate astrtemp
+    allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, mem_path, istat, isize)
+    end if
+    !
+    ! -- copy existing values
+    do n = 1, nrow_old
+      astrtemp(n) = acharstr1d(n)
+    end do
+    !
+    ! -- fill new values with missing values
+    do n = nrow_old + 1, nrow
+      astrtemp(n) = string
+    end do
+    !
+    ! -- deallocate mt pointer, repoint, recalculate isize
+    deallocate (acharstr1d)
+    !
+    ! -- allocate astr1d
+    allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
+    if (istat /= 0) then
+      call allocate_error(name, mem_path, istat, isize)
+    end if
+    !
+    ! -- fill the reallocated character array
+    do n = 1, nrow
+      acharstr1d(n) = astrtemp(n)
+    end do
+    !
+    ! -- deallocate temporary storage
+    deallocate (astrtemp)
+    !
+    ! -- reset memory manager values
+    mt%acharstr1d => acharstr1d
+    mt%element_size = ilen
+    mt%isize = isize
+    mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
+    nvalues_astr = nvalues_astr + isize - isize_old
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- return
     return
@@ -1360,14 +1363,15 @@ contains
 
   !> @brief Reallocate a 1-dimensional integer array
   !<
-  subroutine reallocate_int1d(aint, nrow, name, mem_path)
+  subroutine reallocate_int1d(aint, nrow, name, mem_path, copy)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint !< the reallocated integer array
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     integer(I4B) :: istat
     integer(I4B) :: isize
     integer(I4B) :: i
@@ -1375,17 +1379,37 @@ contains
     integer(I4B) :: ifill
     ! -- code
     !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
+    !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     isize = nrow
     isizeold = size(mt%aint1d)
-    ifill = min(isizeold, isize)
+    !
+    ifill = 0
+    if (do_copy) then
+      if (isizeold > 0) then
+        ifill = isizeold
+        ! -- set error attempting to copy to smaller array
+        if (ifill > isize) then
+          errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                   "to copy existing values to reduced size array."
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end if
+    end if
+    !
     allocate (aint(nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
       call allocate_error(name, mem_path, istat, isize)
     end if
+    !
     do i = 1, ifill
       aint(i) = mt%aint1d(i)
     end do
@@ -1405,15 +1429,16 @@ contains
 
   !> @brief Reallocate a 2-dimensional integer array
   !<
-  subroutine reallocate_int2d(aint, ncol, nrow, name, mem_path)
+  subroutine reallocate_int2d(aint, ncol, nrow, name, mem_path, copy)
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< the reallocated 2d integer array
     integer(I4B), intent(in) :: ncol !< number of columns
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     integer(I4B) :: istat
     integer(I4B), dimension(2) :: ishape
     integer(I4B) :: i
@@ -1422,6 +1447,12 @@ contains
     integer(I4B) :: isizeold
     ! -- code
     !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
+    !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
     !
@@ -1429,15 +1460,28 @@ contains
     ishape = shape(mt%aint2d)
     isize = nrow * ncol
     isizeold = ishape(1) * ishape(2)
+    !
+    if (do_copy) then
+      ! -- set error attempting to copy to smaller array
+      if (ncol < ishape(1) .or. nrow < ishape(2)) then
+        errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                 "to copy existing values to reduced size array."
+        call store_error(errmsg, terminate=.TRUE.)
+      end if
+    end if
+    !
     allocate (aint(ncol, nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
       call allocate_error(name, mem_path, istat, isize)
     end if
-    do i = 1, ishape(2)
-      do j = 1, ishape(1)
-        aint(j, i) = mt%aint2d(j, i)
+    !
+    if (do_copy) then
+      do i = 1, ishape(2)
+        do j = 1, ishape(1)
+          aint(j, i) = mt%aint2d(j, i)
+        end do
       end do
-    end do
+    end if
     !
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%aint2d)
@@ -1455,11 +1499,12 @@ contains
 
   !> @brief Reallocate a 1-dimensional real array
   !<
-  subroutine reallocate_dbl1d(adbl, nrow, name, mem_path)
+  subroutine reallocate_dbl1d(adbl, nrow, name, mem_path, copy)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl !< the reallocated 1d real array
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
     integer(I4B) :: istat
@@ -1467,8 +1512,14 @@ contains
     integer(I4B) :: i
     integer(I4B) :: isizeold
     integer(I4B) :: ifill
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     ! -- code
+    !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
@@ -1476,11 +1527,25 @@ contains
     ! -- Allocate adbl and then refill
     isize = nrow
     isizeold = size(mt%adbl1d)
-    ifill = min(isizeold, isize)
+    !
+    ifill = 0
+    if (do_copy) then
+      if (isizeold > 0) then
+        ifill = isizeold
+        ! -- set error attempting to copy to smaller array
+        if (ifill > isize) then
+          errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                   "to copy existing values to reduced size array."
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end if
+    end if
+    !
     allocate (adbl(nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
       call allocate_error(name, mem_path, istat, isize)
     end if
+    !
     do i = 1, ifill
       adbl(i) = mt%adbl1d(i)
     end do
@@ -1501,15 +1566,16 @@ contains
 
   !> @brief Reallocate a 2-dimensional real array
   !<
-  subroutine reallocate_dbl2d(adbl, ncol, nrow, name, mem_path)
+  subroutine reallocate_dbl2d(adbl, ncol, nrow, name, mem_path, copy)
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< the reallocated 2d real array
     integer(I4B), intent(in) :: ncol !< number of columns
     integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
+    logical(LGP), optional, intent(in) :: copy !< copy memory from old to new array
     ! -- local
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
+    logical(LGP) :: found, do_copy
     integer(I4B) :: istat
     integer(I4B), dimension(2) :: ishape
     integer(I4B) :: i
@@ -1518,6 +1584,12 @@ contains
     integer(I4B) :: isizeold
     ! -- code
     !
+    ! -- initialize do_copy
+    do_copy = .true.
+    !
+    ! -- override with optional argument
+    if (present(copy)) do_copy = copy
+    !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
     !
@@ -1525,15 +1597,28 @@ contains
     ishape = shape(mt%adbl2d)
     isize = nrow * ncol
     isizeold = ishape(1) * ishape(2)
+    !
+    if (do_copy) then
+      ! -- set error attempting to copy to smaller array
+      if (ncol < ishape(1) .or. nrow < ishape(2)) then
+        errmsg = "mem_reallocate for variable '"//trim(name)//"' unable "// &
+                 "to copy existing values to reduced size array."
+        call store_error(errmsg, terminate=.TRUE.)
+      end if
+    end if
+    !
     allocate (adbl(ncol, nrow), stat=istat, errmsg=errmsg)
     if (istat /= 0) then
       call allocate_error(name, mem_path, istat, isize)
     end if
-    do i = 1, ishape(2)
-      do j = 1, ishape(1)
-        adbl(j, i) = mt%adbl2d(j, i)
+    !
+    if (do_copy) then
+      do i = 1, ishape(2)
+        do j = 1, ishape(1)
+          adbl(j, i) = mt%adbl2d(j, i)
+        end do
       end do
-    end do
+    end if
     !
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%adbl2d)
@@ -1548,293 +1633,6 @@ contains
     ! -- return
     return
   end subroutine reallocate_dbl2d
-
-  !> @brief Reset a 1-dimensional defined length string array
-  !<
-  subroutine reset_str1d(astr, ilen, nrow, name, mem_path)
-    integer(I4B), intent(in) :: ilen !< string length
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=ilen), dimension(:), pointer, contiguous, intent(inout) :: astr !< the reset string array
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    integer(I4B) :: istat
-    integer(I4B) :: isize
-    integer(I4B) :: isize_old
-    integer(I4B) :: n
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- reset astr1d
-    if (found) then
-      isize_old = mt%isize
-      !
-      ! -- calculate isize
-      isize = nrow
-      !
-      ! -- deallocate mt pointer, repoint, recalculate isize
-      deallocate (astr)
-      !
-      ! -- allocate astr1d
-      allocate (astr(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- fill the reset character array
-      do n = 1, nrow
-        astr(n) = ''
-      end do
-      !
-      ! -- reset memory manager values
-      mt%element_size = ilen
-      mt%isize = isize
-      mt%nrealloc = mt%nrealloc + 1 ! track reset as reallocation
-      mt%master = .true.
-      nvalues_astr = nvalues_astr + isize - isize_old
-      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
-    else
-      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
-               trim(mem_path)//"' is not defined in the memory manager. Use "// &
-               "mem_allocate instead."
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine reset_str1d
-
-  !> @brief Reset a 1-dimensional deferred length string array
-  !<
-  subroutine reset_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
-    type(CharacterStringType), dimension(:), pointer, contiguous, &
-      intent(inout) :: acharstr1d !< the reset charstring array
-    integer(I4B), intent(in) :: ilen !< string length
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    character(len=ilen) :: string
-    integer(I4B) :: istat
-    integer(I4B) :: isize
-    integer(I4B) :: isize_old
-    integer(I4B) :: n
-    !
-    ! -- Initialize string
-    string = ''
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- reset astr1d
-    if (found) then
-      isize_old = mt%isize
-      !
-      ! -- calculate isize
-      isize = nrow
-      !
-      ! -- deallocate mt pointer, repoint, recalculate isize
-      deallocate (acharstr1d)
-      !
-      ! -- allocate astr1d
-      allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
-      if (istat /= 0) then
-        call allocate_error(name, mem_path, istat, isize)
-      end if
-      !
-      ! -- fill the reset character array
-      do n = 1, nrow
-        acharstr1d(n) = string
-      end do
-      !
-      ! -- reset memory manager values
-      mt%acharstr1d => acharstr1d
-      mt%element_size = ilen
-      mt%isize = isize
-      mt%nrealloc = mt%nrealloc + 1
-      mt%master = .true.
-      nvalues_astr = nvalues_astr + isize - isize_old
-      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
-    else
-      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
-               trim(mem_path)//"' is not defined in the memory manager. Use "// &
-               "mem_allocate instead."
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine reset_charstr1d
-
-  !> @brief Reset a 1-dimensional integer array
-  !<
-  subroutine reset_int1d(aint, nrow, name, mem_path)
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint !< the reset integer array
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    integer(I4B) :: istat
-    integer(I4B) :: isize
-    integer(I4B) :: isizeold
-    ! -- code
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- Allocate aint and then refill
-    isize = nrow
-    isizeold = size(mt%aint1d)
-    allocate (aint(nrow), stat=istat, errmsg=errmsg)
-    if (istat /= 0) then
-      call allocate_error(name, mem_path, istat, isize)
-    end if
-    !
-    ! -- deallocate mt pointer, repoint, recalculate isize
-    deallocate (mt%aint1d)
-    mt%aint1d => aint
-    mt%element_size = I4B
-    mt%isize = isize
-    mt%nrealloc = mt%nrealloc + 1
-    mt%master = .true.
-    nvalues_aint = nvalues_aint + isize - isizeold
-    !
-    ! -- return
-    return
-  end subroutine reset_int1d
-
-  !> @brief Reset a 2-dimensional integer array
-  !<
-  subroutine reset_int2d(aint, ncol, nrow, name, mem_path)
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< the reset 2d integer array
-    integer(I4B), intent(in) :: ncol !< number of columns
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    integer(I4B) :: istat
-    integer(I4B), dimension(2) :: ishape
-    integer(I4B) :: isize
-    integer(I4B) :: isizeold
-    ! -- code
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- Allocate aint and then refill
-    ishape = shape(mt%aint2d)
-    isize = nrow * ncol
-    isizeold = ishape(1) * ishape(2)
-    allocate (aint(ncol, nrow), stat=istat, errmsg=errmsg)
-    if (istat /= 0) then
-      call allocate_error(name, mem_path, istat, isize)
-    end if
-    !
-    ! -- deallocate mt pointer, repoint, recalculate isize
-    deallocate (mt%aint2d)
-    mt%aint2d => aint
-    mt%element_size = I4B
-    mt%isize = isize
-    mt%nrealloc = mt%nrealloc + 1
-    mt%master = .true.
-    nvalues_aint = nvalues_aint + isize - isizeold
-    write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
-    !
-    ! -- return
-    return
-  end subroutine reset_int2d
-
-  !> @brief Reset a 1-dimensional real array
-  !<
-  subroutine reset_dbl1d(adbl, nrow, name, mem_path)
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl !< the reset 1d real array
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    integer(I4B) :: istat
-    integer(I4B) :: isize
-    integer(I4B) :: isizeold
-    logical(LGP) :: found
-    ! -- code
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- Allocate adbl and then refill
-    isize = nrow
-    isizeold = size(mt%adbl1d)
-    allocate (adbl(nrow), stat=istat, errmsg=errmsg)
-    if (istat /= 0) then
-      call allocate_error(name, mem_path, istat, isize)
-    end if
-    !
-    ! -- deallocate mt pointer, repoint, recalculate isize
-    deallocate (mt%adbl1d)
-    mt%adbl1d => adbl
-    mt%element_size = DP
-    mt%isize = isize
-    mt%nrealloc = mt%nrealloc + 1
-    mt%master = .true.
-    nvalues_adbl = nvalues_adbl + isize - isizeold
-    write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
-    !
-    ! -- return
-    return
-  end subroutine reset_dbl1d
-
-  !> @brief Reset a 2-dimensional real array
-  !<
-  subroutine reset_dbl2d(adbl, ncol, nrow, name, mem_path)
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< the reset 2d real array
-    integer(I4B), intent(in) :: ncol !< number of columns
-    integer(I4B), intent(in) :: nrow !< number of rows
-    character(len=*), intent(in) :: name !< variable name
-    character(len=*), intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    integer(I4B) :: istat
-    integer(I4B), dimension(2) :: ishape
-    integer(I4B) :: isize
-    integer(I4B) :: isizeold
-    ! -- code
-    !
-    ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
-    !
-    ! -- Allocate adbl and then refill
-    ishape = shape(mt%adbl2d)
-    isize = nrow * ncol
-    isizeold = ishape(1) * ishape(2)
-    allocate (adbl(ncol, nrow), stat=istat, errmsg=errmsg)
-    if (istat /= 0) then
-      call allocate_error(name, mem_path, istat, isize)
-    end if
-    !
-    ! -- deallocate mt pointer, repoint, recalculate isize
-    deallocate (mt%adbl2d)
-    mt%adbl2d => adbl
-    mt%element_size = DP
-    mt%isize = isize
-    mt%nrealloc = mt%nrealloc + 1
-    mt%master = .true.
-    nvalues_adbl = nvalues_adbl + isize - isizeold
-    write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
-    !
-    ! -- return
-    return
-  end subroutine reset_dbl2d
 
   !> @brief Set pointer to a logical scalar
   !<
