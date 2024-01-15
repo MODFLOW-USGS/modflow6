@@ -92,7 +92,7 @@ contains
   !!
   !! Create a new transport model that will be further refined into GWT or GWE
   !<
-  subroutine tsp_cr(this, filename, id, modelname, macronym, indis, gwecommon)
+  subroutine tsp_cr(this, filename, id, modelname, macronym, indis)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
@@ -106,7 +106,6 @@ contains
     integer(I4B), intent(inout) :: indis
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: macronym
-    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: lst_fname
@@ -146,11 +145,7 @@ contains
     call budget_cr(this%budget, this%name)
     !
     ! -- create model packages
-    if (present(gwecommon)) then
-      call this%create_tsp_packages(indis, gwecommon)
-    else
-      call this%create_tsp_packages(indis)
-    end if
+    call this%create_tsp_packages(indis)
     !
     ! -- Return
     return
@@ -163,7 +158,7 @@ contains
   !! pointers.
   !<
   subroutine tsp_df(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     !
     ! -- Return
@@ -178,10 +173,9 @@ contains
   subroutine tsp_ac(this, sparse)
     ! -- modules
     use SparseModule, only: sparsematrix
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     type(sparsematrix), intent(inout) :: sparse
-    ! -- local
     !
     ! -- Return
     return
@@ -197,7 +191,6 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
-    ! -- local
     !
     ! -- Return
     return
@@ -210,7 +203,7 @@ contains
   !! memory for arrays required by the model object.
   !<
   subroutine tsp_ar(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     !
     ! -- Return
@@ -223,7 +216,7 @@ contains
   !! the read and prepare (rp) routines of attached packages.
   !<
   subroutine tsp_rp(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     !
     ! -- Return
@@ -236,7 +229,7 @@ contains
   !! the advance time step (ad) routines of attached packages.
   !<
   subroutine tsp_ad(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     !
     ! -- Return
@@ -249,7 +242,7 @@ contains
   !! the fill coefficients (fc) routines of attached packages.
   !<
   subroutine tsp_fc(this, kiter, matrix_sln, inwtflag)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
@@ -274,7 +267,6 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
-    ! -- local
     !
     ! -- Return
     return
@@ -286,11 +278,10 @@ contains
   !! intercell flows (flowja)
   !<
   subroutine tsp_cq(this, icnvg, isuppress_output)
-    ! -- dummy variables
+    ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-    ! -- local
     !
     ! -- Return
     return
@@ -350,16 +341,16 @@ contains
     idvprint = this%oc%set_print_flag(trim(this%depvartype), &
                                       this%icnvg, endofperiod)
     !
-    !   Calculate and save observations
+    ! -- Calculate and save observations
     call this%tsp_ot_obs()
     !
-    !   Save and print flows
+    ! -- Save and print flows
     call this%tsp_ot_flow(icbcfl, ibudfl, icbcun, inmst)
     !
-    !   Save and print dependent variables
+    ! -- Save and print dependent variables
     call this%tsp_ot_dv(idvsave, idvprint, ipflag)
     !
-    !   Print budget summaries
+    ! -- Print budget summaries
     call this%tsp_ot_bdsummary(ibudfl, ipflag)
     !
     ! -- Timing Output; if any dependendent variables or budgets
@@ -386,14 +377,14 @@ contains
     ! -- Calculate and save observations
     call this%obs%obs_bd()
     call this%obs%obs_ot()
-
+    !
     ! -- Calculate and save package obserations
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd_obs()
       call packobj%bnd_ot_obs()
     end do
-
+    !
   end subroutine tsp_ot_obs
 
   !> @brief Generalized transport model output routine
@@ -417,11 +408,12 @@ contains
     if (this%inssm > 0) then
       call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
     end if
+    !
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
     end do
-
+    !
     ! -- Save advanced package flows
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -430,11 +422,11 @@ contains
     if (this%inmvt > 0) then
       call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
     end if
-
+    !
     ! -- Print Model (GWT or GWE) flows
-    ! no need to print flowja
-    ! no need to print mst
-    ! no need to print fmi
+    !    no need to print flowja
+    !    no need to print mst
+    !    no need to print fmi
     if (this%inssm > 0) then
       call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
     end if
@@ -442,16 +434,17 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
     end do
-
+    !
     ! -- Print advanced package flows
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
     end do
+    !
     if (this%inmvt > 0) then
       call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
     end if
-
+    !
   end subroutine tsp_ot_flow
 
   !> @brief Generalized transport model output routine
@@ -505,8 +498,8 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_dv(idvsave, idvprint)
     end do
-
-    ! -- save head and print head
+    !
+    ! -- Save head and print head
     call this%oc%oc_ot(ipflag)
     !
     ! -- Return
@@ -530,18 +523,18 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
     end do
-
-    ! -- mover budget summary
+    !
+    ! -- Mover budget summary
     if (this%inmvt > 0) then
       call this%mvt%mvt_ot_bdsummary(ibudfl)
     end if
-
-    ! -- model budget summary
+    !
+    ! -- Model budget summary
     if (ibudfl /= 0) then
       ipflag = 1
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
-
+    !
     ! -- Write to budget csv
     call this%budget%writecsv(totim)
     !
@@ -654,7 +647,6 @@ contains
     integer(I4B), intent(in) :: inmst
     ! -- local
     character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and MST. Stop if not present.
     if (this%inic == 0) then
@@ -697,15 +689,15 @@ contains
     ! -- local
     integer(I4B) :: i, istart, istop
     !
-    ! -- set list file name if not provided
+    ! -- Set list file name if not provided
     if (.not. defined) then
       !
-      ! -- initialize
+      ! -- Initialize
       lst_fname = ' '
       istart = 0
       istop = len_trim(model_fname)
       !
-      ! -- identify '.' character position from back of string
+      ! -- Identify '.' character position from back of string
       do i = istop, 1, -1
         if (model_fname(i:i) == '.') then
           istart = i
@@ -713,20 +705,20 @@ contains
         end if
       end do
       !
-      ! -- if not found start from string end
+      ! -- If not found start from string end
       if (istart == 0) istart = istop + 1
       !
-      ! -- set list file name
+      ! -- Set list file name
       lst_fname = model_fname(1:istart)
       istop = istart + 3
       lst_fname(istart:istop) = '.lst'
     end if
     !
-    ! -- create the list file
+    ! -- Create the list file
     this%iout = getunit()
     call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
     !
-    ! -- write list file header
+    ! -- Write list file header
     call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
     !
     ! -- Return
@@ -736,7 +728,9 @@ contains
   !> @brief Write model name file options to list file
   !<
   subroutine log_namfile_options(this, found)
+    ! -- modules
     use GwfNamInputModule, only: GwfNamParamFoundType
+    ! -- dummy
     class(TransportModelType) :: this
     type(GwfNamParamFoundType), intent(in) :: found
     !
@@ -775,7 +769,7 @@ contains
 
   !> @brief Source package info and begin to process
   !<
-  subroutine create_tsp_packages(this, indis, gwecommon)
+  subroutine create_tsp_packages(this, indis)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
@@ -796,7 +790,6 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(inout) :: indis ! DIS enabled flag
-    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pkgtypes => null()
@@ -817,10 +810,10 @@ contains
     ! -- Initialize
     indis = 0
     !
-    ! -- set input memory paths, input/model and input/model/namfile
+    ! -- Set input memory paths, input/model and input/model/namfile
     model_mempath = create_mem_path(component=this%name, context=idm_context)
     !
-    ! -- set pointers to model path package info
+    ! -- Set pointers to model path package info
     call mem_setptr(pkgtypes, 'PKGTYPES', model_mempath)
     call mem_setptr(pkgnames, 'PKGNAMES', model_mempath)
     call mem_setptr(mempaths, 'MEMPATHS', model_mempath)
@@ -828,13 +821,13 @@ contains
     !
     do n = 1, size(pkgtypes)
       !
-      ! attributes for this input package
+      ! -- Attributes for this input package
       pkgtype = pkgtypes(n)
       pkgname = pkgnames(n)
       mempath = mempaths(n)
       inunit => inunits(n)
       !
-      ! -- create dis package as it is a prerequisite for other packages
+      ! -- Create dis package as it is a prerequisite for other packages
       select case (pkgtype)
       case ('DIS6')
         indis = 1
@@ -873,7 +866,7 @@ contains
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
                 this%eqnsclfac)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
-                this%eqnsclfac, this%depvartype, gwecommon)
+                this%eqnsclfac, this%depvartype)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
                 this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)

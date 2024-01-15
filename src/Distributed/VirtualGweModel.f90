@@ -20,6 +20,8 @@ module VirtualGweModelModule
     type(VirtualDbl1dType), pointer :: dsp_ath1 => null()
     type(VirtualDbl1dType), pointer :: dsp_ath2 => null()
     type(VirtualDbl1dType), pointer :: dsp_atv => null()
+    type(VirtualDbl1dType), pointer :: dsp_ktw => null()
+    type(VirtualDbl1dType), pointer :: dsp_kts => null()
     ! FMI
     type(VirtualDbl1dType), pointer :: fmi_gwfhead => null()
     type(VirtualDbl1dType), pointer :: fmi_gwfsat => null()
@@ -86,6 +88,8 @@ contains
     call this%set(this%dsp_ath1%base(), 'ATH1', 'DSP', MAP_NODE_TYPE)
     call this%set(this%dsp_ath2%base(), 'ATH2', 'DSP', MAP_NODE_TYPE)
     call this%set(this%dsp_atv%base(), 'ATV', 'DSP', MAP_NODE_TYPE)
+    call this%set(this%dsp_ktw%base(), 'KTW', 'DSP', MAP_NODE_TYPE)
+    call this%set(this%dsp_kts%base(), 'KTS', 'DSP', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfhead%base(), 'GWFHEAD', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
@@ -134,6 +138,7 @@ contains
         call this%map(this%dsp_ath1%base(), nr_nodes, (/STG_BFR_CON_AR/))
         call this%map(this%dsp_ath2%base(), nr_nodes, (/STG_BFR_CON_AR/))
         call this%map(this%dsp_atv%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%dsp_ktw%base(), nr_nodes, (/STG_BFR_CON_AR/))
       end if
 
       call this%map(this%fmi_gwfhead%base(), nr_nodes, (/STG_BFR_EXG_AD/))
@@ -160,6 +165,8 @@ contains
     allocate (this%dsp_ath1)
     allocate (this%dsp_ath2)
     allocate (this%dsp_atv)
+    allocate (this%dsp_ktw)
+    allocate (this%dsp_kts)
     allocate (this%fmi_gwfhead)
     allocate (this%fmi_gwfsat)
     allocate (this%fmi_gwfspdis)
@@ -181,6 +188,8 @@ contains
     deallocate (this%dsp_ath1)
     deallocate (this%dsp_ath2)
     deallocate (this%dsp_atv)
+    deallocate (this%dsp_ktw)
+    deallocate (this%dsp_kts)
     deallocate (this%fmi_gwfhead)
     deallocate (this%fmi_gwfsat)
     deallocate (this%fmi_gwfspdis)

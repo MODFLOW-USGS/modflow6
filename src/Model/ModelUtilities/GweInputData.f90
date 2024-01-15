@@ -45,13 +45,13 @@ contains
 
 !> @brief Allocate the shared data
 !<
-  subroutine gweshared_dat_cr(this)
+  subroutine gweshared_dat_cr(gwe_dat)
     ! -- modules
     ! -- dummy
-    type(GweInputDataType), pointer :: this !< the input data block
+    type(GweInputDataType), pointer :: gwe_dat !< the input data block
     !
     ! -- Create the object
-    allocate (this)
+    allocate (gwe_dat)
     !
     ! -- Return
     return

@@ -131,7 +131,7 @@ contains
     call gweshared_dat_cr(this%gwecommon)
     !
     ! -- Call parent class routine
-    call this%tsp_cr(filename, id, modelname, 'GWE', indis, this%gwecommon)
+    call this%tsp_cr(filename, id, modelname, 'GWE', indis)
     !
     ! -- create model packages
     call this%create_packages(indis)

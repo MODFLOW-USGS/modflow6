@@ -14,6 +14,7 @@ module GweInterfaceModelModule
   use GweMstModule, only: mst_cr
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
+  use GweInputDataModule, only: GweInputDataType
 
   implicit none
   private
@@ -50,12 +51,14 @@ contains
   !> @brief Create the interface model, analogously to what
   !< happens in gwe_cr
   subroutine gweifmod_cr(this, name, iout, gridConn)
+    ! -- modules
+    use GweInputDataModule, only: gweshared_dat_cr
     ! -- dummy
     class(GweInterfaceModelType) :: this !< the GWE interface model
     character(len=*), intent(in) :: name !< the interface model's name
     integer(I4B), intent(in) :: iout !< the output unit
     class(GridConnectionType), pointer, intent(in) :: gridConn !< the grid connection data for creating a DISU
-    ! local
+    ! -- local
     class(*), pointer :: modelPtr
     integer(I4B), target :: inobs
     integer(I4B) :: adv_unit, dsp_unit
@@ -63,7 +66,10 @@ contains
     this%memoryPath = create_mem_path(name)
     call this%allocate_scalars(name)
     !
-    ! defaults
+    ! -- Instantiate shared data container
+    call gweshared_dat_cr(this%gwecommon)
+    !
+    ! -- Defaults
     this%iAdvScheme = 0
     this%ixt3d = 0
     this%ieqnsclfac = DONE
@@ -85,14 +91,14 @@ contains
       dsp_unit = huge(1_I4B)
     end if
     !
-    ! create dis and packages
+    ! -- Create dis and packages
     call disu_cr(this%dis, this%name, '', -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout, this%ieqnsclfac, &
                 this%depvartype)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi, &
                 this%ieqnsclfac)
     call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi, &
-                this%eqnsclfac, this%gwecommon)
+                this%ieqnsclfac, this%gwecommon)
     call tsp_obs_cr(this%obs, inobs)
     !
     ! -- Return
@@ -149,7 +155,7 @@ contains
     adv_options%iAdvScheme = this%iAdvScheme
     dsp_options%ixt3d = this%ixt3d
     !
-    ! define DISU
+    ! -- Define DISU
     disPtr => this%dis
     call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
     call this%fmi%fmi_df(this%dis, 0)
@@ -157,14 +163,11 @@ contains
     if (this%inadv > 0) then
       call this%adv%adv_df(adv_options)
     end if
+    !
     if (this%indsp > 0) then
-      !this%dsp%idiffc = this%owner%dsp%idiffc
       this%dsp%idisp = this%owner%dsp%idisp
       call this%dsp%dsp_df(this%dis, dsp_options)
-      !if (this%dsp%idiffc > 0) then
-      !  call mem_reallocate(this%dsp%diffc, this%dis%nodes, 'DIFFC', &
-      !                      trim(this%dsp%memoryPath))
-      !end if
+      !
       if (this%dsp%idisp > 0) then
         call mem_reallocate(this%dsp%alh, this%dis%nodes, 'ALH', &
                             trim(this%dsp%memoryPath))
@@ -186,13 +189,16 @@ contains
                         'POROSITY', create_mem_path(this%name, 'MST'))
     end if
     !
-    ! assign or point model members to dis members
+    ! -- Assign or point model members to dis members
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
     this%ia => this%dis%con%ia
     this%ja => this%dis%con%ja
     !
-    ! allocate model arrays, now that neq and nja are assigned
+    ! -- Define shared data (cpw, rhow, latent heat of vaporization)
+    call this%gwecommon%gweshared_dat_df(this%neq)
+    !
+    ! -- Allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
     !
     ! -- Return
@@ -224,12 +230,13 @@ contains
     ! -- dummy
     class(GweInterfaceModelType) :: this !< the GWE interface model
     !
-    ! this
+    ! -- members specified in the interface model input for use by the
+    !    interface model
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%ieqnsclfac)
     !
-    ! gwe packages
+    ! -- gwe packages
     call this%dis%dis_da()
     call this%fmi%fmi_da()
     call this%adv%adv_da()
@@ -245,7 +252,7 @@ contains
       deallocate (this%mst)
     end if
     !
-    ! gwe scalars
+    ! -- gwe scalars
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
@@ -257,7 +264,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%eqnsclfac)
     !
-    ! base
+    ! -- base
     call this%NumericalModelType%model_da()
     !
     ! -- Return

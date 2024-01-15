@@ -94,8 +94,7 @@ contains
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
-    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
-    ! -- locals
+    type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
@@ -115,7 +114,9 @@ contains
     dspobj%iout = iout
     dspobj%fmi => fmi
     dspobj%eqnsclfac => eqnsclfac
-    dspobj%gwecommon => gwecommon
+    if (present(gwecommon)) then
+      dspobj%gwecommon => gwecommon
+    end if
     !
     if (dspobj%inunit > 0) then
       !
@@ -744,13 +745,13 @@ contains
                                   this%fmi%gwfsat(n)
       if (this%ikts > 0) ktbulk = ktbulk + (DONE - this%porosity(n)) * this%kts(n)
       !
-      ! -- The division by rhow*cpw below is done to render dstar in the form
-      !    of a thermal diffusivity, and not because the governing equation
-      !    is scaled by rhow*cpw. Because of this conceptual distinction,
-      !    ktbulk is divided by the explicitly calculated product rhow*cpw,
-      !    and not by the equivalent scale factor eqnsclfac, even though it
-      !    should make no practical difference in the result.
-      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow) ! kluge note eqnsclfac, define product
+      ! -- The division by rhow*cpw below is undertaken to render dstar in the
+      !    form of a thermal diffusivity, and not because the governing
+      !    equation is scaled by rhow*cpw. Because of this conceptual
+      !    distinction, ktbulk is divided by the explicitly calculated product
+      !    rhow*cpw, and not by the equivalent scale factor eqnsclfac, even
+      !    though it should make no practical difference in the result.
+      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO

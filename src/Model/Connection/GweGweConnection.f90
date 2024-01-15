@@ -80,35 +80,37 @@ contains
   !> @brief Basic construction of the connection
   !<
   subroutine gweGweConnection_ctor(this, model, gweEx)
+    ! -- modules
     use InputOutputModule, only: openfile
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
     class(NumericalModelType), pointer :: model !< the model owning this connection,
                                                 !! this must be a GweModelType
     class(DisConnExchangeType), pointer :: gweEx !< the GWE-GWE exchange the interface model is created for
-    ! local
+    ! -- local
     character(len=LINELENGTH) :: fname
     character(len=LENCOMPONENTNAME) :: name
     class(*), pointer :: objPtr
     logical(LGP) :: write_ifmodel_listfile = .false.
-
+    !
     objPtr => model
     this%gweModel => CastAsGweModel(objPtr)
     objPtr => gweEx
     this%gweExchange => CastAsGweExchange(objPtr)
-
+    !
     if (gweEx%v_model1%is_local .and. gweEx%v_model2%is_local) then
       this%owns_exchange = associated(model, gweEx%model1)
     else
       this%owns_exchange = .true.
     end if
-
+    !
     if (gweEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWECON1_', gweEx%id
     else
       write (name, '(a,i0)') 'GWECON2_', gweEx%id
     end if
-
-    ! .lst file for interface model
+    !
+    ! -- .lst file for interface model
     if (write_ifmodel_listfile) then
       fname = trim(name)//'.im.lst'
       call openfile(this%iout, 0, fname, 'LIST', filstat_opt='REPLACE')
@@ -116,61 +118,63 @@ contains
         trim(this%gweModel%name), 'from exchange ', &
         trim(gweEx%name)
     end if
-
-    ! first call base constructor
+    !
+    ! -- First call base constructor
     call this%SpatialModelConnectionType%spatialConnection_ctor(model, &
                                                                 gweEx, &
                                                                 name)
-
+    !
     call this%allocate_scalars()
     this%typename = 'GWE-GWE'
     this%iIfaceAdvScheme = 0
     this%iIfaceXt3d = 0
     this%exgflowSign = 1
-
+    !
     allocate (this%gweInterfaceModel)
     this%interface_model => this%gweInterfaceModel
-
+    !
   end subroutine gweGweConnection_ctor
 
   !> @brief Allocate scalar variables for this connection
   !<
   subroutine allocate_scalars(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-
+    !
     call mem_allocate(this%iIfaceAdvScheme, 'IADVSCHEME', this%memoryPath)
     call mem_allocate(this%iIfaceXt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%exgflowSign, 'EXGFLOWSIGN', this%memoryPath)
-
+    !
   end subroutine allocate_scalars
 
   !> @brief define the GWE-GWE connection
   !<
   subroutine gwegwecon_df(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-    ! local
+    ! -- local
     character(len=LENCOMPONENTNAME) :: imName
 
-    ! determine advection scheme (the GWE-GWE exchange
-    ! has been read at this point)
+    ! -- Determine advection scheme (the GWE-GWE exchange
+    !    has been read at this point)
     this%iIfaceAdvScheme = this%gweExchange%iAdvScheme
     !
-    ! determine xt3d setting on interface
+    ! -- Determine xt3d setting on interface
     this%iIfaceXt3d = this%gweExchange%ixt3d
 
-    ! turn off when off in the owning model
+    ! -- Turn off when off in the owning model
     if (this%gweModel%indsp > 0) then
       this%iIfaceXt3d = this%gweModel%dsp%ixt3d
     end if
 
-    ! determine the required size of the interface model grid
+    ! -- Determine the required size of the interface model grid
     call this%setGridExtent()
 
-    ! now set up the GridConnection
+    ! -- Now set up the GridConnection
     call this%spatialcon_df()
 
-    ! we have to 'catch up' and create the interface model
-    ! here, then the remainder of this routine will be define
+    ! -- We have to 'catch up' and create the interface model
+    !    here, then the remainder of this routine will be define
     if (this%prim_exchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWEIM1_', this%gweExchange%id
     else
@@ -189,14 +193,14 @@ contains
     call this%allocate_arrays()
     call this%gweInterfaceModel%allocate_fmi()
 
-    ! connect X, RHS, IBOUND, and flowja
+    ! -- Connect X, RHS, IBOUND, and flowja
     call this%spatialcon_setmodelptrs()
 
-    ! connect pointers (used by BUY)
+    ! -- Connect pointers (used by BUY)
     this%conc => this%gweInterfaceModel%x
     this%icbound => this%gweInterfaceModel%ibound
 
-    ! add connections from the interface model to solution matrix
+    ! -- Add connections from the interface model to solution matrix
     call this%spatialcon_connect()
 
   end subroutine gwegwecon_df
@@ -204,23 +208,24 @@ contains
   !> @brief Configure distributed variables for this interface model
   !<
   subroutine cfg_dist_vars(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-
+    !
     call this%cfg_dv('X', '', SYNC_NDS, &
                      (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
     call this%cfg_dv('IBOUND', '', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
-    !if (this%gweInterfaceModel%dsp%idiffc > 0) then
-    !  call this%cfg_dv('DIFFC', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-    !end if
+    !
     if (this%gweInterfaceModel%dsp%idisp > 0) then
       call this%cfg_dv('ALH', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
       call this%cfg_dv('ALV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
       call this%cfg_dv('ATH1', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
       call this%cfg_dv('ATH2', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
       call this%cfg_dv('ATV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('KTW', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('KTS', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
     end if
     call this%cfg_dv('GWFHEAD', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFSAT', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
@@ -228,11 +233,11 @@ contains
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
                      exg_var_name='GWFSIMVALS')
-    ! fill porosity from mst packages, needed for dsp
+    ! -- Fill porosity from mst packages, needed for dsp
     if (this%gweModel%indsp > 0 .and. this%gweModel%inmst > 0) then
       call this%cfg_dv('POROSITY', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
     end if
-
+    !
   end subroutine cfg_dist_vars
 
   !> @brief Allocate array variables for this connection
@@ -248,13 +253,14 @@ contains
   !> @brief Set required extent of the interface grid from
   !< the configuration
   subroutine setGridExtent(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-    ! local
+    ! -- local
     logical(LGP) :: hasAdv, hasDsp
-
+    !
     hasAdv = this%gweModel%inadv > 0
     hasDsp = this%gweModel%indsp > 0
-
+    !
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
         this%exg_stencil_depth = 2
@@ -263,7 +269,7 @@ contains
         end if
       end if
     end if
-
+    !
     if (hasDsp) then
       if (this%iIfaceXt3d > 0) then
         this%exg_stencil_depth = 2
@@ -272,7 +278,7 @@ contains
         end if
       end if
     end if
-
+    !
   end subroutine setGridExtent
 
   !> @brief allocate and read/set the connection's data structures
@@ -285,13 +291,25 @@ contains
     ! called, which is why we do it here
     call this%validateConnection()
 
-    ! allocate and read base
+    ! -- Allocate and read base
     call this%spatialcon_ar()
 
     ! ... and now the interface model
     call this%gweInterfaceModel%model_ar()
 
-    ! AR the movers and obs through the exchange
+    ! -- Set a pointer in the interface model to the gwecommon data
+    if (this%gweModel%inmst > 0) then
+      this%gweInterfaceModel%gwecommon%gwecpw = this%gweModel%gwecommon%gwecpw
+      this%gweInterfaceModel%gwecommon%gwerhow = this%gweModel%gwecommon%gwerhow
+    end if
+
+    !-- Set the equation scaling factor in the interface model to that of
+    !   underlying GWE model
+    if (this%gweModel%indsp > 0) then
+      this%gweInterfaceModel%ieqnsclfac = this%gweModel%dsp%eqnsclfac
+    end if
+
+    ! -- AR the movers and obs through the exchange
     if (this%owns_exchange) then
       !cdl implement this when MVT is ready
       !cdl if (this%gweExchange%inmvt > 0) then
@@ -311,14 +329,14 @@ contains
     use SimModule, only: count_errors, store_error
     class(GweGweConnectionType) :: this !< this connection
 
-    ! base validation, the spatial/geometry part
+    ! -- Base validation, the spatial/geometry part
     call this%SpatialModelConnectionType%validateConnection()
 
-    ! we cannot validate this (yet) in parallel mode
+    ! -- We cannot validate this (yet) in parallel mode
     if (.not. this%gweExchange%v_model1%is_local) return
     if (.not. this%gweExchange%v_model2%is_local) return
 
-    ! GWE related matters
+    ! -- GWE related matters
     if ((this%gweExchange%gwemodel1%inadv > 0 .and. &
          this%gweExchange%gwemodel2%inadv == 0) .or. &
         (this%gweExchange%gwemodel2%inadv > 0 .and. &
@@ -328,7 +346,7 @@ contains
         &and the other one is not'
       call store_error(errmsg)
     end if
-
+    !
     if ((this%gweExchange%gwemodel1%indsp > 0 .and. &
          this%gweExchange%gwemodel2%indsp == 0) .or. &
         (this%gweExchange%gwemodel2%indsp > 0 .and. &
@@ -338,40 +356,43 @@ contains
         &and the other one is not'
       call store_error(errmsg)
     end if
-
-    ! abort on errors
+    !
+    ! Abort on errors
     if (count_errors() > 0) then
       write (errmsg, '(a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
-
+    !
   end subroutine validateConnection
 
   subroutine gwegwecon_rp(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-
+    !
     ! Call exchange rp routines
     if (this%owns_exchange) then
       call this%gweExchange%exg_rp()
     end if
-
+    !
   end subroutine gwegwecon_rp
 
   !> @brief Advance this connection
   !<
   subroutine gwegwecon_ad(this)
+    !
     class(GweGweConnectionType) :: this !< this connection
-
-    ! recalculate dispersion ellipse
+    !
+    ! -- Recalculate dispersion ellipse
     if (this%gweInterfaceModel%indsp > 0) call this%gweInterfaceModel%dsp%dsp_ad()
-
+    !
     if (this%owns_exchange) then
       call this%gweExchange%exg_ad()
     end if
-
+    !
   end subroutine gwegwecon_ad
 
   subroutine gwegwecon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
@@ -388,118 +409,127 @@ contains
                                          this%gweExchange%gwemodel2%x)
       end if
     end if
-
+    !
   end subroutine gwegwecon_fc
 
   subroutine gwegwecon_cq(this, icnvg, isuppress_output, isolnid)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
     integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
     integer(I4B), intent(in) :: isolnid !< solution id
-
+    !
     call this%gweInterfaceModel%model_cq(icnvg, isuppress_output)
     call this%setFlowToExchange()
-
+    !
   end subroutine gwegwecon_cq
 
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
+    ! -- modules
     use IndexMapModule
+    ! -- dummy
     class(GweGweConnectionType) :: this !< this connection
-    ! local
+    ! -- local
     integer(I4B) :: i
     class(GweExchangeType), pointer :: gweEx
     type(IndexMapSgnType), pointer :: map
-
+    !
     if (this%owns_exchange) then
       gweEx => this%gweExchange
       map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
-
-      ! use (half of) the exchange map in reverse:
+      !
+      ! -- Use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
         gweEx%simvals(map%src_idx(i)) = &
           this%gweInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
-
+    !
   end subroutine setFlowToExchange
 
   subroutine gwegwecon_bd(this, icnvg, isuppress_output, isolnid)
+    ! -- modules
     use BudgetModule, only: rate_accumulator
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
     integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
     integer(I4B), intent(in) :: isolnid !< solution id
-
-    ! call exchange budget routine, also calls bd
-    ! for movers.
+    !
+    ! -- Call exchange budget routine, also calls bd
+    !    for movers.
     if (this%owns_exchange) then
       call this%gweExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
-
+    !
   end subroutine gwegwecon_bd
 
   subroutine gwegwecon_ot(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-
-    ! Call exg_ot() here as it handles all output processing
-    ! based on gweExchange%simvals(:), which was correctly
-    ! filled from gwegwecon
+    !
+    ! -- Call exg_ot() here as it handles all output processing
+    !    based on gweExchange%simvals(:), which was correctly
+    !    filled from gwegwecon
     if (this%owns_exchange) then
       call this%gweExchange%exg_ot()
     end if
-
+    !
   end subroutine gwegwecon_ot
 
   subroutine gwegwecon_da(this)
+    ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
-    ! local
+    ! -- local
     logical(LGP) :: isOpen
-
-    ! scalars
+    !
+    ! -- Scalars
     call mem_deallocate(this%iIfaceAdvScheme)
     call mem_deallocate(this%iIfaceXt3d)
     call mem_deallocate(this%exgflowSign)
-
-    ! arrays
+    !
+    ! -- Arrays
     call mem_deallocate(this%exgflowjaGwe)
-
-    ! interface model
+    !
+    ! -- Interface model
     call this%gweInterfaceModel%model_da()
     deallocate (this%gweInterfaceModel)
-
-    ! dealloc base
+    !
+    ! -- Dealloc base
     call this%spatialcon_da()
-
+    !
     inquire (this%iout, opened=isOpen)
     if (isOpen) then
       close (this%iout)
     end if
-
-    ! we need to deallocate the exchange we own:
+    !
+    ! -- We need to deallocate the exchange we own:
     if (this%owns_exchange) then
       call this%gweExchange%exg_da()
     end if
-
+    !
   end subroutine gwegwecon_da
 
   !> @brief Cast to GweGweConnectionType
   !<
   function CastAsGweGweConnection(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj !< object to be cast
+    ! -- return
     class(GweGweConnectionType), pointer :: res !< the GweGweConnection
-
+    !
     res => null()
     if (.not. associated(obj)) return
-
+    !
     select type (obj)
     class is (GweGweConnectionType)
       res => obj
     end select
-    return
+    !
   end function CastAsGweGweConnection
 
 end module
