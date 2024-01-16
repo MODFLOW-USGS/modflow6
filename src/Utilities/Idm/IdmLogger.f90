@@ -351,12 +351,12 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, inunit
+    integer(I4B) :: i, j, inunit
     !
     inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     do i = 1, size(p_mem, dim=2)
-      write (inunit, '(*(i0, " "))') p_mem(:, i)
+      write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
     end do
     !
     close (inunit)
@@ -368,12 +368,12 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, inunit
+    integer(I4B) :: i, j, k, inunit
     !
-    do i = 1, size(p_mem, dim=3)
-      inunit = create_array_echofile(varname, mempath, i, iout)
-      do j = 1, size(p_mem, dim=2)
-        write (inunit, '(*(i0, " "))') p_mem(:, j, i)
+    do k = 1, size(p_mem, dim=3)
+      inunit = create_array_echofile(varname, mempath, k, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
       end do
       close (inunit)
     end do
@@ -400,12 +400,12 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, inunit
+    integer(I4B) :: i, j, inunit
     !
     inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     do i = 1, size(p_mem, dim=2)
-      write (inunit, '(*(G0.10, " "))') p_mem(:, i)
+      write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
     end do
     !
     close (inunit)
@@ -417,12 +417,13 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, inunit
+    integer(I4B) :: i, j, k, inunit
     !
-    do i = 1, size(p_mem, dim=3)
-      inunit = create_array_echofile(varname, mempath, i, iout)
-      do j = 1, size(p_mem, dim=2)
-        write (inunit, '(*(G0.10, " "))') p_mem(:, j, i)
+    do k = 1, size(p_mem, dim=3)
+      inunit = create_array_echofile(varname, mempath, k, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
+                                           size(p_mem, dim=1))
       end do
       close (inunit)
     end do
