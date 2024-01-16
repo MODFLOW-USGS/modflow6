@@ -7,11 +7,19 @@ module MathUtilModule
 
   implicit none
   private
-  public :: mod_offset, is_close, zeroch, zeroin, zerotest
+  public :: f1d, is_close, mod_offset, zeroch, zeroin, zerotest
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
   end interface mod_offset
+
+  interface
+    function f1d(x) result(fx)
+      import DP
+      real(DP), intent(in) :: x
+      real(DP) :: fx
+    end function
+  end interface
 
 contains
 
@@ -121,7 +129,11 @@ contains
   !!
   !<
   function zeroch(x0, x1, f, epsa) result(z)
-    implicit double precision(a - h, o - z)
+    ! -- dummy
+    real(DP) :: x0, x1
+    procedure(f1d), pointer, intent(in) :: f
+    real(DP) :: epsa
+    real(DP) :: z
     ! -- local
     real(DP) :: epsm
     real(DP) :: a, b, c, t
@@ -131,7 +143,7 @@ contains
     real(DP) :: phi, philo, phihi
     real(DP) :: racb, rcab, rbca
     real(DP) :: tol, tl, tlc
-    real(DP) :: xm, xt
+    real(DP) :: xi, xm, xt
 
     epsm = epsilon(x0)
     b = x0
@@ -241,12 +253,15 @@ contains
   !! minimization without derivatives, prentice-hall, inc. (1973).
   !<
   function zeroin(ax, bx, f, tol) result(z)
-    implicit double precision(a - h, o - z)
+    ! -- dummy
+    real(DP) :: ax, bx
+    procedure(f1d), pointer, intent(in) :: f
+    real(DP) :: tol
+    real(DP) :: z
     ! -- local
     real(DP) :: eps
     real(DP) :: a, b, c, d, e, s, p, q
-    real(DP) :: fa, fb, fc
-    real(DP) :: tol1
+    real(DP) :: fa, fb, fc, r, tol1, xm
     logical(LGP) :: rs
 
     eps = epsilon(ax)
@@ -341,7 +356,11 @@ contains
 
   !> @brief Compute a zero of the function f(x) in the interval (x0, x1)
   function zerotest(x0, x1, f, epsa) result(z)
-    implicit double precision(a - h, o - z)
+    ! -- dummy
+    real(DP) :: x0, x1
+    procedure(f1d), pointer, intent(in) :: f
+    real(DP) :: epsa
+    real(DP) :: z
     ! -- local
     real(DP) :: epsm
     real(DP) :: ema, emb
