@@ -304,29 +304,29 @@ def build_distribution(
     shutil.copy(_project_root_path / "code.json", output_path)
 
     # full releases include examples, source code, makefiles and docs
-    if full:
-        # examples
-        setup_examples(
-            bin_path=output_path / "bin",
-            examples_path=output_path / "examples",
-            overwrite=overwrite,
-        )
+    if not full:
+        return
 
-        # copy source code files
-        copy_sources(output_path=output_path)
+    # examples
+    setup_examples(
+        bin_path=output_path / "bin",
+        examples_path=output_path / "examples",
+        overwrite=overwrite,
+    )
 
-        # build and copy makefiles
-        build_makefiles(output_path=output_path)
+    # copy source code files
+    copy_sources(output_path=output_path)
 
-        # docs
-        build_documentation(
-            bin_path=output_path / "bin",
-            output_path=output_path / "doc",
-            examples_repo_path=examples_repo_path,
-            # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
-            full=full,
-            overwrite=overwrite,
-        )
+    # build and copy makefiles
+    build_makefiles(output_path=output_path)
+
+    # docs
+    build_documentation(
+        bin_path=output_path / "bin",
+        full=full,
+        output_path=output_path / "doc",
+        overwrite=overwrite,
+    )
 
 
 @requires_exe("pdflatex")
