@@ -16,7 +16,6 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * tagged -- if set to false, then a keyword is not required prior to value itself.  tagged is set to true if not specified.  Optional.
 * in_record -- if true, then this means that the variable is part of a record, and so it should not be listed on its own line.  in_record is False if not specified.  Optional.
 * layered -- if true, then the LAYERED keyword will be written to the input instructions.  Default is false.
-* echo -- if true, then the ECHO keyword will be written to the input instructions.  Default is false.
 * reader -- this is the MODFLOW 6 subroutine or method that reads the data.  Valid values are: urword, u1ddbl, u2ddbl, readarray.
 * optional -- this is a logical keyword.  When true, the variable is an optional variable for MODFLOW 6.  Optional.
 * longname -- this is a long name for the variable.  Required.

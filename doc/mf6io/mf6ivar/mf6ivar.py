@@ -255,12 +255,8 @@ def block_entry(varname, block, vardict, prefix='  '):
         layered = ''
         if 'layered' in v:
             if v['layered'] == 'true':
-                layered = ' [LAYERED]'
-        echo = ''
-        if 'echo' in v:
-            if v['echo'] == 'true':
-                echo = ' [ECHO]'
-        s = '{}{}{}\n{}{}<{}{}> -- {}'.format(s, layered, echo, prefix, prefix,
+                layered = ' [LAYERED] [ECHO]'
+        s = '{}{}\n{}{}<{}{}> -- {}'.format(s, layered, prefix, prefix,
                                             varname,
                                             shape, reader)
 

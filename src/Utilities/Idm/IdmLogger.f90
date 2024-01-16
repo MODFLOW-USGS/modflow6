@@ -338,7 +338,7 @@ contains
     ! -- dummy
     integer(I4B) :: inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
+    inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     write (inunit, '(*(i0, " "))') p_mem
     !
@@ -353,7 +353,7 @@ contains
     ! -- dummy
     integer(I4B) :: i, inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
+    inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     do i = 1, size(p_mem, dim=2)
       write (inunit, '(*(i0, " "))') p_mem(:, i)
@@ -370,16 +370,13 @@ contains
     ! -- dummy
     integer(I4B) :: i, j, inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
-    !
     do i = 1, size(p_mem, dim=3)
-      write (inunit, '(a,i0)') 'LAYER ', i
+      inunit = create_array_echofile(varname, mempath, i, iout)
       do j = 1, size(p_mem, dim=2)
         write (inunit, '(*(i0, " "))') p_mem(:, j, i)
       end do
+      close (inunit)
     end do
-    !
-    close (inunit)
   end subroutine idm_print_array_int3d
 
   subroutine idm_print_array_dbl1d(p_mem, varname, mempath, iout)
@@ -390,7 +387,7 @@ contains
     ! -- dummy
     integer(I4B) :: inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
+    inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     write (inunit, '(*(G0.10, " "))') p_mem
     !
@@ -405,7 +402,7 @@ contains
     ! -- dummy
     integer(I4B) :: i, inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
+    inunit = create_array_echofile(varname, mempath, 0, iout)
     !
     do i = 1, size(p_mem, dim=2)
       write (inunit, '(*(G0.10, " "))') p_mem(:, i)
@@ -422,25 +419,23 @@ contains
     ! -- dummy
     integer(I4B) :: i, j, inunit
     !
-    inunit = create_array_echofile(varname, mempath, iout)
-    !
     do i = 1, size(p_mem, dim=3)
-      write (inunit, '(a,i0)') 'LAYER ', i
+      inunit = create_array_echofile(varname, mempath, i, iout)
       do j = 1, size(p_mem, dim=2)
         write (inunit, '(*(G0.10, " "))') p_mem(:, j, i)
       end do
+      close (inunit)
     end do
-    !
-    close (inunit)
   end subroutine idm_print_array_dbl3d
 
-  function create_array_echofile(varname, mempath, iout) result(inunit)
+  function create_array_echofile(varname, mempath, layer, iout) result(inunit)
     use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME
     use InputOutputModule, only: openfile, getunit
     use InputOutputModule, only: upcase, lowcase
     use MemoryHelperModule, only: create_mem_path, split_mem_path
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: layer
     integer(I4B), intent(in) :: iout
     integer(I4B) :: inunit
     ! -- dummy
@@ -452,6 +447,10 @@ contains
     suffix = varname
     call lowcase(suffix)
     filename = trim(comp)//'-'//trim(subcomp)//'.'//trim(suffix)
+    if (layer > 0) then
+      write (filename, '(a,i0)') trim(filename)//'.l', layer
+    end if
+    filename = trim(filename)//'.txt'
     !
     ! -- create the array file
     inunit = getunit()
