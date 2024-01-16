@@ -75,19 +75,18 @@ def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
 
+    assert (dist_dir_path / "meson.build").is_file()
+    assert (dist_dir_path / "meson.options").is_file()
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
-
     version_file_path = dist_dir_path / "src" / "Utilities" / "version.f90"
     assert version_file_path.is_file()
 
-    # find IDEVELOPMODE line
+    # check IDEVELOPMODE
     lines = open(version_file_path, "r").read().splitlines()
     pattern = ":: IDEVELOPMODE ="
     line = next(iter([l for l in lines if pattern in l]), None)
     assert line
-
-    # make sure IDEVELOPMODE was set correctly
     idevelopmode = 0 if releasemode else 1
     assert f"IDEVELOPMODE = {idevelopmode}" in line
 

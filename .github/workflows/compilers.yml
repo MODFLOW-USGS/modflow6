@@ -344,21 +344,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # one at a time
+          head="compat"
+          id=$(gh pr list -H $head -s open --json id -q ".[0].id")
+          [[ -n "${id// /}" ]] && (echo "PR already open"; exit 0) || (echo "opening PR")
+
           # setup bot user
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # create new branch
-          now=$(date +'%Y-%m-%dT%H-%M-%S')
-          updated_branch="compat_$now"
-          default_branch="${{ github.event.repository.default_branch }}"
-          git switch -c "$updated_branch"
+          git switch -c "$head"
 
-          # commit wide CSVs and Markdown tables and push branch
+          # commit and push
           git add DEVELOPER.md .github/compat/comp.csv .github/compat/test.csv
           git commit -m "Update compatibility tables"
-          git push -u origin "$updated_branch"
+          git push -u origin "$head"
 
           # open PR
           cat <(echo '### Compile') <(echo) .github/compat/comp.md <(echo) <(echo '### Test') <(echo) .github/compat/test.md > compat.md
-          gh pr create -B "$default_branch" -H "$updated_branch" --title "Update compile/test compatibility tables" --body-file compat.md
+          gh pr create -B "${{ github.event.repository.default_branch }}" -H "$head" --title "Update compile/test compatibility tables" --body-file compat.md
