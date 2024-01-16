@@ -19,7 +19,7 @@ module InputOutputModule
             BuildFloatFormat, BuildIntFormat, fseek_stream, get_nwords, &
             u9rdcom, append_processor_id
 
-  contains
+contains
 
   !> @brief Open a file
   !!
@@ -504,7 +504,7 @@ module InputOutputModule
     if(ncode==1) then
       idiff = ichar('a') - ichar('A')
       do 50 k=istart, istop
-        if(line(k:k) > 'a' .and. line(k:k) < 'z') &
+        if(line(k:k) >= 'a' .and. line(k:k) <= 'z') &
            line(k:k) = char(ichar(line(k:k)) - idiff)
 50    continue
       return
@@ -538,7 +538,7 @@ module InputOutputModule
       return
     !
     ! -- If output unit is positive; write a message to output unit.
-    else if(iout==0) then
+    else if(iout > 0) then
       if(in > 0) then
         write(msg_line,201) in, line(istart:istop), string(1:l)
       else
