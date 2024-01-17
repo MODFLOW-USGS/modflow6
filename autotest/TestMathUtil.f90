@@ -3,7 +3,7 @@ module TestMathUtil
   use ConstantsModule, only: DNODATA, DZERO
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
-  use MathUtilModule, only: is_close, mod_offset, &
+  use MathUtilModule, only: f1d, is_close, mod_offset, &
                             zeroch, zerotest, zeroin
   implicit none
   private
@@ -181,16 +181,19 @@ contains
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
+    procedure(f1d), pointer :: f
 
-    z = zeroch(-1.0_DP, 1.0_DP, sine, 0.001_DP)
+    f => sine
+
+    z = zeroch(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zeroch(-4.0_DP, -1.0_DP, sine, 0.001_DP)
+    z = zeroch(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zeroch(1.0_DP, 4.0_DP, sine, 0.001_DP)
+    z = zeroch(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
   end subroutine test_zeroch
@@ -199,16 +202,19 @@ contains
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
+    procedure(f1d), pointer :: f
 
-    z = zeroin(-1.0_DP, 1.0_DP, sine, 0.001_DP)
+    f => sine
+
+    z = zeroin(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zeroin(-4.0_DP, -1.0_DP, sine, 0.001_DP)
+    z = zeroin(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zeroin(1.0_DP, 4.0_DP, sine, 0.001_DP)
+    z = zeroin(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
   end subroutine test_zeroin
@@ -217,16 +223,19 @@ contains
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
+    procedure(f1d), pointer :: f
 
-    z = zerotest(-1.0_DP, 1.0_DP, sine, 0.001_DP)
+    f => sine
+
+    z = zerotest(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zerotest(-4.0_DP, -1.0_DP, sine, 0.001_DP)
+    z = zerotest(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zerotest(1.0_DP, 4.0_DP, sine, 0.001_DP)
+    z = zerotest(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
   end subroutine test_zerotest
