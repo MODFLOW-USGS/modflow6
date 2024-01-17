@@ -933,27 +933,27 @@ contains
   !> @brief Save 1 layer array on disk
   !<
   subroutine ulasav(buf, text, kstp, kper, pertim, totim, ncol, nrow, &
-                     ilay, ichn)
+                    ilay, ichn)
     ! -- dummy
     character(len=16) :: text
     real(DP), dimension(ncol, nrow) :: buf
     real(DP) :: pertim, totim
     !
     ! -- Write an unformatted record containing identifying information
-    write(ichn) kstp, kper, pertim, totim, text, ncol, nrow, ilay
+    write (ichn) kstp, kper, pertim, totim, text, ncol, nrow, ilay
     !
     ! -- Write an unformatted record containing array values. The array is
     !    dimensioned (ncol,nrow)
-    write(ichn) ((buf(ic, ir), ic=1, ncol), ir=1, nrow)
+    write (ichn) ((buf(ic, ir), ic=1, ncol), ir=1, nrow)
     !
     ! -- flush file
-    flush(ICHN)
+    flush (ICHN)
     !
     ! -- Return
     return
   end subroutine ulasav
 
-  !> @brief Record cell-by-cell flow terms for one component of flow as a 3-D 
+  !> @brief Record cell-by-cell flow terms for one component of flow as a 3-D
   !! array with extra record to indicate delt, pertim, and totim
   !<
   subroutine ubdsv1(kstp, kper, text, ibdchn, buff, ncol, nrow, nlay, iout, &
@@ -991,7 +991,7 @@ contains
   end subroutine ubdsv1
 
   !> @brief Write header records for cell-by-cell flow terms for one component
-  !! of flow.  
+  !! of flow.
   !!
   !! Each item in the list is written by module ubdsvc
   !<
@@ -1027,17 +1027,17 @@ contains
       "' ON UNIT',I7,' AT TIME STEP',I7,', STRESS PERIOD',I7)"
     !
     ! -- Write unformatted records identifying data.
-    if (iout > 0) write(iout,fmt) text, modelnam1, paknam1, modelnam2, &
-                                  paknam2, ibdchn, kstp, kper
-    write(ibdchn) kstp, kper, text, ncol, nrow, -nlay
-    write(ibdchn) 6, delt, pertim, totim
-    write(ibdchn) modelnam1
-    write(ibdchn) paknam1
-    write(ibdchn) modelnam2
-    write(ibdchn) paknam2
-    write(ibdchn) naux+1
-    if (naux > 0) write(ibdchn) (auxtxt(n),n=1,naux)
-    write(ibdchn) nlist
+    if (iout > 0) write (iout, fmt) text, modelnam1, paknam1, modelnam2, &
+      paknam2, ibdchn, kstp, kper
+    write (ibdchn) kstp, kper, text, ncol, nrow, -nlay
+    write (ibdchn) 6, delt, pertim, totim
+    write (ibdchn) modelnam1
+    write (ibdchn) paknam1
+    write (ibdchn) modelnam2
+    write (ibdchn) paknam2
+    write (ibdchn) naux + 1
+    if (naux > 0) write (ibdchn) (auxtxt(n), n=1, naux)
+    write (ibdchn) nlist
     !
     ! -- Return
     return
@@ -1060,9 +1060,9 @@ contains
     !
     ! -- Write record
     if (naux > 0) then
-        write(ibdchn) n,q,(aux(nn),nn=1,naux)
+      write (ibdchn) n, q, (aux(nn), nn=1, naux)
     else
-        write(ibdchn) n,q
+      write (ibdchn) n, q
     end if
     !
     ! -- Return
@@ -1087,9 +1087,9 @@ contains
     !
     ! -- Write record
     if (naux > 0) then
-        write(ibdchn) n,n2,q,(aux(nn),nn=1,naux)
+      write (ibdchn) n, n2, q, (aux(nn), nn=1, naux)
     else
-        write(ibdchn) n,n2,q
+      write (ibdchn) n, n2, q
     end if
     !
     ! -- Return
@@ -1098,7 +1098,7 @@ contains
 
   !> @brief Perform a case-insensitive comparison of two words
   !<
-  logical function same_word(word1, word2) 
+  logical function same_word(word1, word2)
     implicit none
     ! -- dummy
     character(len=*), intent(in) :: word1, word2
@@ -1109,7 +1109,7 @@ contains
     call upcase(upword1)
     upword2 = word2
     call upcase(upword2)
-    same_word = (upword1==upword2)
+    same_word = (upword1 == upword2)
     !
     ! -- Return
     return
@@ -1144,27 +1144,27 @@ contains
        &"('    formatted:',a,'  sequential:',a,'  unformatted:',a,'  form:',a)"
     !
     ! -- set strings using inquire statement
-    inquire(unit=iu, name=fname, access=ac, action=act, formatted=fm, &
-            sequential=seq, unformatted=unf, form=frm)
+    inquire (unit=iu, name=fname, access=ac, action=act, formatted=fm, &
+             sequential=seq, unformatted=unf, form=frm)
     !
     ! -- write the results of the inquire statement
-    write(line,fmta) iu, trim(fname), trim(ac), trim(act)
+    write (line, fmta) iu, trim(fname), trim(ac), trim(act)
     call write_message(line)
-    write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
+    write (line, fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
     call write_message(line)
     !
     ! -- Return
     return
   end subroutine unitinquire
 
-  !> @brief Parse a line into words. 
+  !> @brief Parse a line into words.
   !!
-  !! Blanks and commas are recognized as delimiters. Multiple blanks between 
-  !! words is OK, but multiple commas between words is treated as an error. 
+  !! Blanks and commas are recognized as delimiters. Multiple blanks between
+  !! words is OK, but multiple commas between words is treated as an error.
   !! Quotation marks are not recognized as delimiters.
-  !< 
+  !<
   subroutine ParseLine(line, nwords, words, inunit, filename)
-    ! -- modules 
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     implicit none
     ! -- dummy
@@ -1179,13 +1179,13 @@ contains
     !
     nwords = 0
     if (allocated(words)) then
-      deallocate(words)
-    endif
+      deallocate (words)
+    end if
     linelen = len(line)
     !
     ! -- get the number of words in a line and allocate words array
     nwords = get_nwords(line)
-    allocate(words(nwords))
+    allocate (words(nwords))
     !
     ! -- Populate words array and return
     lloc = 1
@@ -1205,7 +1205,7 @@ contains
     implicit none
     ! -- dummy
     integer(I4B), intent(in) :: ncol, nrow, kstp, kper, ilay, iout
-    real(DP),dimension(ncol,nrow), intent(in) :: buf
+    real(DP), dimension(ncol, nrow), intent(in) :: buf
     character(len=*), intent(in) :: text
     character(len=*), intent(in) :: userfmt
     integer(I4B), intent(in) :: nvalues, nwidth
@@ -1213,31 +1213,33 @@ contains
     ! -- local
     integer(I4B) :: i, j, nspaces
     ! -- formats
-    1 format('1',/2X,A,' IN LAYER ',I3,' AT END OF TIME STEP ',I3, &
-          ' IN STRESS PERIOD ',I4/2X,75('-'))
-    2 format('1',/1X,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
-          ' IN STRESS PERIOD ',I4/1X,79('-'))
+    character(len=*), parameter :: fmtmsgout1 = &
+      "('1',/2X,A,' IN LAYER ',I3,' AT END OF TIME STEP ',I3, &
+&        ' IN STRESS PERIOD ',I4/2X,75('-'))"
+    character(len=*), parameter :: fmtmsgout2 = &
+      "('1',/1X,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
+&        ' IN STRESS PERIOD ',I4/1X,79('-'))"
     !
-    if (iout<=0) return
+    if (iout <= 0) return
     ! -- Print a header depending on ILAY
     if (ilay > 0) then
-       write(iout,1) trim(text), ilay, kstp, kper
-    else if(ilay < 0) then
-       write(iout,2) trim(text), kstp, kper
+      write (iout, fmtmsgout1) trim(text), ilay, kstp, kper
+    else if (ilay < 0) then
+      write (iout, fmtmsgout2) trim(text), kstp, kper
     end if
     !
     ! -- Print column numbers.
     nspaces = 0
     if (editdesc == 'F') nspaces = 3
-    call ucolno(1, ncol, nspaces, nvalues, nwidth+1, iout)
+    call ucolno(1, ncol, nspaces, nvalues, nwidth + 1, iout)
     !
     ! -- Loop through the rows, printing each one in its entirety.
-    do i=1,nrow
-      write(iout,userfmt) i,(buf(j,i),j=1,ncol)
+    do i = 1, nrow
+      write (iout, userfmt) i, (buf(j, i), j=1, ncol)
     end do
     !
     ! -- flush file
-    flush(IOUT)
+    flush (IOUT)
     !
     ! -- Return
     return
@@ -1245,7 +1247,7 @@ contains
 
   !> @breif This function reads a line of arbitrary length and returns it.
   !!
-  !! The returned string can be stored in a deferred-length character variable, 
+  !! The returned string can be stored in a deferred-length character variable,
   !! for example:
   !!
   !!   integer(I4B) :: iu
@@ -1255,7 +1257,7 @@ contains
   !!   open(iu,file='my_file')
   !!   my_string = read_line(iu, eof)
   !<
-  function read_line(iu, eof) result (astring)
+  function read_line(iu, eof) result(astring)
     !
     implicit none
     ! -- dummy
@@ -1268,41 +1270,44 @@ contains
     character(len=1000) :: ermsg, fname
     character(len=7) :: fmtd
     logical :: lop
-    ! -- format
-20  format('Error in read_line: File ',i0,' is not open.')
-30  format('Error in read_line: Attempting to read text ' // &
-              'from unformatted file: "',a,'"')
-40  format('Error reading from file "',a,'" opened on unit ',i0, &
-              ' in read_line.')
+    ! -- formats
+    character(len=*), parameter :: fmterrmsg1 = &
+      & "('Error in read_line: File ',i0,' is not open.')"
+    character(len=*), parameter :: fmterrmsg2 = &
+      & "('Error in read_line: Attempting to read text ' // &
+      & 'from unformatted file: ""',a,'""')"
+    character(len=*), parameter :: fmterrmsg3 = &
+      & "('Error reading from file ""',a,'"" opened on unit ',i0, &
+      & ' in read_line.')"
     !
     astring = ''
     eof = .false.
     do
-      read(iu, '(a)', advance='NO', iostat=istat, size=isize, end=99) buffer
+      read (iu, '(a)', advance='NO', iostat=istat, size=isize, end=99) buffer
       if (istat > 0) then
         ! Determine error if possible, report it, and stop.
         if (iu <= 0) then
-          ermsg = 'Programming error in call to read_line: ' // &
+          ermsg = 'Programming error in call to read_line: '// &
                   'Attempt to read from unit number <= 0'
         else
-          inquire(unit=iu,opened=lop,name=fname,formatted=fmtd)
+          inquire (unit=iu, opened=lop, name=fname, formatted=fmtd)
           if (.not. lop) then
-            write(ermsg,20) iu
+            write (ermsg, fmterrmsg1) iu
           elseif (fmtd == 'NO' .or. fmtd == 'UNKNOWN') then
-            write(ermsg, 30) trim(fname)
+            write (ermsg, fmterrmsg2) trim(fname)
           else
-            write(ermsg,40) trim(fname), iu
-          endif
-        endif
+            write (ermsg, fmterrmsg3) trim(fname), iu
+          end if
+        end if
         call store_error(ermsg)
         call store_error_unit(iu)
-      endif
-      astring = astring // buffer(:isize)
+      end if
+      astring = astring//buffer(:isize)
       ! -- An end-of-record condition stops the loop.
       if (istat < 0) then
         return
-      endif
-    enddo
+      end if
+    end do
     !
     return
 99  continue
@@ -1328,19 +1333,19 @@ contains
     lenpath = len_trim(pathname)
     istart = 1
     istop = lenpath
-    loop: do i=lenpath,1,-1
+    loop: do i = lenpath, 1, -1
       if (pathname(i:i) == fs .or. pathname(i:i) == bs) then
         if (i == istop) then
           istop = istop - 1
         else
           istart = i + 1
           exit loop
-        endif
-      endif
-    enddo loop
+        end if
+      end if
+    end do loop
     if (istop >= istart) then
       filename = pathname(istart:istop)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -1348,8 +1353,8 @@ contains
 
   !> @brief Starting at position icol, define string as line(istart:istop).
   !!
-  !! If string can be interpreted as an integer(I4B), return integer in idnum 
-  !! argument. If token is not an integer(I4B), assume it is a boundary name, 
+  !! If string can be interpreted as an integer(I4B), return integer in idnum
+  !! argument. If token is not an integer(I4B), assume it is a boundary name,
   !! return NAMEDBOUNDFLAG in idnum, convert string to uppercase and return it
   !! in bndname.
   !<
@@ -1360,12 +1365,12 @@ contains
     integer(I4B), intent(inout) :: icol, istart, istop
     integer(I4B), intent(out) :: idnum
     character(len=LENBOUNDNAME), intent(out) :: bndname
-    ! -- local 
-    integer(I4B) :: istat, ndum, ncode=0
+    ! -- local
+    integer(I4B) :: istat, ndum, ncode = 0
     real(DP) :: rdum
     !
     call urword(line, icol, istart, istop, ncode, ndum, rdum, 0, 0)
-    read(line(istart:istop),*,iostat=istat) ndum
+    read (line(istart:istop), *, iostat=istat) ndum
     if (istat == 0) then
       idnum = ndum
       bndname = ''
@@ -1373,7 +1378,7 @@ contains
       idnum = NAMEDBOUNDFLAG
       bndname = line(istart:istop)
       call upcase(bndname)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -1384,7 +1389,7 @@ contains
   subroutine urdaux(naux, inunit, iout, lloc, istart, istop, auxname, line, text)
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray
-    use ConstantsModule,     only: LENAUXNAME
+    use ConstantsModule, only: LENAUXNAME
     ! -- implicit
     implicit none
     ! -- dummy
@@ -1403,12 +1408,13 @@ contains
     real(DP) :: rval
     !
     linelen = len(line)
-    if(naux > 0) then
-      write(errmsg,'(a)') 'Auxiliary variables already specified. Auxiliary ' // &
-        'variables must be specified on one line in the options block.'
+    if (naux > 0) then
+      write (errmsg, '(a)') 'Auxiliary variables already specified. '// &
+        & 'Auxiliary variables must be specified on one line in the '// &
+        & 'options block.'
       call store_error(errmsg)
       call store_error_unit(inunit)
-    endif
+    end if
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
       if (istart >= linelen) exit auxloop
@@ -1421,15 +1427,15 @@ contains
           & to ', LENAUXNAME, ' characters.'
         call store_error(errmsg)
         call store_error_unit(inunit)
-      end if      
+      end if
       naux = naux + 1
       call ExpandArray(auxname)
       auxname(naux) = line(istart:istop)
-      if(iout > 0) then
-        write(iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)")                     &
+      if (iout > 0) then
+        write (iout, "(4X,'AUXILIARY ',a,' VARIABLE: ',A)") &
           trim(adjustl(text)), auxname(naux)
-      endif
-    enddo auxloop
+      end if
+    end do auxloop
     !
     ! -- Return
     return
