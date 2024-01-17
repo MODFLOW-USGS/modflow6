@@ -966,7 +966,7 @@ contains
       case ('DSP6')
         this%indsp = 1
         mempathdsp = mempath
-      case ('CNT6', 'SRC6', 'LKE6', 'SFE6', &
+      case ('CTP6', 'SRC6', 'LKE6', 'SFE6', &
             'MWE6', 'UZE6', 'API6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
