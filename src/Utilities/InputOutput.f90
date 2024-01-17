@@ -52,8 +52,8 @@ module InputOutputModule
 50  format(1x,/1x,'OPENED ',a,/ &
                  1x,'FILE TYPE:',a,'   UNIT ',I4,3x,'STATUS:',a,/ &
                  1x,'FORMAT:',a,3x,'ACCESS:',a/ &
-                 1X,'ACTION:',A/)
-60  FORMAT(1X,/1X,'DID NOT OPEN ',A,/)
+                 1x,'ACTION:',a/)
+60  format(1x,/1x,'DID NOT OPEN ',a,/)
     !
     ! -- Process mode_opt
     if (present(mode_opt)) then
@@ -314,49 +314,49 @@ module InputOutputModule
     if (present(fmt)) then
       cfmt = fmt
     else
-      select case(NCODE)
+      select case(ncode)
         case(TABSTRING, TABUCSTRING)
-          write(cfmt, '(A,I0,A)') '(A', ILEN, ')'
+          write(cfmt, '(a,I0,a)') '(a', ilen, ')'
         case(TABINTEGER)
-          write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
+          write(cfmt, '(a,I0,a)') '(I', ilen, ')'
         case(TABREAL)
           ireal = 1
-          i = ILEN - 7
-          write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
+          i = ilen - 7
+          write(cfmt, '(a,I0,a,I0,a)') '(1PG', ilen, '.', i, ')'
           if (R >= DZERO) then
             ipad = 1
           end if
       end select
     end if
-    write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
+    write(cffmt, '(a,I0,a)') '(a', ilen, ')'
     !
-    if (present(ALIGNMENT)) then
-      ialign = ALIGNMENT
+    if (present(alignment)) then
+      ialign = alignment
     else
       ialign = TABRIGHT
     end if
     !
     ! -- 
-    if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
+    if (ncode == TABSTRING .or. ncode == TABUCSTRING) then
       cval = C
-      if (NCODE == TABUCSTRING) then
-        call UPCASE(cval)
+      if (ncode == TABUCSTRING) then
+        call UPcase(cval)
       end if
-    else if (NCODE == TABINTEGER) then
-      write(cval, cfmt) N
-    else if (NCODE == TABREAL) then
-      write(cval, cfmt) R
+    else if (ncode == TABINTEGER) then
+      write(cval, cfmt) n
+    else if (ncode == TABREAL) then
+      write(cval, cfmt) r
     end if
     !
-    ! -- apply alignment to cval
-    if (len_trim(adjustl(cval)) > ILEN) then
+    ! -- Apply alignment to cval
+    if (len_trim(adjustl(cval)) > ilen) then
       cval = adjustl(cval)
     else
       cval = trim(adjustl(cval))
     end if
     if (ialign == TABCENTER) then
       i = len_trim(cval)
-      ispace = (ILEN - i) / 2
+      ispace = (ilen - i) / 2
       if (ireal > 0) then
         if (ipad > 0) then
           cval = ' ' //trim(adjustl(cval))
@@ -374,23 +374,23 @@ module InputOutputModule
     else
       cval = adjustr(cval)
     end if
-    if (NCODE == TABUCSTRING) then
-      call UPCASE(cval)
+    if (ncode == TABUCSTRING) then
+      call UPcase(cval)
     end if
     !
-    ! -- increment istop to the end of the column
-    istop = ICOL + ILEN - 1
+    ! -- Increment istop to the end of the column
+    istop = icol + ilen - 1
     !
-    ! -- write final string to line
-    write(LINE(ICOL:istop), cffmt) cval
+    ! -- Write final string to line
+    write(line(icol:istop), cffmt) cval
     !
-    ICOL = istop + 1
+    icoL = istop + 1
     !
-    if (present(SEP)) then
-      i = len(SEP)
-      istop = ICOL + i
-      write(LINE(ICOL:istop), '(A)') SEP
-      ICOL = istop
+    if (present(sep)) then
+      i = len(sep)
+      istop = icol + i
+      write(line(icol:istop), '(a)') sep
+      icol = istop
     end if
     !
     ! -- Return
@@ -437,13 +437,13 @@ module InputOutputModule
     integer(I4B), intent(in) :: in !< input file unit number
     ! -- local
     character(len=20) string                
-    CHARACTER(len=30) RW
-    CHARACTER(len=1) TAB
-    CHARACTER(len=1) CHAREND
+    character(len=30) rw
+    character(len=1) tab
+    character(len=1) charend
     character(len=200) :: msg
-    character(len=LINELENGTH) :: msg_line
+    character(len=linelength) :: msg_line
     !
-    TAB=CHAR(9)
+    tab=char(9)
     !
     ! -- Set last char in LINE to blank and set ISTART and ISTOP to point
     !    to this blank as a default situation when no word is found.  If
@@ -460,33 +460,33 @@ module InputOutputModule
     do 10 i=icol, linlen
       if(line(i:i) /= ' ' .and. line(i:i) /= ',' .and. &
          line(i:i) /= tab) go to 20
-10  CONTINUE
+10  continue
     icol = linlen + 1
-    GO TO 100
+    go to 100
     !
     ! -- Found start of word.  Look for end.
     !    When word is quoted, only a quote can terminate it.
-    !    SEARCH FOR A SINGLE (CHAR(39)) OR DOUBLE (CHAR(34)) QUOTE
+    !    search for a single (char(39)) or double (char(34)) quote
 20  if(line(i:i)==char(34) .or. line(i:i)==char(39)) then
       if (line(i:i) == char(34)) then
-        CHAREND = CHAR(34)
-      ELSE
-        CHAREND = CHAR(39)
-      END IF
+        charend = char(34)
+      else
+        charend = char(39)
+      end if
       i = i + 1
       if(i <= linlen) then
         do 25 j=i, linlen
           if(line(j:j)==charend) go to 40
-25      CONTINUE
-      END IF
+25      continue
+      end if
     !
     ! -- When word is not quoted, space, comma, or tab will terminate.
-    ELSE
+    else
       do 30 j=i, linlen
         if(line(j:j)==' ' .or. line(j:j)==',' .or. &
            line(j:j)==tab) go to 40
-30    CONTINUE
-    END IF
+30    continue
+    end if
     !
     ! -- End of line without finding end of word; set end of word to
     !    end of line.
@@ -506,9 +506,9 @@ module InputOutputModule
       do 50 k=istart, istop
         if(line(k:k) >= 'a' .and. line(k:k) <= 'z') &
            line(k:k) = char(ichar(line(k:k)) - idiff)
-50    CONTINUE
-      RETURN
-    END IF
+50    continue
+      return
+    end if
     !
     ! -- Convert word to a number if requested.
 100 if(ncode==2 .or. ncode==3) then
@@ -518,49 +518,49 @@ module InputOutputModule
       rw(l:30) = line(istart:istop)
       if(ncode == 2) read(rw,'(i30)',err=200) n
       if(ncode == 3) read(rw,'(f30.0)',err=200) r
-    END IF
-    RETURN
+    end if
+    return
     !
     ! -- Number conversion error.
 200 if(ncode == 3) then
       string = 'a real number'
       l = 13
-    ELSE
+    else
       string = 'an integer'
       l = 10
-    END IF
+    end if
     !
     ! -- If output unit is negative, set last character of string to 'E'.
     if (iout < 0) then
       n = 0
       r = 0.
       line(linlen+1:linlen+1) = 'E'
-      RETURN
+      return
     !
     ! -- If output unit is positive; write a message to output unit.
     else if(iout > 0) then
       if(in > 0) then
         write(msg_line,201) in, line(istart:istop), string(1:l)
-      ELSE
+      else
         write(msg_line,202) line(istart:istop), string(1:l)
-      END IF
+      end if
       call write_message(msg_line, iunit=IOUT, skipbefore=1)
-      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
-201   FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
-             '" TO ',A,' IN LINE:')
-202   FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
-             '" TO ',A,' IN LINE:')
+      call write_message(line, iunit=IOUT, fmt='(1x,a)')
+201   format(1x,'FILE UNIT ',I4,' : ERROR CONVERTING "',a, &
+             '" TO ',a,' IN LINE:')
+202   format(1x,'KEYBOARD INPUT : ERROR CONVERTING "',a, &
+             '" TO ',a,' IN LINE:')
     !
     ! -- If output unit is 0; write a message to default output.
-    ELSE
+    else
       if(in > 0) then
         write(msg_line,201) in, line(istart:istop), string(1:l)
-      ELSE
+      else
         write(msg_line,202) line(istart:istop), string(1:l)
-      END IF
-      call write_message(msg_line, iunit=IOUT, skipbefore=1)
-      call write_message(LINE, iunit=IOUT, fmt='(1x,a)')
-    END IF
+      end if
+      call write_message(msg_line, iunit=iout, skipbefore=1)
+      call write_message(LINE, iunit=iout, fmt='(1x,a)')
+    end if
     !
     ! -- STOP after storing error message.
     call lowcase(string)
@@ -569,9 +569,9 @@ module InputOutputModule
     else
       write(msg,207) line(istart:istop), trim(string)
     endif
-205 format('File unit ',I0,': Error converting "',A, &
+205 format('File unit ',I0,': Error converting "',a, &
            '" to ',A,' in following line:')
-207 format('Keyboard input: Error converting "',A, &
+207 format('Keyboard input: Error converting "',a, &
            '" to ',A,' in following line:')
     call store_error(msg)
     call store_error(trim(line))
@@ -768,7 +768,7 @@ module InputOutputModule
             & ' IN STRESS PERIOD ',I4/2x,75('-'))
       else if (ilay < 0) then
         write(iout,2) text, kstp, kper
-    2    FORMAT('1',/1X,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
+    2    format('1',/1x,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
             & ' IN STRESS PERIOD ',I4/1x,79('-'))
     end if
     !
@@ -789,112 +789,112 @@ module InputOutputModule
     ! 
     ! -- Loop through the rows printing each one in its entirety.
     do i=1,nrow
-      SELECT CASE(IP)
+      select case(ip)
       !
-      CASE(1)
+      case(1)
       ! -- format 11G10.3
       write(iout, 11) i,(buf(j, i), j=1, ncol)
-11    FORMAT(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))
+11    format(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))
       !
-      CASE(2)
+      case(2)
       ! -- format 9G13.6
       write(iout, 21) i, (buf(j, i), j=1, ncol)
-21    FORMAT(1X,I3,2X,1PG13.6,8(1X,G13.6):/(5X,9(1X,G13.6)))
+21    format(1x,I3,2x,1PG13.6,8(1x,G13.6):/(5x,9(1x,G13.6)))
       !
-      CASE(3)
+      case(3)
       ! -- format 15F7.1
       write(iout, 31) i, (buf(j, i), j=1, ncol)
-31    FORMAT(1X,I3,1X,15(1X,F7.1):/(5X,15(1X,F7.1)))
+31    format(1x,I3,1x,15(1x,F7.1):/(5x,15(1x,F7.1)))
       !
-      CASE(4)
+      case(4)
       ! -- format 15F7.2
-      WRITE(IOUT,41) I,(BUF(J,I),J=1,NCOL)
-41    FORMAT(1X,I3,1X,15(1X,F7.2):/(5X,15(1X,F7.2)))
+      write(iout,41) i,(buf(j,i),j=1,ncol)
+41    format(1x,I3,1x,15(1x,F7.2):/(5x,15(1x,F7.2)))
       !
-      CASE(5)
+      case(5)
       ! -- format 15F7.3
       write(iout, 51) i, (buf(j, i), j=1, ncol)
-51    FORMAT(1X,I3,1X,15(1X,F7.3):/(5X,15(1X,F7.3)))
+51    format(1x,I3,1x,15(1x,F7.3):/(5x,15(1x,F7.3)))
       !
-      CASE(6)
+      case(6)
       ! -- format 15F7.4
       write(iout, 61) i, (buf(j, i), j=1, ncol)
-61    FORMAT(1X,I3,1X,15(1X,F7.4):/(5X,15(1X,F7.4)))
+61    format(1x,I3,1x,15(1x,F7.4):/(5x,15(1x,F7.4)))
       !
-      CASE(7)
+      case(7)
       ! -- format 20F5.0
       write(iout, 71) i, (buf(j, i), j=1, ncol)
-71    FORMAT(1X,I3,1X,20(1X,F5.0):/(5X,20(1X,F5.0)))
+71    format(1x,I3,1x,20(1x,F5.0):/(5x,20(1x,F5.0)))
       !
-      CASE(8)
+      case(8)
       ! -- format 20F5.1
       write(iout, 81) i, (buf(j, i), j=1, ncol)
-81    FORMAT(1X,I3,1X,20(1X,F5.1):/(5X,20(1X,F5.1)))
+81    format(1x,I3,1x,20(1x,F5.1):/(5x,20(1x,F5.1)))
       !
-      CASE(9)
+      case(9)
       ! -- format 20F5.2
       write(iout, 91) i, (buf(j, i), j=1, ncol)
-91    FORMAT(1X,I3,1X,20(1X,F5.2):/(5X,20(1X,F5.2)))
+91    format(1x,I3,1x,20(1x,F5.2):/(5x,20(1x,F5.2)))
       !
-      CASE(10)
+      case(10)
       ! -- format 20F5.3
       write(iout, 101) i, (buf(j, i), j=1, ncol)
-101   FORMAT(1X,I3,1X,20(1X,F5.3):/(5X,20(1X,F5.3)))
+101   format(1x,I3,1x,20(1x,F5.3):/(5x,20(1x,F5.3)))
       !
-      CASE(11)
+      case(11)
       ! -- format 20F5.4
       write(iout, 111) i, (buf(j, i), j=1, ncol)
-111   FORMAT(1X,I3,1X,20(1X,F5.4):/(5X,20(1X,F5.4)))
+111   format(1x,I3,1x,20(1x,F5.4):/(5x,20(1x,F5.4)))
       !
-      CASE(12)
+      case(12)
       ! -- format 10G11.4
       write(iout,121) i, (buf(j, i), j=1, ncol)
-121   FORMAT(1X,I3,2X,1PG11.4,9(1X,G11.4):/(5X,10(1X,G11.4)))
+121   format(1x,I3,2x,1PG11.4,9(1x,G11.4):/(5x,10(1x,G11.4)))
       !
-      CASE(13)
+      case(13)
       ! -- format 10F6.0
       write(iout, 131) i, (buf(j, i), j=1, ncol)
-131   FORMAT(1X,I3,1X,10(1X,F6.0):/(5X,10(1X,F6.0)))
+131   format(1x,I3,1x,10(1x,F6.0):/(5X,10(1x,F6.0)))
       !
-      CASE(14)
+      case(14)
       ! -- format 10F6.1
       write(iout, 141) i, (buf(j, i), j=1, ncol)
-141   FORMAT(1X,I3,1X,10(1X,F6.1):/(5X,10(1X,F6.1)))
+141   format(1x,I3,1x,10(1x,F6.1):/(5x,10(1x,F6.1)))
       !
-      CASE(15)
+      case(15)
       ! -- format 10F6.2
       write(iout, 151) i, (buf(j, i), j=1, ncol)
-151   FORMAT(1X,I3,1X,10(1X,F6.2):/(5X,10(1X,F6.2)))
+151   format(1x,I3,1x,10(1x,F6.2):/(5x,10(1x,F6.2)))
       !
-      CASE(16)
+      case(16)
       ! -- format 10F6.3
       write(iout, 161) i, (buf(j, i), j=1, ncol)
-161   FORMAT(1X,I3,1X,10(1X,F6.3):/(5X,10(1X,F6.3)))
+161   format(1x,I3,1x,10(1x,F6.3):/(5x,10(1x,F6.3)))
       !
-      CASE(17)
+      case(17)
       ! -- format 10F6.4
       write(iout, 171) i, (buf(j, i), j=1, ncol)
-171   FORMAT(1X,I3,1X,10(1X,F6.4):/(5X,10(1X,F6.4)))
+171   format(1x,I3,1x,10(1x,F6.4):/(5x,10(1x,F6.4)))
       !
-      CASE(18)
+      case(18)
       ! -- format 10F6.5
       write(iout, 181) i, (buf(j, i), j=1, ncol)
-181   FORMAT(1X,I3,1X,10(1X,F6.5):/(5X,10(1X,F6.5)))
+181   format(1x,I3,1x,10(1x,F6.5):/(5x,10(1x,F6.5)))
       !
-      CASE(19)
+      case(19)
       ! -- format 5G12.5
       write(iout, 191) i, (buf(j, i), j=1, ncol)
-191   FORMAT(1X,I3,2X,1PG12.5,4(1X,G12.5):/(5X,5(1X,G12.5)))
+191   format(1x,I3,2x,1PG12.5,4(1x,G12.5):/(5x,5(1x,G12.5)))
       !
-      CASE(20)
+      case(20)
       ! -- format 6G11.4
       write(iout, 201) i, (buf(j, i), j=1, ncol)
-201   FORMAT(1X,I3,2X,1PG11.4,5(1X,G11.4):/(5X,6(1X,G11.4)))
+201   format(1x,I3,2x,1PG11.4,5(1x,G11.4):/(5x,6(1x,G11.4)))
       !
-      CASE(21)
+      case(21)
       ! -- format 7G9.2
       write(iout, 211) i, (buf(j, i), j=1, ncol)
-211   FORMAT(1X,I3,2X,1PG9.2,6(1X,G9.2):/(5X,7(1X,G9.2)))
+211   format(1x,I3,2x,1PG9.2,6(1x,G9.2):/(5x,7(1x,G9.2)))
       !
       end select
     end do
@@ -962,7 +962,7 @@ module InputOutputModule
     ! -- flush file
     flush(ibdchn)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ubdsv1
 
@@ -1015,7 +1015,7 @@ module InputOutputModule
     if (naux > 0) write(ibdchn) (auxtxt(n),n=1,naux)
     write(ibdchn) nlist
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ubdsv06
 
@@ -1041,7 +1041,7 @@ module InputOutputModule
         write(ibdchn) n,q
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ubdsvc
 
@@ -1068,7 +1068,7 @@ module InputOutputModule
         write(ibdchn) n,n2,q
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ubdsvd
 
@@ -1129,7 +1129,7 @@ module InputOutputModule
     write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
     call write_message(line)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine unitinquire
 
@@ -1170,7 +1170,7 @@ module InputOutputModule
       words(i) = line(istart:istop)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ParseLine
 
@@ -1215,7 +1215,7 @@ module InputOutputModule
     ! -- flush file
     flush(IOUT)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ulaprufw
 
@@ -1741,7 +1741,7 @@ module InputOutputModule
       get_nwords = get_nwords + 1
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end function get_nwords
 
@@ -1783,7 +1783,7 @@ module InputOutputModule
     write(iu, pos=ipos, iostat=status)
     inquire(unit=iu, pos=ipos)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine fseek_stream
 
@@ -1938,4 +1938,4 @@ module InputOutputModule
     end do
   end subroutine get_line  
 
-END MODULE InputOutputModule
+end module InputOutputModule
