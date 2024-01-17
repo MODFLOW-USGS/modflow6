@@ -1471,7 +1471,7 @@ contains
     character(len=len(linein)) :: line
     character(len=20), dimension(:), allocatable :: words
     character(len=100) :: ermsg
-    integer(I4B) :: ndigits=0, nwords=0
+    integer(I4B) :: ndigits = 0, nwords = 0
     integer(I4B) :: i, ierr
     logical :: isint
     !
@@ -1481,17 +1481,17 @@ contains
     ierr = 0
     i = 0
     isint = .false.
-    if(editdesc == 'I') isint = .true.
+    if (editdesc == 'I') isint = .true.
     !
     ! -- Check array name
     if (nwords < 1) then
-      ermsg = 'Could not build PRINT_FORMAT from line' // trim(line)
+      ermsg = 'Could not build PRINT_FORMAT from line'//trim(line)
       call store_error(trim(ermsg))
       ermsg = 'Syntax is: COLUMNS <columns> WIDTH <width> DIGITS &
               &<digits> <format>'
       call store_error(trim(ermsg))
       call store_error_unit(inunit)
-    endif
+    end if
     !
     ermsg = 'Error setting PRINT_FORMAT. Syntax is incorrect in line:'
     if (nwords >= 4) then
@@ -1499,14 +1499,14 @@ contains
       if (.not. same_word(words(3), 'WIDTH')) ierr = 1
       ! -- Read nvalues and nwidth
       if (ierr == 0) then
-        read(words(2), *, iostat=ierr) nvaluesp
-      endif
+        read (words(2), *, iostat=ierr) nvaluesp
+      end if
       if (ierr == 0) then
-        read(words(4), *, iostat=ierr) nwidthp
-      endif
+        read (words(4), *, iostat=ierr) nwidthp
+      end if
     else
       ierr = 1
-    endif
+    end if
     if (ierr /= 0) then
       call store_error(ermsg)
       call store_error(line)
@@ -1514,7 +1514,7 @@ contains
               &DIGITS <digits> <format>'
       call store_error(trim(ermsg))
       call store_error_unit(inunit)
-    endif
+    end if
     i = 4
     !
     if (.not. isint) then
@@ -1522,12 +1522,12 @@ contains
       if (nwords >= 5) then
         if (.not. same_word(words(5), 'DIGITS')) ierr = 1
         ! -- Read ndigits
-        read(words(6), *, iostat=ierr) ndigits
+        read (words(6), *, iostat=ierr) ndigits
       else
         ierr = 1
-      endif
+      end if
       i = i + 2
-    endif
+    end if
     !
     ! -- Check for EXPONENTIAL | FIXED | GENERAL | SCIENTIFIC option.
     ! -- Check for LABEL, WRAP, and STRIP options.
@@ -1549,7 +1549,7 @@ contains
           editdesc = 'S'
           if (isint) ierr = 1
         case default
-          ermsg = 'Error in format specification. Unrecognized option: ' // words(i)
+          ermsg = 'Error in format specification. Unrecognized option: '//words(i)
           call store_error(ermsg)
           ermsg = 'Valid values are EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.'
           call store_error(ermsg)
@@ -1557,13 +1557,13 @@ contains
         end select
       else
         exit
-      endif
-    enddo
+      end if
+    end do
     if (ierr /= 0) then
       call store_error(ermsg)
       call store_error(line)
       call store_error_unit(inunit)
-    endif
+    end if
     !
     ! -- Build the output format.
     select case (editdesc)
@@ -1586,47 +1586,47 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: nvalsp, nwidp, ndig
     character(len=*), intent(inout) :: outfmt
-    logical, intent(in), optional :: prowcolnum  ! default true
+    logical, intent(in), optional :: prowcolnum ! default true
     ! -- local
-    character(len=8)   :: cvalues, cwidth, cdigits
-    character(len=60)  :: ufmt
+    character(len=8) :: cvalues, cwidth, cdigits
+    character(len=60) :: ufmt
     logical :: prowcolnumlocal
     ! -- formats
-    10 format(i8)
+    character(len=*), parameter :: fmtndig = "(i8)"
     !
     if (present(prowcolnum)) then
       prowcolnumlocal = prowcolnum
     else
       prowcolnumlocal = .true.
-    endif
+    end if
     !
     ! -- Convert integers to characters and left-adjust
-    write(cdigits,10) ndig
+    write (cdigits, fmtndig) ndig
     cdigits = adjustl(cdigits)
     !
     ! -- Build format for printing to the list file in wrap format
-    write(cvalues,10) nvalsp
+    write (cvalues, fmtndig) nvalsp
     cvalues = adjustl(cvalues)
-    write(cwidth,10) nwidp
+    write (cwidth, fmtndig) nwidp
     cwidth = adjustl(cwidth)
     if (prowcolnumlocal) then
       ufmt = '(1x,i3,1x,'
     else
       ufmt = '(5x,'
-    endif
+    end if
     !
-    ufmt = trim(ufmt) // cvalues
-    ufmt = trim(ufmt) // '(1x,f'
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // '.'
-    ufmt = trim(ufmt) // cdigits
-    ufmt = trim(ufmt) // '):/(5x,'
-    ufmt = trim(ufmt) // cvalues
-    ufmt = trim(ufmt) // '(1x,f'
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // '.'
-    ufmt = trim(ufmt) // cdigits
-    ufmt = trim(ufmt) // ')))'
+    ufmt = trim(ufmt)//cvalues
+    ufmt = trim(ufmt)//'(1x,f'
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//'.'
+    ufmt = trim(ufmt)//cdigits
+    ufmt = trim(ufmt)//'):/(5x,'
+    ufmt = trim(ufmt)//cvalues
+    ufmt = trim(ufmt)//'(1x,f'
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//'.'
+    ufmt = trim(ufmt)//cdigits
+    ufmt = trim(ufmt)//')))'
     outfmt = ufmt
     !
     ! -- Return
@@ -1641,58 +1641,58 @@ contains
     integer(I4B), intent(in) :: nvalsp, nwidp, ndig
     character(len=*), intent(in) :: editdesc
     character(len=*), intent(inout) :: outfmt
-    logical, intent(in), optional :: prowcolnum  ! default true
+    logical, intent(in), optional :: prowcolnum ! default true
     ! -- local
-    character(len=8)   :: cvalues,  cwidth, cdigits
-    character(len=60)  :: ufmt
+    character(len=8) :: cvalues, cwidth, cdigits
+    character(len=60) :: ufmt
     logical :: prowcolnumlocal
     ! -- formats
-    10 format(i8)
+    character(len=*), parameter :: fmtndig = "(i8)"
     !
     if (present(prowcolnum)) then
       prowcolnumlocal = prowcolnum
     else
       prowcolnumlocal = .true.
-    endif
+    end if
     !
     ! -- Build the format
-    write(cdigits,10) ndig
+    write (cdigits, fmtndig) ndig
     cdigits = adjustl(cdigits)
     ! -- Convert integers to characters and left-adjust
-    write(cwidth,10) nwidp
+    write (cwidth, fmtndig) nwidp
     cwidth = adjustl(cwidth)
     ! -- Build format for printing to the list file
-    write(cvalues, 10) (nvalsp - 1)
+    write (cvalues, fmtndig) (nvalsp - 1)
     cvalues = adjustl(cvalues)
     if (prowcolnumlocal) then
-      ufmt = '(1x,i3,2x,1p,' // editdesc
+      ufmt = '(1x,i3,2x,1p,'//editdesc
     else
-      ufmt = '(6x,1p,' // editdesc
-    endif
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // '.'
-    ufmt = trim(ufmt) // cdigits
-    if (nvalsp>1) then
-      ufmt = trim(ufmt) // ','
-      ufmt = trim(ufmt) // cvalues
-      ufmt = trim(ufmt) // '(1x,'
-      ufmt = trim(ufmt) // editdesc
-      ufmt = trim(ufmt) // cwidth
-      ufmt = trim(ufmt) // '.'
-      ufmt = trim(ufmt) // cdigits
-      ufmt = trim(ufmt) // ')'
-    endif
+      ufmt = '(6x,1p,'//editdesc
+    end if
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//'.'
+    ufmt = trim(ufmt)//cdigits
+    if (nvalsp > 1) then
+      ufmt = trim(ufmt)//','
+      ufmt = trim(ufmt)//cvalues
+      ufmt = trim(ufmt)//'(1x,'
+      ufmt = trim(ufmt)//editdesc
+      ufmt = trim(ufmt)//cwidth
+      ufmt = trim(ufmt)//'.'
+      ufmt = trim(ufmt)//cdigits
+      ufmt = trim(ufmt)//')'
+    end if
     !
-    ufmt = trim(ufmt) // ':/(5x,'
-    write(cvalues, 10) nvalsp
+    ufmt = trim(ufmt)//':/(5x,'
+    write (cvalues, fmtndig) nvalsp
     cvalues = adjustl(cvalues)
-    ufmt = trim(ufmt) // cvalues
-    ufmt = trim(ufmt) // '(1x,'
-    ufmt = trim(ufmt) // editdesc
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // '.'
-    ufmt = trim(ufmt) // cdigits
-    ufmt = trim(ufmt) // ')))'
+    ufmt = trim(ufmt)//cvalues
+    ufmt = trim(ufmt)//'(1x,'
+    ufmt = trim(ufmt)//editdesc
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//'.'
+    ufmt = trim(ufmt)//cdigits
+    ufmt = trim(ufmt)//')))'
     outfmt = ufmt
     !
     ! -- Return
@@ -1706,38 +1706,38 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: nvalsp, nwidp
     character(len=*), intent(inout) :: outfmt
-    logical, intent(in), optional :: prowcolnum  ! default true
+    logical, intent(in), optional :: prowcolnum ! default true
     ! -- local
-    character(len=8)   :: cvalues, cwidth
-    character(len=60)  :: ufmt
+    character(len=8) :: cvalues, cwidth
+    character(len=60) :: ufmt
     logical :: prowcolnumlocal
     ! -- formats
-    10 format(i8)
+    character(len=*), parameter :: fmtndig = "(i8)"
     !
     if (present(prowcolnum)) then
       prowcolnumlocal = prowcolnum
     else
       prowcolnumlocal = .true.
-    endif
+    end if
     !
     ! -- Build format for printing to the list file in wrap format
-    write(cvalues,10)nvalsp
+    write (cvalues, fmtndig) nvalsp
     cvalues = adjustl(cvalues)
-    write(cwidth,10)nwidp
+    write (cwidth, fmtndig) nwidp
     cwidth = adjustl(cwidth)
     if (prowcolnumlocal) then
       ufmt = '(1x,i3,1x,'
     else
       ufmt = '(5x,'
-    endif
-    ufmt = trim(ufmt) // cvalues
-    ufmt = trim(ufmt) // '(1x,i'
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // '):/(5x,'
-    ufmt = trim(ufmt) // cvalues
-    ufmt = trim(ufmt) // '(1x,i'
-    ufmt = trim(ufmt) // cwidth
-    ufmt = trim(ufmt) // ')))'
+    end if
+    ufmt = trim(ufmt)//cvalues
+    ufmt = trim(ufmt)//'(1x,i'
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//'):/(5x,'
+    ufmt = trim(ufmt)//cvalues
+    ufmt = trim(ufmt)//'(1x,i'
+    ufmt = trim(ufmt)//cwidth
+    ufmt = trim(ufmt)//')))'
     outfmt = ufmt
     !
     ! -- Return
@@ -1750,7 +1750,7 @@ contains
     ! -- return
     integer(I4B) :: get_nwords !< number of words in a string
     ! -- dummy
-    character(len=*), intent(in) :: line  !< line
+    character(len=*), intent(in) :: line !< line
     ! -- local
     integer(I4B) :: linelen
     integer(I4B) :: lloc
@@ -1777,7 +1777,7 @@ contains
 
   !> @brief Move the file pointer.
   !!
-  !! Patterned after fseek, which is not supported as part of the fortran 
+  !! Patterned after fseek, which is not supported as part of the fortran
   !! standard.  For this subroutine to work the file must have been opened with
   !! access='stream' and action='readwrite'.
   !<
@@ -1790,34 +1790,34 @@ contains
     ! -- local
     integer(I8B) :: ipos
     !
-    inquire(unit=iu, size=ipos)
+    inquire (unit=iu, size=ipos)
     !
-    select case(whence)
-    case(0)
+    select case (whence)
+    case (0)
       !
       ! -- whence = 0, offset is relative to start of file
       ipos = 0 + offset
-    case(1)
+    case (1)
       !
       ! -- whence = 1, offset is relative to current pointer position
-      inquire(unit=iu, pos=ipos)
+      inquire (unit=iu, pos=ipos)
       ipos = ipos + offset
-    case(2)
+    case (2)
       !
       ! -- whence = 2, offset is relative to end of file
-      inquire(unit=iu, size=ipos)
+      inquire (unit=iu, size=ipos)
       ipos = ipos + offset
     end select
     !
     ! -- position the file pointer to ipos
-    write(iu, pos=ipos, iostat=status)
-    inquire(unit=iu, pos=ipos)
+    write (iu, pos=ipos, iostat=status)
+    inquire (unit=iu, pos=ipos)
     !
     ! -- Return
     return
   end subroutine fseek_stream
 
-  !> @brief Read until non-comment line found and then return line. 
+  !> @brief Read until non-comment line found and then return line.
   !!
   !! Different from u8rdcom in that line is a deferred length character string,
   !! which allows any length lines to be read using the get_line subroutine.
@@ -1827,14 +1827,14 @@ contains
     use, intrinsic :: iso_fortran_env, only: IOSTAT_END
     implicit none
     ! -- dummy
-    integer(I4B),         intent(in) :: iin
-    integer(I4B),         intent(in) :: iout
-    character (len=:), allocatable, intent(inout) :: line
-    integer(I4B),        intent(out) :: ierr
+    integer(I4B), intent(in) :: iin
+    integer(I4B), intent(in) :: iout
+    character(len=:), allocatable, intent(inout) :: line
+    integer(I4B), intent(out) :: ierr
     ! -- local
-    character (len=:), allocatable :: linetemp
-    character (len=2), parameter :: comment = '//'
-    character(len=1), parameter  :: tab = CHAR(9)
+    character(len=:), allocatable :: linetemp
+    character(len=2), parameter :: comment = '//'
+    character(len=1), parameter :: tab = CHAR(9)
     logical :: iscomment
     integer(I4B) :: i, j, l, istart, lsize
     !
@@ -1850,9 +1850,9 @@ contains
       elseif (ierr /= 0) then
         ! -- Other error...report it
         call unitinquire(iin)
-        write(errmsg, *) 'u9rdcom: Could not read from unit: ',iin
+        write (errmsg, *) 'u9rdcom: Could not read from unit: ', iin
         call store_error(errmsg, terminate=.TRUE.)
-      endif
+      end if
       if (len_trim(line) < 1) then
         line = comment
         cycle
@@ -1864,9 +1864,10 @@ contains
         ! -- adjustl manually to avoid stack overflow
         lsize = len(line)
         istart = 1
-        allocate(character(len=lsize) :: linetemp)
+        allocate (character(len=lsize) :: linetemp)
         do j = 1, lsize
-          if (line(j:j) /= ' ' .and. line(j:j) /= ',' .and. line(j:j) /= char(9)) then
+          if (line(j:j) /= ' ' .and. line(j:j) /= ',' .and. &
+              line(j:j) /= char(9)) then
             istart = j
             exit
           end if
@@ -1874,40 +1875,40 @@ contains
         linetemp(:) = ' '
         linetemp(:) = line(istart:)
         line(:) = linetemp(:)
-        deallocate(linetemp)
+        deallocate (linetemp)
         !
         ! -- check for comment
         iscomment = .false.
         select case (line(1:1))
-          case ('#')
-            iscomment = .true.
-            exit cleartabs
-          case ('!')
-            iscomment = .true.
-            exit cleartabs
-          case (tab)
-            line(1:1) = ' '
-            cycle cleartabs
-          case default
-            if (line(1:2) == comment) iscomment = .true.
-            if (len_trim(line) < 1) iscomment = .true.
-            exit cleartabs
+        case ('#')
+          iscomment = .true.
+          exit cleartabs
+        case ('!')
+          iscomment = .true.
+          exit cleartabs
+        case (tab)
+          line(1:1) = ' '
+          cycle cleartabs
+        case default
+          if (line(1:2) == comment) iscomment = .true.
+          if (len_trim(line) < 1) iscomment = .true.
+          exit cleartabs
         end select
       end do cleartabs
       !
-      if (.not.iscomment) then
+      if (.not. iscomment) then
         exit pcomments
       else
         if (iout > 0) then
           !find the last non-blank character.
           l = len(line)
           do i = l, 1, -1
-            if(line(i:i) /= ' ') then
+            if (line(i:i) /= ' ') then
               exit
             end if
           end do
           ! -- print the line up to the last non-blank character.
-          write(iout,'(1x,a)') line(1:i)
+          write (iout, '(1x,a)') line(1:i)
         end if
       end if
     end do pcomments
@@ -1917,9 +1918,9 @@ contains
   end subroutine u9rdcom
 
   !> @brief Read an unlimited length line from unit number lun into a deferred-
-  !! length character string (line).  
+  !! length character string (line).
   !!
-  !! Tack on a single space to the end so that routines like URWORD continue to 
+  !! Tack on a single space to the end so that routines like URWORD continue to
   !! function as before.
   !<
   subroutine get_line(lun, line, iostat)
@@ -1942,30 +1943,30 @@ contains
       read (lun, '(A)', iostat=iostat, advance='no', size=size_read) buffer
       if (is_iostat_eor(iostat)) then
         linesize = len(line)
-        deallocate(linetemp)
-        allocate(character(len=linesize) :: linetemp)
+        deallocate (linetemp)
+        allocate (character(len=linesize) :: linetemp)
         linetemp(:) = line(:)
-        deallocate(line)
-        allocate(character(len=linesize + size_read + 1) :: line)
+        deallocate (line)
+        allocate (character(len=linesize + size_read + 1) :: line)
         line(:) = linetemp(:)
-        line(linesize+1:) = buffer(:size_read)
+        line(linesize + 1:) = buffer(:size_read)
         linesize = len(line)
         line(linesize:linesize) = ' '
         iostat = 0
         exit
       else if (iostat == 0) then
         linesize = len(line)
-        deallocate(linetemp)
-        allocate(character(len=linesize) :: linetemp)
+        deallocate (linetemp)
+        allocate (character(len=linesize) :: linetemp)
         linetemp(:) = line(:)
-        deallocate(line)
-        allocate(character(len=linesize + size_read) :: line)
+        deallocate (line)
+        allocate (character(len=linesize + size_read) :: line)
         line(:) = linetemp(:)
-        line(linesize+1:) = buffer(:size_read)
+        line(linesize + 1:) = buffer(:size_read)
       else
         exit
       end if
     end do
-  end subroutine get_line  
+  end subroutine get_line
 
 end module InputOutputModule
