@@ -10,10 +10,17 @@ from warnings import warn
 
 import flopy
 import numpy as np
-from common_regression import (COMPARE_PROGRAMS, adjust_htol,
-                               get_mf6_comparison, get_mf6_files,
-                               get_namefiles, get_rclose, get_regression_files,
-                               setup_mf6, setup_mf6_comparison)
+from common_regression import (
+    COMPARE_PROGRAMS,
+    adjust_htol,
+    get_mf6_comparison,
+    get_mf6_files,
+    get_namefiles,
+    get_rclose,
+    get_regression_files,
+    setup_mf6,
+    setup_mf6_comparison,
+)
 from flopy.mbase import BaseModel
 from flopy.mf6 import MFSimulation
 from flopy.utils.compare import compare_heads
@@ -243,7 +250,7 @@ class TestFramework:
         self.build = build
         self.check = check
         self.parallel = parallel
-        self.ncpus = ncpus
+        self.ncpus = [ncpus] if isinstance(ncpus, int) else ncpus
         self.api_func = api_func
         self.compare = compare
         self.outp = None
@@ -526,6 +533,7 @@ class TestFramework:
         workspace: Union[str, os.PathLike],
         target: Union[str, os.PathLike],
         xfail: bool = False,
+        ncpus: int = 1,
     ) -> Tuple[bool, List[str]]:
         """
         Run a simulation or model with FloPy.
@@ -536,6 +544,8 @@ class TestFramework:
             The target executable to use
         xfail : bool
             Whether to expect failure
+        ncpus : int
+            The number of CPUs for a parallel run
         """
 
         # make sure workspace exists
@@ -570,14 +580,12 @@ class TestFramework:
             # via MF6 executable
             elif "mf6" in target.name:
                 # parallel test if configured
-                if self.parallel:
+                if self.parallel and ncpus > 1:
                     print(
                         f"Parallel test {self.name} on {self.ncpus} processes"
                     )
                     try:
-                        success, buff = run_parallel(
-                            workspace, target, self.ncpus
-                        )
+                        success, buff = run_parallel(workspace, target, ncpus)
                     except Exception:
                         warn(
                             "MODFLOW 6 parallel test",
@@ -687,19 +695,31 @@ class TestFramework:
             self.sims = sims
             nsims = len(sims)
             self.buffs = list(repeat(None, nsims))
+
             assert len(self.xfail) in [
                 1,
                 nsims,
             ], f"Invalid xfail: expected a single boolean or one for each model"
             if len(self.xfail) == 1 and nsims:
                 self.xfail = list(repeat(self.xfail[0], nsims))
+
+            assert len(self.ncpus) in [
+                1,
+                nsims,
+            ], f"Invalid ncpus: expected a single integer or one for each model"
+            if len(self.ncpus) == 1 and nsims:
+                self.ncpus = list(repeat(self.ncpus[0], nsims))
+
             write_input(*sims, overwrite=self.overwrite, verbose=self.verbose)
         else:
             self.sims = [MFSimulation.load(sim_ws=self.workspace)]
             self.buffs = [None]
             assert (
                 len(self.xfail) == 1
-            ), f"Invalid xfail: expected a single boolean or one for each model"
+            ), f"Invalid xfail: expected a single boolean"
+            assert (
+                len(self.ncpus) == 1
+            ), f"Invalid ncpus: expected a single integer"
 
         # run models/simulations
         for i, sim_or_model in enumerate(self.sims):
@@ -716,7 +736,10 @@ class TestFramework:
                 else tgts.get(exe_path.stem, tgts["mf6"])
             )
             xfail = self.xfail[i]
-            success, buff = self.run_sim_or_model(workspace, target, xfail)
+            ncpus = self.ncpus[i]
+            success, buff = self.run_sim_or_model(
+                workspace, target, xfail, ncpus
+            )
             self.buffs[i] = buff  # store model output for assertions later
             assert success, (
                 f"{'Simulation' if 'mf6' in str(target) else 'Model'} "
