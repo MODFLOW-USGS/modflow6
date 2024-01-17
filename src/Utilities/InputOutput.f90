@@ -55,14 +55,14 @@ module InputOutputModule
                  1X,'ACTION:',A/)
 60  FORMAT(1X,/1X,'DID NOT OPEN ',A,/)
     !
-    ! -- process mode_opt
+    ! -- Process mode_opt
     if (present(mode_opt)) then
       imode = mode_opt
     else
       imode = isim_mode
     end if
     !
-    ! -- evaluate if the file should be opened
+    ! -- Evaluate if the file should be opened
     if (isim_mode < imode) then
       if(iout > 0) then
         write(iout, 60) trim(fname)
@@ -140,7 +140,7 @@ module InputOutputModule
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine openfile
 
@@ -164,7 +164,7 @@ module InputOutputModule
     iu = i
     iunext = iu + 1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine freeunitnumber
 
@@ -226,11 +226,11 @@ module InputOutputModule
     ! -- local
     integer(I4B) :: idiff, k, l
     !
-    ! -- compute the difference between lowercase and uppercase.
+    ! -- Compute the difference between lowercase and uppercase.
     l = len(word)
     idiff = ichar('a') - ichar('A')
     !
-    ! -- loop through the string and convert any uppercase characters.
+    ! -- Loop through the string and convert any uppercase characters.
     do k = 1, l
       if(word(k:k) >= 'A' .and. word(k:k) <= 'Z') then
         word(k:k)=char(ichar(word(k:k))+idiff)
@@ -249,12 +249,12 @@ module InputOutputModule
   !<
   subroutine append_processor_id(name, proc_id)
     ! -- dummy
-    character(len=linelength), intent(inout) :: name  !< file name
+    character(len=LINELENGTH), intent(inout) :: name  !< file name
     integer(I4B), intent(in) :: proc_id  !< processor id
     ! -- local
-    character(len=linelength) :: name_local
-    character(len=linelength) :: name_processor
-    character(len=linelength) :: extension_local
+    character(len=LINELENGTH) :: name_local
+    character(len=LINELENGTH) :: name_processor
+    character(len=LINELENGTH) :: extension_local
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
     !
@@ -272,7 +272,7 @@ module InputOutputModule
       name(1:ipos0-1), '.p', proc_id, trim(adjustl(extension_local))
     name = name_processor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine append_processor_id
 
@@ -311,8 +311,8 @@ module InputOutputModule
     ireal = 0
     !
     ! -- process dummy variables
-    if (present(FMT)) then
-      CFMT = FMT
+    if (present(fmt)) then
+      cfmt = fmt
     else
       select case(NCODE)
         case(TABSTRING, TABUCSTRING)
@@ -1003,8 +1003,8 @@ module InputOutputModule
       "' ON UNIT',I7,' AT TIME STEP',I7,', STRESS PERIOD',I7)"
     !
     ! -- Write unformatted records identifying data.
-    if (iout > 0) write(iout,fmt) text, modelnam1, paknam1, modelnam2, paknam2,&
-                                  modelnam2, paknam2, ibdchn, kstp, kper
+    if (iout > 0) write(iout,fmt) text, modelnam1, paknam1, modelnam2, &
+                                  paknam2, ibdchn, kstp, kper
     write(ibdchn) kstp, kper, text, ncol, nrow, -nlay
     write(ibdchn) 6, delt, pertim, totim
     write(ibdchn) modelnam1
