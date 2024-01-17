@@ -667,7 +667,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(int1d, idt%tagname, memoryPath, iout)
     end if
 
@@ -724,7 +724,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int2d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(int2d, idt%tagname, memoryPath, iout)
     end if
 
@@ -786,7 +786,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(int3d, idt%tagname, memoryPath, iout)
     end if
 
@@ -860,7 +860,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(dbl1d, idt%tagname, memoryPath, iout)
     end if
 
@@ -917,7 +917,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(dbl2d, idt%tagname, memoryPath, iout)
     end if
 
@@ -979,7 +979,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
-    if (print_array) then
+    if (print_array .and. idt%layered) then
       call idm_print_array(dbl3d, idt%tagname, memoryPath, iout)
     end if
 
