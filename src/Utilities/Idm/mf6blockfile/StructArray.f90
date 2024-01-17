@@ -597,9 +597,14 @@ contains
         !
       case (2) ! -- memtype real
         !
-        call idm_log_var(this%struct_vectors(j)%dbl1d, &
-                         this%struct_vectors(j)%idt%tagname, &
-                         this%mempath, iout)
+        if (this%struct_vectors(j)%ts_strlocs%count() > 0) then
+          call idm_log_var(this%struct_vectors(j)%idt%tagname, &
+                           this%mempath, iout, .false.)
+        else
+          call idm_log_var(this%struct_vectors(j)%dbl1d, &
+                           this%struct_vectors(j)%idt%tagname, &
+                           this%mempath, iout)
+        end if
         !
       case (4) ! -- memtype intvector
         !
@@ -617,9 +622,14 @@ contains
         !
       case (6) ! -- memtype dbl2d
         !
-        call idm_log_var(this%struct_vectors(j)%dbl2d, &
-                         this%struct_vectors(j)%idt%tagname, &
-                         this%mempath, iout)
+        if (this%struct_vectors(j)%ts_strlocs%count() > 0) then
+          call idm_log_var(this%struct_vectors(j)%idt%tagname, &
+                           this%mempath, iout, .false.)
+        else
+          call idm_log_var(this%struct_vectors(j)%dbl2d, &
+                           this%struct_vectors(j)%idt%tagname, &
+                           this%mempath, iout)
+        end if
         !
       end select
       !

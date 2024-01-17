@@ -143,7 +143,8 @@ contains
       !
       ! -- set pointer to model dynamic packages list
       dynamic_pkgs => dynamic_model_pkgs(model_pkg_inputs%modelname, &
-                                         static_loader%component_input_name)
+                                         static_loader%component_input_name, &
+                                         iout)
       !
       ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
@@ -427,10 +428,12 @@ contains
 
   !> @brief retrieve list of model dynamic loaders
   !<
-  function dynamic_model_pkgs(modelname, modelfname) result(model_dynamic_input)
+  function dynamic_model_pkgs(modelname, modelfname, iout) &
+    result(model_dynamic_input)
     use InputLoadTypeModule, only: AddDynamicModelToList, GetDynamicModelFromList
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
+    integer(I4B), intent(in) :: iout
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     class(ModelDynamicPkgsType), pointer :: temp
     integer(I4B) :: id
@@ -450,7 +453,7 @@ contains
     ! -- create if not found
     if (.not. associated(model_dynamic_input)) then
       allocate (model_dynamic_input)
-      call model_dynamic_input%init(modelname, modelfname)
+      call model_dynamic_input%init(modelname, modelfname, iout)
       call AddDynamicModelToList(model_dynamic_pkgs, model_dynamic_input)
     end if
     !

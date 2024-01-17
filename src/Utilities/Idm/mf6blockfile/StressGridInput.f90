@@ -146,6 +146,7 @@ contains
     use DefinitionSelectModule, only: get_param_definition_type
     use ArrayHandlersModule, only: ifind
     use SourceCommonModule, only: ifind_charstr
+    use IdmLoggerModule, only: idm_log_header, idm_log_close, idm_log_var
     class(StressGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     type(BlockParserType), pointer, intent(inout) :: parser
     ! -- locals
@@ -157,6 +158,10 @@ contains
     !
     ! -- reset for this period
     call this%reset()
+    !
+    ! -- log lst file header
+    call idm_log_header(this%mf6_input%component_name, &
+                        this%mf6_input%subcomponent_name, this%iout)
     !
     ! -- read array block
     do
@@ -197,6 +202,9 @@ contains
             this%param_reads(iparam)%invar = 2
           end if
           !
+          ! -- log variable
+          call idm_log_var(param_tag, this%mf6_input%mempath, this%iout, .true.)
+          !
           ! -- cycle to next input param
           cycle
         end if
@@ -213,6 +221,10 @@ contains
     if (this%tas_active /= 0) then
       call this%tas_links_create(parser%iuactive)
     end if
+    !
+    ! -- log lst file header
+    call idm_log_close(this%mf6_input%component_name, &
+                       this%mf6_input%subcomponent_name, this%iout)
     !
     ! -- return
     return
