@@ -57,11 +57,11 @@ contains
   !> @ brief log a dynamic header message
   !<
   subroutine idm_log_period_header(component, iout)
-    use TdisModule, only: kper
+    use TdisModule, only: kper, kstp
     character(len=*), intent(in) :: component !< component name
     integer(I4B), intent(in) :: iout
 
-    if (iparamlog > 0 .and. iout > 0) then
+    if (iparamlog > 0 .and. iout > 0 .and. kstp == 1) then
       write (iout, '(/1x,a,i0,a)') 'IDP PERIOD ', kper, &
         ' load for component: '//trim(component)
     end if
@@ -70,9 +70,10 @@ contains
   !> @ brief log the period closing message
   !<
   subroutine idm_log_period_close(iout)
+    use TdisModule, only: kstp
     integer(I4B), intent(in) :: iout
 
-    if (iparamlog > 0 .and. iout > 0) then
+    if (iparamlog > 0 .and. iout > 0 .and. kstp == 1) then
       !backspace iout
       write (iout, '(1x,a,/)') 'IDP component dynamic load complete...'
     end if
