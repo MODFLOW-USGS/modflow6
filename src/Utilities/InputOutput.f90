@@ -19,7 +19,7 @@ module InputOutputModule
             BuildFloatFormat, BuildIntFormat, fseek_stream, get_nwords, &
             u9rdcom, append_processor_id
 
-  contains
+contains
 
   !> @brief Open a file
   !!
@@ -755,21 +755,66 @@ module InputOutputModule
 
   !> @brief Print 1 layer array
   !<
-  subroutine ULAPRW(buf,text,kstp,kper,ncol,nrow,ilay,iprn,iout)
+  subroutine ULAPRW(buf, text, kstp, kper, ncol, nrow, ilay, iprn, iout)
     ! -- dummy
     character(len=16) :: text
-    real(DP), dimension(ncol,nrow) :: buf
+    real(DP), dimension(ncol, nrow) :: buf
+    ! -- formats
+    character(len=*), parameter :: fmtmsgout1 = &
+      & "('1', /2x, a, ' IN LAYER ',I3,' AT END OF TIME STEP ',I3, &
+      & ' IN STRESS PERIOD ',I4/2x,75('-'))"
+    character(len=*), parameter :: fmtmsgout2 = &
+      & "('1',/1x,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
+      & ' IN STRESS PERIOD ',I4/1x,79('-'))"
+    character(len=*), parameter :: fmtg10 = &
+      & "(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))"
+    character(len=*), parameter :: fmtg13 = &
+      & "(1x,I3,2x,1PG13.6,8(1x,G13.6):/(5x,9(1x,G13.6)))"
+    character(len=*), parameter :: fmtf7pt1 = &
+      & "(1x,I3,1x,15(1x,F7.1):/(5x,15(1x,F7.1)))"
+    character(len=*), parameter :: fmtf7pt2 = &
+      & "(1x,I3,1x,15(1x,F7.2):/(5x,15(1x,F7.2)))"
+    character(len=*), parameter :: fmtf7pt3 = &
+      & "(1x,I3,1x,15(1x,F7.3):/(5x,15(1x,F7.3)))"
+    character(len=*), parameter :: fmtf7pt4 = &
+      & "(1x,I3,1x,15(1x,F7.4):/(5x,15(1x,F7.4)))"
+    character(len=*), parameter :: fmtf5pt0 = &
+      & "(1x,I3,1x,20(1x,F5.0):/(5x,20(1x,F5.0)))"
+    character(len=*), parameter :: fmtf5pt1 = &
+      & "(1x,I3,1x,20(1x,F5.1):/(5x,20(1x,F5.1)))"
+    character(len=*), parameter :: fmtf5pt2 = &
+      & "(1x,I3,1x,20(1x,F5.2):/(5x,20(1x,F5.2)))"
+    character(len=*), parameter :: fmtf5pt3 = &
+      & "(1x,I3,1x,20(1x,F5.3):/(5x,20(1x,F5.3)))"
+    character(len=*), parameter :: fmtf5pt4 = &
+      & "(1x,I3,1x,20(1x,F5.4):/(5x,20(1x,F5.4)))"
+    character(len=*), parameter :: fmtg11 = &
+      & "(1x,I3,2x,1PG11.4,9(1x,G11.4):/(5x,10(1x,G11.4)))"
+    character(len=*), parameter :: fmtf6pt0 = &
+      & "(1x,I3,1x,10(1x,F6.0):/(5X,10(1x,F6.0)))"
+    character(len=*), parameter :: fmtf6pt1 = &
+      & "(1x,I3,1x,10(1x,F6.1):/(5x,10(1x,F6.1)))"
+    character(len=*), parameter :: fmtf6pt2 = &
+      & "(1x,I3,1x,10(1x,F6.2):/(5x,10(1x,F6.2)))"
+    character(len=*), parameter :: fmtf6pt3 = &
+      & "(1x,I3,1x,10(1x,F6.3):/(5x,10(1x,F6.3)))"
+    character(len=*), parameter :: fmtf6pt4 = &
+      & "(1x,I3,1x,10(1x,F6.4):/(5x,10(1x,F6.4)))"
+    character(len=*), parameter :: fmtf6pt5 = &
+      & "(1x,I3,1x,10(1x,F6.5):/(5x,10(1x,F6.5)))"
+    character(len=*), parameter :: fmtg12 = &
+      & "(1x,I3,2x,1PG12.5,4(1x,G12.5):/(5x,5(1x,G12.5)))"
+    character(len=*), parameter :: fmtg11pt4 = &
+      & "(1x,I3,2x,1PG11.4,5(1x,G11.4):/(5x,6(1x,G11.4)))"
+    character(len=*), parameter :: fmtg9pt2 = &
+      & "(1x,I3,2x,1PG9.2,6(1x,G9.2):/(5x,7(1x,G9.2)))"
     !
     if (iout <= 0) return
     ! -- Print a header depending on ilay
     if (ilay > 0) then
-      write(iout, 1) text, ilay, kstp, kper
-    1 format('1', /2x, a, ' IN LAYER ',I3,' AT END OF TIME STEP ',I3, &
-            & ' IN STRESS PERIOD ',I4/2x,75('-'))
-      else if (ilay < 0) then
-        write(iout,2) text, kstp, kper
-    2    format('1',/1x,A,' FOR CROSS SECTION AT END OF TIME STEP',I3, &
-            & ' IN STRESS PERIOD ',I4/1x,79('-'))
+      write (iout, fmtmsgout1) text, ilay, kstp, kper
+    else if (ilay < 0) then
+      write (iout, fmtmsgout2) text, kstp, kper
     end if
     !
     ! -- Make sure the format code (ip or iprn) is between 1 and 21
@@ -786,121 +831,100 @@ module InputOutputModule
     if (ip == 19) call ucolno(1, ncol, 0, 5, 13, iout)
     if (ip == 20) call ucolno(1, ncol, 0, 6, 12, iout)
     if (ip == 21) call ucolno(1, ncol, 0, 7, 10, iout)
-    ! 
+    !
     ! -- Loop through the rows printing each one in its entirety.
-    do i=1,nrow
-      select case(ip)
-      !
-      case(1)
-      ! -- format 11G10.3
-      write(iout, 11) i,(buf(j, i), j=1, ncol)
-11    format(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))
-      !
-      case(2)
-      ! -- format 9G13.6
-      write(iout, 21) i, (buf(j, i), j=1, ncol)
-21    format(1x,I3,2x,1PG13.6,8(1x,G13.6):/(5x,9(1x,G13.6)))
-      !
-      case(3)
-      ! -- format 15F7.1
-      write(iout, 31) i, (buf(j, i), j=1, ncol)
-31    format(1x,I3,1x,15(1x,F7.1):/(5x,15(1x,F7.1)))
-      !
-      case(4)
-      ! -- format 15F7.2
-      write(iout,41) i,(buf(j,i),j=1,ncol)
-41    format(1x,I3,1x,15(1x,F7.2):/(5x,15(1x,F7.2)))
-      !
-      case(5)
-      ! -- format 15F7.3
-      write(iout, 51) i, (buf(j, i), j=1, ncol)
-51    format(1x,I3,1x,15(1x,F7.3):/(5x,15(1x,F7.3)))
-      !
-      case(6)
-      ! -- format 15F7.4
-      write(iout, 61) i, (buf(j, i), j=1, ncol)
-61    format(1x,I3,1x,15(1x,F7.4):/(5x,15(1x,F7.4)))
-      !
-      case(7)
-      ! -- format 20F5.0
-      write(iout, 71) i, (buf(j, i), j=1, ncol)
-71    format(1x,I3,1x,20(1x,F5.0):/(5x,20(1x,F5.0)))
-      !
-      case(8)
-      ! -- format 20F5.1
-      write(iout, 81) i, (buf(j, i), j=1, ncol)
-81    format(1x,I3,1x,20(1x,F5.1):/(5x,20(1x,F5.1)))
-      !
-      case(9)
-      ! -- format 20F5.2
-      write(iout, 91) i, (buf(j, i), j=1, ncol)
-91    format(1x,I3,1x,20(1x,F5.2):/(5x,20(1x,F5.2)))
-      !
-      case(10)
-      ! -- format 20F5.3
-      write(iout, 101) i, (buf(j, i), j=1, ncol)
-101   format(1x,I3,1x,20(1x,F5.3):/(5x,20(1x,F5.3)))
-      !
-      case(11)
-      ! -- format 20F5.4
-      write(iout, 111) i, (buf(j, i), j=1, ncol)
-111   format(1x,I3,1x,20(1x,F5.4):/(5x,20(1x,F5.4)))
-      !
-      case(12)
-      ! -- format 10G11.4
-      write(iout,121) i, (buf(j, i), j=1, ncol)
-121   format(1x,I3,2x,1PG11.4,9(1x,G11.4):/(5x,10(1x,G11.4)))
-      !
-      case(13)
-      ! -- format 10F6.0
-      write(iout, 131) i, (buf(j, i), j=1, ncol)
-131   format(1x,I3,1x,10(1x,F6.0):/(5X,10(1x,F6.0)))
-      !
-      case(14)
-      ! -- format 10F6.1
-      write(iout, 141) i, (buf(j, i), j=1, ncol)
-141   format(1x,I3,1x,10(1x,F6.1):/(5x,10(1x,F6.1)))
-      !
-      case(15)
-      ! -- format 10F6.2
-      write(iout, 151) i, (buf(j, i), j=1, ncol)
-151   format(1x,I3,1x,10(1x,F6.2):/(5x,10(1x,F6.2)))
-      !
-      case(16)
-      ! -- format 10F6.3
-      write(iout, 161) i, (buf(j, i), j=1, ncol)
-161   format(1x,I3,1x,10(1x,F6.3):/(5x,10(1x,F6.3)))
-      !
-      case(17)
-      ! -- format 10F6.4
-      write(iout, 171) i, (buf(j, i), j=1, ncol)
-171   format(1x,I3,1x,10(1x,F6.4):/(5x,10(1x,F6.4)))
-      !
-      case(18)
-      ! -- format 10F6.5
-      write(iout, 181) i, (buf(j, i), j=1, ncol)
-181   format(1x,I3,1x,10(1x,F6.5):/(5x,10(1x,F6.5)))
-      !
-      case(19)
-      ! -- format 5G12.5
-      write(iout, 191) i, (buf(j, i), j=1, ncol)
-191   format(1x,I3,2x,1PG12.5,4(1x,G12.5):/(5x,5(1x,G12.5)))
-      !
-      case(20)
-      ! -- format 6G11.4
-      write(iout, 201) i, (buf(j, i), j=1, ncol)
-201   format(1x,I3,2x,1PG11.4,5(1x,G11.4):/(5x,6(1x,G11.4)))
-      !
-      case(21)
-      ! -- format 7G9.2
-      write(iout, 211) i, (buf(j, i), j=1, ncol)
-211   format(1x,I3,2x,1PG9.2,6(1x,G9.2):/(5x,7(1x,G9.2)))
-      !
+    do i = 1, nrow
+      select case (ip)
+        !
+      case (1)
+        ! -- format 11G10.3
+        write (iout, fmtg10) i, (buf(j, i), j=1, ncol)
+        !
+      case (2)
+        ! -- format 9G13.6
+        write (iout, fmtg13) i, (buf(j, i), j=1, ncol)
+        !
+      case (3)
+        ! -- format 15F7.1
+        write (iout, fmtf7pt1) i, (buf(j, i), j=1, ncol)
+        !
+      case (4)
+        ! -- format 15F7.2
+        write (iout, fmtf7pt2) i, (buf(j, i), j=1, ncol)
+        !
+      case (5)
+        ! -- format 15F7.3
+        write (iout, fmtf7pt3) i, (buf(j, i), j=1, ncol)
+        !
+      case (6)
+        ! -- format 15F7.4
+        write (iout, fmtf7pt4) i, (buf(j, i), j=1, ncol)
+        !
+      case (7)
+        ! -- format 20F5.0
+        write (iout, fmtf5pt0) i, (buf(j, i), j=1, ncol)
+        !
+      case (8)
+        ! -- format 20F5.1
+        write (iout, fmtf5pt1) i, (buf(j, i), j=1, ncol)
+        !
+      case (9)
+        ! -- format 20F5.2
+        write (iout, fmtf5pt2) i, (buf(j, i), j=1, ncol)
+        !
+      case (10)
+        ! -- format 20F5.3
+        write (iout, fmtf5pt3) i, (buf(j, i), j=1, ncol)
+        !
+      case (11)
+        ! -- format 20F5.4
+        write (iout, fmtf5pt4) i, (buf(j, i), j=1, ncol)
+        !
+      case (12)
+        ! -- format 10G11.4
+        write (iout, fmtg11) i, (buf(j, i), j=1, ncol)
+        !
+      case (13)
+        ! -- format 10F6.0
+        write (iout, fmtf6pt0) i, (buf(j, i), j=1, ncol)
+        !
+      case (14)
+        ! -- format 10F6.1
+        write (iout, fmtf6pt1) i, (buf(j, i), j=1, ncol)
+        !
+      case (15)
+        ! -- format 10F6.2
+        write (iout, fmtf6pt2) i, (buf(j, i), j=1, ncol)
+        !
+      case (16)
+        ! -- format 10F6.3
+        write (iout, fmtf6pt3) i, (buf(j, i), j=1, ncol)
+        !
+      case (17)
+        ! -- format 10F6.4
+        write (iout, fmtf6pt4) i, (buf(j, i), j=1, ncol)
+        !
+      case (18)
+        ! -- format 10F6.5
+        write (iout, fmtf6pt5) i, (buf(j, i), j=1, ncol)
+        !
+      case (19)
+        ! -- format 5G12.5
+        write (iout, fmtg12) i, (buf(j, i), j=1, ncol)
+        !
+      case (20)
+        ! -- format 6G11.4
+        write (iout, fmtg11pt4) i, (buf(j, i), j=1, ncol)
+        !
+      case (21)
+        ! -- format 7G9.2
+        write (iout, fmtg9pt2) i, (buf(j, i), j=1, ncol)
+        !
       end select
     end do
     !
     ! -- Flush file
-    flush(iout)
+    flush (iout)
     !
     ! -- Return
     return
