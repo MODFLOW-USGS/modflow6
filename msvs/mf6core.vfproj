@@ -141,8 +141,8 @@
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterEnergy">
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1cnt1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1cnt1idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1ctp1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1ctp1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dis1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1disu1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1disv1idm.f90"/>

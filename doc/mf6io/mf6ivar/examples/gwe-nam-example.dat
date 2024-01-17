@@ -9,8 +9,8 @@ BEGIN PACKAGES
   ADV6       heat_transport.adv
   DSP6       heat_transport.dsp
   SSM6       heat_transport.ssm
-  CNT6       heat_transport01.cnt LEFT
-  CNT6       heat_transport02.cnt RIGHT
+  CTP6       heat_transport01.ctp LEFT
+  CTP6       heat_transport02.ctp RIGHT
   OC6        heat_transport.oc
 END PACKAGES
 

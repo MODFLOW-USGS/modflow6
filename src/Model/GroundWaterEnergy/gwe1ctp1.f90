@@ -1,4 +1,4 @@
-module GweCntModule
+module GweCtpModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
@@ -17,35 +17,35 @@ module GweCntModule
   implicit none
   !
   private
-  public :: cnt_create
+  public :: ctp_create
   !
-  character(len=LENFTYPE) :: ftype = 'CNT'
-  character(len=LENPACKAGENAME) :: text = '             CNT'
+  character(len=LENFTYPE) :: ftype = 'CTP'
+  character(len=LENPACKAGENAME) :: text = '             CTP'
   !
-  type, extends(BndExtType) :: GweCntType
+  type, extends(BndExtType) :: GweCtpType
 
     real(DP), dimension(:), pointer, contiguous :: tspvar => null() !< constant temperature array
-    real(DP), dimension(:), pointer, contiguous :: ratecntin => null() !< simulated flows into constant temperature (excluding other CNTs)
-    real(DP), dimension(:), pointer, contiguous :: ratecntout => null() !< simulated flows out of constant temperature (excluding to other CNTs)
+    real(DP), dimension(:), pointer, contiguous :: ratectpin => null() !< simulated flows into constant temperature (excluding other CNTs)
+    real(DP), dimension(:), pointer, contiguous :: ratectpout => null() !< simulated flows out of constant temperature (excluding to other CNTs)
     character(len=LENVARNAME) :: depvartype = '' !< stores string of dependent variable type, depending on model type
   contains
-    procedure :: bnd_rp => cnt_rp
-    procedure :: bnd_ad => cnt_ad
-    procedure :: bnd_ck => cnt_ck
-    procedure :: bnd_fc => cnt_fc
-    procedure :: bnd_cq => cnt_cq
-    procedure :: bnd_bd => cnt_bd
-    procedure :: bnd_da => cnt_da
-    procedure :: allocate_arrays => cnt_allocate_arrays
+    procedure :: bnd_rp => ctp_rp
+    procedure :: bnd_ad => ctp_ad
+    procedure :: bnd_ck => ctp_ck
+    procedure :: bnd_fc => ctp_fc
+    procedure :: bnd_cq => ctp_cq
+    procedure :: bnd_bd => ctp_bd
+    procedure :: bnd_da => ctp_da
+    procedure :: allocate_arrays => ctp_allocate_arrays
     procedure :: define_listlabel
-    procedure :: bound_value => cnt_bound_value
+    procedure :: bound_value => ctp_bound_value
     procedure :: temp_mult
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => cnt_obs_supported
-    procedure, public :: bnd_df_obs => cnt_df_obs
+    procedure, public :: bnd_obs_supported => ctp_obs_supported
+    procedure, public :: bnd_df_obs => ctp_df_obs
     ! -- method for time series
-    procedure, public :: bnd_rp_ts => cnt_rp_ts
-  end type GweCntType
+    procedure, public :: bnd_rp_ts => ctp_rp_ts
+  end type GweCtpType
 
 contains
 
@@ -53,7 +53,7 @@ contains
   !!
   !! Routine points packobj to the newly created package
   !<
-  subroutine cnt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+  subroutine ctp_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         depvartype, mempath)
     ! -- dummy
     class(BndType), pointer :: packobj
@@ -66,18 +66,18 @@ contains
     character(len=LENVARNAME), intent(in) :: depvartype
     character(len=*), intent(in) :: mempath
     ! -- local
-    type(GweCntType), pointer :: cntobj
+    type(GweCtpType), pointer :: ctpobj
     !
     ! -- allocate the object and assign values to object variables
-    allocate (cntobj)
-    packobj => cntobj
+    allocate (ctpobj)
+    packobj => ctpobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
-    call cntobj%allocate_scalars()
+    call ctpobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -91,19 +91,19 @@ contains
     packobj%iscloc = 1
     !
     ! -- Store the appropriate label based on the dependent variable
-    cntobj%depvartype = depvartype
+    ctpobj%depvartype = depvartype
     !
     ! -- Return
     return
-  end subroutine cnt_create
+  end subroutine ctp_create
 
   !> @brief Allocate arrays specific to the constant temperature package
   !<
-  subroutine cnt_allocate_arrays(this, nodelist, auxvar)
+  subroutine ctp_allocate_arrays(this, nodelist, auxvar)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
@@ -112,13 +112,13 @@ contains
     ! -- call standard BndType allocate scalars
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
     !
-    ! -- allocate ratecntex
-    call mem_allocate(this%ratecntin, this%maxbound, 'RATECNTIN', this%memoryPath)
-    call mem_allocate(this%ratecntout, this%maxbound, 'RATECNTOUT', &
+    ! -- allocate ratectpex
+    call mem_allocate(this%ratectpin, this%maxbound, 'RATECTPIN', this%memoryPath)
+    call mem_allocate(this%ratectpout, this%maxbound, 'RATECTPOUT', &
                       this%memoryPath)
     do i = 1, this%maxbound
-      this%ratecntin(i) = DZERO
-      this%ratecntout(i) = DZERO
+      this%ratectpin(i) = DZERO
+      this%ratectpout(i) = DZERO
     end do
     ! -- set constant head array input context pointer
     call mem_setptr(this%tspvar, 'TSPVAR', this%input_mempath)
@@ -130,23 +130,23 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_allocate_arrays
+  end subroutine ctp_allocate_arrays
 
   !> @brief Constant temperature read and prepare (rp) routine
   !<
-  subroutine cnt_rp(this)
+  subroutine ctp_rp(this)
     ! -- modules
     use SimModule, only: store_error
     use InputOutputModule, only: lowcase
     implicit none
     ! -- dummy
-    class(GweCntType), intent(inout) :: this
+    class(GweCtpType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, node, ibd, ierr
     character(len=30) :: nodestr
     character(len=LENVARNAME) :: dvtype
     !
-    ! -- Reset previous CNTs to active cell
+    ! -- Reset previous CTPs to active cell
     do i = 1, this%nbound
       node = this%nodelist(i)
       this%ibound(node) = this%ibcnum
@@ -184,15 +184,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_rp
+  end subroutine ctp_rp
 
   !> @brief Constant temperature package advance routine
   !!
   !! Add package connections to matrix
   !<
-  subroutine cnt_ad(this)
+  subroutine ctp_ad(this)
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: cb
@@ -216,19 +216,19 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_ad
+  end subroutine ctp_ad
 
   !> @brief Check constant temperature boundary condition data
   !<
-  subroutine cnt_ck(this)
+  subroutine ctp_ck(this)
     ! -- dummy
-    class(GweCntType), intent(inout) :: this
+    class(GweCtpType), intent(inout) :: this
     ! -- local
     character(len=30) :: nodestr
     integer(I4B) :: i
     integer(I4B) :: node
     ! -- formats
-    character(len=*), parameter :: fmtcnterr = &
+    character(len=*), parameter :: fmtctperr = &
       &"('Specified dependent variable boundary ',i0, &
       &' temperature (',g0,') is less than zero for cell', a)"
     !
@@ -238,28 +238,28 @@ contains
       ! -- accumulate errors
       if (this%temp_mult(i) < DZERO) then
         call this%dis%noder_to_string(node, nodestr)
-        write (errmsg, fmt=fmtcnterr) i, this%tspvar(i), trim(nodestr)
+        write (errmsg, fmt=fmtctperr) i, this%tspvar(i), trim(nodestr)
         call store_error(errmsg)
       end if
     end do
     !
-    ! -- write summary of cnt package error messages
+    ! -- write summary of ctp package error messages
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
     !
     ! -- Return
     return
-  end subroutine cnt_ck
+  end subroutine ctp_ck
 
   !> @brief Override bnd_fc and do nothing
   !!
   !! For constant temperature boundary type, the call to bnd_fc needs to be
   !! overwritten to prevent logic found in bnd from being executed
   !<
-  subroutine cnt_fc(this, rhs, ia, idxglo, matrix_sln)
+  subroutine ctp_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -267,15 +267,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_fc
+  end subroutine ctp_fc
 
   !> @brief Calculate flow associated with constant temperature boundary
   !!
   !! This method overrides bnd_cq()
   !<
-  subroutine cnt_cq(this, x, flowja, iadv)
+  subroutine ctp_cq(this, x, flowja, iadv)
     ! -- dummy
-    class(GweCntType), intent(inout) :: this
+    class(GweCtpType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
@@ -317,15 +317,15 @@ contains
           end if
         end do
         !
-        ! -- For CNT, store total flow in rhs so it is available for other
+        ! -- For CTP, store total flow in rhs so it is available for other
         !    calculations
         this%rhs(i) = -rate
         this%hcof(i) = DZERO
         !
         ! -- Save simulated value to simvals array.
         this%simvals(i) = rate
-        this%ratecntin(i) = ratein
-        this%ratecntout(i) = rateout
+        this%ratectpin(i) = ratein
+        this%ratectpout(i) = rateout
         flowja(idiag) = flowja(idiag) + rate
         !
       end do
@@ -334,16 +334,16 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_cq
+  end subroutine ctp_cq
 
   !> @brief Add package ratin/ratout to model budget
   !<
-  subroutine cnt_bd(this, model_budget)
+  subroutine ctp_bd(this, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     ! -- local
     type(BudgetType), intent(inout) :: model_budget
     real(DP) :: ratin
@@ -352,36 +352,36 @@ contains
     integer(I4B) :: isuppress_output
     !
     isuppress_output = 0
-    call rate_accumulator(this%ratecntin(1:this%nbound), ratin, dum)
-    call rate_accumulator(this%ratecntout(1:this%nbound), ratout, dum)
+    call rate_accumulator(this%ratectpin(1:this%nbound), ratin, dum)
+    call rate_accumulator(this%ratectpout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
     !
     ! -- Return
     return
-  end subroutine cnt_bd
+  end subroutine ctp_bd
 
   !> @brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
   !<
-  subroutine cnt_da(this)
+  subroutine ctp_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
     !
     ! -- arrays
-    call mem_deallocate(this%ratecntin)
-    call mem_deallocate(this%ratecntout)
+    call mem_deallocate(this%ratectpin)
+    call mem_deallocate(this%ratectpout)
     call mem_deallocate(this%tspvar, 'TSPVAR', this%memoryPath)
     !
     ! -- Return
     return
-  end subroutine cnt_da
+  end subroutine ctp_da
 
   !> @brief Define labels used in list file
   !!
@@ -390,7 +390,7 @@ contains
   !<
   subroutine define_listlabel(this)
     ! -- dummy
-    class(GweCntType), intent(inout) :: this
+    class(GweCtpType), intent(inout) :: this
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -419,27 +419,27 @@ contains
   !! This routine:
   !!   - returns true because the SDV package supports observations,
   !!   - overrides packagetype%_obs_supported()
-  logical function cnt_obs_supported(this)
+  logical function ctp_obs_supported(this)
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     !
-    cnt_obs_supported = .true.
+    ctp_obs_supported = .true.
     !
     ! -- Return
     return
-  end function cnt_obs_supported
+  end function ctp_obs_supported
 
   !> @brief Procedure related to observation processing
   !!
   !! This routine:
   !!   - defines observations
   !!   - stores observation types supported by either of the SDV packages
-  !!     (CNT or CNT),
+  !!     (CTP or CTP),
   !!   - overrides BndExtType%bnd_df_obs
   !<
-  subroutine cnt_df_obs(this)
+  subroutine ctp_df_obs(this)
     ! -- dummy
-    class(GweCntType) :: this
+    class(GweCtpType) :: this
     ! -- local
     integer(I4B) :: indx
     !
@@ -448,7 +448,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_df_obs
+  end subroutine ctp_df_obs
 
   ! -- Procedure related to time series
 
@@ -458,9 +458,9 @@ contains
   !! For the constant temperature packages, the dependent variable can also be
   !! controlled by a time series.
   !<
-  subroutine cnt_rp_ts(this)
+  subroutine ctp_rp_ts(this)
     ! -- dummy
-    class(GweCntType), intent(inout) :: this
+    class(GweCtpType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
@@ -478,7 +478,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnt_rp_ts
+  end subroutine ctp_rp_ts
 
   !> @brief Apply auxiliary multiplier to specified temperature if
   !< appropriate
@@ -486,7 +486,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GweCntType), intent(inout) :: this !< BndExtType object
+    class(GweCtpType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: row
     ! -- result
     real(DP) :: temp
@@ -505,11 +505,11 @@ contains
   !!
   !!  Return a bound value associated with an ncolbnd index and row.
   !<
-  function cnt_bound_value(this, col, row) result(bndval)
+  function ctp_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy variables
-    class(GweCntType), intent(inout) :: this !< BndExtType object
+    class(GweCtpType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
     ! -- result
@@ -528,6 +528,6 @@ contains
     !
     ! -- Return
     return
-  end function cnt_bound_value
+  end function ctp_bound_value
 
-end module GweCntModule
+end module GweCtpModule

@@ -9,7 +9,7 @@ module IdmGweDfnSelectorModule
   use GweDisuInputModule
   use GweDisvInputModule
   use GweDspInputModule
-  use GweCntInputModule
+  use GweCtpInputModule
   use GweIcInputModule
   use GweNamInputModule
 
@@ -48,8 +48,8 @@ contains
       call set_param_pointer(input_definition, gwe_disv_param_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwe_dsp_param_definitions)
-    case ('CNT')
-      call set_param_pointer(input_definition, gwe_cnt_param_definitions)
+    case ('CTP')
+      call set_param_pointer(input_definition, gwe_ctp_param_definitions)
     case ('IC')
       call set_param_pointer(input_definition, gwe_ic_param_definitions)
     case ('NAM')
@@ -72,8 +72,8 @@ contains
       call set_param_pointer(input_definition, gwe_disv_aggregate_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwe_dsp_aggregate_definitions)
-    case ('CNT')
-      call set_param_pointer(input_definition, gwe_cnt_aggregate_definitions)
+    case ('CTP')
+      call set_param_pointer(input_definition, gwe_ctp_aggregate_definitions)
     case ('IC')
       call set_param_pointer(input_definition, gwe_ic_aggregate_definitions)
     case ('NAM')
@@ -96,8 +96,8 @@ contains
       call set_block_pointer(input_definition, gwe_disv_block_definitions)
     case ('DSP')
       call set_block_pointer(input_definition, gwe_dsp_block_definitions)
-    case ('CNT')
-      call set_block_pointer(input_definition, gwe_cnt_block_definitions)
+    case ('CTP')
+      call set_block_pointer(input_definition, gwe_ctp_block_definitions)
     case ('IC')
       call set_block_pointer(input_definition, gwe_ic_block_definitions)
     case ('NAM')
@@ -119,8 +119,8 @@ contains
       multi_package = gwe_disv_multi_package
     case ('DSP')
       multi_package = gwe_dsp_multi_package
-    case ('CNT')
-      multi_package = gwe_cnt_multi_package
+    case ('CTP')
+      multi_package = gwe_ctp_multi_package
     case ('IC')
       multi_package = gwe_ic_multi_package
     case ('NAM')
@@ -146,7 +146,7 @@ contains
       integrated = .true.
     case ('DSP')
       integrated = .true.
-    case ('CNT')
+    case ('CTP')
       integrated = .true.
     case ('IC')
       integrated = .true.

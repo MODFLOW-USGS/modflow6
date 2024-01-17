@@ -1014,8 +1014,8 @@ if __name__ == "__main__":
             SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1dsp1idm.f90",
         ],
         [
-            DFN_PATH / "gwe-cnt.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1cnt1idm.f90",
+            DFN_PATH / "gwe-ctp.dfn",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1ctp1idm.f90",
         ],
         [
             DFN_PATH / "gwe-ic.dfn",

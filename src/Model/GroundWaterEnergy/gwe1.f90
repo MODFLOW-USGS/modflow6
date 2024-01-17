@@ -82,7 +82,7 @@ module GweModule
   !<
   integer(I4B), parameter :: GWE_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(GWE_NMULTIPKG) :: GWE_MULTIPKG
-  data GWE_MULTIPKG/'CNT6 ', 'SRC6 ', 'LKE6 ', 'SFE6 ', '     ', & !  5
+  data GWE_MULTIPKG/'CTP6 ', 'SRC6 ', 'LKE6 ', 'SFE6 ', '     ', & !  5
                    &'MWE6 ', 'UZE6 ', 'API6 ', '     ', '     ', & ! 10
                    &40*'     '/ ! 50
 
@@ -764,7 +764,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
-    use GweCntModule, only: cnt_create
+    use GweCtpModule, only: ctp_create
     !use GweSrcModule, only: src_create
     !use GweLkeModule, only: lke_create
     !use GweSfeModule, only: sfe_create
@@ -788,8 +788,8 @@ contains
     !
     ! -- This part creates the package object
     select case (filtyp)
-    case ('CNT6')
-      call cnt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+    case ('CTP6')
+      call ctp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%depvartype, mempath)
       !case ('SRC6')
       !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &

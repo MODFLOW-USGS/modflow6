@@ -1,4 +1,4 @@
-# --------------------- gwe cnt options ---------------------
+# --------------------- gwe ctp options ---------------------
 # flopy multi-package
 
 block options
@@ -131,7 +131,7 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'Constant Temperature'}
 
 
-# --------------------- gwe cnt dimensions ---------------------
+# --------------------- gwe ctp dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -142,7 +142,7 @@ longname maximum number of constant temperatures
 description REPLACE maxbound {'{#1}': 'constant temperatures'}
 
 
-# --------------------- gwe cnt period ---------------------
+# --------------------- gwe ctp period ---------------------
 
 block period
 name iper

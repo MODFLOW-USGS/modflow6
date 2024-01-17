@@ -123,7 +123,7 @@ $(OBJDIR)/gwe1dsp1idm.o \
 $(OBJDIR)/gwe1disv1idm.o \
 $(OBJDIR)/gwe1disu1idm.o \
 $(OBJDIR)/gwe1dis1idm.o \
-$(OBJDIR)/gwe1cnt1idm.o \
+$(OBJDIR)/gwe1ctp1idm.o \
 $(OBJDIR)/gwtgwtidm.o \
 $(OBJDIR)/gwfgwtidm.o \
 $(OBJDIR)/gwfgwfidm.o \
@@ -282,7 +282,7 @@ $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/gwe1mst1.o \
 $(OBJDIR)/gwe1dsp1.o \
-$(OBJDIR)/gwe1cnt1.o \
+$(OBJDIR)/gwe1ctp1.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ims8base.o \

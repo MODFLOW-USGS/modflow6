@@ -1,16 +1,16 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module GweCntInputModule
+module GweCtpInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public gwe_cnt_param_definitions
-  public gwe_cnt_aggregate_definitions
-  public gwe_cnt_block_definitions
-  public GweCntParamFoundType
-  public gwe_cnt_multi_package
+  public gwe_ctp_param_definitions
+  public gwe_ctp_aggregate_definitions
+  public gwe_ctp_block_definitions
+  public GweCtpParamFoundType
+  public gwe_ctp_multi_package
 
-  type GweCntParamFoundType
+  type GweCtpParamFoundType
     logical :: auxiliary = .false.
     logical :: auxmultname = .false.
     logical :: boundnames = .false.
@@ -29,15 +29,15 @@ module GweCntInputModule
     logical :: tspvar = .false.
     logical :: auxvar = .false.
     logical :: boundname = .false.
-  end type GweCntParamFoundType
+  end type GweCtpParamFoundType
 
-  logical :: gwe_cnt_multi_package = .true.
+  logical :: gwe_ctp_multi_package = .true.
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_auxiliary = InputParamDefinitionType &
+    gwectp_auxiliary = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'AUXILIARY', & ! tag name
     'AUXILIARY', & ! fortran variable
@@ -51,10 +51,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_auxmultname = InputParamDefinitionType &
+    gwectp_auxmultname = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'AUXMULTNAME', & ! tag name
     'AUXMULTNAME', & ! fortran variable
@@ -68,10 +68,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_boundnames = InputParamDefinitionType &
+    gwectp_boundnames = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'BOUNDNAMES', & ! tag name
     'BOUNDNAMES', & ! fortran variable
@@ -85,10 +85,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_iprflow = InputParamDefinitionType &
+    gwectp_iprflow = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_INPUT', & ! tag name
     'IPRFLOW', & ! fortran variable
@@ -102,10 +102,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_ipakcb = InputParamDefinitionType &
+    gwectp_ipakcb = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_FLOWS', & ! tag name
     'IPAKCB', & ! fortran variable
@@ -119,10 +119,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_iprpak = InputParamDefinitionType &
+    gwectp_iprpak = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'SAVE_FLOWS', & ! tag name
     'IPRPAK', & ! fortran variable
@@ -136,10 +136,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_ts_filerecord = InputParamDefinitionType &
+    gwectp_ts_filerecord = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'TS_FILERECORD', & ! tag name
     'TS_FILERECORD', & ! fortran variable
@@ -153,10 +153,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_ts6 = InputParamDefinitionType &
+    gwectp_ts6 = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'TS6', & ! tag name
     'TS6', & ! fortran variable
@@ -170,10 +170,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_filein = InputParamDefinitionType &
+    gwectp_filein = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'FILEIN', & ! tag name
     'FILEIN', & ! fortran variable
@@ -187,10 +187,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_ts6_filename = InputParamDefinitionType &
+    gwectp_ts6_filename = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'TS6_FILENAME', & ! tag name
     'TS6_FILENAME', & ! fortran variable
@@ -204,10 +204,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_obs_filerecord = InputParamDefinitionType &
+    gwectp_obs_filerecord = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'OBS_FILERECORD', & ! tag name
     'OBS_FILERECORD', & ! fortran variable
@@ -221,10 +221,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_obs6 = InputParamDefinitionType &
+    gwectp_obs6 = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6', & ! tag name
     'OBS6', & ! fortran variable
@@ -238,10 +238,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_obs6_filename = InputParamDefinitionType &
+    gwectp_obs6_filename = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6_FILENAME', & ! tag name
     'OBS6_FILENAME', & ! fortran variable
@@ -255,10 +255,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_maxbound = InputParamDefinitionType &
+    gwectp_maxbound = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'DIMENSIONS', & ! block
     'MAXBOUND', & ! tag name
     'MAXBOUND', & ! fortran variable
@@ -272,10 +272,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_cellid = InputParamDefinitionType &
+    gwectp_cellid = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'PERIOD', & ! block
     'CELLID', & ! tag name
     'CELLID', & ! fortran variable
@@ -289,10 +289,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_tspvar = InputParamDefinitionType &
+    gwectp_tspvar = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'PERIOD', & ! block
     'TEMP', & ! tag name
     'TSPVAR', & ! fortran variable
@@ -306,10 +306,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_auxvar = InputParamDefinitionType &
+    gwectp_auxvar = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'PERIOD', & ! block
     'AUX', & ! tag name
     'AUXVAR', & ! fortran variable
@@ -323,10 +323,10 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_boundname = InputParamDefinitionType &
+    gwectp_boundname = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'PERIOD', & ! block
     'BOUNDNAME', & ! tag name
     'BOUNDNAME', & ! fortran variable
@@ -340,33 +340,33 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwe_cnt_param_definitions(*) = &
+    gwe_ctp_param_definitions(*) = &
     [ &
-    gwecnt_auxiliary, &
-    gwecnt_auxmultname, &
-    gwecnt_boundnames, &
-    gwecnt_iprflow, &
-    gwecnt_ipakcb, &
-    gwecnt_iprpak, &
-    gwecnt_ts_filerecord, &
-    gwecnt_ts6, &
-    gwecnt_filein, &
-    gwecnt_ts6_filename, &
-    gwecnt_obs_filerecord, &
-    gwecnt_obs6, &
-    gwecnt_obs6_filename, &
-    gwecnt_maxbound, &
-    gwecnt_cellid, &
-    gwecnt_tspvar, &
-    gwecnt_auxvar, &
-    gwecnt_boundname &
+    gwectp_auxiliary, &
+    gwectp_auxmultname, &
+    gwectp_boundnames, &
+    gwectp_iprflow, &
+    gwectp_ipakcb, &
+    gwectp_iprpak, &
+    gwectp_ts_filerecord, &
+    gwectp_ts6, &
+    gwectp_filein, &
+    gwectp_ts6_filename, &
+    gwectp_obs_filerecord, &
+    gwectp_obs6, &
+    gwectp_obs6_filename, &
+    gwectp_maxbound, &
+    gwectp_cellid, &
+    gwectp_tspvar, &
+    gwectp_auxvar, &
+    gwectp_boundname &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    gwecnt_spd = InputParamDefinitionType &
+    gwectp_spd = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'CNT', & ! subcomponent
+    'CTP', & ! subcomponent
     'PERIOD', & ! block
     'STRESS_PERIOD_DATA', & ! tag name
     'SPD', & ! fortran variable
@@ -380,13 +380,13 @@ module GweCntInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwe_cnt_aggregate_definitions(*) = &
+    gwe_ctp_aggregate_definitions(*) = &
     [ &
-    gwecnt_spd &
+    gwectp_spd &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    gwe_cnt_block_definitions(*) = &
+    gwe_ctp_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -408,4 +408,4 @@ module GweCntInputModule
     ) &
     ]
 
-end module GweCntInputModule
+end module GweCtpInputModule

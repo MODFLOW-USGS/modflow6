@@ -315,13 +315,13 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport constant concentration package
-    flopy.mf6.ModflowGwecnt(
+    flopy.mf6.ModflowGwectp(
         gwe,
         maxbound=len(ctpspd),
         stress_period_data=ctpspd,
         save_flows=False,
-        pname="CNT-1",
-        filename="{}.cnt".format(gwename),
+        pname="CTP-1",
+        filename="{}.ctp".format(gwename),
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package

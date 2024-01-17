@@ -320,10 +320,10 @@ def build_models(idx, test):
         0: [[(0, 0, 0), strt_temp], [(1, 0, 0), strt_temp]],
         1: [[(0, 0, 0), strt_temp + 10], [(1, 0, 0), strt_temp + 10]],
     }
-    flopy.mf6.ModflowGwecnt(
+    flopy.mf6.ModflowGwectp(
         gwe1,
         stress_period_data=ctmpspd,
-        pname="CNT-2",
+        pname="CTP-2",
         filename="{}.ctmp".format(gwename1),
     )
 

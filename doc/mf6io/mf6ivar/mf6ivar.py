@@ -740,7 +740,7 @@ if __name__ == "__main__":
         "gwt-mvt",
         "gwt-api",
         "gwe-adv",
-        "gwe-cnt",
+        "gwe-ctp",
         "gwe-dis",
         "gwe-disv",
         "gwe-disu",
