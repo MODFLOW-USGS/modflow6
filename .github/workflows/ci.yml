@@ -435,7 +435,7 @@ jobs:
 
       - name: Cache PETSc
         id: cache-petsc
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: petsc
           key: ${{ runner.os }}-petsc
