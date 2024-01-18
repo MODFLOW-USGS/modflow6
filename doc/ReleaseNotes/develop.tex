@@ -3,43 +3,43 @@
 	
 	\item \currentmodflowversion
 
-	%\underline{NEW FUNCTIONALITY}
-	%\begin{itemize}
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item The Input Data Processor (IDP) was expanded to read additional GWF and GWT component packages.  Additional information on the IDP and the list of supported packages is contained in the MODFLOW 6 Description of Input and Output (mf6io.pdf) under a section titled ``Processing of Program Input.''
+		\item The source code was refactored to support compilation of a parallel version of MODFLOW 6 based on the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc) libraries.  The parallel version of MODFLOW is considered preliminary. Limited testing of the parallel version has been performed on laptops, desktops, and supercomputers, but significant changes are expected in future releases. User support for the parallel version of MODFLOW 6 may be provided in the future.
 	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
-	%\underline{EXAMPLES}
-	%\begin{itemize}
-	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\underline{EXAMPLES}
+	\begin{itemize}
+		\item A new exampled called ex-gwf-rad-disu was added.  This new example uses a DISU grid to represent radial groundwater flow to a pumping well.
+		\item A new exampled called ex-gwf-curv-90 was added.  This new example demonstrates use of a DISV grid to represent a curvilinear spatial discretization.  For this example, the curvilinear grid is applied to one quarter of a radial groundwater flow system.
+		\item A new exampled called ex-gwf-curvilin was added.  This new example uses a curvilinear grid, represented with the DISV Package, to simulate groundwater flow through a multi-region aquifer with bends in the domain boundaries.
+	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
 		\item Improve error message if the size of data read from a binary array file is inconsistent with READARRAY control line and variable description keywords.
 		\item The area calculation for cells in the DISV package was inaccurate for some cases with very large cell vertex coordinates.  The area calculation was improved by using transformed cell vertex coordinates prior to making the area calculation.
-		\item Auxiliary variables in RCH and EVT Array-Based input packages corrected to reset to zero when otherwise not specified in period input data and the auxiliary parameter is not controlled by a time-series.
+		\item Auxiliary variables in RCH and EVT Array-Based input packages are now reset to zero when otherwise not specified in period input data and the auxiliary parameter is not controlled by a time-series.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
 
-	%\underline{INTERNAL FLOW PACKAGES}
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item The data header in the binary output file written by the viscosity (VSC) package was printing `` VISCOSI'' instead of `` VISCOSITY''. The viscosity package now prints the full `` VISCOSITY'' header in the binary output file.
+		\item The CSUB Package did not support output of z-displacement arrays for models using the DISU package.  The CSUB package was updated to support calculation of z-displacement arrays for DISU model grids.
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{STRESS PACKAGES}
 	%\begin{itemize}
 	%	\item xxx
 	%	\item xxx
 	%	\item xxx
 	%\end{itemize}
-
-	\underline{STRESS PACKAGES}
-	\begin{itemize}
-		\item The data header in the binary output file written by the viscosity (VSC) package was printing `` VISCOSI'' instead of `` VISCOSITY''. The viscosity package now prints the full `` VISCOSITY'' header in the binary output file.
-	%	\item xxx
-	%	\item xxx
-	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
