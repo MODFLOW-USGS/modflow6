@@ -16,6 +16,7 @@ module IdmLoggerModule
   public :: idm_log_close
   public :: idm_log_period_header
   public :: idm_log_period_close
+  public :: idm_print_array
   public :: idm_log_var
 
   interface idm_log_var
@@ -26,6 +27,12 @@ module IdmLoggerModule
       idm_log_var_dbl3d, idm_log_var_str, &
       idm_log_var_ts
   end interface idm_log_var
+
+  interface idm_print_array
+    module procedure idm_print_array_int1d, idm_print_array_int2d, &
+      idm_print_array_int3d, idm_print_array_dbl1d, &
+      idm_print_array_dbl2d, idm_print_array_dbl3d
+  end interface idm_print_array
 
 contains
 
@@ -323,5 +330,154 @@ contains
         trim(description), trim(varname), trim(p_mem)
     end if
   end subroutine idm_log_var_str
+
+  !> @brief Create echo file int1d
+  !<
+  subroutine idm_print_array_int1d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: inunit
+    !
+    inunit = create_array_echofile(varname, mempath, 0, iout)
+    !
+    write (inunit, '(*(i0, " "))') p_mem
+    !
+    close (inunit)
+  end subroutine idm_print_array_int1d
+
+  !> @brief Create echo file int2d
+  !<
+  subroutine idm_print_array_int2d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, 0, iout)
+    !
+    do i = 1, size(p_mem, dim=2)
+      write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_int2d
+
+  !> @brief Create echo file int3d
+  !<
+  subroutine idm_print_array_int3d(p_mem, varname, mempath, iout)
+    integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, k, inunit
+    !
+    do k = 1, size(p_mem, dim=3)
+      inunit = create_array_echofile(varname, mempath, k, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
+      end do
+      close (inunit)
+    end do
+  end subroutine idm_print_array_int3d
+
+  !> @brief Create echo file dbl1d
+  !<
+  subroutine idm_print_array_dbl1d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: inunit
+    !
+    inunit = create_array_echofile(varname, mempath, 0, iout)
+    !
+    write (inunit, '(*(G0.10, " "))') p_mem
+    !
+    close (inunit)
+  end subroutine idm_print_array_dbl1d
+
+  !> @brief Create echo file dbl2d
+  !<
+  subroutine idm_print_array_dbl2d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, inunit
+    !
+    inunit = create_array_echofile(varname, mempath, 0, iout)
+    !
+    do i = 1, size(p_mem, dim=2)
+      write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+    end do
+    !
+    close (inunit)
+  end subroutine idm_print_array_dbl2d
+
+  !> @brief Create echo file dbl3d
+  !<
+  subroutine idm_print_array_dbl3d(p_mem, varname, mempath, iout)
+    real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i, j, k, inunit
+    !
+    do k = 1, size(p_mem, dim=3)
+      inunit = create_array_echofile(varname, mempath, k, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
+                                           size(p_mem, dim=1))
+      end do
+      close (inunit)
+    end do
+  end subroutine idm_print_array_dbl3d
+
+  !> @brief Create echo file
+  !!
+  !! Name format: <comp>-<subcomp>.varname.[layer].txt
+  !!
+  !<
+  function create_array_echofile(varname, mempath, layer, iout) result(inunit)
+    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME
+    use InputOutputModule, only: openfile, getunit
+    use InputOutputModule, only: upcase, lowcase
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: layer
+    integer(I4B), intent(in) :: iout
+    integer(I4B) :: inunit
+    ! -- dummy
+    character(len=LENCOMPONENTNAME) :: comp, subcomp
+    character(len=LINELENGTH) :: filename, suffix
+    !
+    ! -- split the mempath
+    call split_mem_path(mempath, comp, subcomp)
+    !
+    ! -- build suffix
+    suffix = varname
+    call lowcase(suffix)
+    if (layer > 0) then
+      write (suffix, '(a,i0)') trim(suffix)//'.l', layer
+    end if
+    suffix = trim(suffix)//'.txt'
+    !
+    ! -- set filename
+    filename = trim(comp)//'-'//trim(subcomp)//'.'//trim(suffix)
+    !
+    ! -- create the array file
+    inunit = getunit()
+    call openfile(inunit, iout, filename, 'ECHO', filstat_opt='REPLACE')
+  end function create_array_echofile
 
 end module IdmLoggerModule

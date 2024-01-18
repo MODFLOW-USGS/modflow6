@@ -248,14 +248,14 @@ def block_entry(varname, block, vardict, prefix="  "):
             s = s.strip()
             s = "{}{}\n{}{}\n{}{}".format("", s, prefix, s, prefix, "...")
 
-    # layered
+    # layered and echo
     elif v["reader"] in ["readarray", "u1ddbl", "u2ddbl", "u1dint"]:
         shape = v["shape"]
         reader = v["reader"].upper()
         layered = ""
         if "layered" in v:
             if v["layered"] == "true":
-                layered = " [LAYERED]"
+                layered = " [LAYERED] [ECHO]"
         s = "{}{}\n{}{}<{}{}> -- {}".format(
             s, layered, prefix, prefix, varname, shape, reader
         )
