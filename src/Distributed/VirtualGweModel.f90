@@ -27,11 +27,11 @@ module VirtualGweModelModule
     type(VirtualDbl1dType), pointer :: fmi_gwfsat => null()
     type(VirtualDbl2dType), pointer :: fmi_gwfspdis => null()
     type(VirtualDbl1dType), pointer :: fmi_gwfflowja => null()
-    ! MST
-    type(VirtualDbl1dType), pointer :: mst_porosity => null()
+    ! EST
+    type(VirtualDbl1dType), pointer :: est_porosity => null()
     ! GWE Model fields
     type(VirtualIntType), pointer :: indsp => null()
-    type(VirtualIntType), pointer :: inmst => null()
+    type(VirtualIntType), pointer :: inest => null()
   contains
     ! public
     procedure :: create => vgwe_create
@@ -94,9 +94,9 @@ contains
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_CONN_TYPE)
-    call this%set(this%mst_porosity%base(), 'POROSITY', 'MST', MAP_NODE_TYPE)
+    call this%set(this%est_porosity%base(), 'POROSITY', 'EST', MAP_NODE_TYPE)
     call this%set(this%indsp%base(), 'INDSP', '', MAP_ALL_TYPE)
-    call this%set(this%inmst%base(), 'INMST', '', MAP_ALL_TYPE)
+    call this%set(this%inest%base(), 'INEST', '', MAP_ALL_TYPE)
 
   end subroutine init_virtual_data
 
@@ -117,7 +117,7 @@ contains
       !call this%map(this%dsp_idiffc%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dsp_idisp%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%indsp%base(), (/STG_AFT_MDL_DF/))
-      call this%map(this%inmst%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%inest%base(), (/STG_AFT_MDL_DF/))
 
     else if (stage == STG_BFR_CON_AR) then
 
@@ -146,8 +146,8 @@ contains
       call this%map(this%fmi_gwfspdis%base(), 3, nr_nodes, (/STG_BFR_EXG_AD/))
       call this%map(this%fmi_gwfflowja%base(), nr_conns, (/STG_BFR_EXG_AD/))
 
-      if (this%indsp%get() > 0 .and. this%inmst%get() > 0) then
-        call this%map(this%mst_porosity%base(), nr_nodes, (/STG_AFT_CON_AR/))
+      if (this%indsp%get() > 0 .and. this%inest%get() > 0) then
+        call this%map(this%est_porosity%base(), nr_nodes, (/STG_AFT_CON_AR/))
       end if
 
     end if
@@ -171,9 +171,9 @@ contains
     allocate (this%fmi_gwfsat)
     allocate (this%fmi_gwfspdis)
     allocate (this%fmi_gwfflowja)
-    allocate (this%mst_porosity)
+    allocate (this%est_porosity)
     allocate (this%indsp)
-    allocate (this%inmst)
+    allocate (this%inest)
 
   end subroutine allocate_data
 
@@ -194,9 +194,9 @@ contains
     deallocate (this%fmi_gwfsat)
     deallocate (this%fmi_gwfspdis)
     deallocate (this%fmi_gwfflowja)
-    deallocate (this%mst_porosity)
+    deallocate (this%est_porosity)
     deallocate (this%indsp)
-    deallocate (this%inmst)
+    deallocate (this%inest)
 
   end subroutine deallocate_data
 

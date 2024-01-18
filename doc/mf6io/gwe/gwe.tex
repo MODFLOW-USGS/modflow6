@@ -47,7 +47,7 @@ Many of the same considerations listed for the GWT model should be kept in mind 
 
 \item GWE and GWT use the same Source and Sink Mixing (SSM) Package for representing the effects of GWF stress package inflows and outflows on simulated temperatures and concentrations.  In a GWE simulation, there are two ways in which users can assign concentrations to the individual features in these stress package.  The first way is to activate a temperature auxiliary variable in the corresponding GWF stress package.  In the SSM input file, the user provides the name of the auxiliary variable to be used for temperature.  The second way is to create a special SPC file, which contains user-assigned time-varying temperatures for stress package features.
 
-\item The GWE model includes an MST Package, but does not include an IST Package.  Heat transport-related parameters such as thermal conductivities and heat capacities are specified in the MST Package.
+\item The GWE model includes an EST Package, but does not include an IST Package.  Heat transport-related parameters such as thermal conductivities and heat capacities are specified in the EST Package.
 
 \item A GWE-GWE Exchange (introduced in version 6.5.0) can be used to tightly couple multiple heat transport models, as might be done in a nested grid configuration.  
 
@@ -110,12 +110,12 @@ In \mf time step lengths are controlled by the user and specified in the Tempora
 \input{gwe/dsp}
 
 \newpage
-\subsection{Source and Sink Mixing (SSM) Package}
-\input{gwe/ssm}
+\subsection{Energy Storage and Transfer (EST) Package}
+\input{gwe/est}
 
 \newpage
-\subsection{Mobile Storage and Transfer (MST) Package}
-\input{gwe/mst}
+\subsection{Source and Sink Mixing (SSM) Package}
+\input{gwe/ssm}
 
 \newpage
 \subsection{Constant Temperature (CTP) Package}

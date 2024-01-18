@@ -11,7 +11,7 @@ module GweModule
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GweDspModule, only: GweDspType
-  use GweMstModule, only: GweMstType
+  use GweEstModule, only: GweEstType
   use BudgetModule, only: BudgetType
   use GweInputDataModule, only: GweInputDataType
   use TransportModelModule
@@ -33,9 +33,9 @@ module GweModule
   type, extends(TransportModelType) :: GweModelType
 
     type(GweInputDataType), pointer :: gwecommon => null() !< container for data shared with multiple packages
-    type(GweMstType), pointer :: mst => null() !< mass storage and transfer package
+    type(GweEstType), pointer :: est => null() !< mass storage and transfer package
     type(GweDspType), pointer :: dsp => null() !< dispersion package
-    integer(I4B), pointer :: inmst => null() ! unit number MST
+    integer(I4B), pointer :: inest => null() ! unit number EST
     integer(I4B), pointer :: indsp => null() ! unit number DSP
 
   contains
@@ -70,7 +70,7 @@ module GweModule
   integer(I4B), parameter :: GWE_NBASEPKG = 50
   character(len=LENPACKAGETYPE), dimension(GWE_NBASEPKG) :: GWE_BASEPKG
   data GWE_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
-                  &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
+                  &'IC6  ', 'FMI6 ', 'EST6 ', 'ADV6 ', '     ', & ! 10
                   &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
                   &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
                   &30*'     '/ ! 50
@@ -276,9 +276,9 @@ contains
     call this%fmi%fmi_ar(this%ibound)
     if (this%inmvt > 0) call this%mvt%mvt_ar()
     if (this%inic > 0) call this%ic%ic_ar(this%x)
-    if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
+    if (this%inest > 0) call this%est%est_ar(this%dis, this%ibound)
     if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
-    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%est%porosity)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
@@ -440,8 +440,8 @@ contains
     if (this%inmvt > 0) then
       call this%mvt%mvt_fc(this%x, this%x)
     end if
-    if (this%inmst > 0) then
-      call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
+    if (this%inest > 0) then
+      call this%est%est_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
                            this%idxglo, this%x, this%rhs, kiter)
     end if
     if (this%inadv > 0) then
@@ -517,7 +517,7 @@ contains
     end do
     if (this%inadv > 0) call this%adv%adv_cq(this%x, this%flowja)
     if (this%indsp > 0) call this%dsp%dsp_cq(this%x, this%flowja)
-    if (this%inmst > 0) call this%mst%mst_cq(this%dis%nodes, this%x, this%xold, &
+    if (this%inest > 0) call this%est%est_cq(this%dis%nodes, this%x, this%xold, &
                                              this%flowja)
     if (this%inssm > 0) call this%ssm%ssm_cq(this%flowja)
     if (this%infmi > 0) call this%fmi%fmi_cq(this%x, this%flowja)
@@ -564,7 +564,7 @@ contains
     !    should be added here to this%budget.  In a subsequent exchange call,
     !    exchange flows might also be added.
     call this%budget%reset()
-    if (this%inmst > 0) call this%mst%mst_bd(isuppress_output, this%budget)
+    if (this%inest > 0) call this%est%est_bd(isuppress_output, this%budget)
     if (this%inssm > 0) call this%ssm%ssm_bd(isuppress_output, this%budget)
     if (this%infmi > 0) call this%fmi%fmi_bd(isuppress_output, this%budget)
     if (this%inmvt > 0) call this%mvt%mvt_bd(this%x, this%x)
@@ -592,13 +592,13 @@ contains
     ! -- Initialize
     icbcfl = 0
     !
-    ! -- Because mst belongs to gwe, call mst_ot_flow directly (and not from parent)
+    ! -- Because est belongs to gwe, call est_ot_flow directly (and not from parent)
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
-    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
+    if (this%inest > 0) call this%est%est_ot_flow(icbcfl, icbcun)
     !
     ! -- Call parent class _ot routines.
-    call this%tsp_ot(this%inmst)
+    call this%tsp_ot(this%inest)
     !
     ! -- Return
     return
@@ -630,7 +630,7 @@ contains
     call this%adv%adv_da()
     call this%dsp%dsp_da()
     call this%ssm%ssm_da()
-    call this%mst%mst_da()
+    call this%est%est_da()
     call this%mvt%mvt_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
@@ -644,7 +644,7 @@ contains
     deallocate (this%adv)
     deallocate (this%dsp)
     deallocate (this%ssm)
-    deallocate (this%mst)
+    deallocate (this%est)
     deallocate (this%mvt)
     deallocate (this%budget)
     deallocate (this%oc)
@@ -659,7 +659,7 @@ contains
     end do
     !
     ! -- Scalars
-    call mem_deallocate(this%inmst)
+    call mem_deallocate(this%inest)
     call mem_deallocate(this%indsp)
     !
     ! -- Parent class members
@@ -744,10 +744,10 @@ contains
     call this%allocate_tsp_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inmst, 'INMST', this%memoryPath)
+    call mem_allocate(this%inest, 'INEST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
     !
-    this%inmst = 0
+    this%inest = 0
     this%indsp = 0
     !
     ! -- Return
@@ -919,7 +919,7 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GweMstModule, only: mst_cr
+    use GweEstModule, only: est_cr
     use GweDspModule, only: dsp_cr
     ! -- dummy
     class(GweModelType) :: this
@@ -961,8 +961,8 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('MST6')
-        this%inmst = inunit
+      case ('EST6')
+        this%inest = inunit
       case ('DSP6')
         this%indsp = 1
         mempathdsp = mempath
@@ -976,13 +976,13 @@ contains
     end do
     !
     ! -- Create packages that are tied directly to model
-    call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
+    call est_cr(this%est, this%name, this%inest, this%iout, this%fmi, &
                 this%eqnsclfac, this%gwecommon)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi, this%eqnsclfac, this%gwecommon)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(indis, this%inmst)
+    call this%ftype_check(indis, this%inest)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
     !

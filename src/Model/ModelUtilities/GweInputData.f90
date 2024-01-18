@@ -11,7 +11,7 @@ module GweInputDataModule
   public :: set_gwe_dat_ptrs
 
   !> Data for sharing among multiple packages.  Originally read in from
-  !< the MST package
+  !< the EST package
 
   type GweInputDataType
 
@@ -21,7 +21,7 @@ module GweInputDataModule
     ! strings
     character(len=LENMEMPATH) :: memoryPath = '' !< the location in the memory manager where the variables are stored
 
-    ! mst data to be share across multiple packages
+    ! est data to be share across multiple packages
     real(DP), pointer :: gwerhow => null() !< Density of water (for GWE purposes, a constant scalar)
     real(DP), pointer :: gwecpw => null() !< Heat capacity of water (non-spatially varying)
     real(DP), pointer :: gwelatheatvap => null() !< latent heat of vaporization
@@ -103,9 +103,9 @@ contains
     return
   end subroutine allocate_shared_vars
 
-  !> @brief Allocate and read data from MST
+  !> @brief Allocate and read data from EST
   !!
-  !! MST data, including heat capacity of water (cpw), density of water
+  !! EST data, including heat capacity of water (cpw), density of water
   !! (rhow), latent heat of vaporization (latheatvap), heat capacity of
   !! the aquifer material (cps), and density of the aquifer material
   !! (rhow) is used among other packages and is therefore stored in a
@@ -114,11 +114,11 @@ contains
                               gwelatheatvap)
     ! -- dummy
     class(GweInputDataType) :: this !< the input data block
-    real(DP), intent(in) :: gwerhow !< ptr to density of water specified in MST
-    real(DP), intent(in) :: gwecpw !< ptr to heat capacity of water specified in MST
-    real(DP), intent(in) :: gwerhos !< ptr to sptially-variably density of aquifer material specified in MST
-    real(DP), intent(in) :: gwecps !< ptr to sptially-variably heat capacity of aquifer material specified in MST
-    real(DP), intent(in), optional :: gwelatheatvap !< ptr to latent heat of vaporization specified in MST
+    real(DP), intent(in) :: gwerhow !< ptr to density of water specified in EST
+    real(DP), intent(in) :: gwecpw !< ptr to heat capacity of water specified in EST
+    real(DP), intent(in) :: gwerhos !< ptr to sptially-variably density of aquifer material specified in EST
+    real(DP), intent(in) :: gwecps !< ptr to sptially-variably heat capacity of aquifer material specified in EST
+    real(DP), intent(in), optional :: gwelatheatvap !< ptr to latent heat of vaporization specified in EST
     !
     ! -- Allocate scalars
     if (present(gwelatheatvap)) then
@@ -134,7 +134,7 @@ contains
     return
   end subroutine set_gwe_dat_ptrs
 
-  !> @brief Set pointers to scalars read by the MST package
+  !> @brief Set pointers to scalars read by the EST package
   !! for use by other packages
   !!
   !! Set pointers to GWE-related scalars and arrays for use
@@ -164,7 +164,7 @@ contains
     return
   end subroutine set_gwe_shared_scalars
 
-  !> @brief Set pointers to data arrays read by the MST package
+  !> @brief Set pointers to data arrays read by the EST package
   !! for use by other packages
   !!
   !! Set pointers to GWE-related arrays for use

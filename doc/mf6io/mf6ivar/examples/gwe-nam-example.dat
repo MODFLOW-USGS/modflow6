@@ -5,7 +5,7 @@ END OPTIONS
 BEGIN PACKAGES
   DIS6       heat_transport.dis
   IC6        heat_transport.ic
-  MST6       heat_transport.mst
+  EST6       heat_transport.est
   ADV6       heat_transport.adv
   DSP6       heat_transport.dsp
   SSM6       heat_transport.ssm

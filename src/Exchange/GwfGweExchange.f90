@@ -245,7 +245,7 @@ contains
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.
-    if (gwemodel%inmst > 0) then
+    if (gwemodel%inest > 0) then
       if (gwfmodel%insto > 0) then
         gwemodel%fmi%gwfstrgss => gwfmodel%sto%strgss
         gwemodel%fmi%igwfstrgss = 1

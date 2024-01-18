@@ -11,7 +11,7 @@ module GweInterfaceModelModule
   use TspAdvOptionsModule, only: TspAdvOptionsType
   use GweDspModule, only: dsp_cr, GweDspType
   use GweDspOptionsModule, only: GweDspOptionsType
-  use GweMstModule, only: mst_cr
+  use GweEstModule, only: est_cr
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
   use GweInputDataModule, only: GweInputDataType
@@ -34,7 +34,7 @@ module GweInterfaceModelModule
     class(GweModelType), private, pointer :: owner => null() !< the real GWE model for which the exchange coefficients
                                                              !! are calculated with this interface model
 
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with EST porosity
 
   contains
 
@@ -184,9 +184,9 @@ contains
         call mem_reallocate(this%dsp%kts, this%dis%nodes, 'KTS', &
                             trim(this%dsp%memoryPath))
       end if
-      allocate (this%mst)
-      call mem_allocate(this%mst%porosity, this%dis%nodes, &
-                        'POROSITY', create_mem_path(this%name, 'MST'))
+      allocate (this%est)
+      call mem_allocate(this%est%porosity, this%dis%nodes, &
+                        'POROSITY', create_mem_path(this%name, 'EST'))
     end if
     !
     ! -- Assign or point model members to dis members
@@ -217,7 +217,7 @@ contains
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+      call this%dsp%dsp_ar(this%ibound, this%est%porosity)
     end if
     !
     ! -- Return
@@ -247,9 +247,9 @@ contains
     deallocate (this%adv)
     deallocate (this%dsp)
     !
-    if (associated(this%mst)) then
-      call mem_deallocate(this%mst%porosity)
-      deallocate (this%mst)
+    if (associated(this%est)) then
+      call mem_deallocate(this%est%porosity)
+      deallocate (this%est)
     end if
     !
     ! -- gwe scalars
@@ -258,7 +258,7 @@ contains
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
-    call mem_deallocate(this%inmst)
+    call mem_deallocate(this%inest)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)

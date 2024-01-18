@@ -325,15 +325,15 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
-    flopy.mf6.ModflowGwemst(
+    flopy.mf6.ModflowGweest(
         gwe1,
         save_flows=True,
         porosity=prsity,
         cps=760.0,
         rhos=1500.0,
         packagedata=[cpw, rhow, lhv],
-        pname="MST-2",
-        filename="{}.mst".format(gwename1),
+        pname="EST-2",
+        filename="{}.est".format(gwename1),
     )
 
     # Instantiate MODFLOW 6 heat transport output control package

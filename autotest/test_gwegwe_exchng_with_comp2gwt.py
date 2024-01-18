@@ -581,14 +581,14 @@ def add_upper_gwemodel(sim, scheme):
         )
 
     # Instantiating MODFLOW 6 transport mass storage package
-    flopy.mf6.ModflowGwemst(
+    flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
         cps=cps,
         rhos=rhos,
         packagedata=[cpw, rhow, lhv],
-        pname="MST-UP",
-        filename="{}.mst".format(mname),
+        pname="EST-UP",
+        filename="{}.est".format(mname),
     )
 
     # Instantiating MODFLOW 6 heat transport source-sink mixing package
@@ -659,14 +659,14 @@ def add_lower_gwemodel(sim, scheme):
         )
 
     # Instantiating MODFLOW 6 transport mass storage package
-    flopy.mf6.ModflowGwemst(
+    flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
         cps=cps,
         rhos=rhos,
         packagedata=[cpw, rhow, lhv],
-        pname="MST-LO",
-        filename="{}.mst".format(mname),
+        pname="EST-LO",
+        filename="{}.est".format(mname),
     )
 
     # Instantiating MODFLOW 6 heat transport source-sink mixing package

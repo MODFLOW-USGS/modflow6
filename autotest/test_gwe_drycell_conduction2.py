@@ -483,15 +483,15 @@ def build_models(idx, test):
         )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
-    flopy.mf6.ModflowGwemst(
+    flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
         porosity=prsity,
         cps=cps,
         rhos=rhos,
         packagedata=[cpw, rhow, lhv],
-        pname="MST-3",
-        filename="{}.mst".format(gwename),
+        pname="EST-3",
+        filename="{}.est".format(gwename),
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package

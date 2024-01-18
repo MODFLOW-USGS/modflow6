@@ -233,9 +233,9 @@ contains
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
                      exg_var_name='GWFSIMVALS')
-    ! -- Fill porosity from mst packages, needed for dsp
-    if (this%gweModel%indsp > 0 .and. this%gweModel%inmst > 0) then
-      call this%cfg_dv('POROSITY', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
+    ! -- Fill porosity from est packages, needed for dsp
+    if (this%gweModel%indsp > 0 .and. this%gweModel%inest > 0) then
+      call this%cfg_dv('POROSITY', 'EST', SYNC_NDS, (/STG_AFT_CON_AR/))
     end if
     !
   end subroutine cfg_dist_vars
@@ -298,7 +298,7 @@ contains
     call this%gweInterfaceModel%model_ar()
 
     ! -- Set a pointer in the interface model to the gwecommon data
-    if (this%gweModel%inmst > 0) then
+    if (this%gweModel%inest > 0) then
       this%gweInterfaceModel%gwecommon%gwecpw = this%gweModel%gwecommon%gwecpw
       this%gweInterfaceModel%gwecommon%gwerhow = this%gweModel%gwecommon%gwerhow
     end if

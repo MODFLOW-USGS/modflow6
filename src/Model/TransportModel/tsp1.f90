@@ -644,7 +644,7 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: indis
-    integer(I4B), intent(in) :: inmst
+    integer(I4B), intent(in) :: inmst !< representative of both inmst and inest depending on model type
     ! -- local
     character(len=LINELENGTH) :: errmsg
     !

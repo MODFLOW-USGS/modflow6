@@ -19,7 +19,7 @@ module GweDspModule
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWE model ibound
     type(TspFmiType), pointer :: fmi => null() ! pointer to GWE fmi object
-    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in est
     real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWE storage porosity
     real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: alv => null() ! longitudinal vertical dispersivity

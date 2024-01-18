@@ -319,13 +319,13 @@ def build_models(idx, test):
         )
 
     # Instantiating MODFLOW 6 heat transport mass storage package (formerly "reaction" package in MT3DMS)
-    flopy.mf6.ModflowGwemst(
+    flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
         cps=760.0,
         packagedata=[cpw, rhow, lhv],
         rhos=1500.0,
-        filename="{}.mst".format(gwename),
+        filename="{}.est".format(gwename),
     )
 
     # Instantiating MODFLOW 6 heat transport source-sink mixing package

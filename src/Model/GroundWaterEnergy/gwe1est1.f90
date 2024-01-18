@@ -1,7 +1,7 @@
-!> -- @ brief Mobile Storage and Transfer (MST) Module
+!> -- @ brief Energy Storage and Transfer (EST) Module
 !!
-!!    The GweMstModule contains the GweMstType, which is related
-!!    to GwtMstModule; however, there are some important differences
+!!    The GweEstModule contains the GweEstType, which is related
+!!    to GwtEstModule; however, there are some important differences
 !!    owing to the fact that a sorbed phase is not considered.
 !!    Instead, a single temperature is simulated for each grid
 !!    cell and is represenative of both the aqueous and solid
@@ -10,7 +10,7 @@
 !!    conductive processes can transport into, through, or
 !!    out of dry cells that are part of the active domain.
 !<
-module GweMstModule
+module GweEstModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
@@ -24,18 +24,18 @@ module GweMstModule
   use GweInputDataModule, only: GweInputDataType
 
   implicit none
-  public :: GweMstType
-  public :: mst_cr
+  public :: GweEstType
+  public :: est_cr
   !
   integer(I4B), parameter :: NBDITEMS = 2
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
   data budtxt/' STORAGE-CELLBLK', '   DECAY-AQUEOUS'/
 
-  !> @ brief Mobile storage and transfer
+  !> @ brief Energy storage and transfer
   !!
   !!  Data and methods for handling changes in temperature
   !<
-  type, extends(NumericalPackageType) :: GweMstType
+  type, extends(NumericalPackageType) :: GweEstType
     !
     ! -- storage
     real(DP), pointer :: cpw => null() !< heat capacity of water
@@ -43,7 +43,7 @@ module GweMstModule
     real(DP), dimension(:), pointer, contiguous :: cps => null() !< heat capacity of solid
     real(DP), dimension(:), pointer, contiguous :: rhos => null() !< density of solid
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
-    real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
+    real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of energy storage
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
@@ -55,39 +55,39 @@ module GweMstModule
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
-    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in est
     real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =rhow*cpw for energy
 
   contains
 
-    procedure :: mst_ar
-    procedure :: mst_fc
-    procedure :: mst_fc_sto
-    procedure :: mst_fc_dcy
-    procedure :: mst_cq
-    procedure :: mst_cq_sto
-    procedure :: mst_cq_dcy
-    procedure :: mst_bd
-    procedure :: mst_ot_flow
-    procedure :: mst_da
+    procedure :: est_ar
+    procedure :: est_fc
+    procedure :: est_fc_sto
+    procedure :: est_fc_dcy
+    procedure :: est_cq
+    procedure :: est_cq_sto
+    procedure :: est_cq_dcy
+    procedure :: est_bd
+    procedure :: est_ot_flow
+    procedure :: est_da
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: read_packagedata
 
-  end type GweMstType
+  end type GweEstType
 
 contains
 
-  !> @ brief Create a new MST package object
+  !> @ brief Create a new EST package object
   !!
-  !!  Create a new MST package
+  !!  Create a new EST package
   !<
-  subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
+  subroutine est_cr(estobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
     ! -- dummy
-    type(GweMstType), pointer :: mstobj !< unallocated new mst object to create
+    type(GweEstType), pointer :: estobj !< unallocated new est object to create
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< unit number of WEL package input file
     integer(I4B), intent(in) :: iout !< unit number of model listing file
@@ -96,47 +96,47 @@ contains
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
-    allocate (mstobj)
+    allocate (estobj)
     !
     ! -- create name and memory path
-    call mstobj%set_names(1, name_model, 'MST', 'MST')
+    call estobj%set_names(1, name_model, 'EST', 'EST')
     !
     ! -- Allocate scalars
-    call mstobj%allocate_scalars()
+    call estobj%allocate_scalars()
     !
     ! -- Set variables
-    mstobj%inunit = inunit
-    mstobj%iout = iout
-    mstobj%fmi => fmi
-    mstobj%eqnsclfac => eqnsclfac
-    mstobj%gwecommon => gwecommon
+    estobj%inunit = inunit
+    estobj%iout = iout
+    estobj%fmi => fmi
+    estobj%eqnsclfac => eqnsclfac
+    estobj%gwecommon => gwecommon
     !
     ! -- Initialize block parser
-    call mstobj%parser%Initialize(mstobj%inunit, mstobj%iout)
+    call estobj%parser%Initialize(estobj%inunit, estobj%iout)
     !
     ! -- Return
     return
-  end subroutine mst_cr
+  end subroutine est_cr
 
   !> @ brief Allocate and read method for package
   !!
   !!  Method to allocate and read static data for the package.
   !<
-  subroutine mst_ar(this, dis, ibound)
+  subroutine est_ar(this, dis, ibound)
     ! -- modules
     use GweInputDataModule, only: set_gwe_dat_ptrs
     ! -- dummy
-    class(GweMstType), intent(inout) :: this !< GweMstType object
+    class(GweEstType), intent(inout) :: this !< GweEstType object
     class(DisBaseType), pointer, intent(in) :: dis !< pointer to dis package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< pointer to GWE ibound array
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtmst = &
-      "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
+    character(len=*), parameter :: fmtest = &
+      "(1x,/1x,'EST -- ENERGY STORAGE AND TRANSFER PACKAGE, VERSION 1, &
       &7/29/2020 INPUT READ FROM UNIT ', i0, //)"
     !
-    ! --print a message identifying the mobile storage and transfer package.
-    write (this%iout, fmtmst) this%inunit
+    ! --print a message identifying the energy storage and transfer package.
+    write (this%iout, fmtest) this%inunit
     !
     ! -- Read options
     call this%read_options()
@@ -165,17 +165,17 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_ar
+  end subroutine est_ar
 
   !> @ brief Fill coefficient method for package
   !!
   !!  Method to calculate and fill coefficients for the package.
   !<
-  subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
+  subroutine est_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
     ! -- modules
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWE connections
@@ -187,27 +187,27 @@ contains
     ! -- local
     !
     ! -- storage contribution
-    call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
+    call this%est_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%mst_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
+      call this%est_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
     !
     ! -- Return
     return
-  end subroutine mst_fc
+  end subroutine est_fc
 
   !> @ brief Fill storage coefficient method for package
   !!
   !!  Method to calculate and fill storage coefficients for the package.
   !<
-  subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
+  subroutine est_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWE connections
@@ -248,18 +248,18 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_fc_sto
+  end subroutine est_fc_sto
 
   !> @ brief Fill decay coefficient method for package
   !!
   !!  Method to calculate and fill decay coefficients for the package.
   !<
-  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
+  subroutine est_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
@@ -311,16 +311,16 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_fc_dcy
+  end subroutine est_fc_dcy
 
   !> @ brief Calculate flows for package
   !!
   !!  Method to calculate flows for the package.
   !<
-  subroutine mst_cq(this, nodes, cnew, cold, flowja)
+  subroutine est_cq(this, nodes, cnew, cold, flowja)
     ! -- modules
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
@@ -328,26 +328,26 @@ contains
     ! -- local
     !
     ! - storage
-    call this%mst_cq_sto(nodes, cnew, cold, flowja)
+    call this%est_cq_sto(nodes, cnew, cold, flowja)
     !
     ! -- decay
     if (this%idcy /= 0) then
-      call this%mst_cq_dcy(nodes, cnew, cold, flowja)
+      call this%est_cq_dcy(nodes, cnew, cold, flowja)
     end if
     !
     ! -- Return
     return
-  end subroutine mst_cq
+  end subroutine est_cq
 
   !> @ brief Calculate storage terms for package
   !!
   !!  Method to calculate storage terms for the package.
   !<
-  subroutine mst_cq_sto(this, nodes, cnew, cold, flowja)
+  subroutine est_cq_sto(this, nodes, cnew, cold, flowja)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
@@ -392,17 +392,17 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_cq_sto
+  end subroutine est_cq_sto
 
   !> @ brief Calculate decay terms for package
   !!
   !!  Method to calculate decay terms for the package.
   !<
-  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja) ! Important note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
+  subroutine est_cq_dcy(this, nodes, cnew, cold, flowja) ! Important note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
@@ -450,18 +450,18 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_cq_dcy
+  end subroutine est_cq_dcy
 
   !> @ brief Calculate budget terms for package
   !!
   !!  Method to calculate budget terms for the package.
   !<
-  subroutine mst_bd(this, isuppress_output, model_budget)
+  subroutine est_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: isuppress_output !< flag to supress output
     type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
@@ -482,15 +482,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_bd
+  end subroutine est_bd
 
   !> @ brief Output flow terms for package
   !!
   !!  Method to output terms for the package.
   !<
-  subroutine mst_ot_flow(this, icbcfl, icbcun)
+  subroutine est_ot_flow(this, icbcfl, icbcun)
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: icbcfl !< flag and unit number for cell-by-cell output
     integer(I4B), intent(in) :: icbcun !< flag indication if cell-by-cell data should be saved
     ! -- local
@@ -529,17 +529,17 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_ot_flow
+  end subroutine est_ot_flow
 
   !> @brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
   !<
-  subroutine mst_da(this)
+  subroutine est_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
@@ -566,7 +566,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine mst_da
+  end subroutine est_da
 
   !> @ brief Allocate scalar variables for package
   !!
@@ -576,7 +576,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     ! -- local
     !
     ! -- Allocate scalars in NumericalPackageType
@@ -609,7 +609,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
     ! -- local
     integer(I4B) :: n
@@ -657,7 +657,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -680,7 +680,7 @@ contains
     !
     ! -- parse options block if detected
     if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING MOBILE STORAGE AND TRANSFER OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING ENERGY STORAGE AND TRANSFER OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -699,12 +699,12 @@ contains
           this%ilhv = 1
           write (this%iout, fmtilhv)
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'UNKNOWN EST OPTION: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
-      write (this%iout, '(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF ENERGY STORAGE AND TRANSFER OPTIONS'
     end if
     !
     ! -- Return
@@ -720,7 +720,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
@@ -834,7 +834,7 @@ contains
   subroutine read_packagedata(this)
     ! -- modules
     ! -- dummy
-    class(GweMstType) :: this !< GweMstType object
+    class(GweEstType) :: this !< GweEstType object
     ! -- local
     logical :: isfound
     logical :: endOfBlock
@@ -909,4 +909,4 @@ contains
     return
   end function get_zero_order_decay
 
-end module GweMstModule
+end module GweEstModule
