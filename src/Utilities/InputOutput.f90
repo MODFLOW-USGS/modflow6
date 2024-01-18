@@ -49,11 +49,11 @@ contains
     integer(I4B) :: ivar
     integer(I4B) :: iuop
     ! -- formats
-50  format(1x,/1x,'OPENED ',a,/ &
-                 1x,'FILE TYPE:',a,'   UNIT ',I4,3x,'STATUS:',a,/ &
-                 1x,'FORMAT:',a,3x,'ACCESS:',a/ &
-                 1x,'ACTION:',a/)
-60  format(1x,/1x,'DID NOT OPEN ',a,/)
+    character(len=*), parameter :: fmtmsg = &
+      "(1x,/1x,'OPENED ',a,/1x,'FILE TYPE:',a,'   UNIT ',I4,3x,'STATUS:',a,/ &
+      & 1x,'FORMAT:',a,3x,'ACCESS:',a/1x,'ACTION:',a/)"
+    character(len=*), parameter :: fmtmsg2 = &
+                                   "(1x,/1x,'DID NOT OPEN ',a,/)"
     !
     ! -- Process mode_opt
     if (present(mode_opt)) then
@@ -64,8 +64,8 @@ contains
     !
     ! -- Evaluate if the file should be opened
     if (isim_mode < imode) then
-      if(iout > 0) then
-        write(iout, 60) trim(fname)
+      if (iout > 0) then
+        write (iout, fmtmsg2) trim(fname)
       end if
     else
       !
@@ -75,49 +75,49 @@ contains
       filstat = 'OLD'
       !
       ! -- Override defaults
-      if(present(fmtarg_opt)) then
+      if (present(fmtarg_opt)) then
         fmtarg = fmtarg_opt
         call upcase(fmtarg)
-      endif
-      if(present(accarg_opt)) then
+      end if
+      if (present(accarg_opt)) then
         accarg = accarg_opt
         call upcase(accarg)
-      endif
-      if(present(filstat_opt)) then
+      end if
+      if (present(filstat_opt)) then
         filstat = filstat_opt
         call upcase(filstat)
-      endif
-      if(filstat == 'OLD') then
+      end if
+      if (filstat == 'OLD') then
         filact = action(1)
       else
         filact = action(2)
-      endif
+      end if
       !
       ! -- size of fname
       iflen = len_trim(fname)
       !
       ! -- Get a free unit number
-      if(iu <= 0) then
+      if (iu <= 0) then
         call freeunitnumber(iu)
-      endif
+      end if
       !
       ! -- Check to see if file is already open, if not then open the file
-      inquire(file=fname(1:iflen), number=iuop)
-      if(iuop > 0) then
+      inquire (file=fname(1:iflen), number=iuop)
+      if (iuop > 0) then
         ivar = -1
       else
-        open(unit=iu, file=fname(1:iflen), form=fmtarg, access=accarg,           &
-           status=filstat, action=filact, iostat=ivar)
-      endif
+        open (unit=iu, file=fname(1:iflen), form=fmtarg, access=accarg, &
+              status=filstat, action=filact, iostat=ivar)
+      end if
       !
       ! -- Check for an error
-      if(ivar /= 0) then
+      if (ivar /= 0) then
         write (errmsg, '(3a,1x,i0,a)') &
           'Could not open "', fname(1:iflen), '" on unit', iu, '.'
-        if(iuop > 0) then
+        if (iuop > 0) then
           write (errmsg, '(a,1x,a,1x,i0,a)') &
             trim(errmsg), 'File already open on unit', iuop, '.'
-        endif
+        end if
         write (errmsg, '(a,1x,a,1x,a,a)') &
           trim(errmsg), 'Specified file status', trim(filstat), '.'
         write (errmsg, '(a,1x,a,1x,a,a)') &
@@ -131,12 +131,12 @@ contains
         write (errmsg, '(a,1x,a)') &
           trim(errmsg), 'STOP EXECUTION in subroutine openfile().'
         call store_error(errmsg, terminate=.TRUE.)
-      endif
+      end if
       !
       ! -- Write a message
       if (iout > 0) then
-        write(iout, 50) fname(1:iflen), ftype, iu, filstat, fmtarg, accarg, &
-                        filact
+        write (iout, fmtmsg) fname(1:iflen), ftype, iu, filstat, fmtarg, &
+          accarg, filact
       end if
     end if
     !
@@ -152,15 +152,15 @@ contains
     ! -- modules
     implicit none
     ! -- dummy
-    integer(I4B), intent(inout) :: iu  !< next free file unit number
+    integer(I4B), intent(inout) :: iu !< next free file unit number
     ! -- local
     integer(I4B) :: i
     logical :: opened
     !
     do i = iunext, iulast
-      inquire(unit=i, opened=opened)
+      inquire (unit=i, opened=opened)
       if (.not. opened) exit
-    enddo
+    end do
     iu = i
     iunext = iu + 1
     !
@@ -176,7 +176,7 @@ contains
     ! -- modules
     implicit none
     ! -- return
-    integer(I4B) :: getunit  !< free unit number
+    integer(I4B) :: getunit !< free unit number
     ! -- local
     integer(I4B) :: iunit
     !
@@ -187,15 +187,15 @@ contains
     ! -- Return
     return
   end function getunit
-  
+
   !> @brief Convert to upper case
   !!
   !! Subroutine to convert a character string to upper case.
   !<
   subroutine upcase(word)
     implicit none
-    ! -- dummy  
-    character (len=*), intent(inout) :: word  !< word to convert to upper case
+    ! -- dummy
+    character(len=*), intent(inout) :: word !< word to convert to upper case
     ! -- local
     integer(I4B) :: l
     integer(I4B) :: idiff
@@ -232,10 +232,10 @@ contains
     !
     ! -- Loop through the string and convert any uppercase characters.
     do k = 1, l
-      if(word(k:k) >= 'A' .and. word(k:k) <= 'Z') then
-        word(k:k)=char(ichar(word(k:k))+idiff)
-      endif
-    enddo
+      if (word(k:k) >= 'A' .and. word(k:k) <= 'Z') then
+        word(k:k) = char(ichar(word(k:k)) + idiff)
+      end if
+    end do
     !
     ! -- Return
     return
@@ -249,8 +249,8 @@ contains
   !<
   subroutine append_processor_id(name, proc_id)
     ! -- dummy
-    character(len=LINELENGTH), intent(inout) :: name  !< file name
-    integer(I4B), intent(in) :: proc_id  !< processor id
+    character(len=LINELENGTH), intent(inout) :: name !< file name
+    integer(I4B), intent(in) :: proc_id !< processor id
     ! -- local
     character(len=LINELENGTH) :: name_local
     character(len=LINELENGTH) :: name_processor
@@ -263,13 +263,13 @@ contains
     ipos0 = index(name_local, ".", back=.TRUE.)
     ipos1 = len_trim(name)
     if (ipos0 > 0) then
-      write(extension_local, '(a)') name(ipos0:ipos1)
+      write (extension_local, '(a)') name(ipos0:ipos1)
     else
       ipos0 = ipos1
       extension_local = ''
     end if
-    write(name_processor, '(a,a,i0,a)') &
-      name(1:ipos0-1), '.p', proc_id, trim(adjustl(extension_local))
+    write (name_processor, '(a,a,i0,a)') &
+      name(1:ipos0 - 1), '.p', proc_id, trim(adjustl(extension_local))
     name = name_processor
     !
     ! -- Return
@@ -279,26 +279,26 @@ contains
   !> @brief Create a formatted line
   !!
   !! Subroutine to create a formatted line with specified alignment and column
-  !! separators. Like URWORD, UWWORD works with strings, integers, and floats. 
+  !! separators. Like URWORD, UWWORD works with strings, integers, and floats.
   !! Can pass an optional format statement, alignment, and column separator.
   !<
   subroutine UWWORD(line, icol, ilen, ncode, c, n, r, fmt, alignment, sep)
     implicit none
     ! -- dummy
-    character (len=*), intent(inout) :: line !< line
+    character(len=*), intent(inout) :: line !< line
     integer(I4B), intent(inout) :: icol !< column to write to line
     integer(I4B), intent(in) :: ilen !< current length of line
     integer(I4B), intent(in) :: ncode !< code for data type to write
-    character (len=*), intent(in) :: c !< character data type
+    character(len=*), intent(in) :: c !< character data type
     integer(I4B), intent(in) :: n !< integer data type
     real(DP), intent(in) :: r !< float data type
-    character (len=*), optional, intent(in) :: fmt !< format statement
+    character(len=*), optional, intent(in) :: fmt !< format statement
     integer(I4B), optional, intent(in) :: alignment !< alignment specifier
-    character (len=*), optional, intent(in) :: sep !< column separator
-    ! -- local 
-    character (len=16) :: cfmt
-    character (len=16) :: cffmt
-    character (len=ILEN) :: cval
+    character(len=*), optional, intent(in) :: sep !< column separator
+    ! -- local
+    character(len=16) :: cfmt
+    character(len=16) :: cffmt
+    character(len=ILEN) :: cval
     integer(I4B) :: ialign
     integer(I4B) :: i
     integer(I4B) :: ispace
@@ -314,21 +314,21 @@ contains
     if (present(fmt)) then
       cfmt = fmt
     else
-      select case(ncode)
-        case(TABSTRING, TABUCSTRING)
-          write(cfmt, '(a,I0,a)') '(a', ilen, ')'
-        case(TABINTEGER)
-          write(cfmt, '(a,I0,a)') '(I', ilen, ')'
-        case(TABREAL)
-          ireal = 1
-          i = ilen - 7
-          write(cfmt, '(a,I0,a,I0,a)') '(1PG', ilen, '.', i, ')'
-          if (R >= DZERO) then
-            ipad = 1
-          end if
+      select case (ncode)
+      case (TABSTRING, TABUCSTRING)
+        write (cfmt, '(a,I0,a)') '(a', ilen, ')'
+      case (TABINTEGER)
+        write (cfmt, '(a,I0,a)') '(I', ilen, ')'
+      case (TABREAL)
+        ireal = 1
+        i = ilen - 7
+        write (cfmt, '(a,I0,a,I0,a)') '(1PG', ilen, '.', i, ')'
+        if (R >= DZERO) then
+          ipad = 1
+        end if
       end select
     end if
-    write(cffmt, '(a,I0,a)') '(a', ilen, ')'
+    write (cffmt, '(a,I0,a)') '(a', ilen, ')'
     !
     if (present(alignment)) then
       ialign = alignment
@@ -336,16 +336,15 @@ contains
       ialign = TABRIGHT
     end if
     !
-    ! -- 
     if (ncode == TABSTRING .or. ncode == TABUCSTRING) then
       cval = C
       if (ncode == TABUCSTRING) then
         call UPcase(cval)
       end if
     else if (ncode == TABINTEGER) then
-      write(cval, cfmt) n
+      write (cval, cfmt) n
     else if (ncode == TABREAL) then
-      write(cval, cfmt) r
+      write (cval, cfmt) r
     end if
     !
     ! -- Apply alignment to cval
@@ -359,17 +358,17 @@ contains
       ispace = (ilen - i) / 2
       if (ireal > 0) then
         if (ipad > 0) then
-          cval = ' ' //trim(adjustl(cval))
+          cval = ' '//trim(adjustl(cval))
         else
           cval = trim(adjustl(cval))
         end if
       else
-        cval = repeat(' ', ispace) // trim(cval)
+        cval = repeat(' ', ispace)//trim(cval)
       end if
     else if (ialign == TABLEFT) then
       cval = trim(adjustl(cval))
       if (ipad > 0) then
-        cval = ' ' //trim(adjustl(cval))
+        cval = ' '//trim(adjustl(cval))
       end if
     else
       cval = adjustr(cval)
@@ -382,14 +381,14 @@ contains
     istop = icol + ilen - 1
     !
     ! -- Write final string to line
-    write(line(icol:istop), cffmt) cval
+    write (line(icol:istop), cffmt) cval
     !
     icoL = istop + 1
     !
     if (present(sep)) then
       i = len(sep)
       istop = icol + i
-      write(line(icol:istop), '(a)') sep
+      write (line(icol:istop), '(a)') sep
       icol = istop
     end if
     !
@@ -400,9 +399,9 @@ contains
   !> @brief Extract a word from a string
   !!
   !! Subroutine to extract a word from a line of text, and optionally
-  !! convert the word to a number. The last character in the line is 
-  !! set to blank so that if any problems occur with finding a word, 
-  !! istart and istop will point to this blank character. Thus, a word 
+  !! convert the word to a number. The last character in the line is
+  !! set to blank so that if any problems occur with finding a word,
+  !! istart and istop will point to this blank character. Thus, a word
   !! will always be returned unless there is a numeric conversion error.
   !! Be sure that the last character in line is not an important character
   !! because it will always be set to blank.
@@ -413,19 +412,19 @@ contains
   !! commas separated by one or more spaces as a null word.
   !!
   !! For a word that begins with "'" or '"', the word starts with
-  !! the character after the quote and ends with the character preceding 
+  !! the character after the quote and ends with the character preceding
   !! a subsequent quote. Thus, a quoted word can include spaces and commas.
-  !! The quoted word cannot contain a quote character of the same type 
-  !! within the word but can contain a different quote character. For 
+  !! The quoted word cannot contain a quote character of the same type
+  !! within the word but can contain a different quote character. For
   !! example, "WORD'S" or 'WORD"S'.
   !!
-  !! Number conversion error is written to unit iout if iout is positive; 
-  !! error is written to default output if iout is 0; no error message is 
+  !! Number conversion error is written to unit iout if iout is positive;
+  !! error is written to default output if iout is 0; no error message is
   !! written if iout is negative.
   !!
   !<
   subroutine URWORD(line, icol, istart, istop, ncode, n, r, iout, in)
-    ! -- dummy  
+    ! -- dummy
     character(len=*) :: line !< line to parse
     integer(I4B), intent(inout) :: icol !< current column in line
     integer(I4B), intent(inout) :: istart !< starting character position of the word
@@ -436,14 +435,25 @@ contains
     integer(I4B), intent(in) :: iout !< output listing file unit
     integer(I4B), intent(in) :: in !< input file unit number
     ! -- local
-    character(len=20) string                
+    character(len=20) string
     character(len=30) rw
     character(len=1) tab
     character(len=1) charend
     character(len=200) :: msg
     character(len=linelength) :: msg_line
+    ! -- formats
+    character(len=*), parameter :: fmtmsgout1 = &
+      "(1X,'FILE UNIT ',I4,' : ERROR CONVERTING ""',A, &
+      & '"" TO ',A,' IN LINE:')"
+    character(len=*), parameter :: fmtmsgout2 = "(1x, &
+      & 'KEYBOARD INPUT : ERROR CONVERTING ""',a,'"" TO ',a,' IN LINE:')"
+    character(len=*), parameter :: fmtmsgout3 = "('File unit ', &
+      & I0,': Error converting ""',a,'"" to ',A,' in following line:')"
+    character(len=*), parameter :: fmtmsgout4 = &
+      "('Keyboard input: Error converting ""',a, &
+      & '"" to ',A,' in following line:')"
     !
-    tab=char(9)
+    tab = char(9)
     !
     ! -- Set last char in LINE to blank and set ISTART and ISTOP to point
     !    to this blank as a default situation when no word is found.  If
@@ -453,39 +463,39 @@ contains
     istart = linlen
     istop = linlen
     linlen = linlen - 1
-    if(icol < 1 .or. icol > linlen) go to 100
+    if (icol < 1 .or. icol > linlen) go to 100
     !
     ! -- Find start of word, which is indicated by first character that
     !    is not a blank, a comma, or a tab.
-    do 10 i=icol, linlen
-      if(line(i:i) /= ' ' .and. line(i:i) /= ',' .and. &
-         line(i:i) /= tab) go to 20
-10  continue
+    do i = icol, linlen
+      if (line(i:i) /= ' ' .and. line(i:i) /= ',' .and. &
+          line(i:i) /= tab) go to 20
+    end do
     icol = linlen + 1
     go to 100
     !
     ! -- Found start of word.  Look for end.
     !    When word is quoted, only a quote can terminate it.
     !    search for a single (char(39)) or double (char(34)) quote
-20  if(line(i:i)==char(34) .or. line(i:i)==char(39)) then
+20  if (line(i:i) == char(34) .or. line(i:i) == char(39)) then
       if (line(i:i) == char(34)) then
         charend = char(34)
       else
         charend = char(39)
       end if
       i = i + 1
-      if(i <= linlen) then
-        do 25 j=i, linlen
-          if(line(j:j)==charend) go to 40
-25      continue
+      if (i <= linlen) then
+        do j = i, linlen
+          if (line(j:j) == charend) go to 40
+        end do
       end if
-    !
-    ! -- When word is not quoted, space, comma, or tab will terminate.
+      !
+      ! -- When word is not quoted, space, comma, or tab will terminate.
     else
-      do 30 j=i, linlen
-        if(line(j:j)==' ' .or. line(j:j)==',' .or. &
-           line(j:j)==tab) go to 40
-30    continue
+      do j = i, linlen
+        if (line(j:j) == ' ' .or. line(j:j) == ',' .or. &
+            line(j:j) == tab) go to 40
+      end do
     end if
     !
     ! -- End of line without finding end of word; set end of word to
@@ -496,33 +506,33 @@ contains
     !    set ICOL to point to location for scanning for another word.
 40  icol = j + 1
     j = j - 1
-    if(j < i) go to 100
+    if (j < i) go to 100
     istart = i
     istop = j
     !
     ! -- Convert word to upper case and RETURN if NCODE is 1.
-    if(ncode==1) then
+    if (ncode == 1) then
       idiff = ichar('a') - ichar('A')
-      do 50 k=istart, istop
-        if(line(k:k) >= 'a' .and. line(k:k) <= 'z') &
-           line(k:k) = char(ichar(line(k:k)) - idiff)
-50    continue
+      do k = istart, istop
+        if (line(k:k) >= 'a' .and. line(k:k) <= 'z') &
+          line(k:k) = char(ichar(line(k:k)) - idiff)
+      end do
       return
     end if
     !
     ! -- Convert word to a number if requested.
-100 if(ncode==2 .or. ncode==3) then
+100 if (ncode == 2 .or. ncode == 3) then
       rw = ' '
-      l = 30-istop+istart
+      l = 30 - istop + istart
       if (l < 1) go to 200
       rw(l:30) = line(istart:istop)
-      if(ncode == 2) read(rw,'(i30)',err=200) n
-      if(ncode == 3) read(rw,'(f30.0)',err=200) r
+      if (ncode == 2) read (rw, '(i30)', err=200) n
+      if (ncode == 3) read (rw, '(f30.0)', err=200) r
     end if
     return
     !
     ! -- Number conversion error.
-200 if(ncode == 3) then
+200 if (ncode == 3) then
       string = 'a real number'
       l = 13
     else
@@ -534,29 +544,25 @@ contains
     if (iout < 0) then
       n = 0
       r = 0.
-      line(linlen+1:linlen+1) = 'E'
+      line(linlen + 1:linlen + 1) = 'E'
       return
-    !
-    ! -- If output unit is positive; write a message to output unit.
-    else if(iout > 0) then
-      if(in > 0) then
-        write(msg_line,201) in, line(istart:istop), string(1:l)
+      !
+      ! -- If output unit is positive; write a message to output unit.
+    else if (iout > 0) then
+      if (in > 0) then
+        write (msg_line, fmtmsgout1) in, line(istart:istop), string(1:l)
       else
-        write(msg_line,202) line(istart:istop), string(1:l)
+        write (msg_line, fmtmsgout2) line(istart:istop), string(1:l)
       end if
       call write_message(msg_line, iunit=IOUT, skipbefore=1)
       call write_message(line, iunit=IOUT, fmt='(1x,a)')
-201   format(1x,'FILE UNIT ',I4,' : ERROR CONVERTING "',a, &
-             '" TO ',a,' IN LINE:')
-202   format(1x,'KEYBOARD INPUT : ERROR CONVERTING "',a, &
-             '" TO ',a,' IN LINE:')
-    !
-    ! -- If output unit is 0; write a message to default output.
+      !
+      ! -- If output unit is 0; write a message to default output.
     else
-      if(in > 0) then
-        write(msg_line,201) in, line(istart:istop), string(1:l)
+      if (in > 0) then
+        write (msg_line, fmtmsgout1) in, line(istart:istop), string(1:l)
       else
-        write(msg_line,202) line(istart:istop), string(1:l)
+        write (msg_line, fmtmsgout2) line(istart:istop), string(1:l)
       end if
       call write_message(msg_line, iunit=iout, skipbefore=1)
       call write_message(LINE, iunit=iout, fmt='(1x,a)')
@@ -565,14 +571,11 @@ contains
     ! -- STOP after storing error message.
     call lowcase(string)
     if (in > 0) then
-      write(msg,205) in,line(istart:istop), trim(string)
+      write (msg, fmtmsgout3) in, line(istart:istop), trim(string)
     else
-      write(msg,207) line(istart:istop), trim(string)
-    endif
-205 format('File unit ',I0,': Error converting "',a, &
-           '" to ',A,' in following line:')
-207 format('Keyboard input: Error converting "',a, &
-           '" to ',A,' in following line:')
+      write (msg, fmtmsgout4) line(istart:istop), trim(string)
+    end if
+    !
     call store_error(msg)
     call store_error(trim(line))
     call store_error_unit(in)
