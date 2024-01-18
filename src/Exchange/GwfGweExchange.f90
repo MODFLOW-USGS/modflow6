@@ -177,7 +177,7 @@ contains
     !
     ! -- Set the npf flag so that specific discharge is available for
     !    transport calculations if dispersion is active
-    if (gwemodel%indsp > 0) then
+    if (gwemodel%incnd > 0) then
       gwfmodel%npf%icalcspdis = 1
     end if
     !

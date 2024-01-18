@@ -1,4 +1,4 @@
-# --------------------- gwe dsp options ---------------------
+# --------------------- gwe cnd options ---------------------
 
 block options
 name xt3d_off
@@ -18,7 +18,7 @@ optional true
 longname xt3d on right-hand side
 description add xt3d terms to right-hand side, when possible.  This option uses less memory, but may require more iterations.
 
-# --------------------- gwe dsp griddata ---------------------
+# --------------------- gwe cnd griddata ---------------------
 
 block griddata
 name alh

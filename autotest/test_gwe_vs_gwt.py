@@ -309,13 +309,13 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
-        flopy.mf6.ModflowGwedsp(
+        flopy.mf6.ModflowGwecnd(
             gwe,
             alh=al,
             ath1=ath1,
             ktw=0.5918,
             kts=0.2700,
-            filename="{}.dsp".format(gwename),
+            filename="{}.cnd".format(gwename),
         )
 
     # Instantiating MODFLOW 6 heat transport mass storage package (formerly "reaction" package in MT3DMS)

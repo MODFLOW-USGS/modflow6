@@ -10,7 +10,7 @@ module GweModule
   use NumericalModelModule, only: NumericalModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use GweDspModule, only: GweDspType
+  use GweCndModule, only: GweCndType
   use GweEstModule, only: GweEstType
   use BudgetModule, only: BudgetType
   use GweInputDataModule, only: GweInputDataType
@@ -34,9 +34,9 @@ module GweModule
 
     type(GweInputDataType), pointer :: gwecommon => null() !< container for data shared with multiple packages
     type(GweEstType), pointer :: est => null() !< mass storage and transfer package
-    type(GweDspType), pointer :: dsp => null() !< dispersion package
+    type(GweCndType), pointer :: cnd => null() !< dispersion package
     integer(I4B), pointer :: inest => null() ! unit number EST
-    integer(I4B), pointer :: indsp => null() ! unit number DSP
+    integer(I4B), pointer :: incnd => null() ! unit number CND
 
   contains
 
@@ -71,7 +71,7 @@ module GweModule
   character(len=LENPACKAGETYPE), dimension(GWE_NBASEPKG) :: GWE_BASEPKG
   data GWE_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
                   &'IC6  ', 'FMI6 ', 'EST6 ', 'ADV6 ', '     ', & ! 10
-                  &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
+                  &'CND6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
                   &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
                   &30*'     '/ ! 50
 
@@ -161,7 +161,7 @@ contains
     call this%fmi%fmi_df(this%dis, 0)
     if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
     if (this%inadv > 0) call this%adv%adv_df()
-    if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
+    if (this%incnd > 0) call this%cnd%cnd_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
     call this%budget%budget_df(NIUNIT_GWE, this%depvarunit, &
@@ -217,8 +217,8 @@ contains
     !
     ! -- Add the internal connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
-    if (this%indsp > 0) &
-      call this%dsp%dsp_ac(this%moffset, sparse)
+    if (this%incnd > 0) &
+      call this%cnd%cnd_ac(this%moffset, sparse)
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -245,7 +245,7 @@ contains
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
     !
-    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
+    if (this%incnd > 0) call this%cnd%cnd_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
     do ip = 1, this%bndlist%Count()
@@ -278,7 +278,7 @@ contains
     if (this%inic > 0) call this%ic%ic_ar(this%x)
     if (this%inest > 0) call this%est%est_ar(this%dis, this%ibound)
     if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
-    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%est%porosity)
+    if (this%incnd > 0) call this%cnd%cnd_ar(this%ibound, this%est%porosity)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
@@ -377,7 +377,7 @@ contains
     call this%fmi%fmi_ad(this%x)
     !
     ! -- Advance
-    if (this%indsp > 0) call this%dsp%dsp_ad()
+    if (this%incnd > 0) call this%cnd%cnd_ad()
     if (this%inssm > 0) call this%ssm%ssm_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -448,8 +448,8 @@ contains
       call this%adv%adv_fc(this%dis%nodes, matrix_sln, this%idxglo, this%x, &
                            this%rhs)
     end if
-    if (this%indsp > 0) then
-      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, matrix_sln, &
+    if (this%incnd > 0) then
+      call this%cnd%cnd_fc(kiter, this%dis%nodes, this%nja, matrix_sln, &
                            this%idxglo, this%rhs, this%x)
     end if
     if (this%inssm > 0) then
@@ -516,7 +516,7 @@ contains
       this%flowja(i) = DZERO
     end do
     if (this%inadv > 0) call this%adv%adv_cq(this%x, this%flowja)
-    if (this%indsp > 0) call this%dsp%dsp_cq(this%x, this%flowja)
+    if (this%incnd > 0) call this%cnd%cnd_cq(this%x, this%flowja)
     if (this%inest > 0) call this%est%est_cq(this%dis%nodes, this%x, this%xold, &
                                              this%flowja)
     if (this%inssm > 0) call this%ssm%ssm_cq(this%flowja)
@@ -628,7 +628,7 @@ contains
     call this%ic%ic_da()
     call this%fmi%fmi_da()
     call this%adv%adv_da()
-    call this%dsp%dsp_da()
+    call this%cnd%cnd_da()
     call this%ssm%ssm_da()
     call this%est%est_da()
     call this%mvt%mvt_da()
@@ -642,7 +642,7 @@ contains
     deallocate (this%ic)
     deallocate (this%fmi)
     deallocate (this%adv)
-    deallocate (this%dsp)
+    deallocate (this%cnd)
     deallocate (this%ssm)
     deallocate (this%est)
     deallocate (this%mvt)
@@ -660,7 +660,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%inest)
-    call mem_deallocate(this%indsp)
+    call mem_deallocate(this%incnd)
     !
     ! -- Parent class members
     call this%TransportModelType%tsp_da()
@@ -712,9 +712,9 @@ contains
       if (this%adv%iasym /= 0) iasym = 1
     end if
     !
-    ! -- DSP
-    if (this%indsp > 0) then
-      if (this%dsp%ixt3d /= 0) iasym = 1
+    ! -- CND
+    if (this%incnd > 0) then
+      if (this%cnd%ixt3d /= 0) iasym = 1
     end if
     !
     ! -- Check for any packages that introduce matrix asymmetry
@@ -745,10 +745,10 @@ contains
     !
     ! -- allocate members that are part of model class
     call mem_allocate(this%inest, 'INEST', this%memoryPath)
-    call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
+    call mem_allocate(this%incnd, 'INCND', this%memoryPath)
     !
     this%inest = 0
-    this%indsp = 0
+    this%incnd = 0
     !
     ! -- Return
     return
@@ -920,7 +920,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
     use GweEstModule, only: est_cr
-    use GweDspModule, only: dsp_cr
+    use GweCndModule, only: cnd_cr
     ! -- dummy
     class(GweModelType) :: this
     integer(I4B), intent(in) :: indis
@@ -940,7 +940,7 @@ contains
     integer(I4B), pointer :: inunit
     integer(I4B), dimension(:), allocatable :: bndpkgs
     integer(I4B) :: n
-    character(len=LENMEMPATH) :: mempathdsp = ''
+    character(len=LENMEMPATH) :: mempathcnd = ''
     !
     ! -- set input memory paths, input/model and input/model/namfile
     model_mempath = create_mem_path(component=this%name, context=idm_context)
@@ -963,9 +963,9 @@ contains
       select case (pkgtype)
       case ('EST6')
         this%inest = inunit
-      case ('DSP6')
-        this%indsp = 1
-        mempathdsp = mempath
+      case ('CND6')
+        this%incnd = 1
+        mempathcnd = mempath
       case ('CTP6', 'SRC6', 'LKE6', 'SFE6', &
             'MWE6', 'UZE6', 'API6')
         call expandarray(bndpkgs)
@@ -978,7 +978,7 @@ contains
     ! -- Create packages that are tied directly to model
     call est_cr(this%est, this%name, this%inest, this%iout, this%fmi, &
                 this%eqnsclfac, this%gwecommon)
-    call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
+    call cnd_cr(this%cnd, this%name, mempathcnd, this%incnd, this%iout, &
                 this%fmi, this%eqnsclfac, this%gwecommon)
     !
     ! -- Check to make sure that required ftype's have been specified

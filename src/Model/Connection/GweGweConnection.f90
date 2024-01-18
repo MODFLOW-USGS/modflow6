@@ -33,7 +33,7 @@ module GweGweConnectionModule
     class(GweInterfaceModelType), pointer :: gweInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
-    integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
+    integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface CND package: 0 = no, 1 = lhs, 2 = rhs
     integer(I4B), pointer :: exgflowSign => null() !< indicates the flow direction of exgflowja
     real(DP), dimension(:), pointer, contiguous :: exgflowjaGwe => null() !< gwe-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)
@@ -163,8 +163,8 @@ contains
     this%iIfaceXt3d = this%gweExchange%ixt3d
 
     ! -- Turn off when off in the owning model
-    if (this%gweModel%indsp > 0) then
-      this%iIfaceXt3d = this%gweModel%dsp%ixt3d
+    if (this%gweModel%incnd > 0) then
+      this%iIfaceXt3d = this%gweModel%cnd%ixt3d
     end if
 
     ! -- Determine the required size of the interface model grid
@@ -218,14 +218,14 @@ contains
     call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     !
-    if (this%gweInterfaceModel%dsp%idisp > 0) then
-      call this%cfg_dv('ALH', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('ALV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('ATH1', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('ATH2', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('ATV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('KTW', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
-      call this%cfg_dv('KTS', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gweInterfaceModel%cnd%idisp > 0) then
+      call this%cfg_dv('ALH', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ALV', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH1', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH2', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATV', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('KTW', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('KTS', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
     end if
     call this%cfg_dv('GWFHEAD', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFSAT', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
@@ -233,8 +233,8 @@ contains
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
                      exg_var_name='GWFSIMVALS')
-    ! -- Fill porosity from est packages, needed for dsp
-    if (this%gweModel%indsp > 0 .and. this%gweModel%inest > 0) then
+    ! -- Fill porosity from est packages, needed for cnd
+    if (this%gweModel%incnd > 0 .and. this%gweModel%inest > 0) then
       call this%cfg_dv('POROSITY', 'EST', SYNC_NDS, (/STG_AFT_CON_AR/))
     end if
     !
@@ -256,10 +256,10 @@ contains
     ! -- dummy
     class(GweGweConnectionType) :: this !< the connection
     ! -- local
-    logical(LGP) :: hasAdv, hasDsp
+    logical(LGP) :: hasAdv, hasCnd
     !
     hasAdv = this%gweModel%inadv > 0
-    hasDsp = this%gweModel%indsp > 0
+    hasCnd = this%gweModel%incnd > 0
     !
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
@@ -270,10 +270,10 @@ contains
       end if
     end if
     !
-    if (hasDsp) then
+    if (hasCnd) then
       if (this%iIfaceXt3d > 0) then
         this%exg_stencil_depth = 2
-        if (this%gweModel%dsp%ixt3d > 0) then
+        if (this%gweModel%cnd%ixt3d > 0) then
           this%int_stencil_depth = 2
         end if
       end if
@@ -305,8 +305,8 @@ contains
 
     !-- Set the equation scaling factor in the interface model to that of
     !   underlying GWE model
-    if (this%gweModel%indsp > 0) then
-      this%gweInterfaceModel%ieqnsclfac = this%gweModel%dsp%eqnsclfac
+    if (this%gweModel%incnd > 0) then
+      this%gweInterfaceModel%ieqnsclfac = this%gweModel%cnd%eqnsclfac
     end if
 
     ! -- AR the movers and obs through the exchange
@@ -347,12 +347,12 @@ contains
       call store_error(errmsg)
     end if
     !
-    if ((this%gweExchange%gwemodel1%indsp > 0 .and. &
-         this%gweExchange%gwemodel2%indsp == 0) .or. &
-        (this%gweExchange%gwemodel2%indsp > 0 .and. &
-         this%gweExchange%gwemodel1%indsp == 0)) then
+    if ((this%gweExchange%gwemodel1%incnd > 0 .and. &
+         this%gweExchange%gwemodel2%incnd == 0) .or. &
+        (this%gweExchange%gwemodel2%incnd > 0 .and. &
+         this%gweExchange%gwemodel1%incnd == 0)) then
       write (errmsg, '(1x,a,a,a)') 'Cannot connect GWE models in exchange ', &
-        trim(this%gweExchange%name), ' because one model is configured with DSP &
+        trim(this%gweExchange%name), ' because one model is configured with CND &
         &and the other one is not'
       call store_error(errmsg)
     end if
@@ -382,8 +382,8 @@ contains
     !
     class(GweGweConnectionType) :: this !< this connection
     !
-    ! -- Recalculate dispersion ellipse
-    if (this%gweInterfaceModel%indsp > 0) call this%gweInterfaceModel%dsp%dsp_ad()
+    ! -- Recalculate conduction ellipse
+    if (this%gweInterfaceModel%incnd > 0) call this%gweInterfaceModel%cnd%cnd_ad()
     !
     if (this%owns_exchange) then
       call this%gweExchange%exg_ad()

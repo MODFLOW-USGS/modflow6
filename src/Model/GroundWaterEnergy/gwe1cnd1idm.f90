@@ -1,16 +1,16 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module GweDspInputModule
+module GweCndInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public gwe_dsp_param_definitions
-  public gwe_dsp_aggregate_definitions
-  public gwe_dsp_block_definitions
-  public GweDspParamFoundType
-  public gwe_dsp_multi_package
+  public gwe_cnd_param_definitions
+  public gwe_cnd_aggregate_definitions
+  public gwe_cnd_block_definitions
+  public GweCndParamFoundType
+  public gwe_cnd_multi_package
 
-  type GweDspParamFoundType
+  type GweCndParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
     logical :: alh = .false.
@@ -20,15 +20,15 @@ module GweDspInputModule
     logical :: atv = .false.
     logical :: ktw = .false.
     logical :: kts = .false.
-  end type GweDspParamFoundType
+  end type GweCndParamFoundType
 
-  logical :: gwe_dsp_multi_package = .false.
+  logical :: gwe_cnd_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_xt3d_off = InputParamDefinitionType &
+    gwecnd_xt3d_off = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'OPTIONS', & ! block
     'XT3D_OFF', & ! tag name
     'XT3D_OFF', & ! fortran variable
@@ -42,10 +42,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_xt3d_rhs = InputParamDefinitionType &
+    gwecnd_xt3d_rhs = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'OPTIONS', & ! block
     'XT3D_RHS', & ! tag name
     'XT3D_RHS', & ! fortran variable
@@ -59,10 +59,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_alh = InputParamDefinitionType &
+    gwecnd_alh = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'ALH', & ! tag name
     'ALH', & ! fortran variable
@@ -76,10 +76,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_alv = InputParamDefinitionType &
+    gwecnd_alv = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'ALV', & ! tag name
     'ALV', & ! fortran variable
@@ -93,10 +93,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_ath1 = InputParamDefinitionType &
+    gwecnd_ath1 = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'ATH1', & ! tag name
     'ATH1', & ! fortran variable
@@ -110,10 +110,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_ath2 = InputParamDefinitionType &
+    gwecnd_ath2 = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'ATH2', & ! tag name
     'ATH2', & ! fortran variable
@@ -127,10 +127,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_atv = InputParamDefinitionType &
+    gwecnd_atv = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'ATV', & ! tag name
     'ATV', & ! fortran variable
@@ -144,10 +144,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_ktw = InputParamDefinitionType &
+    gwecnd_ktw = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'KTW', & ! tag name
     'KTW', & ! fortran variable
@@ -161,10 +161,10 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwedsp_kts = InputParamDefinitionType &
+    gwecnd_kts = InputParamDefinitionType &
     ( &
     'GWE', & ! component
-    'DSP', & ! subcomponent
+    'CND', & ! subcomponent
     'GRIDDATA', & ! block
     'KTS', & ! tag name
     'KTS', & ! fortran variable
@@ -178,21 +178,21 @@ module GweDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwe_dsp_param_definitions(*) = &
+    gwe_cnd_param_definitions(*) = &
     [ &
-    gwedsp_xt3d_off, &
-    gwedsp_xt3d_rhs, &
-    gwedsp_alh, &
-    gwedsp_alv, &
-    gwedsp_ath1, &
-    gwedsp_ath2, &
-    gwedsp_atv, &
-    gwedsp_ktw, &
-    gwedsp_kts &
+    gwecnd_xt3d_off, &
+    gwecnd_xt3d_rhs, &
+    gwecnd_alh, &
+    gwecnd_alv, &
+    gwecnd_ath1, &
+    gwecnd_ath2, &
+    gwecnd_atv, &
+    gwecnd_ktw, &
+    gwecnd_kts &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    gwe_dsp_aggregate_definitions(*) = &
+    gwe_cnd_aggregate_definitions(*) = &
     [ &
     InputParamDefinitionType &
     ( &
@@ -212,7 +212,7 @@ module GweDspInputModule
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    gwe_dsp_block_definitions(*) = &
+    gwe_cnd_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -228,4 +228,4 @@ module GweDspInputModule
     ) &
     ]
 
-end module GweDspInputModule
+end module GweCndInputModule

@@ -19,8 +19,8 @@ module ExgGwegweInputModule
     logical :: iprflow = .false.
     logical :: ipakcb = .false.
     logical :: adv_scheme = .false.
-    logical :: dsp_xt3d_off = .false.
-    logical :: dsp_xt3d_rhs = .false.
+    logical :: cnd_xt3d_off = .false.
+    logical :: cnd_xt3d_rhs = .false.
     logical :: filein = .false.
     logical :: mve_filerecord = .false.
     logical :: mve6 = .false.
@@ -179,13 +179,13 @@ module ExgGwegweInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwegwe_dsp_xt3d_off = InputParamDefinitionType &
+    exggwegwe_cnd_xt3d_off = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'GWEGWE', & ! subcomponent
     'OPTIONS', & ! block
-    'DSP_XT3D_OFF', & ! tag name
-    'DSP_XT3D_OFF', & ! fortran variable
+    'CND_XT3D_OFF', & ! tag name
+    'CND_XT3D_OFF', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -196,13 +196,13 @@ module ExgGwegweInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwegwe_dsp_xt3d_rhs = InputParamDefinitionType &
+    exggwegwe_cnd_xt3d_rhs = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'GWEGWE', & ! subcomponent
     'OPTIONS', & ! block
-    'DSP_XT3D_RHS', & ! tag name
-    'DSP_XT3D_RHS', & ! fortran variable
+    'CND_XT3D_RHS', & ! tag name
+    'CND_XT3D_RHS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -512,8 +512,8 @@ module ExgGwegweInputModule
     exggwegwe_iprflow, &
     exggwegwe_ipakcb, &
     exggwegwe_adv_scheme, &
-    exggwegwe_dsp_xt3d_off, &
-    exggwegwe_dsp_xt3d_rhs, &
+    exggwegwe_cnd_xt3d_off, &
+    exggwegwe_cnd_xt3d_rhs, &
     exggwegwe_filein, &
     exggwegwe_mve_filerecord, &
     exggwegwe_mve6, &

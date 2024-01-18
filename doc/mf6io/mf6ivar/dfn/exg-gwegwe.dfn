@@ -72,7 +72,7 @@ longname advective scheme
 description scheme used to solve the advection term.  Can be upstream, central, or TVD.  If not specified, upstream weighting is the default weighting scheme.
 
 block options
-name dsp_xt3d_off
+name cnd_xt3d_off
 type keyword
 shape
 reader urword
@@ -81,7 +81,7 @@ longname deactivate xt3d
 description deactivate the xt3d method for the dispersive flux and use the faster and less accurate approximation for this exchange.
 
 block options
-name dsp_xt3d_rhs
+name cnd_xt3d_rhs
 type keyword
 shape
 reader urword

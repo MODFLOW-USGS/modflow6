@@ -284,7 +284,7 @@ contains
     ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
     ! GWE-GWE exchange (this%ianglex > 0).
     if (associated(this%gwemodel1) .and. associated(this%gwemodel2)) then
-      if (this%gwemodel1%indsp /= 0 .or. this%gwemodel2%indsp /= 0) then
+      if (this%gwemodel1%incnd /= 0 .or. this%gwemodel2%incnd /= 0) then
         if (this%ianglex == 0) then
           write (errmsg, '(3a)') 'GWE-GWE exchange ', trim(this%name), &
             ' requires that ANGLDEGX be specified as an'// &
@@ -722,10 +722,10 @@ contains
                        found%gwfmodelname2)
     call mem_set_value(this%iAdvScheme, 'ADV_SCHEME', this%input_mempath, &
                        adv_scheme, found%adv_scheme)
-    call mem_set_value(this%ixt3d, 'DSP_XT3D_OFF', this%input_mempath, &
-                       found%dsp_xt3d_off)
-    call mem_set_value(this%ixt3d, 'DSP_XT3D_RHS', this%input_mempath, &
-                       found%dsp_xt3d_rhs)
+    call mem_set_value(this%ixt3d, 'CND_XT3D_OFF', this%input_mempath, &
+                       found%cnd_xt3d_off)
+    call mem_set_value(this%ixt3d, 'CND_XT3D_RHS', this%input_mempath, &
+                       found%cnd_xt3d_rhs)
     !
     write (iout, '(1x,a)') 'PROCESSING GWE-GWE EXCHANGE OPTIONS'
     !
@@ -750,14 +750,14 @@ contains
         trim(adv_scheme(this%iAdvScheme + 1))
     end if
     !
-    if (found%dsp_xt3d_off .and. found%dsp_xt3d_rhs) then
-      errmsg = 'DSP_XT3D_OFF and DSP_XT3D_RHS cannot both be set as options.'
+    if (found%cnd_xt3d_off .and. found%cnd_xt3d_rhs) then
+      errmsg = 'CND_XT3D_OFF and CND_XT3D_RHS cannot both be set as options.'
       call store_error(errmsg)
       call store_error_filename(this%filename)
-    else if (found%dsp_xt3d_off) then
+    else if (found%cnd_xt3d_off) then
       this%ixt3d = 0
       write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
-    else if (found%dsp_xt3d_rhs) then
+    else if (found%cnd_xt3d_rhs) then
       this%ixt3d = 2
       write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
     end if

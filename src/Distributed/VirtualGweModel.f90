@@ -11,17 +11,17 @@ module VirtualGweModelModule
   public :: add_virtual_gwe_model
 
   type, extends(VirtualModelType) :: VirtualGweModelType
-    ! DSP
-    !type(VirtualIntType), pointer :: dsp_idiffc => null()
-    type(VirtualIntType), pointer :: dsp_idisp => null()
-    !type(VirtualDbl1dType), pointer :: dsp_diffc => null()
-    type(VirtualDbl1dType), pointer :: dsp_alh => null()
-    type(VirtualDbl1dType), pointer :: dsp_alv => null()
-    type(VirtualDbl1dType), pointer :: dsp_ath1 => null()
-    type(VirtualDbl1dType), pointer :: dsp_ath2 => null()
-    type(VirtualDbl1dType), pointer :: dsp_atv => null()
-    type(VirtualDbl1dType), pointer :: dsp_ktw => null()
-    type(VirtualDbl1dType), pointer :: dsp_kts => null()
+    ! CND
+    !type(VirtualIntType), pointer :: cnd_idiffc => null()
+    type(VirtualIntType), pointer :: cnd_idisp => null()
+    !type(VirtualDbl1dType), pointer :: cnd_diffc => null()
+    type(VirtualDbl1dType), pointer :: cnd_alh => null()
+    type(VirtualDbl1dType), pointer :: cnd_alv => null()
+    type(VirtualDbl1dType), pointer :: cnd_ath1 => null()
+    type(VirtualDbl1dType), pointer :: cnd_ath2 => null()
+    type(VirtualDbl1dType), pointer :: cnd_atv => null()
+    type(VirtualDbl1dType), pointer :: cnd_ktw => null()
+    type(VirtualDbl1dType), pointer :: cnd_kts => null()
     ! FMI
     type(VirtualDbl1dType), pointer :: fmi_gwfhead => null()
     type(VirtualDbl1dType), pointer :: fmi_gwfsat => null()
@@ -30,7 +30,7 @@ module VirtualGweModelModule
     ! EST
     type(VirtualDbl1dType), pointer :: est_porosity => null()
     ! GWE Model fields
-    type(VirtualIntType), pointer :: indsp => null()
+    type(VirtualIntType), pointer :: incnd => null()
     type(VirtualIntType), pointer :: inest => null()
   contains
     ! public
@@ -80,22 +80,22 @@ contains
   subroutine init_virtual_data(this)
     class(VirtualGweModelType) :: this
 
-    !call this%set(this%dsp_idiffc%base(), 'IDIFFC', 'DSP', MAP_ALL_TYPE)
-    call this%set(this%dsp_idisp%base(), 'IDISP', 'DSP', MAP_ALL_TYPE)
-    !call this%set(this%dsp_diffc%base(), 'DIFFC', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_alh%base(), 'ALH', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_alv%base(), 'ALV', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_ath1%base(), 'ATH1', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_ath2%base(), 'ATH2', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_atv%base(), 'ATV', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_ktw%base(), 'KTW', 'DSP', MAP_NODE_TYPE)
-    call this%set(this%dsp_kts%base(), 'KTS', 'DSP', MAP_NODE_TYPE)
+    !call this%set(this%cnd_idiffc%base(), 'IDIFFC', 'CND', MAP_ALL_TYPE)
+    call this%set(this%cnd_idisp%base(), 'IDISP', 'CND', MAP_ALL_TYPE)
+    !call this%set(this%cnd_diffc%base(), 'DIFFC', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_alh%base(), 'ALH', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_alv%base(), 'ALV', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_ath1%base(), 'ATH1', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_ath2%base(), 'ATH2', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_atv%base(), 'ATV', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_ktw%base(), 'KTW', 'CND', MAP_NODE_TYPE)
+    call this%set(this%cnd_kts%base(), 'KTS', 'CND', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfhead%base(), 'GWFHEAD', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_CONN_TYPE)
     call this%set(this%est_porosity%base(), 'POROSITY', 'EST', MAP_NODE_TYPE)
-    call this%set(this%indsp%base(), 'INDSP', '', MAP_ALL_TYPE)
+    call this%set(this%incnd%base(), 'INCND', '', MAP_ALL_TYPE)
     call this%set(this%inest%base(), 'INEST', '', MAP_ALL_TYPE)
 
   end subroutine init_virtual_data
@@ -114,9 +114,9 @@ contains
 
     if (stage == STG_AFT_MDL_DF) then
 
-      !call this%map(this%dsp_idiffc%base(), (/STG_AFT_MDL_DF/))
-      call this%map(this%dsp_idisp%base(), (/STG_AFT_MDL_DF/))
-      call this%map(this%indsp%base(), (/STG_AFT_MDL_DF/))
+      !call this%map(this%cnd_idiffc%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%cnd_idisp%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%incnd%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%inest%base(), (/STG_AFT_MDL_DF/))
 
     else if (stage == STG_BFR_CON_AR) then
@@ -128,17 +128,17 @@ contains
                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
       call this%map(this%ibound%base(), nr_nodes, (/STG_BFR_CON_AR/))
 
-      !if (this%dsp_idiffc%get() > 0) then
-      !  call this%map(this%dsp_diffc%base(), nr_nodes, (/STG_BFR_CON_AR/))
+      !if (this%cnd_idiffc%get() > 0) then
+      !  call this%map(this%cnd_diffc%base(), nr_nodes, (/STG_BFR_CON_AR/))
       !end if
 
-      if (this%dsp_idisp%get() > 0) then
-        call this%map(this%dsp_alh%base(), nr_nodes, (/STG_BFR_CON_AR/))
-        call this%map(this%dsp_alv%base(), nr_nodes, (/STG_BFR_CON_AR/))
-        call this%map(this%dsp_ath1%base(), nr_nodes, (/STG_BFR_CON_AR/))
-        call this%map(this%dsp_ath2%base(), nr_nodes, (/STG_BFR_CON_AR/))
-        call this%map(this%dsp_atv%base(), nr_nodes, (/STG_BFR_CON_AR/))
-        call this%map(this%dsp_ktw%base(), nr_nodes, (/STG_BFR_CON_AR/))
+      if (this%cnd_idisp%get() > 0) then
+        call this%map(this%cnd_alh%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_alv%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_ath1%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_ath2%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_atv%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_ktw%base(), nr_nodes, (/STG_BFR_CON_AR/))
       end if
 
       call this%map(this%fmi_gwfhead%base(), nr_nodes, (/STG_BFR_EXG_AD/))
@@ -146,7 +146,7 @@ contains
       call this%map(this%fmi_gwfspdis%base(), 3, nr_nodes, (/STG_BFR_EXG_AD/))
       call this%map(this%fmi_gwfflowja%base(), nr_conns, (/STG_BFR_EXG_AD/))
 
-      if (this%indsp%get() > 0 .and. this%inest%get() > 0) then
+      if (this%incnd%get() > 0 .and. this%inest%get() > 0) then
         call this%map(this%est_porosity%base(), nr_nodes, (/STG_AFT_CON_AR/))
       end if
 
@@ -157,22 +157,22 @@ contains
   subroutine allocate_data(this)
     class(VirtualGweModelType) :: this
 
-    !allocate (this%dsp_idiffc)
-    allocate (this%dsp_idisp)
-    !allocate (this%dsp_diffc)
-    allocate (this%dsp_alh)
-    allocate (this%dsp_alv)
-    allocate (this%dsp_ath1)
-    allocate (this%dsp_ath2)
-    allocate (this%dsp_atv)
-    allocate (this%dsp_ktw)
-    allocate (this%dsp_kts)
+    !allocate (this%cnd_idiffc)
+    allocate (this%cnd_idisp)
+    !allocate (this%cnd_diffc)
+    allocate (this%cnd_alh)
+    allocate (this%cnd_alv)
+    allocate (this%cnd_ath1)
+    allocate (this%cnd_ath2)
+    allocate (this%cnd_atv)
+    allocate (this%cnd_ktw)
+    allocate (this%cnd_kts)
     allocate (this%fmi_gwfhead)
     allocate (this%fmi_gwfsat)
     allocate (this%fmi_gwfspdis)
     allocate (this%fmi_gwfflowja)
     allocate (this%est_porosity)
-    allocate (this%indsp)
+    allocate (this%incnd)
     allocate (this%inest)
 
   end subroutine allocate_data
@@ -180,22 +180,22 @@ contains
   subroutine deallocate_data(this)
     class(VirtualGweModelType) :: this
 
-    !deallocate (this%dsp_idiffc)
-    deallocate (this%dsp_idisp)
-    !deallocate (this%dsp_diffc)
-    deallocate (this%dsp_alh)
-    deallocate (this%dsp_alv)
-    deallocate (this%dsp_ath1)
-    deallocate (this%dsp_ath2)
-    deallocate (this%dsp_atv)
-    deallocate (this%dsp_ktw)
-    deallocate (this%dsp_kts)
+    !deallocate (this%cnd_idiffc)
+    deallocate (this%cnd_idisp)
+    !deallocate (this%cnd_diffc)
+    deallocate (this%cnd_alh)
+    deallocate (this%cnd_alv)
+    deallocate (this%cnd_ath1)
+    deallocate (this%cnd_ath2)
+    deallocate (this%cnd_atv)
+    deallocate (this%cnd_ktw)
+    deallocate (this%cnd_kts)
     deallocate (this%fmi_gwfhead)
     deallocate (this%fmi_gwfsat)
     deallocate (this%fmi_gwfspdis)
     deallocate (this%fmi_gwfflowja)
     deallocate (this%est_porosity)
-    deallocate (this%indsp)
+    deallocate (this%incnd)
     deallocate (this%inest)
 
   end subroutine deallocate_data

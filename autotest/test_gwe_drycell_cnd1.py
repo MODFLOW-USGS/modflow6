@@ -1,41 +1,102 @@
 """
 Test problem for GWE
 
-Test the energy "flowing" through a dry cell. The test checks for
-some of the flow-through energy being left behind and warming the
-cell it passes through.  Based on the model appearing in the
-MT3D-USGS documention, pages 13-14.  Dry cell is in layer 1, row 1
-column 4.
+Test the energy "flowing" between two dry cells via conduction
+only using a temperature gradient
 
-     +-------+-------+-------+-------+-------+-------+
-  -> |   ->  |       |       | DRY   |       |       |
-     |       |  ->   |       |   CELL|       |       |
-     |       |       |  ->  -+-> |   |       |       |
-     +-------+-------+-------+---+---+-------+-------+
-     |       |       |       |   v   |       |       |
-  -> |   ->  |  ->   |  ->   |  ->   |  ->   |  ->   | ->
-     |       |       |       |       |       |       |
-     +-------+-------+-------+-------+-------+-------+
+   ~: Represents conduction
 
-              --->  Direction of flow  --->
+ A) 1st model configuration
+
+       +---------+---------+
+       |         |~        |
+       |         |~        |
+       +---------+---------+
+
+ B) 2nd model configuration
+
+       +---------+
+       |         |
+       |  ~   ~  |
+       +---------+
+       |         |
+       |         |
+       +---------+
+
+ C) 3rd model configuration
+
+                 +---------+
+       +---------+         |
+       |         |~        |
+       |         +---------+
+       +---------+
 """
 
 # Imports
 
 import os
-
 import numpy as np
 import pytest
 import flopy
 
 from framework import TestFramework
 
+
+# Monotonicity function
+def isMonotonic(A):
+    x, y = [], []
+    x.extend(A)
+    y.extend(A)
+    x.sort()
+    y.sort(reverse=True)
+    if np.all(x == A) or np.all(y == A):
+        return True
+    return False
+
+
 # Base simulation and model name and workspace
 
 scheme = "UPSTREAM"
 # scheme = "TVD"
 
-cases = ["drycell0"]
+cases = [
+    "drycell2-a",  # 2-cell model, horizontally connected with tops and bots aligned
+    "drycell2-b",  # 2-cell model, vertically connected
+    "drycell2-c",  # 2-cell model, horizontally connected with staggered alignment (reduced shared cell face area)
+]
+
+conn_types = (
+    "horizontal",
+    "vertical",
+    "staggered",
+)
+
+dis_data = {
+    conn_types[0]: {
+        "nrow": 1,
+        "ncol": 2,
+        "nlay": 1,
+        "top": np.ones(2, dtype=float),
+        "bot": np.zeros(2, dtype=float),
+        "strthd": np.zeros(2, dtype=float),
+    },
+    conn_types[1]: {
+        "nrow": 1,
+        "ncol": 1,
+        "nlay": 2,
+        "top": 2,
+        "bot": np.array([[[1.0]], [[0.0]]], dtype=float),
+        "strthd": np.zeros(2, dtype=float),
+    },
+    conn_types[2]: {
+        "nrow": 2,
+        "ncol": 1,
+        "nlay": 1,
+        "top": np.array([[[1.0], [1.5]]], dtype=float),
+        "bot": np.array([[[0.0], [0.5]]], dtype=float),
+        "strthd": -1 * np.ones(2, dtype=float),
+    },
+}
 
 # Model units
 length_units = "meters"
@@ -43,21 +104,17 @@ time_units = "days"
 
 # Table MODFLOW 6 GWE comparison to MT3DMS
 
-nrow = 1
-ncol = 6
-nlay = 2
-delr = 10.0  # Column width ($m$)
-delc = 10.0  # Row width ($m$)
-top = 20.0  # Top of model
-k11 = 100.0  # Horizontal hydraulic conductivity ($m/d$)
+delr = 1.0  # Column width ($m$)
+delc = 1.0  # Row width ($m$)
+k11 = 1.0  # Horizontal hydraulic conductivity ($m/d$)
 ss = 1e-6  # Specific storage
 sy = 0.20  # Specific Yield
 prsity = 0.20  # Porosity
-nper = 2  # Number of periods
-perlen = [1, 100]  # Simulation time ($days$)
-nstp = [1, 10]  # 10 day transient time steps
-steady = {0: True, 1: False}
-transient = {0: False, 1: True}
+nper = 4  # Number of periods
+perlen = [1, 1000, 1, 1000]  # Simulation time ($days$)
+nstp = [1, 10, 1, 10]  # 10 day transient time steps
+steady = {0: False}
+transient = {0: True}
 
 # Set some static model parameter values
 
@@ -68,35 +125,14 @@ iconvert = 1  # All cells are convertible
 icelltype = 1  # Cell conversion type (>1: unconfined)
 
 # Set some static transport related model parameter values
-botm = []
-botm.append(np.ones((nrow, ncol), dtype=float) * 10)
-botm.append(np.zeros((nrow, ncol), dtype=float))
-botm = np.array(botm)
+strt_temp1 = 4.0
+strt_temp2 = 34.0
+dispersivity = 0.0  # dispersion (remember, 1D model)
 
 # GWE related parameters
 rhow = 1000.0
 cpw = 4183.0
 lhv = 2454.0
-
-# Head input
-left_hd = 15.0
-right_hd = 2.0
-strt_hd1 = np.ones((nrow, ncol), dtype=float) * 11.0
-strt_hd2 = np.ones((nrow, ncol), dtype=float) * 11.0
-strt_hd1[0] = strt_hd2[0] = left_hd
-strt_hd1[-1] = strt_hd2[-1] = right_hd
-strt_hd = np.array([strt_hd1, strt_hd2])
-strt_temp = 10.0
-
-chd_data = {}
-chd_data[0] = [
-    [(0, 0, 0), left_hd],
-    [(1, 0, 0), left_hd],
-    [(1, 0, ncol - 1), right_hd],
-]
-chd_mf6 = chd_data
-
-dispersivity = 0.0  # dispersion (remember, 1D model)
 
 # Set solver parameter values (and related)
 nouter, ninner = 100, 300
@@ -108,11 +144,14 @@ tdis_rc = []
 for i in np.arange(nper):
     tdis_rc.append((perlen[i], nstp[i], ttsmult))
 
-# ### Generate MODFLOW 6 Example test model
+# ### Create MODFLOW 6 GWE MT3DMS Example 1 Boundary Conditions
 #
+# No GWF, only Heat conduction simulated
 
 
 def build_models(idx, test):
+    conn_type = conn_types[idx]
+
     # Base MF6 GWF model type
     ws = test.workspace
     name = cases[idx]
@@ -135,7 +174,6 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
         sim,
-        newtonoptions="UNDER_RELAXATION",
         modelname=gwfname,
         save_flows=True,
         model_nam_file="{}.nam".format(gwfname),
@@ -151,7 +189,7 @@ def build_models(idx, test):
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,
-        linear_acceleration="BICGSTAB",
+        linear_acceleration="CG",
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
@@ -163,14 +201,21 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwfdis(
         gwf,
         length_units=length_units,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
+        nlay=dis_data[conn_type]["nlay"],
+        nrow=dis_data[conn_type]["nrow"],
+        ncol=dis_data[conn_type]["ncol"],
         delr=delr,
         delc=delc,
-        top=top,
-        botm=botm,
-        idomain=np.ones((nlay, nrow, ncol)),
+        top=dis_data[conn_type]["top"],
+        botm=dis_data[conn_type]["bot"],
+        idomain=np.ones(
+            (
+                dis_data[conn_type]["nlay"],
+                dis_data[conn_type]["nrow"],
+                dis_data[conn_type]["ncol"],
+            ),
+            dtype=int,
+        ),
         pname="DIS-1",
         filename="{}.dis".format(gwfname),
     )
@@ -194,21 +239,17 @@ def build_models(idx, test):
         icelltype=icelltype,
         k=k11,
         k33=k33,
-        alternative_cell_averaging="AMT-HMK",
         save_specific_discharge=True,
         pname="NPF-1",
         filename="{}.npf".format(gwfname),
     )
 
-    # Instantiating MODFLOW 6 constant head package
-    flopy.mf6.ModflowGwfchd(
-        gwf,
-        stress_period_data=chd_mf6,
-        filename="{}.chd".format(gwfname),
-    )
-
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(gwf, strt=strt_hd, filename="{}.ic".format(gwfname))
+    flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=dis_data[conn_type]["strthd"],
+        filename="{}.ic".format(gwfname),
+    )
 
     # Instantiating MODFLOW 6 output control package for flow model
     flopy.mf6.ModflowGwfoc(
@@ -249,13 +290,13 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwedis(
         gwe1,
         nogrb=True,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
+        nlay=dis_data[conn_type]["nlay"],
+        nrow=dis_data[conn_type]["nrow"],
+        ncol=dis_data[conn_type]["ncol"],
         delr=delr,
         delc=delc,
-        top=top,
-        botm=botm,
+        top=dis_data[conn_type]["top"],
+        botm=dis_data[conn_type]["bot"],
         idomain=1,
         pname="DIS-2",
         filename="{}.dis".format(gwename1),
@@ -263,7 +304,7 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGweic(
-        gwe1, strt=strt_temp, pname="IC-2", filename="{}.ic".format(gwename1)
+        gwe1, strt=strt_temp1, pname="IC-2", filename="{}.ic".format(gwename1)
     )
 
     # Instantiating MODFLOW 6 transport advection package
@@ -272,17 +313,15 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
-    flopy.mf6.ModflowGwedsp(
+    flopy.mf6.ModflowGwecnd(
         gwe1,
-        xt3d_off=False,
+        xt3d_off=True,
         alh=dispersivity,
         ath1=dispersivity,
         ktw=0.5918 * 86400,
-        # ktw=0.0,
         kts=0.2700 * 86400,
-        # kts=0.0,
-        pname="DSP-2",
-        filename="{}.dsp".format(gwename1),
+        pname="CND-2",
+        filename="{}.cnd".format(gwename1),
     )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
@@ -295,11 +334,6 @@ def build_models(idx, test):
         packagedata=[cpw, rhow, lhv],
         pname="EST-2",
         filename="{}.est".format(gwename1),
-    )
-
-    # Instantiating MODFLOW 6 heat transport source-sink mixing package
-    flopy.mf6.ModflowGwessm(
-        gwe1, sources=[[]], pname="SSM-2", filename="{}.ssm".format(gwename1)
     )
 
     # Instantiate MODFLOW 6 heat transport output control package
@@ -317,8 +351,30 @@ def build_models(idx, test):
 
     # Instantiate a constant temperature in 1 of the dry cells
     ctmpspd = {
-        0: [[(0, 0, 0), strt_temp], [(1, 0, 0), strt_temp]],
-        1: [[(0, 0, 0), strt_temp + 10], [(1, 0, 0), strt_temp + 10]],
+        0: [
+            [(0, 0, 0), strt_temp1],
+            [
+                (
+                    dis_data[conn_type]["nlay"] - 1,
+                    dis_data[conn_type]["nrow"] - 1,
+                    dis_data[conn_type]["ncol"] - 1,
+                ),
+                strt_temp1 + 10,
+            ],
+        ],
+        1: [],
+        2: [
+            [(0, 0, 0), strt_temp2],
+            [
+                (
+                    dis_data[conn_type]["nlay"] - 1,
+                    dis_data[conn_type]["nrow"] - 1,
+                    dis_data[conn_type]["ncol"] - 1,
+                ),
+                strt_temp2 - 10,
+            ],
+        ],
+        3: [],
     }
     flopy.mf6.ModflowGwectp(
         gwe1,
@@ -347,7 +403,23 @@ def check_output(idx, test):
     name = cases[idx]
     gwename = "gwe-" + name
 
+    # All indices are 0 based
+    # initialize
+    idxl = 0
+    idxr = 0
+    idxc = 0
+    # override depending on scenario
+    if idx == 0:
+        idxc = 1
+
+    if idx == 1:
+        idxl = 1
+
+    if idx == 2:
+        idxr = 1
+
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
+
     try:
         # load temperatures
         cobj = flopy.utils.HeadFile(
@@ -357,54 +429,43 @@ def check_output(idx, test):
     except:
         assert False, f'could not load temperature data from "{fpth}"'
 
-    # Check that the two perpetually dry cells:
-    # 1) after warming begins (2nd stress period onward), should be greater
-    #    than their initial condition
-    msg0 = "There should be warming in a dry cell via conduction"
-    assert np.all(conc1[1:, 0, 0, 4] > 10.0), msg0
-    assert np.all(conc1[1:, 0, 0, 5] > 10.0), msg0
+    # Ensure constant temperatures are initiated properly in teh 1st and 3rd
+    # stress periods, which are separated by period of "turning off" the
+    # constant temperature boundary
+    msg0 = "Grid cell temperatures do not reflect user-specified difference"
+    assert conc1[0, 0, 0, 0] + 10.0 == conc1[0, idxl, idxr, idxc], msg0
+    assert conc1[11, 0, 0, 0] - 10.0 == conc1[11, idxl, idxr, idxc], msg0
 
-    msg1 = (
-        "Cell at 1, 1, 5 should be warmer than the cell at 1, 1, 6 "
-        "throughout the simulation by virtue of it being physically "
-        "upstream"
-    )
-    assert np.all(conc1[1:, 0, 0, 4] > conc1[1:, 0, 0, 5]), msg1
+    # After running transient stress period, temperatures in grid cells
+    # should equilibrate through the process of conduction only (there
+    # is no gwf flow)
+    msg1 = "Grid cell temperatures should have equilabrated via conduction"
+    assert np.isclose(conc1[10, 0, 0, 0], conc1[10, idxl, idxr, idxc]), msg1
+    assert np.isclose(conc1[21, 0, 0, 0], conc1[21, idxl, idxr, idxc]), msg1
 
-    # 2) monotonically increase from being in contact with the warmer
-    #    water passing by the cells below
-    msg2 = (
-        "Perpetually dry cell should be steadily warming as a result of it "
-        "being in contact with warming cell below it."
-    )
-    assert np.all(np.diff(conc1[:, 0, 0, 5]) > 0), msg2
-    assert np.all(np.diff(conc1[:, 0, 0, 4]) > 0), msg2
+    # Ensure that as the cells equilibrate, they do so in a monotonic manner
+    msg2 = "There should be a monotonic increase as the 2 cells equilibrate"
+    msg3 = "There should be a monotonic decrease as the 2 cells equilibrate"
+    assert isMonotonic(np.diff(conc1[1:11, 0, 0, 0])), msg2
+    assert isMonotonic(np.diff(conc1[1:11, idxl, idxr, idxc])), msg3
+    assert isMonotonic(np.diff(conc1[12:, 0, 0, 0])), msg3
+    assert isMonotonic(np.diff(conc1[12:, idxl, idxr, idxc])), msg2
 
-    # Because this is a steady flow problem, the largest incremental warming
-    # increments happen in the first two stress periods.  After that, the amount
-    # of warming from time step to time step decreases.
-    msg3 = (
-        "After the first two stress periods, the relative amount of "
-        "warming in layer 1, row 1, and column 4 should slow, but isn't"
-    )
-    assert np.all(np.diff(np.diff(conc1[2:, 0, 0, 4])) < 0), msg3
-
-    # The 'pass-through' cell (layer 1, row 1, column 4 - see diagram at top
-    # of script) should be warming more than its two neighbors to the right.
+    # Ensure that the equilibrated temperature is half the starting difference between the cells
     msg4 = (
-        "Pass through cell should be warming up at a higher rate than "
-        "the dry cells."
+        "The final equilibrated cell temperature does not split the "
+        "difference of the starting temperature"
     )
-    assert np.all(conc1[:, 0, 0, 3] > conc1[:, 0, 0, 4]), msg4
-
-    # Pass through cell should not be as warm as the cell from which it
-    # receives water, since that cell will have already robbed the water
-    # passing through of some of its heat
-    msg5 = (
-        "Pass through cell should not be as warm as its neighbor to "
-        "the left"
-    )
-    assert np.all(conc1[:, 0, 0, 2] > conc1[:, 0, 0, 3]), msg5
+    initTdiff1 = abs(conc1[0, 0, 0, 0] - conc1[0, idxl, idxr, idxc])
+    initTdiff2 = abs(conc1[11, 0, 0, 0] - conc1[11, idxl, idxr, idxc])
+    assert np.isclose(
+        conc1[10, 0, 0, 0],
+        conc1[0, 0, 0, 0] + initTdiff1 / 2,
+    ), msg4
+    assert np.isclose(
+        conc1[21, 0, 0, 0],
+        conc1[11, 0, 0, 0] - initTdiff2 / 2,
+    ), msg4
 
 
 # - No need to change any code below

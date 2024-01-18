@@ -1,4 +1,4 @@
-module GweDspModule
+module GweCndModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DHALF, DPI
@@ -6,16 +6,16 @@ module GweDspModule
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
-  use GweDspOptionsModule, only: GweDspOptionsType
+  use GweCndOptionsModule, only: GweCndOptionsType
   use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
 
   implicit none
   private
-  public :: GweDspType
-  public :: dsp_cr
+  public :: GweCndType
+  public :: cnd_cr
 
-  type, extends(NumericalPackageType) :: GweDspType
+  type, extends(NumericalPackageType) :: GweCndType
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWE model ibound
     type(TspFmiType), pointer :: fmi => null() ! pointer to GWE fmi object
@@ -56,14 +56,14 @@ module GweDspModule
 
   contains
 
-    procedure :: dsp_df
-    procedure :: dsp_ac
-    procedure :: dsp_mc
-    procedure :: dsp_ar
-    procedure :: dsp_ad
-    procedure :: dsp_fc
-    procedure :: dsp_cq
-    procedure :: dsp_da
+    procedure :: cnd_df
+    procedure :: cnd_ac
+    procedure :: cnd_mc
+    procedure :: cnd_ar
+    procedure :: cnd_ad
+    procedure :: cnd_fc
+    procedure :: cnd_cq
+    procedure :: cnd_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: source_options
@@ -73,21 +73,21 @@ module GweDspModule
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
 
-  end type GweDspType
+  end type GweCndType
 
 contains
 
-  !> @brief Create a new DSP object
+  !> @brief Create a new CND object
   !!
-  !! Create a new MST package
+  !! Create a new CND package
   !<
-  subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi, &
+  subroutine cnd_cr(cndobj, name_model, input_mempath, inunit, iout, fmi, &
                     eqnsclfac, gwecommon)
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
-    type(GweDspType), pointer :: dspobj
+    type(GweCndType), pointer :: cndobj
     character(len=*), intent(in) :: name_model
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
@@ -96,49 +96,49 @@ contains
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- formats
-    character(len=*), parameter :: fmtdsp = &
-      "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
+    character(len=*), parameter :: fmtcnd = &
+      "(1x,/1x,'CND-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
       &'01/01/2024, INPUT READ FROM MEMPATH ', A, //)"
     !
     ! -- Create the object
-    allocate (dspobj)
+    allocate (cndobj)
     !
     ! -- create name and memory path
-    call dspobj%set_names(1, name_model, 'DSP', 'DSP', input_mempath)
+    call cndobj%set_names(1, name_model, 'CND', 'CND', input_mempath)
     !
     ! -- Allocate scalars
-    call dspobj%allocate_scalars()
+    call cndobj%allocate_scalars()
     !
     ! -- Set variables
-    dspobj%inunit = inunit
-    dspobj%iout = iout
-    dspobj%fmi => fmi
-    dspobj%eqnsclfac => eqnsclfac
+    cndobj%inunit = inunit
+    cndobj%iout = iout
+    cndobj%fmi => fmi
+    cndobj%eqnsclfac => eqnsclfac
     if (present(gwecommon)) then
-      dspobj%gwecommon => gwecommon
+      cndobj%gwecommon => gwecommon
     end if
     !
-    if (dspobj%inunit > 0) then
+    if (cndobj%inunit > 0) then
       !
       ! -- Print a message identifying the dispersion package.
-      if (dspobj%iout > 0) then
-        write (dspobj%iout, fmtdsp) input_mempath
+      if (cndobj%iout > 0) then
+        write (cndobj%iout, fmtcnd) input_mempath
       end if
     end if
     !
     ! -- Return
     return
-  end subroutine dsp_cr
+  end subroutine cnd_cr
 
-  !> @brief Define DSP object
+  !> @brief Define CND object
   !<
-  subroutine dsp_df(this, dis, dspOptions)
+  subroutine cnd_df(this, dis, cndOptions)
     ! -- modules
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     class(DisBaseType), pointer :: dis
-    type(GweDspOptionsType), optional, intent(in) :: dspOptions !< the optional DSP options, used when not
-                                                                !! creating DSP from file
+    type(GweCndOptionsType), optional, intent(in) :: cndOptions !< the optional CND options, used when not
+                                                                !! creating CND from file
     !
     ! -- Store pointer to dis
     this%dis => dis
@@ -148,8 +148,8 @@ contains
     this%ixt3d = 1
     !
     ! -- Read dispersion options
-    if (present(dspOptions)) then
-      this%ixt3d = dspOptions%ixt3d
+    if (present(cndOptions)) then
+      this%ixt3d = cndOptions%ixt3d
       !
       ! -- Allocate only, grid data will not be read from file
       call this%allocate_arrays(this%dis%nodes)
@@ -173,18 +173,18 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_df
+  end subroutine cnd_df
 
-  !> @brief Add connections to DSP
+  !> @brief Add connections to CND
   !!
   !! Add connections for extended neighbors to the sparse matrix
   !<
-  subroutine dsp_ac(this, moffset, sparse)
+  subroutine cnd_ac(this, moffset, sparse)
     ! -- modules
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     !
@@ -193,17 +193,17 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_ac
+  end subroutine cnd_ac
 
-  !> @brief Map DSP connections
+  !> @brief Map CND connections
   !!
   !! Map connections and construct iax, jax, and idxglox
   !<
-  subroutine dsp_mc(this, moffset, matrix_sln)
+  subroutine cnd_mc(this, moffset, matrix_sln)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     integer(I4B), intent(in) :: moffset
     class(MatrixBaseType), pointer :: matrix_sln
     !
@@ -212,39 +212,39 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_mc
+  end subroutine cnd_mc
 
   !> @brief Allocate and read method for package
   !!
   !!  Method to allocate and read static data for the package.
   !<
-  subroutine dsp_ar(this, ibound, porosity)
+  subroutine cnd_ar(this, ibound, porosity)
     ! -- modules
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtdsp = &
-      "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
+    character(len=*), parameter :: fmtcnd = &
+      "(1x,/1x,'CND-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
       &'5/01/2023, INPUT READ FROM UNIT ', i0, //)"
     !
-    ! -- dsp pointers to arguments that were passed in
+    ! -- cnd pointers to arguments that were passed in
     this%ibound => ibound
     this%porosity => porosity
     !
     ! -- Return
     return
-  end subroutine dsp_ar
+  end subroutine cnd_ar
 
   !> @brief Advance method for the package
   !<
-  subroutine dsp_ad(this)
+  subroutine cnd_ad(this)
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     !
     ! -- xt3d
     ! TODO: might consider adding a new mf6 level set pointers method, and
@@ -272,15 +272,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_ad
+  end subroutine cnd_ad
 
   !> @brief  Fill coefficient method for package
   !!
   !!  Method to calculate and fill coefficients for the package.
   !<
-  subroutine dsp_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
+  subroutine cnd_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     integer(I4B) :: kiter
     integer(I4B), intent(in) :: nodes
     integer(I4B), intent(in) :: nja
@@ -321,16 +321,16 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_fc
+  end subroutine cnd_fc
 
   !> @ brief Calculate flows for package
   !!
   !!  Method to calculate dispersion contribution to flowja
   !<
-  subroutine dsp_cq(this, cnew, flowja)
+  subroutine cnd_cq(this, cnew, flowja)
     ! -- modules
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     real(DP), intent(inout), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
@@ -357,7 +357,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_cq
+  end subroutine cnd_cq
 
   !> @ brief Allocate scalar variables for package
   !!
@@ -368,7 +368,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -422,7 +422,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     integer(I4B), intent(in) :: nodes
     !
     ! -- Allocate
@@ -456,17 +456,17 @@ contains
   !!
   !!  Method to deallocate memory for the package.
   !<
-  subroutine dsp_da(this)
+  subroutine cnd_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     ! -- local
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'DSP', idm_context)
+    call memorylist_remove(this%name_model, 'CND', idm_context)
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then
@@ -514,19 +514,19 @@ contains
     !
     ! -- Return
     return
-  end subroutine dsp_da
+  end subroutine cnd_da
 
   !> @brief Write user options to list file
   !<
   subroutine log_options(this, found)
-    use GweDspInputModule, only: GweDspParamFoundType
-    class(GweDspType) :: this
-    type(GweDspParamFoundType), intent(in) :: found
+    use GweCndInputModule, only: GweCndParamFoundType
+    class(GweCndType) :: this
+    type(GweCndParamFoundType), intent(in) :: found
     !
-    write (this%iout, '(1x,a)') 'Setting DSP Options'
+    write (this%iout, '(1x,a)') 'Setting CND Options'
     write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
                                    &3=ACTIVE RHS] set to: ', this%ixt3d
-    write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
+    write (this%iout, '(1x,a,/)') 'End Setting CND Options'
     ! -- Return
     return
   end subroutine log_options
@@ -536,11 +536,11 @@ contains
   subroutine source_options(this)
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use GweDspInputModule, only: GweDspParamFoundType
+    use GweCndInputModule, only: GweCndParamFoundType
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     ! -- locals
-    type(GweDspParamFoundType) :: found
+    type(GweCndParamFoundType) :: found
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%ixt3doff, 'XT3D_OFF', this%input_mempath, &
@@ -564,11 +564,11 @@ contains
   !> @brief Write dimensions to list file
   !<
   subroutine log_griddata(this, found)
-    use GweDspInputModule, only: GweDspParamFoundType
-    class(GweDspType) :: this
-    type(GweDspParamFoundType), intent(in) :: found
+    use GweCndInputModule, only: GweCndParamFoundType
+    class(GweCndType) :: this
+    type(GweCndParamFoundType), intent(in) :: found
     !
-    write (this%iout, '(1x,a)') 'Setting DSP Griddata'
+    write (this%iout, '(1x,a)') 'Setting CND Griddata'
     !
     if (found%alh) then
       write (this%iout, '(4x,a)') 'ALH set from input file'
@@ -598,13 +598,13 @@ contains
       write (this%iout, '(4x,a)') 'KTS set from input file'
     end if
     !
-    write (this%iout, '(1x,a,/)') 'End Setting DSP Griddata'
+    write (this%iout, '(1x,a,/)') 'End Setting CND Griddata'
     !
     ! -- Return
     return
   end subroutine log_griddata
 
-  !> @brief Update DSP simulation data from input mempath
+  !> @brief Update CND simulation data from input mempath
   !<
   subroutine source_griddata(this)
     ! -- modules
@@ -612,12 +612,12 @@ contains
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     use MemoryManagerExtModule, only: mem_set_value
     use ConstantsModule, only: LENMEMPATH, LINELENGTH
-    use GweDspInputModule, only: GweDspParamFoundType
+    use GweCndInputModule, only: GweCndParamFoundType
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     ! -- locals
     character(len=LINELENGTH) :: errmsg
-    type(GweDspParamFoundType) :: found
+    type(GweCndParamFoundType) :: found
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
     !
@@ -690,7 +690,7 @@ contains
   subroutine calcdispellipse(this)
     ! -- modules
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     ! -- local
     integer(I4B) :: nodes, n
     real(DP) :: q, qx, qy, qz
@@ -811,7 +811,7 @@ contains
     ! -- modules
     use GwfNpfModule, only: hyeff_calc
     ! -- dummy
-    class(GweDspType) :: this
+    class(GweCndType) :: this
     ! -- local
     integer(I4B) :: nodes, n, m, idiag, ipos
     real(DP) :: clnm, clmn, dn, dm
@@ -940,4 +940,4 @@ contains
     return
   end subroutine calcdispcoef
 
-end module GweDspModule
+end module GweCndModule

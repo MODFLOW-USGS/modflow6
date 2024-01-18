@@ -471,15 +471,15 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport dispersion package
     if dispersivity != 0:
-        flopy.mf6.ModflowGwedsp(
+        flopy.mf6.ModflowGwecnd(
             gwe,
             xt3d_off=False,
             alh=dispersivity,
             ath1=dispersivity,
             ktw=ktw,
             kts=kts,
-            pname="DSP-3",
-            filename="{}.dsp".format(gwename),
+            pname="CND-3",
+            filename="{}.cnd".format(gwename),
         )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)

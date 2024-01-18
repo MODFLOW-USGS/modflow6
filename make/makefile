@@ -119,11 +119,11 @@ $(OBJDIR)/gwf3dis8idm.o \
 $(OBJDIR)/gwf3chd8idm.o \
 $(OBJDIR)/gwe1idm.o \
 $(OBJDIR)/gwe1ic1idm.o \
-$(OBJDIR)/gwe1dsp1idm.o \
 $(OBJDIR)/gwe1disv1idm.o \
 $(OBJDIR)/gwe1disu1idm.o \
 $(OBJDIR)/gwe1dis1idm.o \
 $(OBJDIR)/gwe1ctp1idm.o \
+$(OBJDIR)/gwe1cnd1idm.o \
 $(OBJDIR)/gwtgwtidm.o \
 $(OBJDIR)/gwfgwtidm.o \
 $(OBJDIR)/gwfgwfidm.o \
@@ -246,7 +246,7 @@ $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
-$(OBJDIR)/GweDspOptions.o \
+$(OBJDIR)/GweCndOptions.o \
 $(OBJDIR)/VirtualSolution.o \
 $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
@@ -281,8 +281,8 @@ $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/gwe1est1.o \
-$(OBJDIR)/gwe1dsp1.o \
 $(OBJDIR)/gwe1ctp1.o \
+$(OBJDIR)/gwe1cnd1.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ims8base.o \

@@ -8,7 +8,7 @@ module IdmGweDfnSelectorModule
   use GweDisInputModule
   use GweDisuInputModule
   use GweDisvInputModule
-  use GweDspInputModule
+  use GweCndInputModule
   use GweCtpInputModule
   use GweIcInputModule
   use GweNamInputModule
@@ -46,8 +46,8 @@ contains
       call set_param_pointer(input_definition, gwe_disu_param_definitions)
     case ('DISV')
       call set_param_pointer(input_definition, gwe_disv_param_definitions)
-    case ('DSP')
-      call set_param_pointer(input_definition, gwe_dsp_param_definitions)
+    case ('CND')
+      call set_param_pointer(input_definition, gwe_cnd_param_definitions)
     case ('CTP')
       call set_param_pointer(input_definition, gwe_ctp_param_definitions)
     case ('IC')
@@ -70,8 +70,8 @@ contains
       call set_param_pointer(input_definition, gwe_disu_aggregate_definitions)
     case ('DISV')
       call set_param_pointer(input_definition, gwe_disv_aggregate_definitions)
-    case ('DSP')
-      call set_param_pointer(input_definition, gwe_dsp_aggregate_definitions)
+    case ('CND')
+      call set_param_pointer(input_definition, gwe_cnd_aggregate_definitions)
     case ('CTP')
       call set_param_pointer(input_definition, gwe_ctp_aggregate_definitions)
     case ('IC')
@@ -94,8 +94,8 @@ contains
       call set_block_pointer(input_definition, gwe_disu_block_definitions)
     case ('DISV')
       call set_block_pointer(input_definition, gwe_disv_block_definitions)
-    case ('DSP')
-      call set_block_pointer(input_definition, gwe_dsp_block_definitions)
+    case ('CND')
+      call set_block_pointer(input_definition, gwe_cnd_block_definitions)
     case ('CTP')
       call set_block_pointer(input_definition, gwe_ctp_block_definitions)
     case ('IC')
@@ -117,8 +117,8 @@ contains
       multi_package = gwe_disu_multi_package
     case ('DISV')
       multi_package = gwe_disv_multi_package
-    case ('DSP')
-      multi_package = gwe_dsp_multi_package
+    case ('CND')
+      multi_package = gwe_cnd_multi_package
     case ('CTP')
       multi_package = gwe_ctp_multi_package
     case ('IC')
@@ -144,7 +144,7 @@ contains
       integrated = .true.
     case ('DISV')
       integrated = .true.
-    case ('DSP')
+    case ('CND')
       integrated = .true.
     case ('CTP')
       integrated = .true.

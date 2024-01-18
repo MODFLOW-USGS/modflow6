@@ -571,13 +571,13 @@ def add_upper_gwemodel(sim, scheme):
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
-        flopy.mf6.ModflowGwedsp(
+        flopy.mf6.ModflowGwecnd(
             gwe,
             alh=al,
             ath1=ath1,
             ktw=0.5918,
             kts=0.2700,
-            filename="{}.dsp".format(mname),
+            filename="{}.cnd".format(mname),
         )
 
     # Instantiating MODFLOW 6 transport mass storage package
@@ -649,13 +649,13 @@ def add_lower_gwemodel(sim, scheme):
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
-        flopy.mf6.ModflowGwedsp(
+        flopy.mf6.ModflowGwecnd(
             gwe,
             alh=al,
             ath1=ath1,
             ktw=0.5918,
             kts=0.2700,
-            filename="{}.dsp".format(mname),
+            filename="{}.cnd".format(mname),
         )
 
     # Instantiating MODFLOW 6 transport mass storage package

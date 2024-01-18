@@ -39,7 +39,7 @@ from framework import TestFramework
 # Base simulation and model name and workspace
 
 viscosity_on = [False]
-cases = ["dsp01"]
+cases = ["cnd01"]
 
 # Model units
 
@@ -293,14 +293,14 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport dispersion package
     if dispersivity != 0:
-        flopy.mf6.ModflowGwedsp(
+        flopy.mf6.ModflowGwecnd(
             gwe,
             xt3d_off=True,
             alh=dispersivity,
             ath1=dispersivity,
             ktw=0.5918,
             kts=0.2700,
-            filename="{}.dsp".format(gwename),
+            filename="{}.cnd".format(gwename),
         )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)

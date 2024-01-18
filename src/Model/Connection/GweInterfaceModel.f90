@@ -9,8 +9,8 @@ module GweInterfaceModelModule
   use TspFmiModule, only: fmi_cr, TspFmiType
   use TspAdvModule, only: adv_cr, TspAdvType
   use TspAdvOptionsModule, only: TspAdvOptionsType
-  use GweDspModule, only: dsp_cr, GweDspType
-  use GweDspOptionsModule, only: GweDspOptionsType
+  use GweCndModule, only: cnd_cr, GweCndType
+  use GweCndOptionsModule, only: GweCndOptionsType
   use GweEstModule, only: est_cr
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
@@ -61,7 +61,7 @@ contains
     ! -- local
     class(*), pointer :: modelPtr
     integer(I4B), target :: inobs
-    integer(I4B) :: adv_unit, dsp_unit
+    integer(I4B) :: adv_unit, cnd_unit
     !
     this%memoryPath = create_mem_path(name)
     call this%allocate_scalars(name)
@@ -81,14 +81,14 @@ contains
     !
     inobs = 0
     adv_unit = 0
-    dsp_unit = 0
+    cnd_unit = 0
     if (this%owner%inadv > 0) then
       this%inadv = huge(1_I4B)
       adv_unit = huge(1_I4B)
     end if
-    if (this%owner%indsp > 0) then
-      this%indsp = huge(1_I4B)
-      dsp_unit = huge(1_I4B)
+    if (this%owner%incnd > 0) then
+      this%incnd = huge(1_I4B)
+      cnd_unit = huge(1_I4B)
     end if
     !
     ! -- Create dis and packages
@@ -97,7 +97,7 @@ contains
                 this%depvartype)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi, &
                 this%ieqnsclfac)
-    call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi, &
+    call cnd_cr(this%cnd, this%name, '', -cnd_unit, this%iout, this%fmi, &
                 this%ieqnsclfac, this%gwecommon)
     call tsp_obs_cr(this%obs, inobs)
     !
@@ -149,11 +149,11 @@ contains
     ! -- local
     class(*), pointer :: disPtr
     type(TspAdvOptionsType) :: adv_options
-    type(GweDspOptionsType) :: dsp_options
+    type(GweCndOptionsType) :: cnd_options
     !
     this%moffset = 0
     adv_options%iAdvScheme = this%iAdvScheme
-    dsp_options%ixt3d = this%ixt3d
+    cnd_options%ixt3d = this%ixt3d
     !
     ! -- Define DISU
     disPtr => this%dis
@@ -164,25 +164,25 @@ contains
       call this%adv%adv_df(adv_options)
     end if
     !
-    if (this%indsp > 0) then
-      this%dsp%idisp = this%owner%dsp%idisp
-      call this%dsp%dsp_df(this%dis, dsp_options)
+    if (this%incnd > 0) then
+      this%cnd%idisp = this%owner%cnd%idisp
+      call this%cnd%cnd_df(this%dis, cnd_options)
       !
-      if (this%dsp%idisp > 0) then
-        call mem_reallocate(this%dsp%alh, this%dis%nodes, 'ALH', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%alv, this%dis%nodes, 'ALV', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%ath1, this%dis%nodes, 'ATH1', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%ath2, this%dis%nodes, 'ATH2', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%atv, this%dis%nodes, 'ATV', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%ktw, this%dis%nodes, 'KTW', &
-                            trim(this%dsp%memoryPath))
-        call mem_reallocate(this%dsp%kts, this%dis%nodes, 'KTS', &
-                            trim(this%dsp%memoryPath))
+      if (this%cnd%idisp > 0) then
+        call mem_reallocate(this%cnd%alh, this%dis%nodes, 'ALH', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%alv, this%dis%nodes, 'ALV', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%ath1, this%dis%nodes, 'ATH1', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%ath2, this%dis%nodes, 'ATH2', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%atv, this%dis%nodes, 'ATV', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%ktw, this%dis%nodes, 'KTW', &
+                            trim(this%cnd%memoryPath))
+        call mem_reallocate(this%cnd%kts, this%dis%nodes, 'KTS', &
+                            trim(this%cnd%memoryPath))
       end if
       allocate (this%est)
       call mem_allocate(this%est%porosity, this%dis%nodes, &
@@ -216,8 +216,8 @@ contains
     if (this%inadv > 0) then
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
-    if (this%indsp > 0) then
-      call this%dsp%dsp_ar(this%ibound, this%est%porosity)
+    if (this%incnd > 0) then
+      call this%cnd%cnd_ar(this%ibound, this%est%porosity)
     end if
     !
     ! -- Return
@@ -240,12 +240,12 @@ contains
     call this%dis%dis_da()
     call this%fmi%fmi_da()
     call this%adv%adv_da()
-    call this%dsp%dsp_da()
+    call this%cnd%cnd_da()
     !
     deallocate (this%dis)
     deallocate (this%fmi)
     deallocate (this%adv)
-    deallocate (this%dsp)
+    deallocate (this%cnd)
     !
     if (associated(this%est)) then
       call mem_deallocate(this%est%porosity)
@@ -256,7 +256,7 @@ contains
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
-    call mem_deallocate(this%indsp)
+    call mem_deallocate(this%incnd)
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inest)
     call mem_deallocate(this%inmvt)
