@@ -1250,7 +1250,7 @@ contains
     return
   end subroutine ulaprufw
 
-  !> @breif This function reads a line of arbitrary length and returns it.
+  !> @brief This function reads a line of arbitrary length and returns it.
   !!
   !! The returned string can be stored in a deferred-length character variable,
   !! for example:
