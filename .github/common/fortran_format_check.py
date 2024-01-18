@@ -18,7 +18,7 @@ excludedirs = [
 ]
 
 # Exclude these files from checks
-excludefiles = ["src/Utilities/InputOutput.f90"]  # excluded until refactored
+excludefiles = []  # add excluded files here
 
 
 class FortranFormatCheck:
