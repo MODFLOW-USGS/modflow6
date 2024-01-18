@@ -595,27 +595,28 @@ contains
     ! -- constant
     character(len=1) DASH(400)
     data DASH/400*'-'/
+    ! -- formats
+    character(len=*), parameter :: fmtmsgout1 = "(1x, a)"
+    character(len=*), parameter :: fmtmsgout2 = "(1x, 400a)"
     !
     ! -- Construct the complete label in BUF.  Start with BUF=LABEL.
-    buf=label
+    buf = label
     !
     ! -- Add auxiliary data names if there are any.
     nbuf = len(label) + 9
-    if(naux > 0) then
-       do 10 i=1, naux
-         n1 = nbuf + 1
-         nbuf = nbuf + 16
-         buf(n1:nbuf) = caux(i)
-10     continue
+    if (naux > 0) then
+      do i = 1, naux
+        n1 = nbuf + 1
+        nbuf = nbuf + 16
+        buf(n1:nbuf) = caux(i)
+      end do
     end if
     !
     ! -- Write the label.
-    write(iout, 103) buf(1:nbuf)
-103 format(1x, a)
+    write (iout, fmtmsgout1) buf(1:nbuf)
     !
     ! -- Add a line of dashes.
-    write(iout, 104) (DASH(j), j=1, nbuf)
-104 format(1x,400a)
+    write (iout, fmtmsgout2) (DASH(j), j=1, nbuf)
     !
     ! -- Return
     return
@@ -628,22 +629,22 @@ contains
   !<
   subroutine UBDSV4(kstp, kper, text, naux, auxtxt, ibdchn, &
      &              ncol, nrow, nlay, nlist, iout, delt, pertim, totim)
-    ! -- dummy 
+    ! -- dummy
     character(len=16) :: text
     character(len=16), dimension(:) :: auxtxt
-    real(DP),intent(in) :: delt, pertim, totim
+    real(DP), intent(in) :: delt, pertim, totim
     ! -- formats
     character(len=*), parameter :: fmt = &
-      "(1X,'UBDSV4 SAVING ',A16,' ON UNIT',I7,' AT TIME STEP',I7,"// &
-      "', STRESS PERIOD',I7)"
+      & "(1X,'UBDSV4 SAVING ',A16,' ON UNIT',I7,' AT TIME STEP',I7,"// &
+      & "', STRESS PERIOD',I7)"
     !
     ! -- Write unformatted records identifying data
-    if(iout > 0) write(iout, fmt) text, ibdchn, kstp, kper
-    write(ibdchn) kstp, kper, text, ncol, nrow, -nlay
-    write(ibdchn) 5, delt, pertim, totim
-    write(ibdchn) naux + 1
-    if(naux > 0) write(ibdchn) (auxtxt(n), n=1, naux)
-    write(ibdchn) nlist
+    if (iout > 0) write (iout, fmt) text, ibdchn, kstp, kper
+    write (ibdchn) kstp, kper, text, ncol, nrow, -nlay
+    write (ibdchn) 5, delt, pertim, totim
+    write (ibdchn) naux + 1
+    if (naux > 0) write (ibdchn) (auxtxt(n), n=1, naux)
+    write (ibdchn) nlist
     !
     ! -- Return
     return
@@ -651,18 +652,18 @@ contains
 
   !> @brief Write one value of cell-by-cell flow plus auxiliary data using a
   !! list structure
-  !< 
+  !<
   subroutine UBDSVB(ibdchn, icrl, q, val, nvl, naux, laux)
     ! -- dummy
     real(DP), dimension(nvl) :: val
     real(DP) :: q
     !
     ! -- Write cell number and flow rate
-    IF(naux > 0) then
+    IF (naux > 0) then
       n2 = laux + naux - 1
-      write(ibdchn) icrl, q, (val(n), n=laux, n2)
+      write (ibdchn) icrl, q, (val(n), n=laux, n2)
     else
-      write(ibdchn) icrl, q
+      write (ibdchn) icrl, q
     end if
     !
     ! -- Return
@@ -682,34 +683,37 @@ contains
     ! -- local
     character(len=1) :: DOT, SPACE, DG, BF
     dimension :: BF(1000), DG(10)
-    !
-    data DG(1),DG(2),DG(3),DG(4),DG(5),DG(6),DG(7),DG(8),DG(9),DG(10)/ &
-       & '0','1','2','3','4','5','6','7','8','9'/
-    data DOT,SPACE/'.',' '/
+    ! -- constants
+    data DG(1), DG(2), DG(3), DG(4), DG(5), DG(6), DG(7), DG(8), DG(9), DG(10)/ &
+       & '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'/
+    data DOT, SPACE/'.', ' '/
+    ! -- formats
+    character(len=*), parameter :: fmtmsgout1 = "(1x)"
+    character(len=*), parameter :: fmtmsgout2 = "(1x, 1000a1)"
     !
     ! -- Calculate # of columns to be printed (nlbl), width
     !    of a line (ntot), number of lines (nwrap).
     if (iout <= 0) return
-    write(iout, 1)
-  1 format(1x)
+    write (iout, fmtmsgout1)
+    !
     nlbl = nlbl2 - nlbl1 + 1
     n = nlbl
     !
-    if(nlbl < ncpl) n = ncpl
+    if (nlbl < ncpl) n = ncpl
     ntot = nspace + n * ndig
     !
-    if(ntot > 1000) go to 50
-    nwrap = (nlbl-1) / ncpl + 1
+    if (ntot > 1000) go to 50
+    nwrap = (nlbl - 1) / ncpl + 1
     j1 = nlbl1 - ncpl
     j2 = nlbl1 - 1
     !
     ! -- Build and print each line
-    do 40 n=1, nwrap
+    do n = 1, nwrap
       !
       ! -- Clear the buffer (BF)
-      do 20 i=1, 1000
+      do i = 1, 1000
         BF(i) = SPACE
- 20   continue
+      end do
       nbf = nspace
       !
       ! -- Determine first (j1) and last (j2) column # for this line.
@@ -717,40 +721,38 @@ contains
       j2 = j2 + ncpl
       if (j2 > nlbl2) j2 = nlbl2
       !
-      !-- Load the column #'s into the buffer.
-      do 30 j=j1, j2
+      ! -- Load the column #'s into the buffer.
+      do j = j1, j2
         nbf = nbf + ndig
         i2 = j / 10
         i1 = j - i2 * 10 + 1
         BF(nbf) = DG(i1)
-        if(i2 == 0) go to 30
+        if (i2 == 0) go to 30
         i3 = i2 / 10
         i2 = i2 - i3 * 10 + 1
-        BF(nbf-1) = DG(i2)
-        if(i3 == 0) go to 30
+        BF(nbf - 1) = DG(i2)
+        if (i3 == 0) go to 30
         i4 = i3 / 10
         i3 = i3 - i4 * 10 + 1
-        BF(nbf-2) = DG(i3)
+        BF(nbf - 2) = DG(i3)
         if (I4 == 0) go to 30
         if (I4 > 9) then
           ! -- If more than 4 digits, use "X" for 4th digit.
-          BF(nbf-3) = 'X'
+          BF(nbf - 3) = 'X'
         else
-          BF(nbf-3) = DG(i4+1)
+          BF(nbf - 3) = DG(i4 + 1)
         end if
- 30   continue
+30    end do
       !
       ! -- Print the contents of the buffer (i.e. print the line).
-      write(iout, 31) (BF(i), i=1, nbf)
- 31   format(1x,1000A1)
+      write (iout, fmtmsgout2) (BF(i), i=1, nbf)
       !
- 40 continue
+    end do
     !
     ! -- Print a line of dots (for aesthetic purposes only).
- 50 ntot = ntot
-    if (ntot > 1000) ntot=1000
-    write(iout, 51) (DOT,i=1,ntot)
- 51 format(1x,1000A1)
+50  ntot = ntot
+    if (ntot > 1000) ntot = 1000
+    write (iout, fmtmsgout2) (DOT, i=1, ntot)
     !
     ! -- Return
     return
@@ -977,17 +979,17 @@ contains
     real(DP), intent(in) :: totim
     ! -- format
     character(len=*), parameter :: fmt = &
-      "(1X,'UBDSV1 SAVING ',A16,' ON UNIT',I7,' AT TIME STEP',I7,"// &
-      "', STRESS PERIOD',I7)"
+      & "(1X,'UBDSV1 SAVING ',A16,' ON UNIT',I7,' AT TIME STEP',I7,"// &
+      & "', STRESS PERIOD',I7)"
     !
     ! -- Write records
-    if(iout > 0) write(iout, fmt) text, ibdchn, kstp, kper
-    write(ibdchn) kstp,kper,text,ncol,nrow,-nlay
-    write(ibdchn) 1,delt,pertim,totim
-    write(ibdchn) buff
+    if (iout > 0) write (iout, fmt) text, ibdchn, kstp, kper
+    write (ibdchn) kstp, kper, text, ncol, nrow, -nlay
+    write (ibdchn) 1, delt, pertim, totim
+    write (ibdchn) buff
     !
     ! -- flush file
-    flush(ibdchn)
+    flush (ibdchn)
     !
     ! -- Return
     return
@@ -1025,9 +1027,9 @@ contains
     integer(I4B) :: n
     ! -- format
     character(len=*), parameter :: fmt = &
-      "(1X,'UBDSV06 SAVING ',A16,' IN MODEL ',A16,' PACKAGE ',A16,"//&
-      "'CONNECTED TO MODEL ',A16,' PACKAGE ',A16,"//&
-      "' ON UNIT',I7,' AT TIME STEP',I7,', STRESS PERIOD',I7)"
+      & "(1X,'UBDSV06 SAVING ',A16,' IN MODEL ',A16,' PACKAGE ',A16,"// &
+      & "'CONNECTED TO MODEL ',A16,' PACKAGE ',A16,"// &
+      & "' ON UNIT',I7,' AT TIME STEP',I7,', STRESS PERIOD',I7)"
     !
     ! -- Write unformatted records identifying data.
     if (iout > 0) write (iout, fmt) text, modelnam1, paknam1, modelnam2, &
