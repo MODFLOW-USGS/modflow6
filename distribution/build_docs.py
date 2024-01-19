@@ -489,7 +489,7 @@ def build_documentation(
 
     if not full:
         # convert LaTeX to PDF
-        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
+        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path, overwrite=overwrite)
     else:
         # convert benchmarks to LaTex, running them first if necessary
         build_benchmark_tex(
