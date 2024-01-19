@@ -437,9 +437,12 @@ contains
   subroutine connections_cr()
     use ConnectionBuilderModule
     use SimVariablesModule, only: iout
+    use VersionModule, only: IDEVELOPMODE
     integer(I4B) :: isol
     type(ConnectionBuilderType) :: connectionBuilder
     class(BaseSolutionType), pointer :: sol => null()
+    integer(I4B) :: status
+    character(len=16) :: envvar
 
     write (iout, '(/a)') 'PROCESSING MODEL CONNECTIONS'
 
@@ -447,6 +450,15 @@ contains
       ! if this is not a coupled simulation in any way,
       ! then we will not need model connections
       return
+    end if
+
+    if (IDEVELOPMODE == 1) then
+      call get_environment_variable('DEV_ALWAYS_USE_IFMOD', &
+                                    value=envvar, status=status)
+      if (status == 0 .and. envvar == '1') then
+        connectionBuilder%dev_always_ifmod = .true.
+        write (iout, '(/a)') "Development option: forcing interface model"
+      end if
     end if
 
     do isol = 1, basesolutionlist%Count()
