@@ -220,10 +220,10 @@ contains
     ! -- Ensure models are in same solution
     if (this%v_model1%idsoln%get() /= this%v_model2%idsoln%get()) then
       call store_error('Two models are connected in a GWF '// &
-                        'exchange but they are in different solutions. '// &
-                        'GWF models must be in same solution: '// &
-                        trim(this%v_model1%name)//' '// &
-                        trim(this%v_model2%name))
+                       'exchange but they are in different solutions. '// &
+                       'GWF models must be in same solution: '// &
+                       trim(this%v_model1%name)//' '// &
+                       trim(this%v_model2%name))
       call store_error_filename(this%filename)
     end if
     !
