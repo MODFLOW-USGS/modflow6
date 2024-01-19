@@ -1056,9 +1056,7 @@ contains
     ! first get the participating models
     call model_ids%init()
     do i = 1, this%nrOfCells
-      if (.not. model_ids%contains(this%idxToGlobal(i)%v_model%id)) then
-        call model_ids%push_back(this%idxToGlobal(i)%v_model%id)
-      end if
+      call model_ids%push_back_unique(this%idxToGlobal(i)%v_model%id)
     end do
 
     ! initialize the map

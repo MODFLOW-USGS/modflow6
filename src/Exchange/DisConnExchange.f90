@@ -194,8 +194,8 @@ contains
     return
   end subroutine source_dimensions
 
-  !> @brief
-  !<
+  !> @brief Returns reduced node number from user
+  !< specified cell id.
   function noder(this, model, cellid, iout)
     ! -- modules
     use GeomUtilModule, only: get_node
@@ -226,11 +226,11 @@ contains
 
   !> @brief
   !<
-  function cellstr(this, model, cellid, iout)
+  function cellstr(this, ndim, cellid, iout)
     ! -- modules
     ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
-    class(NumericalModelType), pointer, intent(in) :: model
+    integer(I4B) :: ndim !< model DIS dimension
     integer(I4B), dimension(:), pointer, intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
     character(len=20) :: cellstr
@@ -243,7 +243,7 @@ contains
     !
     cellstr = ''
     !
-    select case (model%dis%ndim)
+    select case (ndim)
     case (1)
       write (cellstr, fmtndim1) cellid(1)
     case (2)
@@ -274,6 +274,7 @@ contains
     real(DP), dimension(:), contiguous, pointer :: hwva
     real(DP), dimension(:, :), contiguous, pointer :: auxvar
     type(CharacterStringType), dimension(:), contiguous, pointer :: boundname
+    integer(I4B) :: ndim1, ndim2
     character(len=20) :: cellstr1, cellstr2
     character(len=2) :: cnfloat
     integer(I4B) :: nerr, iaux
@@ -292,6 +293,8 @@ contains
     call mem_setptr(hwva, 'HWVA', this%input_mempath)
     call mem_setptr(auxvar, 'AUX', this%input_mempath)
     call mem_setptr(boundname, 'BOUNDNAME', this%input_mempath)
+    ndim1 = size(cellidm1, dim=1)
+    ndim2 = size(cellidm2, dim=1)
     !
     write (iout, '(1x,a)') 'PROCESSING EXCHANGEDATA'
     !
@@ -316,7 +319,7 @@ contains
       !
       if (associated(this%model1)) then
         !
-        ! -- Determine user node number
+        ! -- Determine reduced node number
         nodem1 = this%noder(this%model1, cellidm1(:, iexg), iout)
         this%nodem1(iexg) = nodem1
         !
@@ -326,7 +329,7 @@ contains
       !
       if (associated(this%model2)) then
         !
-        ! -- Determine user node number
+        ! -- Determine reduced node number
         nodem2 = this%noder(this%model2, cellidm2(:, iexg), iout)
         this%nodem2(iexg) = nodem2
         !
@@ -348,8 +351,8 @@ contains
       !
       ! -- Write the data to listing file if requested
       if (this%iprpak /= 0) then
-        cellstr1 = this%cellstr(this%model1, cellidm1(:, iexg), iout)
-        cellstr2 = this%cellstr(this%model2, cellidm2(:, iexg), iout)
+        cellstr1 = this%cellstr(ndim1, cellidm1(:, iexg), iout)
+        cellstr2 = this%cellstr(ndim2, cellidm2(:, iexg), iout)
         if (this%inamedbound == 0) then
           write (iout, fmtexgdata) trim(cellstr1), trim(cellstr2), &
             this%ihc(iexg), this%cl1(iexg), this%cl2(iexg), &
@@ -367,7 +370,7 @@ contains
       ! -- Check to see if nodem1 is outside of active domain
       if (associated(this%model1)) then
         if (nodem1 <= 0) then
-          cellstr1 = this%cellstr(this%model1, cellidm1(:, iexg), iout)
+          cellstr1 = this%cellstr(ndim1, cellidm1(:, iexg), iout)
           write (errmsg, *) &
             trim(adjustl(this%model1%name))// &
             ' Cell is outside active grid domain ('// &
@@ -379,7 +382,7 @@ contains
       ! -- Check to see if nodem2 is outside of active domain
       if (associated(this%model2)) then
         if (nodem2 <= 0) then
-          cellstr2 = this%cellstr(this%model2, cellidm2(:, iexg), iout)
+          cellstr2 = this%cellstr(ndim2, cellidm2(:, iexg), iout)
           write (errmsg, *) &
             trim(adjustl(this%model2%name))// &
             ' Cell is outside active grid domain ('// &

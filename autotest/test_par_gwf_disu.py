@@ -1,6 +1,7 @@
 """
 Test for parallel MODFLOW running on two cpus.
-It contains two coupled models with
+Each case contains two coupled DISU models which are
+generated from their DIS counterparts:
 
 1d:  (nlay,nrow,ncol) = (1,1,5),
 2d:  (nlay,nrow,ncol) = (1,5,5),
@@ -15,11 +16,16 @@ import os
 import flopy
 import numpy as np
 import pytest
+from flopy.utils.gridutil import get_disu_kwargs
 
 from framework import TestFramework
 
-cases = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
-dis_shape = [(1, 1, 5), (1, 5, 5), (5, 5, 5)]
+cases = [
+    "par_gwf_disu1d",
+    "par_gwf_disu2d",
+    "par_gwf_disu3d",
+]
+dis_shape = [(1, 1, 5), (1, 1, 5), (1, 1, 5), (1, 5, 5), (5, 5, 5)]
 
 # global convenience...
 name_left = "leftmodel"
@@ -47,8 +53,9 @@ def get_model(idx, dir):
 
     # cell spacing
     delr = 100.0
+    delr_arr = delr * np.ones(ncol)
     delc = 100.0
-    area = delr * delc
+    delc_arr = delc * np.ones(nrow)
 
     # shift
     shift_x = 5 * delr
@@ -56,6 +63,18 @@ def get_model(idx, dir):
 
     # top/bot of the aquifer
     tops = [0.0, -100.0, -200.0, -300.0, -400.0, -500.0]
+
+    # conversion to DISU
+    disukwargs = get_disu_kwargs(
+        nlay,
+        nrow,
+        ncol,
+        delr_arr,
+        delc_arr,
+        tops[0],
+        tops[1 : nlay + 1],
+        return_vertices=True,
+    )
 
     # hydraulic conductivity
     k11 = 1.0
@@ -93,27 +112,18 @@ def get_model(idx, dir):
 
     # submodel on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left]
+        [(ilay * ncol * nrow + irow * ncol), h_left]
         for irow in range(nrow)
         for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name_left, save_flows=True)
-    dis = flopy.mf6.ModflowGwfdis(
-        gwf,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        delr=delr,
-        delc=delc,
-        top=tops[0],
-        botm=tops[1 : nlay + 1],
-    )
+    disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        save_specific_discharge=True,
+        save_specific_discharge=False,  # let's skip angledegx
         save_flows=True,
         icelltype=0,
         k=k11,
@@ -129,29 +139,20 @@ def get_model(idx, dir):
 
     # submodel on the right:
     right_chd = [
-        [(ilay, irow, ncol - 1), h_right]
+        [(ilay * ncol * nrow + irow * ncol + ncol - 1), h_right]
         for irow in range(nrow)
         for ilay in range(nlay)
     ]
     chd_spd_right = {0: right_chd}
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name_right, save_flows=True)
-    dis = flopy.mf6.ModflowGwfdis(
-        gwf,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        delr=delr,
-        delc=delc,
-        xorigin=shift_x,
-        yorigin=shift_y,
-        top=tops[0],
-        botm=tops[1 : nlay + 1],
-    )
+    disukwargs["xorigin"] = shift_x
+    disukwargs["yorigin"] = shift_y
+    disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        save_specific_discharge=True,
+        save_specific_discharge=False,  # let's skip angledegx
         save_flows=True,
         icelltype=0,
         k=k11,
@@ -170,8 +171,8 @@ def get_model(idx, dir):
     cdist = delr
     gwfgwf_data = [
         [
-            (ilay, irow, ncol - 1),
-            (ilay, irow, 0),
+            (ilay * ncol * nrow + irow * ncol + ncol - 1),
+            (ilay * ncol * nrow + irow * ncol),
             1,
             delr / 2.0,
             delr / 2.0,
@@ -182,6 +183,7 @@ def get_model(idx, dir):
         for irow in range(nrow)
         for ilay in range(nlay)
     ]
+
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -202,6 +204,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
+    pass
     # two coupled models with a uniform flow field,
     # here we assert the known head values at the
     # cell centers
