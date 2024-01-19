@@ -20,7 +20,6 @@ module TransportModelModule
   use TspOcModule, only: TspOcType
   use TspObsModule, only: TspObsType
   use BudgetModule, only: BudgetType
-  use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
 
   implicit none
