@@ -18,6 +18,7 @@ module ConnectionBuilderModule
   private
 
   type, public :: ConnectionBuilderType
+    logical(LGP) :: dev_always_ifmod = .false. !< development option: force interface model on all exchanges
   contains
     procedure, pass(this) :: processSolution
     procedure, private, pass(this) :: processExchanges
@@ -78,7 +79,6 @@ contains
   !<
   subroutine processExchanges(this, exchanges, newConnections)
     use ListsModule, only: baseconnectionlist, baseexchangelist
-    use VersionModule, only: IDEVELOPMODE
     class(ConnectionBuilderType) :: this !< the connection builder object
     type(ListType), pointer, intent(in) :: exchanges !< the list of exchanges to process
     type(ListType), intent(inout) :: newConnections !< the newly created connections
@@ -88,20 +88,6 @@ contains
     integer(I4B) :: iex, ibasex
     class(SpatialModelConnectionType), pointer :: modelConnection
     logical(LGP) :: isPeriodic
-    integer(I4B) :: status
-    logical(LGP) :: dev_always_ifmod
-    character(len=16) :: envvar
-
-    ! Force use of the interface model
-    dev_always_ifmod = .false.
-    if (IDEVELOPMODE == 1) then
-      call get_environment_variable('DEV_ALWAYS_USE_IFMOD', &
-                                    value=envvar, status=status)
-      if (status == 0 .and. envvar == '1') then
-        dev_always_ifmod = .true.
-        write (*, '(a,/)') "### Experimental: forcing interface model ###"
-      end if
-    end if
 
     do iex = 1, exchanges%Count()
       conEx => GetDisConnExchangeFromList(exchanges, iex)
@@ -113,7 +99,7 @@ contains
       ! for now, if we have XT3D on the interface, we use a connection,
       ! (this will be more generic in the future)
       if (conEx%use_interface_model() .or. conEx%dev_ifmod_on &
-          .or. dev_always_ifmod) then
+          .or. this%dev_always_ifmod) then
 
         ! we should not get period connections here
         isPeriodic = (conEx%v_model1 == conEx%v_model2)
