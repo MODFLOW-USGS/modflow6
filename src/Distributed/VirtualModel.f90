@@ -45,6 +45,8 @@ module VirtualModelModule
     type(VirtualDbl1dType), pointer :: x => null()
     type(VirtualDbl1dType), pointer :: x_old => null()
     type(VirtualInt1dType), pointer :: ibound => null()
+    ! Base Model fields
+    type(VirtualIntType), pointer :: idsoln => null()
   contains
     ! public
     procedure :: create => vm_create
@@ -116,6 +118,8 @@ contains
     call this%set(this%x%base(), 'X', '', MAP_NODE_TYPE)
     call this%set(this%x_old%base(), 'XOLD', '', MAP_NODE_TYPE)
     call this%set(this%ibound%base(), 'IBOUND', '', MAP_NODE_TYPE)
+    ! Base model
+    call this%set(this%idsoln%base(), 'IDSOLN', '', MAP_ALL_TYPE)
 
   end subroutine init_virtual_data
 
@@ -128,6 +132,7 @@ contains
 
     if (stage == STG_AFT_MDL_DF) then
 
+      call this%map(this%idsoln%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%con_ianglex%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_ndim%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_nodes%base(), (/STG_AFT_MDL_DF/))
@@ -250,6 +255,7 @@ contains
     allocate (this%x)
     allocate (this%x_old)
     allocate (this%ibound)
+    allocate (this%idsoln)
 
   end subroutine allocate_data
 
@@ -285,6 +291,8 @@ contains
     deallocate (this%x)
     deallocate (this%x_old)
     deallocate (this%ibound)
+    ! Base model
+    deallocate (this%idsoln)
 
   end subroutine deallocate_data
 

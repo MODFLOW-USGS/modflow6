@@ -207,15 +207,13 @@ contains
     write (iout, '(/a,a)') ' Creating exchange: ', this%name
     !
     ! -- Ensure models are in same solution
-    if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
-      if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
-        call store_error('Two models are connected in a GWT '// &
-                         'exchange but they are in different solutions. '// &
-                         'GWT models must be in same solution: '// &
-                         trim(this%gwtmodel1%name)//' '// &
-                         trim(this%gwtmodel2%name))
-        call store_error_filename(this%filename)
-      end if
+    if (this%v_model1%idsoln%get() /= this%v_model2%idsoln%get()) then
+      call store_error('Two models are connected in a GWT '// &
+                       'exchange but they are in different solutions. '// &
+                       'GWT models must be in same solution: '// &
+                       trim(this%v_model1%name)//' '// &
+                       trim(this%v_model2%name))
+      call store_error_filename(this%filename)
     end if
     !
     ! -- source options
@@ -270,7 +268,7 @@ contains
     end if
     !
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
-    if (associated(this%model1, this%model2)) then
+    if (this%v_model1 == this%v_model2) then
       if (this%ixt3d > 0) then
         write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
           ' is a periodic boundary condition which cannot'// &

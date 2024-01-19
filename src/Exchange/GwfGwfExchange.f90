@@ -218,15 +218,13 @@ contains
     write (iout, '(/a,a)') ' Creating exchange: ', this%name
     !
     ! -- Ensure models are in same solution
-    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
-      if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
-        call store_error('Two models are connected in a GWF '// &
-                         'exchange but they are in different solutions. '// &
-                         'GWF models must be in same solution: '// &
-                         trim(this%gwfmodel1%name)//' '// &
-                         trim(this%gwfmodel2%name))
-        call store_error_filename(this%filename)
-      end if
+    if (this%v_model1%idsoln%get() /= this%v_model2%idsoln%get()) then
+      call store_error('Two models are connected in a GWF '// &
+                       'exchange but they are in different solutions. '// &
+                       'GWF models must be in same solution: '// &
+                       trim(this%v_model1%name)//' '// &
+                       trim(this%v_model2%name))
+      call store_error_filename(this%filename)
     end if
     !
     ! -- source options
@@ -282,7 +280,7 @@ contains
     logical(LGP) :: has_k22, has_spdis, has_vsc
     !
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
-    if (associated(this%model1, this%model2)) then
+    if (this%v_model1 == this%v_model2) then
       if (this%ixt3d > 0) then
         write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
           ' is a periodic boundary condition which cannot'// &
