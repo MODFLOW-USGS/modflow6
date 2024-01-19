@@ -200,7 +200,7 @@ This section describes known issues with this release of MODFLOW~6.
 \begin{enumerate}
 
 \item
-The AUXMULTNAME option can be used to scale input values, such as riverbed conductance, using values in an auxiliary column.  When this AUXMULTNAME option is used, the multiplier value in the AUXMULTNAME column should not be represented with a time series unless the value to scale is also represented with a time series.  
+The READARRAY utility is used by some packages to read arrays of numeric values provided by the user.  The READARRAY utility has an IPRN option (as described in the MODFLOW 6 Description of Input and Output), which will cause the array to be written to the model listing file.  Support for the IPRN option has been removed for some packages and will ultimately be removed for all packages.  An alternative for IPRN functionality is presently under development.
 
 \item
 The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and streams has not been implemented.

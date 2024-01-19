@@ -5,7 +5,7 @@
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item The Input Data Processor (IDP) was expanded to read additional GWF and GWT component packages.  Additional information on the IDP and the list of supported packages is contained in the MODFLOW 6 Description of Input and Output (mf6io.pdf) under a section titled ``Processing of Program Input.''
+		\item The Input Data Processor (IDP), first released in version 6.4.2, is a general utility for reading user-provided input files.  Package-specific routines for reading input files continue to be replaced by the IDP approach.  For packages that use IDP for input, logging information is written to the simulation list file (mfsim.lst).  Additional information on the IDP and the list of supported packages is contained in the MODFLOW 6 Description of Input and Output (mf6io.pdf) under a section titled ``Processing of Program Input.''
 		\item The source code was refactored to support compilation of a parallel version of MODFLOW 6 based on the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc) libraries.  The parallel version of MODFLOW is considered preliminary. Limited testing of the parallel version has been performed on laptops, desktops, and supercomputers, but significant changes are expected in future releases. User support for the parallel version of MODFLOW 6 may be provided in the future.
 	%	\item xxx
 	\end{itemize}
@@ -34,12 +34,13 @@
 	%	\item xxx
 	\end{itemize}
 
-	%\underline{STRESS PACKAGES}
-	%\begin{itemize}
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item This release contains a fix for a longstanding issue related to the use of AUXMULTNAME and time series.  Previous release notes included the following description of a known issue: \textit{``The AUXMULTNAME option can be used to scale input values, such as riverbed conductance, using values in an auxiliary column.  When this AUXMULTNAME option is used, the multiplier value in the AUXMULTNAME column should not be represented with a time series unless the value to scale is also represented with a time series.''}  With this release, the Input Data Processor (IDP) is now used to read stress package input files, and the limitation with AUXMULTNAME and time series no longer applies.
 	%	\item xxx
 	%	\item xxx
 	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
