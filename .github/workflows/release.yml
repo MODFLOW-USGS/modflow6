@@ -550,6 +550,7 @@ jobs:
               $distname/utils \
               $distname/code.json \
               $distname/meson.build \
+              $distname/meson.options \
               -x '*.DS_Store' \
               -x '*libmf6.lib' \
               -x '*idmloader*' \
@@ -586,6 +587,7 @@ jobs:
               $distname/utils \
               $distname/code.json \
               $distname/meson.build \
+              $distname/meson.options \
               -xr!libmf6.lib \
               -xr!idmloader \
               -xr!pymake \
