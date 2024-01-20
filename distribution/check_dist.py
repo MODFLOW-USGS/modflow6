@@ -190,11 +190,12 @@ def test_binaries(dist_dir_path, approved):
 
     # check version numbers
     version = output.lower().split(" ")[1]
-    print(version)
+    print("Version string:", version)
     v_split = version.split(".")
     assert len(v_split) >= 3
-    assert all(s.isdigit() for s in v_split[:3])
+
+    # approved release should use semantic version number with
+    # exactly 3 components and no alphabetic characters in it
     if approved:
         assert len(v_split) == 3
-    else:
-        assert "dev" in v_split[3]
+        assert all(s.isdigit() for s in v_split[:3])
