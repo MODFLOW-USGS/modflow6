@@ -31,7 +31,7 @@ module LoadMf6FileModule
   use MemoryHelperModule, only: create_mem_path
   use StructArrayModule, only: StructArrayType
   use IdmLoggerModule, only: idm_log_var, idm_log_header, idm_log_close, &
-                             idm_print_array
+                             idm_echo
 
   implicit none
   private
@@ -766,7 +766,7 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! Check if it is a full grid sized array (NODES), otherwise use
     ! idt%shape to construct shape from variables in memoryPath
@@ -783,7 +783,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -791,7 +791,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -804,8 +804,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(int1d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(int1d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -826,7 +826,7 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -840,7 +840,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -848,7 +848,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -861,8 +861,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int2d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(int2d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(int2d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -884,7 +884,7 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
     integer(I4B), dimension(:), pointer, contiguous :: int1d_ptr
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -900,7 +900,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -908,7 +908,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -923,8 +923,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(int3d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(int3d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -960,7 +960,7 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! Check if it is a full grid sized array (NODES)
     if (idt%shape == 'NODES') then
@@ -976,7 +976,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -984,7 +984,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -997,8 +997,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(dbl1d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(dbl1d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -1019,7 +1019,7 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -1033,7 +1033,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -1041,7 +1041,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -1054,8 +1054,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(dbl2d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(dbl2d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -1077,7 +1077,7 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
     real(DP), dimension(:), pointer, contiguous :: dbl1d_ptr
-    logical(LGP) :: is_layered, print_array
+    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -1093,7 +1093,7 @@ contains
     ! check to see if the user specified "LAYERED" input
     keyword = ''
     is_layered = .false.
-    print_array = .false.
+    echo = .false.
     call parser%GetStringCaps(keyword)
     if (keyword == 'LAYERED') then
       is_layered = .true.
@@ -1101,7 +1101,7 @@ contains
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') print_array = .true.
+    if (keyword == 'ECHO') echo = .true.
 
     ! read the array from the input file
     if (is_layered .and. idt%layered) then
@@ -1116,8 +1116,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
-    if (print_array .and. idt%layered) then
-      call idm_print_array(dbl3d, idt%tagname, memoryPath, iout)
+    if (echo .and. idt%layered) then
+      call idm_echo(dbl3d, idt%tagname, memoryPath, iout)
     end if
 
     return
