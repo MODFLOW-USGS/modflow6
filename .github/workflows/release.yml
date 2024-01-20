@@ -606,21 +606,6 @@ jobs:
               -xr!mod_temp
           fi
 
-      # validate only after zipping distribution to avoid accidentally changing any files
-      - name: Validate distribution
-        run: |
-          cmd="pytest -v -s modflow6/distribution/check_dist.py --path ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          if [[ "${{ inputs.approve }}" == "true" ]]; then
-            cmd="$cmd --approved"
-          fi
-          if [[ "${{ inputs.developmode }}" == "false" ]]; then
-             cmd="$cmd --releasemode"
-          fi
-          if [[ "${{ inputs.full }}" == "true" ]]; then
-            cmd="$cmd --full"
-          fi
-          eval "$cmd"
-
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
@@ -633,3 +618,26 @@ jobs:
         with:
           name: release_notes
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}/doc/release.pdf"
+
+      - name: Validate distribution
+        run: |
+          # unzip and validate the archive we created, not just the distribution directory, to test the zip step too
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
+          validate="validate_${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            7z x $distname -o$validate
+          else
+            unzip $distname -d $validate
+          fi
+
+          cmd="pytest -v -s modflow6/distribution/check_dist.py --path $validate"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approved"
+          fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+             cmd="$cmd --releasemode"
+          fi
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            cmd="$cmd --full"
+          fi
+          eval "$cmd"
