@@ -73,8 +73,8 @@ jobs:
           # if branch was provided explicitly via workflow_dispatch, use it
           if [[ ("${{ github.event_name }}" == "workflow_dispatch") && (-n "${{ inputs.branch }}") ]]; then
             branch="${{ inputs.branch }}"
-            # prevent releases from develop or master
-            if [[ ("$branch" == "develop") || ("$branch" == "master") ]]; then
+            # prevent releases from master
+            if [[ "$branch" == "master" ]]; then
               echo "error: releases may not be triggered from branch $branch"
               exit 1
             fi
@@ -144,7 +144,7 @@ jobs:
       version: ${{ needs.set_options.outputs.version }}
   pr:
     name: Draft release PR
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' && (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
+    if: ${{ github.ref_name != 'master' && ((github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc'))) }}
     needs:
       - set_options
       - make_dist
