@@ -225,17 +225,6 @@ jobs:
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      # - name: Install dependencies for ex-gwf-twri example model
-      #   if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
-      #   working-directory: modflow6-examples/etc
-      #   run: |
-      #     # install extra Python packages
-      #     pip install -r requirements.pip.txt
-
-      #     # the example model needs executables to be on the path
-      #     echo "${{ github.workspace }}/modflow6/bin" >> $GITHUB_PATH
-      #     echo "${{ github.workspace }}/modflow6/bin/downloaded" >> $GITHUB_PATH
-
       - name: Test distribution scripts
         if: ${{ inputs.run_tests == true }}
         working-directory: modflow6/distribution
@@ -335,13 +324,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          # install extra Python packages
           pip install -r requirements.pip.txt
-  
-          # the example model needs executables to be on the path
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
-
-          # the example model also needs mf2005
           get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
 
       - name: Build example models
@@ -349,12 +333,11 @@ jobs:
         working-directory: modflow6-examples/etc
         run: python ci_build_files.py
       
-      - name: Create full docs folder structure
+      - name: Create folder structure
         if: inputs.full == true
         run: |
+          # Create empty folder structure for the <distname>/docs subdirectory
           distname=${{ needs.build.outputs.distname }}
-
-          # Create a skeleton of the distribution's folder structure to include in the docs
           mkdir -p "$distname/doc"
           mkdir "$distname/make"
           mkdir "$distname/msvs"
@@ -371,11 +354,9 @@ jobs:
 
       - name: Collect deprecations
         working-directory: modflow6/doc/mf6io/mf6ivar
-        run: python deprecations.py
-
-      - name: Show deprecations
-        working-directory: modflow6/doc/mf6io/mf6ivar/md
-        run: cat deprecations.md
+        run: |
+          python deprecations.py
+          cat md/deprecations.md
 
       - name: Upload deprecations
         uses: actions/upload-artifact@v3
@@ -385,7 +366,9 @@ jobs:
 
       - name: Build documentation
         env:
-          # need a GITHUB_TOKEN to download example doc PDF asset from modflow6-examples repo
+          # this step is lazy about building the mf6 examples PDF document, first
+          # trying to download a prebuilt PDF from MODFLOW-USGS/modflow6-examples,
+          # so it needs a GITHUB_TOKEN.
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
@@ -490,13 +473,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          # install extra Python packages
           pip install -r modflow6-examples/etc/requirements.pip.txt
-  
-          # example models need executables to be on the path
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           echo "$distname/bin" >> $GITHUB_PATH
-
           # execute permissions may not have survived artifact upload/download
           chmod +x "$distname/bin/mf6"
           chmod +x "$distname/bin/mf5to6"
@@ -550,6 +529,7 @@ jobs:
               $distname/utils \
               $distname/code.json \
               $distname/meson.build \
+              $distname/meson.options \
               -x '*.DS_Store' \
               -x '*libmf6.lib' \
               -x '*idmloader*' \
@@ -586,6 +566,7 @@ jobs:
               $distname/utils \
               $distname/code.json \
               $distname/meson.build \
+              $distname/meson.options \
               -xr!libmf6.lib \
               -xr!idmloader \
               -xr!pymake \
@@ -604,21 +585,6 @@ jobs:
               -xr!mod_temp
           fi
 
-      # validate only after zipping distribution to avoid accidentally changing any files
-      - name: Validate distribution
-        run: |
-          cmd="pytest -v -s modflow6/distribution/check_dist.py --path ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          if [[ "${{ inputs.approve }}" == "true" ]]; then
-            cmd="$cmd --approved"
-          fi
-          if [[ "${{ inputs.developmode }}" == "false" ]]; then
-             cmd="$cmd --releasemode"
-          fi
-          if [[ "${{ inputs.full }}" == "true" ]]; then
-            cmd="$cmd --full"
-          fi
-          eval "$cmd"
-
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
@@ -631,3 +597,28 @@ jobs:
         with:
           name: release_notes
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}/doc/release.pdf"
+
+      - name: Check distribution
+        run: |
+          # unzip and validate the archive
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distfile="$distname.zip"
+          checkdir="check"
+          mkdir $checkdir
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            7z x $distfile -o$checkdir
+          else
+            unzip $distfile -d $checkdir
+          fi
+
+          cmd="pytest -v -s modflow6/distribution/check_dist.py --path $checkdir/$distname"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approved"
+          fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+             cmd="$cmd --releasemode"
+          fi
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            cmd="$cmd --full"
+          fi
+          eval "$cmd"
