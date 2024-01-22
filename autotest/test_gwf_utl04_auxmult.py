@@ -10,10 +10,15 @@ import pytest
 
 from framework import TestFramework
 
-cases = ["auxmult01"]
+cases = ["auxmult01", "auxmult02"]
 
+wellist = [
+    [(0, 2, 2), "tsq", "tsqfact"],
+    [(0, 2, 2), 1.0000000, "tsqfact"]
+]
 
 def build_models(idx, test):
+    global numstep
     nlay, nrow, ncol = 1, 3, 3
     perlen = [1.0, 1.0, 1.0, 1.0]
     nstp = [10, 1, 1, 1]
@@ -23,6 +28,7 @@ def build_models(idx, test):
     delr = delc = lenx / float(nrow)
     botm = -1.0
     hk = 1.0
+    numstep = sum(nstp)
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 1e-3, 1.0
@@ -102,18 +108,27 @@ def build_models(idx, test):
     )
 
     # wel files
-    wellist1 = []
-    wellist1.append([(0, 2, 2), "tsq", "tsqfact"])
     wel = flopy.mf6.ModflowGwfwel(
         gwf,
         pname="wel",
         print_input=True,
         print_flows=True,
-        stress_period_data={0: wellist1},
+        stress_period_data={0: [wellist[idx]]},
         auxiliary=["auxmult"],
         auxmultname="auxmult",
     )
     # ts_filerecord='well-rates.ts')
+
+    # wel obs
+    obs = {
+        "wel.obs.csv": [
+            ["q", "wel", (0, 2, 2)]
+        ],
+    }
+    welobs = wel.obs.initialize(
+        print_input=True,
+        continuous=obs,
+    )
 
     # well ts package
     ts_recarray = [
@@ -158,7 +173,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    fpth = os.path.join(test.workspace, "auxmult01.bud")
+    name = cases[idx]
+    fpth = os.path.join(test.workspace, f"{name}.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     records = bobj.get_data(text="wel")
 
@@ -171,6 +187,18 @@ def check_output(idx, test):
     answer = np.array(7 * [1.0, 0.0])[:-1]
     msg = f"err {qlist} /= {answer}"
     assert np.allclose(qlist, answer), msg
+
+    # MODFLOW 6 observations
+    fpth = os.path.join(test.workspace, "wel.obs.csv")
+    try:
+        obs = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, f'could not load data from "{fpth}"'
+
+    rate = obs["Q"]
+    obs_answer = [1.0 if x%2==0 else 0.0 for x in range(numstep)]
+    msg = f"err {rate} /= {obs_answer}"
+    assert np.allclose(rate, obs_answer), msg
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
