@@ -53,6 +53,7 @@ module GwfGwfConnectionModule
     procedure :: exg_ar => gwfgwfcon_ar
     procedure :: exg_rp => gwfgwfcon_rp
     procedure :: exg_ad => gwfgwfcon_ad
+    procedure :: exg_cf => gwfgwfcon_cf
     procedure :: exg_fc => gwfgwfcon_fc
     procedure :: exg_da => gwfgwfcon_da
     procedure :: exg_cq => gwfgwfcon_cq
@@ -313,6 +314,21 @@ contains
     end if
 
   end subroutine gwfgwfcon_ad
+
+  subroutine gwfgwfcon_cf(this, kiter)
+    class(GwfGwfConnectionType) :: this !< this connection
+    integer(I4B), intent(in) :: kiter !< the iteration counter
+
+    call this%SpatialModelConnectionType%spatialcon_cf(kiter)
+
+    ! CF the movers through the exchange
+    if (this%owns_exchange) then
+      if (this%gwfExchange%inmvr > 0) then
+        call this%gwfExchange%mvr%xmvr_cf()
+      end if
+    end if
+
+  end subroutine gwfgwfcon_cf
 
   !> @brief Write the calculated coefficients into the global
   !< system matrix and the rhs

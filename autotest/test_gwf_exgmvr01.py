@@ -1,7 +1,6 @@
 """
 Based on sft01 gwf model, but split into two gwf models test gwf-gwf and
-mvr. The single base model is split using the model splitter into two models.
-The single model is run as the regression model
+mvr. The single model is run as the regression model
 
 The final split model look like:
 
@@ -18,9 +17,7 @@ import pytest
 
 from framework import TestFramework
 
-# from flopy.mf6.utils import Mf6Splitter
-
-cases = ["sfr01gwfgwf"]
+cases = ["gwf_exgmvr01"]
 
 # properties for single model combination
 lx = 14.0

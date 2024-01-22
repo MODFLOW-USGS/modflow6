@@ -113,7 +113,7 @@ module GwfMvrModule
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use GwfMvrPeriodDataModule, only: GwfMvrPeriodDataType
-  use PackageMoverModule, only: PackageMoverType
+  use PackageMoverModule, only: PackageMoverType, set_packagemover_pointer
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: urword
   use TableModule, only: TableType, table_cr
@@ -147,7 +147,7 @@ module GwfMvrModule
     type(TableType), pointer :: outputtab => null()
 
   contains
-
+    procedure :: mvr_init
     procedure :: mvr_ar
     procedure :: mvr_rp
     procedure :: mvr_ad
@@ -165,10 +165,11 @@ module GwfMvrModule
     procedure :: read_packages
     procedure :: check_packages
     procedure :: assign_packagemovers
+    procedure :: initialize_movers
+    procedure :: fill_budobj
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: mvr_setup_budobj
-    procedure, private :: mvr_fill_budobj
     procedure, private :: mvr_setup_outputtab
     procedure, private :: mvr_print_outputtab
 
@@ -190,37 +191,52 @@ contains
     ! -- Create the object
     allocate (mvrobj)
     !
-    ! -- create name and memory paths. name_parent will either be model name or the
-    !    exchange name.
-    call mvrobj%set_names(1, name_parent, 'MVR', 'MVR')
-    !
-    ! -- Allocate scalars
-    call mvrobj%allocate_scalars()
-    !
-    ! -- Set pointer to dis
-    mvrobj%dis => dis
-    !
-    ! -- Set variables
-    mvrobj%inunit = inunit
-    mvrobj%iout = iout
-    !
-    ! -- Set iexgmvr
-    if (present(iexgmvr)) mvrobj%iexgmvr = iexgmvr
-    !
-    ! -- Create the budget object
-    if (inunit > 0) then
-      call budget_cr(mvrobj%budget, mvrobj%memoryPath)
-      !
-      ! -- Initialize block parser
-      call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
-    end if
-    !
-    ! -- instantiate the budget object
-    call budgetobject_cr(mvrobj%budobj, 'WATER MOVER')
+    ! -- Init
+    call mvrobj%mvr_init(name_parent, inunit, iout, dis, iexgmvr)
     !
     ! -- Return
     return
   end subroutine mvr_cr
+
+  subroutine mvr_init(this, name_parent, inunit, iout, dis, iexgmvr)
+    class(GwfMvrType) :: this
+    character(len=*), intent(in) :: name_parent
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), optional :: iexgmvr
+    !
+    ! -- create name and memory paths. name_parent will either be model name or the
+    !    exchange name.
+    call this%set_names(1, name_parent, 'MVR', 'MVR')
+    !
+    ! -- Allocate scalars
+    call this%allocate_scalars()
+    !
+    ! -- Set pointer to dis
+    this%dis => dis
+    !
+    ! -- Set variables
+    this%inunit = inunit
+    this%iout = iout
+    !
+    ! -- Set iexgmvr
+    if (present(iexgmvr)) this%iexgmvr = iexgmvr
+    !
+    ! -- Create the budget object
+    if (inunit > 0) then
+      call budget_cr(this%budget, this%memoryPath)
+      !
+      ! -- Initialize block parser
+      call this%parser%Initialize(this%inunit, this%iout)
+    end if
+    !
+    ! -- instantiate the budget object
+    call budgetobject_cr(this%budobj, 'WATER MOVER')
+    !
+    ! -- Return
+    return
+  end subroutine mvr_init
 
   !> @brief Allocate and read water mover information
   !<
@@ -337,15 +353,10 @@ contains
       call this%gwfmvrperioddata%read_from_parser(this%parser, nlist, mname)
       !
       ! -- Process the input data into the individual mover objects
+      call this%initialize_movers(nlist)
+      !
+      ! -- assign the pointers
       do i = 1, nlist
-        call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
-                                    this%gwfmvrperioddata%pname1(i), &
-                                    this%gwfmvrperioddata%id1(i), &
-                                    this%gwfmvrperioddata%mname2(i), &
-                                    this%gwfmvrperioddata%pname2(i), &
-                                    this%gwfmvrperioddata%id2(i), &
-                                    this%gwfmvrperioddata%imvrtype(i), &
-                                    this%gwfmvrperioddata%value(i))
         call this%mvr(i)%prepare(this%parser%iuactive, &
                                  this%pckMemPaths, &
                                  this%pakmovers)
@@ -360,16 +371,16 @@ contains
       !
       ! -- Check to make sure all providers and receivers are properly stored
       do i = 1, this%nmvr
-        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%mem_path_src)
         if (ipos < 1) then
           write (errmsg, '(a,a,a)') 'Provider ', &
-            trim(this%mvr(i)%pckNameSrc), ' not listed in packages block.'
+            trim(this%mvr(i)%mem_path_src), ' not listed in packages block.'
           call store_error(errmsg)
         end if
-        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%mem_path_tgt)
         if (ipos < 1) then
           write (errmsg, '(a,a,a)') 'Receiver ', &
-            trim(this%mvr(i)%pckNameTgt), ' not listed in packages block.'
+            trim(this%mvr(i)%mem_path_tgt), ' not listed in packages block.'
           call store_error(errmsg)
         end if
       end do
@@ -384,8 +395,8 @@ contains
       !
       ! --
       do i = 1, this%nmvr
-        ii = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
-        jj = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
+        ii = ifind(this%pckMemPaths, this%mvr(i)%mem_path_src)
+        jj = ifind(this%pckMemPaths, this%mvr(i)%mem_path_tgt)
         ipos = (ii - 1) * this%maxpackages + jj
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
@@ -398,8 +409,25 @@ contains
     return
   end subroutine mvr_rp
 
-  !> @brief Advance mover
-  !<
+  subroutine initialize_movers(this, nr_active_movers)
+    class(GwfMvrType) :: this
+    integer(I4B) :: nr_active_movers
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, nr_active_movers
+      call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
+                                  this%gwfmvrperioddata%pname1(i), &
+                                  this%gwfmvrperioddata%id1(i), &
+                                  this%gwfmvrperioddata%mname2(i), &
+                                  this%gwfmvrperioddata%pname2(i), &
+                                  this%gwfmvrperioddata%id2(i), &
+                                  this%gwfmvrperioddata%imvrtype(i), &
+                                  this%gwfmvrperioddata%value(i))
+    end do
+
+  end subroutine initialize_movers
+
   subroutine mvr_ad(this)
     ! -- dummy
     class(GwfMvrType) :: this
@@ -417,17 +445,15 @@ contains
   !> @brief Calculate qfrommvr as a function of qtomvr
   !<
   subroutine mvr_fc(this)
-    ! -- dummy
     class(GwfMvrType) :: this
-    ! -- locals
+    ! local
     integer(I4B) :: i
-    !
+
     do i = 1, this%nmvr
-      call this%mvr(i)%fc()
+      call this%mvr(i)%update_provider()
+      call this%mvr(i)%update_receiver()
     end do
-    !
-    ! -- Return
-    return
+
   end subroutine mvr_fc
 
   !> @brief Extra convergence check for mover
@@ -465,9 +491,23 @@ contains
   subroutine mvr_bd(this)
     ! -- dummy
     class(GwfMvrType) :: this
+    ! -- locals
+    integer(I4B) :: i, mapped_id
+    class(PackageMoverType), pointer :: pkg_mvr
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- set the feature maps
+    allocate (pkg_mvr)
+    do i = 1, this%nmvr
+      call set_packagemover_pointer(pkg_mvr, this%mvr(i)%mem_path_src)
+      mapped_id = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
+      this%mvr(i)%iRchNrSrcMapped = mapped_id
+    end do
+    deallocate (pkg_mvr)
     !
     ! -- fill the budget object
-    call this%mvr_fill_budobj()
+    call this%fill_budobj()
     !
     ! -- Return
     return
@@ -578,10 +618,10 @@ contains
     ! -- Accumulate the rates
     do i = 1, this%nmvr
       do j = 1, this%maxpackages
-        if (this%pckMemPaths(j) == this%mvr(i)%pckNameSrc) then
+        if (this%pckMemPaths(j) == this%mvr(i)%mem_path_src) then
           ratin(j) = ratin(j) + this%mvr(i)%qpactual
         end if
-        if (this%pckMemPaths(j) == this%mvr(i)%pckNameTgt) then
+        if (this%pckMemPaths(j) == this%mvr(i)%mem_path_tgt) then
           ratout(j) = ratout(j) + this%mvr(i)%qpactual
         end if
       end do
@@ -907,9 +947,8 @@ contains
           this%pckMemPaths(npak) = create_mem_path(this%name_model, word1)
           word = word1
         else
-          this%pckMemPaths(npak) = trim(word1)
           call this%parser%GetStringCaps(word2)
-          this%pckMemPaths(npak) = create_mem_path(this%pckMemPaths(npak), word2)
+          this%pckMemPaths(npak) = create_mem_path(word1, word2)
           word = word2
         end if
         this%paknames(npak) = trim(word)
@@ -1138,9 +1177,14 @@ contains
     return
   end subroutine mvr_setup_budobj
 
-  !> @brief Copy flow terms into this%budobj
-  !<
-  subroutine mvr_fill_budobj(this)
+  subroutine fill_budobj(this)
+! ******************************************************************************
+! mvr_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -1195,15 +1239,14 @@ contains
           !
           ! -- pname1 is provider, pname2 is receiver
           !    flow is always negative because it is coming from provider
-          if (this%pckMemPaths(i) == this%mvr(n)%pckNameSrc) then
-            if (this%pckMemPaths(j) == this%mvr(n)%pckNameTgt) then
+          if (this%pckMemPaths(i) == this%mvr(n)%mem_path_src) then
+            if (this%pckMemPaths(j) == this%mvr(n)%mem_path_tgt) then
               !
               ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
               !
-              ! -- map from irch1 to feature (needed for lake to map outlet to lake number)
-              n1 = this%mvr(n)%iRchNrSrc
-              n1 = this%pakmovers(i)%iprmap(n1)
+              ! -- use mapped index (needed for lake to map outlet to lake number)
+              n1 = this%mvr(n)%iRchNrSrcMapped
               !
               ! -- set receiver id to irch2
               n2 = this%mvr(n)%iRchNrTgt
@@ -1221,7 +1264,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine mvr_fill_budobj
+  end subroutine fill_budobj
 
   !> @brief Set up output table
   !<
@@ -1290,11 +1333,11 @@ contains
     call this%outputtab%set_maxbound(this%nmvr)
     do i = 1, this%nmvr
       call this%outputtab%add_term(i)
-      call this%outputtab%add_term(this%mvr(i)%pckNameSrc)
+      call this%outputtab%add_term(this%mvr(i)%mem_path_src)
       call this%outputtab%add_term(this%mvr(i)%iRchNrSrc)
       call this%outputtab%add_term(this%mvr(i)%qavailable)
       call this%outputtab%add_term(this%mvr(i)%qpactual)
-      call this%outputtab%add_term(this%mvr(i)%pckNameTgt)
+      call this%outputtab%add_term(this%mvr(i)%mem_path_tgt)
       call this%outputtab%add_term(this%mvr(i)%iRchNrTgt)
     end do
     !

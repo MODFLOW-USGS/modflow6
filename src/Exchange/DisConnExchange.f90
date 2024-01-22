@@ -28,7 +28,7 @@ module DisConnExchangeModule
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
     class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
     logical(LGP) :: is_datacopy !< when true, this exchange is just a data copy on another process and
-                                !! not responsible for controlling movers, observations, ...
+                                !! not responsible for controlling movers, observations, ... TODO_MJR: refactor this with the new mover!!!
 
     integer(I4B), pointer :: nexg => null() !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1

@@ -535,6 +535,9 @@ contains
       call mp%model_rp()
     end do
     !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_BFR_EXG_RP)
+    !
     ! -- Read and prepare each exchange
     do ie = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ie)
@@ -546,6 +549,9 @@ contains
       mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_rp()
     end do
+    !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_AFT_CON_RP)
     !
     ! -- reset simulation convergence flag
     call converge_reset()
