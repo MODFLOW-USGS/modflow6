@@ -18,6 +18,8 @@ module VirtualGwfExchangeModule
     type(VirtualIntType), pointer :: maxmvr => null()
     type(VirtualDbl1dType), pointer :: qpactual_m1 => null()
     type(VirtualDbl1dType), pointer :: qpactual_m2 => null()
+    type(VirtualDbl1dType), pointer :: qavailable_m1 => null()
+    type(VirtualDbl1dType), pointer :: qavailable_m2 => null()
     type(VirtualInt1dType), pointer :: id_mapped_m1 => null()
     type(VirtualInt1dType), pointer :: id_mapped_m2 => null()
     ! private
@@ -90,6 +92,10 @@ contains
                   MAP_ALL_TYPE, is_nodem1_local)
     call this%set(this%qpactual_m2%base(), 'QPACTUAL_M2', 'MVR', &
                   MAP_ALL_TYPE, is_nodem2_local)
+    call this%set(this%qavailable_m1%base(), 'QAVAILABLE_M1', 'MVR', &
+                  MAP_ALL_TYPE, is_nodem1_local)
+    call this%set(this%qavailable_m2%base(), 'QAVAILABLE_M2', 'MVR', &
+                  MAP_ALL_TYPE, is_nodem2_local)
     call this%set(this%id_mapped_m1%base(), 'ID_MAPPED_M1', 'MVR', &
                   MAP_ALL_TYPE, is_nodem1_local)
     call this%set(this%id_mapped_m2%base(), 'ID_MAPPED_M2', 'MVR', &
@@ -132,11 +138,15 @@ contains
         if (maxmvr > 0) then
           call this%map(this%qpactual_m1%base(), maxmvr, (/STG_BFR_EXG_FC/))
           call this%map(this%qpactual_m2%base(), maxmvr, (/STG_BFR_EXG_FC/))
+          call this%map(this%qavailable_m1%base(), maxmvr, (/STG_BFR_EXG_FC/))
+          call this%map(this%qavailable_m2%base(), maxmvr, (/STG_BFR_EXG_FC/))
           call this%map(this%id_mapped_m1%base(), maxmvr, (/STG_AFT_CON_RP/))
           call this%map(this%id_mapped_m2%base(), maxmvr, (/STG_AFT_CON_RP/))
         else
           call this%map(this%qpactual_m1%base(), 0, (/STG_NEVER/))
           call this%map(this%qpactual_m2%base(), 0, (/STG_NEVER/))
+          call this%map(this%qavailable_m1%base(), 0, (/STG_NEVER/))
+          call this%map(this%qavailable_m2%base(), 0, (/STG_NEVER/))
           call this%map(this%id_mapped_m1%base(), 0, (/STG_NEVER/))
           call this%map(this%id_mapped_m2%base(), 0, (/STG_NEVER/))
         end if
@@ -153,6 +163,7 @@ contains
     type(STLVecInt) :: virtual_items
     ! local
     integer(I4B) :: qpactual_m1_idx, qpactual_m2_idx
+    integer(I4B) :: qavailable_m1_idx, qavailable_m2_idx
     integer(I4B) :: id_mapped_m1_idx, id_mapped_m2_idx
     class(*), pointer :: vdi
 
@@ -165,6 +176,10 @@ contains
     qpactual_m1_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%qpactual_m2
     qpactual_m2_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%qavailable_m1
+    qavailable_m1_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%qavailable_m2
+    qavailable_m2_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%id_mapped_m1
     id_mapped_m1_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%id_mapped_m2
@@ -177,6 +192,9 @@ contains
       if (this%qpactual_m2%check_stage(stage)) then
         call virtual_items%push_back(qpactual_m2_idx)
       end if
+      if (this%qavailable_m2%check_stage(stage)) then
+        call virtual_items%push_back(qavailable_m2_idx)
+      end if
       if (this%id_mapped_m2%check_stage(stage)) then
         call virtual_items%push_back(id_mapped_m2_idx)
       end if
@@ -185,6 +203,9 @@ contains
       ! the reverse case...
       if (this%qpactual_m1%check_stage(stage)) then
         call virtual_items%push_back(qpactual_m1_idx)
+      end if
+      if (this%qavailable_m1%check_stage(stage)) then
+        call virtual_items%push_back(qavailable_m1_idx)
       end if
       if (this%id_mapped_m1%check_stage(stage)) then
         call virtual_items%push_back(id_mapped_m1_idx)
@@ -200,6 +221,7 @@ contains
     type(STLVecInt) :: virtual_items
     ! local
     integer(I4B) :: qpactual_m1_idx, qpactual_m2_idx
+    integer(I4B) :: qavailable_m1_idx, qavailable_m2_idx
     integer(I4B) :: id_mapped_m1_idx, id_mapped_m2_idx
     class(*), pointer :: vdi
 
@@ -212,6 +234,10 @@ contains
     qpactual_m1_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%qpactual_m2
     qpactual_m2_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%qavailable_m1
+    qavailable_m1_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%qavailable_m2
+    qavailable_m2_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%id_mapped_m1
     id_mapped_m1_idx = this%virtual_data_list%GetIndex(vdi)
     vdi => this%id_mapped_m2
@@ -224,6 +250,9 @@ contains
       if (this%qpactual_m1%check_stage(stage)) then
         call virtual_items%push_back(qpactual_m1_idx)
       end if
+      if (this%qavailable_m1%check_stage(stage)) then
+        call virtual_items%push_back(qavailable_m1_idx)
+      end if
       if (this%id_mapped_m1%check_stage(stage)) then
         call virtual_items%push_back(id_mapped_m1_idx)
       end if
@@ -232,6 +261,9 @@ contains
       ! the reverse case...
       if (this%qpactual_m2%check_stage(stage)) then
         call virtual_items%push_back(qpactual_m2_idx)
+      end if
+      if (this%qavailable_m2%check_stage(stage)) then
+        call virtual_items%push_back(qavailable_m2_idx)
       end if
       if (this%id_mapped_m2%check_stage(stage)) then
         call virtual_items%push_back(id_mapped_m2_idx)
@@ -257,6 +289,8 @@ contains
     allocate (this%maxmvr)
     allocate (this%qpactual_m1)
     allocate (this%qpactual_m2)
+    allocate (this%qavailable_m1)
+    allocate (this%qavailable_m2)
     allocate (this%id_mapped_m1)
     allocate (this%id_mapped_m2)
 
@@ -269,6 +303,8 @@ contains
     deallocate (this%maxmvr)
     deallocate (this%qpactual_m1)
     deallocate (this%qpactual_m2)
+    deallocate (this%qavailable_m1)
+    deallocate (this%qavailable_m2)
     deallocate (this%id_mapped_m1)
     deallocate (this%id_mapped_m2)
 

@@ -17,7 +17,7 @@ import pytest
 
 from framework import TestFramework
 
-cases = ["gwf_exgmvr"]
+cases = ["gwf_exgmvr01"]
 
 # properties for single model combination
 lx = 14.0

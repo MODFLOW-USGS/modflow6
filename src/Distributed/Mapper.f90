@@ -68,6 +68,10 @@ contains
           call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M1', &
                                   local_mem_path, 'QPACTUAL_M1', &
                                   virt_mem_path, (/STG_BFR_EXG_FC/))
+          virt_mem_path = virt_exg%get_vrt_mem_path('QAVAILABLE_M1', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'QAVAILABLE_M1', &
+                                  local_mem_path, 'QAVAILABLE_M1', &
+                                  virt_mem_path, (/STG_BFR_EXG_FC/))
           virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M1', 'MVR')
           call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M1', &
                                   local_mem_path, 'ID_MAPPED_M1', &
@@ -85,6 +89,10 @@ contains
           virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M2', 'MVR')
           call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M2', &
                                   local_mem_path, 'QPACTUAL_M2', &
+                                  virt_mem_path, (/STG_BFR_EXG_FC/))
+          virt_mem_path = virt_exg%get_vrt_mem_path('QAVAILABLE_M2', 'MVR')
+          call this%map_data_full(conn%owner%idsoln, 'QAVAILABLE_M2', &
+                                  local_mem_path, 'QAVAILABLE_M2', &
                                   virt_mem_path, (/STG_BFR_EXG_FC/))
           virt_mem_path = virt_exg%get_vrt_mem_path('ID_MAPPED_M2', 'MVR')
           call this%map_data_full(conn%owner%idsoln, 'ID_MAPPED_M2', &

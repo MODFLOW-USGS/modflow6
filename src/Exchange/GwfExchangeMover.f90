@@ -20,6 +20,8 @@ module GwfExgMoverModule
     logical(LGP), dimension(:), pointer, contiguous :: prov_is_m1 => null() !< .true. when the providing package is part of model 1
     real(DP), dimension(:), pointer, contiguous :: qpactual_m1 => null() !< stores qpactual for synchronization when provider is in model 1
     real(DP), dimension(:), pointer, contiguous :: qpactual_m2 => null() !< stores qpactual for synchronization when provider is in model 2
+    real(DP), dimension(:), pointer, contiguous :: qavailable_m1 => null() !< stores qavailable for synchronization when provider is in model 1
+    real(DP), dimension(:), pointer, contiguous :: qavailable_m2 => null() !< stores qavailable for synchronization when provider is in model 2
     integer(I4B), dimension(:), pointer, contiguous :: id_mapped_m1 => null() !< stores the mapped feature ids for synchronization when provider is in model 1
     integer(I4B), dimension(:), pointer, contiguous :: id_mapped_m2 => null() !< stores the mapped feature ids for synchronization when provider is in model 2
   contains
@@ -173,10 +175,14 @@ contains
         ! copy calculated rate to arrays for synchronization:
         if (this%prov_is_m1(i)) then
           this%qpactual_m1(i) = this%mvr(i)%qpactual
+          this%qavailable_m1(i) = this%mvr(i)%qavailable
           this%qpactual_m2(i) = DNODATA
+          this%qavailable_m2(i) = DNODATA
         else
           this%qpactual_m1(i) = DNODATA
+          this%qavailable_m1(i) = DNODATA
           this%qpactual_m2(i) = this%mvr(i)%qpactual
+          this%qavailable_m2(i) = this%mvr(i)%qavailable
         end if
       end if
     end do
@@ -198,8 +204,10 @@ contains
         ! copy from synchronization arrays back into movers:
         if (this%prov_is_m1(i)) then
           this%mvr(i)%qpactual = this%qpactual_m1(i)
+          this%mvr(i)%qavailable = this%qavailable_m1(i)
         else
           this%mvr(i)%qpactual = this%qpactual_m2(i)
+          this%mvr(i)%qavailable = this%qavailable_m2(i)
         end if
 
         call this%mvr(i)%update_receiver()
@@ -240,6 +248,10 @@ contains
                       this%memoryPath)
     call mem_allocate(this%qpactual_m2, this%maxmvr, 'QPACTUAL_M2', &
                       this%memoryPath)
+    call mem_allocate(this%qavailable_m1, this%maxmvr, 'QAVAILABLE_M1', &
+                      this%memoryPath)
+    call mem_allocate(this%qavailable_m2, this%maxmvr, 'QAVAILABLE_M2', &
+                      this%memoryPath)
     call mem_allocate(this%id_mapped_m1, this%maxmvr, 'ID_MAPPED_M1', &
                       this%memoryPath)
     call mem_allocate(this%id_mapped_m2, this%maxmvr, 'ID_MAPPED_M2', &
@@ -248,6 +260,10 @@ contains
     do i = 1, this%maxmvr
       this%id_mapped_m1(i) = 0
       this%id_mapped_m2(i) = 0
+      this%qpactual_m1(i) = DNODATA
+      this%qpactual_m2(i) = DNODATA
+      this%qavailable_m1(i) = DNODATA
+      this%qavailable_m2(i) = DNODATA
     end do
 
   end subroutine xmvr_allocate_arrays
@@ -260,6 +276,8 @@ contains
     deallocate (this%prov_is_m1)
     call mem_deallocate(this%qpactual_m1)
     call mem_deallocate(this%qpactual_m2)
+    call mem_deallocate(this%qavailable_m1)
+    call mem_deallocate(this%qavailable_m2)
     call mem_deallocate(this%id_mapped_m1)
     call mem_deallocate(this%id_mapped_m2)
 
