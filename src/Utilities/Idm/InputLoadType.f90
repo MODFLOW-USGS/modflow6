@@ -103,6 +103,7 @@ module InputLoadTypeModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
     type(ListType) :: pkglist !< list of pointers to model dynamic package loaders
+    integer(I4B) :: iout
   contains
     procedure :: init => dynamicpkgs_init
     procedure :: add => dynamicpkgs_add
@@ -235,13 +236,15 @@ contains
   !> @brief model dynamic packages init
   !!
   !<
-  subroutine dynamicpkgs_init(this, modelname, modelfname)
+  subroutine dynamicpkgs_init(this, modelname, modelfname, iout)
     class(ModelDynamicPkgsType), intent(inout) :: this
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
+    integer(I4B), intent(in) :: iout
     !
     this%modelname = modelname
     this%modelfname = modelfname
+    this%iout = iout
     !
     return
   end subroutine dynamicpkgs_init
@@ -286,14 +289,19 @@ contains
   !!
   !<
   subroutine dynamicpkgs_rp(this)
+    use IdmLoggerModule, only: idm_log_period_header, idm_log_period_close
     class(ModelDynamicPkgsType), intent(inout) :: this
     class(DynamicPkgLoadBaseType), pointer :: dynamic_pkg
     integer(I4B) :: n
+    !
+    call idm_log_period_header(this%modelname, this%iout)
     !
     do n = 1, this%pkglist%Count()
       dynamic_pkg => this%get(n)
       call dynamic_pkg%rp()
     end do
+    !
+    call idm_log_period_close(this%iout)
     !
     return
   end subroutine dynamicpkgs_rp

@@ -117,11 +117,11 @@ contains
     character(len=*), parameter :: fmtvspts = &
       &"(' Validating:  Stress period: ',i5,4x,'Time step: ',i5,4x)"
     character(len=*), parameter :: fmtspi = &
-      "('1',/28X,'STRESS PERIOD NO. ',I0,', LENGTH =',G15.7,/ &
-      &28X,47('-'))"
+      "('1',/1X,'STRESS PERIOD NO. ',I0,', LENGTH =',G15.7,/ &
+      &1X,42('-'))"
     character(len=*), parameter :: fmtspits = &
-      "(28X,'NUMBER OF TIME STEPS = ',I0,/ &
-      &28X,'MULTIPLIER FOR DELT =',F10.3)"
+      "(1X,'NUMBER OF TIME STEPS = ',I0,/ &
+      &1X,'MULTIPLIER FOR DELT =',F10.3)"
     !
     ! -- Initialize variables for this step
     if (inats > 0) dtstable = DNODATA
@@ -175,7 +175,7 @@ contains
     logical(LGP) :: adaptivePeriod
     ! -- format
     character(len=*), parameter :: fmttsi = &
-                                   "(28X,'INITIAL TIME STEP SIZE =',G15.7)"
+                                   "(1X,'INITIAL TIME STEP SIZE =',G15.7)"
     !
     ! -- Initialize
     adaptivePeriod = isAdaptivePeriod(kper)

@@ -14,6 +14,8 @@ module IdmLoggerModule
   private
   public :: idm_log_header
   public :: idm_log_close
+  public :: idm_log_period_header
+  public :: idm_log_period_close
   public :: idm_log_var
 
   interface idm_log_var
@@ -21,7 +23,8 @@ module IdmLoggerModule
       idm_log_var_int1d, idm_log_var_int2d, &
       idm_log_var_int3d, idm_log_var_dbl, &
       idm_log_var_dbl1d, idm_log_var_dbl2d, &
-      idm_log_var_dbl3d, idm_log_var_str
+      idm_log_var_dbl3d, idm_log_var_str, &
+      idm_log_var_ts
   end interface idm_log_var
 
 contains
@@ -47,9 +50,53 @@ contains
     integer(I4B), intent(in) :: iout
 
     if (iparamlog > 0 .and. iout > 0) then
-      write (iout, '(1x,a,/)') 'Loading input complete...'
+      write (iout, '(1x,a)') 'Loading input complete...'
     end if
   end subroutine idm_log_close
+
+  !> @ brief log a dynamic header message
+  !<
+  subroutine idm_log_period_header(component, iout)
+    use TdisModule, only: kper, kstp
+    character(len=*), intent(in) :: component !< component name
+    integer(I4B), intent(in) :: iout
+
+    if (iparamlog > 0 .and. iout > 0 .and. kstp == 1) then
+      write (iout, '(/1x,a,i0,a)') 'IDP PERIOD ', kper, &
+        ' load for component: '//trim(component)
+    end if
+  end subroutine idm_log_period_header
+
+  !> @ brief log the period closing message
+  !<
+  subroutine idm_log_period_close(iout)
+    use TdisModule, only: kstp
+    integer(I4B), intent(in) :: iout
+
+    if (iparamlog > 0 .and. iout > 0 .and. kstp == 1) then
+      !backspace iout
+      write (iout, '(1x,a,/)') 'IDP component dynamic load complete...'
+    end if
+  end subroutine idm_log_period_close
+
+  !> @ brief log the period closing message
+  !<
+  subroutine idm_log_var_ts(varname, mempath, iout, is_tas)
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    logical(LGP), intent(in) :: is_tas
+
+    if (iparamlog > 0 .and. iout > 0) then
+      if (is_tas) then
+        write (iout, '(3x, a, ": ", a)') &
+          'Time-array-series controlled dynamic variable detected', trim(varname)
+      else
+        write (iout, '(3x, a, ": ", a)') &
+          'Time-series controlled dynamic variable detected', trim(varname)
+      end if
+    end if
+  end subroutine idm_log_var_ts
 
   !> @brief Log type specific information logical
   !<
