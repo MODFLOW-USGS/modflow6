@@ -93,9 +93,9 @@ jobs:
 
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
+        working-directory: modflow6-examples/autotest
         run: |
-          python ci_build_files.py
+          pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
 
       - name: Run benchmarks

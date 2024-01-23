@@ -84,7 +84,7 @@ jobs:
         if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
         run: |
-          python ci_build_files.py
+          pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
 
       - name: Add Micromamba Scripts dir to path (Windows)

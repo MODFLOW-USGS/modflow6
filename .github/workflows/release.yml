@@ -330,8 +330,8 @@ jobs:
 
       - name: Build example models
         if: inputs.full == true
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
+        working-directory: modflow6-examples/autotest
+        run: pytest -v -n auto test_scripts.py --init
       
       - name: Create folder structure
         if: inputs.full == true
@@ -494,7 +494,7 @@ jobs:
       - name: Build example models
         if: inputs.full == true
         working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
+        run: pytest -v -n auto test_scripts.py --init
 
       - name: Build distribution
         env:
