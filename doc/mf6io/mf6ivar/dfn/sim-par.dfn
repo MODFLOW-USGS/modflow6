@@ -1,0 +1,29 @@
+# --------------------- sim par options ---------------------
+
+block options
+name log_mpi
+type keyword
+reader urword
+optional true
+longname log mpi traffic
+description keyword to enable logging of mpi traffic to file.
+
+
+# --------------------- sim nam partitions ---------------------
+
+block partitions
+name partitions
+type recarray mrank
+reader urword
+optional
+longname list of partition numbers
+description is the list of zero-based partition numbers.
+
+block partitions
+name mrank
+in_record true
+type integer
+tagged false
+reader urword
+longname model rank
+description is the zero-based partition number (also: MPI rank or processor id) to which the model will be assigned.

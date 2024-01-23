@@ -56,6 +56,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate input memory
+    call memorylist_remove('SIM', 'PAR', idm_context)
     call memorylist_remove('SIM', 'NAM', idm_context)
     call memorylist_remove(component='SIM', context=idm_context)
     !
@@ -248,12 +249,16 @@ contains
     !
     ! -- allocate global arrays
     nr_models_glob = size(mnames)
-    call mem_allocate(model_ranks, nr_models_glob, 'MRANKS', input_mempath)
     allocate (model_names(nr_models_glob))
     allocate (model_loc_idx(nr_models_glob))
     !
     ! -- assign models to cpu cores (in serial all to rank 0)
-    call create_load_balance(model_ranks)
+    if (associated(model_ranks)) then
+      ! no-op
+    else
+      call mem_allocate(model_ranks, nr_models_glob, 'MRANK', input_mempath)
+      call create_load_balance(model_ranks)
+    end if
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
@@ -781,18 +786,39 @@ contains
   !< of the IDM.
   subroutine create_load_mask(mask_array)
     use SimVariablesModule, only: proc_id
+    use MemoryManagerModule, only: mem_setptr, get_isize
+    use MemoryHelperModule, only: create_mem_path
+    use SimVariablesModule, only: idm_context
     integer(I4B), dimension(:) :: mask_array
     ! local
-    integer(I4B) :: i
+    character(len=LENMEMPATH) :: input_mempath
+    integer(I4B) :: i, nmranks
 
-    call create_load_balance(mask_array)
-    do i = 1, size(mask_array)
-      if (mask_array(i) == proc_id) then
-        mask_array(i) = 1
-      else
-        mask_array(i) = 0
-      end if
-    end do
+    nullify (model_ranks)
+
+    input_mempath = create_mem_path('SIM', 'PAR', idm_context)
+    call get_isize('MRANK', input_mempath, nmranks)
+
+    if (nmranks > 0) then
+      call mem_setptr(model_ranks, 'MRANK', input_mempath)
+      do i = 1, size(mask_array)
+        if (model_ranks(i) == proc_id) then
+          mask_array(i) = 1
+        else
+          mask_array(i) = 0
+        end if
+      end do
+
+    else
+      call create_load_balance(mask_array)
+      do i = 1, size(mask_array)
+        if (mask_array(i) == proc_id) then
+          mask_array(i) = 1
+        else
+          mask_array(i) = 0
+        end if
+      end do
+    end if
 
   end subroutine create_load_mask
 

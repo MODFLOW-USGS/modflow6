@@ -260,6 +260,7 @@ modflow_sources = files(
     'mf6core.f90',
     'mf6lists.f90',
     'simnamidm.f90',
+    'simparidm.f90',
     'SimulationCreate.f90',
     'RunControl.f90',
     'RunControlFactory.F90'

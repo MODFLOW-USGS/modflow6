@@ -267,8 +267,9 @@ contains
   subroutine static_input_load()
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
-    use SimVariablesModule, only: iout
-    use IdmLoadModule, only: simnam_load, load_models, load_exchanges
+    use SimVariablesModule, only: iout, simulation_mode
+    use IdmLoadModule, only: simnam_load, simpar_load, load_models, &
+                             load_exchanges
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
@@ -281,6 +282,11 @@ contains
     !
     ! -- load simnam input context
     call simnam_load(iparamlog)
+    !
+    ! -- load optional mfsimm.par if in parallel mode
+    if (simulation_mode == 'PARALLEL') then
+      call simpar_load()
+    end if
     !
     ! -- allocate model load mask
     input_mempath = create_mem_path(component='SIM', context=idm_context)

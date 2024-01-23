@@ -6,6 +6,7 @@ module IdmSimDfnSelectorModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   use SimNamInputModule
+  use SimParInputModule
 
   implicit none
   private
@@ -36,6 +37,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, sim_nam_param_definitions)
+    case ('PAR')
+      call set_param_pointer(input_definition, sim_par_param_definitions)
     case default
     end select
     return
@@ -48,6 +51,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, sim_nam_aggregate_definitions)
+    case ('PAR')
+      call set_param_pointer(input_definition, sim_par_aggregate_definitions)
     case default
     end select
     return
@@ -60,6 +65,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_block_pointer(input_definition, sim_nam_block_definitions)
+    case ('PAR')
+      call set_block_pointer(input_definition, sim_par_block_definitions)
     case default
     end select
     return
@@ -71,6 +78,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       multi_package = sim_nam_multi_package
+    case ('PAR')
+      multi_package = sim_par_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="SIM"'//&
@@ -85,6 +94,8 @@ contains
     integrated = .false.
     select case (subcomponent)
     case ('NAM')
+      integrated = .true.
+    case ('PAR')
       integrated = .true.
     case default
     end select

@@ -18,7 +18,7 @@ module SourceLoadModule
   private
   public :: create_input_loader
   public :: open_source_file
-  public :: load_modelnam, load_simnam
+  public :: load_modelnam, load_simnam, load_simpar
   public :: remote_model_ndim
 
 contains
@@ -173,6 +173,35 @@ contains
     ! -- return
     return
   end subroutine load_simnam
+
+  subroutine load_simpar()
+    use SimVariablesModule, only: parfile, iout
+    use MessageModule, only: write_message
+    use IdmMf6FileModule, only: input_load
+    type(ModflowInputType) :: mf6_input
+    character(len=LINELENGTH) :: line
+    logical :: lexist
+    !
+    ! -- load mfsim.nam if it exists
+    inquire (file=trim(adjustl(parfile)), exist=lexist)
+    !
+    if (lexist) then
+      !
+      ! -- write name of namfile to stdout
+      write (line, '(2(1x,a))') 'Using simulation parallel file:', &
+        trim(adjustl(parfile))
+      call write_message(line, skipafter=1)
+      !
+      ! -- create description of input
+      mf6_input = getModflowInput('PAR6', 'SIM', 'PAR', 'SIM', 'PAR', parfile)
+      !
+      ! -- open namfile and load to input context
+      call input_load(parfile, mf6_input, parfile, iout)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine load_simpar
 
   function remote_model_ndim(mtype, mfname) result(ncelldim)
     use SourceCommonModule, only: package_source_type

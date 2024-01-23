@@ -962,6 +962,10 @@ if __name__ == "__main__":
             DFN_PATH / "sim-nam.dfn",
             SRC_PATH / "simnamidm.f90",
         ],
+        [
+            DFN_PATH / "sim-par.dfn",
+            SRC_PATH / "simparidm.f90",
+        ],
     ]
 
     dfn_d = {}

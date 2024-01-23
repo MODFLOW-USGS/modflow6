@@ -21,6 +21,7 @@ module IdmLoadModule
   implicit none
   private
   public :: simnam_load
+  public :: simpar_load
   public :: load_models
   public :: load_exchanges
   public :: idm_df
@@ -425,6 +426,18 @@ contains
     ! --return
     return
   end subroutine simnam_load
+
+  !> @brief MODFLOW 6 mfsim.par input load routine
+  !<
+  subroutine simpar_load()
+    use SourceLoadModule, only: load_simpar
+    !
+    ! -- load sim nam file
+    call load_simpar()
+    !
+    ! --return
+    return
+  end subroutine simpar_load
 
   !> @brief retrieve list of model dynamic loaders
   !<
