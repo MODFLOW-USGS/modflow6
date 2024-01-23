@@ -660,6 +660,7 @@ def write_appendix(texdir, allblocks):
 if __name__ == '__main__':
 
     file_order = ['sim-nam',  # dfn completed  tex updated
+                  'sim-par',
                   'sim-tdis',  # dfn completed  tex updated
                   'exg-gwfgwf',  # dfn completed  tex updated
                   'exg-gwfgwt',

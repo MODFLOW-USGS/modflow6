@@ -118,6 +118,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/DiscretizationBase.o \
+$(OBJDIR)/simparidm.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1idm.o \
 $(OBJDIR)/gwt1ic1idm.o \
@@ -237,6 +238,7 @@ $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
@@ -268,7 +270,6 @@ $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ims8base.o \
 $(OBJDIR)/StructVector.o \
-$(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/DefinitionSelect.o \
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/Integer1dReader.o \
