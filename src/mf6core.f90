@@ -283,7 +283,7 @@ contains
     ! -- load simnam input context
     call simnam_load(iparamlog)
     !
-    ! -- load optional mfsimm.par if in parallel mode
+    ! -- load optional mfsim.par if in parallel mode
     if (simulation_mode == 'PARALLEL') then
       call simpar_load()
     end if

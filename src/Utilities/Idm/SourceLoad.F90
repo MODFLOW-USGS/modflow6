@@ -175,28 +175,28 @@ contains
   end subroutine load_simnam
 
   subroutine load_simpar()
-    use SimVariablesModule, only: parfile, iout
+    use SimVariablesModule, only: simparfile, iout
     use MessageModule, only: write_message
     use IdmMf6FileModule, only: input_load
     type(ModflowInputType) :: mf6_input
     character(len=LINELENGTH) :: line
     logical :: lexist
     !
-    ! -- load mfsim.nam if it exists
-    inquire (file=trim(adjustl(parfile)), exist=lexist)
+    ! -- load mfsim.par if it exists
+    inquire (file=trim(adjustl(simparfile)), exist=lexist)
     !
     if (lexist) then
       !
-      ! -- write name of namfile to stdout
+      ! -- write name of simparfile to stdout
       write (line, '(2(1x,a))') 'Using simulation parallel file:', &
-        trim(adjustl(parfile))
+        trim(adjustl(simparfile))
       call write_message(line, skipafter=1)
       !
       ! -- create description of input
-      mf6_input = getModflowInput('PAR6', 'SIM', 'PAR', 'SIM', 'PAR', parfile)
+      mf6_input = getModflowInput('PAR6', 'SIM', 'PAR', 'SIM', 'PAR', simparfile)
       !
-      ! -- open namfile and load to input context
-      call input_load(parfile, mf6_input, parfile, iout)
+      ! -- open simulation parallel file and load to input context
+      call input_load(simparfile, mf6_input, simparfile, iout)
     end if
     !
     ! -- return

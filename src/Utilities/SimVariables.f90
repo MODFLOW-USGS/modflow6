@@ -13,7 +13,7 @@ module SimVariablesModule
                              VALL, MNORMAL, LENMODELNAME
   public
   character(len=LINELENGTH) :: simfile = 'mfsim.nam' !< simulation name file
-  character(len=LINELENGTH) :: parfile = 'mfsim.par' !< simulation parallel file
+  character(len=LINELENGTH) :: simparfile = 'mfsim.par' !< simulation parallel file
   character(len=LINELENGTH) :: simlstfile = 'mfsim.lst' !< simulation listing file name
   character(len=LINELENGTH) :: simstdout = 'mfsim.stdout' !< name of standard out file if screen output is piped to a file
   character(len=LINELENGTH) :: idm_context = '__INPUT__'

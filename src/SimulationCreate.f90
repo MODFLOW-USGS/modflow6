@@ -808,7 +808,6 @@ contains
           mask_array(i) = 0
         end if
       end do
-
     else
       call create_load_balance(mask_array)
       do i = 1, size(mask_array)

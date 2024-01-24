@@ -432,7 +432,7 @@ contains
   subroutine simpar_load()
     use SourceLoadModule, only: load_simpar
     !
-    ! -- load sim nam file
+    ! -- load simulation parallel file
     call load_simpar()
     !
     ! --return
