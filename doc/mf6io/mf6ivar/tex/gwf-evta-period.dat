@@ -7,6 +7,6 @@ BEGIN PERIOD <iper>
     <rate(ncol*nrow; ncpl)> -- READARRAY
   DEPTH
     <depth(ncol*nrow; ncpl)> -- READARRAY
-  AUX(IAUX)
-    <aux(iaux)(ncol*nrow; ncpl)> -- READARRAY
+  AUX
+    <aux(ncol*nrow; ncpl)> -- READARRAY
 END PERIOD
