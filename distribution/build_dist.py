@@ -1,13 +1,12 @@
 import argparse
 import os
 import platform
-import shutil
 import sys
 import textwrap
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
-from shutil import copytree
+from shutil import copy, copyfile, copytree, ignore_patterns
 
 import pytest
 from modflow_devtools.build import meson_build
@@ -16,8 +15,11 @@ from modflow_devtools.markers import requires_exe
 from modflow_devtools.misc import get_model_paths
 
 from build_docs import build_documentation
-from build_makefiles import (build_mf5to6_makefile, build_mf6_makefile,
-                             build_zbud6_makefile)
+from build_makefiles import (
+    build_mf5to6_makefile,
+    build_mf6_makefile,
+    build_zbud6_makefile,
+)
 from utils import get_project_root_path, run_command
 
 # default paths
@@ -54,31 +56,32 @@ def copy_sources(output_path: PathLike):
         str(source_msvs_path / "mf6bmi.sln"),
         str(source_msvs_path / "mf6bmi.vfproj"),
     ]:
-        shutil.copy(d, output_path / "msvs")
+        copy(d, output_path / "msvs")
 
-    ignored = shutil.ignore_patterns(".DS_Store")
+    ignored = [".DS_Store"]
 
     # copy top-level meson.build and meson.options
-    shutil.copy(_project_root_path / "meson.build", output_path)
-    shutil.copy(_project_root_path / "meson.options", output_path)
+    copy(_project_root_path / "meson.build", output_path)
+    copy(_project_root_path / "meson.options", output_path)
 
     # copy source folder
     src_path = _project_root_path / "src"
     dst_path = output_path / "src"
     print(f"Copying {src_path} to {dst_path}")
-    copytree(src_path, dst_path, ignore=ignored)
+    copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy srcbmi folder
     src_path = _project_root_path / "srcbmi"
     dst_path = output_path / "srcbmi"
     print(f"Copying {src_path} to {dst_path}")
-    copytree(src_path, dst_path, ignore=ignored)
+    copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy utils folder
     src_path = _project_root_path / "utils"
     dst_path = output_path / "utils"
     print(f"Copying {src_path} to {dst_path}")
-    copytree(src_path, dst_path, ignore=ignored)
+    ignored.extend(["idmloader"])
+    copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
 
 def test_copy_sources(tmp_path):
@@ -93,6 +96,14 @@ def test_copy_sources(tmp_path):
     assert (tmp_path / "srcbmi" / "meson.build").is_file()
     assert (tmp_path / "utils" / "meson.build").is_file()
     assert (tmp_path / "msvs" / "mf6.sln").is_file()
+
+    assert (tmp_path / "utils").is_dir()
+    assert (tmp_path / "utils" / "mf5to6").is_dir()
+    assert (tmp_path / "utils" / "zonebudget").is_dir()
+    assert (tmp_path / "utils" / "mf5to6" / "pymake").is_dir()
+    assert (tmp_path / "utils" / "zonebudget" / "pymake").is_dir()
+    assert not (tmp_path / "utils" / "idmloader").is_dir()
+    
 
 
 def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
@@ -234,10 +245,10 @@ def build_makefiles(output_path: PathLike):
     # create and copy mf6 makefile
     build_mf6_makefile()
     (output_path / "make").mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
+    copyfile(
         _project_root_path / "make" / "makefile", output_path / "make" / "makefile"
     )
-    shutil.copyfile(
+    copyfile(
         _project_root_path / "make" / "makedefaults",
         output_path / "make" / "makedefaults",
     )
@@ -246,10 +257,10 @@ def build_makefiles(output_path: PathLike):
     build_zbud6_makefile()
     rel_path = Path("utils") / "zonebudget" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
+    copyfile(
         _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
     )
-    shutil.copyfile(
+    copyfile(
         _project_root_path / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
@@ -258,10 +269,10 @@ def build_makefiles(output_path: PathLike):
     build_mf5to6_makefile()
     rel_path = Path("utils") / "mf5to6" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
+    copyfile(
         _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
     )
-    shutil.copyfile(
+    copyfile(
         _project_root_path / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
@@ -301,7 +312,7 @@ def build_distribution(
     )
 
     # code.json metadata
-    shutil.copy(_project_root_path / "code.json", output_path)
+    copy(_project_root_path / "code.json", output_path)
 
     # full releases include examples, source code, makefiles and docs
     if not full:
