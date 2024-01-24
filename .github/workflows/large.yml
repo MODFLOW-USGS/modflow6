@@ -82,7 +82,7 @@ jobs:
 
       - name: Build example models
         if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
+        working-directory: modflow6-examples/autotest
         run: |
           pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/

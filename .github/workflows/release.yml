@@ -493,7 +493,7 @@ jobs:
   
       - name: Build example models
         if: inputs.full == true
-        working-directory: modflow6-examples/etc
+        working-directory: modflow6-examples/autotest
         run: pytest -v -n auto test_scripts.py --init
 
       - name: Build distribution
