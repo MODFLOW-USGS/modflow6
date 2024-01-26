@@ -34,7 +34,7 @@ module GweEslModule
     procedure, public :: bnd_df_obs => esl_df_obs
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => esl_rp_ts
-    
+
   end type GweEslType
 
 contains
@@ -223,7 +223,7 @@ contains
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
-  
+
   !> @brief Support function for specified energy source loading observations
   !!
   !! This function:

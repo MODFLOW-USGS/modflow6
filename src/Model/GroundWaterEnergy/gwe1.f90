@@ -788,12 +788,12 @@ contains
     !
     ! -- This part creates the package object
     select case (filtyp)
-      case ('CTP6')
-        call ctp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%depvartype, mempath)
-      case ('ESL6')
-        call esl_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%gwecommon)
+    case ('CTP6')
+      call ctp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%depvartype, mempath)
+    case ('ESL6')
+      call esl_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%gwecommon)
       !case ('LKE6')
       !  call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
@@ -961,13 +961,13 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-        case ('EST6')
-          this%inest = inunit
-        case ('CND6')
-          this%incnd = 1
-          mempathcnd = mempath
-        case ('CTP6', 'ESL6', 'LKE6', 'SFE6', &
-              'MWE6', 'UZE6', 'API6')
+      case ('EST6')
+        this%inest = inunit
+      case ('CND6')
+        this%incnd = 1
+        mempathcnd = mempath
+      case ('CTP6', 'ESL6', 'LKE6', 'SFE6', &
+            'MWE6', 'UZE6', 'API6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default
