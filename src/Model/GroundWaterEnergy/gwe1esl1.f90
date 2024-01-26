@@ -135,7 +135,6 @@ contains
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: q
-    logical :: lrm
     !
     ! -- Return if no sources
     if (this%nbound == 0) return
