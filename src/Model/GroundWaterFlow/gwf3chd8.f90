@@ -41,6 +41,8 @@ module ChdModule
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => chd_obs_supported
     procedure, public :: bnd_df_obs => chd_df_obs
+    !
+    procedure, private :: calc_chd_rate
   end type ChdType
 
 contains
@@ -266,12 +268,21 @@ contains
   !! This method overrides bnd_cq()
   !<
   subroutine chd_cq(this, x, flowja, iadv)
-    ! -- modules
-    ! -- dummy
     class(ChdType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
+
+    ! NB: the rate calculation cannot be done until chd_bd below
+
+  end subroutine chd_cq
+
+  !> @brief Calculate the CHD cell rates, to be called
+  !< after all updates to the model flowja are done
+  subroutine calc_chd_rate(this)
+    ! -- modules
+    ! -- dummy
+    class(ChdType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: ipos
@@ -296,7 +307,7 @@ contains
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
           this%dis%con%ia(node + 1) - 1
-          q = flowja(ipos)
+          q = this%flowja(ipos)
           rate = rate - q
           ! -- only accumulate chin and chout for active
           !    connected cells
@@ -319,7 +330,7 @@ contains
         this%simvals(i) = rate
         this%ratechdin(i) = ratein
         this%ratechdout(i) = rateout
-        flowja(idiag) = flowja(idiag) + rate
+        this%flowja(idiag) = this%flowja(idiag) + rate
         !
       end do
       !
@@ -327,7 +338,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine chd_cq
+  end subroutine calc_chd_rate
 
   !> @brief Add package ratin/ratout to model budget
   !<
@@ -341,6 +352,13 @@ contains
     real(DP) :: ratout
     real(DP) :: dum
     integer(I4B) :: isuppress_output
+
+    ! For CHDs at an exchange, under some conditions
+    ! (XT3D), the model flowja into the cell is not
+    ! finalized until after exg_cq. So we calculate
+    ! the CHD rate here
+    call this%calc_chd_rate()
+
     isuppress_output = 0
     call rate_accumulator(this%ratechdin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratechdout(1:this%nbound), ratout, dum)

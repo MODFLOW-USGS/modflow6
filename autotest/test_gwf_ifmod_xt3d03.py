@@ -334,8 +334,6 @@ def qxqyqz(fname, nlay, nrow, ncol):
 
 
 def check_output(idx, test):
-    print("comparing heads and spec. discharge to single model reference...")
-
     fpth = os.path.join(test.workspace, f"ref.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
