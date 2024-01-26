@@ -269,7 +269,8 @@ contains
   subroutine load_exchanges(model_loadmask, iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr, mem_allocate, mem_deallocate
+    use MemoryManagerModule, only: mem_setptr, mem_allocate, &
+                                   mem_deallocate, get_isize
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
     use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
@@ -301,7 +302,7 @@ contains
     character(len=LENCOMPONENTNAME) :: sc_type, sc_name, mtype
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
-    integer(I4B) :: n, m1_idx, m2_idx, irem
+    integer(I4B) :: n, m1_idx, m2_idx, irem, isize
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -360,8 +361,13 @@ contains
           mfname = mfnames(irem)
           mname = mnames(irem)
           mempath = create_mem_path(component=mname, context=idm_context)
-          call mem_allocate(ncelldim, 'NCELLDIM', mempath)
-          ncelldim = remote_model_ndim(mtype, mfname)
+          call get_isize('NCELLDIM', mempath, isize)
+          if (isize < 0) then
+            call mem_allocate(ncelldim, 'NCELLDIM', mempath)
+            ncelldim = remote_model_ndim(mtype, mfname)
+          else
+            call mem_setptr(ncelldim, 'NCELLDIM', mempath)
+          end if
         else
           nullify (ncelldim)
         end if
@@ -393,11 +399,21 @@ contains
           deallocate (static_loader)
         end if
         !
-        ! -- deallocate ncelldim as all input has been loaded
-        if (associated(ncelldim)) call mem_deallocate(ncelldim)
-        !
       end if
       !
+    end do
+    !
+    ! -- clean up temporary NCELLDIM for remote models
+    do n = 1, size(mnames)
+      if (model_loadmask(n) == 0) then
+        mname = mnames(n)
+        mempath = create_mem_path(component=mname, context=idm_context)
+        call get_isize('NCELLDIM', mempath, isize)
+        if (isize > 0) then
+          call mem_setptr(ncelldim, 'NCELLDIM', mempath)
+          call mem_deallocate(ncelldim)
+        end if
+      end if
     end do
     !
     ! -- return
