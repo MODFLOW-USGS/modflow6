@@ -307,7 +307,7 @@ def build_models(idx, test):
         gwe, scheme=scheme, filename="{}.adv".format(gwename)
     )
 
-    # Instantiating MODFLOW 6 heat transport dispersion package
+    # Instantiating MODFLOW 6 heat transport conduction package
     if al != 0:
         flopy.mf6.ModflowGwecnd(
             gwe,

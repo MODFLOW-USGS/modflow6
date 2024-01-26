@@ -82,7 +82,7 @@ module GweModule
   !<
   integer(I4B), parameter :: GWE_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(GWE_NMULTIPKG) :: GWE_MULTIPKG
-  data GWE_MULTIPKG/'CTP6 ', 'SRC6 ', 'LKE6 ', 'SFE6 ', '     ', & !  5
+  data GWE_MULTIPKG/'CTP6 ', 'ESL6 ', 'LKE6 ', 'SFE6 ', '     ', & !  5
                    &'MWE6 ', 'UZE6 ', 'API6 ', '     ', '     ', & ! 10
                    &40*'     '/ ! 50
 
@@ -765,7 +765,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use GweCtpModule, only: ctp_create
-    !use GweSrcModule, only: src_create
+    use GweEslModule, only: esl_create
     !use GweLkeModule, only: lke_create
     !use GweSfeModule, only: sfe_create
     !use GweMweModule, only: mwe_create
@@ -788,12 +788,12 @@ contains
     !
     ! -- This part creates the package object
     select case (filtyp)
-    case ('CTP6')
-      call ctp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%depvartype, mempath)
-      !case ('SRC6')
-      !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%tsplab, this%gwecommon)
+      case ('CTP6')
+        call ctp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                        pakname, this%depvartype, mempath)
+      case ('ESL6')
+        call esl_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                        pakname, this%gwecommon)
       !case ('LKE6')
       !  call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
@@ -961,13 +961,13 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('EST6')
-        this%inest = inunit
-      case ('CND6')
-        this%incnd = 1
-        mempathcnd = mempath
-      case ('CTP6', 'SRC6', 'LKE6', 'SFE6', &
-            'MWE6', 'UZE6', 'API6')
+        case ('EST6')
+          this%inest = inunit
+        case ('CND6')
+          this%incnd = 1
+          mempathcnd = mempath
+        case ('CTP6', 'ESL6', 'LKE6', 'SFE6', &
+              'MWE6', 'UZE6', 'API6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default

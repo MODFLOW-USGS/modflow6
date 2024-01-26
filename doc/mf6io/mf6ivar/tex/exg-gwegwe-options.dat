@@ -7,8 +7,8 @@ BEGIN OPTIONS
   [PRINT_FLOWS]
   [SAVE_FLOWS]
   [ADV_SCHEME <adv_scheme>]
-  [DSP_XT3D_OFF]
-  [DSP_XT3D_RHS]
+  [CND_XT3D_OFF]
+  [CND_XT3D_RHS]
   [MVE6 FILEIN <mve6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS
