@@ -7,13 +7,14 @@ amount of energy input.
 
  Model configuration
  
-    ~: Represents energy source loading
+    *: Represents energy source loading
+    ~: Represents conduction into neighboring cell
 
-       +---------+
-       |         |
-       |    ~    |
-       |         |
-       +---------+
+       +---------+---------+
+       |         |~        |
+       |    *    |~        |
+       |         |~        |
+       +---------+---------+
 
 """
 
@@ -33,8 +34,10 @@ scheme = "UPSTREAM"
 # scheme = "TVD"
 
 cases = [
-    "warmup",  # 1-cell "bathtub" model with easily calculate-able answers
+    "2cell_cnd",  # 2-cell model, horizontally connected with tops and bottoms aligned
+    "3cell_cnd",
 ]
+ncol = [2, 3]
 
 # Model units
 length_units = "meters"
@@ -42,7 +45,7 @@ time_units = "days"
 
 # Parameterization
 
-nrow = ncol = nlay = 1
+nrow = nlay = 1
 top = 1.0
 botm = [0.0]
 delr = 1.0  # Column width ($m$)
@@ -51,23 +54,18 @@ k11 = 1.0  # Horizontal hydraulic conductivity ($m/d$)
 ss = 1e-6  # Specific storage
 sy = 0.10  # Specific Yield
 prsity = sy  # Porosity
-nper = 4  # Number of periods
-perlen = [1, 1, 1, 1]  # Simulation time ($days$)
-nstp = [1, 1, 1, 1]  # 10 day transient time steps
 steady = {0: False}
 transient = {0: True}
-strthd = 0.0
+strthd = strt_temp1 = 0.0
 
 # Set some static model parameter values
 
 k33 = k11  # Vertical hydraulic conductivity ($m/d$)
 idomain = 1  # All cells included in the simulation
 iconvert = 1  # All cells are convertible
-
-icelltype = 1  # Cell conversion type (>1: unconfined)
+icelltype = 1  # Cell conversion type (>0: unconfined)
 
 # Set some static transport related model parameter values
-strt_temp1 = 0.0
 dispersivity = 0.0  # dispersion (remember, 1D model)
 
 # GWE related parameters
@@ -83,17 +81,18 @@ hclose, rclose, relax = 1e-10, 1e-10, 1.0
 ttsmult = 1.0
 
 # Set up temporal data used by TDIS file
+perlen = [1, 1e5]  # Simulation time ($days$)
+nstp = [1, 100]  # 10 day transient time steps
+ttsmult = 1.0
 tdis_rc = []
-for i in np.arange(nper):
+for i in np.arange(len(perlen)):
     tdis_rc.append((perlen[i], nstp[i], ttsmult))
 
-Joules_added_for_1degC_rise = (
-    delr * delc * (top - botm[0]) * (1 - prsity) * cps * rhos
-)
 
-# ### Create MODFLOW 6 GWE
+# ### Create MODFLOW 6 GWE model
 #
-# No GWF, only Heat conduction simulated
+# No GWF, only heat conduction simulated between two cells with energy supplied
+# by energy source loading package
 
 
 def build_models(idx, test):
@@ -113,7 +112,7 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 time discretization
     flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
+        sim, nper=len(perlen), perioddata=tdis_rc, time_units=time_units
     )
 
     # Instantiating MODFLOW 6 groundwater flow model
@@ -148,7 +147,7 @@ def build_models(idx, test):
         length_units=length_units,
         nlay=nlay,
         nrow=nrow,
-        ncol=ncol,
+        ncol=ncol[idx],
         delr=delr,
         delc=delc,
         top=top,
@@ -197,8 +196,8 @@ def build_models(idx, test):
         head_filerecord="{}.hds".format(gwfname),
         budget_filerecord="{}.cbc".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
     # ----------------------------------
@@ -232,24 +231,24 @@ def build_models(idx, test):
         nogrb=True,
         nlay=nlay,
         nrow=nrow,
-        ncol=ncol,
+        ncol=ncol[idx],
         delr=delr,
         delc=delc,
         top=top,
         botm=botm,
         idomain=1,
-        pname="DIS-GWE",
+        pname="DIS-1",
         filename="{}.dis".format(gwename),
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp1, pname="IC-2", filename="{}.ic".format(gwename)
+        gwe, strt=strt_temp1, pname="IC-1", filename="{}.ic".format(gwename)
     )
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV-2", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV-1", filename="{}.adv".format(gwename)
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -260,7 +259,7 @@ def build_models(idx, test):
         ath1=dispersivity,
         ktw=0.5918 * 86400,
         kts=0.2700 * 86400,
-        pname="CND-2",
+        pname="CND-1",
         filename="{}.cnd".format(gwename),
     )
 
@@ -272,7 +271,7 @@ def build_models(idx, test):
         cps=cps,
         rhos=rhos,
         packagedata=[cpw, rhow, lhv],
-        pname="EST-2",
+        pname="EST-1",
         filename="{}.est".format(gwename),
     )
 
@@ -285,21 +284,23 @@ def build_models(idx, test):
         temperatureprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
+        saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
 
     # Instantiate energy source loading (ESL) package
     # Energy is added such that the temperature change in the cell will be
     # +1.0, +2.0, -1.0, and 0.0 degrees Celcius from stress period to stress
     # period
+    factor = ncol[idx]
+    Specified_joules_added = (
+        factor * delr * delc * (top - botm[0]) * (1 - prsity) * cps * rhos
+    )
     esl_spd = {
         0: [
-            [(0, 0, 0), Joules_added_for_1degC_rise],
+            [(0, 0, 0), Specified_joules_added],
         ],
-        1: [[(0, 0, 0), 2 * Joules_added_for_1degC_rise]],
-        2: [[(0, 0, 0), -1 * Joules_added_for_1degC_rise]],
-        3: [],
+        1: [],
     }
     flopy.mf6.ModflowGweesl(
         gwe,
@@ -339,18 +340,14 @@ def check_output(idx, test):
     except:
         assert False, f'could not load temperature data from "{fpth}"'
 
-    # Energy source loading was carefully chosen to result in a +1,
-    # +2 (for an absolute value of 3 deg C), -1, and 0.0 degree C
-    # change between stress periods.
-    known_ans = [1.0, 3.0, 2.0, 2.0]
+    # Energy source loading was crafted such that each cell in
+    # the simulation would rise by 1 degree at the end of the simulation.
     msg0 = (
-        "Grid cell temperatures do not reflect the expected difference "
+        "Grid cell temperatures do not reflect the expected difference"
         "in stress period "
     )
-    for index in np.arange(4):
-        assert np.isclose(temps[index, 0, 0, 0], known_ans[index]), msg0 + str(
-            index
-        )
+    ans = ncol[idx]
+    assert np.isclose(np.sum(temps[-1]), ans), msg0 + str(index)
 
 
 # - No need to change any code below
