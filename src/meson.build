@@ -161,6 +161,7 @@ modflow_sources = files(
     'Solution' / 'SolutionFactory.F90',
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
+    'Timing' / 'simtdisidm.f90',
     'Timing' / 'tdis.f90',
     'Utilities' / 'ArrayRead' / 'ArrayReaderBase.f90',
     'Utilities' / 'ArrayRead' / 'Double1dReader.f90',

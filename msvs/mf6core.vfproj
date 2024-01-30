@@ -286,6 +286,7 @@
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
 		<Filter Name="Timing">
 		<File RelativePath="..\src\Timing\ats.f90"/>
+		<File RelativePath="..\src\Timing\simtdisidm.f90"/>
 		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
 		<Filter Name="Utilities">
 		<Filter Name="ArrayRead">

@@ -50,14 +50,8 @@ contains
   subroutine simulation_da()
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
-    use SimVariablesModule, only: idm_context
     ! -- local
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Deallocate input memory
-    call memorylist_remove('SIM', 'NAM', idm_context)
-    call memorylist_remove(component='SIM', context=idm_context)
     !
     ! -- variables
     deallocate (model_names)
@@ -183,11 +177,13 @@ contains
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
+    character(len=LENMEMPATH) :: tdis_input_mempath
     character(len=:), pointer :: tdis6
     logical :: terminate = .true.
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    tdis_input_mempath = create_mem_path('SIM', 'TDIS', idm_context)
     !
     write (iout, '(/1x,a)') 'READING SIMULATION TIMING'
     !
@@ -196,7 +192,7 @@ contains
     !
     ! -- create timing
     if (tdis6 /= '') then
-      call tdis_cr(tdis6)
+      call tdis_cr(tdis6, tdis_input_mempath)
     else
       call store_error('TIMING block variable TDIS6 is unset'// &
                        ' in simulation control input.', terminate)
