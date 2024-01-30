@@ -5,6 +5,7 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
+<<<<<<< HEAD
 SOURCEDIR2=../src/Model
 SOURCEDIR3=../src/Model/TransportModel
 SOURCEDIR4=../src/Model/GroundWaterFlow
@@ -35,6 +36,38 @@ SOURCEDIR28=../src/Solution
 SOURCEDIR29=../src/Solution/PETSc
 SOURCEDIR30=../src/Solution/LinearMethods
 SOURCEDIR31=../src/Exchange
+=======
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Timing
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/ModelUtilities
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/Geometry
+SOURCEDIR9=../src/Model/TransportModel
+SOURCEDIR10=../src/Model/GroundWaterTransport
+SOURCEDIR11=../src/Solution
+SOURCEDIR12=../src/Solution/LinearMethods
+SOURCEDIR13=../src/Solution/PETSc
+SOURCEDIR14=../src/Distributed
+SOURCEDIR15=../src/Utilities
+SOURCEDIR16=../src/Utilities/TimeSeries
+SOURCEDIR17=../src/Utilities/Idm
+SOURCEDIR18=../src/Utilities/Idm/selector
+SOURCEDIR19=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR20=../src/Utilities/ArrayRead
+SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR22=../src/Utilities/Matrix
+SOURCEDIR23=../src/Utilities/Vector
+SOURCEDIR24=../src/Utilities/Observation
+SOURCEDIR25=../src/Utilities/OutputControl
+SOURCEDIR26=../src/Utilities/Libraries
+SOURCEDIR27=../src/Utilities/Libraries/rcm
+SOURCEDIR28=../src/Utilities/Libraries/sparskit2
+SOURCEDIR29=../src/Utilities/Libraries/sparsekit
+SOURCEDIR30=../src/Utilities/Libraries/blas
+SOURCEDIR31=../src/Utilities/Libraries/daglib
+>>>>>>> 73519cf4e7 (rebuild makefiles)
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -88,36 +121,10 @@ $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
+$(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/LongLineReader.o \
-$(OBJDIR)/DevFeature.o \
-$(OBJDIR)/MemoryList.o \
-$(OBJDIR)/TimeSeriesRecord.o \
-$(OBJDIR)/MathUtil.o \
-$(OBJDIR)/BlockParser.o \
-$(OBJDIR)/MemoryManager.o \
-$(OBJDIR)/TimeSeries.o \
-$(OBJDIR)/ats.o \
-$(OBJDIR)/GeomUtil.o \
-$(OBJDIR)/TimeSeriesLink.o \
-$(OBJDIR)/TimeSeriesFileList.o \
-$(OBJDIR)/tdis.o \
-$(OBJDIR)/HashTable.o \
-$(OBJDIR)/VectorBase.o \
-$(OBJDIR)/Sparse.o \
-$(OBJDIR)/DisvGeom.o \
-$(OBJDIR)/ArrayReaders.o \
-$(OBJDIR)/TimeSeriesManager.o \
-$(OBJDIR)/SmoothingFunctions.o \
-$(OBJDIR)/MemoryManagerExt.o \
-$(OBJDIR)/MatrixBase.o \
-$(OBJDIR)/ListReader.o \
-$(OBJDIR)/Connections.o \
-$(OBJDIR)/InputDefinition.o \
-$(OBJDIR)/TimeArray.o \
-$(OBJDIR)/ObsOutput.o \
-$(OBJDIR)/DiscretizationBase.o \
+$(OBJDIR)/simtdisidm.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1idm.o \
 $(OBJDIR)/gwt1ic1idm.o \
@@ -144,18 +151,46 @@ $(OBJDIR)/gwf3chd8idm.o \
 $(OBJDIR)/gwtgwtidm.o \
 $(OBJDIR)/gwfgwtidm.o \
 $(OBJDIR)/gwfgwfidm.o \
-$(OBJDIR)/TimeArraySeries.o \
-$(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/Observe.o \
+$(OBJDIR)/LongLineReader.o \
+$(OBJDIR)/DevFeature.o \
+$(OBJDIR)/MemoryList.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmGwtDfnSelector.o \
 $(OBJDIR)/IdmGwfDfnSelector.o \
 $(OBJDIR)/IdmExgDfnSelector.o \
+$(OBJDIR)/TimeSeriesRecord.o \
+$(OBJDIR)/MathUtil.o \
+$(OBJDIR)/BlockParser.o \
+$(OBJDIR)/MemoryManager.o \
+$(OBJDIR)/IdmDfnSelector.o \
+$(OBJDIR)/TimeSeries.o \
+$(OBJDIR)/SourceCommon.o \
+$(OBJDIR)/MemoryManagerExt.o \
+$(OBJDIR)/ats.o \
+$(OBJDIR)/GeomUtil.o \
+$(OBJDIR)/TimeSeriesLink.o \
+$(OBJDIR)/TimeSeriesFileList.o \
+$(OBJDIR)/tdis.o \
+$(OBJDIR)/HashTable.o \
+$(OBJDIR)/VectorBase.o \
+$(OBJDIR)/Sparse.o \
+$(OBJDIR)/DisvGeom.o \
+$(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/TimeSeriesManager.o \
+$(OBJDIR)/SmoothingFunctions.o \
+$(OBJDIR)/MatrixBase.o \
+$(OBJDIR)/ListReader.o \
+$(OBJDIR)/Connections.o \
+$(OBJDIR)/TimeArray.o \
+$(OBJDIR)/ObsOutput.o \
+$(OBJDIR)/DiscretizationBase.o \
+$(OBJDIR)/TimeArraySeries.o \
+$(OBJDIR)/ObsOutputList.o \
+$(OBJDIR)/Observe.o \
 $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/BudgetFileReader.o \
-$(OBJDIR)/IdmDfnSelector.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
@@ -164,7 +199,6 @@ $(OBJDIR)/Budget.o \
 $(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/SfrCrossSectionUtils.o \
-$(OBJDIR)/SourceCommon.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/VirtualBase.o \
 $(OBJDIR)/STLVecInt.o \
