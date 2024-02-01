@@ -199,13 +199,15 @@ module GwtDspInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

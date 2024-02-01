@@ -240,13 +240,15 @@ module GwfNamInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'PACKAGES', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

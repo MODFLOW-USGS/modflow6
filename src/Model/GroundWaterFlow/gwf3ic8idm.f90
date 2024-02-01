@@ -66,13 +66,15 @@ module GwfIcInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 
