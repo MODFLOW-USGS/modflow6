@@ -10,6 +10,7 @@ module AsciiInputLoadTypeModule
   use KindModule, only: DP, I4B, LGP
   use InputLoadTypeModule, only: DynamicPkgLoadType
   use BlockParserModule, only: BlockParserType
+  use ModflowInputModule, only: ModflowInputType
 
   implicit none
   private
@@ -20,7 +21,8 @@ module AsciiInputLoadTypeModule
   !<
   type, abstract, extends(DynamicPkgLoadType) :: AsciiDynamicPkgLoadBaseType
   contains
-    procedure(ascii_period_load_if), deferred :: rp
+    procedure(ascii_load_init_if), deferred :: ainit !< ascii source loader init
+    procedure(ascii_period_load_if), deferred :: rp !< ascii source loader read and prepare
   end type AsciiDynamicPkgLoadBaseType
 
   abstract interface
@@ -28,6 +30,19 @@ module AsciiInputLoadTypeModule
       import AsciiDynamicPkgLoadBaseType, BlockParserType
       class(AsciiDynamicPkgLoadBaseType), intent(inout) :: this
       type(BlockParserType), pointer, intent(inout) :: parser !< block parser
+    end subroutine
+    subroutine ascii_load_init_if(this, mf6_input, component_name, &
+                                  component_input_name, input_name, &
+                                  iperblock, parser, iout)
+      import I4B, AsciiDynamicPkgLoadBaseType, BlockParserType, ModflowInputType
+      class(AsciiDynamicPkgLoadBaseType), intent(inout) :: this
+      type(ModflowInputType), intent(in) :: mf6_input !< description of input
+      character(len=*), intent(in) :: component_name !< component name
+      character(len=*), intent(in) :: component_input_name !< component input name, e.g. model name file
+      character(len=*), intent(in) :: input_name !< input name, e.g. package *.chd file
+      integer(I4B), intent(in) :: iperblock !< index of period block on block definition list
+      type(BlockParserType), pointer, intent(inout) :: parser !< block parser
+      integer(I4B), intent(in) :: iout
     end subroutine
   end interface
 
