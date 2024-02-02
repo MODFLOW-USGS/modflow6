@@ -21,10 +21,12 @@ module STLVecIntModule
     procedure, pass(this) :: add_array_unique !< adds elements of array at the end of the vector, if not present yet
     procedure, pass(this) :: at !< random access, unsafe, no bounds checking
     procedure, pass(this) :: at_safe !< random access with bounds checking
+    procedure, pass(this) :: set !< set value at index, no bounds checking
     procedure, pass(this) :: clear !< empties the vector, leaves memory unchanged
     procedure, pass(this) :: shrink_to_fit !< reduces the allocated memory to fit the actual vector size
     procedure, pass(this) :: destroy !< deletes the memory
     procedure, pass(this) :: contains !< true when element already present
+    procedure, pass(this) :: get_index !< return index of first occurrence of value in array
     procedure, pass(this) :: get_values !< returns a copy of the values
     ! private
     procedure, private, pass(this) :: expand
@@ -119,6 +121,15 @@ contains ! module routines
 
   end function at_safe
 
+  subroutine set(this, idx, value)
+    class(STLVecInt), intent(inout) :: this
+    integer(I4B), intent(in) :: idx
+    integer(I4B) :: value
+
+    this%values(idx) = value
+
+  end subroutine set
+
   subroutine clear(this)
     class(STLVecInt), intent(inout) :: this
 
@@ -199,6 +210,25 @@ contains ! module routines
     end do
 
   end function contains
+
+  !> @brief Return index of first occurrence,
+  !< returns -1 when not present
+  function get_index(this, val) result(idx)
+    class(STLVecInt), intent(inout) :: this
+    integer(I4B) :: val
+    integer(I4B) :: idx
+    ! local
+    integer(I4B) :: i
+
+    idx = -1
+    do i = 1, this%size
+      if (this%at(i) == val) then
+        idx = i
+        return
+      end if
+    end do
+
+  end function get_index
 
   function get_values(this) result(values)
     class(STLVecInt), intent(in) :: this

@@ -11,6 +11,7 @@ module MpiRouterModule
   use VirtualExchangeModule, only: VirtualExchangeType
   use VirtualSolutionModule
   use MpiMessageBuilderModule
+  use MpiMessageCacheModule
   use MpiWorldModule
   use mpi
   implicit none
@@ -27,6 +28,7 @@ module MpiRouterModule
     type(VdcPtrType), dimension(:), pointer :: rte_models => null() !< the currently active models to be routed
     type(VdcPtrType), dimension(:), pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
     type(MpiMessageBuilderType) :: message_builder
+    type(MpiMessageCacheType) :: body_snd_cache
     type(MpiWorldType), pointer :: mpi_world => null()
     integer(I4B) :: imon !< the output file unit for the mpi monitor
     logical(LGP) :: enable_monitor !< when true, log diagnostics
@@ -73,8 +75,9 @@ contains
     ! to log or not to log
     this%enable_monitor = .false.
 
-    ! initialize the MPI message builder
+    ! initialize the MPI message builder and cache
     call this%message_builder%init()
+    call this%body_snd_cache%init()
 
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
@@ -303,7 +306,6 @@ contains
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
-      call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
     ! wait for exchange of all headers
@@ -323,8 +325,14 @@ contains
           write (this%imon, '(6x,a,99i6)') "map sizes: ", headers(j, i)%map_sizes
         end do
       end if
+    end do
 
+    ! clean up types
+    do i = 1, this%receivers%size
       call MPI_Type_free(hdr_rcv_t(i), ierr)
+    end do
+    do i = 1, this%senders%size
+      call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
     if (this%enable_monitor) then
@@ -423,9 +431,17 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
       end if
-      call this%message_builder%create_body_snd( &
-        rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
-        rcv_maps(:, i), body_snd_t(i))
+      ! check if cached
+      if (.not. this%body_snd_cache%is_cached(rnk, stage)) then
+        ! no, create and add to cache
+        call this%message_builder%create_body_snd( &
+          rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
+          rcv_maps(:, i), body_snd_t(i))
+        call this%body_snd_cache%cache(rnk, stage, body_snd_t(i))
+      else
+        ! yes, get from cache
+        body_snd_t(i) = this%body_snd_cache%get_cached(rnk, stage)
+      end if
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
@@ -444,9 +460,6 @@ contains
     ! clean up types
     do i = 1, this%senders%size
       call MPI_Type_free(body_rcv_t(i), ierr)
-    end do
-    do i = 1, this%receivers%size
-      call MPI_Type_free(body_snd_t(i), ierr)
     end do
 
     ! done sending, clean up element maps
@@ -543,6 +556,8 @@ contains
 
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this
+
+    call this%body_snd_cache%destroy()
 
     call this%senders%destroy()
     call this%receivers%destroy()

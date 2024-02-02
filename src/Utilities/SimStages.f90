@@ -21,6 +21,7 @@ module SimStagesModule
   integer(I4B), public, parameter :: STG_BFR_EXG_AD = 12 !< before exchange advance (per solution)
   integer(I4B), public, parameter :: STG_BFR_EXG_CF = 13 !< before exchange calculate (per solution)
   integer(I4B), public, parameter :: STG_BFR_EXG_FC = 14 !< before exchange formulate (per solution)
+  integer(I4B), public, parameter :: NR_SIM_STAGES = 14 !< before exchange formulate (per solution)
 
 contains
 

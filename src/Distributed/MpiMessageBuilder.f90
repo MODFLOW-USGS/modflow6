@@ -42,7 +42,6 @@ module MpiMessageBuilderModule
     procedure, private :: create_vdc_snd_map
     procedure, private :: create_vdc_snd_body
     procedure, private :: create_vdc_rcv_body
-    procedure, private :: create_element_map
   end type
 
 contains
@@ -626,33 +625,6 @@ contains
     call items%destroy()
 
   end function create_vdc_snd_body
-
-  !> @brief Temp. function to generate a dummy (complete) map
-  !<
-  function create_element_map(this, rank, vdc, vd) result(el_map)
-    use MemoryManagerModule, only: get_mem_shape, get_mem_rank
-    use ConstantsModule, only: MAXMEMRANK
-    class(MpiMessageBuilderType) :: this
-    integer(I4B) :: rank
-    class(VirtualDataContainerType), pointer :: vdc
-    class(VirtualDataType), pointer :: vd
-    integer(I4B), dimension(:), pointer, contiguous :: el_map
-    ! local
-    integer(I4B), dimension(MAXMEMRANK) :: mem_shp
-    integer(I4B) :: i, nrow, mem_rank
-
-    el_map => null()
-    call get_mem_rank(vd%virtual_mt%name, vd%virtual_mt%path, mem_rank)
-    call get_mem_shape(vd%virtual_mt%name, vd%virtual_mt%path, mem_shp)
-    if (mem_rank > 0) then
-      nrow = mem_shp(mem_rank)
-      allocate (el_map(nrow))
-      do i = 1, nrow
-        el_map(i) = i - 1
-      end do
-    end if
-
-  end function create_element_map
 
   function get_vdc_from_hdr(this, header) result(vdc)
     class(MpiMessageBuilderType) :: this

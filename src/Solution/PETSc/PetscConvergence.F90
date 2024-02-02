@@ -92,10 +92,11 @@ contains
         CHKERRQ(ierr)
         call VecCopy(res, context%res_old, ierr)
         CHKERRQ(ierr)
-        call VecDestroy(res, ierr)
-        CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
+
+      call VecDestroy(res, ierr)
+      CHKERRQ(ierr)
       return
     end if
 
