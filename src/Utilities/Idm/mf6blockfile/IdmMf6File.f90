@@ -1,7 +1,10 @@
 !> @brief This module contains the IdmMf6FileModule
 !!
 !! This module contains high-level routines for loading
-!! MODFLOW 6 ASCII source input.
+!! MODFLOW 6 ASCII source input. This module implements the
+!! loader types that the IdmLoadModule creates and invokes.
+!! It also creates and manages dynamic ASCII input loaders
+!! for all supported types of MODFLOW 6 ASCII dynamic input.
 !!
 !<
 module IdmMf6FileModule
@@ -62,18 +65,12 @@ contains
     type(LoadMf6FileType) :: loader
     integer(I4B) :: inunit
     !
-    ! -- set parser based package loader by file type
-    select case (mf6_input%pkgtype)
-    case default
-      !
-      ! -- open input file
-      inunit = open_mf6file(mf6_input%pkgtype, filename, component_filename, iout)
-      !
-      ! -- allocate and initialize parser
-      allocate (parser)
-      call parser%Initialize(inunit, iout)
-      !
-    end select
+    ! -- open input file
+    inunit = open_mf6file(mf6_input%pkgtype, filename, component_filename, iout)
+    !
+    ! -- allocate and initialize parser
+    allocate (parser)
+    call parser%Initialize(inunit, iout)
     !
     ! -- invoke the selected load routine
     call loader%load(parser, mf6_input, filename, iout)
@@ -327,16 +324,16 @@ contains
     use Mf6FileListInputModule, only: BoundListInputType
     ! -- dummy
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
-    class(BoundListInputType), pointer :: load_bndlist
-    class(BoundGridInputType), pointer :: load_bndgrid
+    class(BoundListInputType), pointer :: bndlist_loader
+    class(BoundGridInputType), pointer :: bndgrid_loader
     !
     ! -- allocate and set loader
     if (this%readasarrays) then
-      allocate (load_bndgrid)
-      this%rp_loader => load_bndgrid
+      allocate (bndgrid_loader)
+      this%rp_loader => bndgrid_loader
     else
-      allocate (load_bndlist)
-      this%rp_loader => load_bndlist
+      allocate (bndlist_loader)
+      this%rp_loader => bndlist_loader
     end if
     !
     ! -- initialize loader

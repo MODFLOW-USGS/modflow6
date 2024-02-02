@@ -21,19 +21,19 @@ module AsciiInputLoadTypeModule
   !<
   type, abstract, extends(DynamicPkgLoadType) :: AsciiDynamicPkgLoadBaseType
   contains
-    procedure(ascii_load_init_if), deferred :: ainit !< ascii source loader init
-    procedure(ascii_period_load_if), deferred :: rp !< ascii source loader read and prepare
+    procedure(load_init_if), deferred :: ainit !< source loader init
+    procedure(period_load_if), deferred :: rp !< source loader read and prepare
   end type AsciiDynamicPkgLoadBaseType
 
   abstract interface
-    subroutine ascii_period_load_if(this, parser)
+    subroutine period_load_if(this, parser)
       import AsciiDynamicPkgLoadBaseType, BlockParserType
       class(AsciiDynamicPkgLoadBaseType), intent(inout) :: this
       type(BlockParserType), pointer, intent(inout) :: parser !< block parser
     end subroutine
-    subroutine ascii_load_init_if(this, mf6_input, component_name, &
-                                  component_input_name, input_name, &
-                                  iperblock, parser, iout)
+    subroutine load_init_if(this, mf6_input, component_name, &
+                            component_input_name, input_name, &
+                            iperblock, parser, iout)
       import I4B, AsciiDynamicPkgLoadBaseType, BlockParserType, ModflowInputType
       class(AsciiDynamicPkgLoadBaseType), intent(inout) :: this
       type(ModflowInputType), intent(in) :: mf6_input !< description of input

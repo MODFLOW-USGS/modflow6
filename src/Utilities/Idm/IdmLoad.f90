@@ -214,7 +214,6 @@ contains
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceCommonModule, only: idm_component_type
     use SourceLoadModule, only: load_modelnam
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask

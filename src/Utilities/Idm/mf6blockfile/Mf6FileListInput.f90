@@ -98,7 +98,7 @@ contains
     ! -- initialize package input context
     call this%bound_ctx%init(mf6_input, this%readasarrays)
     !
-    ! -- load OPTIONS and DIMENSIONS blocks
+    ! -- load blocks after OPTIONS and DIMENSIONS
     do iblk = 1, size(this%mf6_input%block_dfns)
       !
       ! -- log block header via loader or directly here?

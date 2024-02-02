@@ -36,20 +36,20 @@ module LoadMf6FileModule
   private
   public :: LoadMf6FileType
 
-  !> @brief type for
+  !> @brief Static parser based input loader
   !!
   !! This type defines a static input context loader
   !! for traditional mf6 ascii input files.
   !!
   !<
   type :: LoadMf6FileType
-    type(BlockParserType), pointer :: parser
+    type(BlockParserType), pointer :: parser !< ascii block parser
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< model shape
-    type(StructArrayType), pointer :: structarray => null()
+    type(StructArrayType), pointer :: structarray => null() !< structarray for loading list input
     type(ModflowInputType) :: mf6_input !< description of input
-    character(len=LINELENGTH) :: filename
-    logical(LGP) :: ts_active
-    integer(I4B) :: iout
+    character(len=LINELENGTH) :: filename !< name of ascii input file
+    logical(LGP) :: ts_active !< is timeseries active
+    integer(I4B) :: iout !< inunit for list log
   contains
     procedure :: load
     procedure :: init
@@ -68,7 +68,8 @@ contains
 
   !> @brief load all static input blocks
   !!
-  !! invoke this routine to load all static input blocks
+  !! Invoke this routine to load all static input blocks
+  !! in single call.
   !!
   !<
   subroutine load(this, parser, mf6_input, filename, iout)
@@ -146,7 +147,10 @@ contains
 
   !> @brief load a single block
   !!
-  !! assumed in order load of single (next) block
+  !! Assumed in order load of single (next) block. If a
+  !! StructArray object is allocated to load this block
+  !! it persists until this routine (or finalize) is
+  !! called again.
   !!
   !<
   subroutine load_block(this, iblk)
@@ -193,7 +197,7 @@ contains
     return
   end subroutine finalize
 
-  !> @brief post parse block handling
+  !> @brief Post parse block handling
   !!
   !<
   subroutine block_post_process(this, iblk)
@@ -678,7 +682,6 @@ contains
     type(CharacterStringType), dimension(:), pointer, contiguous :: charstr1d
     integer(I4B) :: ilen, isize, idx
     ilen = LINELENGTH
-    write (iout, '(a)') 'IDM load_io_tag which='//trim(which)
     if (which == 'FILEIN') then
       call get_isize(idt%mf6varname, memoryPath, isize)
       if (isize < 0) then
@@ -692,7 +695,6 @@ contains
       end if
       call parser%GetString(cstr, (.not. idt%preserve_case))
       charstr1d(idx) = cstr
-      write (iout, '(a)') 'IDM load_io_tag loaded='//trim(cstr)
     else if (which == 'FILEOUT') then
       call load_string_type(parser, idt, memoryPath, iout)
     end if
