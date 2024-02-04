@@ -94,10 +94,7 @@ contains
       if (this%mf6_input%block_dfns(iblk)%blockname == 'PERIOD') exit
       !
       ! -- load the block
-      call this%parse_block(iblk, .false.)
-      !
-      ! -- post process block
-      call this%block_post_process(iblk)
+      call this%load_block(iblk)
       !
     end do
     !
@@ -155,11 +152,17 @@ contains
   !<
   subroutine load_block(this, iblk)
     ! -- modules
-    use MemoryManagerModule, only: get_isize
+    use StructArrayModule, only: destructStructArray
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
     ! -- local
+    !
+    ! -- reset structarray if it was created for previous block
+    if (associated(this%structarray)) then
+      ! -- destroy the structured array reader
+      call destructStructArray(this%structarray)
+    end if
     !
     ! -- load the block
     call this%parse_block(iblk, .false.)
@@ -183,15 +186,15 @@ contains
     class(LoadMf6FileType) :: this
     ! -- local
     !
-    ! -- close logging block
-    call idm_log_close(this%mf6_input%component_name, &
-                       this%mf6_input%subcomponent_name, this%iout)
-    !
     ! -- cleanup
     if (associated(this%structarray)) then
       ! -- destroy the structured array reader
       call destructStructArray(this%structarray)
     end if
+    !
+    ! -- close logging block
+    call idm_log_close(this%mf6_input%component_name, &
+                       this%mf6_input%subcomponent_name, this%iout)
     !
     ! -- return
     return
@@ -252,7 +255,6 @@ contains
     ! -- modules
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
-    use StructArrayModule, only: destructStructArray
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
@@ -264,12 +266,6 @@ contains
     integer(I4B) :: ierr
     logical(LGP) :: found, required
     type(MemoryType), pointer :: mt
-    !
-    ! -- reset structarray if it was created for previous block
-    if (associated(this%structarray)) then
-      ! -- destroy the structured array reader
-      call destructStructArray(this%structarray)
-    end if
     !
     ! -- disu vertices/cell2d blocks are contingent on NVERT dimension
     if (this%mf6_input%pkgtype == 'DISU6' .and. &

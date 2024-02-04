@@ -44,7 +44,6 @@ module IdmMf6FileModule
     procedure :: init => dynamic_init
     procedure :: df => dynamic_df
     procedure :: ad => dynamic_ad
-    procedure :: set => dynamic_set
     procedure :: rp => dynamic_rp
     procedure :: read_ionper => dynamic_read_ionper
     procedure :: create_loader => dynamic_create_loader
@@ -118,10 +117,6 @@ contains
       ! -- allocate dynamic loader
       allocate (mf6_loader)
       !
-      ! -- set dynamic loader parser
-      call mf6_loader%set(this%mf6_input%pkgtype, this%input_name, &
-                          this%component_input_name, iout)
-      !
       ! -- initialize dynamic loader
       call mf6_loader%init(this%mf6_input, this%component_name, &
                            this%component_input_name, this%input_name, &
@@ -165,6 +160,7 @@ contains
     character(len=*), intent(in) :: input_name
     integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
+    integer(I4B) :: inunit
     !
     ! -- initialize base loader
     call this%DynamicPkgLoadType%init(mf6_input, component_name, &
@@ -180,35 +176,20 @@ contains
     this%iper = 0
     this%ionper = 0
     !
+    ! -- open input file
+    inunit = open_mf6file(mf6_input%pkgtype, input_name, &
+                          component_input_name, iout)
+    !
+    ! -- allocate and initialize parser
+    allocate (this%parser)
+    call this%parser%Initialize(inunit, iout)
+    !
     ! -- allocate and initialize loader
     call this%create_loader()
     !
     ! -- return
     return
   end subroutine dynamic_init
-
-  !> @brief dynamic loader set parser object
-  !<
-  subroutine dynamic_set(this, pkgtype, input_fname, component_input_fname, iout)
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
-    class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
-    character(len=*), intent(in) :: pkgtype
-    character(len=*), intent(in) :: input_fname
-    character(len=*), intent(in) :: component_input_fname
-    integer(I4B), intent(in) :: iout
-    integer(I4B) :: inunit
-    !
-    ! -- open input file
-    inunit = open_mf6file(pkgtype, input_fname, component_input_fname, iout)
-    !
-    ! -- allocate and initialize parser
-    allocate (this%parser)
-    call this%parser%Initialize(inunit, iout)
-    !
-    ! -- return
-    return
-  end subroutine dynamic_set
 
   !> @brief define routine for dynamic loader
   !<
