@@ -75,8 +75,11 @@ def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
 
+    # check top-level meson files
     assert (dist_dir_path / "meson.build").is_file()
     assert (dist_dir_path / "meson.options").is_file()
+
+    # check src subdir
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
     version_file_path = dist_dir_path / "src" / "Utilities" / "version.f90"
@@ -89,6 +92,14 @@ def test_sources(dist_dir_path, releasemode, full):
     assert line
     idevelopmode = 0 if releasemode else 1
     assert f"IDEVELOPMODE = {idevelopmode}" in line
+
+    # check utils subdir
+    assert (dist_dir_path / "utils").is_dir()
+    assert (dist_dir_path / "utils" / "mf5to6").is_dir()
+    assert (dist_dir_path / "utils" / "zonebudget").is_dir()
+    assert (dist_dir_path / "utils" / "mf5to6" / "pymake").is_dir()
+    assert (dist_dir_path / "utils" / "zonebudget" / "pymake").is_dir()
+    assert not (dist_dir_path / "utils" / "idmloader").is_dir()
 
 
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")

@@ -346,7 +346,8 @@ jobs:
           cp modflow6/meson.build "$distname/meson.build"
           cp -r modflow6-examples/examples "$distname"
           cp -r modflow6/src "$distname"
-          cp -r modflow6/utils "$distname"
+          cp -r modflow6/utils/mf5to6 "$distname/utils/mf5to6"
+          cp -r modflow6/utils/zonebudget "$distname/utils/zonebudget"
           
           # create LaTeX file describing the folder structure
           cd modflow6/doc/ReleaseNotes
@@ -533,7 +534,6 @@ jobs:
               -x '*.DS_Store' \
               -x '*libmf6.lib' \
               -x '*idmloader*' \
-              -x '*pymake*' \
               -x '*obj_temp*' \
               -x '*mod_temp*'
           else
@@ -545,7 +545,6 @@ jobs:
               -x '*.DS_Store' \
               -x '*libmf6.lib' \
               -x '*idmloader*' \
-              -x '*pymake*' \
               -x '*obj_temp*' \
               -x '*mod_temp*'
           fi
@@ -569,7 +568,6 @@ jobs:
               $distname/meson.options \
               -xr!libmf6.lib \
               -xr!idmloader \
-              -xr!pymake \
               -xr!obj_temp \
               -xr!mod_temp
           else
@@ -580,7 +578,6 @@ jobs:
               $distname/code.json \
               -xr!libmf6.lib \
               -xr!idmloader \
-              -xr!pymake \
               -xr!obj_temp \
               -xr!mod_temp
           fi

@@ -69,6 +69,7 @@ module GwfGwfConnectionModule
     procedure, private :: setGridExtent
     procedure, private :: validateGwfExchange
     procedure, private :: setFlowToExchange
+    procedure, private :: setFlowToModel
     procedure, private :: setNpfEdgeProps
 
   end type GwfGwfConnectionType
@@ -501,6 +502,8 @@ contains
 
     call this%setFlowToExchange()
 
+    call this%setFlowToModel()
+
     !cdl Could we allow GwfExchange to do this instead, using
     !    simvals?
     ! if needed, we add the edge properties to the model's NPF
@@ -543,13 +546,54 @@ contains
 
   end subroutine setFlowToExchange
 
+  !> @brief Set the flows (flowja from the interface model) to
+  !< to the model, update the budget
+  subroutine setFlowToModel(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: n, m, ipos, iposLoc
+    integer(I4B) :: nLoc, mLoc
+    type(ConnectionsType), pointer :: imCon !< interface model connections
+    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+
+    ! for readability
+    imCon => this%gwfInterfaceModel%dis%con
+    toGlobal => this%ig_builder%idxToGlobal
+
+    do n = 1, this%neq
+      if (.not. toGlobal(n)%v_model == this%owner) then
+        ! only add flows to own model
+        cycle
+      end if
+
+      nLoc = toGlobal(n)%index
+
+      do ipos = imCon%ia(n) + 1, imCon%ia(n + 1) - 1
+        if (imCon%mask(ipos) < 1) cycle ! skip this connection, it's masked so not determined by us
+
+        m = imCon%ja(ipos)
+        mLoc = toGlobal(m)%index
+        if (toGlobal(m)%v_model == this%owner) then
+
+          ! internal, need to set flowja for n-m
+          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
+
+          ! update flowja with correct value
+          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
+
+        end if
+      end do
+    end do
+
+  end subroutine setFlowToModel
+
   !> @brief Set flowja as edge properties in the model,
   !< so it can be used for e.g. specific discharge calculation
   subroutine setNpfEdgeProps(this)
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: n, m, ipos, isym
-    integer(I4B) :: nLoc, mLoc, iposLoc
+    integer(I4B) :: nLoc, mLoc
     integer(I4B) :: ihc
     real(DP) :: rrate
     real(DP) :: area
@@ -622,12 +666,6 @@ contains
           dist = conLen * cl / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area, &
                                                      nx, ny, dist)
-        else
-          ! internal, need to set flowja for n-m
-          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
-
-          ! update flowja with correct value
-          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
         end if
       end do
     end do

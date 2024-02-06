@@ -2273,7 +2273,6 @@ contains
       thck = ttop - bbot
       !
       ! -- If thck<0 print message, set hnew, and ibound
-!      if(thck<0) then
       if (thck <= DZERO) then
         call this%wdmsg(1, ncnvrt, nodcnvrt, acnvrt, ihdcnv, kiter, n)
         hnew(n) = this%hdry

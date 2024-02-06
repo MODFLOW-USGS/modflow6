@@ -350,11 +350,10 @@ contains ! module procedures
           if (this%owner%dis%con%mask(csr_idx) > 0) then
             call this%owner%dis%con%set_mask(csr_idx, 0)
           else
-            ! edge case, someone will be calculating this connection
-            ! so we ignore it here
-            write (*, *) 'Warning: overlap detected, no mask on connection ', &
-              nloc, ':', mloc, ' in model ', trim(this%owner%name), &
-              ' for Exchange ', trim(this%prim_exchange%name)
+            ! edge case, this connection is already being calculated
+            ! so we ignore it here. This can happen in the overlap
+            ! between two different exchanges when a larger stencil
+            ! (XT3D) is applied.
             call conn%set_mask(ipos, 0)
           end if
         end if
