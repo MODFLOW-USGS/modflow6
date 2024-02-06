@@ -543,7 +543,7 @@ module GwtDisuInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -560,7 +560,7 @@ module GwtDisuInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D XC YC NCVERT ICVERT', & ! type
     'NODES', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -603,13 +603,13 @@ module GwtDisuInputModule
     ), &
     InputBlockDefinitionType( &
     'VERTICES', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .true., & ! aggregate
     .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'CELL2D', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .true., & ! aggregate
     .false. & ! block_variable
     ) &
