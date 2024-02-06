@@ -1,12 +1,14 @@
-! -- Module to manage unit numbers.  Allows for multiple unit numbers
-! -- assigned to a single package type, as shown below.
-! --    row(i)   cunit(i) iunit(i)%nval   iunit(i)%iunit  iunit(i)%ipos
-! --         1      BCF6              1           (1000)            (1)
-! --         2       WEL              3 (1001,1003,1005)        (2,5,7)
-! --         3       GHB              1           (1002)            (4)
-! --         4       EVT              2      (1004,1006)         (6,10)
-! --         5       RIV              0               ()             ()
-! --       ...
+!> @brief
+!! -- Module to manage unit numbers.  Allows for multiple unit numbers
+!! -- assigned to a single package type, as shown below.
+!! --    row(i)   cunit(i) iunit(i)%nval   iunit(i)%iunit  iunit(i)%ipos
+!! --         1      BCF6              1           (1000)            (1)
+!! --         2       WEL              3 (1001,1003,1005)        (2,5,7)
+!! --         3       GHB              1           (1002)            (4)
+!! --         4       EVT              2      (1004,1006)         (6,10)
+!! --         5       RIV              0               ()             ()
+!! --       ...
+!<
 
 module IunitModule
 
@@ -35,21 +37,16 @@ module IunitModule
 
 contains
 
+  !> @brief Allocate the cunit and iunit entries of this object, and copy cunit
+  !! into the object
+  !<
   subroutine init(this, niunit, cunit)
-! ******************************************************************************
-! init -- allocate the cunit and iunit entries of this object, and copy
-!   cunit into the object.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(IunitType), intent(inout) :: this
     integer(I4B), intent(in) :: niunit
     character(len=*), dimension(niunit), intent(in) :: cunit
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     allocate (this%cunit(niunit))
     allocate (this%iunit(niunit))
@@ -62,15 +59,11 @@ contains
     return
   end subroutine init
 
+  !> @brief Add an ftyp and unit number
+  !!
+  !! Find the row for the ftyp and store another iunit value.
+  !<
   subroutine addfile(this, ftyp, iunit, ipos, namefilename)
-! ******************************************************************************
-! addfile -- add an ftyp and unit number.  Find the row for the ftyp and
-!            store another iunit value.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(IunitType), intent(inout) :: this
     character(len=*), intent(in) :: ftyp
@@ -81,7 +74,6 @@ contains
     character(len=LINELENGTH) :: errmsg
     integer(I4B), allocatable, dimension(:) :: itemp
     integer(I4B) :: i, irow
-! ------------------------------------------------------------------------------
     !
     ! -- Find the row containing ftyp
     irow = 0
@@ -104,7 +96,7 @@ contains
       this%iunit(irow)%nval = 1
     else
       !
-      ! -- increase size of iunit
+      ! -- Increase size of iunit
       allocate (itemp(this%iunit(irow)%nval))
       itemp(:) = this%iunit(irow)%iunit(:)
       deallocate (this%iunit(irow)%iunit)
@@ -112,13 +104,13 @@ contains
       allocate (this%iunit(irow)%iunit(this%iunit(irow)%nval))
       this%iunit(irow)%iunit(1:this%iunit(irow)%nval - 1) = itemp(:)
       !
-      ! -- increase size of ipos
+      ! -- Increase size of ipos
       itemp(:) = this%iunit(irow)%ipos(:)
       deallocate (this%iunit(irow)%ipos)
       allocate (this%iunit(irow)%ipos(this%iunit(irow)%nval))
       this%iunit(irow)%ipos(1:this%iunit(irow)%nval - 1) = itemp(:)
       !
-      ! -- cleanup temp
+      ! -- Cleanup temp
       deallocate (itemp)
     end if
     this%iunit(irow)%iunit(this%iunit(irow)%nval) = iunit
@@ -128,20 +120,18 @@ contains
     return
   end subroutine
 
+  !> @brief Get the last unit number for type ftyp or return 0 for iunit.
+  !!
+  !! If iremove is 1, then remove this unit number.  Similar to a list.pop().
+  !<
   subroutine getunitnumber(this, ftyp, iunit, iremove)
-! ******************************************************************************
-! Get the last unit number for type ftyp or return 0 for iunit.  If iremove
-! is 1, then remove this unit number.  Similar to a list.pop().
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(IunitType), intent(inout) :: this
     character(len=*), intent(in) :: ftyp
     integer(I4B), intent(inout) :: iunit
     integer(I4B), intent(in) :: iremove
+    ! -- local
     integer(I4B) :: i, irow, nval
-! ------------------------------------------------------------------------------
     !
     ! -- Find the row
     irow = 0
@@ -152,7 +142,7 @@ contains
       end if
     end do
     !
-    ! -- Find the unit number.
+    ! -- Find the unit number
     iunit = 0
     if (irow > 0) then
       nval = this%iunit(irow)%nval
