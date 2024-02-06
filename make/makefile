@@ -333,8 +333,7 @@ $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
 $(OBJDIR)/RectangularGeometry.o \
-$(OBJDIR)/CircularGeometry.o \
-$(OBJDIR)/MpiUnitCache.o
+$(OBJDIR)/CircularGeometry.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)
