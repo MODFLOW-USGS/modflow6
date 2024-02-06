@@ -28,7 +28,7 @@ module MpiRouterModule
     type(VdcPtrType), dimension(:), pointer :: rte_models => null() !< the currently active models to be routed
     type(VdcPtrType), dimension(:), pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
     type(MpiMessageBuilderType) :: message_builder
-    type(MpiMessageCacheType) :: body_snd_cache
+    type(MpiMessageCacheType) :: msg_cache
     type(MpiWorldType), pointer :: mpi_world => null()
     integer(I4B) :: imon !< the output file unit for the mpi monitor
     logical(LGP) :: enable_monitor !< when true, log diagnostics
@@ -40,10 +40,10 @@ module MpiRouterModule
     ! private
     procedure, private :: activate
     procedure, private :: deactivate
-    procedure, private :: mr_update_senders
-    procedure, private :: mr_update_senders_sln
-    procedure, private :: mr_update_receivers
-    procedure, private :: mr_update_receivers_sln
+    procedure, private :: update_senders
+    procedure, private :: update_senders_sln
+    procedure, private :: update_receivers
+    procedure, private :: update_receivers_sln
     procedure, private :: mr_route_active
   end type MpiRouterType
 
@@ -77,7 +77,7 @@ contains
 
     ! initialize the MPI message builder and cache
     call this%message_builder%init()
-    call this%body_snd_cache%init()
+    call this%msg_cache%init()
 
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
@@ -184,7 +184,7 @@ contains
 
     ! route all
     call this%activate(this%all_models, this%all_exchanges)
-    call this%mr_route_active(stage)
+    call this%mr_route_active(0, stage)
     call this%deactivate()
 
     if (this%enable_monitor) then
@@ -209,7 +209,7 @@ contains
 
     ! route for this solution
     call this%activate(virtual_sol%models, virtual_sol%exchanges)
-    call this%mr_route_active(stage)
+    call this%mr_route_active(virtual_sol%solution_id, stage)
     call this%deactivate()
 
     if (this%enable_monitor) then
@@ -219,10 +219,41 @@ contains
   end subroutine mr_route_sln
 
   !> @brief Routes the models and exchanges. This is the
-  !< workhorse routine
-  subroutine mr_route_active(this, stage)
-    class(MpiRouterType) :: this
-    integer(I4B) :: stage
+  !! workhorse routine. The communication at a stage,
+  !! for a unit (a solution or global), is done in a
+  !! sequence of 6 steps (distributed over 3 phases):
+  !!
+  !! "synchronizing headers (VdcHeaderType)"
+  !!
+  !!   step 1 = MPI_HDR_RCV:
+  !!     Receive headers from remote addresses requesting data
+  !!     from virtual data containers (models, exchanges, ...) local to this process
+  !!   step 2 = MPI_HDR_SND:
+  !!     Send headers to remote addresses to indicate for which
+  !!     virtual data containers (models, exchanges, ...) data is requested
+  !!
+  !! "synchronizing maps (VdcReceiverMapsType)"
+  !!
+  !!   step 3 = MPI_MAP_RCV:
+  !!     Based on the received headers, receive element maps (which elements are
+  !!     sent from a contiguous array) for outgoing data
+  !!   step 4 = MPI_MAP_SND:
+  !!     Send element maps to remote addresses to specify incoming data
+  !!
+  !! "synchronizing data (VirtualDataContainerType)"
+  !!
+  !!   step 5 = MPI_BDY_RCV:
+  !!     Receive the data from remote addresses and use the map to have the MPI
+  !!     library place it directly into the correct memory location.
+  !!
+  !!   step 6 = MPI_BDY_SND:
+  !!     Send the requested data, using the received maps from the previous step,
+  !!     to remote addresses.
+  !!
+  subroutine mr_route_active(this, unit, stage)
+    class(MpiRouterType) :: this !< this mpi router
+    integer(I4B) :: unit !< the solution id, or equal to 0 when global
+    integer(I4B) :: stage !< the stage to route
     ! local
     integer(I4B) :: i, j, k
     integer(I4B) :: rnk
@@ -249,8 +280,8 @@ contains
     integer, dimension(:), allocatable :: body_snd_t
 
     ! update adress list
-    call this%mr_update_senders()
-    call this%mr_update_receivers()
+    call this%update_senders()
+    call this%update_receivers()
 
     if (this%enable_monitor) then
       write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
@@ -291,10 +322,14 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "Ireceive header from process: ", rnk
       end if
-      call this%message_builder%create_header_rcv(hdr_rcv_t(i))
+      ! cache
+      hdr_rcv_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_HDR_RCV)
+      if (hdr_rcv_t(i) == NO_CACHED_VALUE) then
+        call this%message_builder%create_header_rcv(hdr_rcv_t(i))
+        call this%msg_cache%put(unit, rnk, stage, MPI_HDR_RCV, hdr_rcv_t(i))
+      end if
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      this%mpi_world%comm, rcv_req(i), ierr)
-      ! don't free mpi datatype, we need the count below
     end do
 
     ! send header for incoming data
@@ -303,7 +338,13 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
       end if
-      call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
+      ! cache
+      hdr_snd_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_HDR_SND)
+      if (hdr_snd_t(i) == NO_CACHED_VALUE) then
+        call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
+        call this%msg_cache%put(unit, rnk, stage, MPI_HDR_SND, hdr_snd_t(i))
+      end if
+
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
     end do
@@ -327,14 +368,6 @@ contains
       end if
     end do
 
-    ! clean up types
-    do i = 1, this%receivers%size
-      call MPI_Type_free(hdr_rcv_t(i), ierr)
-    end do
-    do i = 1, this%senders%size
-      call MPI_Type_free(hdr_snd_t(i), ierr)
-    end do
-
     if (this%enable_monitor) then
       write (this%imon, '(2x,a)') "== communicating maps =="
     end if
@@ -355,7 +388,6 @@ contains
 
       call this%message_builder%create_map_rcv(rcv_maps(:, i), hdr_rcv_cnt(i), &
                                                map_rcv_t(i))
-
       call MPI_Irecv(MPI_BOTTOM, 1, map_rcv_t(i), rnk, stage, &
                      this%mpi_world%comm, rcv_req(i), ierr)
     end do
@@ -366,6 +398,7 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "send map to process: ", rnk
       end if
+
       call this%message_builder%create_map_snd(rnk, stage, map_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, map_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
@@ -413,7 +446,13 @@ contains
         write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
       end if
 
-      call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
+      ! cache
+      body_rcv_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_RCV)
+      if (body_rcv_t(i) == NO_CACHED_VALUE) then
+        call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
+        call this%msg_cache%put(unit, rnk, stage, MPI_BDY_RCV, body_rcv_t(i))
+      end if
+
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
@@ -431,17 +470,16 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
       end if
-      ! check if cached
-      if (.not. this%body_snd_cache%is_cached(rnk, stage)) then
-        ! no, create and add to cache
+
+      ! cache
+      body_snd_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_SND)
+      if (body_snd_t(i) == NO_CACHED_VALUE) then
         call this%message_builder%create_body_snd( &
           rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
           rcv_maps(:, i), body_snd_t(i))
-        call this%body_snd_cache%cache(rnk, stage, body_snd_t(i))
-      else
-        ! yes, get from cache
-        body_snd_t(i) = this%body_snd_cache%get_cached(rnk, stage)
+        call this%msg_cache%put(unit, rnk, stage, MPI_BDY_SND, body_snd_t(i))
       end if
+
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
@@ -456,11 +494,6 @@ contains
 
     ! wait for exchange of all messages
     call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
-
-    ! clean up types
-    do i = 1, this%senders%size
-      call MPI_Type_free(body_rcv_t(i), ierr)
-    end do
 
     ! done sending, clean up element maps
     do i = 1, this%receivers%size
@@ -478,7 +511,7 @@ contains
 
   end subroutine mr_route_active
 
-  subroutine mr_update_senders(this)
+  subroutine update_senders(this)
     class(MpiRouterType) :: this
     ! local
     integer(I4B) :: i
@@ -499,9 +532,9 @@ contains
       end if
     end do
 
-  end subroutine mr_update_senders
+  end subroutine update_senders
 
-  subroutine mr_update_senders_sln(this, virtual_sol)
+  subroutine update_senders_sln(this, virtual_sol)
     class(MpiRouterType) :: this
     type(VirtualSolutionType) :: virtual_sol
     ! local
@@ -523,9 +556,9 @@ contains
       end if
     end do
 
-  end subroutine mr_update_senders_sln
+  end subroutine update_senders_sln
 
-  subroutine mr_update_receivers(this)
+  subroutine update_receivers(this)
     class(MpiRouterType) :: this
     ! local
     integer(I4B) :: i
@@ -537,9 +570,9 @@ contains
       call this%receivers%push_back(this%senders%at(i))
     end do
 
-  end subroutine mr_update_receivers
+  end subroutine update_receivers
 
-  subroutine mr_update_receivers_sln(this, virtual_sol)
+  subroutine update_receivers_sln(this, virtual_sol)
     class(MpiRouterType) :: this
     type(VirtualSolutionType) :: virtual_sol
     ! local
@@ -552,12 +585,12 @@ contains
       call this%receivers%push_back(this%senders%at(i))
     end do
 
-  end subroutine mr_update_receivers_sln
+  end subroutine update_receivers_sln
 
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this
 
-    call this%body_snd_cache%destroy()
+    call this%msg_cache%destroy()
 
     call this%senders%destroy()
     call this%receivers%destroy()

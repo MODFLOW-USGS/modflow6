@@ -1,155 +1,136 @@
 module MpiMessageCacheModule
-  use KindModule, only: I4B, LGP
-  use STLVecIntModule
+  use KindModule, only: I4B
   use SimStagesModule, only: NR_SIM_STAGES
+  use ListModule
+  use STLVecIntModule
+  use MpiUnitCacheModule
   implicit none
   private
 
-  integer(I4B), parameter :: NO_CACHED_VALUE = -1
+  ! the communication steps of routing a simulation stage:
 
+  integer(I4B), public, parameter :: MPI_HDR_RCV = 1 !< receiving headers from ranks
+  integer(I4B), public, parameter :: MPI_HDR_SND = 2 !< sending headers to ranks
+  integer(I4B), public, parameter :: MPI_MAP_RCV = 3 !< receiving requested data maps from ranks
+  integer(I4B), public, parameter :: MPI_MAP_SND = 4 !< sending requested data maps to ranks
+  integer(I4B), public, parameter :: MPI_BDY_RCV = 5 !< receiving data (body) from ranks
+  integer(I4B), public, parameter :: MPI_BDY_SND = 6 !< sending data (body) to ranks
+  integer(I4B), public, parameter :: NR_COMM_STEPS = 6 !< the total number of communication steps in the routing a stage, for a unit
+
+  ! expose this from the unit cache module
+  public :: NO_CACHED_VALUE
+
+  !> @brief Facility to cache the constructed MPI datatypes.
+  !! This will avoid having to construct them over and over
+  !! again for the communication inside the timestep loop.
+  !! This class deals with separate caches for different
+  !! units (solutions mostly) and for different parts
+  !< (elements) of the message.
   type, public :: MpiMessageCacheType
-    type(STLVecInt) :: cached_ranks
-    type(STLVecInt) :: cached_messages
+    type(STLVecInt) :: cached_ids !< a vector with ids for the cached units (e.g. solution ids or 0 for global)
+    type(ListType) :: unit_caches !< a cache list per communication step in routing a stage,
+    !< with the list containing a cache per unit
   contains
-    procedure :: init => mc_init
-    procedure :: is_cached => mc_is_cached
-    procedure :: cache => mc_cache
-    procedure :: get_cached => mc_get_cached
-    procedure :: destroy => mc_destroy
-    ! private
-    procedure, private :: is_rank_cached
-    procedure, private :: is_stage_cached
-    procedure, private :: add_rank_cache
-    procedure, private :: get_rank_index
-    procedure, private :: get_msg_index
+    procedure :: init => mmc_init
+    procedure :: get => mmc_get
+    procedure :: put => mmc_put
+    procedure :: destroy => mmc_destroy
   end type MpiMessageCacheType
 
 contains
 
-  subroutine mc_init(this)
-    class(MpiMessageCacheType) :: this
+  !< @brief Initialize the MPI type cache system.
+  !<
+  subroutine mmc_init(this)
+    class(MpiMessageCacheType) :: this !< the message cache
 
-    call this%cached_ranks%init()
-    call this%cached_messages%init()
+    call this%cached_ids%init()
 
-  end subroutine mc_init
+  end subroutine mmc_init
 
-  function mc_is_cached(this, rank, stage) result(in_cache)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    logical(LGP) :: in_cache
+  !< @brief Get the cached mpi datatype for the given
+  !! unit, rank, stage, and message element. Returns
+  !< NO_CACHED_VALUE when not in cache.
+  function mmc_get(this, unit, rank, stage, step) result(mpi_type)
+    class(MpiMessageCacheType) :: this !< the message cache
+    integer(I4B) :: unit !< the unit (e.g. solution or global)
+    integer(I4B) :: rank !< the rank of the MPI process to communicate with
+    integer(I4B) :: stage !< the simulation stage at which the message is sent
+    integer(I4B) :: step !< the communication step as an integer between 1 and NR_COMM_STEPS (see above for predefined values)
+    integer :: mpi_type !< the resulting mpi datatype
     ! local
-    integer(I4B) :: msg_index
+    integer(I4B) :: unit_idx
+    class(*), pointer :: obj_ptr
 
-    in_cache = .false.
-    msg_index = this%get_msg_index(rank, stage)
-    if (msg_index > 0) then
-      in_cache = (this%cached_messages%at(msg_index) /= NO_CACHED_VALUE)
+    mpi_type = NO_CACHED_VALUE
+
+    unit_idx = this%cached_ids%get_index(unit)
+    if (unit_idx == -1) return ! not cached
+
+    obj_ptr => this%unit_caches%GetItem(unit_idx)
+    select type (obj_ptr)
+    class is (MpiUnitCacheType)
+      mpi_type = obj_ptr%get_cached(rank, stage, step)
+    end select
+
+  end function mmc_get
+
+  !> @brief Put the mpi datatype for this particular unit,
+  !! rank, and stage in cache. The datatype should be
+  !< committed to the type database externally.
+  subroutine mmc_put(this, unit, rank, stage, step, mpi_type)
+    class(MpiMessageCacheType) :: this !< the message cache
+    integer(I4B) :: unit !< the unit (e.g. solution or global)
+    integer(I4B) :: rank !< the rank of the MPI process to communicate with
+    integer(I4B) :: stage !< the simulation stage at which the message is sent
+    integer(I4B) :: step !< the communication step as an integer between 1 and NR_COMM_STEPS (see above for predefined values)
+    integer :: mpi_type !< the mpi datatype to cache
+    ! local
+    integer(I4B) :: unit_idx
+    type(MpiUnitCacheType), pointer :: new_cache
+    class(*), pointer :: obj_ptr
+
+    unit_idx = this%cached_ids%get_index(unit)
+    if (unit_idx == -1) then
+      ! add to vector with cached unit ids
+      call this%cached_ids%push_back(unit)
+      ! create and add unit cache
+      allocate (new_cache)
+      call new_cache%init(NR_SIM_STAGES, NR_COMM_STEPS)
+      obj_ptr => new_cache
+      call this%unit_caches%Add(obj_ptr)
+      unit_idx = this%cached_ids%size
     end if
 
-  end function mc_is_cached
+    ! get the cache for this unit and communication step
+    obj_ptr => this%unit_caches%GetItem(unit_idx)
+    select type (obj_ptr)
+    class is (MpiUnitCacheType)
+      call obj_ptr%cache(rank, stage, step, mpi_type)
+    end select
 
-  subroutine mc_cache(this, rank, stage, mpi_type)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    integer :: mpi_type
-    ! local
-    integer(I4B) :: msg_idx
+  end subroutine mmc_put
 
-    ! add if rank not present in cache yet
-    if (.not. this%is_rank_cached(rank)) then
-      call this%add_rank_cache(rank)
-    end if
-
-    ! rank has been added to cache, now set
-    ! mpi datatype for this stage's message:
-    msg_idx = this%get_msg_index(rank, stage)
-    call this%cached_messages%set(msg_idx, mpi_type)
-
-  end subroutine mc_cache
-
-  function mc_get_cached(this, rank, stage) result(mpi_type)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    integer :: mpi_type
-    ! local
-    integer(I4B) :: msg_idx
-
-    msg_idx = this%get_msg_index(rank, stage)
-    mpi_type = this%cached_messages%at(msg_idx)
-
-  end function mc_get_cached
-
-  function is_rank_cached(this, rank) result(in_cache)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    logical(LGP) :: in_cache
-
-    in_cache = this%cached_ranks%contains(rank)
-
-  end function is_rank_cached
-
-  function is_stage_cached(this, rank, stage) result(in_cache)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    logical(LGP) :: in_cache
-
-    in_cache = .false.
-
-  end function is_stage_cached
-
-  subroutine add_rank_cache(this, rank)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
+  !< @brief Destroy the MPI type cache system.
+  !<
+  subroutine mmc_destroy(this)
+    class(MpiMessageCacheType) :: this !< the message cache
     ! local
     integer(I4B) :: i
+    class(*), pointer :: obj_ptr
 
-    call this%cached_ranks%push_back(rank)
-    do i = 1, NR_SIM_STAGES
-      call this%cached_messages%push_back(NO_CACHED_VALUE)
+    ! clear caches
+    do i = 1, this%cached_ids%size
+      obj_ptr => this%unit_caches%GetItem(i)
+      select type (obj_ptr)
+      class is (MpiUnitCacheType)
+        call obj_ptr%destroy()
+      end select
     end do
+    call this%unit_caches%Clear(destroy=.true.)
 
-  end subroutine add_rank_cache
+    call this%cached_ids%destroy()
 
-  !> @Brief returns -1 when not present
-  !<
-  function get_rank_index(this, rank) result(rank_index)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: rank_index
-
-    rank_index = this%cached_ranks%get_index(rank)
-
-  end function get_rank_index
-
-  !> @Brief returns -1 when not present
-  !<
-  function get_msg_index(this, rank, stage) result(msg_index)
-    class(MpiMessageCacheType) :: this
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    integer(I4B) :: msg_index
-    ! local
-    integer(I4B) :: rank_idx
-
-    msg_index = -1
-    rank_idx = this%get_rank_index(rank)
-    if (rank_idx < 1) return
-
-    msg_index = (rank_idx - 1) * NR_SIM_STAGES + stage
-
-  end function get_msg_index
-
-  subroutine mc_destroy(this)
-    class(MpiMessageCacheType) :: this
-
-    call this%cached_ranks%destroy()
-    call this%cached_messages%destroy()
-
-  end subroutine mc_destroy
+  end subroutine mmc_destroy
 
 end module

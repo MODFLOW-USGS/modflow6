@@ -26,7 +26,7 @@ module STLVecIntModule
     procedure, pass(this) :: shrink_to_fit !< reduces the allocated memory to fit the actual vector size
     procedure, pass(this) :: destroy !< deletes the memory
     procedure, pass(this) :: contains !< true when element already present
-    procedure, pass(this) :: get_index !< return index of first occurrence of value in array
+    procedure, pass(this) :: get_index !< return index of first occurrence of value in array, -1 when not present
     procedure, pass(this) :: get_values !< returns a copy of the values
     ! private
     procedure, private, pass(this) :: expand

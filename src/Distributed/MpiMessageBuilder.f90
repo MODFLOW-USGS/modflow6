@@ -113,7 +113,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: hdrs_snd_type
+    integer, intent(out) :: hdrs_snd_type
     ! local
     integer(I4B) :: i, offset, nr_types
     class(VirtualDataContainerType), pointer :: vdc
@@ -185,7 +185,7 @@ contains
 
   subroutine create_header_rcv(this, hdr_rcv_type)
     class(MpiMessageBuilderType) :: this
-    integer :: hdr_rcv_type
+    integer, intent(out) :: hdr_rcv_type
     ! local
     integer :: ierr
 
@@ -202,7 +202,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: map_snd_type
+    integer, intent(out) :: map_snd_type
     ! local
     integer(I4B) :: i, offset, nr_types
     class(VirtualDataContainerType), pointer :: vdc
@@ -279,7 +279,7 @@ contains
     class(MpiMessageBuilderType) :: this
     type(VdcReceiverMapsType), dimension(:) :: rcv_map
     integer(I4B) :: nr_headers
-    integer :: map_rcv_type
+    integer, intent(out) :: map_rcv_type
     ! local
     integer(I4B) :: i, j, nr_elems, type_cnt
     integer :: ierr, max_nr_maps
@@ -322,7 +322,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: body_rcv_type
+    integer, intent(out) :: body_rcv_type
     ! local
     integer(I4B) :: i, nr_types, offset
     class(VirtualDataContainerType), pointer :: vdc
@@ -399,7 +399,7 @@ contains
     integer(I4B) :: stage
     type(VdcHeaderType), dimension(:) :: headers
     type(VdcReceiverMapsType), dimension(:) :: maps
-    integer :: body_snd_type
+    integer, intent(out) :: body_snd_type
     ! local
     integer(I4B) :: i, nr_headers
     class(VirtualDataContainerType), pointer :: vdc
