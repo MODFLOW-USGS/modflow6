@@ -39,13 +39,12 @@
 		\item This release contains a fix for a longstanding issue related to the use of AUXMULTNAME and time series.  Previous release notes included the following description of a known issue: \textit{``The AUXMULTNAME option can be used to scale input values, such as riverbed conductance, using values in an auxiliary column.  When this AUXMULTNAME option is used, the multiplier value in the AUXMULTNAME column should not be represented with a time series unless the value to scale is also represented with a time series.''}  With this release, the Input Data Processor (IDP) is now used to read stress package input files, and the limitation with AUXMULTNAME and time series no longer applies.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-		\item Added functionality to support zero values for each grid dimension when specifying the CELLID for SFR reaches that are not connected to an underlying groundwater grid cell. For example, for a DIS grid a CELLID of 0 0 0 should be specified for unconnected reaches. Warning messages will be issued if NONE is specified for unconnected reaches. Specifying a CELLID of NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
-		\item Added functionality to support specification of a DNODATA (3.0E+30) BEDLEAK value for LAK package connections to identify lake-GWF connections where conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent. Warning messages will be issued if NONE is specified for LAK package connections. Specifying a BEDLEAK value equal to NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
+		\item Added functionality to support zero values for each grid dimension when specifying the CELLID for SFR reaches that are not connected to an underlying groundwater grid cell. For example, for a DIS grid a CELLID of 0 0 0 should be specified for reaches with no connection to a groundwater cell. Warning messages will be issued if NONE is specified for the CELLID of an unconnected reach. Specifying a CELLID of NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
+		\item Added functionality to support specification of a DNODATA (3.0E+30) BEDLEAK value for LAK package connections.  This DNODATA value is used to identify lake-GWF connections where conductance is solely a function of aquifer properties in the connected GWF cell.  In this case, the lakebed sediments are assumed to be absent and all resistance to flow is assumed to be within the GWF cell. Warning messages are now issued if NONE is specified for LAK package connections. Specifying a BEDLEAK value equal to NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
 		\item SFR diversion would not be updated if the outflow of its upstream reach is zero. If diversion was not zero in the previous stress period, it would report mass balance error in the SFR budget. This bug was fixed by always updating the diversion.
 	%	\item xxx
 	\end{itemize}
@@ -59,7 +58,7 @@
 
 	\underline{EXCHANGES}
 	\begin{itemize}
-		\item A model budget error would occur when a constant-head cell in one model had a direct connection to an active cell in another model.  For the model budget to be calculated correctly a new term called ``FLOW-JA-FACE-CHD'' was added to the GWF model budget.  This term is only included in the table when the GWF Model is connected to another GWF Model using a GWF-GWF Exchange.  
+		\item A model budget error would occur when a constant-head (CHD) cell in one model had a direct connection to an active cell in another model.  For the model budget to be calculated correctly a new term called ``FLOW-JA-FACE-CHD'' was added to the GWF model budget.  This term is only included in the budget table when the GWF Model is connected to another GWF Model using a GWF-GWF Exchange.  Additionally, the CHD budget calculation for a very specific (and rare) configuration was also incorrect. The incorrect budget calculation occurred when the following conditions were met: (1) a GWF model was connected to another GWF model with a GWF-GWF Exchange; (2) the model as well as the Exchange had the XT3D option enabled, and (3) the model was configured with a CHD cell that is either an Exchange cell, i.e. a cell that is part of the EXCHANGEDATA block, or a cell directly connected to such an Exchange cell.  The size of the error depends on the degree of anisotropy around the particular CHD cell and shows up as a discrepancy in the volume budget table reported in the GWF list file. The program has been updated with the correct budget calculation.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}

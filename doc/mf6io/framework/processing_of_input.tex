@@ -1,58 +1,59 @@
 An effort is underway to process program input early in program runtime, before the simulation is created, in a general way that is not dependent on any given component.  This capability is called the \mf Input Data Processor (IDP).  Components that have been updated to use IDP no longer directly read or process file inputs but instead access input data from internally managed memory locations. 
 
-\subsection{Supported components}
+\subsection{Supported Components}
 
-A specific set of \mf components has been updated in the current version to use the Input Data Processor, as shown in Table~\ref{table:idmsupported}.  Two integration steps have been taken for each file type listed in the table.  First, IDP has been updated to support the reading and loading of variable input data for the component.  File types listed in the table, each previously read and processed by the component, are now processed by IDP.  Second, the component itself has been refactored to retrieve input from managed memory locations in a predictable way.  Components and associated file types shown in table~\ref{table:idmsupported} are described in more detail in later sections of this document.
+A specific set of \mf components has been updated in the current version to use the IDP routines, as shown in Table~\ref{table:idmsupported}.  Two integration steps have been taken for each file type listed in the table.  First, IDP has been updated to support the reading and loading of variable input data for the component.  File types listed in the table, each previously read and processed by the component, are now processed by IDP.  Second, the component itself has been refactored to retrieve input from managed memory locations in a predictable way.  Components and associated file types shown in table~\ref{table:idmsupported} are described in more detail in later sections of this document.
 
 \begin{table}[H]
-\caption{IDP integrated components}
+\caption{Components and subcomponents that are read using Input Data Processor (IDP) routines}
 \small
 \begin{center}
-\begin{tabular*}{\columnwidth}{l l l l}
+%\begin{tabular*}{\columnwidth}{l l}
+\begin{longtable}{p{6cm} p{4cm}}
 \hline
 \hline
-\textbf{Component Type} & \textbf{Subcomponent Type} & \textbf{Component} & \textbf{File Type} \\
+\textbf{Component / Subcomponent} & \textbf{File Type} \\
 \hline
-SIM & NAM & SIM/NAM & mfsim.nam \\
-GWF & NAM & GWF/NAM & GWF name file \\
-GWT & NAM & GWT/NAM & GWT name file \\
-GWF & CHD & GWF/CHD & CHD6 \\
-GWF & DIS & GWF/DIS & DIS6 \\
-GWF & DISU & GWF/DISU & DISU6 \\
-GWF & DISV & GWF/DISV & DISV6 \\
-GWF & DRN & GWF/DRN & DRN6 \\
-GWF & EVT & GWF/EVT & EVT6 \\
-GWF & EVTA & GWF/EVTA & EVT6 \\
-GWF & GHB & GWF/GHB & GHB6 \\
-GWF & IC & GWF/IC & IC6 \\
-GWF & NPF & GWF/NPF & NPF6 \\
-GWF & RCH & GWF/RCH & RCH6 \\
-GWF & RCHA & GWF/RCHA & RCH6 \\
-GWF & RIV & GWF/RIV & RIV6 \\
-GWF & WEL & GWF/WEL & WEL6 \\
-GWT & DIS & GWT/DIS & DIS6 \\
-GWT & DISU & GWT/DISU & DISU6 \\
-GWT & DISV & GWT/DISV & DISV6 \\
-GWT & CNC & GWT/CNC & CNC6 \\
-GWT & DSP & GWT/DSP & DSP6 \\
-GWT & IC & GWT/IC & IC6 \\
-EXG & GWFGWF & EXG/GWFGWF & GWF6-GWF6 \\
-EXG & GWFGWT & EXG/GWFGWT & GWF6-GWT6 \\
-EXG & GWTGWT & EXG/GWTGWT & GWT6-GWT6 \\
+SIM/NAM & mfsim.nam \\
+GWF/NAM & GWF name file \\
+GWT/NAM & GWT name file \\
+GWF/CHD & CHD6 \\
+GWF/DIS & DIS6 \\
+GWF/DISU & DISU6 \\
+GWF/DISV & DISV6 \\
+GWF/DRN & DRN6 \\
+GWF/EVT & EVT6 \\
+GWF/EVTA & EVT6 \\
+GWF/GHB & GHB6 \\
+GWF/IC & IC6 \\
+GWF/NPF & NPF6 \\
+GWF/RCH & RCH6 \\
+GWF/RCHA & RCH6 \\
+GWF/RIV & RIV6 \\
+GWF/WEL & WEL6 \\
+GWT/DIS & DIS6 \\
+GWT/DISU & DISU6 \\
+GWT/DISV & DISV6 \\
+GWT/CNC & CNC6 \\
+GWT/DSP & DSP6 \\
+GWT/IC & IC6 \\
+EXG/GWFGWF & GWF6-GWF6 \\
+EXG/GWFGWT & GWF6-GWT6 \\
+EXG/GWTGWT & GWT6-GWT6 \\
 \hline
-\end{tabular*}
+\end{longtable}
 \label{table:idmsupported}
 \end{center}
 \normalsize
 \end{table}
 
-\subsection{Scope of change}
+\subsection{Scope of Change}
 
 The Input Data Processor introduces transparent changes that are beyond the scope of this document.  Input logging differences, however, are readily apparent when comparing to earlier versions of \mf.  These differences are primarily related to timing as input files processed by IDP are read before the simulation has been created.  Logging appears in the simulation log (mfsim.lst) in part because simulation models and their associated listing files do not exist at the time when input is read.  In addition, input logging reflects only what was read and loaded to memory as further processing and use is deferred to the simulation components that the input is intended for.  Summaries of memory managed variables, including input data variables loaded by IDP, are possible to view in the simulation listing files with a Simulation Name File option described later. 
 
-\subsection{Example logging blocks}
+\subsection{Example of Logging}
 
-Below is example simulation logging (mfsim.lst) for two model package input files read and loaded by the Input Data Processor.  The first logging block results from processing a DIS6 input file and the second logging block results from processing an NPF6 input file.  Variable names in the blocks are described in later sections of this document.
+Below is an example of simulation logging (to the mfsim.lst output file) for two model package input files read and loaded by IDP routines.  The first logging block results from processing a DIS6 input file and the second logging block results from processing an NPF6 input file.  Variable names in the blocks are described in later sections of this document.
 
 \small
 \begin{lstlisting}[style=modeloutput]
