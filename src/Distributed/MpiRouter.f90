@@ -44,7 +44,10 @@ module MpiRouterModule
     procedure, private :: update_senders_sln
     procedure, private :: update_receivers
     procedure, private :: update_receivers_sln
-    procedure, private :: mr_route_active
+    procedure, private :: route_active
+    procedure, private :: is_cached
+    procedure, private :: compose_messages
+    procedure, private :: load_messages
   end type MpiRouterType
 
 contains
@@ -184,7 +187,7 @@ contains
 
     ! route all
     call this%activate(this%all_models, this%all_exchanges)
-    call this%mr_route_active(0, stage)
+    call this%route_active(0, stage)
     call this%deactivate()
 
     if (this%enable_monitor) then
@@ -209,7 +212,7 @@ contains
 
     ! route for this solution
     call this%activate(virtual_sol%models, virtual_sol%exchanges)
-    call this%mr_route_active(virtual_sol%solution_id, stage)
+    call this%route_active(virtual_sol%solution_id, stage)
     call this%deactivate()
 
     if (this%enable_monitor) then
@@ -218,46 +221,150 @@ contains
 
   end subroutine mr_route_sln
 
-  !> @brief Routes the models and exchanges. This is the
-  !! workhorse routine. The communication at a stage,
-  !! for a unit (a solution or global), is done in a
-  !! sequence of 6 steps (distributed over 3 phases):
-  !!
-  !! "synchronizing headers (VdcHeaderType)"
-  !!
-  !!   step 1 = MPI_HDR_RCV:
-  !!     Receive headers from remote addresses requesting data
-  !!     from virtual data containers (models, exchanges, ...) local to this process
-  !!   step 2 = MPI_HDR_SND:
-  !!     Send headers to remote addresses to indicate for which
-  !!     virtual data containers (models, exchanges, ...) data is requested
-  !!
-  !! "synchronizing maps (VdcReceiverMapsType)"
-  !!
-  !!   step 3 = MPI_MAP_RCV:
-  !!     Based on the received headers, receive element maps (which elements are
-  !!     sent from a contiguous array) for outgoing data
-  !!   step 4 = MPI_MAP_SND:
-  !!     Send element maps to remote addresses to specify incoming data
-  !!
-  !! "synchronizing data (VirtualDataContainerType)"
-  !!
-  !!   step 5 = MPI_BDY_RCV:
-  !!     Receive the data from remote addresses and use the map to have the MPI
-  !!     library place it directly into the correct memory location.
-  !!
-  !!   step 6 = MPI_BDY_SND:
-  !!     Send the requested data, using the received maps from the previous step,
-  !!     to remote addresses.
-  !!
-  subroutine mr_route_active(this, unit, stage)
+  !> @brief Routes the models and exchanges over MPI,
+  !! either constructing the message bodies in a sequence
+  !! of communication steps, or by loading from cache
+  !< for efficiency.
+  subroutine route_active(this, unit, stage)
     class(MpiRouterType) :: this !< this mpi router
     integer(I4B) :: unit !< the solution id, or equal to 0 when global
     integer(I4B) :: stage !< the stage to route
     ! local
-    integer(I4B) :: i, j, k
+    integer(I4B) :: i
     integer(I4B) :: rnk
     integer :: ierr, msg_size
+    logical(LGP) :: from_cache
+    ! mpi handles
+    integer, dimension(:), allocatable :: rcv_req
+    integer, dimension(:), allocatable :: snd_req
+    integer, dimension(:, :), allocatable :: rcv_stat
+    integer, dimension(:, :), allocatable :: snd_stat
+
+    ! message body
+    integer, dimension(:), allocatable :: body_rcv_t
+    integer, dimension(:), allocatable :: body_snd_t
+
+    ! update adress list
+    call this%update_senders()
+    call this%update_receivers()
+
+    ! allocate body data
+    allocate (body_rcv_t(this%senders%size))
+    allocate (body_snd_t(this%receivers%size))
+
+    ! allocate handles
+    allocate (rcv_req(this%receivers%size))
+    allocate (snd_req(this%senders%size))
+    allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
+    allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
+        this%senders%get_values()
+      write (this%imon, '(2x,a,*(i3))') "process ids receiving data: ", &
+        this%receivers%get_values()
+    end if
+
+    ! from cache or build
+    from_cache = this%is_cached(unit, stage)
+    if (.not. from_cache) then
+      call this%compose_messages(unit, stage, body_snd_t, body_rcv_t)
+    else
+      call this%load_messages(unit, stage, body_snd_t, body_rcv_t)
+    end if
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating bodies =="
+    end if
+
+    ! recv bodies
+    do i = 1, this%senders%size
+      rnk = this%senders%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+      end if
+
+      call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
+      if (msg_size > 0) then
+        call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
+                       this%mpi_world%comm, rcv_req(i), ierr)
+      end if
+
+      if (this%enable_monitor) then
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
+      end if
+    end do
+
+    ! send bodies
+    do i = 1, this%receivers%size
+      rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+      end if
+
+      call MPI_Type_size(body_snd_t(i), msg_size, ierr)
+      if (msg_size > 0) then
+        call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
+                       this%mpi_world%comm, snd_req(i), ierr)
+      end if
+
+      if (this%enable_monitor) then
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
+      end if
+      call flush (this%imon)
+    end do
+
+    ! wait for exchange of all messages
+    call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
+
+    deallocate (rcv_req, snd_req, rcv_stat, snd_stat)
+    deallocate (body_rcv_t, body_snd_t)
+
+  end subroutine route_active
+
+  !> @brief Constructs the message bodies' MPI datatypes.
+  !!
+  !! Constructs the message bodies' MPI datatypes for a
+  !! unit (a solution) and a given stage. This is done in
+  !! a sequence of 6 steps (distributed over 3 phases):
+  !!
+  !! == synchronizing headers (VdcHeaderType) ==
+  !!
+  !!   step 1:
+  !!     Receive headers from remote addresses requesting data
+  !!     from virtual data containers (models, exchanges, ...) local to this process
+  !!   step 2:
+  !!     Send headers to remote addresses to indicate for which
+  !!     virtual data containers (models, exchanges, ...) data is requested
+  !!
+  !! == synchronizing maps (VdcReceiverMapsType) ==
+  !!
+  !!   step 3:
+  !!     Based on the received headers, receive element maps (which elements are
+  !!     to be sent from a contiguous array) for outgoing data
+  !!   step 4:
+  !!     Send element maps to remote addresses to specify incoming data
+  !!
+  !! == construct message body data types (VirtualDataContainerType) ==
+  !!
+  !!   step 5:
+  !!     Construct the message receive body based on the virtual
+  !!     data items in the virtual data containers, and cache
+  !!
+  !!   step 6:
+  !!     Construct the message send body, based on received header data and
+  !!     and maps, from the virtual data containers, and cache
+  !<
+  subroutine compose_messages(this, unit, stage, body_snd_t, body_rcv_t)
+    class(MpiRouterType) :: this
+    integer(I4B) :: unit
+    integer(I4B) :: stage
+    integer, dimension(:), allocatable :: body_snd_t
+    integer, dimension(:), allocatable :: body_rcv_t
+    ! local
+    integer(I4B) :: i, j, k
+    integer(I4B) :: rnk
+    integer :: ierr
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
@@ -269,26 +376,10 @@ contains
     integer, dimension(:), allocatable :: hdr_rcv_t
     integer, dimension(:), allocatable :: hdr_snd_t
     integer, dimension(:), allocatable :: hdr_rcv_cnt
-
     ! maps
     type(VdcReceiverMapsType), dimension(:, :), allocatable :: rcv_maps
     integer, dimension(:), allocatable :: map_rcv_t
     integer, dimension(:), allocatable :: map_snd_t
-
-    ! message body
-    integer, dimension(:), allocatable :: body_rcv_t
-    integer, dimension(:), allocatable :: body_snd_t
-
-    ! update adress list
-    call this%update_senders()
-    call this%update_receivers()
-
-    if (this%enable_monitor) then
-      write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
-        this%senders%get_values()
-      write (this%imon, '(2x,a,*(i3))') "process ids receiving data: ", &
-        this%receivers%get_values()
-    end if
 
     ! allocate handles
     allocate (rcv_req(this%receivers%size))
@@ -308,10 +399,6 @@ contains
     allocate (map_rcv_t(this%receivers%size))
     allocate (rcv_maps(max_headers, this%receivers%size)) ! for every header, we potentially need the maps
 
-    ! allocate body data
-    allocate (body_rcv_t(this%senders%size))
-    allocate (body_snd_t(this%receivers%size))
-
     if (this%enable_monitor) then
       write (this%imon, '(2x,a)') "== communicating headers =="
     end if
@@ -322,12 +409,7 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "Ireceive header from process: ", rnk
       end if
-      ! cache
-      hdr_rcv_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_HDR_RCV)
-      if (hdr_rcv_t(i) == NO_CACHED_VALUE) then
-        call this%message_builder%create_header_rcv(hdr_rcv_t(i))
-        call this%msg_cache%put(unit, rnk, stage, MPI_HDR_RCV, hdr_rcv_t(i))
-      end if
+      call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      this%mpi_world%comm, rcv_req(i), ierr)
     end do
@@ -338,13 +420,7 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
       end if
-      ! cache
-      hdr_snd_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_HDR_SND)
-      if (hdr_snd_t(i) == NO_CACHED_VALUE) then
-        call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
-        call this%msg_cache%put(unit, rnk, stage, MPI_HDR_SND, hdr_snd_t(i))
-      end if
-
+      call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
     end do
@@ -366,6 +442,14 @@ contains
           write (this%imon, '(6x,a,99i6)') "map sizes: ", headers(j, i)%map_sizes
         end do
       end if
+    end do
+
+    ! clean up types
+    do i = 1, this%receivers%size
+      call MPI_Type_free(hdr_rcv_t(i), ierr)
+    end do
+    do i = 1, this%senders%size
+      call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
     if (this%enable_monitor) then
@@ -436,66 +520,34 @@ contains
     end do
 
     if (this%enable_monitor) then
-      write (this%imon, '(2x,a)') "== communicating bodies =="
+      write (this%imon, '(2x,a)') "== composing message bodies =="
     end if
 
-    ! recv bodies
+    ! construct recv bodies and cache
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       if (this%enable_monitor) then
-        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+        write (this%imon, '(4x,a,i0)') "build recv body for process: ", rnk
       end if
 
-      ! cache
-      body_rcv_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_RCV)
-      if (body_rcv_t(i) == NO_CACHED_VALUE) then
-        call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
-        call this%msg_cache%put(unit, rnk, stage, MPI_BDY_RCV, body_rcv_t(i))
-      end if
-
-      call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
-      if (msg_size > 0) then
-        call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
-                       this%mpi_world%comm, rcv_req(i), ierr)
-      end if
-
-      if (this%enable_monitor) then
-        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-      end if
+      call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
+      call this%msg_cache%put(unit, rnk, stage, MPI_BDY_RCV, body_rcv_t(i))
     end do
 
-    ! send bodies
+    ! construct send bodies and cache
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
       if (this%enable_monitor) then
-        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+        write (this%imon, '(4x,a,i0)') "build send body for process: ", rnk
       end if
 
-      ! cache
-      body_snd_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_SND)
-      if (body_snd_t(i) == NO_CACHED_VALUE) then
-        call this%message_builder%create_body_snd( &
-          rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
-          rcv_maps(:, i), body_snd_t(i))
-        call this%msg_cache%put(unit, rnk, stage, MPI_BDY_SND, body_snd_t(i))
-      end if
-
-      call MPI_Type_size(body_snd_t(i), msg_size, ierr)
-      if (msg_size > 0) then
-        call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
-                       this%mpi_world%comm, snd_req(i), ierr)
-      end if
-
-      if (this%enable_monitor) then
-        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-      end if
-      call flush (this%imon)
+      call this%message_builder%create_body_snd( &
+        rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
+        rcv_maps(:, i), body_snd_t(i))
+      call this%msg_cache%put(unit, rnk, stage, MPI_BDY_SND, body_snd_t(i))
     end do
 
-    ! wait for exchange of all messages
-    call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
-
-    ! done sending, clean up element maps
+    ! clean up element maps
     do i = 1, this%receivers%size
       do j = 1, hdr_rcv_cnt(i)
         call rcv_maps(j, i)%destroy()
@@ -507,9 +559,34 @@ contains
     deallocate (headers)
     deallocate (map_rcv_t, map_snd_t)
     deallocate (rcv_maps)
-    deallocate (body_rcv_t, body_snd_t)
 
-  end subroutine mr_route_active
+  end subroutine compose_messages
+
+  !> @brief Load the message body MPI datatypes from cache
+  !<
+  subroutine load_messages(this, unit, stage, body_snd_t, body_rcv_t)
+    class(MpiRouterType) :: this
+    integer(I4B) :: unit
+    integer(I4B) :: stage
+    integer, dimension(:), allocatable :: body_snd_t
+    integer, dimension(:), allocatable :: body_rcv_t
+    ! local
+    integer(I4B) :: i, rnk
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "... running from cache ..."
+    end if
+
+    do i = 1, this%receivers%size
+      rnk = this%receivers%at(i)
+      body_snd_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_SND)
+    end do
+    do i = 1, this%senders%size
+      rnk = this%senders%at(i)
+      body_rcv_t(i) = this%msg_cache%get(unit, rnk, stage, MPI_BDY_RCV)
+    end do
+
+  end subroutine load_messages
 
   subroutine update_senders(this)
     class(MpiRouterType) :: this
@@ -586,6 +663,44 @@ contains
     end do
 
   end subroutine update_receivers_sln
+
+  !> @brief Check if this stage is cached
+  !<
+  function is_cached(this, unit, stage) result(in_cache)
+    use SimModule, only: ustop
+    class(MpiRouterType) :: this
+    integer(I4B) :: unit
+    integer(I4B) :: stage
+    logical(LGP) :: in_cache
+    ! local
+    integer(I4B) :: i, rnk
+    integer(I4B) :: no_cache_cnt
+    integer :: cached_type
+
+    in_cache = .false.
+    no_cache_cnt = 0
+
+    do i = 1, this%receivers%size
+      rnk = this%receivers%at(i)
+      cached_type = this%msg_cache%get(unit, rnk, stage, MPI_BDY_SND)
+      if (cached_type == NO_CACHED_VALUE) no_cache_cnt = no_cache_cnt + 1
+    end do
+    do i = 1, this%senders%size
+      rnk = this%senders%at(i)
+      cached_type = this%msg_cache%get(unit, rnk, stage, MPI_BDY_RCV)
+      if (cached_type == NO_CACHED_VALUE) no_cache_cnt = no_cache_cnt + 1
+    end do
+
+    ! it should be all or nothing
+    if (no_cache_cnt == this%receivers%size + this%senders%size) then
+      in_cache = .false.
+    else if (no_cache_cnt == 0) then
+      in_cache = .true.
+    else
+      call ustop("Internal error: MPI message cache corrupt...")
+    end if
+
+  end function is_cached
 
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this

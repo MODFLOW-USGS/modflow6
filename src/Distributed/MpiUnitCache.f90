@@ -14,7 +14,7 @@ module MpiUnitCacheModule
     type(STLVecInt), private :: cached_ranks
     type(STLVecInt), private :: cached_messages
     integer(I4B), private :: nr_stages
-    integer(I4B), private :: nr_steps
+    integer(I4B), private :: nr_msg_types
   contains
     procedure :: init => cc_init
     procedure :: get_cached => cc_get_cached
@@ -31,13 +31,13 @@ contains
 
   !> @brief Initialize the unit cache.
   !<
-  subroutine cc_init(this, nr_stages, nr_steps)
+  subroutine cc_init(this, nr_stages, nr_msg_types)
     class(MpiUnitCacheType) :: this
     integer(I4B) :: nr_stages !< number of (simulation) stages
-    integer(I4B) :: nr_steps !< number of routing steps per stage
+    integer(I4B) :: nr_msg_types !< number of message types to be cached during a stage
 
     this%nr_stages = nr_stages
-    this%nr_steps = nr_steps
+    this%nr_msg_types = nr_msg_types
     call this%cached_ranks%init()
     call this%cached_messages%init()
 
@@ -45,17 +45,17 @@ contains
 
   !> @brief Get the cached mpi type for this rank and
   !< stage. Equal to NO_CACHED_VALUE when not present.
-  function cc_get_cached(this, rank, stage, step) result(mpi_type)
+  function cc_get_cached(this, rank, stage, msg_id) result(mpi_type)
     class(MpiUnitCacheType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer(I4B) :: step
+    integer(I4B) :: msg_id
     integer :: mpi_type
     ! local
     integer(I4B) :: msg_idx
 
     mpi_type = NO_CACHED_VALUE
-    msg_idx = this%get_msg_index(rank, stage, step)
+    msg_idx = this%get_msg_index(rank, stage, msg_id)
     if (msg_idx > 0) then
       mpi_type = this%cached_messages%at(msg_idx)
     end if
@@ -65,11 +65,11 @@ contains
   !> @brief Cache the mpi datatype for this particular
   !! rank and stage. The datatype should be committed
   !< to the type database externally.
-  subroutine mc_cache(this, rank, stage, step, mpi_type)
+  subroutine mc_cache(this, rank, stage, msg_id, mpi_type)
     class(MpiUnitCacheType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer(I4B) :: step
+    integer(I4B) :: msg_id
     integer :: mpi_type
     ! local
     integer(I4B) :: msg_idx
@@ -81,7 +81,7 @@ contains
 
     ! rank has been added to cache, now set
     ! mpi datatype for this stage's message:
-    msg_idx = this%get_msg_index(rank, stage, step)
+    msg_idx = this%get_msg_index(rank, stage, msg_id)
     call this%cached_messages%set(msg_idx, mpi_type)
 
   end subroutine mc_cache
@@ -103,7 +103,7 @@ contains
 
     call this%cached_ranks%push_back(rank)
     do i = 1, this%nr_stages
-      do j = 1, this%nr_steps
+      do j = 1, this%nr_msg_types
         call this%cached_messages%push_back(NO_CACHED_VALUE)
       end do
     end do
@@ -123,11 +123,11 @@ contains
 
   !> @Brief returns -1 when not present
   !<
-  function get_msg_index(this, rank, stage, step) result(msg_index)
+  function get_msg_index(this, rank, stage, msg_id) result(msg_index)
     class(MpiUnitCacheType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer(I4B) :: step
+    integer(I4B) :: msg_id
     integer(I4B) :: msg_index
     ! local
     integer(I4B) :: rank_idx
@@ -137,9 +137,9 @@ contains
     rank_idx = this%get_rank_index(rank)
     if (rank_idx < 1) return
 
-    rank_offset = (rank_idx - 1) * (this%nr_stages * this%nr_steps)
-    stage_offset = (stage - 1) * this%nr_steps
-    msg_index = rank_offset + stage_offset + step
+    rank_offset = (rank_idx - 1) * (this%nr_stages * this%nr_msg_types)
+    stage_offset = (stage - 1) * this%nr_msg_types
+    msg_index = rank_offset + stage_offset + msg_id
 
   end function get_msg_index
 
