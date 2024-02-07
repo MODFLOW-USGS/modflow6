@@ -30,41 +30,16 @@ contains
 
   !> @brief Destroy the time selection object.
   subroutine destroy(this)
-    ! -- dummy
     class(TimeSelectType) :: this
     deallocate (this%times)
   end subroutine destroy
 
   !> @brief Expand capacity by the given amount. Resets the current slice.
   subroutine expand(this, increment)
-    ! -- dummy
     class(TimeSelectType) :: this
     integer(I4B), optional, intent(in) :: increment
-    ! -- local
-    integer(I4B) :: inclocal, isize, newsize
-    real(DP), allocatable, dimension(:) :: temp
-
-    if (present(increment)) then
-      inclocal = increment
-    else
-      inclocal = 1
-    end if
-
-    ! -- expand/repopulate array if already allocated,
-    !    otherwise allocate it to the given size. the
-    !    current slice is also reset here.
-    if (allocated(this%times)) then
-      isize = size(this%times)
-      newsize = isize + inclocal
-      allocate (temp(newsize))
-      temp(1:isize) = this%times
-      deallocate (this%times)
-      call move_alloc(temp, this%times)
-      this%slice = (/1, newsize/)
-    else
-      allocate (this%times(inclocal))
-      this%slice = (/1, inclocal/)
-    end if
+    call ExpandArray(this%times, increment=increment)
+    this%slice = (/1, size(this%times)/)
   end subroutine expand
 
   !> @brief Initialize or clear the time selection object.
