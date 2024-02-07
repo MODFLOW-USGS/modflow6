@@ -226,6 +226,7 @@ contains
   !! of communication steps, or by loading from cache
   !< for efficiency.
   subroutine route_active(this, unit, stage)
+    use SimModule, only: store_error
     class(MpiRouterType) :: this !< this mpi router
     integer(I4B) :: unit !< the solution id, or equal to 0 when global
     integer(I4B) :: stage !< the stage to route
@@ -248,6 +249,11 @@ contains
     call this%update_senders()
     call this%update_receivers()
 
+    if (this%senders%size /= this%receivers%size) then
+      call store_error("Internal error: receivers should equal senders", &
+                       terminate=.true.)
+    end if
+
     ! allocate body data
     allocate (body_rcv_t(this%senders%size))
     allocate (body_snd_t(this%receivers%size))
@@ -257,6 +263,10 @@ contains
     allocate (snd_req(this%senders%size))
     allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
     allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
+
+    ! always initialize request handles
+    rcv_req = MPI_REQUEST_NULL
+    snd_req = MPI_REQUEST_NULL
 
     if (this%enable_monitor) then
       write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
@@ -316,6 +326,7 @@ contains
 
     ! wait for exchange of all messages
     call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
+    call CHECK_MPI(ierr)
 
     deallocate (rcv_req, snd_req, rcv_stat, snd_stat)
     deallocate (body_rcv_t, body_snd_t)
@@ -359,8 +370,8 @@ contains
     class(MpiRouterType) :: this
     integer(I4B) :: unit
     integer(I4B) :: stage
-    integer, dimension(:), allocatable :: body_snd_t
-    integer, dimension(:), allocatable :: body_rcv_t
+    integer, dimension(:) :: body_snd_t
+    integer, dimension(:) :: body_rcv_t
     ! local
     integer(I4B) :: i, j, k
     integer(I4B) :: rnk
@@ -386,6 +397,10 @@ contains
     allocate (snd_req(this%senders%size))
     allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
     allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
+
+    ! init handles
+    rcv_req = MPI_REQUEST_NULL
+    snd_req = MPI_REQUEST_NULL
 
     ! allocate header data
     max_headers = size(this%rte_models) + size(this%rte_exchanges)
@@ -427,6 +442,11 @@ contains
 
     ! wait for exchange of all headers
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
+    call CHECK_MPI(ierr)
+
+    ! reinit handles
+    rcv_req = MPI_REQUEST_NULL
+    snd_req = MPI_REQUEST_NULL
 
     ! after WaitAll we can count incoming headers from statuses
     do i = 1, this%receivers%size
@@ -490,6 +510,7 @@ contains
 
     ! wait on receiving maps
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
+    call CHECK_MPI(ierr)
 
     ! print maps
     if (this%enable_monitor) then

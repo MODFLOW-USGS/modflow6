@@ -326,6 +326,9 @@ contains
       vdi => get_virtual_data_from_list(this%virtual_data_list, items%at(i))
       write (imon, *) vdi%var_name, ":", vdi%mem_path
     end do
+    if (items%size == 0) then
+      write (imon, *) "... empty ...", this%name
+    end if
     write (imon, *) "<===== items"
 
   end subroutine print_items
