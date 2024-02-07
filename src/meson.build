@@ -176,6 +176,8 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionManager.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionUtils.f90',
+    'Model' / 'ModelUtilities' / 'TimeSelect.f90',
+    'Model' / 'ModelUtilities' / 'TspAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'SwfCxsUtils.f90',
     'Model' / 'ModelUtilities' / 'TspAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',

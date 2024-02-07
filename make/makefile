@@ -387,6 +387,7 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
+$(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
