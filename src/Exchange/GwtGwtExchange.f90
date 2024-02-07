@@ -11,7 +11,8 @@ module GwtGwtExchangeModule
 
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg, model_loc_idx
-  use SimModule, only: store_error
+  use SimModule, only: store_error, store_error_filename, &
+                       count_errors, ustop
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
@@ -22,13 +23,10 @@ module GwtGwtExchangeModule
   use VirtualModelModule, only: get_virtual_model
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
-  use GwtMvtModule, only: GwtMvtType
+  use TspMvtModule, only: TspMvtType
+  use VirtualModelModule, only: VirtualModelType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use SimModule, only: count_errors, store_error, &
-                       store_error_unit, ustop
-  use SimVariablesModule, only: errmsg
-  use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
 
@@ -44,7 +42,6 @@ module GwtGwtExchangeModule
   !!
   !! This derived type contains information and methods for
   !! connecting two GWT models.
-  !!
   !<
   type, extends(DisConnExchangeType) :: GwtExchangeType
     !
@@ -54,19 +51,17 @@ module GwtGwtExchangeModule
     real(DP), dimension(:), pointer, contiguous :: gwfsimvals => null() !< simulated gwf flow rate for each exchange
     !
     ! -- pointers to gwt models
-    type(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
-    type(GwtModelType), pointer :: gwtmodel2 => null() !< pointer to GWT Model 2
+    class(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
+    class(GwtModelType), pointer :: gwtmodel2 => null() !< pointer to GWT Model 2
     !
     ! -- GWT specific option block:
     integer(I4B), pointer :: inewton => null() !< unneeded newton flag allows for mvt to be used here
-    integer(I4B), pointer :: iprflow => null() !< print flag for cell by cell flows
-    integer(I4B), pointer :: ipakcb => null() !< save flag for cell by cell flows
     integer(I4B), pointer :: iAdvScheme !< the advection scheme at the interface:
                                                                                  !! 0 = upstream, 1 = central, 2 = TVD
     !
     ! -- Mover transport package
     integer(I4B), pointer :: inmvt => null() !< unit number for mover transport (0 if off)
-    type(GwtMvtType), pointer :: mvt => null() !< water mover object
+    type(TspMvtType), pointer :: mvt => null() !< water mover object
     !
     ! -- Observation package
     integer(I4B), pointer :: inobs => null() !< unit number for GWT-GWT observations
@@ -95,10 +90,10 @@ module GwtGwtExchangeModule
     procedure :: use_interface_model
     procedure :: allocate_scalars
     procedure :: allocate_arrays
-    procedure :: read_options
-    procedure :: parse_option
+    procedure :: source_options
     procedure :: read_mvt
     procedure :: gwt_gwt_bdsav
+    procedure, private :: gwt_gwt_bdsav_model
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
     procedure, public :: gwt_gwt_save_simvals
@@ -110,11 +105,9 @@ contains
   !> @ brief Create GWT GWT exchange
   !!
   !! Create a new GWT to GWT exchange object.
-  !!
   !<
-  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id)
+  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
@@ -125,6 +118,7 @@ contains
     character(len=*) :: name !< the exchange name
     integer(I4B), intent(in) :: m1_id !< id for model 1
     integer(I4B), intent(in) :: m2_id !< id for model 2
+    character(len=*), intent(in) :: input_mempath
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -140,6 +134,7 @@ contains
     exchange%id = id
     exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
+    exchange%input_mempath = input_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
@@ -151,21 +146,25 @@ contains
     ! -- set gwtmodel1
     m1_index = model_loc_idx(m1_id)
     mb => GetBaseModelFromList(basemodellist, m1_index)
-    select type (mb)
-    type is (GwtModelType)
-      exchange%model1 => mb
-      exchange%gwtmodel1 => mb
-    end select
+    if (m1_index > 0) then
+      select type (mb)
+      type is (GwtModelType)
+        exchange%model1 => mb
+        exchange%gwtmodel1 => mb
+      end select
+    end if
     exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwtmodel2
     m2_index = model_loc_idx(m2_id)
-    mb => GetBaseModelFromList(basemodellist, m2_index)
-    select type (mb)
-    type is (GwtModelType)
-      exchange%model2 => mb
-      exchange%gwtmodel2 => mb
-    end select
+    if (m2_index > 0) then
+      mb => GetBaseModelFromList(basemodellist, m2_index)
+      select type (mb)
+      type is (GwtModelType)
+        exchange%model2 => mb
+        exchange%gwtmodel2 => mb
+      end select
+    end if
     exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwt model1 is of the correct type
@@ -176,7 +175,7 @@ contains
       call store_error(errmsg, terminate=.true.)
     end if
     !
-    ! -- Verify that gwf model2 is of the correct type
+    ! -- Verify that gwt model2 is of the correct type
     if (.not. associated(exchange%gwtmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
@@ -187,14 +186,13 @@ contains
     ! -- Create the obs package
     call obs_cr(exchange%obs, exchange%inobs)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtexchange_create
 
   !> @ brief Define GWT GWT exchange
   !!
   !! Define GWT to GWT exchange object.
-  !!
   !<
   subroutine gwt_gwt_df(this)
     ! -- modules
@@ -204,35 +202,31 @@ contains
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
-    integer(I4B) :: inunit
     !
-    ! -- open the file
-    inunit = getunit()
+    ! -- log the exchange
     write (iout, '(/a,a)') ' Creating exchange: ', this%name
-    call openfile(inunit, iout, this%filename, 'GWT-GWT')
-    !
-    call this%parser%Initialize(inunit, iout)
     !
     ! -- Ensure models are in same solution
-    if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
+    if (this%v_model1%idsoln%get() /= this%v_model2%idsoln%get()) then
       call store_error('Two models are connected in a GWT '// &
                        'exchange but they are in different solutions. '// &
                        'GWT models must be in same solution: '// &
-                       trim(this%gwtmodel1%name)//' '//trim(this%gwtmodel2%name))
-      call this%parser%StoreErrorUnit()
+                       trim(this%v_model1%name)//' '// &
+                       trim(this%v_model2%name))
+      call store_error_filename(this%filename)
     end if
     !
-    ! -- read options
-    call this%read_options(iout)
+    ! -- source options
+    call this%source_options(iout)
     !
-    ! -- read dimensions
-    call this%read_dimensions(iout)
+    ! -- source dimensions
+    call this%source_dimensions(iout)
     !
     ! -- allocate arrays
     call this%allocate_arrays()
     !
-    ! -- read exchange data
-    call this%read_data(iout)
+    ! -- source exchange data
+    call this%source_data(iout)
     !
     ! -- Read mover information
     if (this%inmvt > 0) then
@@ -240,26 +234,25 @@ contains
       call this%mvt%mvt_df(this%gwtmodel1%dis)
     end if
     !
-    ! -- close the file
-    close (inunit)
-    !
     ! -- Store obs
     call this%gwt_gwt_df_obs()
-    call this%obs%obs_df(iout, this%name, 'GWT-GWT', this%gwtmodel1%dis)
+    if (associated(this%gwtmodel1)) then
+      call this%obs%obs_df(iout, this%name, 'GWT-GWT', this%gwtmodel1%dis)
+    end if
     !
     ! -- validate
     call this%validate_exchange()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_df
 
   !> @brief validate exchange data after reading
   !<
   subroutine validate_exchange(this)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! local
-
+    !
     ! Ensure gwfmodel names were entered
     if (this%gwfmodelname1 == '') then
       write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
@@ -273,9 +266,9 @@ contains
                             &OPTIONS block.'
       call store_error(errmsg)
     end if
-
+    !
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
-    if (associated(this%model1, this%model2)) then
+    if (this%v_model1 == this%v_model2) then
       if (this%ixt3d > 0) then
         write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
           ' is a periodic boundary condition which cannot'// &
@@ -283,43 +276,44 @@ contains
         call store_error(errmsg)
       end if
     end if
-
+    !
     ! Check to see if dispersion is on in either model1 or model2.
     ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
     ! GWT-GWT exchange (this%ianglex > 0).
-    if (this%gwtmodel1%indsp /= 0 .or. this%gwtmodel2%indsp /= 0) then
-      if (this%ianglex == 0) then
-        write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
-          ' requires that ANGLDEGX be specified as an'// &
-          ' auxiliary variable because dispersion was '// &
-          'specified in one or both transport models.'
-        call store_error(errmsg)
+    if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
+      if (this%gwtmodel1%indsp /= 0 .or. this%gwtmodel2%indsp /= 0) then
+        if (this%ianglex == 0) then
+          write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
+            ' requires that ANGLDEGX be specified as an'// &
+            ' auxiliary variable because dispersion was '// &
+            'specified in one or both transport models.'
+          call store_error(errmsg)
+        end if
       end if
     end if
-
+    !
     if (this%ixt3d > 0 .and. this%ianglex == 0) then
       write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
         ' requires that ANGLDEGX be specified as an'// &
         ' auxiliary variable because XT3D is enabled'
       call store_error(errmsg)
     end if
-
+    !
     if (count_errors() > 0) then
       call ustop()
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine validate_exchange
 
   !> @ brief Allocate and read
   !!
   !! Allocated and read and calculate saturated conductance
-  !!
   !<
   subroutine gwt_gwt_ar(this)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- If mover is active, then call ar routine
     if (this%inmvt > 0) call this%mvt%mvt_ar()
@@ -334,7 +328,6 @@ contains
   !> @ brief Read and prepare
   !!
   !! Read new data for mover and obs
-  !!
   !<
   subroutine gwt_gwt_rp(this)
     ! -- modules
@@ -358,13 +351,10 @@ contains
   !> @ brief Advance
   !!
   !! Advance mover and obs
-  !!
   !<
   subroutine gwt_gwt_ad(this)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- Advance mover
     !if(this%inmvt > 0) call this%mvt%mvt_ad()
@@ -379,17 +369,14 @@ contains
   !> @ brief Fill coefficients
   !!
   !! Calculate conductance and fill coefficient matrix
-  !!
   !<
   subroutine gwt_gwt_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
-    ! -- local
     !
     ! -- Call mvt fc routine
     if (this%inmvt > 0) call this%mvt%mvt_fc(this%gwtmodel1%x, this%gwtmodel2%x)
@@ -401,7 +388,6 @@ contains
   !> @ brief Budget
   !!
   !! Accumulate budget terms
-  !!
   !<
   subroutine gwt_gwt_bd(this, icnvg, isuppress_output, isolnid)
     ! -- modules
@@ -416,7 +402,6 @@ contains
     character(len=LENBUDTXT), dimension(1) :: budtxt
     real(DP), dimension(2, 1) :: budterm
     real(DP) :: ratin, ratout
-    ! -- formats
     !
     ! -- initialize
     budtxt(1) = '    FLOW-JA-FACE'
@@ -425,248 +410,45 @@ contains
     call rate_accumulator(this%simvals, ratin, ratout)
     !
     ! -- Add the budget terms to model 1
-    budterm(1, 1) = ratin
-    budterm(2, 1) = ratout
-    call this%gwtmodel1%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwtmodel1)) then
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwtmodel1%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Add the budget terms to model 2
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
-    call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwtmodel2)) then
+      budterm(1, 1) = ratout
+      budterm(2, 1) = ratin
+      call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Call mvt bd routine
     if (this%inmvt > 0) call this%mvt%mvt_bd(this%gwtmodel1%x, this%gwtmodel2%x)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_bd
 
   !> @ brief Budget save
   !!
   !! Output individual flows to listing file and binary budget files
-  !!
   !<
   subroutine gwt_gwt_bdsav(this)
-    ! -- modules
-    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
-    character(len=LENBOUNDNAME) :: bname
-    character(len=LENPACKAGENAME + 4) :: packname1
-    character(len=LENPACKAGENAME + 4) :: packname2
-    character(len=LENBUDTXT), dimension(1) :: budtxt
-    character(len=20) :: nodestr
-    integer(I4B) :: ntabrows
-    integer(I4B) :: nodeu
-    integer(I4B) :: i, n1, n2, n1u, n2u
-    integer(I4B) :: ibinun1, ibinun2
     integer(I4B) :: icbcfl, ibudfl
-    real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: isuppress_output
-    ! -- formats
     !
-    ! -- initialize local variables
-    isuppress_output = 0
-    budtxt(1) = '    FLOW-JA-FACE'
-    packname1 = 'EXG '//this%name
-    packname1 = adjustr(packname1)
-    packname2 = 'EXG '//this%name
-    packname2 = adjustr(packname2)
-    !
-    ! -- update output tables
-    if (this%iprflow /= 0) then
-      !
-      ! -- update titles
-      if (this%gwtmodel1%oc%oc_save('BUDGET')) then
-        call this%outputtab1%set_title(packname1)
-      end if
-      if (this%gwtmodel2%oc%oc_save('BUDGET')) then
-        call this%outputtab2%set_title(packname2)
-      end if
-      !
-      ! -- set table kstp and kper
-      call this%outputtab1%set_kstpkper(kstp, kper)
-      call this%outputtab2%set_kstpkper(kstp, kper)
-      !
-      ! -- update maxbound of tables
-      ntabrows = 0
-      do i = 1, this%nexg
-        n1 = this%nodem1(i)
-        n2 = this%nodem2(i)
-        !
-        ! -- If both cells are active then calculate flow rate
-        if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-            this%gwtmodel2%ibound(n2) /= 0) then
-          ntabrows = ntabrows + 1
-        end if
-      end do
-      if (ntabrows > 0) then
-        call this%outputtab1%set_maxbound(ntabrows)
-        call this%outputtab2%set_maxbound(ntabrows)
-      end if
+    ! -- budget for model1
+    if (associated(this%gwtmodel1)) then
+      call this%gwt_gwt_bdsav_model(this%gwtmodel1)
     end if
     !
-    ! -- Print and write budget terms for model 1
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun1 = this%gwtmodel1%oc%oc_save_unit('BUDGET')
-    else
-      ibinun1 = 0
+    ! -- budget for model2
+    if (associated(this%gwtmodel2)) then
+      call this%gwt_gwt_bdsav_model(this%gwtmodel2)
     end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwtmodel1%oc%oc_save('BUDGET')) ibinun1 = 0
-    if (isuppress_output /= 0) then
-      ibinun1 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun1 /= 0) then
-      call this%gwtmodel1%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwtmodel1%name, &
-                                                        this%name, &
-                                                        this%gwtmodel2%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun1, this%nexg, &
-                                                        this%gwtmodel1%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-          this%gwtmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwtmodel1%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwtmodel1%dis%get_nodeuser(n1)
-            call this%gwtmodel1%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab1%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwtmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwtmodel2%dis%get_nodeuser(n2)
-      if (ibinun1 /= 0) &
-        call this%gwtmodel1%dis%record_mf6_list_entry( &
-        ibinun1, n1u, n2u, rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
-    !
-    ! -- Print and write budget terms for model 2
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun2 = this%gwtmodel2%oc%oc_save_unit('BUDGET')
-    else
-      ibinun2 = 0
-    end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwtmodel2%oc%oc_save('BUDGET')) ibinun2 = 0
-    if (isuppress_output /= 0) then
-      ibinun2 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun2 /= 0) then
-      call this%gwtmodel2%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwtmodel2%name, &
-                                                        this%name, &
-                                                        this%gwtmodel1%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun2, this%nexg, &
-                                                        this%gwtmodel2%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-          this%gwtmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwtmodel2%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwtmodel2%dis%get_nodeuser(n2)
-            call this%gwtmodel2%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab2%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  -rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwtmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwtmodel2%dis%get_nodeuser(n2)
-      if (ibinun2 /= 0) &
-        call this%gwtmodel2%dis%record_mf6_list_entry( &
-        ibinun2, n2u, n1u, -rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVT package
@@ -681,19 +463,185 @@ contains
       call this%gwt_gwt_save_simvals()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_bdsav
+
+  !> @ brief Budget save
+  !!
+  !! Output individual flows to listing file and binary budget files
+  !<
+  subroutine gwt_gwt_bdsav_model(this, model)
+    ! -- modules
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(GwtExchangeType) :: this !<  GwtExchangeType
+    class(GwtModelType), pointer :: model
+    ! -- local
+    character(len=LENBOUNDNAME) :: bname
+    character(len=LENPACKAGENAME + 4) :: packname
+    character(len=LENBUDTXT), dimension(1) :: budtxt
+    type(TableType), pointer :: output_tab
+    class(VirtualModelType), pointer :: nbr_model
+    character(len=20) :: nodestr
+    integer(I4B) :: ntabrows
+    integer(I4B) :: nodeu
+    integer(I4B) :: i, n1, n2, n1u, n2u
+    integer(I4B) :: ibinun
+    real(DP) :: ratin, ratout, rrate
+    logical(LGP) :: is_for_model1
+    integer(I4B) :: isuppress_output
+    !
+    ! -- initialize local variables
+    isuppress_output = 0
+    budtxt(1) = '    FLOW-JA-FACE'
+    packname = 'EXG '//this%name
+    packname = adjustr(packname)
+    if (associated(model, this%gwtmodel1)) then
+      output_tab => this%outputtab1
+      nbr_model => this%v_model2
+      is_for_model1 = .true.
+    else
+      output_tab => this%outputtab2
+      nbr_model => this%v_model1
+      is_for_model1 = .false.
+    end if
+    !
+    ! -- update output tables
+    if (this%iprflow /= 0) then
+      !
+      ! -- update titles
+      if (model%oc%oc_save('BUDGET')) then
+        call output_tab%set_title(packname)
+      end if
+      !
+      ! -- set table kstp and kper
+      call output_tab%set_kstpkper(kstp, kper)
+      !
+      ! -- update maxbound of tables
+      ntabrows = 0
+      do i = 1, this%nexg
+        n1 = this%nodem1(i)
+        n2 = this%nodem2(i)
+        !
+        ! -- If both cells are active then calculate flow rate
+        if (this%v_model1%ibound%get(n1) /= 0 .and. &
+            this%v_model2%ibound%get(n2) /= 0) then
+          ntabrows = ntabrows + 1
+        end if
+      end do
+      if (ntabrows > 0) then
+        call output_tab%set_maxbound(ntabrows)
+      end if
+    end if
+    !
+    ! -- Print and write budget terms for model 1
+    !
+    ! -- Set binary unit numbers for saving flows
+    if (this%ipakcb /= 0) then
+      ibinun = model%oc%oc_save_unit('BUDGET')
+    else
+      ibinun = 0
+    end if
+    !
+    ! -- If save budget flag is zero for this stress period, then
+    !    shut off saving
+    if (.not. model%oc%oc_save('BUDGET')) ibinun = 0
+    if (isuppress_output /= 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if (ibinun /= 0) then
+      call model%dis%record_srcdst_list_header(budtxt(1), &
+                                               model%name, &
+                                               this%name, &
+                                               nbr_model%name, &
+                                               this%name, &
+                                               this%naux, this%auxname, &
+                                               ibinun, this%nexg, &
+                                               model%iout)
+    end if
+    !
+    ! Initialize accumulators
+    ratin = DZERO
+    ratout = DZERO
+    !
+    ! -- Loop through all exchanges
+    do i = 1, this%nexg
+      !
+      ! -- Assign boundary name
+      if (this%inamedbound > 0) then
+        bname = this%boundname(i)
+      else
+        bname = ''
+      end if
+      !
+      ! -- Calculate the flow rate between n1 and n2
+      rrate = DZERO
+      n1 = this%nodem1(i)
+      n2 = this%nodem2(i)
+      !
+      ! -- If both cells are active then calculate flow rate
+      if (this%v_model1%ibound%get(n1) /= 0 .and. &
+          this%v_model2%ibound%get(n2) /= 0) then
+        rrate = this%simvals(i)
+        !
+        ! -- Print the individual rates to model list files if requested
+        if (this%iprflow /= 0) then
+          if (model%oc%oc_save('BUDGET')) then
+            !
+            ! -- set nodestr and write outputtab table
+            if (is_for_model1) then
+              nodeu = model%dis%get_nodeuser(n1)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               rrate, bname)
+            else
+              nodeu = model%dis%get_nodeuser(n2)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               -rrate, bname)
+            end if
+          end if
+        end if
+        if (rrate < DZERO) then
+          ratout = ratout - rrate
+        else
+          ratin = ratin + rrate
+        end if
+      end if
+      !
+      ! -- If saving cell-by-cell flows in list, write flow
+      n1u = this%v_model1%dis_get_nodeuser(n1)
+      n2u = this%v_model2%dis_get_nodeuser(n2)
+      if (ibinun /= 0) then
+        if (is_for_model1) then
+          call model%dis%record_mf6_list_entry( &
+            ibinun, n1u, n2u, rrate, this%naux, this%auxvar(:, i), &
+            .false., .false.)
+        else
+          call model%dis%record_mf6_list_entry( &
+            ibinun, n2u, n1u, -rrate, this%naux, this%auxvar(:, i), &
+            .false., .false.)
+        end if
+      end if
+      !
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine gwt_gwt_bdsav_model
 
   !> @ brief Output
   !!
   !! Write output
-  !!
   !<
   subroutine gwt_gwt_ot(this)
     ! -- modules
     use SimVariablesModule, only: iout
-    use ConstantsModule, only: DZERO, LINELENGTH
+    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
@@ -722,12 +670,12 @@ contains
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
         flow = this%simvals(iexg)
-        call this%gwtmodel1%dis%noder_to_string(n1, node1str)
-        call this%gwtmodel2%dis%noder_to_string(n2, node2str)
+        call this%v_model1%dis_noder_to_string(n1, node1str)
+        call this%v_model2%dis_noder_to_string(n2, node2str)
         write (iout, fmtdata) trim(adjustl(node1str)), &
           trim(adjustl(node2str)), &
-          this%cond(iexg), this%gwtmodel1%x(n1), &
-          this%gwtmodel2%x(n2), flow
+          this%cond(iexg), this%v_model1%x%get(n1), &
+          this%v_model2%x%get(n2), flow
       end do
     end if
     !
@@ -739,214 +687,117 @@ contains
     ! -- OBS output
     call this%obs%obs_ot()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_ot
 
-  !> @ brief Read options
+  !> @ brief Source options
   !!
-  !! Read the options block
-  !!
+  !! Source the options block
   !<
-  subroutine read_options(this, iout)
+  subroutine source_options(this, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENAUXNAME, DEM6
-    use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: store_error, store_error_unit
+    use ConstantsModule, only: LENVARNAME
+    use InputOutputModule, only: getunit, openfile
+    use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
+    use ExgGwtgwtInputModule, only: ExgGwtgwtParamFoundType
+    use SourceCommonModule, only: filein_fname
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: keyword
-    logical :: isfound
-    logical :: endOfBlock
-    integer(I4B) :: ierr
+    type(ExgGwtgwtParamFoundType) :: found
+    character(len=LENVARNAME), dimension(3) :: adv_scheme = &
+      &[character(len=LENVARNAME) :: 'UPSTREAM', 'CENTRAL', 'TVD']
+    character(len=LINELENGTH) :: mvt_fname
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- update defaults with values sourced from input context
+    call mem_set_value(this%gwfmodelname1, 'GWFMODELNAME1', this%input_mempath, &
+                       found%gwfmodelname1)
+    call mem_set_value(this%gwfmodelname2, 'GWFMODELNAME2', this%input_mempath, &
+                       found%gwfmodelname2)
+    call mem_set_value(this%iAdvScheme, 'ADV_SCHEME', this%input_mempath, &
+                       adv_scheme, found%adv_scheme)
+    call mem_set_value(this%ixt3d, 'DSP_XT3D_OFF', this%input_mempath, &
+                       found%dsp_xt3d_off)
+    call mem_set_value(this%ixt3d, 'DSP_XT3D_RHS', this%input_mempath, &
+                       found%dsp_xt3d_rhs)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (iout, '(1x,a)') 'PROCESSING GWT-GWT EXCHANGE OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) then
-          exit
-        end if
-        call this%parser%GetStringCaps(keyword)
-
-        ! first parse option in base
-        if (this%DisConnExchangeType%parse_option(keyword, iout)) then
-          cycle
-        end if
-
-        ! it's probably ours
-        if (this%parse_option(keyword, iout)) then
-          cycle
-        end if
-
-        ! unknown option
-        errmsg = "Unknown GWT-GWT exchange option '"//trim(keyword)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end do
-
-      write (iout, '(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
+    write (iout, '(1x,a)') 'PROCESSING GWT-GWT EXCHANGE OPTIONS'
+    !
+    ! -- source base class options
+    call this%DisConnExchangeType%source_options(iout)
+    !
+    if (found%gwfmodelname1) then
+      write (iout, '(4x,a,a)') &
+        'GWFMODELNAME1 IS SET TO: ', trim(this%gwfmodelname1)
     end if
+    !
+    if (found%gwfmodelname2) then
+      write (iout, '(4x,a,a)') &
+        'GWFMODELNAME2 IS SET TO: ', trim(this%gwfmodelname2)
+    end if
+    !
+    if (found%adv_scheme) then
+      ! -- count from 0
+      this%iAdvScheme = this%iAdvScheme - 1
+      write (iout, '(4x,a,a)') &
+        'ADVECTION SCHEME METHOD HAS BEEN SET TO: ', &
+        trim(adv_scheme(this%iAdvScheme + 1))
+    end if
+    !
+    if (found%dsp_xt3d_off .and. found%dsp_xt3d_rhs) then
+      errmsg = 'DSP_XT3D_OFF and DSP_XT3D_RHS cannot both be set as options.'
+      call store_error(errmsg)
+      call store_error_filename(this%filename)
+    else if (found%dsp_xt3d_off) then
+      this%ixt3d = 0
+      write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
+    else if (found%dsp_xt3d_rhs) then
+      this%ixt3d = 2
+      write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
+    end if
+    !
+    ! -- enforce 0 or 1 MVR6_FILENAME entries in option block
+    if (filein_fname(mvt_fname, 'MVT6_FILENAME', this%input_mempath, &
+                     this%filename)) then
+      this%inmvt = getunit()
+      call openfile(this%inmvt, iout, mvt_fname, 'MVT')
+      write (iout, '(4x,a)') &
+        'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(mvt_fname)
+    end if
+    !
+    ! -- enforce 0 or 1 OBS6_FILENAME entries in option block
+    if (filein_fname(this%obs%inputFilename, 'OBS6_FILENAME', &
+                     this%input_mempath, this%filename)) then
+      this%obs%active = .true.
+      this%obs%inUnitObs = GetUnit()
+      call openfile(this%obs%inUnitObs, iout, this%obs%inputFilename, 'OBS')
+    end if
+    !
+    write (iout, '(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
     !
     ! -- return
     return
-  end subroutine read_options
-
-  !> @brief parse option from exchange file
-  !<
-  function parse_option(this, keyword, iout) result(parsed)
-    use InputOutputModule, only: getunit, openfile
-    class(GwtExchangeType) :: this !<  GwtExchangeType
-    character(len=LINELENGTH), intent(in) :: keyword !< the option name
-    integer(I4B), intent(in) :: iout !< for logging
-    logical(LGP) :: parsed !< true when parsed
-    ! local
-    character(len=LINELENGTH) :: fname
-    integer(I4B) :: inobs, ilen
-    character(len=LINELENGTH) :: subkey
-
-    parsed = .true.
-
-    select case (keyword)
-    case ('GWFMODELNAME1')
-      call this%parser%GetStringCaps(subkey)
-      ilen = len_trim(subkey)
-      if (ilen > LENMODELNAME) then
-        write (errmsg, '(a,a)') &
-          'Invalid model name: ', trim(subkey)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end if
-      if (this%gwfmodelname1 /= '') then
-        call store_error('GWFMODELNAME1 has already been set to ' &
-                         //trim(this%gwfmodelname1)// &
-                         '. Cannot set more than once.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%gwfmodelname1 = subkey(1:LENMODELNAME)
-      write (iout, '(4x,a,a)') &
-        'GWFMODELNAME1 IS SET TO: ', trim(this%gwfmodelname1)
-    case ('GWFMODELNAME2')
-      call this%parser%GetStringCaps(subkey)
-      ilen = len_trim(subkey)
-      if (ilen > LENMODELNAME) then
-        write (errmsg, '(a,a)') &
-          'Invalid model name: ', trim(subkey)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end if
-      if (this%gwfmodelname2 /= '') then
-        call store_error('GWFMODELNAME2 has already been set to ' &
-                         //trim(this%gwfmodelname2)// &
-                         '. Cannot set more than once.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%gwfmodelname2 = subkey(1:LENMODELNAME)
-      write (iout, '(4x,a,a)') &
-        'GWFMODELNAME2 IS SET TO: ', trim(this%gwfmodelname2)
-    case ('PRINT_FLOWS')
-      this%iprflow = 1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
-    case ('SAVE_FLOWS')
-      this%ipakcb = -1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
-    case ('MVT6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('MVT6 keyword must be followed by '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('No MVT6 file specified.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%inmvt = getunit()
-      call openfile(this%inmvt, iout, fname, 'MVT')
-      write (iout, '(4x,a)') &
-        'WATER MOVER TRANSPORT INFORMATION WILL BE READ FROM ', trim(fname)
-    case ('OBS6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('OBS8 keyword must be followed by '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%obs%active = .true.
-      call this%parser%GetString(this%obs%inputFilename)
-      inobs = GetUnit()
-      call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
-      this%obs%inUnitObs = inobs
-    case ('ADV_SCHEME')
-      call this%parser%GetStringCaps(subkey)
-      select case (subkey)
-      case ('UPSTREAM')
-        this%iAdvScheme = 0
-      case ('CENTRAL')
-        this%iAdvScheme = 1
-      case ('TVD')
-        this%iAdvScheme = 2
-      case default
-        errmsg = "Unknown weighting method for advection: '"//trim(subkey)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end select
-      write (iout, '(4x,a,a)') &
-        'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('DSP_XT3D_OFF')
-      this%ixt3d = 0
-      write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
-    case ('DSP_XT3D_RHS')
-      this%ixt3d = 2
-      write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
-    case ('ADVSCHEME')
-      errmsg = 'ADVSCHEME is no longer a valid keyword.  Use ADV_SCHEME &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case ('XT3D_OFF')
-      errmsg = 'XT3D_OFF is no longer a valid keyword.  Use DSP_XT3D_OFF &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case ('XT3D_RHS')
-      errmsg = 'XT3D_RHS is no longer a valid keyword.  Use DSP_XT3D_RHS &
-        &instead.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    case default
-      parsed = .false.
-    end select
-
-  end function parse_option
+  end subroutine source_options
 
   !> @ brief Read mover
   !!
   !! Read and process movers
-  !!
   !<
   subroutine read_mvt(this, iout)
     ! -- modules
-    use GwtMvtModule, only: mvt_cr
+    use TspMvtModule, only: mvt_cr
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
-    ! -- local
     !
     ! -- Create and initialize the mover object  Here, fmi is set to the one
     !    for gwtmodel1 so that a call to save flows has an associated dis
     !    object.
     call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%fmi, &
+                this%gwtmodel1%eqnsclfac, &
                 gwfmodelname1=this%gwfmodelname1, &
                 gwfmodelname2=this%gwfmodelname2, &
                 fmi2=this%gwtmodel2%fmi)
@@ -958,7 +809,6 @@ contains
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -966,40 +816,32 @@ contains
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
     call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
-    call mem_allocate(this%iprflow, 'IPRFLOW', this%memoryPath)
-    call mem_allocate(this%ipakcb, 'IPAKCB', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%iAdvScheme, 'IADVSCHEME', this%memoryPath)
     this%inewton = 0
-    this%iprpak = 0
-    this%iprflow = 0
-    this%ipakcb = 0
     this%inobs = 0
     this%iAdvScheme = 0
     !
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     this%inmvt = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_scalars
 
   !> @ brief Deallocate
   !!
   !! Deallocate memory associated with this object
-  !!
   !<
   subroutine gwt_gwt_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- objects
     if (this%inmvt > 0) then
@@ -1029,8 +871,6 @@ contains
     ! -- scalars
     deallocate (this%filename)
     call mem_deallocate(this%inewton)
-    call mem_deallocate(this%iprflow)
-    call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%inmvt)
@@ -1038,14 +878,13 @@ contains
     ! -- deallocate base
     call this%DisConnExchangeType%disconnex_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_da
 
   !> @ brief Allocate arrays
   !!
   !! Allocate arrays
-  !!
   !<
   subroutine allocate_arrays(this)
     ! -- modules
@@ -1077,43 +916,46 @@ contains
       !
       ! -- initialize the output table objects
       !    outouttab1
-      call table_cr(this%outputtab1, this%name, '    ')
-      call this%outputtab1%table_df(this%nexg, ntabcol, this%gwtmodel1%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model1%is_local) then
+        call table_cr(this%outputtab1, this%name, '    ')
+        call this%outputtab1%table_df(this%nexg, ntabcol, this%gwtmodel1%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
       !    outouttab2
-      call table_cr(this%outputtab2, this%name, '    ')
-      call this%outputtab2%table_df(this%nexg, ntabcol, this%gwtmodel2%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model2%is_local) then
+        call table_cr(this%outputtab2, this%name, '    ')
+        call this%outputtab2%table_df(this%nexg, ntabcol, this%gwtmodel2%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_arrays
 
   !> @ brief Define observations
   !!
   !! Define the observations associated with this object
-  !!
   !<
   subroutine gwt_gwt_df_obs(this)
     ! -- dummy
@@ -1126,14 +968,13 @@ contains
     call this%obs%StoreObsType('flow-ja-face', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => gwt_gwt_process_obsID
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_df_obs
 
   !> @ brief Read and prepare observations
   !!
   !! Handle observation exchanges exchange-boundary names.
-  !!
   !<
   subroutine gwt_gwt_rp_obs(this)
     ! -- modules
@@ -1198,7 +1039,7 @@ contains
     !
     ! -- write summary of error messages
     if (count_errors() > 0) then
-      call store_error_unit(this%inobs)
+      call store_error_filename(this%obs%inputFilename)
     end if
     !
     ! -- Return
@@ -1208,24 +1049,27 @@ contains
   !> @ brief Final processing
   !!
   !! Conduct any final processing
-  !!
   !<
   subroutine gwt_gwt_fp(this)
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_fp
 
-  !> @brief Return true when this exchange provides matrix
-  !! coefficients for solving @param model
+  !> @brief Return true when this exchange provides matrix coefficients for
+  !! solving @param model
   !<
   function gwt_gwt_connects_model(this, model) result(is_connected)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    ! -- return
     logical(LGP) :: is_connected !< true, when connected
-
+    !
     is_connected = .false.
+    !
     ! only connected when model is GwtModelType of course
     select type (model)
     class is (GwtModelType)
@@ -1235,7 +1079,9 @@ contains
         is_connected = .true.
       end if
     end select
-
+    !
+    ! -- Return
+    return
   end function gwt_gwt_connects_model
 
   !> @brief Should interface model be used for this exchange
@@ -1247,23 +1093,25 @@ contains
   !! set the return accordingly.
   !<
   function use_interface_model(this) result(use_im)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
+    ! -- return
     logical(LGP) :: use_im !< true when interface model should be used
-
+    !
     ! For now set use_im to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
     use_im = .true.
-
+    !
+    ! -- Return
+    return
   end function
 
   !> @ brief Save simulated flow observations
   !!
   !! Save the simulated flows for each exchange
-  !!
   !<
   subroutine gwt_gwt_save_simvals(this)
     ! -- dummy
-    use SimModule, only: store_error, store_error_unit
     use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
@@ -1294,20 +1142,20 @@ contains
             errmsg = 'Unrecognized observation type: '// &
                      trim(obsrv%ObsTypeId)
             call store_error(errmsg)
-            call store_error_unit(this%inobs)
+            call store_error_filename(this%obs%inputFilename)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_save_simvals
 
   !> @ brief Obs ID processer
   !!
   !! Process observations for this exchange
-  !!
   !<
   subroutine gwt_gwt_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- modules
@@ -1343,17 +1191,19 @@ contains
       obsrv%intPak1 = NAMEDBOUNDFLAG
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_process_obsID
 
   !> @ brief Cast polymorphic object as exchange
   !!
   !! Cast polymorphic object as exchange
-  !!
   !<
   function CastAsGwtExchange(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(GwtExchangeType), pointer :: res
     !
     res => null()
@@ -1363,19 +1213,21 @@ contains
     class is (GwtExchangeType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsGwtExchange
 
   !> @ brief Get exchange from list
   !!
   !! Return an exchange from the list for specified index
-  !!
   !<
   function GetGwtExchangeFromList(list, idx) result(res)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
+    ! -- return
     class(GwtExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
@@ -1383,6 +1235,7 @@ contains
     obj => list%GetItem(idx)
     res => CastAsGwtExchange(obj)
     !
+    ! -- Return
     return
   end function GetGwtExchangeFromList
 

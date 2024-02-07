@@ -95,9 +95,13 @@
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
+		<File RelativePath="..\src\Exchange\GwfExchangeMover.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
+		<File RelativePath="..\src\Exchange\gwfgwfidm.f90"/>
 		<File RelativePath="..\src\Exchange\GwfGwtExchange.f90"/>
+		<File RelativePath="..\src\Exchange\gwfgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\GwtGwtExchange.f90"/>
+		<File RelativePath="..\src\Exchange\gwtgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
@@ -122,6 +126,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3api8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3buy8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3csub8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8idm.f90"/>
@@ -130,10 +135,15 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evta8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3lak8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3maw8.f90"/>
@@ -143,7 +153,10 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3obs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3oc8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rcha8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
@@ -151,65 +164,78 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3vsc8.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8idm.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1adv1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1apt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dis1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1disu1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1disv1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1idm.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1fmi1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ist1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1lkt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1mst1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1mvt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1mwt1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1obs1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1oc1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1sft1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1src1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ssm1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1uzt1.f90"/></Filter>
 		<Filter Name="ModelUtilities">
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackageExt.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\FlowModelInterface.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfBuyInputData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfMvrPeriodData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfVscInputData.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\GwtAdvOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\ModelPackageInput.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionUtils.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TspAdvOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
+		<Filter Name="TransportModel">
+		<File RelativePath="..\src\Model\TransportModel\tsp1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1adv1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1apt1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1fmi1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1ic1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1mvt1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1obs1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1oc1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1ssm1.f90"/></Filter>
 		<File RelativePath="..\src\Model\BaseModel.f90"/>
 		<File RelativePath="..\src\Model\ExplicitModel.f90"/>
 		<File RelativePath="..\src\Model\NumericalModel.f90"/>
-		<File RelativePath="..\src\Model\NumericalPackage.f90"/>
-		<File RelativePath="..\src\Model\TransportModel.f90"/></Filter>
+		<File RelativePath="..\src\Model\NumericalPackage.f90"/></Filter>
 		<Filter Name="Solution">
 		<Filter Name="LinearMethods">
 		<File RelativePath="..\src\Solution\LinearMethods\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSettings.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSolver.f90"/></Filter>
 		<Filter Name="PETSc">
 		<File RelativePath="..\src\Solution\PETSc\PetscConvergence.F90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Solution\PETSc\PetscImsPreconditioner.F90">
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
@@ -220,6 +246,7 @@
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
+		<File RelativePath="..\src\Solution\ConvergenceSummary.f90"/>
 		<File RelativePath="..\src\Solution\ExplicitSolution.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverBase.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverFactory.F90">
@@ -260,21 +287,29 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
 		<Filter Name="Idm">
 		<Filter Name="mf6blockfile">
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\AsciiInputLoadType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StressGridInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StressListInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmExgDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\InputLoadType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\ModelPackageInputs.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\SourceCommon.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\SourceLoad.F90"/></Filter>
 		<Filter Name="Libraries">
 		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\daglib\dag_module.f90"/>
@@ -353,7 +388,9 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\src\Utilities\DevFeature.f90"/>
+		<File RelativePath="..\src\Utilities\ErrorUtil.f90"/>
+		<File RelativePath="..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
@@ -361,6 +398,8 @@
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
+		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
+		<File RelativePath="..\src\Utilities\MathUtil.f90"/>
 		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>

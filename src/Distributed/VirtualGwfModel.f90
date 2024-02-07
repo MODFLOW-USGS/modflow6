@@ -16,6 +16,7 @@ module VirtualGwfModelModule
     type(VirtualIntType), pointer :: npf_iangle2 => null()
     type(VirtualIntType), pointer :: npf_iangle3 => null()
     type(VirtualIntType), pointer :: npf_iwetdry => null()
+    type(VirtualIntType), pointer :: inbuy => null()
     type(VirtualInt1dType), pointer :: npf_icelltype => null()
     type(VirtualDbl1dType), pointer :: npf_k11 => null()
     type(VirtualDbl1dType), pointer :: npf_k22 => null()
@@ -24,6 +25,7 @@ module VirtualGwfModelModule
     type(VirtualDbl1dType), pointer :: npf_angle2 => null()
     type(VirtualDbl1dType), pointer :: npf_angle3 => null()
     type(VirtualDbl1dType), pointer :: npf_wetdry => null()
+    type(VirtualDbl1dType), pointer :: buy_dense => null()
   contains
     ! public
     procedure :: create => vgwf_create
@@ -78,6 +80,7 @@ contains
     call this%set(this%npf_iangle2%base(), 'IANGLE2', 'NPF', MAP_ALL_TYPE)
     call this%set(this%npf_iangle3%base(), 'IANGLE3', 'NPF', MAP_ALL_TYPE)
     call this%set(this%npf_iwetdry%base(), 'IWETDRY', 'NPF', MAP_ALL_TYPE)
+    call this%set(this%inbuy%base(), 'INBUY', '', MAP_ALL_TYPE)
     call this%set(this%npf_icelltype%base(), 'ICELLTYPE', 'NPF', MAP_NODE_TYPE)
     call this%set(this%npf_k11%base(), 'K11', 'NPF', MAP_NODE_TYPE)
     call this%set(this%npf_k22%base(), 'K22', 'NPF', MAP_NODE_TYPE)
@@ -86,6 +89,7 @@ contains
     call this%set(this%npf_angle2%base(), 'ANGLE2', 'NPF', MAP_NODE_TYPE)
     call this%set(this%npf_angle3%base(), 'ANGLE3', 'NPF', MAP_NODE_TYPE)
     call this%set(this%npf_wetdry%base(), 'WETDRY', 'NPF', MAP_NODE_TYPE)
+    call this%set(this%buy_dense%base(), 'DENSE', 'BUY', MAP_NODE_TYPE)
 
   end subroutine init_virtual_data
 
@@ -104,6 +108,7 @@ contains
       call this%map(this%npf_iangle2%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%npf_iangle3%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%npf_iwetdry%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%inbuy%base(), (/STG_AFT_MDL_DF/))
 
     else if (stage == STG_BFR_CON_AR) then
 
@@ -142,6 +147,12 @@ contains
         call this%map(this%npf_wetdry%base(), 0, (/STG_NEVER/))
       end if
 
+      if (this%inbuy%get() > 0) then
+        call this%map(this%buy_dense%base(), nr_nodes, (/STG_BFR_EXG_CF/))
+      else
+        call this%map(this%buy_dense%base(), 0, (/STG_NEVER/))
+      end if
+
     end if
 
   end subroutine vgwf_prepare_stage
@@ -161,6 +172,7 @@ contains
     allocate (this%npf_iangle2)
     allocate (this%npf_iangle3)
     allocate (this%npf_iwetdry)
+    allocate (this%inbuy)
     allocate (this%npf_icelltype)
     allocate (this%npf_k11)
     allocate (this%npf_k22)
@@ -169,6 +181,7 @@ contains
     allocate (this%npf_angle2)
     allocate (this%npf_angle3)
     allocate (this%npf_wetdry)
+    allocate (this%buy_dense)
 
   end subroutine allocate_data
 
@@ -179,6 +192,7 @@ contains
     deallocate (this%npf_iangle2)
     deallocate (this%npf_iangle3)
     deallocate (this%npf_iwetdry)
+    deallocate (this%inbuy)
     deallocate (this%npf_icelltype)
     deallocate (this%npf_k11)
     deallocate (this%npf_k22)
@@ -187,6 +201,7 @@ contains
     deallocate (this%npf_angle2)
     deallocate (this%npf_angle3)
     deallocate (this%npf_wetdry)
+    deallocate (this%buy_dense)
 
   end subroutine deallocate_data
 

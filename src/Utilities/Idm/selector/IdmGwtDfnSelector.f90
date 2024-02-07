@@ -1,29 +1,17 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmGwtDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use GwtDisInputModule, only: gwt_dis_param_definitions, &
-                               gwt_dis_aggregate_definitions, &
-                               gwt_dis_block_definitions, &
-                               gwt_dis_multi_package
-  use GwtDisuInputModule, only: gwt_disu_param_definitions, &
-                                gwt_disu_aggregate_definitions, &
-                                gwt_disu_block_definitions, &
-                                gwt_disu_multi_package
-  use GwtDisvInputModule, only: gwt_disv_param_definitions, &
-                                gwt_disv_aggregate_definitions, &
-                                gwt_disv_block_definitions, &
-                                gwt_disv_multi_package
-  use GwtDspInputModule, only: gwt_dsp_param_definitions, &
-                               gwt_dsp_aggregate_definitions, &
-                               gwt_dsp_block_definitions, &
-                               gwt_dsp_multi_package
-  use GwtNamInputModule, only: gwt_nam_param_definitions, &
-                               gwt_nam_aggregate_definitions, &
-                               gwt_nam_block_definitions, &
-                               gwt_nam_multi_package
+  use GwtDisInputModule
+  use GwtDisuInputModule
+  use GwtDisvInputModule
+  use GwtDspInputModule
+  use GwtCncInputModule
+  use GwtIcInputModule
+  use GwtNamInputModule
 
   implicit none
   private
@@ -60,6 +48,10 @@ contains
       call set_param_pointer(input_definition, gwt_disv_param_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_param_definitions)
+    case ('CNC')
+      call set_param_pointer(input_definition, gwt_cnc_param_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwt_ic_param_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwt_nam_param_definitions)
     case default
@@ -80,6 +72,10 @@ contains
       call set_param_pointer(input_definition, gwt_disv_aggregate_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_aggregate_definitions)
+    case ('CNC')
+      call set_param_pointer(input_definition, gwt_cnc_aggregate_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwt_ic_aggregate_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwt_nam_aggregate_definitions)
     case default
@@ -100,6 +96,10 @@ contains
       call set_block_pointer(input_definition, gwt_disv_block_definitions)
     case ('DSP')
       call set_block_pointer(input_definition, gwt_dsp_block_definitions)
+    case ('CNC')
+      call set_block_pointer(input_definition, gwt_cnc_block_definitions)
+    case ('IC')
+      call set_block_pointer(input_definition, gwt_ic_block_definitions)
     case ('NAM')
       call set_block_pointer(input_definition, gwt_nam_block_definitions)
     case default
@@ -119,6 +119,10 @@ contains
       multi_package = gwt_disv_multi_package
     case ('DSP')
       multi_package = gwt_dsp_multi_package
+    case ('CNC')
+      multi_package = gwt_cnc_multi_package
+    case ('IC')
+      multi_package = gwt_ic_multi_package
     case ('NAM')
       multi_package = gwt_nam_multi_package
     case default
@@ -141,6 +145,10 @@ contains
     case ('DISV')
       integrated = .true.
     case ('DSP')
+      integrated = .true.
+    case ('CNC')
+      integrated = .true.
+    case ('IC')
       integrated = .true.
     case ('NAM')
       integrated = .true.

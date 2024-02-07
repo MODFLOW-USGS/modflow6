@@ -1,8 +1,10 @@
-# tests ats on the prudic transport model.  With these ATS settings, the
-# solver should fail on time step 19 in period 2, and should converge on the
-# second try with a smaller time step.  This test will not pass if the states
-# are not restored properly for the advanced transport packages when the
-# failure occurs.
+"""
+Tests ATS on the prudic transport model.  With these ATS settings, the
+solver should fail on time step 19 in period 2, and should converge on the
+second try with a smaller time step.  This test will not pass if the states
+are not restored properly for the advanced transport packages when the
+failure occurs.
+"""
 
 import os
 from os.path import join
@@ -10,12 +12,12 @@ from os.path import join
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 
 data_path = project_root_path / "autotest" / "data"
 model_path = str(data_path / "prudic2004test2")
 testgroup = "prudic2004t2fmiats"
-
 nlay = 8
 nrow = 36
 ncol = 23
@@ -212,7 +214,8 @@ def run_flow_model(dir, exe):
             budget_filerecord=gwfname + ".sfr.bud",
             mover=True,
             pname="SFR-1",
-            unit_conversion=128390.00,
+            length_conversion=3.28084,
+            time_conversion=86400.0,
             boundnames=True,
             nreaches=len(rivlist),
             packagedata=sfrpackagedata,
@@ -850,6 +853,5 @@ def run_transport_model(dir, exe):
 
 @pytest.mark.slow
 def test_prudic2004t2fmiats(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(dir=str(function_tmpdir), exe=mf6)
-    run_transport_model(dir=str(function_tmpdir), exe=mf6)
+    run_flow_model(dir=str(function_tmpdir), exe=targets["mf6"])
+    run_transport_model(dir=str(function_tmpdir), exe=targets["mf6"])

@@ -1,0 +1,141 @@
+\subsection{Array Input (READARRAY)}
+Some \mf Model packages require arrays of information to be provided by the user.  This information is read using a generic READARRAY capability in \mf.  Within this user guide, variables that are read with READARRAY are marked accordingly, as shown in example input instructions for a DATA block.  
+
+\begin{lstlisting}[style=blockdefinition]
+BEGIN DATA
+  ARRAY1
+    <array1(nval)> -- READARRAY
+END DATA
+\end{lstlisting}
+
+\noindent In this example, the uppercase ARRAY1 is a text string that is recognized by the program.  While reading through the DATA block, the program would recognize ARRAY1, and would then use READARRAY to fill \texttt{array1} with \texttt{nval} values.
+
+\subsubsection{READARRAY Control Line}
+
+READARRAY works similar to the array readers in previous MODFLOW versions.  It begins by reading a control line.  The control line has one of three forms shown below, and is limited to a length of 999 characters.
+
+\begin{lstlisting}[style=blockdefinition]
+1. CONSTANT <constant> 
+\end{lstlisting}
+With CONSTANT, all values in the array are set equal to \texttt{constant}. 
+
+\begin{lstlisting}[style=blockdefinition]
+2. INTERNAL [FACTOR <factor>] [IPRN <iprn>] 
+\end{lstlisting}
+With INTERNAL, the individual array elements will be read from the same file that contains the control line. 
+
+\begin{lstlisting}[style=blockdefinition]
+3. OPEN/CLOSE <fname> [FACTOR <factor>] [(BINARY)] [IPRN <iprn>]
+\end{lstlisting}
+With OPEN/CLOSE, the array will be read from the file whose name is specified by \texttt{fname}. This file will be opened just prior to reading the array and closed immediately after the array is read. A file that is read using this control line can contain only a single array. 
+
+\subsubsection{READARRAY Variable Descriptions}
+
+\begin{description}
+
+\item \texttt{<constant>}---is a real number constant for real arrays and an integer constant for integer arrays. The \texttt{constant} value is assigned to the entire array. 
+
+\item \texttt{FACTOR <factor>}---are a keyword and a real number factor for real arrays and an integer factor for integer arrays. The individual elements of the array are multiplied by \texttt{factor} after they are read. If \texttt{factor} is specified as 0, then it is changed to 1.
+
+\item \texttt{(BINARY)}---is an option that indicates the OPEN/CLOSE file contains array data in binary (unformatted) form. A binary file that can be read by MODFLOW may be created in only two ways. The first way is to use MODFLOW to create the file by saving heads in a binary file. This is commonly done when the user desires to use computed heads from one simulation as initial heads for a subsequent simulation. The other way to create a binary file is to write a special program that generates a binary file.  ``(BINARY)'' can be specified only when the control line is OPEN/CLOSE.
+
+\item \texttt{IPRN <iprn>}---are a keyword and a flag that indicates whether the array being read should be written to the Listing File after the array has been read and a code for indicating the format that should be used when the array is written. The format codes are the same as for MODFLOW-2005. IPRN is set to zero when the specified value exceeds those defined. If IPRN is less than zero or if the keyword and flag are omitted, the array will not be printed.  This IPRN capability is not functional for all data sets, and may be removed in future versions.
+
+\end{description}
+
+\begin{longtable}{p{2cm} p{2cm} p{2cm} p{2cm}}
+\caption{IPRN Code and corresponding print formats for array readers.  These print codes determine how the user-provided array is written to the list file} 
+\tabularnewline
+\hline
+\hline
+\textbf{IPRN} & \textbf{Real} & \textbf{Integer} \\
+\hline
+\endhead
+\hline
+\endfoot
+0 & 10G11.4 & 10I11 \\
+1 & 11G10.3 & 60I1 \\
+2 & 9G13.6 & 40I2 \\
+3 & 15F7.1 & 30I3 \\
+4 & 15F7.2 & 25I4 \\
+5 & 15F7.3 & 20I5 \\
+6 & 15F7.4 & 10I11 \\
+7 & 20F5.0 & 25I2 \\
+8 & 20F5.1 & 15I4 \\
+9 & 20F5.2 & 10I6 \\
+10 & 20F5.3 &  \\
+11 & 20F5.4 &  \\
+12 & 10G11.4 & \\
+13 & 10F6.0 &  \\
+14 & 10F6.1 &  \\
+15 & 10F6.2 &  \\
+16 & 10F6.3 &  \\
+17 & 10F6.4 &  \\
+18 & 10F6.5 &  \\
+19 & 5G12.5 &  \\
+20 & 6G11.4 &  \\
+21 & 7G9.2 &  \\
+%\label{table:ndim}
+\end{longtable}
+
+
+\subsubsection{READARRAY Examples}
+
+The following examples use free-format control lines for reading an array. The example array is a real array consisting of 4 rows with 7 columns per row: 
+
+\begin{lstlisting}[style=inputfile]
+CONSTANT 5.7      This sets an entire array to the value "5.7". 
+INTERNAL FACTOR 1.0 IPRN 3            This reads the array values from the 
+ 1.2 3.7 9.3 4.2 2.2 9.9 1.0      file that contains the control line. 
+ 3.3 4.9 7.3 7.5 8.2 8.7 6.6      Thus, the values immediately follow the 
+ 4.5 5.7 2.2 1.1 1.7 6.7 6.9      control line. 
+ 7.4 3.5 7.8 8.5 7.4 6.8 8.8 
+OPEN/CLOSE inp.txt FACTOR 1.0 IPRN 3    Read array from formatted file "inp.dat". 
+OPEN/CLOSE inp.bin FACTOR 1.0 (BINARY) IPRN 3     Read array from binary file "inp.bin". 
+OPEN/CLOSE test.dat FACTOR 1.0 IPRN 3     Read array from file "test.dat". 
+\end{lstlisting}
+
+
+Some arrays define information that is required for the entire model grid, or part of a model grid.  This type of information is provided in a special type of data block called a ``GRIDDATA'' block.  For example, hydraulic conductivity is required for every cell in the model grid.  Hydraulic conductivity is read from a ``GRIDDATA'' block in the \mf GWF NPF Package input file.  For GRIDDATA arrays with one value for every cell in the model grid, the arrays can optionally be read in a LAYERED format, in which an array is provided for each layer of the grid.  Alternatively, the array can be read for the entire model grid.  As an example, consider the GRIDDATA block for the \mf GWF or GWT IC Package shown below:
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ic-griddata.dat}
+
+Here, the initial heads for the model are provided in the \texttt{strt} array.  If the optional LAYERED keyword is present, then a separate array is provided for each layer.  If the LAYERED keyword is not present, then the entire starting head array is read at once.  The LAYERED keyword may be useful to discretization packages of type DIS and DISV, which support the concept of layers.  Models defined with the DISU Package are not layered.
+
+For a structured DIS model, the READARRAY utility is used to read arrays that are dimensioned to the full size of the grid (of size \texttt{nlay*nrow*ncol}). This utility first reads an array name, which associates the input to be read with the desired array.  For these arrays, an optional keyword ``LAYERED'' can be located next to the array name.  If ``LAYERED'' is detected, then a control line is provided for each layer and the array is filled with values for each model layer.  If the ``LAYERED'' keyword is absent, then a single control line is used and the entire array is filled at once.
+
+For example, the following block shows one way the \mf GWF model starting head array (STRT) could be specified for a model with 4 layers.  Following the array name and the ``LAYERED'' keyword are four control lines, one for each layer.
+
+\begin{lstlisting}[style=inputfile]
+  STRT LAYERED
+     CONSTANT 10.0  #layer 1
+     CONSTANT 10.0  #layer 2
+     CONSTANT 10.0  #layer 3
+     CONSTANT 10.0  #layer 4
+\end{lstlisting}
+
+In this next example, the ``LAYERED'' keyword is absent.  In this case, the control line applies to the entire \texttt{strt} array.  One control line is required, and a constant value of 10.0 will be assigned to STRT for all cells in the model grid.
+
+\begin{lstlisting}[style=inputfile]
+  STRT
+     CONSTANT 10.0  #applies to all cells in the grid
+\end{lstlisting}
+
+In the next example, the ``LAYERED'' keyword is present and binary files are used for each layer. A control line with the ``BINARY'' keyword is required for each layer.
+
+\begin{lstlisting}[style=inputfile]
+  STRT LAYERED
+     OPEN/CLOSE strt.layer1.bin (BINARY)  #layer1
+     OPEN/CLOSE strt.layer2.bin (BINARY)  #layer2
+     OPEN/CLOSE strt.layer3.bin (BINARY)  #layer3
+     OPEN/CLOSE strt.layer4.bin (BINARY)  #layer4
+\end{lstlisting}
+
+In the next example, the ``LAYERED'' keyword is absent. In this case, a single control line with the ``BINARY'' keyword is required and the binary file will include the entire data array.
+
+\begin{lstlisting}[style=inputfile]
+  STRT
+     OPEN/CLOSE strt.bin (BINARY)  #layers1-4
+\end{lstlisting}
+
+A consequence of the way binary input files have been implemented in \mf, simulated dependent variable binary output (for example, head and concentration) cannot be used as binary array input for a model. Instead, simulated dependent variable binary output must be processed and split into separate binary files for each layer or combined into a single array equal to the size of the grid (for DIS grids this would be an array equal to NCOL * NROW * NLAY).

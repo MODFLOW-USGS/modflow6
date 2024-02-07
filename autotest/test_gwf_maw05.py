@@ -1,21 +1,23 @@
-# Test maw package ability to equalize.
-# maw_05a - well and aquifer start at 4; should be now flow
-# maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
-# maw_05c - well starts at or below 3.0; not working yet
+"""
+Test maw package ability to equalize.
+maw_05a - well and aquifer start at 4; should be now flow
+maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
+maw_05c - well starts at or below 3.0; not working yet
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["maw_05a", "maw_05b", "maw_05c"]
+from framework import TestFramework
+
+cases = ["maw_05a", "maw_05b", "maw_05c"]
 mawstrt = [4.0, 3.5, 2.5]  # add 3.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -42,10 +44,10 @@ def build_model(idx, dir):
     nouter, ninner = 700, 10
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -112,16 +114,16 @@ def build_model(idx, dir):
     mstrt = mawstrt[idx]
     mawcondeqn = "THIEM"
     mawngwfnodes = nlay
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = [
         [0, mawradius, mawbottom, mstrt, mawcondeqn, mawngwfnodes]
     ]
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
         [0, icon, (icon, 0, 0), top, mawbottom, -999.0, -999.0]
         for icon in range(nlay)
     ]
-    # <wellno> <mawsetting>
+    # <ifno> <mawsetting>
     mawperioddata = [[0, "STATUS", "ACTIVE"]]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
@@ -177,26 +179,24 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * np.pi * 0.1**2
+    v0maw = mawstrt[idx] * np.pi * 0.1**2
     v0gwf = 4 * 7 * 0.3
     v0 = v0maw + v0gwf
     top = [4.0, 3.0, 2.0, 1.0]
@@ -214,7 +214,6 @@ def eval_results(sim):
     # calculate current volume of water in well and aquifer and compare with
     # initial volume
     for kstp, mawstage in enumerate(stage):
-
         vgwf = 0
         for k in range(nlay):
             for j in range(ncol):
@@ -241,17 +240,14 @@ def eval_results(sim):
     )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare="mf6_regression",
     )
+    test.run()

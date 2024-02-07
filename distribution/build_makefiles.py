@@ -6,8 +6,8 @@ from pathlib import Path
 import pymake
 import pytest
 from flaky import flaky
-from modflow_devtools.misc import set_dir
 from modflow_devtools.markers import requires_exe
+from modflow_devtools.misc import set_dir
 
 from utils import get_modified_time, get_project_root_path
 

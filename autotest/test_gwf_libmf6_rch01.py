@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that recharge is passed to the highest active layer and
 verify that recharge is in the highest active layer by looking at the
 individual budget terms.  For this test, there are two layers and five
@@ -13,11 +12,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_rch01"]
+from framework import TestFramework
+
+cases = ["libgwf_rch01"]
 
 # recharge package name
 rch_pname = "RCH-1"
@@ -135,21 +134,21 @@ def get_model(ws, name, rech):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
     sim = get_model(ws, name, rech=rch_spd)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, rech=0.0)
 
     return sim, mc
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
 
@@ -177,13 +176,12 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
+    rch_tag = mf6.get_var_address("RECHARGE", name, rch_pname)
     new_recharge = mf6.get_value(rch_tag)
 
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt and prepare for non-linear iterations
         dt = mf6.get_time_step()
         mf6.prepare_time_step(dt)
@@ -193,7 +191,7 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_solve()
 
         # update recharge
-        new_recharge[:, 0] = rch_spd[idx] * area
+        new_recharge[:] = rch_spd[idx]
         mf6.set_value(rch_tag, new_recharge)
 
         while kiter < max_iter:
@@ -232,16 +230,13 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

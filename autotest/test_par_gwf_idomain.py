@@ -1,56 +1,46 @@
-import os
-from decimal import Decimal
+"""
+This tests reuses the simulation data in test_gwf_ifmod_idomain.py
+and runs it in parallel on three cpus with
+
+cpu 0: 'refmodel'
+cpu 1: 'leftmodel'
+cpu 2: 'rightmodel'
+
+so we can compare the parallel coupling of 'leftmodel' + 'rightmodel'
+with a serial 'refmodel'
+"""
+
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-# This tests reuses the simulation data in test_gwf_ifmod_idomain.py
-# and runs it in parallel on three cpus with
-#
-# cpu 0: 'refmodel'
-# cpu 1: 'leftmodel'
-# cpu 2: 'rightmodel'
-#
-# so we can compare the parallel coupling of 'leftmodel' + 'rightmodel'
-# with a serial 'refmodel'
+cases = ["par_idomain"]
 
-ex = ["par_idomain"]
 
-def build_petsc_db(idx, exdir):
-    from test_gwf_ifmod_idomain import hclose_check, max_inner_it
-    petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-ksp_type bicg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-sub_pc_factor_levels 2\n")
-        petsc_file.write(f"-dvclose {Decimal(hclose_check):.2E}\n")
-        petsc_file.write(f"-nitermax {max_inner_it}\n")
-        petsc_file.write("-options_left no\n")
+def build_models(idx, test):
+    from test_gwf_ifmod_idomain import build_models as build
 
-def build_model(idx, exdir):
-    from test_gwf_ifmod_idomain import build_model as build_model_ext
-    build_petsc_db(idx, exdir)
-    sim, dummy = build_model_ext(idx, exdir)
+    sim, dummy = build(idx, test)
     return sim, dummy
 
-def eval_model(test_sim):
-    from test_gwf_ifmod_idomain import compare_to_ref
-    compare_to_ref(test_sim)    
+
+def check_output(idx, test):
+    from test_gwf_ifmod_idomain import check_output as check
+
+    check(idx, test)
+
 
 @pytest.mark.parallel
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, 
-            idxsim=0, make_comparison=False,
-            parallel=True, ncpus=3,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare=None,
+        parallel=True,
+        ncpus=3,
     )
+    test.run()

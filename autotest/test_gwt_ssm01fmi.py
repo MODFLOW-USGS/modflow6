@@ -1,7 +1,9 @@
-# multiple ssm sources and sinks using a flow model followed by a
-# transport model.  Initial conditions and all inflows and outflows are
-# assigned a concentration of 100.0 so the simulated concentration must also
-# be 100.
+"""
+multiple ssm sources and sinks using a flow model followed by a
+transport model.  Initial conditions and all inflows and outflows are
+assigned a concentration of 100.0 so the simulated concentration must also
+be 100.
+"""
 
 import os
 from os.path import join
@@ -310,6 +312,5 @@ def run_transport_model(dir, exe):
 
 
 def test_ssm01fmi(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(str(function_tmpdir), mf6)
-    run_transport_model(str(function_tmpdir), mf6)
+    run_flow_model(str(function_tmpdir), targets["mf6"])
+    run_transport_model(str(function_tmpdir), targets["mf6"])

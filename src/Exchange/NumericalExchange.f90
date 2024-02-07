@@ -15,7 +15,9 @@ module NumericalExchangeModule
 
   type, extends(BaseExchangeType) :: NumericalExchangeType
     character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
+
   contains
+
     procedure :: exg_df
     procedure :: exg_ac
     procedure :: exg_mc
@@ -34,155 +36,104 @@ module NumericalExchangeModule
 
 contains
 
+  !> @brief Define the exchange
+  !<
   subroutine exg_df(this)
-! ******************************************************************************
-! exg_df -- define the exchange
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use BaseModelModule, only: BaseModelType
     use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(NumericalExchangeType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_df
 
+  !> @brief If an implicit exchange then add connections to sparse
+  !<
   subroutine exg_ac(this, sparse)
-! ******************************************************************************
-! exg_ac -- If an implicit exchange then add connections to sparse
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(NumericalExchangeType) :: this
     type(sparsematrix), intent(inout) :: sparse
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_ac
 
+  !> @brief Map the connections in the global matrix
+  !<
   subroutine exg_mc(this, matrix_sln)
-! ******************************************************************************
-! exg_mc -- Map the connections in the global matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(NumericalExchangeType) :: this
     class(MatrixBaseType), pointer :: matrix_sln
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
   end subroutine exg_mc
 
+  !> @brief Allocate and read
+  !<
   subroutine exg_ar(this)
-! ******************************************************************************
-! exg_ar -- Allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(NumericalExchangeType) :: this
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    class(NumericalExchangeType) :: this
+    !
+    ! -- Return
     return
   end subroutine exg_ar
 
+  !> @brief Advance
+  !<
   subroutine exg_ad(this)
-! ******************************************************************************
-! exg_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(NumericalExchangeType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_ad
 
+  !> @brief Calculate conductance, and for explicit exchanges, set the
+  !! conductance in the boundary package
+  !<
   subroutine exg_cf(this, kiter)
-! ******************************************************************************
-! exg_cf -- Calculate conductance, and for explicit exchanges, set the
-!   conductance in the boundary package.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: kiter
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_cf
 
+  !> @brief Fill the matrix
+  !<
   subroutine exg_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
-! ******************************************************************************
-! exg_fc -- Fill the matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_fc
 
+  !> @brief Additional convergence check
+  !<
   subroutine exg_cc(this, icnvg)
-! ******************************************************************************
-! exg_cc -- Additional convergence check
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), intent(inout) :: icnvg
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_cc
 
+  !> @brief Calculate flow
+  !<
   subroutine exg_cq(this, icnvg, isuppress_output, isolnid)
-! ******************************************************************************
-! exg_cq -- Calculate flow
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -190,20 +141,14 @@ contains
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_cq
 
+  !> @brief Exchange budget
+  !<
   subroutine exg_bd(this, icnvg, isuppress_output, isolnid)
-! ******************************************************************************
-! exg_bd -- Exchange budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -211,56 +156,50 @@ contains
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_bd
 
+  !> @brief Output
+  !<
   subroutine exg_ot(this)
-! ******************************************************************************
-! exg_ot
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(NumericalExchangeType) :: this
-! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine exg_ot
 
+  !> @brief Deallocate memory
+  !<
   subroutine exg_da(this)
-! ******************************************************************************
-! exg_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(NumericalExchangeType) :: this
-    ! -- local
-! ------------------
-
+    !
+    ! -- Return
     return
   end subroutine exg_da
 
   function get_iasym(this) result(iasym)
+    ! -- dummy
     class(NumericalExchangeType) :: this
+    ! -- return
     integer(I4B) :: iasym
-
+    !
     iasym = 0
-
+    !
+    ! -- Return
+    return
   end function get_iasym
 
   function CastAsNumericalExchangeClass(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(NumericalExchangeType), pointer :: res
     !
     res => null()
@@ -270,9 +209,13 @@ contains
     class is (NumericalExchangeType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsNumericalExchangeClass
 
+  !> @brief Add numerical exchange to a list
+  !<
   subroutine AddNumericalExchangeToList(list, exchange)
     implicit none
     ! -- dummy
@@ -284,9 +227,12 @@ contains
     obj => exchange
     call list%Add(obj)
     !
+    ! -- Return
     return
   end subroutine AddNumericalExchangeToList
 
+  !> @brief Retrieve a specific numerical exchange from a list
+  !<
   function GetNumericalExchangeFromList(list, idx) result(res)
     implicit none
     ! -- dummy
@@ -299,6 +245,7 @@ contains
     obj => list%GetItem(idx)
     res => CastAsNumericalExchangeClass(obj)
     !
+    ! -- Return
     return
   end function GetNumericalExchangeFromList
 

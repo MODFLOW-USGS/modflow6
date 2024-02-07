@@ -1,0 +1,66 @@
+# Deploy MODFLOW 6 to HPC systems.
+#
+# Expects shared environment variables...
+#
+#  - GIT_REMOTE, name of the mf6 remote to pull from
+#  - GIT_BRANCH, name of the mf6 branch to pull from
+#  - MODULE_SCRIPT, module update script path (relative to mf6 proj root)
+#  - SSH_KNOWN_HOSTS, content of ~/.ssh/known_hosts
+#  - SSH_USERNAME, SSH username to login with
+#  - SSH_PRIVATE_KEY, SSH private key for user
+#
+# ...and environment-specific variables:
+#
+#  - DENALI_HOSTNAME, SSH hostname of cluster
+#  - DENALI_SLURM_ACCOUNT, slurm account for jobs
+#  - DENALI_SLURM_RESERVATION, slurm reservation for jobs
+#  - DENALI_MODULES_PATH, path to root of module system
+#  - DENALI_MF6_PREV_VERSION, version of modulefile to use as template
+#  - DENALI_MF6_PROJ_ROOT, path to modflow6 project root
+#  - DENALI_BUILD_SCRIPT, relpath of script to build mf6
+#
+# ...and likewise for HOVENWEEP_* or other systems
+
+image: ubuntu:20.04
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == 'push'
+before_script:
+  # install ssh agent
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
+  # configure ssh agent
+  - eval $(ssh-agent -s)
+  # set private key permissions
+  - chmod 400 "$SSH_PRIVATE_KEY"
+  # add keys to the agent store
+  - ssh-add "$SSH_PRIVATE_KEY"
+  # configure known hosts
+  - mkdir -p ~/.ssh
+  - cp "$SSH_KNOWN_HOSTS" ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+deploy_denali:
+  environment: denali
+  script: "$CI_PROJECT_DIR/.hpc/deploy.sh"
+  stage: deploy
+  variables:
+    SSH_USERNAME: $SSH_USERNAME
+    SSH_HOSTNAME: $DENALI_HOSTNAME
+    SLURM_ACCOUNT: $DENALI_SLURM_ACCOUNT
+    SLURM_RESERVATION: $DENALI_SLURM_RESERVATION
+    MODULES_PATH: $DENALI_MODULES_PATH
+    MF6_PROJ_ROOT: $DENALI_MF6_PROJ_ROOT
+    MF6_PREV_VERSION: $DENALI_MF6_PREV_VERSION
+    BUILD_SCRIPT: $DENALI_BUILD_SCRIPT
+deploy_hovenweep:
+  environment: hovenweep
+  script: "$CI_PROJECT_DIR/.hpc/deploy.sh"
+  stage: deploy
+  variables:
+    SSH_USERNAME: $SSH_USERNAME
+    SSH_HOSTNAME: $HOVENWEEP_HOSTNAME
+    SLURM_ACCOUNT: $HOVENWEEP_SLURM_ACCOUNT
+    SLURM_RESERVATION: $HOVENWEEP_SLURM_RESERVATION
+    MODULES_PATH: $HOVENWEEP_MODULES_PATH
+    MF6_PROJ_ROOT: $HOVENWEEP_MF6_PROJ_ROOT
+    MF6_PREV_VERSION: $HOVENWEEP_MF6_PREV_VERSION
+    BUILD_SCRIPT: $HOVENWEEP_BUILD_SCRIPT

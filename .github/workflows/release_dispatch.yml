@@ -24,6 +24,16 @@ on:
         description: 'Branch to release from.'
         required: true
         type: string
+      compiler_toolchain:
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
+        type: string
+        default: 'intel-classic'
+      compiler_version:
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
+        type: string
+        default: '2021.7'
       commit_version:
         description: 'Commit version numbers back to the develop branch. Not considered if reset is false.'
         required: false
@@ -36,7 +46,7 @@ on:
         default: false
       run_tests:
         description: 'Run tests after building binaries.'
-        required: true
+        required: false
         type: boolean
         default: true
       version:
@@ -53,6 +63,8 @@ jobs:
         shell: bash -l {0}
     outputs:
       branch: ${{ steps.set_branch.outputs.branch }}
+      compiler_toolchain: ${{ steps.set_compiler.outputs.compiler_toolchain }}
+      compiler_version: ${{ steps.set_compiler.outputs.compiler_version }}
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - name: Set branch
@@ -61,8 +73,8 @@ jobs:
           # if branch was provided explicitly via workflow_dispatch, use it
           if [[ ("${{ github.event_name }}" == "workflow_dispatch") && (-n "${{ inputs.branch }}") ]]; then
             branch="${{ inputs.branch }}"
-            # prevent releases from develop or master
-            if [[ ("$branch" == "develop") || ("$branch" == "master") ]]; then
+            # prevent releases from master
+            if [[ "$branch" == "master" ]]; then
               echo "error: releases may not be triggered from branch $branch"
               exit 1
             fi
@@ -77,6 +89,26 @@ jobs:
             exit 1
           fi
           echo "branch=$branch" >> $GITHUB_OUTPUT
+      - name: Set compiler
+        id: set_compiler
+        run: |
+          # if compiler toolchain was provided explicitly via workflow_dispatch, use it
+          if [[ ("${{ github.event_name }}" == "workflow_dispatch") && (-n "${{ inputs.compiler_toolchain }}") ]]; then
+            compiler_toolchain="${{ inputs.compiler_toolchain }}"
+            compiler_version="${{ inputs.compiler_version }}"
+            echo "using compiler toolchain $compiler_toolchain version $compiler_version from workflow_dispatch"
+          elif [[ ("${{ github.event_name }}" == "push") && ("${{ github.ref_name }}" != "master") ]]; then
+            # if release was triggered by pushing a release branch, use the default toolchain and version
+            compiler_toolchain="intel-classic"
+            compiler_version="2021.7"
+            echo "using default compiler toolchain $compiler_toolchain version $compiler_version"
+          else
+            # otherwise exit with an error
+            echo "error: this workflow should not have triggered for event ${{ github.event_name }} on branch ${{ github.ref_name }}"
+            exit 1
+          fi
+          echo "compiler_toolchain=$compiler_toolchain" >> $GITHUB_OUTPUT
+          echo "compiler_version=$compiler_version" >> $GITHUB_OUTPUT
       - name: Set version
         id: set_version
         run: |
@@ -103,6 +135,8 @@ jobs:
       # If the workflow is manually triggered, the maintainer must manually set approve=true to approve a release.
       # If triggered by pushing a release branch, the release is approved if the branch name doesn't contain "rc".
       approve: ${{ (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
+      compiler_toolchain: ${{ needs.set_options.outputs.compiler_toolchain }}
+      compiler_version: ${{ needs.set_options.outputs.compiler_version }}
       branch: ${{ needs.set_options.outputs.branch }}
       developmode: false
       full: true
@@ -110,7 +144,7 @@ jobs:
       version: ${{ needs.set_options.outputs.version }}
   pr:
     name: Draft release PR
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' && (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
+    if: ${{ github.ref_name != 'master' && ((github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc'))) }}
     needs:
       - set_options
       - make_dist
@@ -123,7 +157,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           ref: ${{ github.ref }}
@@ -185,7 +219,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
@@ -198,7 +232,7 @@ jobs:
           cache-environment: true
 
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
 
       - name: Draft release
         working-directory: modflow6
@@ -229,7 +263,7 @@ jobs:
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           path: modflow6

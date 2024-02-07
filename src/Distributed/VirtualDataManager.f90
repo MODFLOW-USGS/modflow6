@@ -3,14 +3,16 @@ module VirtualDataManagerModule
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
   use VirtualBaseModule, only: MAP_NODE_TYPE, MAP_CONN_TYPE
-  use VirtualModelModule, only: get_virtual_model
-  use VirtualExchangeModule, only: get_virtual_exchange
+  use VirtualModelModule, only: get_virtual_model, get_virtual_model_from_list
+  use VirtualExchangeModule, only: get_virtual_exchange, &
+                                   get_virtual_exchange_from_list
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule
   use RouterFactoryModule, only: create_router
   use ListsModule, only: basesolutionlist
-  use NumericalSolutionModule, only: NumericalSolutionType
+  use NumericalSolutionModule, only: NumericalSolutionType, &
+                                     CastAsNumericalSolutionClass
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use NumericalExchangeModule, only: NumericalExchangeType, &
                                      GetNumericalExchangeFromList
@@ -30,6 +32,7 @@ module VirtualDataManagerModule
     procedure :: create => vds_create
     procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
+    procedure :: set_halo => vds_set_halo
     procedure :: reduce_halo => vds_reduce_halo
     procedure :: synchronize => vds_synchronize
     procedure :: synchronize_sln => vds_synchronize_sln
@@ -90,6 +93,7 @@ contains
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
     class(VirtualDataContainerType), pointer :: vdc
+    logical :: found
 
     this%nr_solutions = this%nr_solutions + 1
     virt_sol => this%virtual_solutions(this%nr_solutions)
@@ -102,16 +106,34 @@ contains
     virt_sol%solution_id = num_sol%id
     virt_sol%numerical_solution => num_sol
 
-    ! 1) adding all local models from the solution
+    ! 1) adding all local models with a virtual model counterpart from the solution
     do im = 1, num_sol%modellist%Count()
       num_mod => GetNumericalModelFromList(num_sol%modellist, im)
-      call model_ids%push_back(num_mod%id)
+      found = .false.
+      do i = 1, virtual_model_list%Count()
+        vdc => get_virtual_model_from_list(virtual_model_list, i)
+        if (num_mod%id == vdc%id) then
+          found = .true.
+          exit
+        end if
+      end do
+      if (found) then
+        call model_ids%push_back(num_mod%id)
+      end if
     end do
 
-    ! 2) adding all local exchanges
+    ! 2) adding all local exchanges with a virtual exchange counterpart
     do ix = 1, num_sol%exchangelist%Count()
       exg => GetDisConnExchangeFromList(num_sol%exchangelist, ix)
       if (.not. associated(exg)) cycle ! interface model is handled separately
+      found = .false.
+      do i = 1, virtual_exchange_list%Count()
+        vdc => get_virtual_exchange_from_list(virtual_exchange_list, i)
+        if (exg%id == vdc%id) then
+          found = .true.
+          exit
+        end if
+      end do
       call exchange_ids%push_back_unique(exg%id)
     end do
 
@@ -153,6 +175,69 @@ contains
 
   end subroutine vds_add_solution
 
+  !> @brief Restrict the models and exchanges in the halo
+  !< to the set that has an actual chance of being used
+  subroutine vds_set_halo(this)
+    use ListsModule, only: basesolutionlist
+    use VirtualDataListsModule
+    use VirtualModelModule
+    use VirtualExchangeModule
+    class(VirtualDataManagerType) :: this
+    ! local
+    integer(I4B) :: i, imod, isol, iexg
+    type(STLVecInt) :: halo_model_ids
+    class(VirtualModelType), pointer :: vm
+    class(VirtualExchangeType), pointer :: ve
+    class(SpatialModelConnectionType), pointer :: conn
+    class(*), pointer :: sln_ptr
+
+    call halo_model_ids%init()
+
+    ! add halo models to list with ids (unique)
+    do isol = 1, basesolutionlist%Count()
+      sln_ptr => basesolutionlist%GetItem(isol)
+      select type (sln_ptr)
+      class is (NumericalSolutionType)
+        do iexg = 1, sln_ptr%exchangelist%Count()
+          conn => get_smc_from_list(sln_ptr%exchangelist, iexg)
+          if (.not. associated(conn)) cycle
+
+          ! add halo model ids to the list
+          do i = 1, conn%halo_models%size
+            call halo_model_ids%push_back_unique(conn%halo_models%at(i))
+          end do
+        end do
+      end select
+    end do
+
+    ! deactivate models that are not local, and not in halo
+    do imod = 1, virtual_model_list%Count()
+      vm => get_virtual_model_from_list(virtual_model_list, imod)
+      if (.not. vm%is_local) then
+        if (.not. halo_model_ids%contains(vm%id)) then
+          vm%is_active = .false.
+        end if
+      end if
+    end do
+
+    ! deactivate exchanges that are not local and outside halo
+    do iexg = 1, virtual_exchange_list%Count()
+      ve => get_virtual_exchange_from_list(virtual_exchange_list, iexg)
+      if (ve%v_model1%is_local .or. ve%v_model2%is_local) then
+        cycle
+      end if
+      if (halo_model_ids%contains(ve%v_model1%id) .and. &
+          halo_model_ids%contains(ve%v_model2%id)) then
+        cycle
+      end if
+
+      ve%is_active = .false.
+    end do
+
+    call halo_model_ids%destroy()
+
+  end subroutine vds_set_halo
+
   !> @brief Reduce the halo for all solutions. This will
   !< activate the mapping tables in the virtual data items.
   subroutine vds_reduce_halo(this)
@@ -173,7 +258,7 @@ contains
     ! merge the interface maps over this process
     do isol = 1, this%nr_solutions
       virt_sol => this%virtual_solutions(isol)
-      num_sol => virt_sol%numerical_solution
+      num_sol => CastAsNumericalSolutionClass(virt_sol%numerical_solution)
       do iexg = 1, num_sol%exchangelist%Count()
         conn => get_smc_from_list(num_sol%exchangelist, iexg)
         if (.not. associated(conn)) cycle
@@ -191,7 +276,8 @@ contains
       do isol = 1, this%nr_solutions
         write (outunit, '(a,i0,/)') "interface mape for solution ", &
           this%virtual_solutions(isol)%solution_id
-        call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
+        virt_sol => this%virtual_solutions(isol)
+        call virt_sol%interface_map%print_interface(outunit)
       end do
       close (outunit)
     end if
@@ -230,13 +316,16 @@ contains
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
 
-    ! prepare all virtual data for this stage
+    ! prepare all virtual data for this stage,
+    ! cycle inactive to avoid redundant mem allocs
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
+      if (.not. vdc%is_active) cycle
       call vdc%prepare_stage(stage)
     end do
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
+      if (.not. vdc%is_active) cycle
       call vdc%prepare_stage(stage)
     end do
 

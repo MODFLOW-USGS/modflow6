@@ -69,11 +69,11 @@
 \item \textbf{Block: PACKAGEDATA}
 
 \begin{description}
-\item \texttt{lakeno}---integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
+\item \texttt{ifno}---integer value that defines the feature (lake) number associated with the specified PACKAGEDATA data on the line. IFNO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
 
 \item \texttt{strt}---real value that defines the starting stage for the lake.
 
-\item \texttt{nlakeconn}---integer value that defines the number of GWF cells connected to this (LAKENO) lake. There can only be one vertical lake connection to each GWF cell. NLAKECONN must be greater than zero.
+\item \texttt{nlakeconn}---integer value that defines the number of GWF cells connected to this (IFNO) lake. There can only be one vertical lake connection to each GWF cell. NLAKECONN must be greater than zero.
 
 \item \textcolor{blue}{\texttt{aux}---represents the values of the auxiliary variables for each lake. The values of auxiliary variables must be present for each lake. The values must be specified in the order of the auxiliary variables specified in the OPTIONS block.  If the package supports time series and the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
@@ -83,15 +83,15 @@
 \item \textbf{Block: CONNECTIONDATA}
 
 \begin{description}
-\item \texttt{lakeno}---integer value that defines the lake number associated with the specified CONNECTIONDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake connection information must be specified for every lake connection to the GWF model (NLAKECONN) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
+\item \texttt{ifno}---integer value that defines the feature (lake) number associated with the specified CONNECTIONDATA data on the line. IFNO must be greater than zero and less than or equal to NLAKES. Lake connection information must be specified for every lake connection to the GWF model (NLAKECONN) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
 
-\item \texttt{iconn}---integer value that defines the GWF connection number for this lake connection entry. ICONN must be greater than zero and less than or equal to NLAKECONN for lake LAKENO.
+\item \texttt{iconn}---integer value that defines the GWF connection number for this lake connection entry. ICONN must be greater than zero and less than or equal to NLAKECONN for lake IFNO.
 
 \item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, CELLID is the layer, row, and column.   For a grid that uses the DISV input file, CELLID is the layer and CELL2D number.  If the model uses the unstructured discretization (DISU) input file, CELLID is the node number for the cell.
 
 \item \texttt{claktype}---character string that defines the lake-GWF connection type for the lake connection. Possible lake-GWF connection type strings include:  VERTICAL--character keyword to indicate the lake-GWF connection is vertical  and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. HORIZONTAL--character keyword to indicate the lake-GWF connection is horizontal and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDH--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDV--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. Embedded lakes can only be connected to a single cell (NLAKECONN = 1) and there must be a lake table associated with each embedded lake.
 
-\item \texttt{bedleak}---character string or real value that defines the bed leakance for the lake-GWF connection. BEDLEAK must be greater than or equal to zero or specified to be NONE. If BEDLEAK is specified to be NONE, the lake-GWF connection conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent.
+\item \texttt{bedleak}---real value or character string that defines the bed leakance for the lake-GWF connection. BEDLEAK must be greater than or equal to zero, equal to the DNODATA value (3.0E+30), or specified to be NONE. If DNODATA or NONE is specified for BEDLEAK, the lake-GWF connection conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent. Warning messages will be issued if NONE is specified. Eventually the ability to specify NONE will be deprecated and cause MODFLOW 6 to terminate with an error.
 
 \item \texttt{belev}---real value that defines the bottom elevation for a HORIZONTAL lake-GWF connection. Any value can be specified if CLAKTYPE is VERTICAL, EMBEDDEDH, or EMBEDDEDV. If CLAKTYPE is HORIZONTAL and BELEV is not equal to TELEV, BELEV must be greater than or equal to the bottom of the GWF cell CELLID. If BELEV is equal to TELEV, BELEV is reset to the bottom of the GWF cell CELLID.
 
@@ -105,7 +105,7 @@
 \item \textbf{Block: TABLES}
 
 \begin{description}
-\item \texttt{lakeno}---integer value that defines the lake number associated with the specified TABLES data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than NTABLES.
+\item \texttt{ifno}---integer value that defines the feature (lake) number associated with the specified TABLES data on the line. IFNO must be greater than zero and less than or equal to NLAKES. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than NTABLES.
 
 \item \texttt{TAB6}---keyword to specify that record corresponds to a table file.
 
@@ -173,7 +173,7 @@ AUXILIARY <auxname> <@auxval@>
 
 \item \textcolor{blue}{\texttt{withdrawal}---real or character value that defines the maximum withdrawal rate $(L^3 T^{-1})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
-\item \textcolor{blue}{\texttt{rate}---real or character value that defines the extraction rate for the lake outflow. A positive value indicates inflow and a negative value indicates outflow from the lake. RATE only applies to active (IBOUND $>$ 0) lakes. A specified RATE is only applied if COUTTYPE for the OUTLETNO is SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. By default, the RATE for each SPECIFIED lake outlet is zero.}
+\item \textcolor{blue}{\texttt{rate}---real or character value that defines the extraction rate for the lake outflow. A positive value indicates inflow and a negative value indicates outflow from the lake. RATE only applies to outlets associated with active lakes (STATUS is ACTIVE). A specified RATE is only applied if COUTTYPE for the OUTLETNO is SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. By default, the RATE for each SPECIFIED lake outlet is zero.}
 
 \item \textcolor{blue}{\texttt{invert}---real or character value that defines the invert elevation for the lake outlet. A specified INVERT value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 

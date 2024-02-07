@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["utl03_obs"]
+from framework import TestFramework
+
+cases = ["utl03_obs"]
 
 # temporal discretization
 nper = 2
@@ -48,13 +48,11 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 0.01, 1.0
 
 
-def build_mf6(idx, ws, exe, binaryobs=True):
-    name = ex[idx]
+def build_mf6(idx, ws, binaryobs=True):
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=name, version="mf6", sim_ws=ws)
     # create tdis package
     flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
@@ -137,14 +135,14 @@ def build_mf6(idx, ws, exe, binaryobs=True):
     return sim
 
 
-def build_model(idx, dir, exe):
+def build_model(idx, dir):
     ws = dir
     # build mf6 with ascii observation output
-    sim = build_mf6(idx, ws, exe=exe, binaryobs=False)
+    sim = build_mf6(idx, ws, binaryobs=False)
 
     # build mf6 with binary observation output
     wsc = os.path.join(ws, "mf6")
-    mc = build_mf6(idx, wsc, exe=exe, binaryobs=True)
+    mc = build_mf6(idx, wsc, binaryobs=True)
 
     sim.write_simulation()
     mc.write_simulation()
@@ -153,16 +151,16 @@ def build_model(idx, dir, exe):
     return sim, mc
 
 
-def build_models(dir, exe):
-    for idx, name in enumerate(ex):
-        sim, mc = build_model(idx, dir, exe)
-        sim.write_simulation()
-        mc.write_simulation()
-        hack_binary_obs(idx, dir)
+def build_models(idx, test):
+    sim, mc = build_model(idx, test.workspace)
+    sim.write_simulation()
+    mc.write_simulation()
+    hack_binary_obs(idx, test.workspace)
+    return sim, mc
 
 
 def hack_binary_obs(idx, dir):
-    name = ex[idx]
+    name = cases[idx]
     ws = dir
     wsc = os.path.join(ws, "mf6")
     fname = name + ".obs"
@@ -176,14 +174,11 @@ def hack_binary_obs(idx, dir):
                 line += "  BINARY"
             f.write(f"{line}\n")
         f.close()
-    return
 
 
-def eval_obs(sim):
-    print("evaluating observations...")
-
+def check_output(idx, test):
     # get results from the observation files
-    pth = sim.simpath
+    pth = test.workspace
     files = [fn for fn in os.listdir(pth) if ".csv" in fn]
     for file in files:
         pth0 = os.path.join(pth, file)
@@ -216,13 +211,14 @@ def eval_obs(sim):
             assert np.allclose(d0[name], d1[name], rtol=1e-5), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets["mf6"]
-    test = TestFramework()
-    build_models(ws, mf6)
-    test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_obs), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
+        overwrite=False,
+    )
+    test.run()

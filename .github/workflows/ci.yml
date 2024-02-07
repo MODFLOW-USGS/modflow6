@@ -1,23 +1,43 @@
 name: MODFLOW 6 continuous integration
 on:
   push:
-    branches:
-      - master
-      - develop
-      - ci-diagnose*
     paths-ignore:
       - '**.md'
-      - 'doc/**'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
+      - '.hpc/**'
   pull_request:
     branches:
       - master
       - develop
     paths-ignore:
       - '**.md'
-      - 'doc/**'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
+      - '.hpc/**'
 jobs:
   lint:
-    name: Lint (fprettify)
+    name: Check format
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,7 +45,7 @@ jobs:
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -37,22 +57,25 @@ jobs:
       - name: Check Fortran source formatting
         run: python .github/common/fortran_format_check.py
 
+      - name: Check msvs project files
+        run: python .github/common/msvs_vfproj_check.py
+
   build:
-    name: Build (gfortran 12)
+    name: Build
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      GCC_V: 13
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Setup gfortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
           version: ${{ env.GCC_V }}
@@ -70,29 +93,39 @@ jobs:
       - name: Meson compile
         run: meson compile -C builddir
 
+      - name: Show build log
+        if: failure()
+        run: cat builddir/meson-logs/meson-log.txt
+
       - name: Meson test
         run: meson test --verbose --no-rebuild -C builddir
 
   smoke_test:
-    name: Smoke test (gfortran 12)
+    name: Smoke test
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      GCC: 13
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: modflow6
+      
+      - name: Checkout test-drive
+        uses: actions/checkout@v4
+        with:
+          repository: fortran-lang/test-drive
+          path: test-drive
 
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+      - name: Setup GNU Fortran ${{ env.GCC }}
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.GCC }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -101,12 +134,27 @@ jobs:
           cache-environment: true
           cache-downloads: true
 
+      - name: Build test-drive
+        working-directory: test-drive
+        run: |
+          meson setup builddir --prefix=$(pwd) --libdir=lib
+          meson install -C builddir
+          echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
       - name: Build modflow6
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+    
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
         working-directory: modflow6/autotest
@@ -127,8 +175,8 @@ jobs:
             pytest -v -n auto --durations 0 -S
           fi
 
-  test_gfortran_latest:
-    name: Test (gfortran 12)
+  test_gfortran:
+    name: Test gnu fortran
     needs:
       - lint
       - build
@@ -143,30 +191,30 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      GCC: 13
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: modflow6
 
       - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
       
       - name: Checkout modflow6-examples
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+      - name: Setup GNU Fortran ${{ env.GCC }}
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.GCC }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -183,7 +231,15 @@ jobs:
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+      
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
         working-directory: modflow6/autotest
@@ -207,11 +263,9 @@ jobs:
             pytest -v -n auto --durations 0 -m "not large"
           fi
       
-      # steps below run only on Linux to test distribution procedures, e.g.
-      # compiling binaries, building documentation
       - name: Checkout usgslatex
         if: runner.os == 'Linux'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/usgslatex
           path: usgslatex
@@ -230,31 +284,15 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
-
-      - name: Install dependencies for ex-gwf-twri example model
-        if: runner.os == 'Linux'
-        working-directory: modflow6-examples/etc
-        run: |
-          # install extra Python packages
-          pip install -r requirements.pip.txt
-
-          # the example model needs executables to be on the path
-          echo "${{ github.workspace }}/modflow6/bin" >> $GITHUB_PATH
-          echo "${{ github.workspace }}/modflow6/bin/downloaded" >> $GITHUB_PATH
-
-      - name: Build ex-gwf-twri example model
-        if: runner.os == 'Linux'
-        working-directory: modflow6-examples/scripts
-        run: python ex-gwf-twri.py
-
+     
       - name: Test distribution scripts
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
 
-  test_gfortran_previous:
-    name: Test gfortran (${{ matrix.GCC_V }}, ${{ matrix.os }})
+  test_intel_fortran:
+    name: Test intel fortran
     needs:
       - lint
       - build
@@ -263,90 +301,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04 ]
-        GCC_V: [ 7, 8, 9, 10, 11 ]
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      FC: gfortran
-    steps:
+        include:
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7}
+          - {os: macos-12, compiler: intel-classic, version: 2021.7}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.7}
 
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-testmodels
-          path: modflow6-testmodels
-
-      - name: Setup GNU Fortran ${{ matrix.GCC_V }}
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: gcc
-          version: ${{ matrix.GCC_V }}
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
-      - name: Build modflow6
-        working-directory: modflow6
-        run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
-      
-      - name: Get executables
-        working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-
-      - name: Test modflow6
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
-          else
-            pytest -v -n auto --durations 0 -m "not large"
-          fi
-
-  test_ifort:
-    name: Test (ifort)
-    needs:
-      - lint
-      - build
-      - smoke_test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
     defaults:
       run:
         shell: bash -l {0}
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: modflow6
 
       - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
@@ -362,50 +333,41 @@ jobs:
           cache-downloads: true
 
       - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
 
       - name: Update version files
         working-directory: modflow6/distribution
         run: python update_version.py
 
       - name: Build modflow6
-        if: runner.os != 'Windows'
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
 
-      - name: Build modflow6 (Windows)
-        if: runner.os == 'Windows'
+      - name: Show build log
+        if: failure()
         working-directory: modflow6
-        shell: pwsh
-        run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
-        if: runner.os != 'Windows'
         working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-          
-      - name: Get executables (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/autotest
-        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
-        if: runner.os != 'Windows'
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -416,30 +378,8 @@ jobs:
             pytest -v -n auto --durations 0 -m "not large"
           fi
 
-      - name: Test programs (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/autotest
-        shell: pwsh
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          if ( "${{ github.ref_name }}" -eq "master" ) {
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
-          } else {
-            pytest -v -n auto --durations 0 -m "not large"
-          }
-
       - name: Test scripts
-        if: runner.os != 'Windows'
         working-directory: modflow6/distribution
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
-
-      - name: Test scripts (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/distribution
-        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
@@ -464,7 +404,7 @@ jobs:
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: modflow6
 
@@ -488,14 +428,14 @@ jobs:
           mpi: msmpi
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
           version: ${{ env.GCC_V }}
 
       - name: Cache PETSc
         id: cache-petsc
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: petsc
           key: ${{ runner.os }}-petsc

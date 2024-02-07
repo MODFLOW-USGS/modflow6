@@ -19,7 +19,7 @@ program mf5to6
   use SimFileWriterModule, only: SimFileWriterType
   use SimModule, only: ustop
   use SimListVariablesModule, only: SimMovers
-  use UtilitiesModule, only: GetArgs, ReadMf5to6Options, PhmfOption
+  use UtilitiesModule, only: GetArgs, PhmfOption
   !
   implicit none
   integer :: iexg, igrid, ispw, iu
@@ -69,7 +69,6 @@ program mf5to6
   ! provide a command-prompt instruction that will run PostObsMF, or maybe
   ! generate a batch or python file (could also be an option) that would
   ! run PostObsMF (twice, if there are multilayer head observations).
-  if (SupportPreproc) call ReadMf5to6Options()
   SimFileWriter%BaseName = basnam
   if (ilgr > 0) then
     ! LGR is active; read and initialize parent and all children.

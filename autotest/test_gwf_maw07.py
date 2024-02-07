@@ -1,16 +1,18 @@
-# Modifiy the previous test by having a first stress period where the
-# MAW well is inactive.  Test ensures that gwf-maw and maw-gwf flows reported
-# in the gwf and maw budget files are zero for this first period.
+"""
+Modify the previous test by having a first stress period where the
+MAW well is inactive. Test ensures that gwf-maw and maw-gwf flows
+in the gwf and maw budget files are zero for this first period.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["maw_07a", "maw_07b"]
+from framework import TestFramework
+
+cases = ["maw_07a", "maw_07b"]
 
 nlay = 2
 nrow = 1
@@ -47,7 +49,7 @@ mawradius = np.sqrt(mawarea / np.pi)  # .65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nper = 2
     perlen = [10.0, 10.0]
     nstp = [1, 100]
@@ -60,10 +62,10 @@ def build_model(idx, dir):
     nouter, ninner = 700, 200
     hclose, rclose, relax = 1e-9, 1e-9, 1.0
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -131,14 +133,14 @@ def build_model(idx, dir):
     mstrt = mawstrt[idx]
     mawcondeqn = "SPECIFIED"
     mawngwfnodes = nlay
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = [[0, mawradius, bot, mstrt, mawcondeqn, mawngwfnodes]]
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
         [0, icon, (icon, 0, 0), top, bot, mawcond, -999]
         for icon in range(nlay)
     ]
-    # <wellno> <mawsetting>
+    # <ifno> <mawsetting>
     mawperioddata = {}
     mawperioddata[0] = [[0, "STATUS", "INACTIVE"]]
     mawperioddata[1] = [[0, "STATUS", "ACTIVE"]]
@@ -199,27 +201,25 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()[1:]
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()[1:]
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * mawarea
-    v0gwf = (gwfstrt[sim.idxsim] - bot) * sy * gwfarea
+    v0maw = mawstrt[idx] * mawarea
+    v0gwf = (gwfstrt[idx] - bot) * sy * gwfarea
     v0 = v0maw + v0gwf
 
     print(
@@ -259,13 +259,13 @@ def eval_results(sim):
 
     # compare the maw-gwf flows with the gwf-maw flows
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -285,17 +285,14 @@ def eval_results(sim):
             assert np.allclose(qmaw, -qgwf), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        compare="mf6_regression",
     )
+    test.run()

@@ -14,15 +14,13 @@ module PreprocModule
   use GLOBAL,                    only: NCOL, NROW, DELC, DELR
   use globalPHMF,                only: ioutPHMF, outfile
   use GlobalVariablesPHMFModule, only: prognamPHMF, verbose, vnam
-  use InputOutputModule,         only: GetUnit, uget_block, urword, &
-                                       uterminate_block, GetUnit, openfile, &
-                                       uget_any_block
+  use InputOutputModule,         only: GetUnit, urword, GetUnit, openfile
   use ListModule,                only: ListType
   use ObsBlockModule,            only: ObsBlockType, ConstructObsBlockType, &
                                        AddObsBlockToList, GetObsBlockFromList
   use OpenSpecModule,            only: ACCESS, ACTION, FORM
   use SimModule,                 only: count_errors, print_notes, store_error, &
-                                       store_error_unit, ustop, write_message
+                                       store_error_unit, ustop
   use UtilitiesModule,           only: get_extension, CalcContribFactors
 
   implicit none
@@ -203,8 +201,6 @@ contains
     ierr = 0
     !
     ! -- get BEGIN line of OPTIONS block
-!    call uget_block(iin, 0, blockTypeWanted, ierr, found, &
-!                    lloc, line, iuext, continueread)
     call this%parser%GetBlock('OPTIONS', found, ierr, supportOpenClose=.true.)
     if (ierr /= 0) then
       ! end of file
@@ -733,7 +729,6 @@ contains
     !
     ! -- Read any block as long as it's SINGLE or CONTINUOUS.
     lloc = 1
-!    call uget_any_block(iu, this%iout, isfound, lloc, line, ctagfound, iuext)
     call this%parser%GetBlock('*', isfound, ierr, .true., &
                               .false., ctagfound)
     if (.not. isfound) then

@@ -7,6 +7,7 @@
 module InputDefinitionModule
 
   use KindModule, only: LGP
+  use ConstantsModule, only: LENVARNAME
 
   implicit none
   private
@@ -24,13 +25,14 @@ module InputDefinitionModule
     character(len=100) :: subcomponent_type = ''
     character(len=100) :: blockname = ''
     character(len=100) :: tagname = ''
-    character(len=100) :: mf6varname = ''
-    character(len=100) :: datatype = ''
+    character(len=LENVARNAME) :: mf6varname = ''
+    character(len=120) :: datatype = ''
     character(len=100) :: shape = ''
     logical(LGP) :: required = .false.
     logical(LGP) :: in_record = .false.
     logical(LGP) :: preserve_case = .false.
     logical(LGP) :: layered = .false.
+    logical(LGP) :: timeseries = .false.
   end type InputParamDefinitionType
 
   !> @brief derived type for storing block information

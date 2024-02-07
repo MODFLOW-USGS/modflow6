@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
-Test the bmi which is used update the calculate a head-based pumping rate that
-is equivalent to use of the evapotranspiration package in the
-non-bmi simulation.
+Test bmi with a head-based pumping rate equivalent to
+the evapotranspiration package in a non-bmi simulation.
 """
 
 import os
@@ -10,11 +8,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_evt01"]
+from framework import TestFramework
+
+cases = ["libgwf_evt01"]
 
 # et variables
 et_max = 0.1
@@ -128,14 +126,14 @@ def get_model(ws, name, bmi=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, bmi=True)
 
     return sim, mc
@@ -153,7 +151,7 @@ def head2et_wellrate(h):
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
     output_file_path = os.path.join(model_ws, "mfsim.stdout")
@@ -184,7 +182,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of well data
-    well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
+    well_tag = mf6.get_var_address("Q", name, "WEL_0")
     well = mf6.get_value(well_tag)
 
     # check NPF type
@@ -202,7 +200,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt and prepare for non-linear iterations
         dt = mf6.get_time_step()
         mf6.prepare_time_step(dt)
@@ -212,10 +209,9 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_solve()
 
         while kiter < max_iter:
-
             # update well rate
             twell[:] = head2et_wellrate(head[0])
-            well[:, 0] = twell[:]
+            well[:] = twell[:]
             mf6.set_value(well_tag, well)
 
             # solve with updated well rate
@@ -254,16 +250,13 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

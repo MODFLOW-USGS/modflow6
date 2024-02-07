@@ -7,17 +7,18 @@
 module VersionModule
   ! -- module imports
   use KindModule
-  use DefinedMacros, only: is_pro, using_petsc
+  use DefinedMacros, only: is_extended, using_petsc, using_netcdf
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, DZERO
   use SimVariablesModule, only: istdout
-  use GenericUtilitiesModule, only: write_centered, write_message, sim_message
+  use MessageModule, only: write_message, write_message_centered, &
+                           write_message_counter
   use CompilerVersion, only: get_compiler, get_compile_options
   implicit none
   public
   ! -- modflow 6 version
-  integer(I4B), parameter :: IDEVELOPMODE = 0
-  character(len=*), parameter :: VERSIONNUMBER = '6.4.2'
-  character(len=*), parameter :: VERSIONTAG = ' 06/28/2023'
+  integer(I4B), parameter :: IDEVELOPMODE = 1
+  character(len=*), parameter :: VERSIONNUMBER = '6.4.3'
+  character(len=*), parameter :: VERSIONTAG = ' 02/07/2024'
   character(len=40), parameter :: VERSION = VERSIONNUMBER//VERSIONTAG
   character(len=2), parameter :: MFVNAM = ' 6'
   character(len=*), parameter :: MFTITLE = &
@@ -61,6 +62,16 @@ module VersionModule
   &'      and the PETSc Development Team All rights reserved.',/,&
   &'      (https://petsc.org/release/)',/&
   &)"
+  character(len=*), parameter :: NETCDFLICENSE = &
+  "(&
+  &'The following library is used in this USGS product:',//,&
+  &'    NetCDF, network Common Data Form software library',/,&
+  &'      Copyright (c) 1993-2014 University Corporation for Atmospheric',/,&
+  &'      Research/Unidata. Redistribution and use in source and binary',/,&
+  &'      forms, with or without modification, are permitted provided that',/,&
+  &'      the conditions in the NetCDF copyright are met',/,&
+  &'        (https://www.unidata.ucar.edu/software/netcdf/copyright.html)',/&
+  &)"
   ! -- disclaimer must be appropriate for version (release or release candidate)
   character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,&
@@ -101,33 +112,40 @@ contains
     logical(LGP) :: wsc
     !
     ! -- set pro string
-    if (is_pro()) then
-      write (cheader, '(3a)') 'MODFLOW', MFVNAM, ' PROFESSIONAL'
+    if (is_extended()) then
+      write (cheader, '(3a)') 'MODFLOW', MFVNAM, ' EXTENDED'
     else
       write (cheader, '(2a)') 'MODFLOW', MFVNAM
     end if
     !
     ! -- Write title to iout
-    call write_centered(cheader, iheader_width, iunit=iout)
-    call write_centered(MFTITLE, iheader_width, iunit=iout)
+    call write_message_centered(text=cheader, linelen=iheader_width, &
+                                iunit=iout)
+    call write_message_centered(text=MFTITLE, linelen=iheader_width, &
+                                iunit=iout)
     !
     ! -- Write model type to list file
     if (present(cmodel_type)) then
-      call write_centered(cmodel_type, iheader_width, iunit=iout)
+      call write_message_centered(text=cmodel_type, linelen=iheader_width, &
+                                  iunit=iout)
     end if
     !
     ! -- Write version
-    call write_centered('VERSION '//VERSION, iheader_width, iunit=iout)
+    call write_message_centered(text='VERSION '//VERSION, &
+                                linelen=iheader_width, iunit=iout)
     !
     ! -- Write if develop mode
     if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', iheader_width, iunit=iout)
+      call write_message_centered(text='***DEVELOP MODE***', &
+                                  linelen=iheader_width, iunit=iout)
     end if
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_centered(' ', iheader_width, iunit=iout)
-    call write_centered(trim(adjustl(compiler)), iheader_width, iunit=iout)
+    call write_message_centered(text=' ', linelen=iheader_width, &
+                                iunit=iout)
+    call write_message_centered(text=trim(adjustl(compiler)), &
+                                linelen=iheader_width, iunit=iout)
     !
     ! -- Write disclaimer
     write (iout, FMTDISCLAIMER)
@@ -140,7 +158,7 @@ contains
     ! -- write compiler options
     if (iout /= istdout) then
       call get_compile_options(compiler_options)
-      call write_message(compiler_options, iunit=iout)
+      call write_message_counter(text=compiler_options, iunit=iout)
     end if
     !
     ! -- Write the system command used to initiate simulation
@@ -160,9 +178,7 @@ contains
       call write_kindinfo(iout)
     end if
     write (iout, *)
-    !
-    ! -- return
-    return
+
   end subroutine write_listfile_header
 
   !> @ brief Write program license
@@ -178,7 +194,16 @@ contains
     if (present(iout)) then
       write (iout, FMTLICENSE)
     else
-      call sim_message('', fmt=FMTLICENSE)
+      call write_message('', fmt=FMTLICENSE)
+    end if
+    !
+    ! -- write NetCDF license
+    if (using_netcdf()) then
+      if (present(iout)) then
+        write (iout, NETCDFLICENSE)
+      else
+        call write_message('', fmt=NETCDFLICENSE)
+      end if
     end if
     !
     ! -- write PETSc license
@@ -186,12 +211,10 @@ contains
       if (present(iout)) then
         write (iout, PETSCLICENSE)
       else
-        call sim_message('', fmt=PETSCLICENSE)
+        call write_message('', fmt=PETSCLICENSE)
       end if
     end if
-    !
-    ! -- return
-    return
+
   end subroutine write_license
 
 end module VersionModule

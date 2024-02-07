@@ -4,7 +4,6 @@ remove water at a concentration of zero for the first stress period, which
 will cause the concentration to increase.  Then for the second stress period
 add recharge water with a concentration of zero which will dilute the solute
 concentration.  Simulation results are compared against a simple calculation.
-
 """
 
 import os
@@ -12,18 +11,17 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["ssm02"]
+from framework import TestFramework
+
+cases = ["ssm02"]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -42,10 +40,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -217,18 +215,16 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_alldata().flatten()
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata().flatten()
 
@@ -252,17 +248,13 @@ def eval_transport(sim):
         vold = v
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

@@ -3,13 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
+
 from cross_section_functions import get_depths
+from framework import TestFramework
 
 paktest = "sfr"
 
-ex = [
+cases = [
     "sfr_npt02a",
 ]
 
@@ -53,15 +53,14 @@ def flow_to_depth_wide(rwid, q):
     return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope))) ** 0.6
 
 
-#
-def build_model(idx, ws):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    name = ex[idx]
+    name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -209,11 +208,9 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_npointdepth(sim):
-    name = sim.name
-    print("evaluating n-point cross-section results..." f"({name})")
-
-    obs_pth = os.path.join(sim.simpath, f"{name}.sfr.obs.csv")
+def check_output(idx, test):
+    name = test.name
+    obs_pth = os.path.join(test.workspace, f"{name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
@@ -242,20 +239,13 @@ def eval_npointdepth(sim):
     ), "sfr depth not equal to calculated depth"
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_npointdepth,
-            idxsim=0,
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

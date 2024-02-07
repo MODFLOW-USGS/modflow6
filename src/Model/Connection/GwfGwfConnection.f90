@@ -37,10 +37,9 @@ module GwfGwfConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
-    type(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
-    type(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
-    logical(LGP) :: owns_exchange !< when true, this connection has ownership over the exchange (memory)
-    type(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
+    class(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
+    class(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
+    class(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
                                                        !! 0 = don't, 1 = matrix, 2 = rhs
     integer(I4B) :: iout = 0 !< the list file for the interface model
@@ -70,6 +69,7 @@ module GwfGwfConnectionModule
     procedure, private :: setGridExtent
     procedure, private :: validateGwfExchange
     procedure, private :: setFlowToExchange
+    procedure, private :: setFlowToModel
     procedure, private :: setNpfEdgeProps
 
   end type GwfGwfConnectionType
@@ -226,6 +226,9 @@ contains
     call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwfInterfaceModel%inbuy > 0) then
+      call this%cfg_dv('DENSE', 'BUY', SYNC_NDS, (/STG_BFR_EXG_CF/))
+    end if
 
   end subroutine cfg_dist_vars
 
@@ -305,7 +308,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
 
     ! this triggers the BUY density calculation
-    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+    !if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
 
     if (this%owns_exchange) then
       call this%gwfExchange%exg_ad()
@@ -313,23 +316,18 @@ contains
 
   end subroutine gwfgwfcon_ad
 
-  !> @brief Calculate (or adjust) matrix coefficients,
-  !! in this case those which are determined or affected
-  !< by the connection of a GWF model with its neigbors
   subroutine gwfgwfcon_cf(this, kiter)
     class(GwfGwfConnectionType) :: this !< this connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
-    ! local
-    integer(I4B) :: i
 
-    ! reset interface system
-    call this%matrix%zero_entries()
-    do i = 1, this%neq
-      this%rhs(i) = 0.0_DP
-    end do
+    call this%SpatialModelConnectionType%spatialcon_cf(kiter)
 
-    ! calculate (wetting/drying, saturation)
-    call this%gwfInterfaceModel%model_cf(kiter)
+    ! CF the movers through the exchange
+    if (this%owns_exchange) then
+      if (this%gwfExchange%inmvr > 0) then
+        call this%gwfExchange%mvr%xmvr_cf()
+      end if
+    end if
 
   end subroutine gwfgwfcon_cf
 
@@ -342,36 +340,9 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
-    integer(I4B) :: n, nglo
-    integer(I4B) :: ipos, icol_start, icol_end
-    class(MatrixBaseType), pointer :: matrix_base
 
-    ! fill (and add to...) coefficients for interface
-    matrix_base => this%matrix
-    call this%gwfInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
-
-    ! map back to solution matrix
-    do n = 1, this%neq
-      ! we cannot check with the mask here, because cross-terms are not
-      ! necessarily from primary connections. But, we only need the coefficients
-      ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
-        ! only add connections for own model to global matrix
-        cycle
-      end if
-
-      nglo = this%ig_builder%idxToGlobal(n)%index + &
-             this%ig_builder%idxToGlobal(n)%v_model%moffset%get() - &
-             matrix_sln%get_row_offset()
-      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
-
-      icol_start = this%matrix%get_first_col_pos(n)
-      icol_end = this%matrix%get_last_col_pos(n)
-      do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
-                                      this%matrix%get_value_pos(ipos))
-      end do
-    end do
+    call this%SpatialModelConnectionType%spatialcon_fc( &
+      kiter, matrix_sln, rhs_sln, inwtflag)
 
     ! FC the movers through the exchange; we cannot call
     ! exg_fc() directly because it calculates matrix terms
@@ -394,9 +365,8 @@ contains
     ! local
 
     ! base validation (geometry/spatial)
-    ! TODO_MJR: uncomment this...
-    !call this%SpatialModelConnectionType%validateConnection()
-    !call this%validateGwfExchange()
+    call this%SpatialModelConnectionType%validateConnection()
+    call this%validateGwfExchange()
 
     ! abort on errors
     if (count_errors() > 0) then
@@ -426,6 +396,11 @@ contains
     logical(LGP) :: compatible
 
     gwfEx => this%gwfExchange
+
+    ! we cannot validate this (yet) in parallel mode
+    if (.not. gwfEx%v_model1%is_local) return
+    if (.not. gwfEx%v_model2%is_local) return
+
     modelPtr => this%gwfExchange%model1
     gwfModel1 => CastAsGwfModel(modelPtr)
     modelPtr => this%gwfExchange%model2
@@ -527,6 +502,8 @@ contains
 
     call this%setFlowToExchange()
 
+    call this%setFlowToModel()
+
     !cdl Could we allow GwfExchange to do this instead, using
     !    simvals?
     ! if needed, we add the edge properties to the model's NPF
@@ -569,13 +546,54 @@ contains
 
   end subroutine setFlowToExchange
 
+  !> @brief Set the flows (flowja from the interface model) to
+  !< to the model, update the budget
+  subroutine setFlowToModel(this)
+    class(GwfGwfConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: n, m, ipos, iposLoc
+    integer(I4B) :: nLoc, mLoc
+    type(ConnectionsType), pointer :: imCon !< interface model connections
+    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
+
+    ! for readability
+    imCon => this%gwfInterfaceModel%dis%con
+    toGlobal => this%ig_builder%idxToGlobal
+
+    do n = 1, this%neq
+      if (.not. toGlobal(n)%v_model == this%owner) then
+        ! only add flows to own model
+        cycle
+      end if
+
+      nLoc = toGlobal(n)%index
+
+      do ipos = imCon%ia(n) + 1, imCon%ia(n + 1) - 1
+        if (imCon%mask(ipos) < 1) cycle ! skip this connection, it's masked so not determined by us
+
+        m = imCon%ja(ipos)
+        mLoc = toGlobal(m)%index
+        if (toGlobal(m)%v_model == this%owner) then
+
+          ! internal, need to set flowja for n-m
+          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
+
+          ! update flowja with correct value
+          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
+
+        end if
+      end do
+    end do
+
+  end subroutine setFlowToModel
+
   !> @brief Set flowja as edge properties in the model,
   !< so it can be used for e.g. specific discharge calculation
   subroutine setNpfEdgeProps(this)
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: n, m, ipos, isym
-    integer(I4B) :: nLoc, mLoc, iposLoc
+    integer(I4B) :: nLoc, mLoc
     integer(I4B) :: ihc
     real(DP) :: rrate
     real(DP) :: area
@@ -648,12 +666,6 @@ contains
           dist = conLen * cl / (imCon%cl1(isym) + imCon%cl2(isym))
           call this%gwfModel%npf%set_edge_properties(nLoc, ihc, rrate, area, &
                                                      nx, ny, dist)
-        else
-          ! internal, need to set flowja for n-m
-          iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
-
-          ! update flowja with correct value
-          this%gwfModel%flowja(iposLoc) = this%gwfInterfaceModel%flowja(ipos)
         end if
       end do
     end do

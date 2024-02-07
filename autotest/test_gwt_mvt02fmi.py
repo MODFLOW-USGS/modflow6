@@ -1,8 +1,10 @@
-# Simple one-layer model with a drn and sfr network on top.  Purpose is to
-# test movement of solute between stress and advanced packages.  In this case
-# water from a drain is moved into the first sfr reach.  The test confirms
-# that the solute from the drain is moved into the sfr reach.
-# There is no flow between the stream and the aquifer.
+"""
+Simple one-layer model with a drn and sfr network on top.  Purpose is to
+test movement of solute between stress and advanced packages.  In this case
+water from a drain is moved into the first sfr reach.  The test confirms
+that the solute from the drain is moved into the sfr reach.
+There is no flow between the stream and the aquifer.
+"""
 
 import os
 from os.path import join
@@ -11,7 +13,7 @@ import flopy
 import numpy as np
 
 testgroup = "mvt02fmi"
-ex = ["mvt02fmi"]
+cases = ["mvt02fmi"]
 
 # parameters
 lx = 7.0
@@ -390,8 +392,6 @@ def run_transport_model(dir, exe):
     errmsg = f"transport model did not terminate successfully\n{buff}"
     assert success, errmsg
 
-    print("evaluating results...")
-
     # Load csv budget and make sure names are correct
     fname = f"{gwtname}.bud.csv"
     fname = os.path.join(gwt.model_ws, fname)
@@ -470,6 +470,5 @@ def run_transport_model(dir, exe):
 
 
 def test_mvt02fmi(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(str(function_tmpdir), mf6)
-    run_transport_model(str(function_tmpdir), mf6)
+    run_flow_model(str(function_tmpdir), targets["mf6"])
+    run_transport_model(str(function_tmpdir), targets["mf6"])

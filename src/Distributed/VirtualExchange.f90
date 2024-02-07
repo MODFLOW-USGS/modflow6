@@ -82,6 +82,7 @@ module VirtualExchangeModule
     procedure :: prepare_stage => vx_prepare_stage
     procedure :: get_send_items => vx_get_send_items
     procedure :: get_recv_items => vx_get_recv_items
+    procedure :: has_mover => vx_has_mover
     procedure :: destroy => vx_destroy
     ! private
     procedure, private :: init_virtual_data
@@ -240,6 +241,16 @@ contains
     end if
 
   end subroutine vx_get_send_items
+
+  !> @brief Checks if there is an active mover in the exchange
+  !<
+  function vx_has_mover(this) result(has_mover)
+    class(VirtualExchangeType) :: this
+    logical(LGP) :: has_mover
+
+    has_mover = .false.
+
+  end function vx_has_mover
 
   subroutine vx_destroy(this)
     class(VirtualExchangeType) :: this

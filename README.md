@@ -3,7 +3,7 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.4.2
+### Version 6.4.3
 
 [![GitHub release](https://img.shields.io/github/release/MODFLOW-USGS/modflow6.svg)](https://github.com/MODFLOW-USGS/modflow6/releases/latest)
 [![MODFLOW 6 continuous integration](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml)
@@ -93,6 +93,8 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 [Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022, Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A61, 56 p., https://doi.org/10.3133/tm6A61](https://doi.org/10.3133/tm6A61)
 
 [Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022, Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A62, 57 p., https://doi.org/10.3133/tm6A62](https://doi.org/10.3133/tm6A62)
+
+[Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J. and Panday, S., 2023, MODFLOW as a Configurable Multi-Model Hydrologic Simulator: Groundwater, https://doi.org/10.1111/gwat.13351](https://doi.org/10.1111/gwat.13351)
 
 #### ***Software/Code***
 

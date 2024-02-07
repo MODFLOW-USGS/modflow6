@@ -1,11 +1,11 @@
-import os
 import sys
-import json
 from pathlib import Path
-from enum import Enum
 
 MF6_LENVARNAME = 16
 F90_LINELEN = 82
+PROJ_ROOT = Path(__file__).parents[3]
+DFN_PATH = PROJ_ROOT / "doc" / "mf6io" / "mf6ivar" / "dfn"
+SRC_PATH = PROJ_ROOT / "src"
 
 
 class Dfn2F90:
@@ -46,7 +46,6 @@ class Dfn2F90:
 
     def write_f90(self, ofspec=None):
         with open(ofspec, "w") as f:
-
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
 
@@ -138,7 +137,6 @@ class Dfn2F90:
         vd = {}
 
         for line in lines:
-
             # skip blank lines
             if len(line.strip()) == 0:
                 if len(vd) > 0:
@@ -256,7 +254,8 @@ class Dfn2F90:
             self._param_str += "    .false., & ! required\n"
             self._param_str += "    .false., & ! multi-record\n"
             self._param_str += "    .false., & ! preserve case\n"
-            self._param_str += "    .false. & ! layered\n"
+            self._param_str += "    .false., & ! layered\n"
+            self._param_str += "    .false. & ! timeseries\n"
             self._param_str += "    ), &\n"
 
         if not self._aggregate_str:
@@ -272,7 +271,8 @@ class Dfn2F90:
             self._aggregate_str += "    .false., & ! required\n"
             self._aggregate_str += "    .false., & ! multi-record\n"
             self._aggregate_str += "    .false., & ! preserve case\n"
-            self._aggregate_str += "    .false. & ! layered\n"
+            self._aggregate_str += "    .false., & ! layered\n"
+            self._aggregate_str += "    .false. & ! timeseries\n"
             self._aggregate_str += "    ), &\n"
 
         if not self._block_str:
@@ -301,7 +301,6 @@ class Dfn2F90:
             r = ".false."
 
         for k in self._var_d:
-
             varname, bname = k
             if bname != blockname:
                 continue
@@ -333,12 +332,23 @@ class Dfn2F90:
 
             shape = ""
             shapelist = []
+            # workaround for Flopy shape issue with exg dfns:
+            if c.upper() == "EXG":
+                if vn == "CELLIDM1" or vn == "CELLIDM2":
+                    v["shape"] = "(ncelldim)"
             if "shape" in v:
                 shape = v["shape"]
                 shape = shape.replace("(", "")
                 shape = shape.replace(")", "")
                 shape = shape.replace(",", "")
                 shape = shape.upper()
+                if shape == "NCOL*NROW; NCPL":
+                    # grid array input syntax
+                    if mf6vn == "AUXVAR":
+                        # for grid, set AUX as DOUBLE2D
+                        shape = "NAUX NCPL"
+                    else:
+                        shape = "NCPL"
                 shapelist = shape.strip().split()
             ndim = len(shapelist)
 
@@ -375,6 +385,13 @@ class Dfn2F90:
                 else:
                     layered = ".false."
 
+            timeseries = ".false."
+            if "time_series" in v:
+                if v["time_series"] == "true":
+                    timeseries = ".true."
+                else:
+                    timeseries = ".false."
+
             if inrec == ".false.":
                 required_l.append(r)
             tuple_list = [
@@ -389,6 +406,7 @@ class Dfn2F90:
                 (inrec, "multi-record"),
                 (preserve_case, "preserve case"),
                 (layered, "layered"),
+                (timeseries, "timeseries"),
             ]
 
             if aggregate_t:
@@ -443,6 +461,7 @@ class Dfn2F90:
         s = (
             f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
             f"module {component.title()}{subcomponent.title()}InputModule\n"
+            f"  use ConstantsModule, only: LENVARNAME\n"
             f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
             f"                                   InputBlockDefinitionType\n"
             f"  private\n"
@@ -505,6 +524,7 @@ class IdmDfnSelector:
     def __init__(
         self,
         dfn_d: dict = None,
+        varnames: list = None,
     ):
         """IdmDfnSelector init"""
 
@@ -515,7 +535,7 @@ class IdmDfnSelector:
         self._write_master()
 
     def _write_master(self):
-        ofspec = f"../../../src/Utilities/Idm/selector/IdmDfnSelector.f90"
+        ofspec = SRC_PATH / "Utilities" / "Idm" / "selector" / "IdmDfnSelector.f90"
         with open(ofspec, "w") as fh:
             self._write_master_decl(fh)
             self._write_master_defn(fh, defn="param", dtype="param")
@@ -523,12 +543,17 @@ class IdmDfnSelector:
             self._write_master_defn(fh, defn="block", dtype="block")
             self._write_master_multi(fh)
             self._write_master_integration(fh)
+            self._write_master_component(fh)
             fh.write(f"end module IdmDfnSelectorModule\n")
 
     def _write_selectors(self):
         for c in self._d:
             ofspec = (
-                f"../../../src/Utilities/Idm/selector/Idm{c.title()}DfnSelector.f90"
+                SRC_PATH
+                / "Utilities"
+                / "Idm"
+                / "selector"
+                / f"Idm{c.title()}DfnSelector.f90"
             )
             with open(ofspec, "w") as fh:
                 self._write_selector_decl(fh, component=c, sc_list=self._d[c])
@@ -554,6 +579,7 @@ class IdmDfnSelector:
         s = (
             f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
             f"module Idm{c.title()}DfnSelectorModule\n\n"
+            f"  use ConstantsModule, only: LENVARNAME\n"
             f"  use SimModule, only: store_error\n"
             f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
             f"                                   InputBlockDefinitionType\n"
@@ -563,16 +589,7 @@ class IdmDfnSelector:
             len_sc = len(sc)
             spacer = space * (len_c + len_sc)
 
-            s += (
-                f"  use {c.title()}{sc.title()}InputModule, only: "
-                f"{c.lower()}_{sc.lower()}_param_definitions, &"
-                f"\n                         {spacer}"
-                f"{c.lower()}_{sc.lower()}_aggregate_definitions, &"
-                f"\n                         {spacer}"
-                f"{c.lower()}_{sc.lower()}_block_definitions, &"
-                f"\n                         {spacer}"
-                f"{c.lower()}_{sc.lower()}_multi_package\n"
-            )
+            s += f"  use {c.title()}{sc.title()}InputModule\n"
 
         s += (
             f"\n  implicit none\n"
@@ -582,8 +599,8 @@ class IdmDfnSelector:
             f"  public :: {c.lower()}_block_definitions\n"
             f"  public :: {c.lower()}_idm_multi_package\n"
             f"  public :: {c.lower()}_idm_integrated\n\n"
-            f"contains\n\n"
         )
+        s += f"contains\n\n"
 
         fh.write(s)
 
@@ -704,6 +721,7 @@ class IdmDfnSelector:
         s = (
             f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
             f"module IdmDfnSelectorModule\n\n"
+            f"  use ConstantsModule, only: LENVARNAME\n"
             f"  use SimModule, only: store_error\n"
             f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
             f"                                   InputBlockDefinitionType\n"
@@ -712,18 +730,7 @@ class IdmDfnSelector:
         for c in self._d:
             len_c = len(c)
             spacer = space * (len_c)
-            s += (
-                f"  use Idm{c.title()}DfnSelectorModule, only: "
-                f"{c.lower()}_param_definitions, &"
-                f"\n                                  {spacer}"
-                f"{c.lower()}_aggregate_definitions, &"
-                f"\n                                  {spacer}"
-                f"{c.lower()}_block_definitions, &"
-                f"\n                                  {spacer}"
-                f"{c.lower()}_idm_multi_package, &"
-                f"\n                                  {spacer}"
-                f"{c.lower()}_idm_integrated\n"
-            )
+            s += f"  use Idm{c.title()}DfnSelectorModule\n"
 
         s += (
             f"\n  implicit none\n"
@@ -732,7 +739,8 @@ class IdmDfnSelector:
             f"  public :: aggregate_definitions\n"
             f"  public :: block_definitions\n"
             f"  public :: idm_multi_package\n"
-            f"  public :: idm_integrated\n\n"
+            f"  public :: idm_integrated\n"
+            f"  public :: idm_component\n\n"
             f"contains\n\n"
         )
 
@@ -823,55 +831,136 @@ class IdmDfnSelector:
 
         fh.write(s)
 
+    def _write_master_component(self, fh=None):
+        s = (
+            f"  function idm_component(component) "
+            f"result(integrated)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    logical :: integrated\n"
+            f"    integrated = .false.\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += f"    case ('{c}')\n" f"      integrated = .true.\n"
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function idm_component\n\n"
+        )
+
+        fh.write(s)
+
 
 if __name__ == "__main__":
-
     dfns = [
         # ** Add a new dfn parameter set to MODFLOW 6 by adding a new entry to this list **
         # [relative path of input dnf, relative path of output f90 definition file]
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
+            DFN_PATH / "gwf-chd.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3chd8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3disu8idm.f90"),
+            DFN_PATH / "gwf-dis.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3dis8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3disv8idm.f90"),
+            DFN_PATH / "gwf-disu.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disu8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
+            DFN_PATH / "gwf-disv.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disv8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dis.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1dis1idm.f90"),
+            DFN_PATH / "gwf-drn.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3drn8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disu.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1disu1idm.f90"),
+            DFN_PATH / "gwf-evt.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evt8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disv.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1disv1idm.f90"),
+            DFN_PATH / "gwf-evta.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evta8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1dsp1idm.f90"),
+            DFN_PATH / "gwf-ghb.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ghb8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3idm.f90"),
+            DFN_PATH / "gwf-ic.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ic8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-nam.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1idm.f90"),
+            DFN_PATH / "gwf-npf.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3npf8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "sim-nam.dfn"),
-            Path("../../../src", "simnamidm.f90"),
+            DFN_PATH / "gwf-rch.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rch8idm.f90",
+        ],
+        [
+            DFN_PATH / "gwf-rcha.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rcha8idm.f90",
+        ],
+        [
+            DFN_PATH / "gwf-riv.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3riv8idm.f90",
+        ],
+        [
+            DFN_PATH / "gwf-wel.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3wel8idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-dis.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dis1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-disu.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disu1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-disv.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disv1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-dsp.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dsp1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-cnc.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1cnc1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-ic.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1ic1idm.f90",
+        ],
+        [
+            DFN_PATH / "gwf-nam.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3idm.f90",
+        ],
+        [
+            DFN_PATH / "gwt-nam.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwfgwf.dfn",
+            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwfgwt.dfn",
+            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
+        ],
+        [
+            DFN_PATH / "exg-gwtgwt.dfn",
+            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
+        ],
+        [
+            DFN_PATH / "sim-nam.dfn",
+            SRC_PATH / "simnamidm.f90",
         ],
     ]
 

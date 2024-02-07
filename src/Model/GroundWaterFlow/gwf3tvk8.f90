@@ -31,7 +31,9 @@ module TvkModule
     integer(I4B), pointer :: kchangeper => null() !< NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() !< NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() !< NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+
   contains
+
     procedure :: da => tvk_da
     procedure :: ar_set_pointers => tvk_ar_set_pointers
     procedure :: read_option => tvk_read_option
@@ -46,10 +48,9 @@ contains
   !> @brief Create a new TvkType object
   !!
   !! Create a new time-varying conductivity (TvkType) object.
-  !!
   !<
   subroutine tvk_cr(tvk, name_model, inunit, iout)
-    ! -- dummy variables
+    ! -- dummy
     type(TvkType), pointer, intent(out) :: tvk
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
@@ -58,6 +59,7 @@ contains
     allocate (tvk)
     call tvk%init(name_model, 'TVK', 'TVK', inunit, iout)
     !
+    ! -- Return
     return
   end subroutine tvk_cr
 
@@ -65,12 +67,11 @@ contains
   !!
   !! Announce package version and set array and variable pointers from the NPF
   !! package for access by TVK.
-  !!
   !<
   subroutine tvk_ar_set_pointers(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
-    ! -- local variables
+    ! -- local
     character(len=LENMEMPATH) :: npfMemoryPath
     ! -- formats
     character(len=*), parameter :: fmttvk = &
@@ -92,6 +93,7 @@ contains
     call mem_setptr(this%kchangestp, 'KCHANGESTP', npfMemoryPath)
     call mem_setptr(this%nodekchange, 'NODEKCHANGE', npfMemoryPath)
     !
+    ! -- Return
     return
   end subroutine tvk_ar_set_pointers
 
@@ -99,10 +101,9 @@ contains
   !!
   !! Process a single TVK-specific option. Used when reading the OPTIONS block
   !! of the TVK package input file.
-  !!
   !<
   function tvk_read_option(this, keyword) result(success)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
     character(len=*), intent(in) :: keyword
     ! -- return
@@ -111,6 +112,7 @@ contains
     ! -- There are no TVK-specific options, so just return false
     success = .false.
     !
+    ! -- Return
     return
   end function tvk_read_option
 
@@ -118,10 +120,9 @@ contains
   !!
   !! Return a pointer to the given node's value in the appropriate NPF array
   !! based on the given variable name string.
-  !!
   !<
   function tvk_get_pointer_to_value(this, n, varName) result(bndElem)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
@@ -139,6 +140,7 @@ contains
       bndElem => null()
     end select
     !
+    ! -- Return
     return
   end function tvk_get_pointer_to_value
 
@@ -146,10 +148,9 @@ contains
   !!
   !! Deferred procedure implementation called by the TvBaseType code when a
   !! property value change occurs at (kper, kstp).
-  !!
   !<
   subroutine tvk_set_changed_at(this, kper, kstp)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
@@ -157,6 +158,7 @@ contains
     this%kchangeper = kper
     this%kchangestp = kstp
     !
+    ! -- Return
     return
   end subroutine tvk_set_changed_at
 
@@ -165,7 +167,6 @@ contains
   !! Deferred procedure implementation called by the TvBaseType code when a
   !! new time step commences, indicating that any previously set per-node
   !! property value change flags should be reset.
-  !!
   !<
   subroutine tvk_reset_change_flags(this)
     ! -- dummy variables
@@ -178,6 +179,7 @@ contains
       this%nodekchange(i) = 0
     end do
     !
+    ! -- Return
     return
   end subroutine tvk_reset_change_flags
 
@@ -187,14 +189,13 @@ contains
   !! property value change occurs. Check if the property value of the given
   !! variable at the given node is invalid, and log an error if so. Update
   !! K22 and K33 values appropriately when specified as anisotropy.
-  !!
   !<
   subroutine tvk_validate_change(this, n, varName)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
-    ! -- local variables
+    ! -- local
     character(len=LINELENGTH) :: cellstr
     ! -- formats
     character(len=*), parameter :: fmtkerr = &
@@ -234,16 +235,16 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine tvk_validate_change
 
   !> @brief Deallocate package memory
   !!
   !! Deallocate TVK package scalars and arrays.
-  !!
   !<
   subroutine tvk_da(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvkType) :: this
     !
     ! -- Nullify pointers to other package variables
@@ -259,6 +260,7 @@ contains
     ! -- Deallocate parent
     call tvbase_da(this)
     !
+    ! -- Return
     return
   end subroutine tvk_da
 

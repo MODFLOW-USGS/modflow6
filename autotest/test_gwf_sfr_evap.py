@@ -1,14 +1,16 @@
-# Test evap in SFR reaches (no interaction with gwf)
+"""
+Test evap in SFR reaches (no interaction with gwf)
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["sfr-evap"]
+from framework import TestFramework
+
+cases = ["sfr-evap"]
 
 
 # Model units
@@ -65,15 +67,11 @@ perlen = [1, 1]
 nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-3, 1e-4, 0.97
 
-#
-# MODFLOW 6 flopy GWF object
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -265,7 +263,8 @@ def build_model(idx, dir):
         print_stage=True,
         print_flows=True,
         print_input=True,
-        unit_conversion=1.0 * 86400,
+        length_conversion=1.0,
+        time_conversion=86400.0,
         budget_filerecord=budpth,
         mover=False,
         nreaches=nreaches,
@@ -362,7 +361,8 @@ def build_model(idx, dir):
         print_stage=True,
         print_flows=True,
         print_input=True,
-        unit_conversion=1.0 * 86400,
+        length_conversion=1.0,
+        time_conversion=86400.0,
         budget_filerecord=budpth,
         mover=False,
         nreaches=nreaches,
@@ -376,16 +376,14 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname_t = "gwf-" + name + "-t"
     gwfname_r = "gwf-" + name + "-r"
 
     fname = gwfname_t + ".sfr.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
@@ -414,7 +412,7 @@ def eval_results(sim):
 
     # Now check results from standard rectangular x-section setup (not an n-point channel)
     fname2 = gwfname_r + ".sfr.cbc"
-    fname2 = os.path.join(sim.simpath, fname2)
+    fname2 = os.path.join(test.workspace, fname2)
     assert os.path.isfile(fname2)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname2, precision="double")
@@ -434,17 +432,13 @@ def eval_results(sim):
     assert np.allclose(stored_strm_evap_r, sim_evap_r, atol=1e-4), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

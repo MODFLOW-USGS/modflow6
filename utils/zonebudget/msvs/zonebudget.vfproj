@@ -1,28 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{E7756A4E-003C-4D3D-B618-CC2BE6D20B04}">
 	<Platforms>
-		<Platform Name="Win32"/></Platforms>
+		<Platform Name="Win32"/>
+	</Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnDeclarations="true" WarnUnusedVariables="true" WarnTruncateSource="true" WarnUnalignedData="false" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
-				<Tool Name="VFResourceCompilerTool"/>
-				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
-				<Tool Name="VFCustomBuildTool"/>
-				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
-				<Tool Name="VFPostBuildEventTool"/>
-				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnDeclarations="true" WarnUnusedVariables="true" WarnTruncateSource="true" WarnUnalignedData="false" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
 		<Configuration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
-				<Tool Name="VFResourceCompilerTool"/>
-				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
-				<Tool Name="VFCustomBuildTool"/>
-				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
-				<Tool Name="VFPostBuildEventTool"/>
-				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+	</Configurations>
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
@@ -34,14 +38,17 @@
 		<File RelativePath="..\..\..\src\Utilities\Budget.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\compilerversion.F90">
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\..\..\src\Utilities\Constants.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\defmacro.F90">
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
-		<File RelativePath="..\..\..\src\Utilities\genericutils.f90"/>
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+		<File RelativePath="..\..\..\src\Utilities\DevFeature.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\ErrorUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\LongLineReader.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Sim.f90"/>
@@ -52,5 +59,7 @@
 		<File RelativePath="..\src\grb.f90"/>
 		<File RelativePath="..\src\zbud6.f90"/>
 		<File RelativePath="..\src\zone.f90"/>
-		<File RelativePath="..\src\zoneoutput.f90"/></Filter></Files>
-	<Globals/></VisualStudioProject>
+		<File RelativePath="..\src\zoneoutput.f90"/></Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>

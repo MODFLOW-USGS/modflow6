@@ -1,7 +1,5 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that auxmultcol is working when used with a time series
-
 """
 
 import os
@@ -9,14 +7,18 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["auxmult01"]
+cases = ["auxmult01", "auxmult02"]
 
+wellist = [
+    [(0, 2, 2), "tsq", "tsqfact"],
+    [(0, 2, 2), 1.0000000, "tsqfact"]
+]
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
+    global numstep
     nlay, nrow, ncol = 1, 3, 3
     perlen = [1.0, 1.0, 1.0, 1.0]
     nstp = [10, 1, 1, 1]
@@ -26,6 +28,7 @@ def build_model(idx, dir):
     delr = delc = lenx / float(nrow)
     botm = -1.0
     hk = 1.0
+    numstep = sum(nstp)
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 1e-3, 1.0
@@ -34,10 +37,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -105,18 +108,27 @@ def build_model(idx, dir):
     )
 
     # wel files
-    wellist1 = []
-    wellist1.append([(0, 2, 2), "tsq", "tsqfact"])
     wel = flopy.mf6.ModflowGwfwel(
         gwf,
         pname="wel",
         print_input=True,
         print_flows=True,
-        stress_period_data={0: wellist1},
+        stress_period_data={0: [wellist[idx]]},
         auxiliary=["auxmult"],
         auxmultname="auxmult",
     )
     # ts_filerecord='well-rates.ts')
+
+    # wel obs
+    obs = {
+        "wel.obs.csv": [
+            ["q", "wel", (0, 2, 2)]
+        ],
+    }
+    welobs = wel.obs.initialize(
+        print_input=True,
+        continuous=obs,
+    )
 
     # well ts package
     ts_recarray = [
@@ -160,10 +172,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
-    fpth = os.path.join(sim.simpath, "auxmult01.bud")
+def check_output(idx, test):
+    name = cases[idx]
+    fpth = os.path.join(test.workspace, f"{name}.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     records = bobj.get_data(text="wel")
 
@@ -177,17 +188,26 @@ def eval_model(sim):
     msg = f"err {qlist} /= {answer}"
     assert np.allclose(qlist, answer), msg
 
-    # assert False
+    # MODFLOW 6 observations
+    fpth = os.path.join(test.workspace, "wel.obs.csv")
+    try:
+        obs = np.genfromtxt(fpth, names=True, delimiter=",")
+    except:
+        assert False, f'could not load data from "{fpth}"'
+
+    rate = obs["Q"]
+    obs_answer = [1.0 if x%2==0 else 0.0 for x in range(numstep)]
+    msg = f"err {rate} /= {obs_answer}"
+    assert np.allclose(rate, obs_answer), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_model), ws
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

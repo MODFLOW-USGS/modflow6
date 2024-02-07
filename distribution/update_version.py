@@ -31,20 +31,18 @@ language reflects preliminary/provisional status, and version strings contain "(
 import argparse
 import json
 import os
-import re
-import shutil
 import textwrap
 from collections import OrderedDict
 from datetime import datetime
-from os import PathLike
+from packaging.version import Version
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Optional
 
 import pytest
 from filelock import FileLock
 import yaml
 
-from utils import get_modified_time, split_nonnumeric
+from utils import get_modified_time
 
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
@@ -60,56 +58,6 @@ touched_file_paths = [
     project_root_path / "code.json",
     project_root_path / "src" / "Utilities" / "version.f90",
 ]
-
-
-class Version(NamedTuple):
-    """Semantic version number, optionally with a short label (e.g, 'rc').
-    The label may contain numbers but must begin with a letter."""
-
-    major: int = 0
-    minor: int = 0
-    patch: int = 0
-    label: Optional[str] = None
-
-    def __repr__(self):
-        s = f"{self.major}.{self.minor}.{self.patch}"
-        if self.label is not None and self.label != "":
-            s += self.label
-        return s
-
-    @classmethod
-    def from_string(cls, version: str) -> "Version":
-        t = version.split(".")
-        assert len(t) > 2
-        vmajor = int(t[0])
-        vminor = int(t[1])
-        tt = split_nonnumeric(t[2])
-        vpatch = int(tt[0])
-        vlabel = tt[1] if len(tt) > 1 else None
-        return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)
-
-    @classmethod
-    def from_file(cls, path: PathLike) -> "Version":
-        path = Path(path).expanduser().absolute()
-        lines = [line.rstrip("\n") for line in open(Path(path), "r")]
-        vmajor = vminor = vpatch = vlabel = None
-        for line in lines:
-            t = line.split()
-            if "major =" in line:
-                vmajor = int(t[2])
-            elif "minor =" in line:
-                vminor = int(t[2])
-            elif "micro =" in line:
-                vpatch = int(t[2])
-            elif "label =" in line:
-                vlabel = t[2].replace("'", "")
-
-        msg = "version string must follow semantic version format, with optional label: major.minor.patch[label]"
-        missing = lambda v: f"Missing {v} number, {msg}"
-        assert vmajor is not None, missing("major")
-        assert vminor is not None, missing("minor")
-        assert vpatch is not None, missing("patch")
-        return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)
 
 
 _approved_fmtdisclaimer = '''  character(len=*), parameter :: FMTDISCLAIMER = &
@@ -181,25 +129,17 @@ def log_update(path, version: Version):
 
 def update_version_txt_and_py(version: Version, timestamp: datetime):
     with open(version_file_path, "w") as f:
+        f.write(str(version))
+    log_update(version_file_path, version)
+
+    py_path = project_root_path / "doc" / version_file_path.name.replace(".txt", ".py")
+    with open(py_path, "w") as f:
         f.write(
             f"# {project_name} version file automatically "
             + f"created using...{os.path.basename(__file__)}\n"
         )
         f.write("# created on..." + f"{timestamp.strftime('%B %d, %Y %H:%M:%S')}\n")
-        f.write("\n")
-        f.write(f"major = {version.major}\n")
-        f.write(f"minor = {version.minor}\n")
-        f.write(f"micro = {version.patch}\n")
-        f.write(
-            "label = " + (("'" + version.label + "'") if version.label else "''") + "\n"
-        )
-        f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
-        f.write("if label:\n")
-        f.write("\t__version__ += '{}{}'.format(__version__, label)")
-        f.close()
-    log_update(version_file_path, version)
-    py_path = project_root_path / "doc" / version_file_path.name.replace(".txt", ".py")
-    shutil.copyfile(version_file_path, py_path)
+        f.write(f'__version__ = "{version}"\n')
     log_update(py_path, version)
 
 
@@ -209,7 +149,7 @@ def update_meson_build(version: Version):
     with open(path, "w") as f:
         for line in lines:
             if "version:" in line and "meson_version:" not in line:
-                line = f"  version: '{version.major}.{version.minor}.{version.patch}{version.label if version.label else ''}',"
+                line = f"  version: '{version}',"
             f.write(f"{line}\n")
     log_update(path, version)
 
@@ -217,7 +157,7 @@ def update_meson_build(version: Version):
 def update_version_tex(version: Version, timestamp: datetime):
     path = project_root_path / "doc" / "version.tex"
     with open(path, "w") as f:
-        line = "\\newcommand{\\modflowversion}{mf" + f"{str(version)}" + "}"
+        line = "\\newcommand{\\modflowversion}{mf" + str(version) + "}"
         f.write(f"{line}\n")
         line = (
             "\\newcommand{\\modflowdate}{" + f"{timestamp.strftime('%B %d, %Y')}" + "}"
@@ -351,11 +291,11 @@ def update_version(
     lock_path = Path(version_file_path.name + ".lock")
     try:
         lock = FileLock(lock_path)
-        previous = Version.from_file(version_file_path)
+        previous = Version(version_file_path.read_text().strip())
         version = (
             version
             if version
-            else Version(previous.major, previous.minor, previous.patch)
+            else previous
         )
 
         with lock:
@@ -370,8 +310,8 @@ def update_version(
         lock_path.unlink(missing_ok=True)
 
 
-_initial_version = Version(0, 0, 1)
-_current_version = Version.from_file(version_file_path)
+_initial_version = Version("0.0.1")
+_current_version = Version(version_file_path.read_text().strip())
 
 
 @pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
@@ -379,17 +319,8 @@ _current_version = Version.from_file(version_file_path)
     "version",
     [
         None,
-        Version(
-            major=_initial_version.major,
-            minor=_initial_version.minor,
-            patch=_initial_version.patch,
-        ),
-        Version(
-            major=_initial_version.major,
-            minor=_initial_version.minor,
-            patch=_initial_version.patch,
-            label="rc",
-        ),
+        _initial_version,
+        Version(f"{_initial_version.major}.{_initial_version.minor}.dev{_initial_version.micro}"),
     ],
 )
 @pytest.mark.parametrize("approved", [True, False])
@@ -405,7 +336,7 @@ def test_update_version(version, approved, developmode):
             approved=approved,
             developmode=developmode,
         )
-        updated = Version.from_file(version_file_path)
+        updated = Version(version_file_path.read_text().strip())
 
         # check files containing version info were modified
         for p, t in zip(touched_file_paths, m_times):
@@ -414,20 +345,10 @@ def test_update_version(version, approved, developmode):
         # check version number and optional label are correct
         if version:
             # version should be auto-incremented
-            assert updated.major == _initial_version.major
-            assert updated.minor == _initial_version.minor
-            assert updated.patch == _initial_version.patch
-            if version.label is not None:
-                assert updated.label == version.label
+            assert updated == _initial_version
         else:
             # version should not have changed
-            assert updated.major == _current_version.major
-            assert updated.minor == _current_version.minor
-            assert updated.patch == _current_version.patch
-            if version.label is not None:
-                assert updated.label == version.label
-        if version.label is not None:
-            assert updated.label == _initial_version
+            assert updated == _current_version
 
         # check IDEVELOPMODE was set correctly
         version_f90_path = project_root_path / "src" / "Utilities" / "version.f90"
@@ -462,13 +383,10 @@ if __name__ == "__main__":
             provided, the version number will not be changed. A file lock is held
             to synchronize file access. To indicate a version is production-ready
             use --approve. This will change the disclaimer and version tag label,
-            removing 'Release Candidate' from the latter and modifying the former
-            to reflect approval The IDEVELOPMODE flag is set to 1 for preliminary
-            versions and 0 for approved versions. The version tag must follow the
+            removing '(preliminary)' from the latter, and modifying the former to
+            reflect approval The --releasemode flag controls whether IDEVELOPMODE
+            is set to 0 instead of the default 1. The version tag must follow the
             '<major>.<minor>.<patch>' format conventions for semantic versioning.
-            If --version is provided, --bump-patch, --bump-minor and --bump-major
-            may not be provided. Likewise, if any of the latter are provided, the
-            version number must not be specified.
             """
         ),
     )
@@ -493,24 +411,6 @@ if __name__ == "__main__":
         help="Set IDEVELOPMODE to 0 for release mode (defaults to false for development distributions)",
     )
     parser.add_argument(
-        "--bump-major",
-        required=False,
-        action="store_true",
-        help="Increment the major version number (cannot be used with --version, defaults to false)",
-    )
-    parser.add_argument(
-        "--bump-minor",
-        required=False,
-        action="store_true",
-        help="Increment the minor version number (cannot be used with --version, defaults to false)",
-    )
-    parser.add_argument(
-        "--bump-patch",
-        required=False,
-        action="store_true",
-        help="Increment the patch version number (cannot be used with --version, defaults to false)",
-    )
-    parser.add_argument(
         "-g",
         "--get",
         required=False,
@@ -518,33 +418,13 @@ if __name__ == "__main__":
         help="Get the current version number, don't update anything (defaults to false)",
     )
     args = parser.parse_args()
-
-    if args.version and (args.bump_major or args.bump_minor or args.bump_patch):
-        raise ValueError(f"Cannot specify --version and --bump-*, use one or the other")
-
-    bump_flags = [b for b in [args.bump_major, args.bump_minor, args.bump_patch] if b]
-    if len(bump_flags) > 1:
-        raise ValueError(f"Cannot specify more than one --bump-* flag, use just one")
-
     if args.get:
-        print(Version.from_file(project_root_path / "version.txt"))
+        print(Version((project_root_path / "version.txt").read_text().strip()))
     else:
-        if not args.version and not any(bump_flags):
-            version = _current_version
-        elif args.version:
-            version = Version.from_string(args.version)
-        else:
-            current = Version.from_file(project_root_path / "version.txt")
-            if args.bump_major:
-                print(f"Incrementing major number")
-                version = Version(current.major + 1, 0, 0)
-            elif args.bump_minor:
-                print(f"Incrementing minor number")
-                version = Version(current.major, current.minor + 1, 0)
-            else:
-                print(f"Incrementing patch number")
-                version = Version(current.major, current.minor, current.patch + 1)
-
+        print(f"Updating to version {args.version} with options")
+        print(f"    releasemode: {args.releasemode}")
+        print(f"    approved: {args.approved}")
+        version = Version(args.version) if args.version else _current_version
         update_version(
             version=version,
             timestamp=datetime.now(),

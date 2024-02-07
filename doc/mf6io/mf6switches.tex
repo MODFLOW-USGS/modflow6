@@ -1,14 +1,15 @@
 {\small
 \begin{lstlisting}[style=modeloutput]
-mf6.exe - MODFLOW 6.3.0 03/04/2022 (compiled Mar 02 2022 15:29:04)
-usage: mf6.exe               run MODFLOW 6 using "mfsim.nam"
-   or: mf6.exe [options]     retrieve program information
+mf6 - MODFLOW 6.5.0.dev0 (preliminary) 07/13/2023 (compiled Jan 24 2024 12:12:59)
+usage: mf6               run MODFLOW 6 using "mfsim.nam"
+   or: mf6 [options]     retrieve program information
 
-Options   GNU long option   Meaning
+Options   GNU long option   Meaning 
  -h, -?    --help           Show this message
  -v        --version        Display program version information.
  -dev      --develop        Display program develop option mode.
  -d        --disclaimer     Display program disclaimer.
+ -p        --parallel       Run program in parallel mode.
  -lic      --license        Display program license information.
  -c        --compiler       Display compiler information.
  -co       --compiler-opt   Display compiler options.
@@ -18,19 +19,17 @@ Options   GNU long option   Meaning
                             <str>=debug   Enhanced output to STDOUT.
  -m <str>  --mode <str>     MODFLOW 6 simulation mode based on <str>.
                             <str>=validate Check model input for
-                                           errors but do not
-                                           assemble or solve matrix
-                                           equations or write
+                                           errors but do not 
+                                           assemble or solve matrix 
+                                           equations or write 
                                            solution output.
-
-Bug reporting and contributions are welcome from the community.
+                                                                    
+Bug reporting and contributions are welcome from the community. 
 Questions can be asked on the issues page[1]. Before creating a new
 issue, please take a moment to search and make sure a similar issue
 does not already exist. If one does exist, you can comment (most
 simply even with just :+1:) to show your support for that issue.
-
+                                                                    
 [1] https://github.com/MODFLOW-USGS/modflow6/issues
-
-
 \end{lstlisting}
 }

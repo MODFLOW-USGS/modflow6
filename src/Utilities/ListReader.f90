@@ -6,6 +6,8 @@ module ListReaderModule
                              LENAUXNAME, LENLISTLABEL, DONE
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors, store_error_unit
+  use LongLineReaderModule, only: LongLineReaderType
+  use GeomUtilModule, only: get_ijk, get_jk, get_node
 
   implicit none
   private
@@ -41,6 +43,7 @@ module ListReaderModule
     integer(I4B), dimension(:), allocatable :: idxtxtauxcol ! col locations of text in auxvar
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtrlist ! text found in rlist
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtauxvar ! text found in auxvar
+    type(LongLineReaderType), pointer :: line_reader => null()
   contains
     procedure :: read_list
     procedure :: write_list
@@ -53,8 +56,9 @@ module ListReaderModule
 
 contains
 
-  subroutine read_list(this, in, iout, nlist, inamedbound, mshape, nodelist, &
-                       rlist, auxvar, auxname, boundname, label)
+  subroutine read_list(this, line_reader, in, iout, nlist, inamedbound, &
+                       mshape, nodelist, rlist, auxvar, auxname, boundname, &
+                       label)
 ! ******************************************************************************
 ! init -- Initialize the reader
 ! ******************************************************************************
@@ -65,6 +69,7 @@ contains
     use ConstantsModule, only: LENBOUNDNAME
     ! -- dummy
     class(ListReaderType) :: this
+    type(LongLineReaderType), intent(inout), target :: line_reader
     integer(I4B), intent(in) :: in
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(inout) :: nlist
@@ -95,6 +100,7 @@ contains
     this%auxvar => auxvar
     this%auxname => auxname
     this%boundname => boundname
+    this%line_reader => line_reader
     !
     ! -- Allocate arrays for storing text and text locations
     if (.not. allocated(this%idxtxtrow)) allocate (this%idxtxtrow(0))
@@ -125,7 +131,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: u9rdcom, urword
+    use InputOutputModule, only: urword
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -142,7 +148,7 @@ contains
     this%ibinary = 0
     !
     ! -- Read to the first non-commented line
-    call u9rdcom(this%in, this%iout, this%line, this%ierr)
+    call this%line_reader%rdcom(this%in, this%iout, this%line, this%ierr)
     this%lloc = 1
     call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r, &
                 this%iout, this%in)
@@ -167,7 +173,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: u9rdcom, urword, openfile
+    use InputOutputModule, only: urword, openfile
     use OpenSpecModule, only: form, access
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
@@ -237,8 +243,9 @@ contains
     !
     ! -- Read the first line from inlist to be consistent with how the list is
     !    read when it is included in the package input file
-    if (this%ibinary /= 1) call u9rdcom(this%inlist, this%iout, this%line, &
-                                        this%ierr)
+    if (this%ibinary /= 1) &
+      call this%line_reader%rdcom(this%inlist, this%iout, this%line, &
+                                  this%ierr)
     !
     ! -- return
     return
@@ -282,7 +289,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBIGLINE
-    use InputOutputModule, only: get_node
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -314,14 +320,14 @@ contains
       !
       ! -- read layer, row, col, or cell number
       read (this%inlist, iostat=this%ierr) cellid
-
-      ! -- ensure cellid is valid, store an error otherwise
-      call check_cellid(ii, cellid, this%mshape, this%ndim)
-
+      !
       ! -- If not end of record, then store nodenumber, else
       !    calculate lstend and nlist, and exit readloop
       select case (this%ierr)
       case (0)
+        !
+        ! -- ensure cellid is valid, store an error otherwise
+        call check_cellid(ii, cellid, this%mshape, this%ndim)
         !
         ! -- Check range
         if (ii > mxlist) then
@@ -394,7 +400,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
-    use InputOutputModule, only: u9rdcom, urword, get_node
+    use InputOutputModule, only: urword
     use ArrayHandlersModule, only: ExpandArray
     use TdisModule, only: kper
     ! -- dummy
@@ -427,7 +433,8 @@ contains
     readloop: do
       !
       ! -- First line was already read, so don't read again
-      if (ii /= 1) call u9rdcom(this%inlist, 0, this%line, this%ierr)
+      if (ii /= 1) &
+        call this%line_reader%rdcom(this%inlist, 0, this%line, this%ierr)
       !
       ! -- If this is an unknown-length list, then check for END.
       !    If found, then backspace, set nlist, and exit readloop.
@@ -436,10 +443,10 @@ contains
         call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r, &
                     this%iout, this%inlist)
         if (this%line(this%istart:this%istop) == 'END' .or. this%ierr < 0) then
-          ! If ierr < 0, backspace was already performed in u9rdcom, so only
-          ! need to backspace if END was found.
+          ! If END was found then call line_reader backspace
+          ! emulator so that caller can proceed with reading END.
           if (this%ierr == 0) then
-            backspace (this%inlist)
+            call this%line_reader%bkspc(this%inlist)
           end if
           this%nlist = ii - 1
           exit readloop
@@ -629,7 +636,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, &
                                TABLEFT, TABCENTER
-    use InputOutputModule, only: ulstlb, get_ijk
+    use InputOutputModule, only: ulstlb
     use TableModule, only: TableType, table_cr
     ! -- dummy
     class(ListReaderType) :: this

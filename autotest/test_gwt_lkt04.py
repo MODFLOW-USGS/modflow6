@@ -1,21 +1,23 @@
-# Simple one-layer model with a lak.  Purpose is to test a lake
-# with a variable stage and variable concentration.  The lake
-# starts at a concentration of 100. and slowly decreases as
-# fresh groundwater flows into it.  Concentrations in the aquifer
-# should remain at zero.
+"""
+Simple one-layer model with a lak.  Purpose is to test a lake
+with a variable stage and variable concentration.  The lake
+starts at a concentration of 100. and slowly decreases as
+fresh groundwater flows into it.  Concentrations in the aquifer
+should remain at zero.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["lkt_04"]
+from framework import DNODATA, TestFramework
+
+cases = ["lkt_04"]
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     lx = 5.0
     lz = 1.0
     nlay = 1
@@ -46,11 +48,11 @@ def build_model(idx, dir, exe):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=dir
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -127,20 +129,20 @@ def build_model(idx, dir, exe):
     )
 
     nlakeconn = 3  # note: this is the number of connectiosn for a lake, not total number of connections
-    # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
+    # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.4, nlakeconn, 0.0, 1025.0)]
 
     connlen = connwidth = delr / 2.0
     con_data = []
-    # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+    # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     con_data.append(
-        (0, 0, (0, 0, 1), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+        (0, 0, (0, 0, 1), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)
     )
     con_data.append(
-        (0, 1, (0, 0, 3), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+        (0, 1, (0, 0, 3), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)
     )
     con_data.append(
-        (0, 2, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth)
+        (0, 2, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
     )
     p_data = [
         (0, "STATUS", "ACTIVE"),
@@ -334,7 +336,7 @@ def build_model(idx, dir, exe):
 
 
 def get_mfsim(testsim):
-    ws = testsim.simpath
+    ws = testsim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     return sim
 
@@ -371,17 +373,15 @@ def eval_csv_information(testsim):
     assert success, f"One or more errors encountered in budget checks"
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # eval csv files
-    eval_csv_information(sim)
+    eval_csv_information(test)
 
     # ensure lake concentrations were saved
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are 100.
@@ -405,7 +405,7 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
     answer = np.zeros(5)
@@ -414,7 +414,7 @@ def eval_results(sim):
     ), f"{caq[-1].flatten()} {answer}"
 
     # lkt observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".lkt.obs.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".lkt.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -469,22 +469,14 @@ def eval_results(sim):
     answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
 
-    # uncomment when testing
-    # assert False
 
-
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets["mf6"]
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

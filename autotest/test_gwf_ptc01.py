@@ -8,13 +8,11 @@ name file.
 import os
 
 import flopy
-import numpy as np
 import pytest
-from conftest import project_root_path
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["ptc01"]
+from framework import TestFramework
+
+cases = ["ptc01"]
 # static model data
 # temporal discretization
 nper = 1
@@ -57,7 +55,7 @@ rech = {0: 0.001}
 
 
 def build_mf6(idx, ws, storage=True):
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -128,28 +126,24 @@ def build_mf6(idx, ws, storage=True):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-    
+
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
+def build_models(idx, test):
     # build mf6 with storage package but steady state stress periods
-    sim = build_mf6(idx, ws, storage=True)
-
+    sim = build_mf6(idx, test.workspace, storage=True)
     # build mf6 with no storage package
-    wsc = os.path.join(ws, "mf6")
-    mc = build_mf6(idx, wsc, storage=False)
-
+    mc = build_mf6(idx, os.path.join(test.workspace, "mf6"), storage=False)
     return sim, mc
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+    )
+    test.run()

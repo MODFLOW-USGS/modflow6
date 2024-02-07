@@ -1,22 +1,20 @@
 """
-MODFLOW 6 Autotest
 Test zero-order decay by running a one-cell model with ten 1-day time steps
 with a decay rate of 1.  And a starting concentration of 8.  Result should be
 0 at the end and decay should shot off once concentration is zero.
-
 """
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["mst06_noadv"]
+cases = ["mst06_noadv"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 1
     nper = 1
     perlen = [10.0]
@@ -34,10 +32,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -119,13 +117,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_ts((0, 0, 0))
 
@@ -139,7 +135,7 @@ def eval_transport(sim):
     assert np.allclose(cres, conc[:, 1]), msg
 
     # Check budget file
-    fpth = os.path.join(sim.simpath, f"{gwtname}.bud")
+    fpth = os.path.join(test.workspace, f"{gwtname}.bud")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     except:
@@ -165,17 +161,13 @@ def eval_transport(sim):
     assert np.allclose(decay_rate, decay_rate_answer), msg
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

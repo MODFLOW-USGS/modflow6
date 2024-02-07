@@ -7,7 +7,6 @@ for the new totim value.  For this problem, the constant head starts at 100 at
 time zero and drops to 50.0 at time 100.  So the constant head values, which
 are observed and written to and obs output file must fall on a line between
 (0, 100) and (100, 50), which is ensured by this test.
-
 """
 
 import os
@@ -15,14 +14,14 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_ats03a"]
+from framework import TestFramework
+
+cases = ["gwf_ats03a"]
 nlay, nrow, ncol = 1, 1, 10
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [100.0]
     nper = len(perlen)
     nstp = [1]
@@ -41,10 +40,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -191,11 +190,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
+def check_output(idx, test):
     # ensure obs2 (a constant head time series) drops linearly from 100 to 50
-    fpth = os.path.join(sim.simpath, sim.name + ".obs.csv")
+    fpth = os.path.join(test.workspace, test.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -207,16 +204,13 @@ def eval_flow(sim):
     assert np.allclose(answer, result), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

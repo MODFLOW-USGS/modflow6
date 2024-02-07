@@ -1,10 +1,9 @@
-# ## Test problem for VSC
-#
-# Uses constant head and general-head boundaries on the left and right
-# sides of the model domain, respectively, to drive flow from left to
-# right.  Tests that head-dependent boundary conditions are properly
-# accounting for viscosity when VSC is active.
-#
+"""
+Uses constant head and general-head boundaries on the left and right
+sides of the model domain, respectively, to drive flow from left to
+right.  Tests that head-dependent boundary conditions are properly
+accounting for viscosity when VSC is active.
+"""
 
 # Imports
 
@@ -14,11 +13,11 @@ import sys
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
+from framework import TestFramework
+
+cases = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
-ex = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
 viscosity_on = [False, True, False]
 hydraulic_conductivity = [hyd_cond[0], hyd_cond[1], hyd_cond[1]]
 
@@ -57,15 +56,11 @@ botm = [top - k * delv for k in range(1, nlay + 1)]
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-10, 1e-6, 0.97
 
-#
-# MODFLOW 6 flopy GWF simulation object (sim) is returned
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -253,15 +248,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GHB")
@@ -269,14 +262,14 @@ def eval_results(sim):
     # Establish known answer:
     stored_ans = -151.63446156218242
 
-    if sim.idxsim == 0:
+    if idx == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
         sim_val_1 = no_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
         assert np.allclose(
             sim_val_1, stored_ans, atol=1e-4
-        ), "Flow in the " + ex[
+        ), "Flow in the " + cases[
             0
         ] + " test problem (doesn't simulate " "viscosity) has changed,\n should be " + str(
             stored_ans
@@ -284,14 +277,14 @@ def eval_results(sim):
             sim_val_1
         )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
         sim_val_2 = with_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
         assert np.allclose(
             sim_val_2, stored_ans, atol=1e-4
-        ), "Flow in the " + ex[
+        ), "Flow in the " + cases[
             1
         ] + " test problem (simulates " "viscosity) has changed,\n should be " + str(
             stored_ans
@@ -299,32 +292,41 @@ def eval_results(sim):
             sim_val_2
         )
 
-    elif sim.idxsim == 2:
+    elif idx == 2:
         no_vsc_low_k_bud_last = np.array(outbud[-1].tolist())
         sim_val_3 = no_vsc_low_k_bud_last[:, 2].sum()
 
         # Ensure the flow leaving model 3 is less than what leaves model 2
         assert abs(stored_ans) > abs(sim_val_3), (
             "Exit flow from model "
-            + ex[1]
+            + cases[1]
             + " should be greater than flow exiting "
-            + ex[2]
+            + cases[2]
             + ", but it is not."
         )
 
+    # Ensure that binary output file is readable (has the correct header)
+    vsc_filerecord = "{}.vsc.bin".format(gwfname)
+    fname = os.path.join(test.workspace, vsc_filerecord)
+    if os.path.isfile(fname):
+        vscobj = flopy.utils.HeadFile(
+            fname, precision="double", text="VISCOSITY"
+        )
+        try:
+            data = vscobj.get_alldata()
+            print(data.shape)
+            data.shape == (500, 1, 10, 80)
+        except:
+            print("Binary viscosity output file was not read successfully")
 
-# - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

@@ -1,20 +1,30 @@
+
 # Building MODFLOW 6 on HPC systems
 
-## SLURM job
+_On Denali_ 
 
 ```
 sbatch --reservation=dev cray-meson-build.slurm.batch
 ```
 
-## Interactive job
+_Hovenweep_
 
 ```
-module switch PrgEnv-${PE_ENV,,} PrgEnv-intel
-module load cray-petsc meson ninja
-export PKG_CONFIG_PATH=/opt/cray/pe/mpt/7.7.19/gni/mpich-intel/16.0/lib/pkgconfig:/opt/cray/pe/petsc/3.14.5.0/real/INTEL/19.1/x86_skylake/lib/pkgconfig:$PKG_CONFIG_PATH
-
-srun --reservation=dev --account=impd --pty bash
-
-meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin -Dcray=true -Ddebug=false --wipe
-meson install -C builddir
+sbatch cray-hovenweep-meson-build.slurm.batch
 ```
+
+
+## Create a module file for a new version of MODFLOW 6
+
+On _Denali_ make a copy of an existing module file using
+```
+rsync /home/software/denali/contrib/impd/modulefiles/modflow/6.5.0.dev0 /home/software/denali/contrib/impd/modulefiles/modflow/6.x.x
+```
+On _Hovenweep_ make a copy of an existing module file using
+```
+rsync /home/software/hovenweep/contrib/impd/modulefiles/modflow/6.5.0.dev0 /home/software/denali/contrib/impd/modulefiles/modflow/6.x.x
+```
+
+Edit `product_version` in the new module file from `6.5.0.dev0` to `6.x.x` on both systems.
+
+

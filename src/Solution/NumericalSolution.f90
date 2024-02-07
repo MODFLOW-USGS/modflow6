@@ -2,6 +2,7 @@
 
 module NumericalSolutionModule
   use KindModule, only: DP, I4B, LGP
+  use ErrorUtilModule, only: pstop
   use TimerModule, only: code_timer
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC, &
                              DPREC, DZERO, DEM20, DEM15, DEM6, &
@@ -12,14 +13,15 @@ module NumericalSolutionModule
                              LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use TableModule, only: TableType, table_cr
-  use GenericUtilitiesModule, only: is_same, sim_message, stop_with_error
+  Use MessageModule, only: write_message
+  use MathUtilModule, only: is_close
   use VersionModule, only: IDEVELOPMODE
   use BaseModelModule, only: BaseModelType
   use BaseExchangeModule, only: BaseExchangeType
   use BaseSolutionModule, only: BaseSolutionType, AddBaseSolutionToList
   use ListModule, only: ListType
   use ListsModule, only: basesolutionlist
-  use InputOutputModule, only: getunit
+  use InputOutputModule, only: getunit, append_processor_id
   use NumericalModelModule, only: NumericalModelType, &
                                   AddNumericalModelToList, &
                                   GetNumericalModelFromList
@@ -27,26 +29,32 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList, &
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
-  use SimVariablesModule, only: iout, isim_mode
+  use SimVariablesModule, only: iout, isim_mode, errmsg, &
+                                proc_id, nr_procs, simulation_mode
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
   use MatrixBaseModule
   use VectorBaseModule
   use LinearSolverBaseModule
+  use ImsLinearSettingsModule
   use LinearSolverFactory, only: create_linear_solver
-  use SparseMatrixModule
   use MatrixBaseModule
+  use ConvergenceSummaryModule
 
   implicit none
   private
 
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
+  public :: CastAsNumericalSolutionClass
   public :: create_numerical_solution
 
+  integer(I4B), parameter :: IMS_SOLVER = 1
+  integer(I4B), parameter :: PETSC_SOLVER = 2
+
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH) :: memoryPath !< the path for storing solution variables in the memory manager
+    character(len=LENMEMPATH) :: memory_path !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH) :: fname !< input file name
     character(len=16) :: solver_mode !< the type of solve: sequential, parallel, mayve block, etc.
     type(ListType), pointer :: modellist !< list of models in solution
@@ -58,10 +66,10 @@ module NumericalSolutionModule
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
     integer(I4B), pointer :: matrix_offset => null() !< offset of linear system when part of distributed solution
-    class(LinearSolverBaseType), pointer :: linear_solver !< the linear solver for this solution
-    class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
-    class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
-    class(VectorBaseType), pointer :: vec_x !< the dependent-variable vector
+    class(LinearSolverBaseType), pointer :: linear_solver => null() !< the linear solver for this solution
+    class(MatrixBaseType), pointer :: system_matrix => null() !< sparse A-matrix for the system of equations
+    class(VectorBaseType), pointer :: vec_rhs => null() !< the right-hand side vector
+    class(VectorBaseType), pointer :: vec_x => null() !< the dependent-variable vector
     real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector values
     real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector values
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< active cell array
@@ -87,7 +95,7 @@ module NumericalSolutionModule
     integer(I4B), pointer :: iouttot_timestep => null() !< total nr. of outer iterations per call to sln_ca
     integer(I4B), pointer :: itertot_sim => null() !< total nr. of inner iterations for simulation
     integer(I4B), pointer :: mxiter => null() !< maximum number of Picard iterations
-    integer(I4B), pointer :: linmeth => null() !< linear acceleration method used
+    integer(I4B), pointer :: linsolver => null() !< linear solver used (IMS, PETSC, ...)
     integer(I4B), pointer :: nonmeth => null() !< under-relaxation method used
     integer(I4B), pointer :: numtrack => null() !< maximum number of backtracks
     integer(I4B), pointer :: iprims => null() !< solver print option
@@ -106,15 +114,10 @@ module NumericalSolutionModule
     integer(I4B), pointer :: nitermax => null() !< maximum number of iterations in a time step (maxiter * maxinner)
     integer(I4B), pointer :: convnmod => null() !< number of models in the solution
     integer(I4B), dimension(:), pointer, contiguous :: convmodstart => null() !< pointer to the start of each model in the convmod* arrays
-    integer(I4B), dimension(:), pointer, contiguous :: locdv => null() !< location of the maximum dependent-variable change in the solution
-    integer(I4B), dimension(:), pointer, contiguous :: locdr => null() !< location of the maximum flow change in the solution
-    integer(I4B), dimension(:), pointer, contiguous :: itinner => null() !< actual number of inner iterations in each Picard iteration
-    integer(I4B), pointer, dimension(:, :), contiguous :: convlocdv => null() !< location of the maximum dependent-variable change in each model in the solution
-    integer(I4B), pointer, dimension(:, :), contiguous :: convlocdr => null() !< location of the maximum flow change in each model in the solution
-    real(DP), dimension(:), pointer, contiguous :: dvmax => null() !< maximum dependent-variable change in the solution
-    real(DP), dimension(:), pointer, contiguous :: drmax => null() !< maximum flow change in the solution
-    real(DP), pointer, dimension(:, :), contiguous :: convdvmax => null() !< maximum dependent-variable change in each model in the solution
-    real(DP), pointer, dimension(:, :), contiguous :: convdrmax => null() !< maximum flow change in each model in the solution
+    !
+    ! -- refactoring
+    type(ConvergenceSummaryType), pointer :: cnvg_summary => null() !< details on the convergence behavior within a timestep
+    type(ImsLinearSettingsType), pointer :: linear_settings => null() !< IMS settings for linear solver
     !
     ! -- pseudo-transient continuation
     integer(I4B), pointer :: iallowptc => null() !< flag indicating if ptc applied this time step
@@ -159,8 +162,12 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_package_convergence
+    procedure :: sln_sync_newtonur_flag
+    procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
     procedure :: sln_underrelax
+    procedure :: sln_backtracking_xupdate
 
     ! private
     procedure, private :: sln_connect
@@ -168,7 +175,6 @@ module NumericalSolutionModule
     procedure, private :: sln_ls
     procedure, private :: sln_setouter
     procedure, private :: sln_backtracking
-    procedure, private :: sln_backtracking_xupdate
     procedure, private :: sln_maxval
     procedure, private :: sln_calcdx
     procedure, private :: sln_calc_residual
@@ -222,19 +228,15 @@ contains
     integer(I4B) :: inunit
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
-    class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     solbase => num_sol
     write (solutionname, '(a, i0)') 'SLN_', id
     !
     num_sol%name = solutionname
-    num_sol%memoryPath = create_mem_path(solutionname)
+    num_sol%memory_path = create_mem_path(solutionname)
     allocate (num_sol%modellist)
     allocate (num_sol%exchangelist)
-    !
-    allocate (matrix_impl)
-    num_sol%system_matrix => matrix_impl
     !
     call num_sol%allocate_scalars()
     !
@@ -271,48 +273,48 @@ contains
     class(NumericalSolutionType) :: this
     !
     ! -- allocate scalars
-    call mem_allocate(this%id, 'ID', this%memoryPath)
-    call mem_allocate(this%iu, 'IU', this%memoryPath)
-    call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
-    call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
-    call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
-    call mem_allocate(this%neq, 'NEQ', this%memoryPath)
-    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memoryPath)
-    call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
-    call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
-    call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
-    call mem_allocate(this%relaxold, 'RELAXOLD', this%memoryPath)
-    call mem_allocate(this%res_prev, 'RES_PREV', this%memoryPath)
-    call mem_allocate(this%res_new, 'RES_NEW', this%memoryPath)
-    call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
-    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
-    call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memoryPath)
-    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
-    call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
-    call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
-    call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
-    call mem_allocate(this%iprims, 'IPRIMS', this%memoryPath)
-    call mem_allocate(this%theta, 'THETA', this%memoryPath)
-    call mem_allocate(this%akappa, 'AKAPPA', this%memoryPath)
-    call mem_allocate(this%gamma, 'GAMMA', this%memoryPath)
-    call mem_allocate(this%amomentum, 'AMOMENTUM', this%memoryPath)
-    call mem_allocate(this%breduc, 'BREDUC', this%memoryPath)
-    call mem_allocate(this%btol, 'BTOL', this%memoryPath)
-    call mem_allocate(this%res_lim, 'RES_LIM', this%memoryPath)
-    call mem_allocate(this%numtrack, 'NUMTRACK', this%memoryPath)
-    call mem_allocate(this%ibflag, 'IBFLAG', this%memoryPath)
-    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memoryPath)
-    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memoryPath)
-    call mem_allocate(this%nitermax, 'NITERMAX', this%memoryPath)
-    call mem_allocate(this%convnmod, 'CONVNMOD', this%memoryPath)
-    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memoryPath)
-    call mem_allocate(this%iptcopt, 'IPTCOPT', this%memoryPath)
-    call mem_allocate(this%iptcout, 'IPTCOUT', this%memoryPath)
-    call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
-    call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
-    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
-    call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
-    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
+    call mem_allocate(this%id, 'ID', this%memory_path)
+    call mem_allocate(this%iu, 'IU', this%memory_path)
+    call mem_allocate(this%ttform, 'TTFORM', this%memory_path)
+    call mem_allocate(this%ttsoln, 'TTSOLN', this%memory_path)
+    call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memory_path)
+    call mem_allocate(this%neq, 'NEQ', this%memory_path)
+    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memory_path)
+    call mem_allocate(this%dvclose, 'DVCLOSE', this%memory_path)
+    call mem_allocate(this%bigchold, 'BIGCHOLD', this%memory_path)
+    call mem_allocate(this%bigch, 'BIGCH', this%memory_path)
+    call mem_allocate(this%relaxold, 'RELAXOLD', this%memory_path)
+    call mem_allocate(this%res_prev, 'RES_PREV', this%memory_path)
+    call mem_allocate(this%res_new, 'RES_NEW', this%memory_path)
+    call mem_allocate(this%icnvg, 'ICNVG', this%memory_path)
+    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memory_path)
+    call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memory_path)
+    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memory_path)
+    call mem_allocate(this%mxiter, 'MXITER', this%memory_path)
+    call mem_allocate(this%linsolver, 'LINSOLVER', this%memory_path)
+    call mem_allocate(this%nonmeth, 'NONMETH', this%memory_path)
+    call mem_allocate(this%iprims, 'IPRIMS', this%memory_path)
+    call mem_allocate(this%theta, 'THETA', this%memory_path)
+    call mem_allocate(this%akappa, 'AKAPPA', this%memory_path)
+    call mem_allocate(this%gamma, 'GAMMA', this%memory_path)
+    call mem_allocate(this%amomentum, 'AMOMENTUM', this%memory_path)
+    call mem_allocate(this%breduc, 'BREDUC', this%memory_path)
+    call mem_allocate(this%btol, 'BTOL', this%memory_path)
+    call mem_allocate(this%res_lim, 'RES_LIM', this%memory_path)
+    call mem_allocate(this%numtrack, 'NUMTRACK', this%memory_path)
+    call mem_allocate(this%ibflag, 'IBFLAG', this%memory_path)
+    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memory_path)
+    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memory_path)
+    call mem_allocate(this%nitermax, 'NITERMAX', this%memory_path)
+    call mem_allocate(this%convnmod, 'CONVNMOD', this%memory_path)
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memory_path)
+    call mem_allocate(this%iptcopt, 'IPTCOPT', this%memory_path)
+    call mem_allocate(this%iptcout, 'IPTCOUT', this%memory_path)
+    call mem_allocate(this%l2norm0, 'L2NORM0', this%memory_path)
+    call mem_allocate(this%ptcdel, 'PTCDEL', this%memory_path)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memory_path)
+    call mem_allocate(this%ptcexp, 'PTCEXP', this%memory_path)
+    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memory_path)
     !
     ! -- initialize scalars
     this%isymmetric = 0
@@ -331,7 +333,7 @@ contains
     this%iouttot_timestep = 0
     this%itertot_sim = 0
     this%mxiter = 0
-    this%linmeth = 1
+    this%linsolver = IMS_SOLVER
     this%nonmeth = 0
     this%iprims = 0
     this%theta = DONE
@@ -379,41 +381,22 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
-    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memoryPath)
-    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memoryPath)
-    call mem_allocate(this%hncg, 0, 'HNCG', this%memoryPath)
-    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%memoryPath)
-    call mem_allocate(this%wsave, 0, 'WSAVE', this%memoryPath)
-    call mem_allocate(this%hchold, 0, 'HCHOLD', this%memoryPath)
-    call mem_allocate(this%deold, 0, 'DEOLD', this%memoryPath)
+    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memory_path)
+    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memory_path)
+    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memory_path)
+    call mem_allocate(this%hncg, 0, 'HNCG', this%memory_path)
+    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%memory_path)
+    call mem_allocate(this%wsave, 0, 'WSAVE', this%memory_path)
+    call mem_allocate(this%hchold, 0, 'HCHOLD', this%memory_path)
+    call mem_allocate(this%deold, 0, 'DEOLD', this%memory_path)
     call mem_allocate(this%convmodstart, this%convnmod + 1, 'CONVMODSTART', &
-                      this%memoryPath)
-    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memoryPath)
-    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memoryPath)
-    call mem_allocate(this%itinner, 0, 'ITINNER', this%memoryPath)
-    call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', &
-                      this%memoryPath)
-    call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', &
-                      this%memoryPath)
-    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memoryPath)
-    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memoryPath)
-    call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', &
-                      this%memoryPath)
-    call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', &
-                      this%memoryPath)
+                      this%memory_path)
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
       this%xtemp(i) = DZERO
       this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
-    end do
-    do i = 1, this%convnmod
-      this%locdv(i) = 0
-      this%locdr(i) = 0
-      this%dvmax(i) = DZERO
-      this%drmax(i) = DZERO
     end do
     !
     ! -- initialize convmodstart
@@ -464,13 +447,18 @@ contains
     else
       this%solver_mode = 'IMS'
     end if
+    !
+    ! -- allocate settings structure
+    allocate (this%linear_settings)
+    !
     ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
-    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', this%memoryPath)
+    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', &
+                                                   this%memory_path)
     this%x => this%vec_x%get_array()
     this%vec_rhs => this%system_matrix%create_vec_mm(this%neq, 'RHS', &
-                                                     this%memoryPath)
+                                                     this%memory_path)
     this%rhs => this%vec_rhs%get_array()
     !
     call this%vec_rhs%get_ownership_range(irow_start, irow_end)
@@ -487,6 +475,11 @@ contains
     !
     ! -- Allocate and initialize solution arrays
     call this%allocate_arrays()
+    !
+    ! -- Create convergence summary report
+    allocate (this%cnvg_summary)
+    call this%cnvg_summary%init(this%modellist%Count(), this%convmodstart, &
+                                this%memory_path)
     !
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
@@ -528,17 +521,14 @@ contains
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
-    character(len=linelength) :: errmsg
     character(len=linelength) :: warnmsg
     character(len=linelength) :: keyword
     character(len=linelength) :: fname
     character(len=linelength) :: msg
     integer(I4B) :: i
-    integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
-    integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: ival
     real(DP) :: rval
     character(len=*), parameter :: fmtcsvout = &
@@ -607,6 +597,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
+            if (nr_procs > 1) then
+              call append_processor_id(fname, proc_id)
+            end if
             this%icsvouterout = getunit()
             call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT', &
                           filstat_opt='REPLACE')
@@ -620,6 +613,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
+            if (nr_procs > 1) then
+              call append_processor_id(fname, proc_id)
+            end if
             this%icsvinnerout = getunit()
             call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT', &
                           filstat_opt='REPLACE')
@@ -792,16 +788,16 @@ contains
           this%nonmeth = ival
         case ('LINEAR_SOLVER')
           call this%parser%GetStringCaps(keyword)
-          ival = 1
+          ival = IMS_SOLVER
           if (keyword .eq. 'DEFAULT' .or. &
               keyword .eq. 'LINEAR') then
-            ival = 1
+            ival = IMS_SOLVER
           else
             write (errmsg, '(3a)') &
               'Unknown LINEAR_SOLVER specified (', trim(keyword), ').'
             call store_error(errmsg)
           end if
-          this%linmeth = ival
+          this%linsolver = ival
         case ('UNDER_RELAXATION_THETA')
           this%theta = this%parser%GetDouble()
         case ('UNDER_RELAXATION_KAPPA')
@@ -892,35 +888,40 @@ contains
     end if
 
     if (this%solver_mode == 'PETSC') then
-      this%linmeth = 2
+      this%linsolver = PETSC_SOLVER
     end if
 
+    ! configure linear settings
+    call this%linear_settings%init(this%memory_path)
+    call this%linear_settings%preset_config(ifdparam)
+    call this%linear_settings%read_from_file(this%parser, iout)
+    !
+    if (this%linear_settings%ilinmeth == CG_METHOD) then
+      this%isymmetric = 1
+    end if
     !
     ! -- call secondary subroutine to initialize and read linear
     !    solver parameters IMSLINEAR solver
-    if (this%linmeth == 1) then
+    if (this%solver_mode == "IMS") then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
-      call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
-                                             this%iprims, this%mxiter, &
-                                             ifdparam, ims_lin_type, &
-                                             this%neq, this%system_matrix, &
-                                             this%rhs, this%x, this%nitermax)
-      if (ims_lin_type .eq. 1) then
-        this%isymmetric = 1
-      end if
+      call this%imslinear%imslinear_allocate(this%name, IOUT, this%iprims, &
+                                             this%mxiter, this%neq, &
+                                             this%system_matrix, this%rhs, &
+                                             this%x, this%linear_settings)
+      !
+      ! -- petsc linear solver flag
+    else if (this%solver_mode == "PETSC") then
+      call this%linear_solver%initialize(this%system_matrix, &
+                                         this%linear_settings, &
+                                         this%cnvg_summary)
       !
       ! -- incorrect linear solver flag
-    else if (this%linmeth == 2) then
-      call this%linear_solver%initialize(this%system_matrix)
-      this%nitermax = this%linear_solver%nitermax
-      this%isymmetric = 0
-    ELSE
-      WRITE (errmsg, '(a)') &
+    else
+      write (errmsg, '(a)') &
         'Incorrect value for linear solution method specified.'
       call store_error(errmsg)
-    END IF
-
+    end if
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -957,7 +958,7 @@ contains
     !
     ! -- non-linear solver data
     WRITE (IOUT, 9002) this%dvclose, this%mxiter, &
-      this%iprims, this%nonmeth, this%linmeth
+      this%iprims, this%nonmeth, this%linsolver
     !
     ! -- standard outer iteration formats
 9002 FORMAT(1X, 'OUTER ITERATION CONVERGENCE CRITERION    (DVCLOSE) = ', E15.6, &
@@ -993,8 +994,10 @@ contains
            /1X, 'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
     !
     ! -- linear solver data
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_summary(this%mxiter)
+    else
+      call this%linear_solver%print_summary()
     end if
 
     ! -- write summary of solver error messages
@@ -1023,33 +1026,16 @@ contains
 
     ! allocate space for saving solver convergence history
     if (this%iprims == 2 .or. this%icsvinnerout > 0) then
-      this%nitermax = this%nitermax * this%mxiter
+      this%nitermax = this%linear_settings%iter1 * this%mxiter
     else
       this%nitermax = 1
     end if
 
     allocate (this%caccel(this%nitermax))
 
-    im = this%convnmod
-    call mem_reallocate(this%itinner, this%nitermax, 'ITINNER', &
-                        trim(this%name))
-    call mem_reallocate(this%convlocdv, im, this%nitermax, 'CONVLOCDV', &
-                        trim(this%name))
-    call mem_reallocate(this%convlocdr, im, this%nitermax, 'CONVLOCDR', &
-                        trim(this%name))
-    call mem_reallocate(this%convdvmax, im, this%nitermax, 'CONVDVMAX', &
-                        trim(this%name))
-    call mem_reallocate(this%convdrmax, im, this%nitermax, 'CONVDRMAX', &
-                        trim(this%name))
-    do i = 1, this%nitermax
-      this%itinner(i) = 0
-      do im = 1, this%convnmod
-        this%convlocdv(im, i) = 0
-        this%convlocdr(im, i) = 0
-        this%convdvmax(im, i) = DZERO
-        this%convdrmax(im, i) = DZERO
-      end do
-    end do
+    !
+    ! -- resize convergence report
+    call this%cnvg_summary%reinit(this%nitermax)
     !
     ! -- check for numerical solution errors
     ierr = count_errors()
@@ -1102,7 +1088,7 @@ contains
       end if
       !
       ! -- submit stable dt for upcoming step
-      call ats_submit_delt(kstp, kper, delt_temp, this%memoryPath, idir=idir)
+      call ats_submit_delt(kstp, kper, delt_temp, this%memory_path, idir=idir)
     end if
     !
     return
@@ -1187,7 +1173,7 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- IMSLinearModule
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_da()
       deallocate (this%imslinear)
     end if
@@ -1233,15 +1219,18 @@ contains
     call mem_deallocate(this%hchold)
     call mem_deallocate(this%deold)
     call mem_deallocate(this%convmodstart)
-    call mem_deallocate(this%locdv)
-    call mem_deallocate(this%locdr)
-    call mem_deallocate(this%itinner)
-    call mem_deallocate(this%convlocdv)
-    call mem_deallocate(this%convlocdr)
-    call mem_deallocate(this%dvmax)
-    call mem_deallocate(this%drmax)
-    call mem_deallocate(this%convdvmax)
-    call mem_deallocate(this%convdrmax)
+    !
+    ! -- convergence report
+    call this%cnvg_summary%destroy()
+    deallocate (this%cnvg_summary)
+    !
+    ! -- linear solver
+    call this%linear_solver%destroy()
+    deallocate (this%linear_solver)
+    !
+    ! -- linear solver settings
+    call this%linear_settings%destroy()
+    deallocate (this%linear_settings)
     !
     ! -- Scalars
     call mem_deallocate(this%id)
@@ -1262,7 +1251,7 @@ contains
     call mem_deallocate(this%iouttot_timestep)
     call mem_deallocate(this%itertot_sim)
     call mem_deallocate(this%mxiter)
-    call mem_deallocate(this%linmeth)
+    call mem_deallocate(this%linsolver)
     call mem_deallocate(this%nonmeth)
     call mem_deallocate(this%iprims)
     call mem_deallocate(this%theta)
@@ -1371,13 +1360,18 @@ contains
         'solution_inner_dvmax_node'
       write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
         '', 'solution_inner_drmax', 'solution_inner_drmax_model', &
-        'solution_inner_drmax_node', 'solution_inner_alpha'
-      if (this%imslinear%ilinmeth == 2) then
+        'solution_inner_drmax_node'
+      ! solver items specific to ims solver
+      if (this%linsolver == IMS_SOLVER) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
-          '', 'solution_inner_omega'
+          '', 'solution_inner_alpha'
+        if (this%imslinear%ilinmeth == 2) then
+          write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
+            '', 'solution_inner_omega'
+        end if
       end if
-      ! -- check for more than one model
-      if (this%convnmod > 1) then
+      ! -- check for more than one model - ims only
+      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -1499,7 +1493,6 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=LINELENGTH) :: line
     character(len=LENPAKLOC) :: cmod
     character(len=LENPAKLOC) :: cpak
     character(len=LENPAKLOC) :: cpakout
@@ -1525,7 +1518,7 @@ contains
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
     real(DP) :: dxmax_nur
-    real(DP) :: dxmax
+    real(DP) :: dxold_max
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
@@ -1549,7 +1542,7 @@ contains
         end if
         !
         ! -- initialize table and define columns
-        title = trim(this%memoryPath)//' OUTER ITERATION SUMMARY'
+        title = trim(this%memory_path)//' OUTER ITERATION SUMMARY'
         call table_cr(this%outertab, this%name, title)
         call this%outertab%table_df(ntabrows, ntabcols, iout, &
                                     finalize=.FALSE.)
@@ -1619,7 +1612,7 @@ contains
       WRITE (99, *) 'MATRIX SOLUTION FOLLOWS'
       WRITE (99, '(10(I8,G15.4))') (n, this%x(N), N=1, this%NEQ)
       close (99)
-      call stop_with_error()
+      call pstop()
     end if
     !-------------------------------------------------------
     !
@@ -1689,47 +1682,41 @@ contains
       end if
     end do
     !
-    ! -- evaluate package convergence
-    if (abs(dpak) > this%dvclose) then
-      this%icnvg = 0
-      ! -- write message to stdout
-      if (iend /= 0) then
-        write (line, '(3a)') &
-          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-        call sim_message(line)
-      end if
-    end if
-    !
-    ! -- write maximum change in package convergence check
-    if (this%iprims > 0) then
-      cval = 'Package'
-      if (this%icnvg /= 1) then
-        cmsg = ' '
-      else
-        cmsg = '*'
-      end if
-      if (len_trim(cpakout) > 0) then
-        !
-        ! -- add data to outertab
-        call this%outertab%add_term(cval)
-        call this%outertab%add_term(kiter)
-        call this%outertab%add_term(' ')
-        if (this%numtrack > 0) then
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
+    ! -- evaluate package convergence - only done if convergence is achieved
+    if (this%icnvg == 1) then
+      this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
+      !
+      ! -- write maximum change in package convergence check
+      if (this%iprims > 0) then
+        cval = 'Package'
+        if (this%icnvg /= 1) then
+          cmsg = ' '
+        else
+          cmsg = '*'
         end if
-        call this%outertab%add_term(dpak)
-        call this%outertab%add_term(cmsg)
-        call this%outertab%add_term(cpakout)
+        if (len_trim(cpakout) > 0) then
+          !
+          ! -- add data to outertab
+          call this%outertab%add_term(cval)
+          call this%outertab%add_term(kiter)
+          call this%outertab%add_term(' ')
+          if (this%numtrack > 0) then
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+          end if
+          call this%outertab%add_term(dpak)
+          call this%outertab%add_term(cmsg)
+          call this%outertab%add_term(cpakout)
+        end if
       end if
     end if
     !
     ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, & ! TODO_MJR: this is not equiv. serial/parallel
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, &
                                  this%active, this%x, this%xtemp)
       else
         call this%sln_calcdx(this%neq, this%active, &
@@ -1748,17 +1735,20 @@ contains
                           this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
       end do
       !
+      ! -- synchronize Newton Under-relaxation flag
+      inewtonur = this%sln_sync_newtonur_flag(inewtonur)
+      !
       ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
         !
         ! -- calculate maximum change in heads in cells that have
         !    not been adjusted by newton under-relxation
-        call this%sln_maxval(this%neq, this%dxold, dxmax)
+        call this%sln_maxval(this%neq, this%dxold, dxold_max)
         !
         ! -- evaluate convergence
-        if (abs(dxmax) <= this%dvclose .and. &
-            abs(this%hncg(kiter)) <= this%dvclose .and. &
-            abs(dpak) <= this%dvclose) then
+        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter))) then
+          !
+          ! -- converged
           this%icnvg = 1
           !
           ! -- reset outer dependent-variable change and location for output
@@ -1920,7 +1910,6 @@ contains
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: inewton
-
     ! local
     integer(I4B) :: im, ic
     class(NumericalModelType), pointer :: mp
@@ -1928,6 +1917,12 @@ contains
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
+
+    ! reset models
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_reset()
+    end do
 
     ! synchronize for CF
     call this%synchronize(STG_BFR_EXG_CF, this%synchronize_ctx)
@@ -1983,7 +1978,7 @@ contains
     character(len=LENPAKLOC) :: strr
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-    integer(I4B) :: i
+    integer(I4B) :: iinner
     integer(I4B) :: i0
     integer(I4B) :: iouter
     integer(I4B) :: j
@@ -2009,7 +2004,7 @@ contains
       ntabcols = 7
       !
       ! -- initialize table and define columns
-      title = trim(this%memoryPath)//' INNER ITERATION SUMMARY'
+      title = trim(this%memory_path)//' INNER ITERATION SUMMARY'
       call table_cr(this%innertab, this%name, title)
       call this%innertab%table_df(ntabrows, ntabcols, iu)
       tag = 'TOTAL ITERATION'
@@ -2036,28 +2031,28 @@ contains
     ! -- write the inner iteration summary to unit iu
     i0 = 0
     do k = 1, itertot_timestep
-      i = this%itinner(k)
-      if (i <= i0) then
+      iinner = this%cnvg_summary%itinner(k)
+      if (iinner <= i0) then
         iouter = iouter + 1
       end if
       if (im > this%convnmod) then
         dv = DZERO
         dr = DZERO
         do j = 1, this%convnmod
-          if (ABS(this%convdvmax(j, k)) > ABS(dv)) then
-            locdv = this%convlocdv(j, k)
-            dv = this%convdvmax(j, k)
+          if (ABS(this%cnvg_summary%convdvmax(j, k)) > ABS(dv)) then
+            locdv = this%cnvg_summary%convlocdv(j, k)
+            dv = this%cnvg_summary%convdvmax(j, k)
           end if
-          if (ABS(this%convdrmax(j, k)) > ABS(dr)) then
-            locdr = this%convlocdr(j, k)
-            dr = this%convdrmax(j, k)
+          if (ABS(this%cnvg_summary%convdrmax(j, k)) > ABS(dr)) then
+            locdr = this%cnvg_summary%convlocdr(j, k)
+            dr = this%cnvg_summary%convdrmax(j, k)
           end if
         end do
       else
-        locdv = this%convlocdv(im, k)
-        locdr = this%convlocdr(im, k)
-        dv = this%convdvmax(im, k)
-        dr = this%convdrmax(im, k)
+        locdv = this%cnvg_summary%convlocdv(im, k)
+        locdr = this%cnvg_summary%convlocdr(im, k)
+        dv = this%cnvg_summary%convdvmax(im, k)
+        dr = this%cnvg_summary%convdrmax(im, k)
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
@@ -2065,14 +2060,14 @@ contains
       ! -- add data to innertab
       call this%innertab%add_term(k)
       call this%innertab%add_term(iouter)
-      call this%innertab%add_term(i)
+      call this%innertab%add_term(iinner)
       call this%innertab%add_term(dv)
       call this%innertab%add_term(adjustr(trim(strh)))
       call this%innertab%add_term(dr)
       call this%innertab%add_term(adjustr(trim(strr)))
       !
       ! -- update i0
-      i0 = i
+      i0 = iinner
     end do
     !
     ! -- return
@@ -2124,13 +2119,13 @@ contains
       dv = DZERO
       dr = DZERO
       do j = 1, this%convnmod
-        if (ABS(this%convdvmax(j, kpos)) > ABS(dv)) then
-          locdv = this%convlocdv(j, kpos)
-          dv = this%convdvmax(j, kpos)
+        if (ABS(this%cnvg_summary%convdvmax(j, kpos)) > ABS(dv)) then
+          locdv = this%cnvg_summary%convlocdv(j, kpos)
+          dv = this%cnvg_summary%convdvmax(j, kpos)
         end if
-        if (ABS(this%convdrmax(j, kpos)) > ABS(dr)) then
-          locdr = this%convlocdr(j, kpos)
-          dr = this%convdrmax(j, kpos)
+        if (ABS(this%cnvg_summary%convdrmax(j, kpos)) > ABS(dr)) then
+          locdr = this%cnvg_summary%convlocdr(j, kpos)
+          dr = this%cnvg_summary%convdrmax(j, kpos)
         end if
       end do
       !
@@ -2142,17 +2137,19 @@ contains
       call this%sln_get_nodeu(locdr, im, nodeu)
       write (iu, '(*(G0,:,","))', advance='NO') '', dr, im, nodeu
       !
-      ! -- write acceleration parameters
-      write (iu, '(*(G0,:,","))', advance='NO') &
-        '', trim(adjustl(this%caccel(kpos)))
+      ! -- write ims acceleration parameters
+      if (this%linsolver == IMS_SOLVER) then
+        write (iu, '(*(G0,:,","))', advance='NO') &
+          '', trim(adjustl(this%caccel(kpos)))
+      end if
       !
-      ! -- write information for each model
-      if (this%convnmod > 1) then
-        do j = 1, this%convnmod
-          locdv = this%convlocdv(j, kpos)
-          dv = this%convdvmax(j, kpos)
-          locdr = this%convlocdr(j, kpos)
-          dr = this%convdrmax(j, kpos)
+      ! -- write information for each model - ims only
+      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
+        do j = 1, this%cnvg_summary%convnmod
+          locdv = this%cnvg_summary%convlocdv(j, kpos)
+          dv = this%cnvg_summary%convdvmax(j, kpos)
+          locdr = this%cnvg_summary%convlocdr(j, kpos)
+          dr = this%cnvg_summary%convdrmax(j, kpos)
           !
           ! -- get model number and user node number for dv
           call this%sln_get_nodeu(locdv, im, nodeu)
@@ -2185,6 +2182,7 @@ contains
   !!
   !<
   subroutine save(this, filename)
+    use SparseMatrixModule
     ! -- modules
     use InputOutputModule, only: getunit
     ! -- dummy variables
@@ -2379,9 +2377,9 @@ contains
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local variables
-    logical :: lsame
+    logical(LGP) :: lsame
     integer(I4B) :: ieq
-    integer(I4B) :: irow
+    integer(I4B) :: irow_glo
     integer(I4B) :: itestmat
     integer(I4B) :: ipos
     integer(I4B) :: icol_s
@@ -2402,7 +2400,7 @@ contains
     do ieq = 1, this%neq
       !
       ! -- get (global) cell id
-      irow = ieq + this%matrix_offset
+      irow_glo = ieq + this%matrix_offset
       !
       ! -- store x in temporary location
       this%xtemp(ieq) = this%x(ieq)
@@ -2411,35 +2409,33 @@ contains
       ! -- adjust small diagonal coefficient in an active cell
       if (this%active(ieq) > 0) then
         diagval = -DONE
-        adiag = abs(this%system_matrix%get_diag_value(irow))
+        adiag = abs(this%system_matrix%get_diag_value(irow_glo))
         if (adiag < DEM15) then
-          call this%system_matrix%set_diag_value(irow, diagval)
+          call this%system_matrix%set_diag_value(irow_glo, diagval)
           this%rhs(ieq) = this%rhs(ieq) + diagval * this%x(ieq)
         end if
         ! -- Dirichlet boundary or no-flow cell
       else
-        call this%system_matrix%set_diag_value(irow, DONE)
-        call this%system_matrix%zero_row_offdiag(irow)
+        call this%system_matrix%set_diag_value(irow_glo, DONE)
+        call this%system_matrix%zero_row_offdiag(irow_glo)
         this%rhs(ieq) = this%x(ieq)
       end if
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
-    if (this%isymmetric == 1) then
+    ! -- TODO_MJR: add this for PETSc/parallel
+    if (this%isymmetric == 1 .and. simulation_mode == "SEQUENTIAL") then
       do ieq = 1, this%neq
-        !
-        ! -- get (global) row number
-        irow = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
-          icol_s = this%system_matrix%get_first_col_pos(irow)
-          icol_e = this%system_matrix%get_last_col_pos(irow)
+          icol_s = this%system_matrix%get_first_col_pos(ieq)
+          icol_e = this%system_matrix%get_last_col_pos(ieq)
           do ipos = icol_s, icol_e
             jcol = this%system_matrix%get_column(ipos)
-            if (jcol == irow) cycle
-            if (this%active(jcol - this%matrix_offset) < 0) then
+            if (jcol == ieq) cycle
+            if (this%active(jcol) < 0) then
               this%rhs(ieq) = this%rhs(ieq) - &
                               (this%system_matrix%get_value_pos(ipos) * &
-                               this%x(jcol - this%matrix_offset))
+                               this%x(jcol))
               call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
 
@@ -2480,7 +2476,7 @@ contains
           end if
         end if
       else
-        lsame = is_same(l2norm, this%l2norm0)
+        lsame = is_close(l2norm, this%l2norm0)
         if (lsame) then
           iptc = 0
         end if
@@ -2526,11 +2522,11 @@ contains
       end if
       bnorm = DZERO
       do ieq = 1, this%neq
-        irow = ieq + this%matrix_offset
+        irow_glo = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
-          diagval = abs(this%system_matrix%get_diag_value(irow))
+          diagval = abs(this%system_matrix%get_diag_value(irow_glo))
           bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
-          call this%system_matrix%add_diag_value(irow, -ptcval)
+          call this%system_matrix%add_diag_value(irow_glo, -ptcval)
           this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
@@ -2555,11 +2551,11 @@ contains
       open (itestmat, file=trim(adjustl(fname)))
       write (itestmat, *) 'NODE, RHS, AMAT FOLLOW'
       do ieq = 1, this%neq
-        irow = ieq + this%matrix_offset
-        icol_s = this%system_matrix%get_first_col_pos(irow)
-        icol_e = this%system_matrix%get_last_col_pos(irow)
+        irow_glo = ieq + this%matrix_offset
+        icol_s = this%system_matrix%get_first_col_pos(irow_glo)
+        icol_e = this%system_matrix%get_last_col_pos(irow_glo)
         write (itestmat, '(*(G0,:,","))') &
-          irow, &
+          irow_glo, &
           this%rhs(ieq), &
           (this%system_matrix%get_column(ipos), ipos=icol_s, icol_e), &
           (this%system_matrix%get_value_pos(ipos), ipos=icol_s, icol_e)
@@ -2572,17 +2568,14 @@ contains
     ! -- call appropriate linear solver
     !
     ! -- ims linear solver - linmeth option 1
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_apply(this%icnvg, kstp, kiter, in_iter, &
-                                          this%nitermax, &
-                                          this%convnmod, this%convmodstart, &
-                                          this%locdv, this%locdr, &
-                                          this%caccel, this%itinner, &
-                                          this%convlocdv, this%convlocdr, &
-                                          this%dvmax, this%drmax, &
-                                          this%convdvmax, this%convdrmax)
-    else if (this%linmeth == 2) then
-      call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
+                                          this%nitermax, this%convnmod, &
+                                          this%convmodstart, this%caccel, &
+                                          this%cnvg_summary)
+    else if (this%linsolver == PETSC_SOLVER) then
+      call this%linear_solver%solve(kiter, this%vec_rhs, &
+                                    this%vec_x, this%cnvg_summary)
       in_iter = this%linear_solver%iteration_number
       this%icnvg = this%linear_solver%is_converged
     end if
@@ -3138,6 +3131,59 @@ contains
 
   end function sln_has_converged
 
+  !> @brief Check package convergence
+  !<
+  function sln_package_convergence(this, dpak, cpakout, iend) result(ivalue)
+    ! dummy
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
+    character(len=LENPAKLOC), intent(in) :: cpakout !< string with package that caused failure
+    integer(I4B), intent(in) :: iend !< flag indicating if last inner iteration (iend=1)
+    ! local
+    integer(I4B) :: ivalue
+    ivalue = 1
+    if (abs(dpak) > this%dvclose) then
+      ivalue = 0
+      ! -- write message to stdout
+      if (iend /= 0) then
+        write (errmsg, '(3a)') &
+          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
+        call write_message(errmsg)
+      end if
+    end if
+
+  end function sln_package_convergence
+
+  !> @brief Syncronize Newton Under-relaxation flag
+  !<
+  function sln_sync_newtonur_flag(this, inewtonur) result(ivalue)
+    ! dummy
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: inewtonur !< Newton Under-relaxation flag
+    ! local
+    integer(I4B) :: ivalue !< Default is set to current value (1 = under-relaxation applied)
+
+    ivalue = inewtonur
+
+  end function sln_sync_newtonur_flag
+
+  !> @brief Custom convergence check for when Newton UR has been applied
+  !<
+  function sln_nur_has_converged(this, dxold_max, hncg) &
+    result(has_converged)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
+    real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iteration
+    logical(LGP) :: has_converged !< True, when converged
+
+    has_converged = .false.
+    if (abs(dxold_max) <= this%dvclose .and. &
+        abs(hncg) <= this%dvclose) then
+      has_converged = .true.
+    end if
+
+  end function sln_nur_has_converged
+
   !> @ brief Get cell location string
   !!
   !!  Get the cell location string for the provided solution node number.
@@ -3154,6 +3200,7 @@ contains
     integer(I4B) :: istart
     integer(I4B) :: iend
     integer(I4B) :: noder
+    integer(I4B) :: nglo
     !
     ! -- initialize dummy variables
     str = ''
@@ -3161,14 +3208,17 @@ contains
     ! -- initialize local variables
     noder = 0
     !
+    ! -- when parallel, account for offset
+    nglo = nodesln + this%matrix_offset
+    !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
       istart = 0
       iend = 0
       call mp%get_mrange(istart, iend)
-      if (nodesln >= istart .and. nodesln <= iend) then
-        noder = nodesln - istart + 1
+      if (nglo >= istart .and. nglo <= iend) then
+        noder = nglo - istart + 1
         call mp%get_mcellid(noder, str)
         exit
       end if

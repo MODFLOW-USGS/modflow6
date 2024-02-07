@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = [
+from framework import TestFramework
+
+cases = [
     "gwf_npf_thickstrt01",  # case 01 -- icelltype=0
     "gwf_npf_thickstrt02",  # case 02 -- icelltype=0, using thickstrt, but it has no effect
     "gwf_npf_thickstrt03",  # case 03 -- icelltype=-1, using thickstrt and strt = 5.
@@ -21,7 +21,8 @@ thickstrt = [False, True, True, False, False, False, True, False, False]
 icelltype = [0, 0, -1, 1, -1, 0, -1, 1, -1]
 hfb_on = [False, False, False, False, False, True, True, True, True]
 
-def build_model(idx, dir):
+
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 6
     nper = 1
     perlen = [1.0]
@@ -46,7 +47,7 @@ def build_model(idx, dir):
     name = "flow"
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -101,11 +102,7 @@ def build_model(idx, dir):
     thickstrt_option = thickstrt[idx]
     ict = icelltype[idx]
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, 
-        thickstrt=thickstrt_option,
-        icelltype=ict, 
-        k=hk, 
-        k33=hk
+        gwf, thickstrt=thickstrt_option, icelltype=ict, k=hk, k33=hk
     )
 
     if hfb_on[idx]:
@@ -113,7 +110,7 @@ def build_model(idx, dir):
             gwf,
             print_input=True,
             maxhfb=1,
-            stress_period_data=[((0, 0, 2), (0, 0, 3), 1.e-4)],
+            stress_period_data=[((0, 0, 2), (0, 0, 3), 1.0e-4)],
         )
 
     # chd files
@@ -139,12 +136,10 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
+def check_output(idx, test):
     name = "flow"
 
-    fpth = os.path.join(sim.simpath, f"{name}.hds")
+    fpth = os.path.join(test.workspace, f"{name}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_data().flatten()
 
@@ -157,60 +152,70 @@ def eval_model(sim):
     answer_confined_hfb = (6.0, 5.9998, 5.9996, 4.0004, 4.0002, 4.0)
     answer_confined_hfb = np.array(answer_confined_hfb)
 
-    answer_confined_thickstart_hfb = (6., 5.9996004, 5.9992008, 4.0007992, 4.0003996, 4.)
+    answer_confined_thickstart_hfb = (
+        6.0,
+        5.9996004,
+        5.9992008,
+        4.0007992,
+        4.0003996,
+        4.0,
+    )
     answer_confined_thickstart_hfb = np.array(answer_confined_thickstart_hfb)
 
-    answer_unconfined_hfb = (6., 5.99983342, 5.99966683, 4.00049971, 4.00024986, 4.)
+    answer_unconfined_hfb = (
+        6.0,
+        5.99983342,
+        5.99966683,
+        4.00049971,
+        4.00024986,
+        4.0,
+    )
     answer_unconfined_hfb = np.array(answer_unconfined_hfb)
 
     answer_dict = {
-        0: answer_linear, 
-        1: answer_linear, 
-        2: answer_linear, 
-        3: answer_water_table, 
-        4: answer_water_table, 
+        0: answer_linear,
+        1: answer_linear,
+        2: answer_linear,
+        3: answer_water_table,
+        4: answer_water_table,
         5: answer_confined_hfb,
         6: answer_confined_thickstart_hfb,
         7: answer_unconfined_hfb,
         8: answer_unconfined_hfb,
     }
 
-    hres = answer_dict[sim.idxsim]
+    hres = answer_dict[idx]
     assert np.allclose(
         hres, head
     ), "simulated head do not match with known solution."
 
-    fpth = os.path.join(sim.simpath, f"{name}.cbc")
+    fpth = os.path.join(test.workspace, f"{name}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
-    q_simulated_inflow = cobj.get_data(idx=1)[0]['q'][0]
+    q_simulated_inflow = cobj.get_data(idx=1)[0]["q"][0]
     q_answer_dict = {
-        0: 4.,
-        1: 4.,
-        2: 2.,
+        0: 4.0,
+        1: 4.0,
+        2: 2.0,
         3: 1.9965396769631871,
         4: 1.9965396769631871,
-        5: 1.9990E-03,
-        6: 1.9980E-03,
-        7: 9.9949E-04,
-        8: 9.9949E-04,
+        5: 1.9990e-03,
+        6: 1.9980e-03,
+        7: 9.9949e-04,
+        8: 9.9949e-04,
     }
-    q_answer = q_answer_dict[sim.idxsim]
+    q_answer = q_answer_dict[idx]
     assert np.allclose(
         q_answer, q_simulated_inflow
     ), "simulated flow does not match with known solution."
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

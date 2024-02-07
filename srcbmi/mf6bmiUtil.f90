@@ -8,7 +8,7 @@ module mf6bmiUtil
                              LENMODELNAME, LINELENGTH, LENMEMTYPE, &
                              LENMEMADDRESS, LENCOMPONENTNAME
   use KindModule, only: DP, I4B, LGP
-  use GenericUtilitiesModule, only: sim_message
+  use MessageModule, only: write_message
   use SimVariablesModule, only: istdout
   use MemoryHelperModule, only: split_mem_address, split_mem_path
   implicit none
@@ -210,7 +210,7 @@ contains
     end do
 
     write (error_msg, '(a,i0)') 'BMI error: no model for grid id ', grid_id
-    call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
+    call write_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
   end function get_model_name
 
   !> @brief Get the solution object for this index

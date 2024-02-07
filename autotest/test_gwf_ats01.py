@@ -1,6 +1,5 @@
 """
 Test adaptive time step module
-
 """
 
 import os
@@ -8,10 +7,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_ats01a"]
+from framework import TestFramework
+
+cases = ["gwf_ats01a"]
 nlay, nrow, ncol = 1, 1, 2
 
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
@@ -22,7 +21,7 @@ dtadj = 2.0
 dtfailadj = 5.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [10]
     nper = len(perlen)
     nstp = [1]
@@ -41,10 +40,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -175,11 +174,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
+def check_output(idx, test):
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{sim.name}.lst")
+    fpth = os.path.join(test.workspace, f"{test.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
@@ -189,7 +186,7 @@ def eval_flow(sim):
     assert v == 10.0, f"Last time should be 10.  Found {v}"
 
     # ensure obs results changing monotonically
-    fpth = os.path.join(sim.simpath, sim.name + ".obs.csv")
+    fpth = os.path.join(test.workspace, test.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -205,17 +202,13 @@ def eval_flow(sim):
     assert v == 10.0, f"Last time should be 10.  Found {v}"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    workspace = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, workspace)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        workspace,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

@@ -6,9 +6,10 @@ module ArrayReadersModule
   use InputOutputModule, only: openfile, u9rdcom, urword, ucolno, ulaprw, &
                                BuildFixedFormat, BuildFloatFormat, &
                                BuildIntFormat
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use OpenSpecModule, only: ACCESS, FORM
   use SimModule, only: store_error, store_error_unit
+  use SimVariablesModule, only: errmsg
 
   implicit none
 
@@ -57,13 +58,14 @@ contains
     integer(I4B), intent(in) :: ndim ! dis%ndim
     integer(I4B), intent(in) :: k ! layer number; 0 to not print
     ! -- local
+    logical(LGP) :: isok
     integer(I4B) :: iclose, iconst, iprn, j, locat, ncpl, ndig
     integer(I4B) :: nval, nvalt
     logical :: prowcolnum
     character(len=100) :: prfmt
     integer(I4B) :: istat
     character(len=30) :: arrname
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=MAXCHARLEN) :: ermsgr
     ! -- formats
 2   format(/, 1x, a, ' = ', i0, ' FOR LAYER ', i0)
 3   format(/, 1x, a, ' = ', i0)
@@ -89,9 +91,9 @@ contains
       read (locat, *, iostat=istat, iomsg=ermsgr) (iarr(j), j=1, jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
-        ermsg = 'Error reading data for array: '//trim(arrname)
-        call store_error(ermsg)
-        call store_error(ermsgr)
+        errmsg = "Error reading data for array '"//trim(arrname)// &
+                 "'. "//trim(adjustl(ermsgr))
+        call store_error(errmsg)
         call store_error_unit(locat)
       end if
       do j = 1, jj
@@ -106,13 +108,15 @@ contains
       nvalt = 0
       do
         call read_binary_header(locat, iout, aname, nval)
+        isok = check_binary_size(nval, nvalt, size(iarr), aname, locat)
+        if (isok .EQV. .FALSE.) exit
         read (locat, iostat=istat, iomsg=ermsgr) &
           (iarr(j), j=nvalt + 1, nvalt + nval)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
+          errmsg = "Error reading data for array '"//trim(arrname)// &
+                   "'. "//trim(adjustl(ermsgr))
+          call store_error(errmsg)
           call store_error_unit(locat)
         end if
         nvalt = nvalt + nval
@@ -150,13 +154,14 @@ contains
     integer(I4B), intent(in) :: ndim ! dis%ndim
     integer(I4B), intent(in) :: k ! layer number; 0 to not print
     ! -- local
+    logical(LGP) :: isok
     integer(I4B) :: i, iclose, iconst, iprn, j, locat, ncpl, ndig
     integer(I4B) :: nval
     logical :: prowcolnum
     character(len=100) :: prfmt
     integer(I4B) :: istat
     character(len=30) :: arrname
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=MAXCHARLEN) :: ermsgr
     ! -- formats
 2   format(/, 1x, a, ' = ', i0, ' FOR LAYER ', i0)
 3   format(/, 1x, a, ' = ', i0)
@@ -185,9 +190,9 @@ contains
         read (locat, *, iostat=istat, iomsg=ermsgr) (iarr(j, i), j=1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
+          errmsg = "Error reading data for array '"//trim(arrname)// &
+                   "'. "//trim(adjustl(ermsgr))
+          call store_error(errmsg)
           call store_error_unit(locat)
         end if
         do j = 1, jj
@@ -201,19 +206,22 @@ contains
       ! -- Read data as binary
       locat = -locat
       call read_binary_header(locat, iout, aname, nval)
-      do i = 1, ii
-        read (locat, iostat=istat, iomsg=ermsgr) (iarr(j, i), j=1, jj)
-        if (istat /= 0) then
-          arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
-          call store_error_unit(locat)
-        end if
-        do j = 1, jj
-          iarr(j, i) = iarr(j, i) * iconst
+      isok = check_binary_size(nval, 0, size(iarr), aname, locat)
+      if (isok) then
+        do i = 1, ii
+          read (locat, iostat=istat, iomsg=ermsgr) (iarr(j, i), j=1, jj)
+          if (istat /= 0) then
+            arrname = adjustl(aname)
+            errmsg = "Error reading data for array '"//trim(arrname)// &
+                     "'. "//trim(adjustl(ermsgr))
+            call store_error(errmsg)
+            call store_error_unit(locat)
+          end if
+          do j = 1, jj
+            iarr(j, i) = iarr(j, i) * iconst
+          end do
         end do
-      end do
+      end if
       if (iclose == 1) then
         close (locat)
       end if
@@ -310,6 +318,7 @@ contains
     integer(I4B), intent(in) :: ndim ! dis%ndim
     integer(I4B), intent(in) :: k ! layer number; 0 to not print
     ! -- local
+    logical(LGP) :: isok
     integer(I4B) :: j, iclose, iprn, locat, ncpl, ndig
     real(DP) :: cnstnt
     logical :: prowcolnum
@@ -317,7 +326,7 @@ contains
     integer(I4B) :: istat
     integer(I4B) :: nvalt, nval
     character(len=30) :: arrname
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=MAXCHARLEN) :: ermsgr
     ! -- formats
 2   format(/, 1x, a, ' = ', g14.7, ' FOR LAYER ', i0)
 3   format(/, 1x, a, ' = ', g14.7)
@@ -343,9 +352,9 @@ contains
       read (locat, *, iostat=istat, iomsg=ermsgr) (darr(j), j=1, jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
-        ermsg = 'Error reading data for array: '//trim(arrname)
-        call store_error(ermsg)
-        call store_error(ermsgr)
+        errmsg = "Error reading data for array '"// &
+                 trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
+        call store_error(errmsg)
         call store_error_unit(locat)
       end if
       do j = 1, jj
@@ -360,13 +369,15 @@ contains
       nvalt = 0
       do
         call read_binary_header(locat, iout, aname, nval)
+        isok = check_binary_size(nval, nvalt, size(darr), aname, locat)
+        if (isok .EQV. .FALSE.) exit
         read (locat, iostat=istat, iomsg=ermsgr) &
           (darr(j), j=nvalt + 1, nvalt + nval)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
+          errmsg = "Error reading data for array '"// &
+                   trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
+          call store_error(errmsg)
           call store_error_unit(locat)
         end if
         nvalt = nvalt + nval
@@ -404,6 +415,7 @@ contains
     integer(I4B), intent(in) :: ndim ! dis%ndim
     integer(I4B), intent(in) :: k ! layer number; 0 to not print
     ! -- local
+    logical(LGP) :: isok
     integer(I4B) :: i, iclose, iprn, j, locat, ncpl, ndig
     integer(I4B) :: nval
     real(DP) :: cnstnt
@@ -411,7 +423,7 @@ contains
     character(len=100) :: prfmt
     integer(I4B) :: istat
     character(len=30) :: arrname
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=MAXCHARLEN) :: ermsgr
     ! -- formats
 2   format(/, 1x, a, ' = ', g14.7, ' FOR LAYER ', i0)
 3   format(/, 1x, a, ' = ', g14.7)
@@ -440,9 +452,9 @@ contains
         read (locat, *, iostat=istat, iomsg=ermsgr) (darr(j, i), j=1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
+          errmsg = "Error reading data for array '"// &
+                   trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
+          call store_error(errmsg)
           call store_error_unit(locat)
         end if
         do j = 1, jj
@@ -456,19 +468,22 @@ contains
       ! -- Read data as binary
       locat = -locat
       call read_binary_header(locat, iout, aname, nval)
-      do i = 1, ii
-        read (locat, iostat=istat, iomsg=ermsgr) (darr(j, i), j=1, jj)
-        if (istat /= 0) then
-          arrname = adjustl(aname)
-          ermsg = 'Error reading data for array: '//trim(arrname)
-          call store_error(ermsg)
-          call store_error(ermsgr)
-          call store_error_unit(locat)
-        end if
-        do j = 1, jj
-          darr(j, i) = darr(j, i) * cnstnt
+      isok = check_binary_size(nval, 0, size(darr), aname, locat)
+      if (isok) then
+        do i = 1, ii
+          read (locat, iostat=istat, iomsg=ermsgr) (darr(j, i), j=1, jj)
+          if (istat /= 0) then
+            arrname = adjustl(aname)
+            errmsg = "Error reading data for array '"// &
+                     trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
+            call store_error(errmsg)
+            call store_error_unit(locat)
+          end if
+          do j = 1, jj
+            darr(j, i) = darr(j, i) * cnstnt
+          end do
         end do
-      end do
+      end if
       if (iclose == 1) then
         close (locat)
       end if
@@ -659,6 +674,7 @@ contains
   end subroutine read_control_dbl
 
   subroutine read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
+    use SimModule, only: ustop
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     ! -- dummy
     integer(I4B), intent(in) :: iu
@@ -674,9 +690,9 @@ contains
     integer(I4B) :: istart, istop, n
     integer(I4B) :: ierr
     real(DP) :: r
-    character(len=MAXCHARLEN) :: ermsg
     !
-    ! -- Read array control record.
+    ! -- Read array control record.  Any future refactoring
+    !    should use the LongLineReader here instead of u9rdcom
     call u9rdcom(iu, iout, line, ierr)
     !
     iclose = 0
@@ -693,12 +709,10 @@ contains
       locat = -1
       iclose = 1
     else
-      write (ermsg, *) 'ERROR READING CONTROL RECORD FOR '// &
-        trim(adjustl(aname))
-      call store_error(ermsg)
-      call store_error(trim(adjustl(line)))
-      write (ermsg, *) 'Use CONSTANT, INTERNAL, or OPEN/CLOSE.'
-      call store_error(ermsg)
+      errmsg = 'READING CONTROL RECORD FOR '// &
+               trim(adjustl(aname))//"'. "// &
+               'Use CONSTANT, INTERNAL, or OPEN/CLOSE.'
+      call store_error(errmsg)
       call store_error_unit(iu)
     end if
     !
@@ -718,7 +732,6 @@ contains
     integer(I4B) :: i, n, istart, istop, lenkey
     real(DP) :: r
     character(len=MAXCHARLEN) :: keyword
-    character(len=LENBIGLINE) :: ermsg
     logical :: binary
     !
     iprn = -1 ! Printing is turned off by default
@@ -734,9 +747,9 @@ contains
         select case (keyword)
         case ('(BINARY)')
           if (iclose == 0) then
-            ermsg = '"(BINARY)" option for array input is valid only if'// &
-                    ' OPEN/CLOSE is also specified.'
-            call store_error(ermsg)
+            errmsg = '"(BINARY)" option for array input is valid only if'// &
+                     ' OPEN/CLOSE is also specified.'
+            call store_error(errmsg)
             call store_error_unit(iu)
           end if
           binary = .true.
@@ -747,9 +760,9 @@ contains
         case ('')
           exit
         case default
-          ermsg = 'Invalid option found in array-control record: "' &
-                  //trim(keyword)//'"'
-          call store_error(ermsg)
+          errmsg = 'Invalid option found in array-control record: "' &
+                   //trim(keyword)//'"'
+          call store_error(errmsg)
           call store_error_unit(iu)
         end select
       end do
@@ -982,7 +995,6 @@ contains
     logical, intent(in) :: prowcolnum ! Print row & column numbers
     ! -- local
     integer(I4B) :: i, j
-    character(len=MAXCHARLEN) :: ermsg
     ! -- formats
 2   format(/, 1x, a, 1x, 'FOR LAYER ', i0)
 3   format(/, 1x, a)
@@ -1007,9 +1019,9 @@ contains
       end do
     else
       if (ii > 1) then
-        ermsg = 'Program error printing array '//trim(aname)// &
-                ': ii > 1 when prowcolnum is false.'
-        call store_error(ermsg, terminate=.TRUE.)
+        errmsg = 'Program error printing array '//trim(aname)// &
+                 ': ii > 1 when prowcolnum is false.'
+        call store_error(errmsg, terminate=.TRUE.)
       end if
       !
       ! -- Write array values, without row numbers
@@ -1031,7 +1043,6 @@ contains
     logical, intent(in) :: prowcolnum ! Print row & column numbers
     ! -- local
     integer(I4B) :: i, j
-    character(len=MAXCHARLEN) :: ermsg
     ! -- formats
 2   format(/, 1x, a, 1x, 'FOR LAYER ', i0)
 3   format(/, 1x, a)
@@ -1056,9 +1067,9 @@ contains
       end do
     else
       if (ii > 1) then
-        ermsg = 'Program error printing array '//trim(aname)// &
-                ': ii > 1 when prowcolnum is false.'
-        call store_error(ermsg, terminate=.TRUE.)
+        errmsg = 'Program error printing array '//trim(aname)// &
+                 ': ii > 1 when prowcolnum is false.'
+        call store_error(errmsg, terminate=.TRUE.)
       end if
       !
       ! -- Write array values, without row numbers
@@ -1079,7 +1090,7 @@ contains
     integer(I4B) :: kstp, kper, m1, m2, m3
     real(DP) :: pertim, totim
     character(len=16) :: text
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=MAXCHARLEN) :: ermsgr
     character(len=*), parameter :: fmthdr = &
       "(/,1X,'HEADER FROM BINARY FILE HAS FOLLOWING ENTRIES',&
        &/,4X,'KSTP: ',I0,'  KPER: ',I0,&
@@ -1093,9 +1104,9 @@ contains
     !
     ! -- Check for errors
     if (istat /= 0) then
-      ermsg = 'Error reading data for array: '//adjustl(trim(arrname))
-      call store_error(ermsg)
-      call store_error(ermsgr)
+      errmsg = "Error reading data for array '"//adjustl(trim(arrname))// &
+               "'. "//trim(adjustl(ermsgr))
+      call store_error(errmsg)
       call store_error_unit(locat)
     end if
     !
@@ -1110,5 +1121,42 @@ contains
     ! -- return
     return
   end subroutine read_binary_header
+
+  !> @ brief Check the binary data size
+  !!
+  !!  Check the size of the binary data that will be read
+  !!  relative to the unfilled elements in the array .
+  !!
+  !<
+  function check_binary_size(nval, nvalt, arrsize, aname, locat) result(isok)
+    ! -- dummy
+    integer(I4B), intent(in) :: nval !< number of array
+    integer(I4B), intent(in) :: nvalt !< current data index
+    integer(I4B), intent(in) :: arrsize !< size of the array
+    character(len=*), intent(in) :: aname !< name of array
+    integer(I4B), intent(in) :: locat !< binary file unit
+    !
+    ! -- local variables
+    logical(LGP) :: isok
+    !
+    ! -- initialize isok
+    isok = .TRUE.
+    !
+    if (nvalt + nval > arrsize) then
+      write (errmsg, '(a,i0,a,1x,a,1x,a,i0,a,1x,i0,3(1x,a))') &
+        'The size of the data array calculated from the binary header (', &
+        nval, ') will exceed the remainder of the', trim(adjustl(aname)), &
+        'data array (', arrsize, ') array by', nvalt + nval - arrsize, &
+        'elements. This is usually caused by incorrect assignment of', &
+        '(m1,m2,m3) in the binary header. See the mf6io.pdf document', &
+        'for information on assigning (m1,m2,m3).'
+      call store_error(errmsg)
+      call store_error_unit(locat)
+      isok = .FALSE.
+    end if
+    !
+    ! -- return
+    return
+  end function check_binary_size
 
 end module ArrayReadersModule

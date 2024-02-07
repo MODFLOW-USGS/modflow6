@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
 Test the advection schemes in the gwt advection package for a one-dimensional
 model grid of square cells.
-
 """
 
 import os
@@ -10,12 +8,16 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
+from framework import TestFramework
+
+cases = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
 scheme = ["upstream", "central", "tvd"]
 gdelr = 1.0
+
+# solver settings
+nouter, ninner = 100, 300
+hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
 
 def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
@@ -33,8 +35,6 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         modelname=gwfname,
         save_flows=True,
     )
-    # this doesn't work here
-    # gwf.set_model_relative_path(gwfname)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -177,8 +177,7 @@ def get_gwt_model(
     return gwt
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # temporal discretization
     nper = 1
     perlen = [5.0]
@@ -189,7 +188,7 @@ def build_model(idx, dir):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -197,10 +196,6 @@ def build_model(idx, dir):
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
     )
-
-    # solver settings
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
     # grid information
     nlay, nrow, ncol = 1, 1, 50
@@ -335,12 +330,10 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
+def check_output(idx, test):
     gwtname = "transport1"
 
-    fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -351,7 +344,7 @@ def eval_transport(sim):
 
     gwtname = "transport2"
 
-    fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -689,12 +682,12 @@ def eval_transport(sim):
     creslist = [cres1, cres2, cres3]
 
     assert np.allclose(
-        creslist[sim.idxsim], conc
+        creslist[idx], conc
     ), "simulated concentrations do not match with known solution."
 
     # check budget
     for mname in ["transport1", "transport2"]:
-        fpth = os.path.join(sim.simpath, mname, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, mname, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -706,13 +699,13 @@ def eval_transport(sim):
 
         # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
-        fpth = os.path.join(sim.simpath, gwfname, f"{gwfname}.dis.grb")
+        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
 
         # Check on residual, which is stored in diagonal position of
         # flow-ja-face.  Residual should be less than convergence tolerance,
         # or this means the residual term is not added correctly.
-        fpth = os.path.join(sim.simpath, mname, f"{mname}.cbc")
+        fpth = os.path.join(test.workspace, mname, f"{mname}.cbc")
         cbb = flopy.utils.CellBudgetFile(fpth)
         flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
         ia = grb._datadict["IA"] - 1
@@ -726,18 +719,14 @@ def eval_transport(sim):
             # assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

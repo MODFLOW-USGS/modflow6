@@ -41,6 +41,8 @@ module SpatialModelConnectionModule
     integer(I4B), pointer :: nr_connections => null() !< total nr. of connected cells (primary)
 
     class(DisConnExchangeType), pointer :: prim_exchange => null() !< the exchange for which the interface model is created
+    logical(LGP) :: owns_exchange !< there are two connections (in serial) for an exchange,
+                                  !! one of them needs to manage/own the exchange (e.g. clean up)
     type(STLVecInt), pointer :: halo_models !< models that are potentially in the halo of this interface
     type(STLVecInt), pointer :: halo_exchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
     integer(I4B), pointer :: int_stencil_depth => null() !< size of the computational stencil for the interior
@@ -72,12 +74,16 @@ module SpatialModelConnectionModule
     procedure :: exg_ar => spatialcon_ar
     procedure :: exg_ac => spatialcon_ac
     procedure :: exg_mc => spatialcon_mc
+    procedure :: exg_cf => spatialcon_cf
+    procedure :: exg_fc => spatialcon_fc
     procedure :: exg_da => spatialcon_da
 
     ! protected
     procedure, pass(this) :: spatialcon_df
     procedure, pass(this) :: spatialcon_ar
     procedure, pass(this) :: spatialcon_ac
+    procedure, pass(this) :: spatialcon_cf
+    procedure, pass(this) :: spatialcon_fc
     procedure, pass(this) :: spatialcon_da
     procedure, pass(this) :: spatialcon_setmodelptrs
     procedure, pass(this) :: spatialcon_connect
@@ -344,11 +350,10 @@ contains ! module procedures
           if (this%owner%dis%con%mask(csr_idx) > 0) then
             call this%owner%dis%con%set_mask(csr_idx, 0)
           else
-            ! edge case, someone will be calculating this connection
-            ! so we ignore it here
-            write (*, *) 'Warning: overlap detected, no mask on connection ', &
-              nloc, ':', mloc, ' in model ', trim(this%owner%name), &
-              ' for Exchange ', trim(this%prim_exchange%name)
+            ! edge case, this connection is already being calculated
+            ! so we ignore it here. This can happen in the overlap
+            ! between two different exchanges when a larger stencil
+            ! (XT3D) is applied.
             call conn%set_mask(ipos, 0)
           end if
         end if
@@ -428,6 +433,65 @@ contains ! module procedures
     end do
 
   end subroutine spatialcon_mc
+
+  !> @brief Calculate (or adjust) matrix coefficients,
+  !! in this case those which are determined or affected
+  !< by the connection of a GWF model with its neigbors
+  subroutine spatialcon_cf(this, kiter)
+    class(SpatialModelConnectionType) :: this !< this connection
+    integer(I4B), intent(in) :: kiter !< the iteration counter
+    ! local
+    integer(I4B) :: i
+
+    ! reset interface system
+    call this%matrix%zero_entries()
+    do i = 1, this%neq
+      this%rhs(i) = 0.0_DP
+    end do
+
+    ! calculate the interface model
+    call this%interface_model%model_cf(kiter)
+
+  end subroutine spatialcon_cf
+
+  !> @brief Formulate coefficients from interface model
+  !<
+  subroutine spatialcon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
+    class(SpatialModelConnectionType) :: this !< this connection
+    integer(I4B), intent(in) :: kiter !< the iteration counter
+    class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
+    real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
+    integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
+    ! local
+    integer(I4B) :: n, nglo
+    integer(I4B) :: icol_start, icol_end, ipos
+    class(MatrixBaseType), pointer :: matrix_base
+
+    matrix_base => this%matrix
+    call this%interface_model%model_fc(kiter, matrix_base, inwtflag)
+
+    ! map back to solution matrix
+    do n = 1, this%neq
+      ! We only need the coefficients for our own model
+      ! (i.e. rows in the matrix that belong to this%owner):
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
+        cycle
+      end if
+
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get() - &
+             matrix_sln%get_row_offset()
+      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
+
+      icol_start = this%matrix%get_first_col_pos(n)
+      icol_end = this%matrix%get_last_col_pos(n)
+      do ipos = icol_start, icol_end
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
+                                      this%matrix%get_value_pos(ipos))
+      end do
+    end do
+
+  end subroutine spatialcon_fc
 
   !> @brief Deallocation
   !<
@@ -549,16 +613,16 @@ contains ! module procedures
     conEx => this%prim_exchange
     if (conEx%ixt3d > 0) then
       ! if XT3D, we need these angles:
-      if (conEx%model1%dis%con%ianglex == 0) then
+      if (conEx%v_model1%con_ianglex%get() == 0) then
         write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
-          trim(conEx%model1%name), ' has no ANGLDEGX specified'
+          trim(conEx%v_model1%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
-      if (conEx%model2%dis%con%ianglex == 0) then
+      if (conEx%v_model2%con_ianglex%get() == 0) then
         write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
-          trim(conEx%model2%name), ' has no ANGLDEGX specified'
+          trim(conEx%v_model2%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
     end if

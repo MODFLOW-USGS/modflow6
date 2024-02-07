@@ -18,7 +18,8 @@ module MawModule
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname, &
+  use GeomUtilModule, only: get_node
+  use InputOutputModule, only: URWORD, extract_idnum_or_bndname, &
                                GetUnit, openfile
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
@@ -163,7 +164,9 @@ module MawModule
     real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: maw vsc ratio; 2: gwf vsc ratio)
     !
     ! -- type bound procedures
+
   contains
+
     procedure :: maw_allocate_scalars
     procedure :: maw_allocate_well_conn_arrays
     procedure :: maw_allocate_arrays
@@ -223,15 +226,12 @@ module MawModule
 
 contains
 
+!> @brief Create a New Multi-Aquifer Well (MAW) Package
+!!
+!! After creating the package object point bndobj to the new package
+!<
   subroutine maw_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
-! ******************************************************************************
-! maw_create -- Create a New Multi-Aquifer Well Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
     integer(I4B), intent(in) :: ibcnum
@@ -240,7 +240,6 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(MawType), pointer :: mawobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (mawobj)
@@ -255,7 +254,7 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
@@ -265,22 +264,17 @@ contains
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_create
 
+  !> @brief Allocate scalar members
+  !<
   subroutine maw_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(MawType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -326,17 +320,13 @@ contains
     this%idense = 0
     this%ivsc = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_allocate_scalars
 
+  !> @brief Allocate well arrays
+  !<
   subroutine maw_allocate_well_conn_arrays(this)
-! ******************************************************************************
-! maw_allocate_arrays -- allocate well arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -345,7 +335,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: jj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate character array for budget text
     call mem_allocate(this%cmawbudget, LENBUDTXT, this%bditems, 'CMAWBUDGET', &
@@ -531,39 +520,29 @@ contains
     ! -- allocate viscratios to size 0
     call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_allocate_well_conn_arrays
 
+  !> @brief Allocate arrays
+  !<
   subroutine maw_allocate_arrays(this)
-! ******************************************************************************
-! maw_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(MawType), intent(inout) :: this
     ! -- local
-    !integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_allocate_arrays
 
+  !> @brief Read the packagedata for this package
+  !<
   subroutine maw_read_wells(this)
-! ******************************************************************************
-! maw_read_wells -- Read the packagedata for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
@@ -601,9 +580,6 @@ contains
     character(len=*), parameter :: fmthdbot = &
       "('well head (', G0, ') must be greater than or equal to the &
       &BOTTOM_ELEVATION (', G0, ').')"
-! ------------------------------------------------------------------------------
-    !
-    ! -- code
     !
     ! -- allocate and initialize temporary variables
     allocate (strttext(this%nmawwells))
@@ -815,17 +791,13 @@ contains
     deallocate (radius)
     deallocate (bottom)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_read_wells
 
+  !> @brief Read the dimensions for this package
+  !<
   subroutine maw_read_well_connections(this)
-! ******************************************************************************
-! pak1read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -852,11 +824,6 @@ contains
     real(DP) :: botw
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     integer(I4B), dimension(:), pointer, contiguous :: iachk
-
-! ------------------------------------------------------------------------------
-    ! -- format
-    !
-    ! -- code
     !
     ! -- initialize counters
     ireset_scrntop = 0
@@ -1072,17 +1039,13 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_read_well_connections
 
+  !> @brief Read the dimensions for this package
+  !<
   subroutine maw_read_dimensions(this)
-! ******************************************************************************
-! pak1read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -1091,7 +1054,6 @@ contains
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
     this%nmawwells = -1
@@ -1153,17 +1115,13 @@ contains
     ! -- setup the head table object
     call this%maw_setup_tableobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_read_dimensions
 
+  !> @brief Read the initial parameters for this package
+  !<
   subroutine maw_read_initial_attr(this)
-! ******************************************************************************
-! maw_read_initial_attr -- Read the initial parameters for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_setptr
@@ -1204,7 +1162,6 @@ contains
       &/1X,2(A10,1X),A20,7(A10,1X))"
     character(len=*), parameter :: fmtwellcd = &
       &"(1X,2(I10,1X),A20,1X,2(G10.3,1X),2(A10,1X),3(G10.3,1X))"
-! ------------------------------------------------------------------------------
     !
     ! -- initialize xnewpak
     do n = 1, this%nmawwells
@@ -1388,18 +1345,13 @@ contains
       call store_error_unit(this%inunit)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_read_initial_attr
 
+  !> @brief Set a stress period attribute for mawweslls(imaw) using keywords
+  !<
   subroutine maw_set_stressperiod(this, imaw, iheadlimit_warning)
-! ******************************************************************************
-! maw_set_stressperiod -- Set a stress period attribute for mawweslls(imaw)
-!                         using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
@@ -1420,7 +1372,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmthdbot = &
       &"('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
-! ------------------------------------------------------------------------------
     !
     ! -- read remainder of variables on the line
     call this%parser%GetStringCaps(keyword)
@@ -1529,19 +1480,13 @@ contains
     end select
 
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_set_stressperiod
 
+  !> @brief Issue a parameter error for mawweslls(imaw)
+  !<
   subroutine maw_set_attribute_error(this, imaw, keyword, msg)
-! ******************************************************************************
-! maw_set_attribute_error -- Issue a parameter error for mawweslls(imaw)
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SimModule, only: store_error
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -1550,7 +1495,7 @@ contains
     character(len=*), intent(in) :: msg
     ! -- local
     ! -- formats
-! ------------------------------------------------------------------------------
+    !
     if (len(msg) == 0) then
       write (errmsg, '(a,1x,a,1x,i0,1x,a)') &
         keyword, ' for MAW well', imaw, 'has already been set.'
@@ -1560,19 +1505,13 @@ contains
     end if
     call store_error(errmsg)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_set_attribute_error
 
+  !> @brief Issue parameter errors for mawwells(imaw)
+  !<
   subroutine maw_check_attributes(this)
-! ******************************************************************************
-! maw_check_attributes -- Issue parameter errors for mawwells(imaw)
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SimModule, only: store_error
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -1583,7 +1522,7 @@ contains
     integer(I4B) :: j
     integer(I4B) :: jpos
     ! -- formats
-! ------------------------------------------------------------------------------
+    !
     idx = 1
     do n = 1, this%nmawwells
       if (this%ngwfnodes(n) < 1) then
@@ -1639,17 +1578,13 @@ contains
     end do
     ! -- reset check_attr
     this%check_attr = 0
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_check_attributes
 
+  !> @brief Add package connection to matrix
+  !<
   subroutine maw_ac(this, moffset, sparse)
-! ******************************************************************************
-! bnd_ac -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -1662,8 +1597,6 @@ contains
     integer(I4B) :: jglo
     integer(I4B) :: nglo
     ! -- format
-! ------------------------------------------------------------------------------
-    !
     !
     ! -- Add package rows to sparse
     do n = 1, this%nmawwells
@@ -1678,17 +1611,13 @@ contains
 
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_ac
 
+  !> @brief Map package connection to matrix
+  !<
   subroutine maw_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! bnd_ac -- map package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1703,7 +1632,6 @@ contains
     integer(I4B) :: jglo
     integer(I4B) :: ipos
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- allocate connection mapping vectors
     call mem_allocate(this%idxlocnode, this%nmawwells, 'IDXLOCNODE', &
@@ -1744,18 +1672,15 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_mc
 
+  !> @brief Set options specific to MawType.
+  !!
+  !! Overrides BndType%bnd_options
+  !<
   subroutine maw_read_options(this, option, found)
-! ******************************************************************************
-! maw_read_options -- set options specific to MawType.
-!                     Overrides BndType%bnd_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
@@ -1775,7 +1700,6 @@ contains
     character(len=*), parameter :: fmtmawbin = &
       "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, &
      &'OPENED ON UNIT: ', I0)"
-! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
     found = .true.
@@ -1869,24 +1793,19 @@ contains
       found = .false.
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_read_options
 
+  !> @brief Allocate and Read
+  !!
+  !! Create new MAW package and point bndobj to the new package
+  !<
   subroutine maw_ar(this)
-    ! ******************************************************************************
-    ! maw_ar -- Allocate and Read
-    ! Subroutine: (1) create new-style package
-    !             (2) point bndobj to the new package
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType), intent(inout) :: this
     ! -- local
     ! -- format
-    ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
@@ -1907,19 +1826,15 @@ contains
       call this%pakmvrobj%ar(this%nmawwells, this%nmawwells, this%memoryPath)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_ar
 
+  !> @brief Read and Prepare
+  !!
+  !! Read itmp and new boundaries if itmp > 0
+  !<
   subroutine maw_rp(this)
-! ******************************************************************************
-! maw_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     ! -- dummy
@@ -1946,7 +1861,6 @@ contains
       &"('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtlsp = &
       &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-! ------------------------------------------------------------------------------
     !
     ! -- initialize counters
     iheadlimit_warning = 0
@@ -2201,17 +2115,13 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_rp
 
+  !> @brief Add package connection to matrix
+  !<
   subroutine maw_ad(this)
-! ******************************************************************************
-! maw_ad -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TdisModule, only: kper, kstp
     ! -- dummy
     class(MawType) :: this
@@ -2220,7 +2130,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: ibnd
-! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
@@ -2275,47 +2184,29 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_ad
 
-  subroutine maw_cf(this, reset_mover)
-    ! ******************************************************************************
-    ! maw_cf -- Formulate the HCOF and RHS terms
-    ! Subroutine: (1) skip if no multi-aquifer wells
-    !             (2) calculate hcof and rhs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip if no multi-aquifer wells, otherwise, calculate hcof and rhs
+  !<
+  subroutine maw_cf(this)
     ! -- dummy
     class(MawType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
-    logical :: lrm
-    ! ------------------------------------------------------------------------------
     !
     ! -- Calculate maw conductance and update package RHS and HCOF
     call this%maw_cfupdate()
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- Return
     return
   end subroutine maw_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine maw_fc(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! maw_fc -- Copy rhs and hcof into solution rhs and amat
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -2350,7 +2241,6 @@ contains
     real(DP) :: rate
     real(DP) :: ratefw
     real(DP) :: flow
-! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if (this%imover == 1) then
@@ -2465,18 +2355,13 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_fc
 
+  !> @brief Fill newton terms
+  !<
   subroutine maw_fn(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! maw_fn -- Fill newton terms
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
-    !use TdisModule, only:delt
     ! -- dummy
     class(MawType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -2514,7 +2399,6 @@ contains
     real(DP) :: flow
     real(DP) :: term2
     real(DP) :: rhsterm
-! --------------------------------------------------------------------------
     !
     ! -- Calculate Newton-Raphson corrections
     idx = 1
@@ -2636,19 +2520,14 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_fn
 
+  !> @brief Calculate under-relaxation of groundwater flow model MAW Package heads
+  !! for current outer iteration using the well bottom
+  !<
   subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
-! ******************************************************************************
-! maw_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Groundwater Flow Model MAW Package Heads
-!                 for current outer iteration using the well bottom
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: neqpak
@@ -2663,8 +2542,6 @@ contains
     real(DP) :: botw
     real(DP) :: xx
     real(DP) :: dxx
-! ------------------------------------------------------------------------------
-
     !
     ! -- Newton-Raphson under-relaxation
     do n = 1, this%nmawwells
@@ -2690,13 +2567,9 @@ contains
     return
   end subroutine maw_nur
 
+  !> @brief Calculate flows
+  !<
   subroutine maw_cq(this, x, flowja, iadv)
-! **************************************************************************
-! maw_cq -- Calculate flows
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
@@ -2716,7 +2589,6 @@ contains
     real(DP) :: cfw
     ! -- for observations
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- recalculate package HCOF and RHS terms with latest groundwater and
     !    maw heads prior to calling base budget functionality
@@ -2811,11 +2683,14 @@ contains
     ! -- fill the budget object
     call this%maw_fill_budobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_cq
 
+  !> @brief Write flows to binary file and/or print flows to budget
+  !<
   subroutine maw_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
+    ! -- dummy
     class(MawType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
@@ -2826,6 +2701,8 @@ contains
     call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
   end subroutine maw_ot_model_flows
 
+  !> @brief Output MAW package flow terms.
+  !<
   subroutine maw_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
     class(MawType) :: this
@@ -2848,9 +2725,13 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine maw_ot_package_flows
 
+  !> @brief Save maw-calculated values to binary file
+  !<
   subroutine maw_ot_dv(this, idvsave, idvprint)
     use TdisModule, only: kstp, kper, pertim, totim
     use ConstantsModule, only: DHNOFLO, DHDRY
@@ -2902,9 +2783,13 @@ contains
         call this%headtab%add_term(this%xnewpak(n))
       end do
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine maw_ot_dv
 
+  !> @brief Write MAW budget to listing file
+  !<
   subroutine maw_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
@@ -2917,24 +2802,18 @@ contains
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_ot_bdsummary
 
+  !> @brief Deallocate memory
+  !<
   subroutine maw_da(this)
-! ******************************************************************************
-! maw_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(MawType) :: this
     ! -- local
-    !integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
@@ -3042,20 +2921,15 @@ contains
     ! -- call standard BndType deallocate
     call this%BndType%bnd_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_da
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(MawType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -3074,18 +2948,14 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
+  !> @brief Set pointers to model arrays and variables so that a package has
+  !! has access to these things.
+  !<
   subroutine maw_set_pointers(this, neq, ibound, xnew, xold, flowja)
-! ******************************************************************************
-! set_pointers -- Set pointers to model arrays and variables so that a package
-!                 has access to these things.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_checkin
     ! -- dummy
@@ -3098,7 +2968,6 @@ contains
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: istart, iend
-! ------------------------------------------------------------------------------
     !
     ! -- call base BndType set_pointers
     call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
@@ -3119,40 +2988,34 @@ contains
       this%xnewpak(n) = DEP20
     end do
     !
-    ! -- return
+    ! -- Return
+    return
   end subroutine maw_set_pointers
 
-  !
   ! -- Procedures related to observations (type-bound)
+
+  !> @brief Return true because MAW package supports observations
+  !!
+  !! Overrides BndType%bnd_obs_supported()
+  !<
   logical function maw_obs_supported(this)
-    ! ******************************************************************************
-    ! maw_obs_supported
-    !   -- Return true because MAW package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     class(MawType) :: this
-    ! ------------------------------------------------------------------------------
+    !
     maw_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function maw_obs_supported
 
+  !> @brief Store observation type supported by MAW package
+  !!
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine maw_df_obs(this)
-    ! ******************************************************************************
-    ! maw_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by MAW package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for head observation type.
@@ -3209,18 +3072,14 @@ contains
     call this%obs%StoreObsType('fw-conductance', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => maw_process_obsID
     !
+    ! -- Return
     return
   end subroutine maw_df_obs
 
+  !> @brief Calculate observations this time step and call
+  !! ObsType%SaveOneSimval for each MawType observation.
+  !<
   subroutine maw_bd_obs(this)
-    ! **************************************************************************
-    ! maw_bd_obs
-    !   -- Calculate observations this time step and call
-    !      ObsType%SaveOneSimval for each MawType observation.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     ! -- local
@@ -3235,7 +3094,6 @@ contains
     real(DP) :: v
     real(DP) :: qfact
     type(ObserveType), pointer :: obsrv => null()
-    !---------------------------------------------------------------------------
     !
     ! Calculate, save, and write simulated values for all MAW observations
     if (this%obs%npakobs > 0) then
@@ -3351,10 +3209,15 @@ contains
       call this%maw_redflow_csv_write()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_bd_obs
 
+  !> @brief Process each observation
+  !!
+  !! Only done the first stress period since boundaries are fixed for the
+  !! simulation
+  !<
   subroutine maw_rp_obs(this)
     use TdisModule, only: kper
     ! -- dummy
@@ -3369,14 +3232,10 @@ contains
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType), pointer :: obsrv => null()
-    ! --------------------------------------------------------------------------
     ! -- formats
 10  format('Boundary "', a, '" for observation "', a, &
            '" is invalid in package "', a, '"')
     !
-    ! -- process each package observation
-    !    only done the first stress period since boundaries are fixed
-    !    for the simulation
     if (kper == 1) then
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
@@ -3479,15 +3338,18 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_rp_obs
 
   !
   ! -- Procedures related to observations (NOT type-bound)
+
+  !> @brief This procedure is pointed to by ObsDataType%ProcesssIdPtr. It
+  !! processes the ID string of an observation definition for MAW package
+  !! observations.
+  !<
   subroutine maw_process_obsID(obsrv, dis, inunitobs, iout)
-    ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-    !    the ID string of an observation definition for MAW package observations.
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -3533,14 +3395,15 @@ contains
     ! -- store multi-aquifer well number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_process_obsID
 
   !
   ! -- private MAW methods
-  !
+
   !> @brief Initialize the auto flow reduce csv output file
+  !<
   subroutine maw_redflow_csv_init(this, fname)
     ! -- dummy variables
     class(MawType), intent(inout) :: this !< MawType object
@@ -3557,10 +3420,13 @@ contains
       this%ioutredflowcsv
     write (this%ioutredflowcsv, '(a)') &
       'time,period,step,MAWnumber,rate-requested,rate-actual,maw-reduction'
+    !
+    ! -- Return
     return
   end subroutine maw_redflow_csv_init
 
   !> @brief MAW reduced flows only when & where they occur
+  !<
   subroutine maw_redflow_csv_write(this)
     ! -- modules
     use TdisModule, only: totim, kstp, kper
@@ -3584,8 +3450,14 @@ contains
           totim, kper, kstp, n, this%rate(n), this%ratesim(n), v
       end if
     end do
+    !
+    ! -- Return
+    return
   end subroutine maw_redflow_csv_write
 
+  !> @brief Calculate the appropriate saturated conductance to use based on
+  !! aquifer and multi-aquifer well characteristics
+  !<
   subroutine maw_calculate_satcond(this, i, j, node)
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -3624,7 +3496,6 @@ contains
     real(DP) :: yx4
     real(DP) :: xy4
     ! -- formats
-    ! ------------------------------------------------------------------------------
     !
     ! -- initialize conductance variables
     iTcontrastErr = 0
@@ -3748,10 +3619,12 @@ contains
     ! -- set saturated conductance
     this%satcond(jpos) = c
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_satcond
 
+  !> @brief Calculate the saturation between the aquifer maw well_head
+  !<
   subroutine maw_calculate_saturation(this, n, j, node, sat)
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -3766,7 +3639,6 @@ contains
     real(DP) :: topw
     real(DP) :: botw
     ! -- formats
-    ! ------------------------------------------------------------------------------
     !
     ! -- initialize saturation
     sat = DZERO
@@ -3809,31 +3681,24 @@ contains
       sat = DONE
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_saturation
 
+  !> @brief Calculate matrix terms for a multi-aquifer well connection. Terms
+  !! for fc and fn methods are calculated based on whether term2 is passed
+  !! Arguments are as follows:
+  !!     n       : maw well number
+  !!     j       : connection number for well n
+  !!     icflow  : flag indicating that flow should be corrected
+  !!     cmaw    : maw-gwf conducance
+  !!     cterm   : correction term for flow to dry cell
+  !!     term    : xxx
+  !!     flow    : calculated flow for this connection, positive into well
+  !!     term2   : xxx
+  !<
   subroutine maw_calculate_conn_terms(this, n, j, icflow, cmaw, cterm, term, &
                                       flow, term2)
-! ******************************************************************************
-! maw_calculate_conn_terms-- Calculate matrix terms for a multi-aquifer well
-!                            connection. Terms for fc and fn methods are
-!                            calculated based on whether term2 is passed
-!
-! -- Arguments are as follows:
-!     n       : maw well number
-!     j       : connection number for well n
-!     icflow  : flag indicating that flow should be corrected
-!     cmaw    : maw-gwf conducance
-!     cterm   : correction term for flow to dry cell
-!     term    : xxx
-!     flow    : calculated flow for this connection, positive into well
-!     term2   : xxx
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     integer(I4B), intent(in) :: n
@@ -3861,7 +3726,6 @@ contains
     real(DP) :: drterm
     real(DP) :: dhbarterm
     real(DP) :: vscratio
-! ------------------------------------------------------------------------------
     !
     ! -- initialize terms
     cterm = DZERO
@@ -3973,19 +3837,14 @@ contains
       call this%maw_calculate_density_exchange(jpos, hmaw, hgwf, cmaw, &
                                                bmaw, flow, term, cterm)
     end if
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_conn_terms
 
+  !> @brief Calculate well pumping rate based on constraints
+  !<
   subroutine maw_calculate_wellq(this, n, hmaw, q)
-! **************************************************************************
-! maw_calculate_wellq-- Calculate well pumping rate based on constraints
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
     integer(I4B), intent(in) :: n
@@ -3998,7 +3857,6 @@ contains
     real(DP) :: rate
     real(DP) :: weight
     real(DP) :: dq
-! --------------------------------------------------------------------------
     !
     ! -- Initialize q
     q = DZERO
@@ -4148,17 +4006,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_wellq
 
+  !> @brief Calculate groundwater inflow to a maw well
+  !<
   subroutine maw_calculate_qpot(this, n, qnet)
-! ******************************************************************************
-! maw_calculate_qpot -- Calculate groundwater inflow to a maw well
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TdisModule, only: delt
     ! -- dummy
     class(MawType), intent(inout) :: this
@@ -4181,7 +4035,6 @@ contains
     real(DP) :: hv
     real(DP) :: vscratio
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- initialize qnet and htmp
     qnet = DZERO
@@ -4242,17 +4095,13 @@ contains
       qnet = qnet + cmaw * (hgwf - hv)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_qpot
 
+  !> @brief Update MAW satcond and package rhs and hcof
+  !<
   subroutine maw_cfupdate(this)
-    ! ******************************************************************************
-    ! maw_cfupdate -- Update MAW satcond and package rhs and hcof
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     class(MawType) :: this
     ! -- dummy
     ! -- local
@@ -4266,7 +4115,6 @@ contains
     real(DP) :: hmaw
     real(DP) :: cterm
     real(DP) :: term
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no maw wells
     if (this%nbound .eq. 0) return
@@ -4309,15 +4157,11 @@ contains
     return
   end subroutine maw_cfupdate
 
+  !> @brief Set up the budget object that stores all the maw flows
+  !! The terms listed here must correspond in number and order to the ones
+  !! listed in the maw_fill_budobj routine.
+  !<
   subroutine maw_setup_budobj(this)
-! ******************************************************************************
-! maw_setup_budobj -- Set up the budget object that stores all the maw flows
-!   The terms listed here must correspond in number and order to the ones
-!   listed in the maw_fill_budobj routine.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -4330,7 +4174,6 @@ contains
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
-! ------------------------------------------------------------------------------
     !
     ! -- Determine the number of maw budget terms. These are fixed for
     !    the simulation and cannot change.
@@ -4474,7 +4317,7 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! --
+      ! -- flowing-well flow to mover
       if (this%iflowingwells > 0) then
         !
         ! --
@@ -4492,7 +4335,7 @@ contains
       end if
     end if
     !
-    ! --
+    ! -- auxiliary variable
     naux = this%naux
     if (naux > 0) then
       !
@@ -4514,19 +4357,16 @@ contains
       call this%budobj%flowtable_df(this%iout)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !!
+  !! terms include a combination of the following:
+  !! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
+  !<
   subroutine maw_fill_budobj(this)
-! ******************************************************************************
-! maw_fill_budobj -- copy flow terms into this%budobj
-!
-! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(MawType) :: this
@@ -4547,7 +4387,6 @@ contains
     real(DP) :: b
     real(DP) :: v
     ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- initialize counter
     idx = 0
@@ -4732,20 +4571,16 @@ contains
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_fill_budobj
 
+  !> @brief Set up the table object that is used to write the maw head data
+  !!
+  !! The terms listed here must correspond in number and order to the ones
+  !! written to the head table in the maw_ot method.
+  !<
   subroutine maw_setup_tableobj(this)
-! ******************************************************************************
-! maw_setup_tableobj -- Set up the table object that is used to write the maw
-!                       head data. The terms listed here must correspond in
-!                       number and order to the ones written to the head table
-!                       in the maw_ot method.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBUDTXT
     ! -- dummy
@@ -4754,7 +4589,6 @@ contains
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
-! ------------------------------------------------------------------------------
     !
     ! -- setup well head table
     if (this%iprhed > 0) then
@@ -4787,17 +4621,13 @@ contains
       call this%headtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_setup_tableobj
 
+  !> @brief Get position of value in connection data
+  !<
   function get_jpos(this, n, j) result(jpos)
-! ******************************************************************************
-! get_jpos -- position of value in connection data.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
     integer(I4B) :: jpos
     ! -- dummy
@@ -4805,22 +4635,17 @@ contains
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: j
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set jpos
     jpos = this%iaconn(n) + j - 1
     !
-    ! -- return
+    ! -- Return
     return
   end function get_jpos
 
+  !> @brief Get the gwfnode for connection
+  !<
   function get_gwfnode(this, n, j) result(igwfnode)
-! ******************************************************************************
-! get_gwfnode -- get the gwfnode for connection.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
     integer(I4B) :: igwfnode
     ! -- dummy
@@ -4829,29 +4654,23 @@ contains
     integer(I4B), intent(in) :: j
     ! -- local
     integer(I4B) :: jpos
-! ------------------------------------------------------------------------------
     !
     ! -- set jpos
     jpos = this%get_jpos(n, j)
     igwfnode = this%gwfnodes(jpos)
     !
-    ! -- return
+    ! -- Return
     return
   end function get_gwfnode
 
+  !> @brief Activate density terms
+  !<
   subroutine maw_activate_density(this)
-! ******************************************************************************
-! maw_activate_density -- Activate addition of density terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Set idense and reallocate denseterms to be of size MAXBOUND
     this%idense = 1
@@ -4865,14 +4684,13 @@ contains
     write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR MAW &
       &PACKAGE: '//trim(adjustl(this%packName))
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_activate_density
 
   !> @brief Activate viscosity terms
-    !!
-    !! Method to activate addition of viscosity terms for a MAW package reach.
-    !!
+  !!
+  !! Method to activate addition of viscosity terms for a MAW package reach.
   !<
   subroutine maw_activate_viscosity(this)
     ! -- modules
@@ -4895,40 +4713,34 @@ contains
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR MAW &
       &PACKAGE: '//trim(adjustl(this%packName))
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_activate_viscosity
 
+  !> @brief Calculate the groundwater-maw density exchnage terms
+  !!
+  !! Arguments are as follows:
+  !!     iconn       : maw-gwf connection number
+  !!     hmaw        : maw head
+  !!     hgwf        : gwf head
+  !!     cond        : conductance
+  !!     bmaw        : bottom elevation of this connection
+  !!     flow        : calculated flow, updated here with density terms, + into maw
+  !!     hcofterm    : head coefficient term
+  !!     rhsterm     : right-hand-side value, updated here with density terms
+  !!
+  !! Member variable used here
+  !!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
+  !!                     col 1 is relative density of maw (densemaw / denseref)
+  !!                     col 2 is relative density of gwf cell (densegwf / denseref)
+  !!                     col 3 is elevation of gwf cell
+  !!
+  !! Upon return, amat and rhs for maw row should be updated as:
+  !!    amat(idiag) = amat(idiag) - hcofterm
+  !!    rhs(n) = rhs(n) + rhsterm
+  !<
   subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond, &
                                             bmaw, flow, hcofterm, rhsterm)
-! ******************************************************************************
-! maw_calculate_density_exchange -- Calculate the groundwater-maw density
-!                                   exchange terms.
-!
-! -- Arguments are as follows:
-!     iconn       : maw-gwf connection number
-!     hmaw        : maw head
-!     hgwf        : gwf head
-!     cond        : conductance
-!     bmaw        : bottom elevation of this connection
-!     flow        : calculated flow, updated here with density terms, + into maw
-!     hcofterm    : head coefficient term
-!     rhsterm     : right-hand-side value, updated here with density terms
-!
-! -- Member variable used here
-!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
-!                     col 1 is relative density of maw (densemaw / denseref)
-!                     col 2 is relative density of gwf cell (densegwf / denseref)
-!                     col 3 is elevation of gwf cell
-!
-! -- Upon return, amat and rhs for maw row should be updated as:
-!    amat(idiag) = amat(idiag) - hcofterm
-!    rhs(n) = rhs(n) + rhsterm
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: iconn
@@ -4947,7 +4759,6 @@ contains
     real(DP) :: rdenseavg
     real(DP) :: elevavg
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- assign relative density terms, return if zero which means not avail yet
     rdensemaw = this%denseterms(1, iconn)
@@ -4988,7 +4799,7 @@ contains
       ! -- Flow should be zero so do nothing
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine maw_calculate_density_exchange
 

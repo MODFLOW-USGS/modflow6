@@ -1,7 +1,5 @@
 """
-MODFLOW 6 Autotest
 Test that the obs concentrations match the oc concentrations
-
 """
 
 import os
@@ -9,16 +7,16 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = [
+from framework import TestFramework
+
+cases = [
     "gwt_obs01a",
 ]
 scheme = ["upstream"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -43,10 +41,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -242,19 +240,17 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
 
     # MODFLOW 6 output control concentrations
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata()
 
     # MODFLOW 6 observation package concentrations
-    fpth = os.path.join(sim.simpath, "conc_obs.csv")
+    fpth = os.path.join(test.workspace, "conc_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     assert np.allclose(
@@ -266,17 +262,13 @@ def eval_transport(sim):
     ), "obs concentrations do not match oc concentrations."
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

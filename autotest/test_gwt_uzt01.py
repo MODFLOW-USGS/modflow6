@@ -1,9 +1,8 @@
 """
-# Test uzt for one-d transport in a vertical column.  This problem is based
+Test uzt for one-d transport in a vertical column.  This problem is based
 on test_gwf_uzf03.py.  Infiltration is assigned a concentration of 100.  The
-# uzet concentration is also assigned as 100. so that the calculated uzf cells
-# should have a concentration of 100.
-
+uzet concentration is also assigned as 100. so that the calculated uzf cells
+should have a concentration of 100.
 """
 
 import os
@@ -11,15 +10,14 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["uzt01a"]
+from framework import TestFramework
+
+cases = ["uzt01a"]
 nlay, nrow, ncol = 15, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     perlen = [17.7]
     nper = len(perlen)
     nstp = [177]
@@ -49,10 +47,10 @@ def build_model(idx, dir):
     for id in range(nper):
         tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -379,14 +377,14 @@ def make_plot(sim, obsvals):
     print("making plots...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
 
     # shows curves for times 2.5, 7.5, 12.6, 17.7
     # which are indices 24, 74, 125, and -1
-    idx = [24, 74, 125, -1]
+    indices = [24, 74, 125, -1]
 
     obsvals = [list(row) for row in obsvals]
-    obsvals = [obsvals[i] for i in idx]
+    obsvals = [obsvals[i] for i in indices]
     obsvals = np.array(obsvals)
 
     import matplotlib.pyplot as plt
@@ -414,7 +412,7 @@ def make_plot(sim, obsvals):
 def check_obs(sim):
     print("checking obs...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -485,13 +483,11 @@ def check_obs(sim):
     assert success, "One or more UZT obs checks did not pass"
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
-    ws = sim.simpath
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, gwfname + ".dis.grb")
@@ -553,26 +549,22 @@ def eval_flow(sim):
     assert np.allclose(c, canswer)
 
     # check observations
-    check_obs(sim)
+    check_obs(test)
 
     # Make plot of obs
-    fpth = os.path.join(sim.simpath, gwtname + ".uzt.obs.concentration.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".uzt.obs.concentration.csv")
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     # make_plot(sim, obsvals)
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

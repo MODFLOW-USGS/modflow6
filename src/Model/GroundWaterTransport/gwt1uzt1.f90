@@ -30,10 +30,10 @@ module GwtUztModule
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use UzfModule, only: UzfType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
+  use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use MatrixBaseModule
   implicit none
@@ -44,7 +44,7 @@ module GwtUztModule
   character(len=*), parameter :: flowtype = 'UZF'
   character(len=16) :: text = '             UZT'
 
-  type, extends(GwtAptType) :: GwtUztType
+  type, extends(TspAptType) :: GwtUztType
 
     integer(I4B), pointer :: idxbudinfl => null() ! index of uzf infiltration terms in flowbudptr
     integer(I4B), pointer :: idxbudrinf => null() ! index of rejected infiltration terms in flowbudptr
@@ -77,14 +77,10 @@ module GwtUztModule
 
 contains
 
+  !> @brief Create a new UZT package
+  !<
   subroutine uzt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
-! ******************************************************************************
-! uzt_create -- Create a New UZT Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+                        fmi, eqnsclfac, dvt, dvu, dvua)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -93,10 +89,13 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=*), intent(in) :: dvt !< For GWT, set to "CONCENTRATION" in TspAptType
+    character(len=*), intent(in) :: dvu !< For GWT, set to "mass" in TspAptType
+    character(len=*), intent(in) :: dvua !< For GWT, set to "M" in TspAptType
     ! -- local
     type(GwtUztType), pointer :: uztobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (uztobj)
@@ -111,30 +110,34 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-
+    !
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     uztobj%fmi => fmi
     !
-    ! -- return
+    ! -- Store pointer to governing equation scale factor
+    uztobj%eqnsclfac => eqnsclfac
+    !
+    ! -- Set labels that will be used in generalized APT class
+    uztobj%depvartype = dvt
+    uztobj%depvarunit = dvu
+    uztobj%depvarunitabbrev = dvua
+    !
+    ! -- Return
     return
   end subroutine uzt_create
 
+  !> @brief Find corresponding uzt package
+  !<
   subroutine find_uzt_package(this)
-! ******************************************************************************
-! find corresponding uzt package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -145,7 +148,6 @@ contains
     integer(I4B) :: ip, icount
     integer(I4B) :: nbudterm
     logical :: found
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize found to false, and error later if flow package cannot
     !    be found
@@ -249,14 +251,12 @@ contains
     return
   end subroutine find_uzt_package
 
+  !> @brief Add matrix terms related to UZT
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for this package
+  !<
   subroutine uzt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! uzt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for this package
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtUztType) :: this
@@ -271,7 +271,6 @@ contains
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-! ------------------------------------------------------------------------------
     !
     ! -- add infiltration contribution
     if (this%idxbudinfl /= 0) then
@@ -321,21 +320,17 @@ contains
     return
   end subroutine uzt_fc_expanded
 
+  !> @brief Explicit solve
+  !!
+  !! Add terms specific to the unsaturated zone to the explicit unsaturated-
+  !! zone solve
   subroutine uzt_solve(this)
-! ******************************************************************************
-! uzt_solve -- add terms specific to the unsaturated zone to the explicit
-!              unsaturated-zone solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType) :: this
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n1, n2
     real(DP) :: rrate
-! ------------------------------------------------------------------------------
     !
     ! -- add infiltration contribution
     if (this%idxbudinfl /= 0) then
@@ -373,21 +368,17 @@ contains
     return
   end subroutine uzt_solve
 
+  !> @brief Function that returns the number of budget terms for this package
+  !!
+  !! This overrides function in parent.
+  !<
   function uzt_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! uzt_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtUztType) :: this
     ! -- return
     integer(I4B) :: nbudterms
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Number of budget terms is 4
     nbudterms = 0
@@ -400,14 +391,9 @@ contains
     return
   end function uzt_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the unsaturated-zone flows
+  !<
   subroutine uzt_setup_budobj(this, idx)
-! ******************************************************************************
-! uzt_setup_budobj -- Set up the budget object that stores all the unsaturated-
-!                     zone flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -416,9 +402,8 @@ contains
     ! -- local
     integer(I4B) :: maxlist, naux
     character(len=LENBUDTXT) :: text
-! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- Infiltration flux
     text = '    INFILTRATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudinfl)%maxlist
@@ -430,9 +415,8 @@ contains
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
-
     !
-    ! --
+    ! -- Rejected infiltration flux (and subsequently removed from the model)
     if (this%idxbudrinf /= 0) then
       text = '         REJ-INF'
       idx = idx + 1
@@ -446,9 +430,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- Evapotranspiration flux originating from the unsaturated zone
     if (this%idxbuduzet /= 0) then
       text = '            UZET'
       idx = idx + 1
@@ -462,9 +445,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- Rejected infiltration flux that is transferred to the MVR/MVT packages
     if (this%idxbudritm /= 0) then
       text = '  INF-REJ-TO-MVR'
       idx = idx + 1
@@ -478,19 +460,13 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
   subroutine uzt_fill_budobj(this, idx, x, ccratin, ccratout)
-! ******************************************************************************
-! uzt_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtUztType) :: this
@@ -503,8 +479,7 @@ contains
     integer(I4B) :: nlist
     real(DP) :: q
     ! -- formats
-! -----------------------------------------------------------------------------
-
+    !
     ! -- INFILTRATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudinfl)%nlist
@@ -514,7 +489,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- REJ-INF
     if (this%idxbudrinf /= 0) then
       idx = idx + 1
@@ -526,7 +501,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- UZET
     if (this%idxbuduzet /= 0) then
       idx = idx + 1
@@ -538,7 +513,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- REJ-INF-TO-MVR
     if (this%idxbudritm /= 0) then
       idx = idx + 1
@@ -550,28 +525,24 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_fill_budobj
 
+  !> @brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtUztType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in GwtAptType
-    call this%GwtAptType%allocate_scalars()
+    ! -- allocate scalars in TspAptType
+    call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudinfl, 'IDXBUDINFL', this%memoryPath)
@@ -589,27 +560,24 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays for package
+  !!
+  !!  Method to allocate arrays for the package.
+  !<
   subroutine uzt_allocate_arrays(this)
-! ******************************************************************************
-! uzt_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtUztType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- time series
     call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%memoryPath)
     call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%memoryPath)
     !
-    ! -- call standard GwtApttype allocate arrays
-    call this%GwtAptType%apt_allocate_arrays()
+    ! -- call standard TspAptType allocate arrays
+    call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -617,24 +585,20 @@ contains
       this%concuzet(n) = DZERO
     end do
     !
-    !
     ! -- Return
     return
   end subroutine uzt_allocate_arrays
 
+  !> @brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine uzt_da(this)
-! ******************************************************************************
-! uzt_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwtUztType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate scalars
     call mem_deallocate(this%idxbudinfl)
@@ -646,21 +610,20 @@ contains
     call mem_deallocate(this%concinfl)
     call mem_deallocate(this%concuzet)
     !
-    ! -- deallocate scalars in GwtAptType
-    call this%GwtAptType%bnd_da()
+    ! -- deallocate scalars in TspAptType
+    call this%TspAptType%bnd_da()
     !
     ! -- Return
     return
   end subroutine uzt_da
 
+  !> @brief Infiltration term
+  !!
+  !! Accounts for mass added to the subsurface via infiltration. For example,
+  !! mass entering the model domain via rainfall or irrigation.
+  !<
   subroutine uzt_infl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uzt_infl_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
@@ -673,7 +636,7 @@ contains
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: h, r
-! ------------------------------------------------------------------------------
+    !
     n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudinfl)%id2(ientry)
     ! -- note that qbnd is negative for negative infiltration
@@ -691,18 +654,19 @@ contains
     if (present(rhsval)) rhsval = r
     if (present(hcofval)) hcofval = h
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_infl_term
 
+  !> @brief Rejected infiltration term
+  !!
+  !! Accounts for mass that is added to the model from specifying an
+  !! infiltration rate and concentration, but is subsequently removed from
+  !! the model as that portion of the infiltration that is rejected (and
+  !! NOT transferred to another advanced package via the MVR/MVT packages).
+  !<
   subroutine uzt_rinf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uzt_rinf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
@@ -714,7 +678,7 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-! ------------------------------------------------------------------------------
+    !
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
@@ -723,18 +687,17 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_rinf_term
 
+  !> @brief Evapotranspiration from the unsaturated-zone term
+  !!
+  !! Accounts for mass removed as a result of evapotranspiration from the
+  !! unsaturated zone.
+  !<
   subroutine uzt_uzet_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uzt_uzet_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
@@ -747,7 +710,7 @@ contains
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: omega
-! ------------------------------------------------------------------------------
+    !
     n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
     ! -- note that qbnd is negative for uzet
@@ -764,18 +727,19 @@ contains
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_uzet_term
 
+  !> @brief Rejected infiltration to MVR/MVT term
+  !!
+  !! Accounts for energy that is added to the model from specifying an
+  !! infiltration rate and temperature, but does not infiltrate into the
+  !! subsurface.  This subroutine is called when the rejected infiltration
+  !! is transferred to another advanced package via the MVR/MVT packages.
+  !<
   subroutine uzt_ritm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uzt_ritm_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
@@ -787,7 +751,7 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-! ------------------------------------------------------------------------------
+    !
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
@@ -796,25 +760,22 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_ritm_term
 
+  !> @brief Define UZT Observation
+  !!
+  !! This subroutine:
+  !!   - Stores observation types supported by the parent APT package.
+  !!   - Overrides BndType%bnd_df_obs
+  !<
   subroutine uzt_df_obs(this)
-! ******************************************************************************
-! uzt_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtUztType) :: this
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for concentration observation type.
@@ -870,13 +831,13 @@ contains
     call this%obs%StoreObsType('rej-inf-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine uzt_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
   !<
   subroutine uzt_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -902,13 +863,9 @@ contains
     return
   end subroutine uzt_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine uzt_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! uzt_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtUztType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -917,7 +874,6 @@ contains
     logical, intent(inout) :: found
     ! -- local
     integer(I4B) :: n1, n2
-! ------------------------------------------------------------------------------
     !
     found = .true.
     select case (obstypeid)
@@ -941,16 +897,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine uzt_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine uzt_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! uzt_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtUztType), intent(inout) :: this
@@ -963,7 +916,6 @@ contains
     integer(I4B) :: jj
     real(DP), pointer :: bndElem => null()
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! INFILTRATION <infiltration>
     ! UZET <uzet>
@@ -1000,7 +952,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzt_set_stressperiod
 

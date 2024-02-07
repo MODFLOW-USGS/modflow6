@@ -1,6 +1,5 @@
 """
 Test of budget table parsing
-
 """
 
 import os
@@ -8,18 +7,17 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["gwf_utl05"]
+from framework import TestFramework
+
+cases = ["gwf_utl05"]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -35,13 +33,13 @@ def build_model(idx, dir):
     hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
     tdis_rc = []
-    for id in range(nper):
-        tdis_rc.append((perlen[id], nstp[id], tsmult[id]))
+    for i in range(nper):
+        tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -141,13 +139,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
-    print("evaluating flow...")
-
-    gwfname = "gwf_" + sim.name
+def check_output(idx, test):
+    gwfname = "gwf_" + test.name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
+    fpth = os.path.join(test.workspace, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     print(names)
@@ -159,17 +155,13 @@ def eval_flow(sim):
     assert np.allclose(inc["WEL_OUT"], 0.0)
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

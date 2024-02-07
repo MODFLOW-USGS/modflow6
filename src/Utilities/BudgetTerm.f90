@@ -54,16 +54,11 @@ module BudgetTermModule
 
 contains
 
+  !> @brief Initialize the budget term
+  !<
   subroutine initialize(this, flowtype, text1id1, text2id1, &
                         text1id2, text2id2, maxlist, olconv1, olconv2, &
                         naux, auxtxt, ordered_id1)
-! ******************************************************************************
-! initialize -- initialize the budget term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     character(len=LENBUDTXT), intent(in) :: flowtype
@@ -77,8 +72,7 @@ contains
     integer(I4B), intent(in) :: naux
     character(len=LENBUDTXT), dimension(:), intent(in), optional :: auxtxt
     logical, intent(in), optional :: ordered_id1
-    ! -- local
-! ------------------------------------------------------------------------------
+    !
     this%flowtype = flowtype
     this%text1id1 = text1id1
     this%text2id1 = text2id1
@@ -93,37 +87,29 @@ contains
     if (present(auxtxt)) this%auxtxt(:) = auxtxt(1:naux)
     this%ordered_id1 = .true.
     if (present(ordered_id1)) this%ordered_id1 = ordered_id1
+    !
   end subroutine initialize
 
+  !> @brief Allocate budget term arrays
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- allocate budget term arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
-! ------------------------------------------------------------------------------
+    !
     allocate (this%id1(this%maxlist))
     allocate (this%id2(this%maxlist))
     allocate (this%flow(this%maxlist))
     allocate (this%auxvar(this%naux, this%maxlist))
     allocate (this%auxtxt(this%naux))
+    !
   end subroutine allocate_arrays
 
+  !> @brief Deallocate budget term arrays
+  !<
   subroutine deallocate_arrays(this)
-! ******************************************************************************
-! deallocate_arrays -- deallocate budget term arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
-! ------------------------------------------------------------------------------
+    !
     deallocate (this%id1)
     deallocate (this%id2)
     deallocate (this%flow)
@@ -131,53 +117,40 @@ contains
     deallocate (this%auxtxt)
   end subroutine deallocate_arrays
 
+  !> @brief reset the budget term and counter so terms can be updated
+  !<
   subroutine reset(this, nlist)
-! ******************************************************************************
-! reset -- reset the budget term and counter so terms can be updated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: nlist
-! ------------------------------------------------------------------------------
+    !
     this%nlist = nlist
     this%icounter = 1
+    !
   end subroutine reset
 
+  !> @brief replace the terms in position this%icounter for id1, id2, flow,
+  !! and aux
+  !<
   subroutine update_term(this, id1, id2, flow, auxvar)
-! ******************************************************************************
-! update_term -- replace the terms in position this%icounter
-!   for id1, id2, flow, and aux
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: id1
     integer(I4B), intent(in) :: id2
     real(DP), intent(in) :: flow
     real(DP), dimension(:), intent(in), optional :: auxvar
-! ------------------------------------------------------------------------------
+    !
     this%id1(this%icounter) = id1
     this%id2(this%icounter) = id2
     this%flow(this%icounter) = flow
     if (present(auxvar)) this%auxvar(:, this%icounter) = auxvar(1:this%naux)
     this%icounter = this%icounter + 1
+    !
   end subroutine update_term
 
+  !> @brief Calculate ratin and ratout for all the flow terms
+  !<
   subroutine accumulate_flow(this, ratin, ratout)
-! ******************************************************************************
-! accumulate_flow -- calculate ratin and ratout for all the flow terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     real(DP), intent(inout) :: ratin
@@ -185,7 +158,7 @@ contains
     ! -- local
     integer(I4B) :: i
     real(DP) :: q
-! ------------------------------------------------------------------------------
+    !
     ratin = DZERO
     ratout = DZERO
     do i = 1, this%nlist
@@ -196,17 +169,13 @@ contains
         ratin = ratin + q
       end if
     end do
+    !
   end subroutine accumulate_flow
 
+  !> @brief Write flows to a binary file
+  !<
   subroutine save_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim, &
                         iout)
-! ******************************************************************************
-! save_flows -- write flows to a binary file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     class(DisBaseType), intent(in) :: dis
@@ -223,7 +192,6 @@ contains
     integer(I4B) :: n1
     integer(I4B) :: n2
     real(DP) :: q
-! ------------------------------------------------------------------------------
     !
     ! -- Count the size of the list and exclude ids less than or equal to zero
     nlist = 0
@@ -253,114 +221,75 @@ contains
                                      olconv=this%olconv1, &
                                      olconv2=this%olconv2)
     end do
+    !
   end subroutine save_flows
 
+  !> @brief Get the number of entries for the stress period
+  !<
   function get_nlist(this) result(nlist)
-! ******************************************************************************
-! get_nlist -- get the number of entries for the stress period
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
+    ! -- dummy
+    class(BudgetTermType) :: this
     ! -- return
     integer(I4B) :: nlist
-    ! -- dummy
-    class(BudgetTermType) :: this
-! ------------------------------------------------------------------------------
+    !
     nlist = this%nlist
     !
-    ! -- return
-    return
   end function get_nlist
 
+  !> @brief Get the flowtype for the budget term
+  !<
   function get_flowtype(this) result(flowtype)
-! ******************************************************************************
-! get_flowtype -- get the flowtype for the budget term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
-    character(len=LENBUDTXT) :: flowtype
     ! -- dummy
     class(BudgetTermType) :: this
-! ------------------------------------------------------------------------------
+    ! -- return
+    character(len=LENBUDTXT) :: flowtype
+    !
     flowtype = this%flowtype
     !
-    ! -- return
-    return
   end function get_flowtype
 
+  !> @brief Get id1(icount) for the budget term
+  !<
   function get_id1(this, icount) result(id1)
-! ******************************************************************************
-! get_id1 -- get id1(icount) for the budget term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
-    integer(I4B) :: id1
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
-! ------------------------------------------------------------------------------
+    ! -- return
+    integer(I4B) :: id1
+    !
     id1 = this%id1(icount)
     !
-    ! -- return
-    return
   end function get_id1
 
+  !> @brief Get id2(icount) for the budget term
+  !<
   function get_id2(this, icount) result(id2)
-! ******************************************************************************
-! get_id2 -- get id2(icount) for the budget term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- return
     integer(I4B) :: id2
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
-! ------------------------------------------------------------------------------
+    !
     id2 = this%id2(icount)
     !
-    ! -- return
-    return
   end function get_id2
 
+  !> @brief Get flow(icount) for the budget term
+  !<
   function get_flow(this, icount) result(flow)
-! ******************************************************************************
-! get_flow -- get flow(icount) for the budget term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- return
     real(DP) :: flow
     ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: icount
-! ------------------------------------------------------------------------------
+    !
     flow = this%flow(icount)
     !
-    ! -- return
-    return
   end function get_flow
 
+  !> @brief Read flows from a binary file
+  !<
   subroutine read_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim)
-! ******************************************************************************
-! read_flows -- read flows from a binary file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(BudgetTermType) :: this
     class(DisBaseType), intent(in) :: dis
@@ -376,7 +305,7 @@ contains
     integer(I4B) :: n1
     integer(I4B) :: n2
     real(DP) :: q
-! ------------------------------------------------------------------------------
+    !
     read (ibinun) kstp, kper, this%flowtype, this%nlist, idum1, idum2
     read (ibinun) imeth, delt, pertim, totim
     read (ibinun) this%text1id1
@@ -393,6 +322,7 @@ contains
         allocate (this%auxtxt(this%naux))
       end if
     end if
+    !
     if (this%naux > 0) read (ibinun) (this%auxtxt(j), j=1, this%naux)
     read (ibinun) this%nlist
     if (.not. associated(this%id1)) then
@@ -414,6 +344,7 @@ contains
         allocate (this%auxvar(this%naux, this%maxlist))
       end if
     end if
+    !
     do i = 1, this%nlist
       read (ibinun) n1
       read (ibinun) n2
@@ -425,15 +356,12 @@ contains
       this%id2(i) = n2
       this%flow(i) = q
     end do
+    !
   end subroutine read_flows
 
+  !> @brief Copy the flow from the binary file reader into this budterm
+  !<
   subroutine fill_from_bfr(this, bfr, dis)
-! ******************************************************************************
-! fill_from_bfr -- copy the flow from the binary file reader into this budterm
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use BudgetFileReaderModule, only: BudgetFileReaderType
     ! -- dummy
@@ -445,13 +373,14 @@ contains
     integer(I4B) :: n1
     integer(I4B) :: n2
     real(DP) :: q
-! ------------------------------------------------------------------------------
+    !
     this%flowtype = bfr%budtxt
     this%text1id1 = bfr%srcmodelname
     this%text2id1 = bfr%srcpackagename
     this%text1id2 = bfr%dstmodelname
     this%text2id2 = bfr%dstpackagename
     this%naux = bfr%naux
+    !
     if (.not. associated(this%auxtxt)) then
       allocate (this%auxtxt(this%naux))
     else
@@ -460,6 +389,7 @@ contains
         allocate (this%auxtxt(this%naux))
       end if
     end if
+    !
     if (this%naux > 0) this%auxtxt(:) = bfr%auxtxt(:)
     this%nlist = bfr%nlist
     if (.not. associated(this%id1)) then
@@ -481,6 +411,7 @@ contains
         allocate (this%auxvar(this%naux, this%maxlist))
       end if
     end if
+    !
     do i = 1, this%nlist
       n1 = bfr%nodesrc(i)
       n2 = bfr%nodedst(i)
@@ -492,6 +423,7 @@ contains
       this%id2(i) = n2
       this%flow(i) = q
     end do
+    !
   end subroutine fill_from_bfr
 
 end module BudgetTermModule

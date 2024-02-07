@@ -27,14 +27,16 @@ _markdown_file_name = "run-time-comparison.md"
 _is_windows = sys.platform.lower() == "win32"
 _app_ext = ".exe" if _is_windows else ""
 _soext = ".dll" if _is_windows else ".so"
+_ostag = "win64" if _is_windows else "linux" if sys.platform.lower().startswith("linux") else "mac"
 
 
 def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
     output_path = Path(output_path).expanduser().absolute()
     version = get_latest_version(_github_repo)
+    distname = f"mf{version}_{_ostag}"
     url = (
         f"https://github.com/{_github_repo}"
-        + f"/releases/download/{version}/mf{version}.zip"
+        + f"/releases/download/{version}/{distname}.zip"
     )
     download_and_unzip(
         url,
@@ -42,7 +44,7 @@ def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
         verbose=True,
     )
 
-    return version, output_path / f"mf{version}"
+    return version, output_path / distname
 
 
 def get_mf6_cmdargs(app, argv, text="mf6:", verbose=False):

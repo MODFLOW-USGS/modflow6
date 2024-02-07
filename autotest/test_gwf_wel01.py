@@ -8,10 +8,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["wel01"]
+from framework import TestFramework
+
+cases = ["wel01"]
 
 # set static data
 nper = 1
@@ -31,15 +31,15 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
-def build_model(idx, ws):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -142,16 +142,14 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_obs(sim):
-    print("evaluating well observations...")
-
+def check_output(idx, test):
     # MODFLOW 6 observations
     dtol = 1e-9
     for file_name in (
         "wel.obs.csv",
         "wel.obs.dup.csv",
     ):
-        fpth = os.path.join(sim.simpath, file_name)
+        fpth = os.path.join(test.workspace, file_name)
         try:
             tc = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
@@ -165,15 +163,15 @@ def eval_obs(sim):
         msg = f"maximum absolute well rates ({diffmax}) "
 
         if diffmax > dtol:
-            sim.success = False
+            test.success = False
             msg += f"exceeds {dtol}"
             assert diffmax < dtol, msg
         else:
-            sim.success = True
+            test.success = True
             print("    " + msg)
 
     # MODFLOW 6 AFR CSV output file
-    fpth = os.path.join(sim.simpath, "wel01.afr.csv")
+    fpth = os.path.join(test.workspace, "wel01.afr.csv")
     try:
         afroutput = np.genfromtxt(
             fpth, names=True, delimiter=",", deletechars=""
@@ -188,17 +186,13 @@ def eval_obs(sim):
     assert np.allclose(a1, a2), errmsg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_obs, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

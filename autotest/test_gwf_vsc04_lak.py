@@ -1,27 +1,28 @@
-# Simple single lake model.  Lake cut into top two layers of a 5 layer
-# model.  Model is loosely based on the first example problem in
-# Merritt and Konikow (2000) which also is one of the MT3D-USGS test
-# problems.  This test developed to isolate lake-aquifer interaction;
-# no SFR or other advanced packages.  Problem set up to have groundwater
-# pass through the lake: gw inflow on the left side, gw outflow on the
-# right side of the lake.  Uses constant stage boundary in the lake to
-# ensure desired flow conditions for testing budget changes with and
-# without VSC active.
-#
-# starting groundwater temperature: 30.0
-# left chd boundary inflow temperature: 30.0
-# starting lake temperature: 4.0
-#
+"""
+Simple single lake model.  Lake cut into top two layers of a 5 layer
+model.  Model is loosely based on the first example problem in
+Merritt and Konikow (2000) which also is one of the MT3D-USGS test
+problems.  This test developed to isolate lake-aquifer interaction;
+no SFR or other advanced packages.  Problem set up to have groundwater
+pass through the lake: gw inflow on the left side, gw outflow on the
+right side of the lake.  Uses constant stage boundary in the lake to
+ensure desired flow conditions for testing budget changes with and
+without VSC active.
+
+starting groundwater temperature: 30.0
+left chd boundary inflow temperature: 30.0
+starting lake temperature: 4.0
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["no-vsc04-lak", "vsc04-lak"]
+from framework import TestFramework
+
+cases = ["no-vsc04-lak", "vsc04-lak"]
 viscosity_on = [False, True]
 
 # Model units
@@ -157,16 +158,12 @@ leftTemp = 30.0  # Temperature of inflow from left constant head ($C$)
 # Viscosity related parameters
 tviscref = 20.0
 
-#
-# MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
-#
 
-
-def build_model(idx, ws):
+def build_models(idx, test):
     global lak_lkup_dict
 
     # Base simulation and model name and workspace
-    name = ex[idx]
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -175,7 +172,7 @@ def build_model(idx, ws):
     gwtname = "gwt-" + name
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
+        sim_name=name, sim_ws=test.workspace, exe_name="mf6", version="mf6"
     )
 
     tdis_rc = []
@@ -331,7 +328,7 @@ def build_model(idx, ws):
                             # by setting belev==telev, MF6 will automatically
                             # re-assign elevations based on cell dimensions
                             h = [
-                                ilak,  # <lakeno>
+                                ilak,  # <ifno>
                                 ilakconn,  # <iconn>
                                 (k, i - 1, j),  # <cellid(ncelldim)>
                                 "horizontal",  # <claktype>
@@ -614,15 +611,13 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".lak.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GWF")
@@ -699,24 +694,24 @@ def eval_results(sim):
     left_chk_with_vsc = []
     right_chk_with_vsc = []
 
-    if sim.idxsim == 0:
+    if idx == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
         no_vsc_bud_np = np.array(no_vsc_bud_last.tolist())
 
-        for idx in np.arange(stored_ans.shape[0]):
-            k, i, j = lak_lkup_dict[idx]
+        for ii in np.arange(stored_ans.shape[0]):
+            k, i, j = lak_lkup_dict[ii]
 
             # left side of lake
             if j < 7:
-                if no_vsc_bud_np[idx, 2] > 0 and stored_ans[idx, 2] > 0:
-                    left_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                    left_chk_ans.append(stored_ans[idx, 2])
+                if no_vsc_bud_np[ii, 2] > 0 and stored_ans[ii, 2] > 0:
+                    left_chk_no_vsc.append(no_vsc_bud_np[ii, 2])
+                    left_chk_ans.append(stored_ans[ii, 2])
 
             # right side of lake
             if j > 9:
-                if no_vsc_bud_np[idx, 2] < 0 and stored_ans[idx, 2] < 0:
-                    right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                    right_chk_ans.append(stored_ans[idx, 2])
+                if no_vsc_bud_np[ii, 2] < 0 and stored_ans[ii, 2] < 0:
+                    right_chk_no_vsc.append(no_vsc_bud_np[ii, 2])
+                    right_chk_ans.append(stored_ans[ii, 2])
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
@@ -737,24 +732,24 @@ def eval_results(sim):
             "solution."
         )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
         with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
 
-        for idx in np.arange(stored_ans.shape[0]):
-            k, i, j = lak_lkup_dict[idx]
+        for ii in np.arange(stored_ans.shape[0]):
+            k, i, j = lak_lkup_dict[ii]
 
             # left side of lake
             if j < 7:
-                if stored_ans[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
-                    left_chk_no_vsc.append(stored_ans[idx, 2])
-                    left_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
+                if stored_ans[ii, 2] > 0 and with_vsc_bud_np[ii, 2] > 0:
+                    left_chk_no_vsc.append(stored_ans[ii, 2])
+                    left_chk_with_vsc.append(with_vsc_bud_np[ii, 2])
 
             # right side of lake
             if j > 9:
-                if stored_ans[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
-                    right_chk_no_vsc.append(stored_ans[idx, 2])
-                    right_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
+                if stored_ans[ii, 2] < 0 and with_vsc_bud_np[ii, 2] < 0:
+                    right_chk_no_vsc.append(stored_ans[ii, 2])
+                    right_chk_with_vsc.append(with_vsc_bud_np[ii, 2])
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
@@ -774,17 +769,13 @@ def eval_results(sim):
         )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

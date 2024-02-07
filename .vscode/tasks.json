@@ -26,7 +26,10 @@
                 "release",
                 "build",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -53,7 +56,10 @@
                 "release",
                 "rebuild",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -81,7 +87,10 @@
                 "release",
                 "build",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -108,7 +117,10 @@
                 "release",
                 "rebuild",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -136,7 +148,10 @@
                 "debug",
                 "build",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -163,7 +178,10 @@
                 "debug",
                 "rebuild",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -191,7 +209,10 @@
                 "debug",
                 "build",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }
@@ -218,7 +239,10 @@
                 "debug",
                 "rebuild",
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "clear": true
             }

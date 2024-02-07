@@ -3,16 +3,19 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["uzf_3lay"]
+from framework import TestFramework
+
+cases = ["uzf_3lay"]
+name = "model"
 iuz_cell_dict = {}
 cell_iuz_dict = {}
 
+nouter, ninner = 100, 300
+hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
-def build_model(idx, dir):
 
+def build_models(idx, test):
     nlay, nrow, ncol = 3, 1, 10
     nper = 5
     perlen = [20.0, 20.0, 20.0, 500.0, 2000.0]
@@ -23,17 +26,12 @@ def build_model(idx, dir):
     delc = 1.0
     strt = -25
 
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-9, 1e-3, 0.97
-
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
-
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -98,7 +96,7 @@ def build_model(idx, dir):
     )
 
     # transient uzf info
-    # iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
+    # ifno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
     uzf_pkdat = [
         [0, (0, 0, 1), 1, 8, 1, 1, 0.05, 0.35, 0.05, 4, "uzf01"],
         [1, (0, 0, 2), 1, 9, 1, 1, 0.05, 0.35, 0.05, 4, "uzf02"],
@@ -257,17 +255,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
+def check_output(idx, test):
+    ws = test.workspace
+    test = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
-    ws = sim.simpath
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
-
-    fpth = os.path.join(ws, "uzf_3lay.hds")
-    hobj = flopy.utils.HeadFile(fpth, precision="double")
-    hds = hobj.get_alldata()
-
-    bpth = os.path.join(ws, "uzf_3lay.cbc")
+    bpth = ws / f"{name}.cbc"
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     bobj.get_unique_record_names()
     # '          STO-SS'
@@ -281,7 +273,7 @@ def eval_model(sim):
     gwet = bobj.get_data(text="UZF-GWET")
     gwet = np.array(gwet)
 
-    uzpth = os.path.join(ws, "uzf_3lay.uzf.bud")
+    uzpth = os.path.join(ws, f"{name}.uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
     uzobj.get_unique_record_names()
     # '    FLOW-JA-FACE'
@@ -296,25 +288,25 @@ def eval_model(sim):
 
     # convert ndarray to grid dimensions
     tot_stp = 0
-    tinfo = sim.tdis.perioddata.get_data()
+    tinfo = test.tdis.perioddata.get_data()
     for itm in tinfo:
         tot_stp += int(itm[1])
 
     gwet_arr = np.zeros(
         (
             tot_stp,
-            sim.uzf_3lay.dis.nlay.get_data(),
-            sim.uzf_3lay.dis.nrow.get_data(),
-            sim.uzf_3lay.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
     uzet_arr = np.zeros(
         (
             tot_stp,
-            sim.uzf_3lay.dis.nlay.get_data(),
-            sim.uzf_3lay.dis.nrow.get_data(),
-            sim.uzf_3lay.dis.ncol.get_data(),
+            test.model.dis.nlay.get_data(),
+            test.model.dis.nrow.get_data(),
+            test.model.dis.ncol.get_data(),
         )
     )
 
@@ -336,7 +328,7 @@ def eval_model(sim):
 
             uzet_arr[tm, lay, row, col] = itm[2]
 
-    uzf_strsPerDat = sim.uzf_3lay.uzf.perioddata.get_data()
+    uzf_strsPerDat = test.model.uzf.perioddata.get_data()
     pet = 0
     for tm in range(tot_stp):
         nstps = 0
@@ -345,8 +337,8 @@ def eval_model(sim):
             if tm < nstps:
                 break
 
-        for i in range(sim.uzf_3lay.dis.nrow.get_data()):
-            for j in range(sim.uzf_3lay.dis.ncol.get_data()):
+        for i in range(test.model.dis.nrow.get_data()):
+            for j in range(test.model.dis.ncol.get_data()):
                 if (0, i, j) in cell_iuz_dict:
                     iuz = cell_iuz_dict[
                         (0, i, j)
@@ -367,17 +359,14 @@ def eval_model(sim):
                         + str(j + 1)
                     )
 
-    print("Finished running checks")
 
-
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx,name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

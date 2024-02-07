@@ -1,20 +1,22 @@
-# Simple 3-layer model with a maw.  Purpose is to test pumping
-# with concentration being drawn in from edge.  The aquifer
-# starts with a concentration of zero, but the values grow as the boundary
-# flows into the aquifer.
+"""
+Simple 3-layer model with a maw.  Purpose is to test pumping
+with concentration being drawn in from edge.  The aquifer
+starts with a concentration of zero, but the values grow as the boundary
+flows into the aquifer.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["mwt_01"]
+cases = ["mwt_01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 5.0
     lz = 3.0
     nlay = 3
@@ -44,10 +46,10 @@ def build_model(idx, dir):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -309,7 +311,7 @@ def build_model(idx, dir):
 def check_obs(sim):
     print("checking obs...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -375,35 +377,29 @@ def check_obs(sim):
     assert success, "One or more MWT obs checks did not pass"
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # ensure mwt concentrations were saved
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     fname = gwtname + ".mwt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     # ensure gwt concentrations were saved
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
-    check_obs(sim)
+    check_obs(test)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

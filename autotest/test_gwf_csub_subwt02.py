@@ -3,11 +3,11 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["csub_subwt02a", "csub_subwt02b", "csub_subwt02c", "csub_subwt02d"]
+cases = ["csub_subwt02a", "csub_subwt02b", "csub_subwt02c", "csub_subwt02d"]
 timeseries = [True, False, True, False]
 cmppth = "mf6_regression"
 htol = [None, None, None, None]
@@ -183,7 +183,7 @@ beta = 0.0
 # beta = 4.65120000e-10
 gammaw = 9806.65000000
 sw = beta * gammaw * theta
-ss = [sw for k in range(nlay)]
+ss = [sw for _ in range(nlay)]
 
 swt6 = []
 ibcno = 0
@@ -216,7 +216,7 @@ for k in range(nlay):
 
 
 def get_model(idx, ws):
-    name = ex[idx]
+    name = cases[idx]
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -407,23 +407,21 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(idx, ws)
 
     # build comparision files
-    ws = os.path.join(dir, cmppth)
+    ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_comp(sim):
-    print("evaluating compaction...")
+def check_output(idx, test):
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -431,7 +429,7 @@ def eval_comp(sim):
 
     # comparision total compaction results
     cpth = cmppth
-    fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -445,7 +443,7 @@ def eval_comp(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -462,24 +460,23 @@ def eval_comp(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
     return
 
 
 # compare cbc and lst budgets
-def cbc_compare(sim):
-    print("evaluating cbc and budget...")
+def cbc_compare(test):
     # open cbc file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -496,7 +493,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -509,7 +506,7 @@ def cbc_compare(sim):
     # get data from cbc dile
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -527,65 +524,59 @@ def cbc_compare(sim):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
     )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(fpth, "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for key in bud_lst:
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for ii, key in enumerate(bud_lst):
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_comp,
-            htol=htol[idx],
-            mf6_regression=True,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
+        htol=htol[idx],
+        compare="mf6_regression",
     )
+    test.run()

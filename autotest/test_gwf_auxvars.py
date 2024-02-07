@@ -1,18 +1,17 @@
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["aux01"]
+from framework import DNODATA, TestFramework
+
+cases = ["aux01"]
 auxvar1 = 101.0
 auxvar2 = 102.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1.0, 1.0, 1.0]
@@ -30,10 +29,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -176,15 +175,15 @@ def build_model(idx, dir):
     )
     # sfr.remove()
 
-    # <lakeno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
+    # <ifno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
     packagedata = [
         [0, 100.0, 1, auxvar1, auxvar2, "lake1"],
         [1, 100.0, 1, auxvar1, auxvar2, "lake2"],
     ]
-    # <lakeno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
+    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
     connectiondata = [
-        [0, 0, (0, 1, 1), "vertical", "none", 0.0, 0.0, 0.0, 0.0],
-        [1, 0, (0, 2, 2), "vertical", "none", 0.0, 0.0, 0.0, 0.0],
+        [0, 0, (0, 1, 1), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
+        [1, 0, (0, 2, 2), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
     ]
     lak = flopy.mf6.ModflowGwflak(
         gwf,
@@ -202,14 +201,14 @@ def build_model(idx, dir):
     )
     # lak.remove()
 
-    # <iuzno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
+    # <ifno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
     packagedata = [
         [0, (0, nrow - 1, 5), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [1, (0, nrow - 1, 6), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [2, (0, nrow - 1, 7), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [3, (0, nrow - 1, 8), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
     ]
-    # <iuzno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
+    # <ifno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
     perioddata = []
     for p in packagedata:
         perioddata.append(
@@ -244,11 +243,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model...")
-
+def check_output(idx, test):
     # maw budget aux variables
-    fpth = os.path.join(sim.simpath, "aux01.maw.bud")
+    fpth = os.path.join(test.workspace, "aux01.maw.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -256,7 +253,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # sfr budget aux variables
-    fpth = os.path.join(sim.simpath, "aux01.sfr.bud")
+    fpth = os.path.join(test.workspace, "aux01.sfr.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -264,7 +261,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # lak budget aux variables
-    fpth = os.path.join(sim.simpath, "aux01.maw.bud")
+    fpth = os.path.join(test.workspace, "aux01.maw.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -272,7 +269,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # uzf budget aux variables
-    fpth = os.path.join(sim.simpath, "aux01.uzf.bud")
+    fpth = os.path.join(test.workspace, "aux01.uzf.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -280,7 +277,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # gwf budget maw aux variables
-    fpth = os.path.join(sim.simpath, "aux01.cbc")
+    fpth = os.path.join(test.workspace, "aux01.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="maw")
     for r in records:
@@ -300,16 +297,13 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

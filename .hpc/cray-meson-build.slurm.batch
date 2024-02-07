@@ -1,11 +1,14 @@
 #!/bin/bash
 
-#SBATCH --job-name=meson-MODFLOW-build
+#SBATCH --job-name=denali-build
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --account=impd
 #SBATCH --time=00:10:00
 #SBATCH --output=slurm-%j.out
+#SBATCH --chdir=../
+
+set -euxo pipefail
 
 # load appropriate modules
 module switch PrgEnv-${PE_ENV,,} PrgEnv-intel
@@ -15,17 +18,27 @@ export PKG_CONFIG_PATH=/opt/cray/pe/mpt/7.7.19/gni/mpich-intel/16.0/lib/pkgconfi
 # list loaded modules
 module list
 
-# move to root directory
-cd ..
+# define the project root (expected to be cwd)
+MODFLOW6ROOT=$(pwd)
+
+# define the version
+VERSION=$(cat "$MODFLOW6ROOT/version.txt") 
+echo "MODFLOW 6 version: $VERSION"
 
 # define paths relative to the root directory
-MODFLOW6ROOT=$(pwd)
-BINDIR=$MODFLOW6ROOT/bin
+BUILDDIR=$MODFLOW6ROOT/$PE_ENV-$VERSION
+BINDIR=$BUILDDIR/src
 TESTDIR=$MODFLOW6ROOT/.mf6minsim
 
+# define the installation location
+PREFIX=/home/software/denali/contrib/impd/apps/modflow/$VERSION/$PE_ENV/19.1.0.166
+
 # build MODFLOW 6
-CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup builddir --prefix=$(pwd) --libdir=bin -Dcray=true -Ddebug=false --wipe
-meson install -C builddir
+CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup $BUILDDIR --prefix=$PREFIX --bindir=bin --libdir=lib -Dcray=true -Ddebug=false
+meson compile -C $BUILDDIR
+
+# install MODFLOW 6
+meson install -C $BUILDDIR
 
 # test MODFLOW 6 build
 cd $TESTDIR

@@ -130,6 +130,8 @@ contains
     use ListsModule, only: lists_da
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
+    use IdmLoadModule, only: idm_da
+    use SimVariablesModule, only: iout
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -140,6 +142,7 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
+    !
     !
     ! -- FINAL PROCESSING (FP)
     ! -- Final processing for each model
@@ -198,6 +201,8 @@ contains
       call sgp%sgp_da()
       deallocate (sgp)
     end do
+    !
+    call idm_da(iout)
     call simulation_da()
     call lists_da()
     !
@@ -229,8 +234,8 @@ contains
   subroutine create_lstfile()
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
-    use InputOutputModule, only: getunit, openfile
-    use GenericUtilitiesModule, only: sim_message
+    use InputOutputModule, only: getunit, openfile, append_processor_id
+    use MessageModule, only: write_message
     use VersionModule, only: write_listfile_header
     character(len=LINELENGTH) :: line
     !
@@ -238,7 +243,7 @@ contains
     iout = getunit()
     !
     if (nr_procs > 1) then
-      write (simlstfile, '(a,i0,a)') 'mfsim.p', proc_id, '.lst'
+      call append_processor_id(simlstfile, proc_id)
     end if
     !
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
@@ -247,7 +252,7 @@ contains
     write (line, '(2(1x,A))') 'Writing simulation list file:', &
       trim(adjustl(simlstfile))
     !
-    call sim_message(line)
+    call write_message(line)
     call write_listfile_header(iout)
     !
     ! -- return
@@ -263,7 +268,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use SimVariablesModule, only: iout
-    use IdmSimulationModule, only: simnam_load, load_models
+    use IdmLoadModule, only: simnam_load, load_models, load_exchanges
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
@@ -285,9 +290,13 @@ contains
     ! -- initialize mask
     call create_load_mask(model_loadmask)
     !
-    ! -- load selected models
+    ! -- load in scope models
     call load_models(model_loadmask, iout)
     !
+    ! -- load in scope exchanges
+    call load_exchanges(model_loadmask, iout)
+    !
+    ! -- cleanup
     deallocate (model_loadmask)
     !
     ! -- return
@@ -302,6 +311,8 @@ contains
     !!
   !<
   subroutine simulation_df()
+    ! -- modules
+    use IdmLoadModule, only: idm_df
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -356,6 +367,9 @@ contains
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_df()
     end do
+
+    ! idm df
+    call idm_df()
 
   end subroutine simulation_df
 
@@ -423,9 +437,12 @@ contains
   subroutine connections_cr()
     use ConnectionBuilderModule
     use SimVariablesModule, only: iout
+    use VersionModule, only: IDEVELOPMODE
     integer(I4B) :: isol
     type(ConnectionBuilderType) :: connectionBuilder
     class(BaseSolutionType), pointer :: sol => null()
+    integer(I4B) :: status
+    character(len=16) :: envvar
 
     write (iout, '(/a)') 'PROCESSING MODEL CONNECTIONS'
 
@@ -433,6 +450,15 @@ contains
       ! if this is not a coupled simulation in any way,
       ! then we will not need model connections
       return
+    end if
+
+    if (IDEVELOPMODE == 1) then
+      call get_environment_variable('DEV_ALWAYS_USE_IFMOD', &
+                                    value=envvar, status=status)
+      if (status == 0 .and. envvar == '1') then
+        connectionBuilder%dev_always_ifmod = .true.
+        write (iout, '(/a)') "Development option: forcing interface model"
+      end if
     end if
 
     do isol = 1, basesolutionlist%Count()
@@ -468,6 +494,7 @@ contains
     use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule, only: converge_reset
     use SimVariablesModule, only: isim_mode
+    use IdmLoadModule, only: idm_rp
     ! -- local variables
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -498,12 +525,18 @@ contains
       line = trim(line)//'normal"'
     end select
 
+    ! -- load dynamic input
+    call idm_rp()
+
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
       call mp%model_message(line, fmt=fmt)
       call mp%model_rp()
     end do
+    !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_BFR_EXG_RP)
     !
     ! -- Read and prepare each exchange
     do ie = 1, baseexchangelist%Count()
@@ -516,6 +549,9 @@ contains
       mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_rp()
     end do
+    !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_AFT_CON_RP)
     !
     ! -- reset simulation convergence flag
     call converge_reset()
@@ -563,6 +599,7 @@ contains
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: iFailedStepRetry
     use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+    use IdmLoadModule, only: idm_ad
     ! -- local variables
     class(SolutionGroupType), pointer :: sgp => null()
     integer(I4B) :: isg
@@ -575,6 +612,9 @@ contains
     !    can be obtained.
     iFailedStepRetry = 0
     retryloop: do
+
+      ! -- idm advance
+      call idm_ad()
 
       do isg = 1, solutiongrouplist%Count()
         sgp => GetSolutionGroupFromList(solutiongrouplist, isg)

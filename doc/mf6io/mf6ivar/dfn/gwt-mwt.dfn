@@ -259,21 +259,21 @@ description REPLACE obs6_filename {'{#1}': 'MWT'}
 
 block packagedata
 name packagedata
-type recarray mawno strt aux boundname
+type recarray ifno strt aux boundname
 shape (maxbound)
 reader urword
 longname
 description
 
 block packagedata
-name mawno
+name ifno
 type integer
 shape
 tagged false
 in_record true
 reader urword
 longname well number for this entry
-description integer value that defines the well number associated with the specified PACKAGEDATA data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS. Well information must be specified for every well or the program will terminate with an error.  The program will also terminate with an error if information for a well is specified more than once.
+description integer value that defines the feature (well) number associated with the specified PACKAGEDATA data on the line. IFNO must be greater than zero and less than or equal to NMAWWELLS. Well information must be specified for every well or the program will terminate with an error.  The program will also terminate with an error if information for a well is specified more than once.
 numeric_index true
 
 block packagedata
@@ -327,21 +327,21 @@ description REPLACE iper {}
 
 block period
 name mwtperioddata
-type recarray mawno mwtsetting
+type recarray ifno mwtsetting
 shape
 reader urword
 longname
 description
 
 block period
-name mawno
+name ifno
 type integer
 shape
 tagged false
 in_record true
 reader urword
 longname well number for this entry
-description integer value that defines the well number associated with the specified PERIOD data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS.
+description integer value that defines the feature (well) number associated with the specified PERIOD data on the line. IFNO must be greater than zero and less than or equal to NMAWWELLS.
 numeric_index true
 
 block period
@@ -352,7 +352,7 @@ tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MWTSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Multi-Aquifer Well Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the well at the calculated concentration of the well.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MWTSETTING string include: STATUS, CONCENTRATION, RATE, and AUXILIARY.  These settings are used to assign the concentration associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Multi-Aquifer Well Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the well at the calculated concentration of the well.
 
 block period
 name status

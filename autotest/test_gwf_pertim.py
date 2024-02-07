@@ -3,10 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = [
+from framework import TestFramework
+
+cases = [
     "gwf_pertim",
 ]
 
@@ -17,8 +17,8 @@ perlen = [0.0]
 nstp = [1]
 tsmult = [1.0]
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 # spatial discretization data
 nlay, nrow, ncol = 3, 21, 20
@@ -38,11 +38,11 @@ canal_spd = [(0, i, 0, 330.0, "canal") for i in range(nrow)]
 river_spd = [(0, i, ncol - 1, 320.0, "river") for i in range(nrow)]
 
 
-def build_model(idx, dir):
-    name = ex[idx]
+def build_models(idx, test):
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -114,11 +114,8 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-
-    print("evaluating results...")
-
-    fpth = os.path.join(sim.simpath, f"{sim.name}.lst")
+def check_output(idx, test):
+    fpth = os.path.join(test.workspace, f"{test.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     inc = mflist.get_incremental()
 
@@ -133,20 +130,13 @@ def eval_model(sim):
     ), f"CHD2_OUT <> {q_out} ({q_out_sim})"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

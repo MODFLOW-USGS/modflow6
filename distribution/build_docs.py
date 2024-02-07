@@ -5,7 +5,7 @@ import shutil
 import sys
 import textwrap
 from datetime import datetime
-from os import PathLike
+from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from tempfile import TemporaryDirectory
@@ -17,24 +17,24 @@ import pytest
 from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import (
-    list_artifacts,
+    download_and_unzip,
     download_artifact,
     get_release,
-    download_and_unzip,
+    list_artifacts,
 )
 from modflow_devtools.markers import requires_exe, requires_github
-from modflow_devtools.misc import set_dir, run_cmd, is_in_ci
+from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
 from benchmark import run_benchmarks
-from utils import convert_line_endings
-from utils import get_project_root_path
+from utils import convert_line_endings, get_project_root_path
 
+# paths
 _project_root_path = get_project_root_path()
 _bin_path = _project_root_path / "bin"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _release_notes_path = _project_root_path / "doc" / "ReleaseNotes"
 _distribution_path = _project_root_path / "distribution"
-_benchmarks_path = _project_root_path / "distribution" / ".benchmarks"
+_benchmarks_dir_path = _project_root_path / "distribution" / ".benchmarks"
 _docs_path = _project_root_path / "doc"
 _dev_dist_tex_paths = [
     _docs_path / "mf6io" / "mf6io.tex",
@@ -47,12 +47,13 @@ _full_dist_tex_paths = [
     _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
     _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
 ]
+
+# OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 
-
-# publications included in distribution docs
+# publications included in full dist docs
 _publication_urls = [
     "https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf",
     "https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf",
@@ -103,16 +104,21 @@ def clean_tex_files():
     assert not os.path.isfile(str(pth) + ".pdf")
 
 
-def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optional[Path]:
+def download_benchmarks(
+    output_path: PathLike, verbose: bool = False, repo_owner: str = "MODFLOW-USGS"
+) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"  # todo make configurable
-    repo = "MODFLOW-USGS/modflow6"  # todo make configurable, add pytest/cli args
+    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
     artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(
         artifacts,
         key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
         reverse=True,
     )
+    artifacts = [
+        a for a in artifacts if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
+    ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
@@ -127,21 +133,32 @@ def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optiona
         return None
 
 
+@pytest.fixture
+def github_user() -> Optional[str]:
+    return environ.get("GITHUB_USER", None)
+
+
 @flaky
 @requires_github
-def test_download_benchmarks(tmp_path):
-    path = download_benchmarks(tmp_path, verbose=True)
+def test_download_benchmarks(tmp_path, github_user):
+    path = download_benchmarks(
+        tmp_path,
+        verbose=True,
+        repo_owner=github_user if github_user else "MODFLOW-USGS",
+    )
     if path:
         assert path.name == "run-time-comparison.md"
 
 
-def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
-    _benchmarks_path.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
+def build_benchmark_tex(
+    output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"
+):
+    _benchmarks_dir_path.mkdir(parents=True, exist_ok=True)
+    benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
 
     # download benchmark artifacts if any exist on GitHub
     if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(_benchmarks_path)
+        benchmarks_path = download_benchmarks(_benchmarks_dir_path, repo_owner=repo_owner)
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
     if overwrite or not benchmarks_path.is_file():
@@ -162,7 +179,7 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
         )
         assert not ret, out + err
         assert tex_path.is_file()
-
+    
     if (_distribution_path / f"{benchmarks_path.stem}.md").is_file():
         assert (_docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex").is_file()
 
@@ -170,7 +187,7 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
 @flaky
 @requires_github
 def test_build_benchmark_tex(tmp_path):
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
+    benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
     tex_path = _distribution_path / f"{benchmarks_path.stem}.tex"
 
     try:
@@ -178,6 +195,22 @@ def test_build_benchmark_tex(tmp_path):
         assert benchmarks_path.is_file()
     finally:
         tex_path.unlink(missing_ok=True)
+
+
+def build_deprecations_tex():
+    deprecations_path = _docs_path / "mf6io" / "mf6ivar" / "md" / "deprecations.md"
+
+    # convert markdown deprecations to LaTeX
+    with set_dir(_release_notes_path):
+        tex_path = Path("deprecations.tex")
+        tex_path.unlink(missing_ok=True)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_deprecations.py", deprecations_path, verbose=True
+        )
+        assert not ret, out + err
+        assert tex_path.is_file()
+    
+    assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
 
 
 def build_mf6io_tex_from_dfn(overwrite: bool = False):
@@ -426,19 +459,15 @@ def test_build_pdfs_from_tex(tmp_path):
 
 def build_documentation(
     bin_path: PathLike,
-    output_path: PathLike,
-    examples_repo_path: PathLike,
-    # Example to use to render sample mf6 output in the docs.
-    # Must be a valid directory in modflow6-examples/examples
-    example_for_sample: str = "ex-gwf-twri01",
     full: bool = False,
+    output_path: Optional[PathLike] = None,
     overwrite: bool = False,
+    repo_owner: str = "MODFLOW-USGS",
 ):
-    print(f"Building {'full' if full else 'full'} documentation")
+    print(f"Building {'full' if full else 'minimal'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
 
     # make sure output directory exists
     output_path.mkdir(parents=True, exist_ok=True)
@@ -448,25 +477,27 @@ def build_documentation(
 
     # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
-        temp_path = Path(temp)
+        example_path = _project_root_path / ".mf6minsim"
         build_mf6io_tex_example(
-            workspace_path=temp_path,
+            workspace_path=Path(temp),
             bin_path=bin_path,
-            example_model_path=examples_repo_path / "examples" / example_for_sample,
+            example_model_path=example_path,
         )
 
-    # build LaTeX file describing distribution folder structure
-    # build_tex_folder_structure(overwrite=True)
+    # build deprecations table for insertion into LaTex release notes
+    build_deprecations_tex()
 
     if not full:
         # convert LaTeX to PDF
-        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
+        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path, overwrite=overwrite)
     else:
         # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(output_path=output_path, overwrite=overwrite)
+        build_benchmark_tex(
+            output_path=output_path, overwrite=overwrite, repo_owner=repo_owner
+        )
 
         # download example docs
-        latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
+        latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
         assets = latest["assets"]
         asset = next(iter([a for a in assets if a["name"] == "mf6examples.pdf"]), None)
         download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
@@ -530,46 +561,11 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "-t",
-        "--tex-path",
-        action="append",
-        required=False,
-        help="Extra LaTeX files to include",
-    )
-    parser.add_argument(
         "-b",
         "--bin-path",
         required=False,
         default=str(_bin_path),
         help="Location of modflow6 executables",
-    )
-    parser.add_argument(
-        "-e",
-        "--examples-repo-path",
-        required=False,
-        default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models",
-    )
-    parser.add_argument(
-        "-s",
-        "--example-for-sample",
-        required=False,
-        default="ex-gwf-twri01",
-        help="Name of example model to use for sample mf6 output",
-    )
-    parser.add_argument(
-        "-o",
-        "--output-path",
-        required=False,
-        default=os.getcwd(),
-        help="Location to create documentation artifacts",
-    )
-    parser.add_argument(
-        "--full",
-        required=False,
-        default=False,
-        action="store_true",
-        help="Build docs for a full rather than minimal distribution",
     )
     parser.add_argument(
         "-f",
@@ -579,21 +575,34 @@ if __name__ == "__main__":
         action="store_true",
         help="Recreate and overwrite existing artifacts",
     )
-    args = parser.parse_args()
-    tex_paths = _full_dist_tex_paths + (
-        [Path(p) for p in args.tex_path] if args.tex_path else []
+    parser.add_argument(
+        "--full",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Build docs for a full rather than minimal distribution",
     )
+    parser.add_argument(
+        "-o",
+        "--output-path",
+        required=False,
+        default=os.getcwd(),
+        help="Location to create documentation artifacts",
+    )
+    parser.add_argument(
+        "--repo-owner",
+        required=False,
+        default="MODFLOW-USGS",
+        help="Repository owner (substitute your own for a fork)",
+    )
+    args = parser.parse_args()
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()
-    examples_repo_path = Path(args.examples_repo_path).expanduser().absolute()
-    example_for_sample = args.example_for_sample
-
     build_documentation(
         bin_path=bin_path,
-        output_path=output_path,
-        examples_repo_path=examples_repo_path,
-        example_for_sample=example_for_sample,
         full=args.full,
+        output_path=output_path,
         overwrite=args.force,
+        repo_owner=args.repo_owner,
     )

@@ -1,9 +1,7 @@
 """
-MODFLOW 6 Autotest
 Two-dimensional injection of solute into the middle of a square grid.  The test will pass
 if the results are symmetric.  Based on test_gwt_adv04, this tests the disu package, which
 represents a regular MODFLOW grid.
-
 """
 
 import os
@@ -12,13 +10,13 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disu_kwargs
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["disu01a"]
+cases = ["disu01a"]
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -59,12 +57,12 @@ def build_model(idx, dir, exe):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -220,13 +218,11 @@ def build_model(idx, dir, exe):
     return sim, None
 
 
-def eval_transport(sim):
-    print("evaluating transport...")
-
-    name = sim.name
+def check_output(idx, test):
+    name = test.name
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -250,18 +246,13 @@ def eval_transport(sim):
     )
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets.mf6
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

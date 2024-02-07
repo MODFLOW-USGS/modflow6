@@ -3,8 +3,7 @@ from types import SimpleNamespace
 
 import flopy
 import numpy as np
-from modflow_devtools.case import Case
-from pytest_cases import parametrize
+import pytest
 
 # temporal discretization
 nper = 2
@@ -101,198 +100,172 @@ def well4(label):
     )
 
 
-case = Case(
-    name="maw_iss305",
-    nlay=nlay,
-    nrow=nrow,
-    ncol=ncol,
-    nper=nper,
-    delr=delr,
-    perlen=perlen,
-    nstp=nstp,
-    tsmult=tsmult,
-    steady=steady,
-    strt=0,
-    hk=10,
-    nouter=100,
-    ninner=100,
-    hclose=1e-9,
-    rclose=1e-6,
-    relax=1,
-    top=top,
-    botm=botm,
-    confined=confined,
-    ss=ss,
-    chd_spd=chd_spd,
-    chd5_spd=chd5_spd,
-    nhalf=nhalf,
-    radius=radius,
-    wellq=wellq,
-    compare=False,
-)
-cases = [case.copy_update(name=case.name + "a", well=well4("a"),)] + [
-    case.copy_update(name=case.name + label, well=well4(label), xfail=True)
-    for label in [
-        "b",
-        # "c",  # todo: this one passes when it should fail
-        "d",
-        "e",
-        "f",
-    ]
-]
+# npf data
+strt = 0
+hk = 10
+
+# solver
+nouter = 100
+ninner = 100
+hclose = 1e-9
+rclose = 1e-6
+relax = 1
+
+# subproblems
+subprobs = ["a", "b", "c", "d", "e", "f"]
+ex = [f"maw_iss305{sp}" for sp in subprobs]
+wells = [well4(sp) for sp in subprobs]
+xfail = [False, True, True, True, True, True]
 
 
-class GwfMaw04Cases:
-    @parametrize(data=cases, ids=[c.name for c in cases])
-    def case_4(self, function_tmpdir, targets, data):
-        name = data.name
-        ws = str(function_tmpdir)
+def build_model(idx, ws, mf6):
+    name = ex[idx]
+    well = wells[idx]
+    # build MODFLOW 6 files
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name=mf6, sim_ws=ws
+    )
+    # create tdis package
+    tdis_rc = []
+    for kper in range(nper):
+        tdis_rc.append((perlen[kper], nstp[kper], tsmult[kper]))
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
-        # build MODFLOW 6 files
-        sim = flopy.mf6.MFSimulation(
-            sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=ws
-        )
-        # create tdis package
-        tdis_rc = []
-        for idx in range(data.nper):
-            tdis_rc.append(
-                (data.perlen[idx], data.nstp[idx], data.tsmult[idx])
-            )
-        tdis = flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=data.nper, perioddata=tdis_rc
-        )
+    # create iterative model solution
+    ims = flopy.mf6.ModflowIms(
+        sim,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        outer_dvclose=hclose,
+    )
 
-        # create iterative model solution
-        ims = flopy.mf6.ModflowIms(
-            sim,
-            inner_dvclose=data.hclose,
-            rcloserecord=data.rclose,
-            outer_dvclose=data.hclose,
-        )
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
-        # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    # discretization
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delr,
+        top=top,
+        botm=botm,
+    )
+    # initial conditions
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
-        # discretization
-        dis = flopy.mf6.ModflowGwfdis(
-            gwf,
-            nlay=data.nlay,
-            nrow=data.nrow,
-            ncol=data.ncol,
-            delr=data.delr,
-            delc=data.delr,
-            top=data.top,
-            botm=data.botm,
+    # node property flow
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=False, icelltype=confined, k=hk
+    )
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf,
+        save_flows=False,
+        iconvert=confined,
+        ss=ss,
+        steady_state={0: True},
+        transient={1: True},
+    )
+    # constant head
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=chd_spd, save_flows=False
+    )
+    # multi-aquifer well
+    maw = flopy.mf6.ModflowGwfmaw(
+        gwf,
+        print_input=well.print_input,
+        no_well_storage=well.no_well_storage,
+        packagedata=well.packagedata,
+        connectiondata=well.connectiondata,
+        perioddata=well.perioddata,
+    )
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(
+        gwf,
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+    )
+    # build MODFLOW-2005 files
+    if xfail[idx]:
+        mc = None
+    else:
+        cmppth = "mf2005"
+        ws = os.path.join(ws, cmppth)
+        mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
+        dis = flopy.modflow.ModflowDis(
+            mc,
+            nlay=nlay,
+            nrow=nrow,
+            ncol=ncol,
+            nper=nper,
+            perlen=perlen,
+            nstp=nstp,
+            tsmult=tsmult,
+            steady=steady,
+            delr=delr,
+            delc=delr,
+            top=top,
+            botm=botm,
         )
-        # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=data.strt)
+        bas = flopy.modflow.ModflowBas(mc, strt=strt)
+        lpf = flopy.modflow.ModflowLpf(
+            mc,
+            laytyp=confined,
+            hk=hk,
+            vka=hk,
+            ss=ss,
+            sy=0,
+        )
+        chd = flopy.modflow.ModflowChd(mc, stress_period_data=chd5_spd)
+        # mnw2
+        # empty mnw2 file to create recarrays
+        mnw2 = flopy.modflow.ModflowMnw2(mc)
+        node_data = mnw2.get_empty_node_data(2)
+        node_data["ztop"] = np.array([top, botm[0]])
+        node_data["zbotm"] = np.array([botm[0], botm[1]])
+        node_data["i"] = np.array([nhalf, nhalf])
+        node_data["j"] = np.array([nhalf, nhalf])
+        node_data["wellid"] = np.array(["well1", "well1"])
+        node_data["losstype"] = np.array(["skin", "skin"])
+        node_data["rw"] = np.array([radius, radius])
+        node_data["rskin"] = np.array([sradius[name[-1]], sradius[name[-1]]])
+        hks = hk * skin_mult[name[-1]]
+        node_data["kskin"] = np.array([hks, hks])
+        dtype = [("wellid", np.unicode_, 20), ("qdes", "<f8")]
+        spd0 = np.zeros(1, dtype=dtype)
+        spd0["wellid"] = "well1"
+        spd1 = np.zeros(1, dtype=dtype)
+        spd1["wellid"] = "well1"
+        spd1["qdes"] = wellq
+        spd = {0: spd0, 1: spd1}
+        mnw2 = flopy.modflow.ModflowMnw2(
+            mc,
+            mnwmax=1,
+            node_data=node_data,
+            stress_period_data=spd,
+            itmp=[1, 1],
+            mnwprnt=2,
+        )
+        oc = flopy.modflow.ModflowOc(
+            mc,
+            stress_period_data=None,
+            save_every=1,
+            save_types=["save head", "save budget"],
+        )
+        pcg = flopy.modflow.ModflowPcg(mc, hclose=hclose, rclose=rclose)
 
-        # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=data.confined, k=data.hk
-        )
-        # storage
-        sto = flopy.mf6.ModflowGwfsto(
-            gwf,
-            save_flows=False,
-            iconvert=data.confined,
-            ss=data.ss,
-            steady_state={0: True},
-            transient={1: True},
-        )
-        # constant head
-        chd = flopy.mf6.ModflowGwfchd(
-            gwf, stress_period_data=data.chd_spd, save_flows=False
-        )
-        # multi-aquifer well
-        maw = flopy.mf6.ModflowGwfmaw(
-            gwf,
-            print_input=data.well.print_input,
-            no_well_storage=data.well.no_well_storage,
-            packagedata=data.well.packagedata,
-            connectiondata=data.well.connectiondata,
-            perioddata=data.well.perioddata,
-        )
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(
-            gwf,
-            budget_filerecord=f"{name}.cbc",
-            head_filerecord=f"{name}.hds",
-            saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        )
-        # build MODFLOW-2005 files
-        if data.xfail:
-            mc = None
-        else:
-            cmppth = "mf2005"
-            ws = os.path.join(str(function_tmpdir), cmppth)
-            mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
-            dis = flopy.modflow.ModflowDis(
-                mc,
-                nlay=data.nlay,
-                nrow=data.nrow,
-                ncol=data.ncol,
-                nper=data.nper,
-                perlen=data.perlen,
-                nstp=data.nstp,
-                tsmult=data.tsmult,
-                steady=data.steady,
-                delr=data.delr,
-                delc=data.delr,
-                top=data.top,
-                botm=data.botm,
-            )
-            bas = flopy.modflow.ModflowBas(mc, strt=data.strt)
-            lpf = flopy.modflow.ModflowLpf(
-                mc,
-                laytyp=data.confined,
-                hk=data.hk,
-                vka=data.hk,
-                ss=data.ss,
-                sy=0,
-            )
-            chd = flopy.modflow.ModflowChd(
-                mc, stress_period_data=data.chd5_spd
-            )
-            # mnw2
-            # empty mnw2 file to create recarrays
-            mnw2 = flopy.modflow.ModflowMnw2(mc)
-            node_data = mnw2.get_empty_node_data(2)
-            node_data["ztop"] = np.array([data.top, data.botm[0]])
-            node_data["zbotm"] = np.array([data.botm[0], data.botm[1]])
-            node_data["i"] = np.array([data.nhalf, data.nhalf])
-            node_data["j"] = np.array([data.nhalf, data.nhalf])
-            node_data["wellid"] = np.array(["well1", "well1"])
-            node_data["losstype"] = np.array(["skin", "skin"])
-            node_data["rw"] = np.array([data.radius, data.radius])
-            node_data["rskin"] = np.array(
-                [sradius[name[-1]], sradius[name[-1]]]
-            )
-            hks = hk * skin_mult[name[-1]]
-            node_data["kskin"] = np.array([hks, hks])
-            dtype = [("wellid", np.unicode_, 20), ("qdes", "<f8")]
-            spd0 = np.zeros(1, dtype=dtype)
-            spd0["wellid"] = "well1"
-            spd1 = np.zeros(1, dtype=dtype)
-            spd1["wellid"] = "well1"
-            spd1["qdes"] = data.wellq
-            spd = {0: spd0, 1: spd1}
-            mnw2 = flopy.modflow.ModflowMnw2(
-                mc,
-                mnwmax=1,
-                node_data=node_data,
-                stress_period_data=spd,
-                itmp=[1, 1],
-                mnwprnt=2,
-            )
-            oc = flopy.modflow.ModflowOc(
-                mc,
-                stress_period_data=None,
-                save_every=1,
-                save_types=["save head", "save budget"],
-            )
-            pcg = flopy.modflow.ModflowPcg(
-                mc, hclose=data.hclose, rclose=data.rclose
-            )
+    return sim, mc
 
-        return data, sim, None, None
+
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    sim, _ = build_model(idx, ws, targets["mf6"])
+    sim.write_simulation()
+    sim.run_simulation()

@@ -1,5 +1,6 @@
 module GwfNpfModule
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
                              DLNLOW, DLNHIGH, &
@@ -102,8 +103,9 @@ module GwfNpfModule
     integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
-    !
+
   contains
+
     procedure :: npf_df
     procedure :: npf_ac
     procedure :: npf_mc
@@ -143,18 +145,15 @@ module GwfNpfModule
     procedure, public :: increase_edge_count
     procedure, public :: set_edge_properties
     procedure, public :: calcSatThickness
+
   end type
 
 contains
 
+  !> @brief Create a new NPF object. Pass a inunit value of 0 if npf data will
+  !! initialized from memory
+  !<
   subroutine npf_cr(npfobj, name_model, input_mempath, inunit, iout)
-! ******************************************************************************
-! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
-!           initialized from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -164,31 +163,23 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    ! -- locals
-    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
        &' INPUT READ FROM MEMPATH: ', A, /)"
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (npfobj)
     !
     ! -- create name and memory path
-    call npfobj%set_names(1, name_model, 'NPF', 'NPF')
+    call npfobj%set_names(1, name_model, 'NPF', 'NPF', input_mempath)
     !
     ! -- Allocate scalars
     call npfobj%allocate_scalars()
     !
     ! -- Set variables
-    npfobj%input_mempath = input_mempath
     npfobj%inunit = inunit
     npfobj%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(npfobj%input_fname, 'INPUT_FNAME', npfobj%input_mempath, &
-                       found_fname)
     !
     ! -- check if npf is enabled
     if (inunit > 0) then
@@ -201,7 +192,7 @@ contains
     return
   end subroutine npf_cr
 
-  !> @brief define the NPF package instance
+  !> @brief Define the NPF package instance
   !!
   !! This is a hybrid routine: it either reads the options for this package
   !! from the input file, or the optional argument @param npf_options
@@ -209,12 +200,6 @@ contains
   !! xt3d_df is called, when enabled.
   !<
   subroutine npf_df(this, dis, xt3d, ingnc, invsc, npf_options)
-! ******************************************************************************
-! npf_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     use Xt3dModule, only: xt3d_cr
@@ -225,9 +210,6 @@ contains
     integer(I4B), intent(in) :: ingnc !< ghostnodes enabled? (>0 means yes)
     integer(I4B), intent(in) :: invsc !< viscosity enabled? (>0 means yes)
     type(GwfNpfOptionsType), optional, intent(in) :: npf_options !< the optional options, for when not constructing from file
-    ! -- local
-    ! -- data
-! ------------------------------------------------------------------------------
     !
     ! -- Set a pointer to dis
     this%dis => dis
@@ -252,7 +234,7 @@ contains
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
     end if
-
+    !
     call this%check_options()
     !
     ! -- Save pointer to xt3d object
@@ -271,21 +253,15 @@ contains
     return
   end subroutine npf_df
 
+  !> @brief Add connections for extended neighbors to the sparse matrix
+  !<
   subroutine npf_ac(this, moffset, sparse)
-! ******************************************************************************
-! npf_ac -- Add connections for extended neighbors to the sparse matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
     if (this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse)
@@ -294,20 +270,13 @@ contains
     return
   end subroutine npf_ac
 
+  !> @brief Map connections and construct iax, jax, and idxglox
+  !<
   subroutine npf_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! npf_mc -- Map connections and construct iax, jax, and idxglox
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
     class(MatrixBaseType), pointer :: matrix_sln
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
     !
@@ -315,18 +284,12 @@ contains
     return
   end subroutine npf_mc
 
-  !> @brief allocate and read this NPF instance
+  !> @brief Allocate and read this NPF instance
   !!
   !! Allocate remaining package arrays, preprocess the input data and
   !! call *_ar on xt3d, when active.
   !<
   subroutine npf_ar(this, ic, vsc, ibound, hnew)
-! ******************************************************************************
-! npf_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
@@ -337,9 +300,6 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-    ! -- data
-! ------------------------------------------------------------------------------
     !
     ! -- Store pointers to arguments that were passed in
     this%ic => ic
@@ -361,7 +321,6 @@ contains
     if (this%invsc /= 0) then
       this%vsc => vsc
     end if
-
     !
     ! -- allocate arrays to store original user input in case TVK/VSC modify them
     if (this%invsc > 0) then
@@ -403,10 +362,10 @@ contains
   !> @brief Read and prepare method for package
   !!
   !! Read and prepare NPF stress period data.
-  !!
   !<
   subroutine npf_rp(this)
     implicit none
+    ! -- dummy
     class(GwfNpfType) :: this
     !
     ! -- TVK
@@ -414,27 +373,27 @@ contains
       call this%tvk%rp()
     end if
     !
+    ! -- Return
     return
   end subroutine npf_rp
 
+  !> @brief Advance
+  !!
+  !! Sets hold (head old) to bot whenever a wettable cell is dry
+  !<
   subroutine npf_ad(this, nodes, hold, hnew, irestore)
-! ******************************************************************************
-! npf_ad -- Advance
-! Subroutine (1) Sets hold to bot whenever a wettable cell is dry
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: kper, kstp
     !
     implicit none
+    ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(inout) :: hold
     real(DP), dimension(nodes), intent(inout) :: hnew
     integer(I4B), intent(in) :: irestore
+    ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- loop through all cells and set hold=bot if wettable cell is dry
     if (this%irewet > 0) then
@@ -487,13 +446,9 @@ contains
     return
   end subroutine npf_ad
 
+  !> @brief Routines associated fill coefficients
+  !<
   subroutine npf_cf(this, kiter, nodes, hnew)
-! ******************************************************************************
-! npf_cf -- Formulate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
@@ -502,7 +457,6 @@ contains
     ! -- local
     integer(I4B) :: n
     real(DP) :: satn
-! ------------------------------------------------------------------------------
     !
     ! -- Perform wetting and drying
     if (this%inewton /= 1) then
@@ -525,13 +479,9 @@ contains
     return
   end subroutine npf_cf
 
+  !> @brief Formulate coefficients
+  !<
   subroutine npf_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
-! ******************************************************************************
-! npf_fc -- Formulate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DONE
     ! -- dummy
@@ -546,7 +496,6 @@ contains
     integer(I4B) :: isymcon, idiagm
     real(DP) :: hyn, hym
     real(DP) :: cond
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate conductance and put into amat
     !
@@ -639,13 +588,9 @@ contains
     return
   end subroutine npf_fc
 
+  !> @brief Fill newton terms
+  !<
   subroutine npf_fn(this, kiter, matrix_sln, idxglo, rhs, hnew)
-! ******************************************************************************
-! npf_fn -- Fill newton terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
@@ -670,10 +615,8 @@ contains
     real(DP) :: botup
     real(DP) :: topdn
     real(DP) :: botdn
-! ------------------------------------------------------------------------------
     !
     ! -- add newton terms to solution matrix
-    !
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (this%ixt3d /= 0) then
@@ -784,16 +727,12 @@ contains
     return
   end subroutine npf_fn
 
+  !> @brief Under-relaxation
+  !!
+  !! Under-relaxation of Groundwater Flow Model Heads for current outer
+  !! iteration using the cell bottoms at the bottom of the model
+  !<
   subroutine npf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
-! ******************************************************************************
-! bnd_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
-!                 outer iteration using the cell bottoms at the bottom of the
-!                 model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: neqmod
@@ -808,8 +747,6 @@ contains
     real(DP) :: botm
     real(DP) :: xx
     real(DP) :: dxx
-! ------------------------------------------------------------------------------
-
     !
     ! -- Newton-Raphson under-relaxation
     do n = 1, this%dis%nodes
@@ -832,17 +769,13 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine npf_nur
 
+  !> @brief Calculate flowja
+  !<
   subroutine npf_cq(this, hnew, flowja)
-! ******************************************************************************
-! npf_cq -- Calculate flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     real(DP), intent(inout), dimension(:) :: hnew
@@ -850,7 +783,6 @@ contains
     ! -- local
     integer(I4B) :: n, ipos, m
     real(DP) :: qnm
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow across each cell face and store in flowja
     !
@@ -874,19 +806,14 @@ contains
     return
   end subroutine npf_cq
 
+  !> @brief Fractional cell saturation
+  !<
   subroutine sgwf_npf_thksat(this, n, hn, thksat)
-! ******************************************************************************
-! sgwf_npf_thksat -- Fractional cell saturation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: hn
     real(DP), intent(inout) :: thksat
-! ------------------------------------------------------------------------------
     !
     ! -- Standard Formulation
     if (hn >= this%dis%top(n)) then
@@ -906,13 +833,9 @@ contains
     return
   end subroutine sgwf_npf_thksat
 
+  !> @brief Flow between two cells
+  !<
   subroutine sgwf_npf_qcalc(this, n, m, hn, hm, icon, qnm)
-! ******************************************************************************
-! sgwf_npf_qcalc -- Flow between two cells
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: n
@@ -926,7 +849,6 @@ contains
     real(DP) :: condnm
     real(DP) :: hntemp, hmtemp
     integer(I4B) :: ihc
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     ihc = this%dis%con%ihc(this%dis%con%jas(icon))
@@ -986,13 +908,9 @@ contains
     return
   end subroutine sgwf_npf_qcalc
 
+  !> @brief Record flowja and calculate specific discharge if requested
+  !<
   subroutine npf_save_model_flows(this, flowja, icbcfl, icbcun)
-! ******************************************************************************
-! npf_save_model_flows -- Record flowja and calculate specific discharge if requested
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
     real(DP), dimension(:), intent(in) :: flowja
@@ -1000,9 +918,6 @@ contains
     integer(I4B), intent(in) :: icbcun
     ! -- local
     integer(I4B) :: ibinun
-    !data
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -1033,13 +948,9 @@ contains
     return
   end subroutine npf_save_model_flows
 
+  !> @brief Print budget
+  !<
   subroutine npf_print_model_flows(this, ibudfl, flowja)
-! ******************************************************************************
-! npf_ot -- Budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, kstp
     use ConstantsModule, only: LENBIGLINE
@@ -1055,7 +966,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtiprflow = &
       &"(/,4x,'CALCULATED INTERCELL FLOW FOR PERIOD ', i0, ' STEP ', i0)"
-! ------------------------------------------------------------------------------
     !
     ! -- Write flowja to list file if requested
     if (ibudfl /= 0 .and. this%iprflow > 0) then
@@ -1080,19 +990,14 @@ contains
     return
   end subroutine npf_print_model_flows
 
+  !> @brief Deallocate variables
+  !<
   subroutine npf_da(this)
-! ******************************************************************************
-! npf_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfNpftype) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate input memory
     call memorylist_remove(this%name_model, 'NPF', idm_context)
@@ -1182,14 +1087,12 @@ contains
   !!
   !! Allocate and initialize scalars for the VSC package. The base model
   !! allocate scalars method is also called.
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfNpftype) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -1284,14 +1187,12 @@ contains
   !> @ brief Store backup copy of hydraulic conductivity when the VSC
   !!         package is activate
   !!
-  !! The K arrays (K11, etc.) get multiplied by the viscosity ratio
-  !! so that subsequent uses of K already take into account the effect
-  !! of viscosity. Thus the original user-specified K array values are
-  !! lost unless they are backed up in k11input, for example.  In a new
-  !! stress period/time step, the values in k11input are multiplied by
-  !! the viscosity ratio, not k11 since it contains viscosity-adjusted
-  !! hydraulic conductivity values.
-  !!
+  !! The K arrays (K11, etc.) get multiplied by the viscosity ratio so that
+  !! subsequent uses of K already take into account the effect of viscosity.
+  !! Thus the original user-specified K array values are lost unless they are
+  !! backed up in k11input, for example.  In a new stress period/time step,
+  !! the values in k11input are multiplied by the viscosity ratio, not k11
+  !! since it contains viscosity-adjusted hydraulic conductivity values.
   !<
   subroutine store_original_k_arrays(this, ncells, njas)
     ! -- modules
@@ -1302,7 +1203,6 @@ contains
     integer(I4B), intent(in) :: njas
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- Retain copy of user-specified K arrays
     do n = 1, ncells
@@ -1315,21 +1215,15 @@ contains
     return
   end subroutine store_original_k_arrays
 
+  !> @brief Allocate npf arrays
+  !<
   subroutine allocate_arrays(this, ncells, njas)
-! ******************************************************************************
-! allocate_arrays -- Allocate npf arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%ithickstartflag, ncells, 'ITHICKSTARTFLAG', &
                       this%memoryPath)
@@ -1379,17 +1273,13 @@ contains
                   '                  WETDRY', '                  ANGLE1', &
                   '                  ANGLE2', '                  ANGLE3']
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_arrays
 
+  !> @brief Log npf options sourced from the input mempath
+  !<
   subroutine log_options(this, found)
-! ******************************************************************************
-! log_options -- log npf options sourced from the input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use GwfNpfInputModule, only: GwfNpfParamFoundType
@@ -1397,7 +1287,6 @@ contains
     class(GwfNpftype) :: this
     ! -- locals
     type(GwfNpfParamFoundType), intent(in) :: found
-! ------------------------------------------------------------------------------
     !
     write (this%iout, '(1x,a)') 'Setting NPF Options'
     if (found%iprflow) &
@@ -1464,19 +1353,21 @@ contains
       write (this%iout, '(4x,a,i5)') &
       'Head rewet equation (IHDWET) has been set to: ', this%ihdwet
     write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
-
+    !
+    ! -- Return
+    return
   end subroutine log_options
 
+  !> @brief Update simulation options from input mempath
+  !<
   subroutine source_options(this)
-! ******************************************************************************
-! source_options -- update simulation options from input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: store_error, store_error_filename
+    use MemoryManagerModule, only: mem_setptr, get_isize
     use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
+    use SourceCommonModule, only: filein_fname
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
@@ -1484,7 +1375,6 @@ contains
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
     character(len=LINELENGTH) :: tvk6_filename
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%iprflow, 'IPRFLOW', this%input_mempath, found%iprflow)
@@ -1508,8 +1398,6 @@ contains
                        found%ik22overk)
     call mem_set_value(this%ik33overk, 'IK33OVERK', this%input_mempath, &
                        found%ik33overk)
-    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
-                       found%tvk6_filename)
     call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
@@ -1531,17 +1419,17 @@ contains
     ! -- save specific discharge active
     if (found%isavspdis) this%icalcspdis = this%isavspdis
     !
-    ! -- TVK6 subpackage file spec provided
-    if (found%tvk6_filename) then
-      this%intvk = GetUnit()
-      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
-      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
-    end if
-    !
     ! -- no newton specified
     if (found%inewton) then
       this%inewton = 0
       this%iasym = 0
+    end if
+    !
+    ! -- enforce 0 or 1 TVK6_FILENAME entries in option block
+    if (filein_fname(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
+                     this%input_fname)) then
+      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
+      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
     end if
     !
     ! -- log options
@@ -1553,10 +1441,13 @@ contains
     return
   end subroutine source_options
 
+  !> @brief Set options in the NPF object
+  !<
   subroutine set_options(this, options)
+    ! -- dummy
     class(GwfNpftype) :: this
     type(GwfNpfOptionsType), intent(in) :: options
-
+    !
     this%icellavg = options%icellavg
     this%ithickstrt = options%ithickstrt
     this%iperched = options%iperched
@@ -1566,24 +1457,20 @@ contains
     this%wetfct = options%wetfct
     this%iwetit = options%iwetit
     this%ihdwet = options%ihdwet
-
+    !
+    ! -- Return
+    return
   end subroutine set_options
 
+  !> @brief Check for conflicting NPF options
+  !<
   subroutine check_options(this)
-! ******************************************************************************
-! check_options -- Check for conflicting NPF options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, count_errors, store_error_filename
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
+    !
     ! -- check if this%iusgnrhc has been enabled for a model that is not using
     !    the Newton-Raphson formulation
     if (this%iusgnrhc > 0 .and. this%inewton == 0) then
@@ -1684,59 +1571,59 @@ contains
   !> @brief Write dimensions to list file
   !<
   subroutine log_griddata(this, found)
+    ! -- modules
     use GwfNpfInputModule, only: GwfNpfParamFoundType
+    ! -- dummy
     class(GwfNpfType) :: this
     type(GwfNpfParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting NPF Griddata'
-
+    !
     if (found%icelltype) then
       write (this%iout, '(4x,a)') 'ICELLTYPE set from input file'
     end if
-
+    !
     if (found%k) then
       write (this%iout, '(4x,a)') 'K set from input file'
     end if
-
+    !
     if (found%k33) then
       write (this%iout, '(4x,a)') 'K33 set from input file'
     else
       write (this%iout, '(4x,a)') 'K33 not provided.  Setting K33 = K.'
     end if
-
+    !
     if (found%k22) then
       write (this%iout, '(4x,a)') 'K22 set from input file'
     else
       write (this%iout, '(4x,a)') 'K22 not provided.  Setting K22 = K.'
     end if
-
+    !
     if (found%wetdry) then
       write (this%iout, '(4x,a)') 'WETDRY set from input file'
     end if
-
+    !
     if (found%angle1) then
       write (this%iout, '(4x,a)') 'ANGLE1 set from input file'
     end if
-
+    !
     if (found%angle2) then
       write (this%iout, '(4x,a)') 'ANGLE2 set from input file'
     end if
-
+    !
     if (found%angle3) then
       write (this%iout, '(4x,a)') 'ANGLE3 set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting NPF Griddata'
-
+    !
+    ! -- Return
+    return
   end subroutine log_griddata
 
+  !> @brief Update simulation griddata from input mempath
+  !<
   subroutine source_griddata(this)
-! ******************************************************************************
-! source_griddata -- update simulation griddata from input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_reallocate
@@ -1749,8 +1636,6 @@ contains
     type(GwfNpfParamFoundType) :: found
     logical, dimension(2) :: afound
     integer(I4B), dimension(:), pointer, contiguous :: map
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- set map to convert user input data into reduced data
     map => null()
@@ -1828,13 +1713,10 @@ contains
     return
   end subroutine source_griddata
 
+  !> @brief Initialize and check NPF data
+  !<
   subroutine prepcheck(this)
-! ******************************************************************************
-! prepcheck -- Initialize and check NPF data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH, DPIO180
     use SimModule, only: store_error, count_errors, store_error_filename
     ! -- dummy
@@ -1848,7 +1730,6 @@ contains
       &"(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
     character(len=*), parameter :: fmtkerr2 = &
       &"(1x, '... ', i0,' additional errors not shown for ',a)"
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     aname => this%aname
@@ -1983,7 +1864,8 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-
+    !
+    ! -- Return
     return
   end subroutine prepcheck
 
@@ -1998,10 +1880,12 @@ contains
   !! 5. If NEWTON under-relaxation, determine lower most node
   !<
   subroutine preprocess_input(this)
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_filename
+    ! -- dummy
     class(GwfNpfType) :: this !< the instance of the NPF package
-    ! local
+    ! -- local
     integer(I4B) :: n, m, ii, nn
     real(DP) :: hyn, hym
     real(DP) :: satn, topn, botn
@@ -2009,7 +1893,7 @@ contains
     real(DP) :: minbot, botm
     logical :: finished
     character(len=LINELENGTH) :: cellstr, errmsg
-    ! format strings
+    ! -- format
     character(len=*), parameter :: fmtcnv = &
       "(1X,'CELL ', A, &
       &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
@@ -2193,14 +2077,12 @@ contains
     !
     ! -- Return
     return
-
   end subroutine preprocess_input
 
   !> @brief Calculate CONDSAT array entries for the given node
   !!
   !! Calculate saturated conductances for all connections of the given node,
   !! or optionally for the upper portion of the matrix only.
-  !!
   !<
   subroutine calc_condsat(this, node, upperOnly)
     ! -- dummy variables
@@ -2290,6 +2172,7 @@ contains
       this%condsat(jj) = csat
     end do
     !
+    ! -- Return
     return
   end subroutine calc_condsat
 
@@ -2304,7 +2187,7 @@ contains
     ! -- dummy variables
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: n
-    ! -- return
+    ! -- Return
     real(DP) :: satn
     !
     satn = DONE
@@ -2315,13 +2198,9 @@ contains
     return
   end function calc_initial_sat
 
+  !> @brief Perform wetting and drying
+  !<
   subroutine sgwf_npf_wetdry(this, kiter, hnew)
-! ******************************************************************************
-! sgwf_npf_wetdry -- Perform wetting and drying
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     use SimModule, only: store_error, store_error_filename
@@ -2351,7 +2230,7 @@ contains
       &"(1X,/1X,'CONSTANT-HEAD CELL WENT DRY -- SIMULATION ABORTED')"
     character(len=*), parameter :: fmtni = &
       &"(1X,'CELLID=',a,' ITERATION=',I0,' TIME STEP=',I0,' STRESS PERIOD=',I0)"
-! ------------------------------------------------------------------------------
+    !
     ! -- Initialize
     ncnvrt = 0
     ihdcnv = 0
@@ -2394,7 +2273,6 @@ contains
       thck = ttop - bbot
       !
       ! -- If thck<0 print message, set hnew, and ibound
-!      if(thck<0) then
       if (thck <= DZERO) then
         call this%wdmsg(1, ncnvrt, nodcnvrt, acnvrt, ihdcnv, kiter, n)
         hnew(n) = this%hdry
@@ -2424,18 +2302,14 @@ contains
     return
   end subroutine sgwf_npf_wetdry
 
+  !> @brief Determine if a cell should rewet
+  !!
+  !! This method can be called from any external object that has a head that
+  !! can be used to rewet the GWF cell node.  The ihc value is used to
+  !! determine if it is a vertical or horizontal connection, which can operate
+  !! differently depending on user settings.
+  !<
   subroutine rewet_check(this, kiter, node, hm, ibdm, ihc, hnew, irewet)
-! ******************************************************************************
-! rewet_check -- Determine if a cell should rewet.  This method can
-!   be called from any external object that has a head that can be used to
-!   rewet the GWF cell node.  The ihc value is used to determine if it is a
-!   vertical or horizontal connection, which can operate differently depending
-!   on user settings.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: kiter
@@ -2448,8 +2322,6 @@ contains
     ! -- local
     integer(I4B) :: itflg
     real(DP) :: wd, awd, turnon, bbot
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     irewet = 0
     !
@@ -2498,14 +2370,10 @@ contains
     return
   end subroutine rewet_check
 
+  !> @brief Print wet/dry message
+  !<
   subroutine sgwf_npf_wdmsg(this, icode, ncnvrt, nodcnvrt, acnvrt, ihdcnv, &
                             kiter, n)
-! ******************************************************************************
-! sgwf_npf_wdmsg -- Print wet/dry message
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
@@ -2524,7 +2392,7 @@ contains
       "(1X,/1X,'CELL CONVERSIONS FOR ITER.=',I0, &
        &'  STEP=',I0,'  PERIOD=',I0,'   (NODE or LRC)')"
     character(len=*), parameter :: fmtnode = "(1X,3X,5(A4, A20))"
-! ------------------------------------------------------------------------------
+    !
     ! -- Keep track of cell conversions
     if (icode > 0) then
       ncnvrt = ncnvrt + 1
@@ -2550,22 +2418,17 @@ contains
     return
   end subroutine sgwf_npf_wdmsg
 
+  !> @brief Calculate the effective hydraulic conductivity for the n-m connection
+  !!
+  !! n is primary node node number
+  !! m is connected node (not used if vg is provided)
+  !! ihc is horizontal indicator (0 vertical, 1 horizontal, 2 vertically
+  !!   staggered)
+  !! ipos_opt is position of connection in ja array
+  !! vg is the global unit vector that expresses the direction from which to
+  !!   calculate an effective hydraulic conductivity.
+  !<
   function hy_eff(this, n, m, ihc, ipos, vg) result(hy)
-! ******************************************************************************
-! hy_eff -- Calculate the effective hydraulic conductivity for the n-m
-!   connection.
-!     n is primary node node number
-!     m is connected node (not used if vg is provided)
-!     ihc is horizontal indicator (0 vertical, 1 horizontal, 2 vertically
-!       staggered)
-!     ipos_opt is position of connection in ja array
-!     vg is the global unit vector that expresses the direction from which to
-!       calculate an effective hydraulic conductivity.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- return
     real(DP) :: hy
     ! -- dummy
@@ -2580,8 +2443,6 @@ contains
     real(DP) :: hy11, hy22, hy33
     real(DP) :: ang1, ang2, ang3
     real(DP) :: vg1, vg2, vg3
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     iipos = 0
@@ -2647,22 +2508,19 @@ contains
     return
   end function hy_eff
 
+  !> @brief Horizontal conductance between two cells
+  !!
+  !! inwtup: if 1, then upstream-weight condsat, otherwise recalculate
+  !!
+  !! This function uses a weighted transmissivity in the harmonic mean
+  !! conductance calculations. This differs from the MODFLOW-NWT and
+  !! MODFLOW-USG conductance calculations for the Newton-Raphson formulation
+  !! which use a weighted hydraulic conductivity.
+  !<
   function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, iusg, &
                  iupw, condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
                  botn, botm, cln, clm, fawidth, satomega, satminopt) &
     result(condnm)
-! ******************************************************************************
-! hcond -- Horizontal conductance between two cells
-!   inwtup: if 1, then upstream-weight condsat, otherwise recalculate
-!
-! hcond function uses a weighted transmissivity in the harmonic mean
-! conductance calculations. This differs from the MODFLOW-NWT and MODFLOW-USG
-! conductance calculations for the Newton-Raphson formulation which use a
-! weighted hydraulic conductivity.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: condnm
     ! -- dummy
@@ -2704,7 +2562,7 @@ contains
     real(DP) :: top, bot
     real(DP) :: athk
     real(DP) :: afac
-! ------------------------------------------------------------------------------
+    !
     if (present(satminopt)) then
       satmin = satminopt
     else
@@ -2752,7 +2610,7 @@ contains
           sn = sQuadraticSaturation(topn, botn, hn, satomega, satmin)
           sm = sQuadraticSaturation(topm, botm, hm, satomega, satmin)
         end if
-
+        !
         if (hn > hm) then
           condnm = sn
         else
@@ -2793,7 +2651,7 @@ contains
           thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
           thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
         end if
-
+        !
         athk = DONE
         if (iusg == 1) then
           if (ihc == 2) then
@@ -2814,15 +2672,11 @@ contains
     return
   end function hcond
 
+  !> @brief Vertical conductance between two cells
+  !<
   function vcond(ibdn, ibdm, ictn, ictm, inewton, ivarcv, idewatcv, &
                  condsat, hn, hm, vkn, vkm, satn, satm, topn, topm, botn, &
                  botm, flowarea) result(condnm)
-! ******************************************************************************
-! vcond -- Vertical conductance between two cells
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: condnm
     ! -- dummy
@@ -2850,7 +2704,6 @@ contains
     real(DP) :: bovk1
     real(DP) :: bovk2
     real(DP) :: denom
-! ------------------------------------------------------------------------------
     !
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -2900,30 +2753,26 @@ contains
     return
   end function vcond
 
+  !> @brief Calculate the conductance between two cells
+  !!
+  !! k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
+  !! k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
+  !! thick1 is the saturated thickness for cell 1
+  !! thick2 is the saturated thickness for cell 2
+  !! cl1 is the distance from the center of cell1 to the shared face with cell2
+  !! cl2 is the distance from the center of cell2 to the shared face with cell1
+  !! h1 is the head for cell1
+  !! h2 is the head for cell2
+  !! width is the width perpendicular to flow
+  !! iavgmeth is the averaging method:
+  !!   0 is harmonic averaging
+  !!   1 is logarithmic averaging
+  !!   2 is arithmetic averaging of sat thickness and logarithmic averaging of
+  !!     hydraulic conductivity
+  !!   3 is arithmetic averaging of sat thickness and harmonic averaging of
+  !!     hydraulic conductivity
+  !<
   function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
-! ******************************************************************************
-! condmean -- Calculate the conductance between two cells
-!
-!   k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
-!   k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
-!   thick1 is the saturated thickness for cell 1
-!   thick2 is the saturated thickness for cell 2
-!   cl1 is the distance from the center of cell1 to the shared face with cell2
-!   cl2 is the distance from the center of cell2 to the shared face with cell1
-!   h1 is the head for cell1
-!   h2 is the head for cell2
-!   width is the width perpendicular to flow
-!   iavgmeth is the averaging method:
-!     0 is harmonic averaging
-!     1 is logarithmic averaging
-!     2 is arithmetic averaging of sat thickness and logarithmic averaging of
-!       hydraulic conductivity
-!     3 is arithmetic averaging of sat thickness and harmonic averaging of
-!       hydraulic conductivity
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: condmean
     ! -- dummy
@@ -2939,7 +2788,6 @@ contains
     real(DP) :: t1
     real(DP) :: t2
     real(DP) :: tmean, kmean, denom
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     t1 = k1 * thick1
@@ -2990,14 +2838,11 @@ contains
     return
   end function condmean
 
+  !> @brief Calculate the the logarithmic mean of two double precision numbers
+  !!
+  !! Use an approximation if the ratio is near 1
+  !<
   function logmean(d1, d2)
-! ******************************************************************************
-! logmean -- Calculate the the logarithmic mean of two double precision
-!            numbers.  Use an approximation if the ratio is near 1.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: logmean
     ! -- dummy
@@ -3005,7 +2850,6 @@ contains
     real(DP), intent(in) :: d2
     ! -- local
     real(DP) :: drat
-! ------------------------------------------------------------------------------
     !
     drat = d2 / d1
     if (drat <= DLNLOW .or. drat >= DLNHIGH) then
@@ -3018,31 +2862,28 @@ contains
     return
   end function logmean
 
+  !> @brief Calculate the effective horizontal hydraulic conductivity from an
+  !! ellipse using a specified direction (unit vector vg1, vg2, vg3)
+  !!
+  !! k11 is the hydraulic conductivity of the major ellipse axis
+  !! k22 is the hydraulic conductivity of first minor axis
+  !! k33 is the hydraulic conductivity of the second minor axis
+  !! ang1 is the counter-clockwise rotation (radians) of the ellipse in
+  !!   the (x, y) plane
+  !! ang2 is the rotation of the conductivity ellipsoid upward or
+  !!   downward from the (x, y) plane
+  !! ang3 is the rotation of the conductivity ellipsoid about the major
+  !!   axis
+  !! vg1, vg2, and vg3 are the components of a unit vector in model coordinates
+  !!   in the direction of the connection between cell n and m
+  !!iavgmeth is the averaging method.  If zero, then use harmonic averaging.
+  !!   if one, then use arithmetic averaging.
+  !<
   function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3, &
                       iavgmeth) result(hyeff)
-! ******************************************************************************
-! hyeff_calc -- Calculate the effective horizontal hydraulic conductivity from
-!   an ellipse using a specified direction (unit vector vg1, vg2, vg3).
-!   k11 is the hydraulic conductivity of the major ellipse axis
-!   k22 is the hydraulic conductivity of first minor axis
-!   k33 is the hydraulic conductivity of the second minor axis
-!   ang1 is the counter-clockwise rotation (radians) of the ellipse in
-!     the (x, y) plane
-!   ang2 is the rotation of the conductivity ellipsoid upward or
-!     downward from the (x, y) plane
-!   ang3 is the rotation of the conductivity ellipsoid about the major
-!     axis
-!   vg1, vg2, and vg3 are the components of a unit vector in model coordinates
-!     in the direction of the connection between cell n and m
-!  iavgmeth is the averaging method.  If zero, then use harmonic averaging.
-!     if one, then use arithmetic averaging.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DONE
-    ! -- result
+    ! -- return
     real(DP) :: hyeff
     ! -- dummy
     real(DP), intent(in) :: k11
@@ -3060,7 +2901,6 @@ contains
     real(DP), dimension(3, 3) :: r
     real(DP) :: ve1, ve2, ve3
     real(DP) :: denom, dnum, d1, d2, d3
-! ------------------------------------------------------------------------------
     !
     ! -- Sin and cos of angles
     s1 = sin(ang1)
@@ -3124,14 +2964,9 @@ contains
     return
   end function hyeff_calc
 
+  !> @brief Calculate the 3 conmponents of specific discharge at the cell center
+  !<
   subroutine calc_spdis(this, flowja)
-! ******************************************************************************
-! calc_spdis -- Calculate the 3 conmponents of specific discharge
-!     at the cell center.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
@@ -3181,7 +3016,6 @@ contains
     real(DP), allocatable, dimension(:) :: bix
     real(DP), allocatable, dimension(:) :: biy
     logical :: nozee = .true.
-! ------------------------------------------------------------------------------
     !
     ! -- Ensure dis has necessary information
     if (this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
@@ -3423,18 +3257,13 @@ contains
     deallocate (bix)
     deallocate (biy)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine calc_spdis
 
+  !> @brief Save specific discharge in binary format to ibinun
+  !<
   subroutine sav_spdis(this, ibinun)
-! ******************************************************************************
-! sav_spdis -- save specific discharge in binary format to ibinun
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: ibinun
@@ -3443,7 +3272,6 @@ contains
     character(len=16), dimension(3) :: auxtxt
     integer(I4B) :: n
     integer(I4B) :: naux
-! ------------------------------------------------------------------------------
     !
     ! -- Write the header
     text = '      DATA-SPDIS'
@@ -3460,18 +3288,13 @@ contains
                                           this%spdis(:, n))
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sav_spdis
 
+  !> @brief Save saturation in binary format to ibinun
+  !<
   subroutine sav_sat(this, ibinun)
-! ******************************************************************************
-! sav_sat -- save saturation in binary format to ibinun
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: ibinun
@@ -3481,7 +3304,6 @@ contains
     real(DP), dimension(1) :: a
     integer(I4B) :: n
     integer(I4B) :: naux
-! ------------------------------------------------------------------------------
     !
     ! -- Write the header
     text = '        DATA-SAT'
@@ -3498,41 +3320,30 @@ contains
       call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux, a)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sav_sat
 
+  !> @brief Reserve space for nedges cells that have an edge on them.
+  !!
+  !! This must be called before the npf%allocate_arrays routine, which is
+  !! called from npf%ar.
+  !<
   subroutine increase_edge_count(this, nedges)
-! ******************************************************************************
-! increase_edge_count -- reserve space for nedges cells that have an edge on them.
-!   This must be called before the npf%allocate_arrays routine, which is called
-!   from npf%ar.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: nedges
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     this%nedges = this%nedges + nedges
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine increase_edge_count
 
+  !> @brief Provide the npf package with edge properties
+  !<
   subroutine set_edge_properties(this, nodedge, ihcedge, q, area, nx, ny, &
                                  distance)
-! ******************************************************************************
-! edge_count -- provide the npf package with edge properties.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B), intent(in) :: nodedge
@@ -3544,7 +3355,6 @@ contains
     real(DP), intent(in) :: distance
     ! -- local
     integer(I4B) :: lastedge
-! ------------------------------------------------------------------------------
     !
     this%lastedge = this%lastedge + 1
     lastedge = this%lastedge
@@ -3560,19 +3370,21 @@ contains
     !    edge properties assignment loop, so need to reset lastedge to 0
     if (this%lastedge == this%nedges) this%lastedge = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_edge_properties
 
   !> Calculate saturated thickness between cell n and m
   !<
   function calcSatThickness(this, n, m, ihc) result(satThickness)
+    ! -- dummy
     class(GwfNpfType) :: this !< this NPF instance
     integer(I4B) :: n !< node n
     integer(I4B) :: m !< node m
     integer(I4B) :: ihc !< 1 = horizonal connection, 0 for vertical
+    ! -- return
     real(DP) :: satThickness !< saturated thickness
-
+    !
     satThickness = thksatnm(this%ibound(n), &
                             this%ibound(m), &
                             this%icelltype(n), &
@@ -3590,19 +3402,16 @@ contains
                             this%dis%bot(m), &
                             this%satomega, &
                             this%satmin)
-
+    !
+    ! -- Return
+    return
   end function calcSatThickness
 
+  !> @brief Calculate saturated thickness at interface between two cells
+  !<
   function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg, &
                     hn, hm, satn, satm, topn, topm, botn, botm, &
                     satomega, satminopt) result(res)
-! ******************************************************************************
-! thksatnm -- calculate saturated thickness at interface between two cells
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- return
     real(DP) :: res
     ! -- dummy
@@ -3633,7 +3442,7 @@ contains
     real(DP) :: sill_top, sill_bot
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
-! ------------------------------------------------------------------------------
+    !
     if (present(satminopt)) then
       satmin = satminopt
     else

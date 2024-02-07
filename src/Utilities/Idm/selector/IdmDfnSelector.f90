@@ -1,24 +1,14 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use IdmGwfDfnSelectorModule, only: gwf_param_definitions, &
-                                     gwf_aggregate_definitions, &
-                                     gwf_block_definitions, &
-                                     gwf_idm_multi_package, &
-                                     gwf_idm_integrated
-  use IdmGwtDfnSelectorModule, only: gwt_param_definitions, &
-                                     gwt_aggregate_definitions, &
-                                     gwt_block_definitions, &
-                                     gwt_idm_multi_package, &
-                                     gwt_idm_integrated
-  use IdmSimDfnSelectorModule, only: sim_param_definitions, &
-                                     sim_aggregate_definitions, &
-                                     sim_block_definitions, &
-                                     sim_idm_multi_package, &
-                                     sim_idm_integrated
+  use IdmGwfDfnSelectorModule
+  use IdmGwtDfnSelectorModule
+  use IdmExgDfnSelectorModule
+  use IdmSimDfnSelectorModule
 
   implicit none
   private
@@ -27,6 +17,7 @@ module IdmDfnSelectorModule
   public :: block_definitions
   public :: idm_multi_package
   public :: idm_integrated
+  public :: idm_component
 
 contains
 
@@ -40,6 +31,8 @@ contains
       input_definition => gwf_param_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_param_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_param_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_param_definitions(subcomponent)
     case default
@@ -57,6 +50,8 @@ contains
       input_definition => gwf_aggregate_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_aggregate_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_aggregate_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_aggregate_definitions(subcomponent)
     case default
@@ -74,6 +69,8 @@ contains
       input_definition => gwf_block_definitions(subcomponent)
     case ('GWT')
       input_definition => gwt_block_definitions(subcomponent)
+    case ('EXG')
+      input_definition => exg_block_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_block_definitions(subcomponent)
     case default
@@ -90,6 +87,8 @@ contains
       multi_package = gwf_idm_multi_package(subcomponent)
     case ('GWT')
       multi_package = gwt_idm_multi_package(subcomponent)
+    case ('EXG')
+      multi_package = exg_idm_multi_package(subcomponent)
     case ('SIM')
       multi_package = sim_idm_multi_package(subcomponent)
     case default
@@ -110,11 +109,31 @@ contains
       integrated = gwf_idm_integrated(subcomponent)
     case ('GWT')
       integrated = gwt_idm_integrated(subcomponent)
+    case ('EXG')
+      integrated = exg_idm_integrated(subcomponent)
     case ('SIM')
       integrated = sim_idm_integrated(subcomponent)
     case default
     end select
     return
   end function idm_integrated
+
+  function idm_component(component) result(integrated)
+    character(len=*), intent(in) :: component
+    logical :: integrated
+    integrated = .false.
+    select case (component)
+    case ('GWF')
+      integrated = .true.
+    case ('GWT')
+      integrated = .true.
+    case ('EXG')
+      integrated = .true.
+    case ('SIM')
+      integrated = .true.
+    case default
+    end select
+    return
+  end function idm_component
 
 end module IdmDfnSelectorModule

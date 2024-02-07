@@ -11,8 +11,6 @@ The GWF Model reads a file called the Name File, which specifies most of the fil
 \subsection{Information for Existing MODFLOW Users}
 \input{gwf/info_existing_users.tex}
 
-\input{gwf/array_data.tex}
-
 \subsection{Units of Length and Time}
 The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.  For example, if hydraulic conductivity is entered in units of feet per day and pumpage as cubic meters per second, the program will run, but the results will be meaningless. Other processes generally are expected to work with consistent length and time units; however, other processes could conceivably place restrictions on which units are supported.
 

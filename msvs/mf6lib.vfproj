@@ -143,13 +143,15 @@
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
 		<File RelativePath="..\src\Utilities\compilerversion.fpp"/>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\src\Utilities\ErrorUtil.f90"/>
+		<File RelativePath="..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
+		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>

@@ -6,7 +6,7 @@
 !<
 module NumericalPackageModule
   ! -- modules
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENPACKAGENAME, LENMODELNAME, &
                              LENMEMPATH, LENFTYPE, LINELENGTH, &
                              LENVARNAME
@@ -28,7 +28,7 @@ module NumericalPackageModule
     character(len=LENMEMPATH) :: memoryPath = '' !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH) :: memoryPathModel = '' !< the location in the memory manager where the variables
                                                                                  !! of the parent model are stored
-    character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath
+    character(len=LENMEMPATH) :: input_mempath = '' !< input context mempath
     character(len=LINELENGTH), pointer :: input_fname => null() !< input file name
     character(len=LENFTYPE) :: filtyp = '' !< file type (CHD, DRN, RIV, etc.)
     character(len=LENFTYPE), pointer :: package_type => null() !< package type (same as filtyp) stored in memory manager
@@ -60,23 +60,25 @@ module NumericalPackageModule
 contains
   !
   !> @ brief Set package names
-    !!
-    !!  Method to assign the filtyp (ftype), the model name, and package name for
-    !!  a package. This method also creates the memoryPath and memoryPathModel that
-    !!  is used by the memory manager when variables are allocated.
-    !!
+  !!
+  !!  Method to assign the filtyp (ftype), the model name, and package name for
+  !!  a package. This method also creates the memoryPath and memoryPathModel that
+  !!  is used by the memory manager when variables are allocated.
+  !!
   !<
-  subroutine set_names(this, ibcnum, name_model, pakname, ftype)
+  subroutine set_names(this, ibcnum, name_model, pakname, ftype, input_mempath)
     ! -- dummy variables
     class(NumericalPackageType), intent(inout) :: this !< NumericalPackageType object
     integer(I4B), intent(in) :: ibcnum !< unique package number
     character(len=*), intent(in) :: name_model !< name of the model
     character(len=*), intent(in) :: pakname !< name of the package
     character(len=*), intent(in) :: ftype !< package type
+    character(len=*), optional, intent(in) :: input_mempath !< input_mempath
     !
     ! -- set names
     this%filtyp = ftype
     this%name_model = name_model
+    if (present(input_mempath)) this%input_mempath = input_mempath
     if (pakname == '') then
       write (this%packName, '(a, i0)') trim(ftype)//'-', ibcnum
     else
@@ -93,19 +95,17 @@ contains
     end if
     this%memoryPath = create_mem_path(name_model, this%packName)
     this%memoryPathModel = create_mem_path(name_model)
-    !
-    ! -- return
-    return
   end subroutine set_names
 
   !> @ brief Allocate package scalars
-    !!
-    !!  Allocate and initialize base numerical package scalars.
-    !!
+  !!
+  !!  Allocate and initialize base numerical package scalars.
+  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy variables
     class(NumericalPackageType) :: this !< NumericalPackageType object
     ! -- local variables
@@ -113,10 +113,9 @@ contains
     integer(I4B), pointer :: imodelprpak => null()
     integer(I4B), pointer :: imodelprflow => null()
     integer(I4B), pointer :: imodelpakcb => null()
+    logical(LGP) :: found
     !
     ! -- allocate scalars
-    call mem_allocate(this%input_mempath, LENMEMPATH, 'INPUT_MEMPATH', &
-                      this%memoryPath)
     call mem_allocate(this%input_fname, LINELENGTH, 'INPUT_FNAME', &
                       this%memoryPath)
     call mem_allocate(this%package_type, LENFTYPE, 'PACKAGE_TYPE', &
@@ -140,7 +139,6 @@ contains
     call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
     !
     ! -- initialize
-    this%input_mempath = ''
     this%input_fname = ''
     this%package_type = this%filtyp
     this%id = 0
@@ -160,14 +158,17 @@ contains
     imodelprflow => null()
     imodelpakcb => null()
     !
-    ! -- return
-    return
+    ! -- update input filename
+    if (this%input_mempath /= '') then
+      call mem_set_value(this%input_fname, 'INPUT_FNAME', &
+                         this%input_mempath, found)
+    end if
   end subroutine allocate_scalars
 
   !> @ brief Deallocate package scalars
-    !!
-    !!  Deallocate and initialize base numerical package scalars.
-    !!
+  !!
+  !!  Deallocate and initialize base numerical package scalars.
+  !!
   !<
   subroutine da(this)
     ! -- modules
@@ -176,7 +177,6 @@ contains
     class(NumericalPackageType) :: this !< NumericalPackageType object
     !
     ! -- deallocate
-    call mem_deallocate(this%input_mempath, 'INPUT_MEMPATH', this%memoryPath)
     call mem_deallocate(this%input_fname, 'INPUT_FNAME', this%memoryPath)
     call mem_deallocate(this%package_type, 'PACKAGE_TYPE', this%memoryPath)
     call mem_deallocate(this%id)
@@ -189,18 +189,15 @@ contains
     call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%ionper)
     call mem_deallocate(this%lastonper)
-    !
-    ! -- return
-    return
   end subroutine da
 
   !> @ brief Check ionper
-    !!
-    !!  Generic method to read and check ionperiod, which is used to determine
-    !!  if new period data should be read from the input file. The check of
-    !!  ionperiod also makes sure periods are increasing in subsequent period
-    !!  data blocks.
-    !!
+  !!
+  !!  Generic method to read and check ionperiod, which is used to determine
+  !!  if new period data should be read from the input file. The check of
+  !!  ionperiod also makes sure periods are increasing in subsequent period
+  !!  data blocks.
+  !!
   !<
   subroutine read_check_ionper(this)
     ! -- modules
@@ -221,15 +218,12 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine read_check_ionper
 
   !> @ brief Read griddata block for a package
-    !!
-    !!  Generic method to read data in the GRIDDATA block for a package.
-    !!
+  !!
+  !!  Generic method to read data in the GRIDDATA block for a package.
+  !!
   !<
   subroutine get_block_data(this, tags, lfound, varinames)
     ! -- modules
@@ -290,9 +284,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine get_block_data
 
 end module NumericalPackageModule

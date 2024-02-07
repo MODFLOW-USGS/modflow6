@@ -271,5 +271,5 @@ def compiler_argv(dir, exe):
     ),
 )
 def test_main(fn, function_tmpdir, targets):
-    mf6 = targets.as_dict()["mf6"]
+    mf6 = targets["mf6"]
     eval(fn)(function_tmpdir, mf6)

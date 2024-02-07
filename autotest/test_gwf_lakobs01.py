@@ -1,21 +1,19 @@
-# Test for checking lak observation input.  The following observation types:
-# 'lak', 'wetted-area', and 'conductance,' require that ID2 be provided when
-# ID is an integer corresponding to a lake number and not BOUNDNAME.
-# See table in LAK Package section of mf6io.pdf for an explanation of ID,
-# ID2, and Observation Type.
+"""
+Test for checking lak observation input.  The following observation types:
+'lak', 'wetted-area', and 'conductance,' require that ID2 be provided when
+ID is an integer corresponding to a lake number and not BOUNDNAME.
+See table in LAK Package section of mf6io.pdf for an explanation of ID,
+ID2, and Observation Type.
+"""
 
 
 import os
-import shutil
-import sys
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = "gwf_lakobs_01a"
+cases = "gwf_lakobs_01a"
 gwf = None
 
 
@@ -54,7 +52,7 @@ def build_model(dir, exe):
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
-    name = ex
+    name = cases
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -138,7 +136,7 @@ def build_model(dir, exe):
             irch[i, j] = k + 1
     nlakeconn = len(lake_vconnect)
 
-    # pak_data = [lakeno, strt, nlakeconn]
+    # pak_data = [ifno, strt, nlakeconn]
     initial_stage = 0.1
     pak_data = [(0, initial_stage, nlakeconn)]
 
@@ -206,13 +204,8 @@ def build_model(dir, exe):
 
 
 def test_mf6model(function_tmpdir, targets):
-    mf6 = targets["mf6"]
-
-    # initialize testing framework
-    test = TestFramework()
-
     # build the models
-    sim = build_model(str(function_tmpdir), mf6)
+    sim = build_model(str(function_tmpdir), targets["mf6"])
 
     # write model input
     sim.write_simulation()
@@ -235,8 +228,8 @@ def test_mf6model(function_tmpdir, targets):
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = str(function_tmpdir / (ex + ".lak.obs"))
-    new_fl = str(function_tmpdir / (ex + ".lak.obs.new"))
+    orig_fl = str(function_tmpdir / (cases + ".lak.obs"))
+    new_fl = str(function_tmpdir / (cases + ".lak.obs.new"))
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 

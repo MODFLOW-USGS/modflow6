@@ -1,13 +1,14 @@
 module DisvGeom
 
   use KindModule, only: DP, I4B
-  use InputOutputModule, only: get_node, get_jk
+  use GeomUtilModule, only: get_node, get_jk
   implicit none
   private
   public :: DisvGeomType
   public :: line_unit_vector
 
   type DisvGeomType
+
     integer(I4B) :: k
     integer(I4B) :: j
     integer(I4B) :: nodeusr
@@ -26,7 +27,9 @@ module DisvGeom
     real(DP), pointer, dimension(:, :) :: cellxy_grid => null()
     integer(I4B), pointer, dimension(:, :) :: nodereduced => null() ! nodered = nodereduced(nodeusr)
     integer(I4B), pointer, dimension(:) :: nodeuser => null() ! nodeusr = nodesuser(nodered)
+
   contains
+
     procedure :: init
     generic :: set => set_kj, set_nodered
     procedure :: set_kj
@@ -37,12 +40,16 @@ module DisvGeom
     procedure :: connection_vector
     procedure :: shares_edge
     procedure :: get_area
+
   end type DisvGeomType
 
 contains
 
+  !> @brief Initialize
+  !<
   subroutine init(this, nlay, ncpl, nodes, top_grid, bot_grid, iavert, &
                   javert, vertex_grid, cellxy_grid, nodereduced, nodeuser)
+    ! -- dummy
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: nlay
     integer(I4B), intent(in) :: ncpl
@@ -57,6 +64,7 @@ contains
     integer(I4B), dimension(nodes), target :: nodeuser
     ! -- local
     integer(I4B) :: nodesuser
+    !
     this%nlay = nlay
     this%ncpl = ncpl
     this%nodes = nodes
@@ -69,6 +77,7 @@ contains
     this%nodereduced => nodereduced
     this%nodeuser => nodeuser
     nodesuser = ncpl * nlay
+    !
     if (nodes < nodesuser) then
       this%reduced = .true.
     else
@@ -76,10 +85,14 @@ contains
     end if
   end subroutine init
 
+  !> @brief Set node IDs
+  !<
   subroutine set_kj(this, k, j)
+    ! -- dummy
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: k
     integer(I4B), intent(in) :: j
+    !
     this%k = k
     this%j = j
     this%nodeusr = get_node(k, 1, j, this%nlay, 1, this%ncpl)
@@ -89,25 +102,39 @@ contains
       this%nodered = this%nodeusr
     end if
     call this%cell_setup()
+    !
+    ! -- Return
     return
   end subroutine set_kj
 
+  !> @brief Set reduced node number
+  !<
   subroutine set_nodered(this, nodered)
+    ! -- dummy
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: nodered
+    !
     this%nodered = nodered
+    !
     if (this%reduced) then
       this%nodeusr = this%nodeuser(nodered)
     else
       this%nodeusr = nodered
     end if
+    !
     call get_jk(this%nodeusr, this%ncpl, this%nlay, this%j, this%k)
     call this%cell_setup()
+    !
+    ! -- Return
     return
   end subroutine set_nodered
 
+  !> @brief Set top and bottom elevations of grid cell
+  !<
   subroutine cell_setup(this)
+    ! -- dummy
     class(DisvGeomType) :: this
+    !
     this%top = this%top_grid(this%nodered)
     this%bot = this%bot_grid(this%nodered)
   end subroutine cell_setup
@@ -115,6 +142,7 @@ contains
   subroutine cprops(this, cell2, hwva, cl1, cl2, ax, ihc)
     ! -- module
     use ConstantsModule, only: DZERO, DHALF, DONE
+    ! -- dummy
     class(DisvGeomType) :: this
     type(DisvGeomType) :: cell2
     real(DP), intent(out) :: hwva
@@ -177,12 +205,14 @@ contains
         ax = anglex(x1, y1, x2, y2)
       end if
     end if
+    !
+    ! -- Return
     return
   end subroutine cprops
 
+  !> @brief Return the x and y components of an outward normal facing vector
+  !<
   subroutine edge_normal(this, cell2, xcomp, ycomp)
-    ! return the x and y components of an outward normal
-    ! facing vector
     ! -- module
     use ConstantsModule, only: DZERO, DHALF, DONE
     ! -- dummy
@@ -208,14 +238,17 @@ contains
     y2 = this%vertex_grid(2, ivert2)
     !
     call line_unit_normal(x1, y1, x2, y2, xcomp, ycomp)
+    !
+    ! -- Return
     return
   end subroutine edge_normal
 
+  !> @brief Return the x y and z components of a unit vector that points from
+  !! from the center of this to the center of cell2, and the straight-line
+  !! connection length
+  !<
   subroutine connection_vector(this, cell2, nozee, satn, satm, xcomp, &
                                ycomp, zcomp, conlen)
-    ! return the x y and z components of a unit vector that points
-    ! from the center of this to the center of cell2, and the
-    ! straight-line connection length
     ! -- module
     use ConstantsModule, only: DZERO, DHALF, DONE
     ! -- dummy
@@ -245,22 +278,23 @@ contains
     !
     call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, &
                           conlen)
+    !
+    ! -- Return
     return
   end subroutine connection_vector
 
+  !> @brief Return true if this shares a horizontal edge with cell2
+  !<
   function shares_edge(this, cell2) result(l)
-! ******************************************************************************
-! shares_edge -- Return true if this shares a horizontal edge with cell2
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(DisvGeomType) :: this
     type(DisvGeomType) :: cell2
+    ! -- return
     logical l
+    ! -- local
     integer(I4B) :: istart1, istop1, istart2, istop2
     integer(I4B) :: ivert1, ivert2
-! ------------------------------------------------------------------------------
+    !
     istart1 = this%iavert(this%j)
     istop1 = this%iavert(this%j + 1) - 1
     istart2 = cell2%iavert(cell2%j)
@@ -272,30 +306,29 @@ contains
     if (ivert1 == 0 .or. ivert2 == 0) then
       l = .false.
     end if
+    !
+    ! -- Return
     return
   end function shares_edge
 
+  !> @brief Find two common vertices shared by cell1 and cell2.
+  !!
+  !! Return 0 if there are no shared edges.  Proceed forward through ivlist1
+  !! and backward through ivlist2 as a clockwise face in cell1 must correspond
+  !! to a counter clockwise face in cell2.
+  !<
   subroutine shared_edge(ivlist1, ivlist2, ivert1, ivert2)
-! ******************************************************************************
-! shared_edge -- Find two common vertices shared by cell1 and cell2.
-!                ivert1 and ivert2 will return with 0 if there are
-!                no shared edges.  Proceed forward through ivlist1 and
-!                backward through ivlist2 as a clockwise face in cell1
-!                must correspond to a counter clockwise face in cell2
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     integer(I4B), dimension(:) :: ivlist1
     integer(I4B), dimension(:) :: ivlist2
     integer(I4B), intent(out) :: ivert1
     integer(I4B), intent(out) :: ivert2
+    ! -- local
     integer(I4B) :: nv1
     integer(I4B) :: nv2
     integer(I4B) :: il1
     integer(I4B) :: il2
     logical :: found
-! ------------------------------------------------------------------------------
     !
     found = .false.
     nv1 = size(ivlist1)
@@ -316,15 +349,12 @@ contains
     end do outerloop
   end subroutine shared_edge
 
+  !> @brief Calculate and return the area of the cell
+  !!
+  !! a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -
+  !!             (x2*y1 + x3*y2 + x4*y3 + ... + x1*yn)]
+  !<
   function get_area(this) result(area)
-! ******************************************************************************
-! get_cell2d_area -- Calculate and return the area of the cell
-!   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -
-!             (x2*y1 + x3*y2 + x4*y3 + ... + x1*yn)]
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use ConstantsModule, only: DZERO, DHALF
     ! -- dummy
@@ -335,13 +365,18 @@ contains
     integer(I4B) :: ivert
     integer(I4B) :: nvert
     integer(I4B) :: icount
+    integer(I4B) :: iv1
     real(DP) :: x
     real(DP) :: y
-! ------------------------------------------------------------------------------
+    real(DP) :: x1
+    real(DP) :: y1
     !
     area = DZERO
     nvert = this%iavert(this%j + 1) - this%iavert(this%j)
     icount = 1
+    iv1 = this%javert(this%iavert(this%j))
+    x1 = this%vertex_grid(1, iv1)
+    y1 = this%vertex_grid(2, iv1)
     do ivert = this%iavert(this%j), this%iavert(this%j + 1) - 1
       x = this%vertex_grid(1, this%javert(ivert))
       if (icount < nvert) then
@@ -349,7 +384,7 @@ contains
       else
         y = this%vertex_grid(2, this%javert(this%iavert(this%j)))
       end if
-      area = area + x * y
+      area = area + (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !
@@ -361,114 +396,116 @@ contains
       else
         x = this%vertex_grid(1, this%javert(this%iavert(this%j)))
       end if
-      area = area - x * y
+      area = area - (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !
     area = abs(area) * DHALF
     !
-    ! -- return
+    ! -- Return
     return
   end function get_area
 
+  !> @brief Calculate the angle that the x-axis makes with a line that is
+  !! normal to the two points.
+  !!
+  !! This assumes that vertices are numbered clockwise so that the angle is for
+  !! the normal outward of cell n.
+  !<
   function anglex(x1, y1, x2, y2) result(ax)
-! ******************************************************************************
-! anglex -- Calculate the angle that the x-axis makes with a line that is
-!   normal to the two points.  This assumes that vertices are numbered
-!   clockwise so that the angle is for the normal outward of cell n.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: DZERO, DTWO, DPI
+    ! -- dummy
     real(DP), intent(in) :: x1
     real(DP), intent(in) :: x2
     real(DP), intent(in) :: y1
     real(DP), intent(in) :: y2
+    ! -- return
     real(DP) :: ax
+    ! -- local
     real(DP) :: dx
     real(DP) :: dy
-! ------------------------------------------------------------------------------
+    !
     dx = x2 - x1
     dy = y2 - y1
     ax = atan2(dx, -dy)
     if (ax < DZERO) ax = DTWO * DPI + ax
+    !
+    ! -- Return
     return
   end function anglex
 
+  !> @brief Calculate distance between two points
+  !<
   function distance(x1, y1, x2, y2) result(d)
-! ******************************************************************************
-! distance -- Calculate distance between two points
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     real(DP), intent(in) :: x1
     real(DP), intent(in) :: x2
     real(DP), intent(in) :: y1
     real(DP), intent(in) :: y2
+    ! -- return
     real(DP) :: d
-! ------------------------------------------------------------------------------
+    !
     d = (x1 - x2)**2 + (y1 - y2)**2
     d = sqrt(d)
+    !
+    ! -- Return
     return
   end function distance
 
+  !> @brief Calculate normal distance from point (x0, y0) to line defined by
+  !! two points, (x1, y1), (x2, y2).
+  !<
   function distance_normal(x0, y0, x1, y1, x2, y2) result(d)
-! ******************************************************************************
-! distance_normal -- Calculate normal distance from point (x0, y0) to line
-!   defined by two points, (x1, y1), (x2, y2)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     real(DP), intent(in) :: x0
     real(DP), intent(in) :: y0
     real(DP), intent(in) :: x1
     real(DP), intent(in) :: y1
     real(DP), intent(in) :: x2
     real(DP), intent(in) :: y2
+    ! -- return
     real(DP) :: d
-! ------------------------------------------------------------------------------
+    !
     d = abs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1))
     d = d / distance(x1, y1, x2, y2)
+    !
+    ! -- Return
     return
   end function distance_normal
 
+  !> @brief Calculate the normal vector components (xcomp and ycomp) for a line
+  !! defined by two points, (x0, y0), (x1, y1).
+  !<
   subroutine line_unit_normal(x0, y0, x1, y1, xcomp, ycomp)
-! ******************************************************************************
-! line_unit_normal -- Calculate the normal vector components (xcomp and ycomp)
-!   for a line defined by two points, (x0, y0), (x1, y1)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     real(DP), intent(in) :: x0
     real(DP), intent(in) :: y0
     real(DP), intent(in) :: x1
     real(DP), intent(in) :: y1
     real(DP), intent(out) :: xcomp
     real(DP), intent(out) :: ycomp
+    ! -- local
     real(DP) :: dx, dy, vmag
-! ------------------------------------------------------------------------------
+    !
     dx = x1 - x0
     dy = y1 - y0
     vmag = sqrt(dx**2 + dy**2)
     xcomp = -dy / vmag
     ycomp = dx / vmag
+    !
+    ! -- Return
     return
   end subroutine line_unit_normal
 
+  !> @brief Calculate the vector components (xcomp, ycomp, and zcomp) for a
+  !! line defined by two points, (x0, y0, z0), (x1, y1, z1).
+  !!
+  !! Also return the magnitude of the original vector, vmag.
+  !<
   subroutine line_unit_vector(x0, y0, z0, x1, y1, z1, &
                               xcomp, ycomp, zcomp, vmag)
-! ******************************************************************************
-! line_unit_vector -- Calculate the vector components (xcomp, ycomp, and zcomp)
-!   for a line defined by two points, (x0, y0, z0), (x1, y1, z1). Also return
-!   the magnitude of the original vector, vmag.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     real(DP), intent(in) :: x0
     real(DP), intent(in) :: y0
     real(DP), intent(in) :: z0
@@ -478,8 +515,10 @@ contains
     real(DP), intent(out) :: xcomp
     real(DP), intent(out) :: ycomp
     real(DP), intent(out) :: zcomp
-    real(DP) :: dx, dy, dz, vmag
-! ------------------------------------------------------------------------------
+    real(DP) :: vmag
+    ! -- local
+    real(DP) :: dx, dy, dz
+    !
     dx = x1 - x0
     dy = y1 - y0
     dz = z1 - z0
@@ -487,6 +526,8 @@ contains
     xcomp = dx / vmag
     ycomp = dy / vmag
     zcomp = dz / vmag
+    !
+    ! -- Return
     return
   end subroutine line_unit_vector
 

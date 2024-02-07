@@ -1,25 +1,25 @@
-# Scenario envisioned by this test is a river running through a V-shaped
-# valley that loses water to the aquifer at the upper end until it goes
-# dry, then begins to gain flow again in the lower reaches.  River water
-# enters the simulation at 8 deg C.  Aquifer water starts out at 35 deg C.
-# Reference viscosity temperature is 20 deg C.  With the VSC package active,
-# the simulation should predict less loss of river water to the aquifer
-# and more discharge of gw to the stream, compared to the same simulation
-# with the VSC package inactive.
-
-# Imports
+"""
+Scenario envisioned by this test is a river running through a V-shaped
+valley that loses water to the aquifer at the upper end until it goes
+dry, then begins to gain flow again in the lower reaches.  River water
+enters the simulation at 8 deg C.  Aquifer water starts out at 35 deg C.
+Reference viscosity temperature is 20 deg C.  With the VSC package active,
+the simulation should predict less loss of river water to the aquifer
+and more discharge of gw to the stream, compared to the same simulation
+with the VSC package inactive.
+"""
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["no-vsc-sfr01", "vsc-sfr01"]
+from framework import TestFramework
+
+cases = ["no-vsc-sfr01", "vsc-sfr01"]
 viscosity_on = [False, True]
+
 
 # Equation for determining land surface elevation with a stream running down the middle
 def topElev_sfrCentered(x, y):
@@ -85,17 +85,11 @@ D_m = K_therm / (porosity * rho_water * C_p_w)
 rhob = (1 - porosity) * rho_solids  # Bulk density ($kg/m^3$)
 K_d = C_s / (rho_water * C_p_w)  # Partitioning coefficient ($m^3/kg$)
 
-#
-# MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
-
-    print("Building model...{}".format(name))
+    ws = test.workspace
+    name = cases[idx]
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -315,7 +309,8 @@ def build_model(idx, dir):
         print_flows=True,
         print_input=False,
         auxiliary=["VDUMMY", "TEMPERATURE"],
-        unit_conversion=1.486 * 86400,
+        length_conversion=3.28084,
+        time_conversion=86400.0,
         budget_filerecord=budpth,
         mover=False,
         nreaches=nreaches,
@@ -434,15 +429,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".sfr.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GWF")
@@ -478,7 +471,7 @@ def eval_results(sim):
         ]
     )
 
-    if sim.idxsim == 0:
+    if idx == 0:
         # convert np.array to list
         no_vsc_bud_last = np.array(outbud[-1].tolist())
 
@@ -507,7 +500,7 @@ def eval_results(sim):
                 " problem."
             )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
 
         # sum up total losses and total gains in the first 10 reaches
@@ -530,17 +523,13 @@ def eval_results(sim):
             )
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

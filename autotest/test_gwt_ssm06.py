@@ -1,5 +1,7 @@
-# Derived from test_gwt_ssm01fmi.py, but drops RIV and adds SFR.
-# See test_gwt_ssm06fmi.py for additional detail on what this test is about.
+"""
+Derived from test_gwt_ssm01fmi.py, but drops RIV and adds SFR.
+See test_gwt_ssm06fmi.py for additional detail on what this test is about.
+"""
 
 import os
 
@@ -16,11 +18,9 @@ delc = 10.0
 top = 100.0
 botm = 0.0
 
-#
 # Add SFR for serving as a MVR receiver (something's up when multiple packages
 # appear in SSM and MVR is active. When MVR is inactive, all seem to work well.
 # However, things break as soon as MVR is activated.
-#
 
 conns = [(0, -1), (1, 0, -2), (2, 1, -3), (3, 2, -4), (4, 3)]
 
@@ -189,7 +189,8 @@ def run_flw_and_trnprt_models(dir, exe):
         budget_filerecord=gwfname + ".sfr.bud",
         save_flows=True,
         pname="SFR-1",
-        unit_conversion=86400.0 * 1.486,
+        length_conversion=3.28084,
+        time_conversion=86400.0,
         boundnames=False,
         nreaches=len(conns),
         packagedata=sfr_pkdat,
@@ -347,5 +348,4 @@ def run_flw_and_trnprt_models(dir, exe):
 
 
 def test_ssm06(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flw_and_trnprt_models(str(function_tmpdir), mf6)
+    run_flw_and_trnprt_models(str(function_tmpdir), targets["mf6"])

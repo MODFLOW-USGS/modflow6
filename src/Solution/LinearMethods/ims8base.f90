@@ -9,9 +9,10 @@ MODULE IMSLinearBaseModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO, &
                              DZERO, DPREC, DEM6, DEM3, DHALF, DONE
-  use GenericUtilitiesModule, only: sim_message, is_same
+  use MathUtilModule, only: is_close
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
+  use ConvergenceSummaryModule
 
   IMPLICIT NONE
 
@@ -28,14 +29,13 @@ contains
   !<
   SUBROUTINE ims_base_cg(ICNVG, ITMAX, INNERIT, &
                          NEQ, NJA, NIAPC, NJAPC, &
-                         IPC, NITERC, ICNVGOPT, NORTH, &
+                         IPC, ICNVGOPT, NORTH, &
                          DVCLOSE, RCLOSE, L2NORM0, EPFACT, &
                          IA0, JA0, A0, IAPC, JAPC, APC, &
                          X, B, D, P, Q, Z, &
                          NJLU, IW, JLU, &
-                         NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
-                         CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                         DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                         NCONV, CONVNMOD, CONVMODSTART, &
+                         CACCEL, summary)
     ! -- dummy variables
     integer(I4B), INTENT(INOUT) :: ICNVG !< convergence flag (1) non-convergence (0)
     integer(I4B), INTENT(IN) :: ITMAX !< maximum number of inner iterations
@@ -45,7 +45,6 @@ contains
     integer(I4B), INTENT(IN) :: NIAPC !< preconditioner number of rows
     integer(I4B), INTENT(IN) :: NJAPC !< preconditioner number of non-zero entries
     integer(I4B), INTENT(IN) :: IPC !< preconditioner option
-    integer(I4B), INTENT(INOUT) :: NITERC !< total number of inner iterations
     integer(I4B), INTENT(IN) :: ICNVGOPT !< flow convergence criteria option
     integer(I4B), INTENT(IN) :: NORTH !< orthogonalization frequency
     real(DP), INTENT(IN) :: DVCLOSE !< dependent-variable closure criteria
@@ -72,16 +71,8 @@ contains
     integer(I4B), INTENT(IN) :: NCONV !< maximum number of inner iterations in a time step (maxiter * maxinner)
     integer(I4B), INTENT(IN) :: CONVNMOD !< number of models in the solution
     integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART !< pointer to the start of each model in the convmod* arrays
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV !< location of the maximum dependent-variable change in the solution
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR !< location of the maximum flow change in the solution
     character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL !< convergence string
-    integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER !< actual number of inner iterations in each Picard iteration
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !< location of the maximum dependent-variable change in each model in the solution
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !< location of the maximum flow change in each model in the solution
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX !< maximum dependent-variable change in the solution
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX !< maximum flow change in the solution
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX !< maximum dependent-variable change in each model in the solution
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX !< maximum flow change in each model in the solution
+    type(ConvergenceSummaryType), pointer, intent(in) :: summary !< Convergence summary report
     ! -- local variables
     LOGICAL :: lorth
     logical :: lsame
@@ -108,7 +99,7 @@ contains
     ! -- INNER ITERATION
     INNER: DO iiter = 1, itmax
       INNERIT = INNERIT + 1
-      NITERC = NITERC + 1
+      summary%iter_cnt = summary%iter_cnt + 1
       !
       ! -- APPLY PRECONDITIONER
       SELECT CASE (IPC)
@@ -148,8 +139,8 @@ contains
       rmax = DZERO
       l2norm = DZERO
       DO im = 1, CONVNMOD
-        DVMAX(im) = DZERO
-        DRMAX(im) = DZERO
+        summary%dvmax(im) = DZERO
+        summary%drmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -170,9 +161,9 @@ contains
           deltax = tv
           xloc = n
         END IF
-        IF (ABS(tv) > ABS(DVMAX(im))) THEN
-          DVMAX(im) = tv
-          LOCDV(im) = n
+        IF (ABS(tv) > ABS(summary%dvmax(im))) THEN
+          summary%dvmax(im) = tv
+          summary%locdv(im) = n
         END IF
         tv = D(n)
         tv = tv - alpha * Q(n)
@@ -181,9 +172,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(DRMAX(im))) THEN
-          DRMAX(im) = tv
-          LOCDR(im) = n
+        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
+          summary%drmax(im) = tv
+          summary%locdr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -191,15 +182,15 @@ contains
       !
       ! -- SAVE SOLVER convergence information dummy variables
       IF (NCONV > 1) THEN !<
-        n = NITERC
+        n = summary%iter_cnt
         WRITE (cval, '(g15.7)') alpha
         CACCEL(n) = cval
-        ITINNER(n) = iiter
+        summary%itinner(n) = iiter
         DO im = 1, CONVNMOD
-          CONVLOCDV(im, n) = LOCDV(im)
-          CONVLOCDR(im, n) = LOCDR(im)
-          CONVDVMAX(im, n) = DVMAX(im)
-          CONVDRMAX(im, n) = DRMAX(im)
+          summary%convlocdv(im, n) = summary%locdv(im)
+          summary%convlocdr(im, n) = summary%locdr(im)
+          summary%convdvmax(im, n) = summary%dvmax(im)
+          summary%convdrmax(im, n) = summary%drmax(im)
         END DO
       END IF
       !
@@ -220,7 +211,7 @@ contains
       IF (ICNVG .NE. 0) EXIT INNER
       !
       ! -- CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT
-      lsame = is_same(rho, rho0)
+      lsame = is_close(rho, rho0)
       IF (lsame) THEN
         EXIT INNER
       END IF
@@ -258,15 +249,14 @@ contains
   !<
   SUBROUTINE ims_base_bcgs(ICNVG, ITMAX, INNERIT, &
                            NEQ, NJA, NIAPC, NJAPC, &
-                           IPC, NITERC, ICNVGOPT, NORTH, ISCL, DSCALE, &
+                           IPC, ICNVGOPT, NORTH, ISCL, DSCALE, &
                            DVCLOSE, RCLOSE, L2NORM0, EPFACT, &
                            IA0, JA0, A0, IAPC, JAPC, APC, &
                            X, B, D, P, Q, &
                            T, V, DHAT, PHAT, QHAT, &
                            NJLU, IW, JLU, &
-                           NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
-                           CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                           DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                           NCONV, CONVNMOD, CONVMODSTART, &
+                           CACCEL, summary)
     ! -- dummy variables
     integer(I4B), INTENT(INOUT) :: ICNVG !< convergence flag (1) non-convergence (0)
     integer(I4B), INTENT(IN) :: ITMAX !< maximum number of inner iterations
@@ -276,7 +266,6 @@ contains
     integer(I4B), INTENT(IN) :: NIAPC !< preconditioner number of rows
     integer(I4B), INTENT(IN) :: NJAPC !< preconditioner number of non-zero entries
     integer(I4B), INTENT(IN) :: IPC !< preconditioner option
-    integer(I4B), INTENT(INOUT) :: NITERC !< total number of inner iterations
     integer(I4B), INTENT(IN) :: ICNVGOPT !< flow convergence criteria option
     integer(I4B), INTENT(IN) :: NORTH !< orthogonalization frequency
     integer(I4B), INTENT(IN) :: ISCL !< scaling option
@@ -309,16 +298,8 @@ contains
     integer(I4B), INTENT(IN) :: NCONV !< maximum number of inner iterations in a time step (maxiter * maxinner)
     integer(I4B), INTENT(IN) :: CONVNMOD !< number of models in the solution
     integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART !< pointer to the start of each model in the convmod* arrays
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV !< location of the maximum dependent-variable change in the solution
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR !< location of the maximum flow change in the solution
     character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL !< convergence string
-    integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER !< actual number of inner iterations in each Picard iteration
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !< location of the maximum dependent-variable change in each model in the solution
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !< location of the maximum flow change in each model in the solution
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX !< maximum dependent-variable change in the solution
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX !< maximum flow change in the solution
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX !< maximum dependent-variable change in each model in the solution
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX !< maximum flow change in each model in the solution
+    type(ConvergenceSummaryType), pointer, intent(in) :: summary !< Convergence summary report
     ! -- local variables
     LOGICAL :: LORTH
     logical :: lsame
@@ -357,7 +338,7 @@ contains
     ! -- INNER ITERATION
     INNER: DO iiter = 1, itmax
       INNERIT = INNERIT + 1
-      NITERC = NITERC + 1
+      summary%iter_cnt = summary%iter_cnt + 1
       !
       ! -- CALCULATE rho
       rho = ddot(NEQ, DHAT, 1, D, 1)
@@ -451,8 +432,8 @@ contains
       rmax = DZERO
       l2norm = DZERO
       DO im = 1, CONVNMOD
-        DVMAX(im) = DZERO
-        DRMAX(im) = DZERO
+        summary%dvmax(im) = DZERO
+        summary%drmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -476,9 +457,9 @@ contains
           deltax = tv
           xloc = n
         END IF
-        IF (ABS(tv) > ABS(DVMAX(im))) THEN
-          DVMAX(im) = tv
-          LOCDV(im) = n
+        IF (ABS(tv) > ABS(summary%dvmax(im))) THEN
+          summary%dvmax(im) = tv
+          summary%locdv(im) = n
         END IF
         !
         ! -- RESIDUAL
@@ -491,9 +472,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(DRMAX(im))) THEN
-          DRMAX(im) = tv
-          LOCDR(im) = n
+        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
+          summary%drmax(im) = tv
+          summary%locdr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -501,16 +482,16 @@ contains
       !
       ! -- SAVE SOLVER convergence information dummy variables
       IF (NCONV > 1) THEN !<
-        n = NITERC
+        n = summary%iter_cnt
         WRITE (cval1, '(g15.7)') alpha
         WRITE (cval2, '(g15.7)') omega
         CACCEL(n) = trim(adjustl(cval1))//','//trim(adjustl(cval2))
-        ITINNER(n) = iiter
+        summary%itinner(n) = iiter
         DO im = 1, CONVNMOD
-          CONVLOCDV(im, n) = LOCDV(im)
-          CONVLOCDR(im, n) = LOCDR(im)
-          CONVDVMAX(im, n) = DVMAX(im)
-          CONVDRMAX(im, n) = DRMAX(im)
+          summary%convdvmax(im, n) = summary%dvmax(im)
+          summary%convlocdv(im, n) = summary%locdv(im)
+          summary%convdrmax(im, n) = summary%drmax(im)
+          summary%convlocdr(im, n) = summary%locdr(im)
         END DO
       END IF
       !
@@ -532,15 +513,15 @@ contains
       !
       ! -- CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE
       !    DIFFERENT
-      lsame = is_same(rho, rho0)
+      lsame = is_close(rho, rho0)
       IF (lsame) THEN
         EXIT INNER
       END IF
-      lsame = is_same(alpha, alpha0)
+      lsame = is_close(alpha, alpha0)
       IF (lsame) THEN
         EXIT INNER
       END IF
-      lsame = is_same(omega, omega0)
+      lsame = is_close(omega, omega0)
       IF (lsame) THEN
         EXIT INNER
       END IF

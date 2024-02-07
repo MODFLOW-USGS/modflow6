@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi which is used to calculate a recharge rate that results in a
 simulated head in the center of the model domain to be equal to the
 simulated head in the non-bmi simulation.
@@ -10,11 +9,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_rch02"]
+from framework import TestFramework
+
+cases = ["libgwf_rch02"]
 
 # recharge package name
 rch_pname = "RCH-1"
@@ -153,26 +152,25 @@ def get_model(ws, name, exe, rech=rch_spd):
     return sim
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
-    sim = get_model(ws, name, exe)
+    ws = test.workspace
+    name = cases[idx]
+    sim = get_model(ws, name, "mf6")
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
-    mc = get_model(ws, name, exe, rech=0.0)
+    ws = os.path.join(test.workspace, "libmf6")
+    mc = get_model(ws, name, "mf6", rech=0.0)
 
     return sim, mc
 
 
 def run_perturbation(mf6, max_iter, recharge, tag, rch):
-
     mf6.prepare_solve()
     kiter = 0
     while kiter < max_iter:
         # update recharge
-        recharge[:, 0] = rch * area
+        recharge[:] = rch
         mf6.set_value(tag, recharge)
         # solve with updated well rate
         has_converged = mf6.solve()
@@ -185,7 +183,7 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
 def api_func(exe, idx, model_ws=None):
     print("\nBMI implementation test:")
 
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     init_wd = os.path.abspath(os.getcwd())
     if model_ws is not None:
         os.chdir(model_ws)
@@ -193,7 +191,7 @@ def api_func(exe, idx, model_ws=None):
     output_file_path = os.path.join(model_ws, "mfsim.stdout")
 
     # get the observations from the standard run
-    fpth = os.path.join("..", f"{ex[idx]}.head.obs.csv")
+    fpth = os.path.join("..", f"{cases[idx]}.head.obs.csv")
     hobs = np.genfromtxt(fpth, delimiter=",", names=True)["H1_6_6"]
 
     try:
@@ -222,7 +220,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
+    rch_tag = mf6.get_var_address("RECHARGE", name, rch_pname)
     new_recharge = mf6.get_value(rch_tag).copy()
 
     # determine initial recharge value
@@ -232,7 +230,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # target head
         htarget = hobs[idx]
 
@@ -308,20 +305,13 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(
-        lambda i, d: build_model(i, d, targets["mf6"]),
-        idx,
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
-    )
+    test.run()

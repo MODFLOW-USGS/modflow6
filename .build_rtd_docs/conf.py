@@ -56,6 +56,15 @@ os.makedirs(dstdir)
 # copy the file
 shutil.copy(src, dst)
 
+# -- copy deprecations markdown ---------------------------------------------
+print("Copy the deprecations table")
+dstdir = "_mf6run"
+fpth = "deprecations.md"
+src = os.path.join("..", "doc", "mf6io", "mf6ivar", "md", fpth)
+dst = os.path.join(dstdir, fpth)
+# copy the file
+shutil.copy(src, dst)
+
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
@@ -140,11 +149,9 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
-html_context = {
-    "css_files": [
-        "_static/theme_overrides.css",  # override wide tables in RTD theme
-    ],
-}
+html_css_files = [
+    "_static/theme_overrides.css",  # override wide tables in RTD theme
+]
 
 # html_theme_options = {
 #     "github_url": "https://github.com/MODFLOW-USGS/modflow6",

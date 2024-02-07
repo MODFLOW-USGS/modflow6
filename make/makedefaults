@@ -1,4 +1,4 @@
-# makedefaults created by pymake (version 1.2.7) for the 'mf6' executable.
+# makedefaults created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -57,18 +57,15 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fall-intrinsics -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
+		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fall-intrinsics -pedantic -Wcharacter-truncation $(OS_macro) -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -std=f2008 -cpp
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fall-intrinsics -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -Wcharacter-truncation -cpp
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fall-intrinsics -pedantic -Wcharacter-truncation $(OS_macro) -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -std=f2008 -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
+		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -Qdiag-disable:7416 -Qdiag-disable:7025 -Qdiag-disable:5268 -fpp
 		MODSWITCH = -module $(MODDIR)
-	endif
-	ifeq ($(FC), $(filter $(FC), ftn))
-		FFLAGS ?= -h noheap_allocate
 	endif
 endif
 
@@ -82,9 +79,6 @@ else
 		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		LDFLAGS ?= -lc
-	endif
-	ifeq ($(FC), $(filter $(FC), ftn))
 		LDFLAGS ?= -lc
 	endif
 endif

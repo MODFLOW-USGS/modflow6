@@ -1,0 +1,74 @@
+% Use this template for starting initializing the release notes
+% after a release has just been made.
+	
+	%\item \currentmodflowversion
+	\subsection{Version mf6.4.2--June 28, 2023}
+	
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item The source code was refactored to support compilation of a parallel version of MODFLOW 6 based on the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc) libraries.  The parallel version of MODFLOW is considered preliminary (alpha release). Limited testing of the parallel version has been performed on laptops, desktops, and supercomputers, but significant changes are expected in future releases. User support for the parallel version of MODFLOW 6 may be provided in the future.
+		\item The Groundwater Transport (GWT) model was modified for simulations involving a mobile domain and one or more immobile domains.  The modifications do not affect GWT Models without the Immobile Storage and Transfer (IST) Package.  The original IST Package formulation described by \cite{modflow6gwt} was based on a limiting assumption about how the mobile and immobile domains are apportioned within a model cell.  The changes introduced here require the user to explicitly specify in the IST Package the volume fraction of each cell that is immobile.  This change also redefines the meaning of several input parameters.  As described in a new chapter (Chapter 9) in the Supplemental Technical Information document, porosity and bulk density values must now be entered per domain volume rather than per cell volume.  Consequently, for simulations that include one or more IST Packages, these changes are not backward compatible, and will require updates to IST and MST input.  Suggestions for updating existing parameter values is included in Chapter 9 of the Supplemental Technical Information document, which is included with the distribution.
+		\item Add LENGTH\_CONVERSION and TIME\_CONVERSION variables to replace the UNIT\_CONVERSION variable in the SFR Package input file. The LENGTH\_CONVERSION and TIME\_CONVERSION variables are used to convert user-specified Manning's roughness coefficients from SI units (sec/m$^{1/3}$) to model length and time units. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters. TIME\_CONVERSION does not need to be specified if TIME\_UNITS are seconds. Warning messages will be issued if UNIT\_CONVERSION variable is specified. The model will terminate with an error if UNIT\_CONVERSION and LENGTH\_CONVERSION and TIME\_CONVERSION variables are specified. The UNIT\_CONVERSION variable in the SFR Package input file will eventually be deprecated. 
+		\item Add MAXIMUM\_ITERATIONS and MAXIMUM\_STAGE\_CHANGE variables in the LAK Package input file. The MAXIMUM\_ITERATIONS variable is used to change the maximum number of iterations and would only need to be increased from the default value if one or more lakes in a simulation has a large water budget error.  The MAXIMUM\_STAGE\_CHANGE variable defines the stage closure tolerance for each lake. The MAXIMUM\_STAGE\_CHANGE variable would only need to be increased or decreased from the default value if the water budget error for one or more lakes is too small or too large. 
+		\item The Input Data Processor (IDP) is introduced in this release to read user-provided input files and store user-provided input data in memory for subsequent use by simulation, model, and package components.  Components that have been integrated with IDP no longer handle input files directly but rather retrieve all input data from named locations, called memory paths, allocated in managed memory.  The collection of all simulation input data in managed memory is called the input context.  IDP uses existing descriptions of input variables, called variable definitions, to interpret and store input.  The program variable definition set and its representation in the input context is described as the Input Data Model (IDM).  Input variables can be recognized in a memory dump (e.g., with the MEMORY\_PRINT\_OPTION activated in the options block of mfsim.nam) by their memory path prefix string "\_\_INPUT\_\_".  Components that later access input typically copy data from the input context to their own memory space; therefore, the present implemention of the IDP results in an increased memory footprint for the program.  Among its advantages include the consolidation of all input processing early in program runtime, and outside of any particular component, enabling the support of alternative types of input data sources.  Input file types that are currently processed by IDP include DIS6, DISU6, DIV6, NPF6, DSP6, and Name File inputs for the Simulation (mfsim.nam) and GWF and GWT models.
+	%	\item xxx
+	\end{itemize}
+
+	\underline{EXAMPLES}
+	\begin{itemize}
+		\item A new example called ex-gwt-synthetic-valley was added.  This new problem simulates groundwater flow and solute transport using a Voronoi model grid.  Additional details for this example problem are described by \cite{hughes2023flopy}.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item The input for some stress packages is read in a list format consisting of a cellid, the form of which depends on the type of discretization package, and stress information on each line.  The cellid is checked upon reading to ensure that the cell is within the model grid.  If the cell is outside the model grid, the program issues an error message and terminates.  This cellid check was not implemented when the list was provided from an OPEN/CLOSE binary input file.  The program was modified to include this check for both text and binary input.
+		\item In some cases, unrecognized keywords and invalid auxiliary input did not terminate with a useful error message. The program was corrected to provide error handling for these cases.
+		\item The SSM Package for the GWT Model did not work properly with Stress Package Concentration (SPC) input with the READARRAY option for transient models.  Under these conditions, the program would prematurely terminate looking for the next BEGIN PERIOD block.  The program was corrected so that SPC input can be read for transient conditions.
+		\item For some Linux systems, observations were not being correctly written to formatted observation output files when the source code was compiled with the Intel IFORT 19.1.0.166 20191121 compiler. This issue has been addressed by adding a flush statement to ObsUtilityModule::write\_unfmtd\_obs after writing each observation for a time step. This change will not affect simulated observations and should not affect simulation run times.
+		\item The wetted area written to the binary LAK package output was modified to be zero when the lake stage is below the bottom of a connected groundwater cell.  The code uses the lak\_calculate\_conn\_warea() function to determine the wetted area, which makes sense for calculating the flow conductance.
+		\item Fix issue with reading boundary package stress period data from binary files when auxiliary data is included.
+	\end{itemize}
+
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item The ICELLTYPE input variable in the Node Property Flow (NPF) Package behaves differently depending on whether or not the THICKSTRT option is specified by the user.  In some cases, the program would give unexpected results if a negative value was specified for ICELLTYPE and the THICKSTRT option was not active.  For example, the Horizontal Flow Barrier (HFB) Package did not work properly when negative values for ICELLTYPE were specified by the user, but the THICKSTRT option was not activated.  The program was modified so that negative ICELLTYPE values provided by the user are automatically reassigned a value of one when the user does not activate the THICKSTRT option.  This is the intended behavior and is consistent with the input and output guide.   
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{STRESS PACKAGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Added additional convergence checks to the Streamflow Routing (SFR), Lake (LAK) and Unsaturated Zone Flow (UZF) Packages to ensure that flows from the Water Mover (MVR) Package meet solver tolerance.  Mover flows are converted into depths using the time step length and area, and the depths are compared to the Iterative Model Solution (IMS) DVCLOSE input parameter.  If a depth is greater than DVCLOSE, then the iteration is marked as not converged.  The maximum depth change between iterations and the advanced package feature number is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block.
+		\item Added an additional convergence check to the Lake (LAK) Package to ensure that the lake residual meets solver tolerance.  In previous versions, it was possible for a time step to converge even if there was a relatively large lake residual. The lake residual is converted to a depth, using the time step length and lake surface area. This depth is compared to the Iterative Model Solution (IMS) DVCLOSE input parameter. If the residual depth is greater than DVCLOSE, then the iteration is marked as not converged. The maximum residual depth and the advanced package feature number (lake number) is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block. This fix may increase the number of iterations required to reach convergence for existing models that use the LAK Package.
+		\item The secant method used in the LAK Package when Newton-Raphson iterations result in lake stages below the lake bottom or when Newton-Raphson iterations stall has been updated. The updates to the secant method improve convergence under drying and wetting conditions in a lake. 		
+		\item Based on the LAK package input-output instructions (mf6io.pdf), the variable ``connlen must be greater than zero for a HORIZONTAL, EMBEDDEDH, or EMBEDDEDV lake-GWF connection.'' However, a value of zero could be specified and the model would run with no LAK-groundwater exchange. A minor fix was made to enforce connlen to be strictly greater than zero per the input instructions.  The error message issued when connlen is specified as zero was augmented with additional information for assisting the user.
+		\item When n-point cross-sections are active in SFR, the evaporation calculation uses the variable rwid (see mf6io.pdf) to calculate the total amount of evaporation even though the wetted topwidth is less than rwid.  For example, using a trapezoidal cross-section geometry with an rwid of 10, an rlen of 100, and prescribed evaporation rate of 0.1, the calculated evaporative losses would equal 100 even when the wetted top width was only 5.0 units wide.  With this bug fix, the evaporation in this example results in only 50 units of evaporation loss.  It is also worth mentioning that the precipitation calculation currently uses rwid.  Since the precipitation falling outside the margins of the wetted top width but within rwid would likely be accumulated in a channel, it makes sense to leave this calculation as is.
+		\item An SFR channel defined with the n-point cross-section option was calculating the wetted cross-sectional area incorrectly for rectangular cross sections and for some other cross-section configurations. The cross sectional area of a triangular section was being calculated as one-half multiplied by the depth of the channel, as opposed to one-half multiplied by the base width multiplied by the height. As a result, the units in the Manning's equation were not correct owing to the missing dimension in the area calculation.  The change in the area calculation will slightly alter the solution found using Manning's equation since the cross-sectional area term appears in it.  As a result, existing models may reflect slightly different answers in groundwater and surface-water exchange amounts owing to slight differences in the calculated stream stage.  In addition to the fix, some clarifying text, including a new figure, was added to mf6io.pdf.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Fixed the residual calculation used to calculate the pseudo-transient time-step length used when psuedo-transient continuation is used for steady-state stress periods in models using the Newton-Raphson method. This fix may change the number of iterations required to achieve convergence for existing models that use psuedo-transient continuation. 
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{EXCHANGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+

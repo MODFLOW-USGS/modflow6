@@ -1,5 +1,4 @@
 import platform
-import re
 import subprocess
 from os import environ
 from pathlib import Path
@@ -7,13 +6,33 @@ from pprint import pprint
 
 import pytest
 
-from utils import split_nonnumeric
 
+# OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 _scext = ".bat" if _system == "Windows" else ".sh"
+
+# fortran compiler
 _fc = environ.get("FC", None)
+
+# directories included in full distribution
+_included_dir_paths = {
+    "full": [
+        "bin",
+        "doc",
+        "examples",
+        "src",
+        "srcbmi",
+        "msvs",
+        "make",
+        "utils",
+    ],
+    "minimal": [
+        "bin",
+        "doc",
+    ],
+}
 
 
 @pytest.fixture
@@ -47,25 +66,40 @@ def dist_dir_path(request):
     return path
 
 
-def test_sources(dist_dir_path, approved, releasemode, full):
+def test_directories(dist_dir_path, full):
+    for dir_path in _included_dir_paths["full" if full else "minimal"]:
+        assert (dist_dir_path / dir_path).is_dir()
+
+
+def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
 
+    # check top-level meson files
+    assert (dist_dir_path / "meson.build").is_file()
+    assert (dist_dir_path / "meson.options").is_file()
+
+    # check src subdir
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
-
     version_file_path = dist_dir_path / "src" / "Utilities" / "version.f90"
     assert version_file_path.is_file()
 
-    # find IDEVELOPMODE line
+    # check IDEVELOPMODE
     lines = open(version_file_path, "r").read().splitlines()
     pattern = ":: IDEVELOPMODE ="
     line = next(iter([l for l in lines if pattern in l]), None)
     assert line
-
-    # make sure IDEVELOPMODE was set correctly
     idevelopmode = 0 if releasemode else 1
     assert f"IDEVELOPMODE = {idevelopmode}" in line
+
+    # check utils subdir
+    assert (dist_dir_path / "utils").is_dir()
+    assert (dist_dir_path / "utils" / "mf5to6").is_dir()
+    assert (dist_dir_path / "utils" / "zonebudget").is_dir()
+    assert (dist_dir_path / "utils" / "mf5to6" / "pymake").is_dir()
+    assert (dist_dir_path / "utils" / "zonebudget" / "pymake").is_dir()
+    assert not (dist_dir_path / "utils" / "idmloader").is_dir()
 
 
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
@@ -142,11 +176,11 @@ def test_examples(dist_dir_path, full):
     print(f"{len(example_paths)} example models found:")
     pprint(example_paths)
     for p in example_paths:
-        pprint(
-            subprocess.check_output([str(p / f"run{_scext}")], cwd=p).decode().split()
-        )
+        script_path = p / f"run{_scext}"
+        if not script_path.is_file():
+            continue
+        pprint(subprocess.check_output([str(script_path)], cwd=p).decode().split())
         break
-
 
 
 def test_binaries(dist_dir_path, approved):
@@ -156,19 +190,23 @@ def test_binaries(dist_dir_path, approved):
     assert (bin_path / f"mf5to6{_eext}").is_file()
     assert (bin_path / f"libmf6{_soext}").is_file()
 
+    # get version string
     output = " ".join(
         subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()
     ).lower()
     assert output.startswith("mf6")
 
-    # make sure binaries were built in correct mode
+    # make sure version string reflects approval
     assert ("preliminary" in output) != approved
 
-    # check version string
+    # check version numbers
     version = output.lower().split(" ")[1]
-    print(version)
+    print("Version string:", version)
     v_split = version.split(".")
-    assert len(v_split) == 3
-    assert all(s.isdigit() for s in v_split[:2])
-    sol = split_nonnumeric(v_split[2])
-    assert sol[0].isdigit()
+    assert len(v_split) >= 3
+
+    # approved release should use semantic version number with
+    # exactly 3 components and no alphabetic characters in it
+    if approved:
+        assert len(v_split) == 3
+        assert all(s.isdigit() for s in v_split[:3])

@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to confirm that the sum of rate-actual and maw-reduction observations
 is equal to the specified MAW extraction or injection pumping rate when
 reported using the MAW_FLOW_REDUCE_CSV option. Injection and extraction
@@ -12,10 +11,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["maw10a", "maw10b", "maw10c", "maw10d"]
+from framework import TestFramework
+
+cases = ["maw10a", "maw10b", "maw10c", "maw10d"]
 mawsetting_a = {
     0: [
         [0, "rate", -2000.0],
@@ -61,8 +60,7 @@ mawsetting_d = {
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 101, 101
     nper = 2
     perlen = [500.0, 500.0]
@@ -81,10 +79,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
 
     # create tdis package
@@ -212,14 +210,11 @@ def build_model(idx, dir):
 # 1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
 # 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
 #  (and all are reduction times present in the obs file)?
-def eval_mawred(sim):
-    print("evaluating MAW flow reduction outputs...")
-
+def check_output(idx, test):
     # MODFLOW 6 maw results
-    idx = sim.idxsim
-    name = ex[idx]
-    fpthobs = os.path.join(sim.simpath, f"{name}.maw.obs.csv")
-    fpthmfr = os.path.join(sim.simpath, f"{name}.maw-reduction.csv")
+    name = cases[idx]
+    fpthobs = os.path.join(test.workspace, f"{name}.maw.obs.csv")
+    fpthmfr = os.path.join(test.workspace, f"{name}.maw-reduction.csv")
     try:
         tcobs = np.genfromtxt(fpthobs, names=True, delimiter=",")
     except:
@@ -266,17 +261,13 @@ def eval_mawred(sim):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_mawred, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

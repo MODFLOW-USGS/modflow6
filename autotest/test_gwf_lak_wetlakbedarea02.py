@@ -1,17 +1,19 @@
-# An adaptation of the LAK package problem 1 supplemented with an additional
-# layer that has variable thinkness to help test that the shared wetted area
-# between a lakebed and groundwater cells in contact with the lake are written
-# to the LAK cbc output file correctly.
+"""
+An adaptation of the LAK package problem 1 supplemented with an additional
+layer that has variable thinkness to help test that the shared wetted area
+between a lakebed and groundwater cells in contact with the lake are written
+to the LAK cbc output file correctly.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["lak-wetlkbd"]
+from framework import TestFramework
+
+cases = ["lak-wetlkbd"]
 
 # Model units
 length_units = "feet"
@@ -201,10 +203,10 @@ def calc_qSat(top, bot, thk):
 #
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     print("Building model...{}".format(name))
 
@@ -330,25 +332,25 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = cases[idx]
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath, load_only=["dis"])
+    sim1 = flopy.mf6.MFSimulation.load(
+        sim_ws=test.workspace, load_only=["dis"]
+    )
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage
-    lk_pth0 = os.path.join(sim.simpath, f"{gwfname}.lak.obs.csv")
+    lk_pth0 = os.path.join(test.workspace, f"{gwfname}.lak.obs.csv")
     lkstg = np.genfromtxt(lk_pth0, names=True, delimiter=",")
     lkstg_val = lkstg["STAGE"]
 
     # Get heads
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     hdobj = flopy.utils.binaryfile.HeadFile(fname, precision="double")
@@ -356,7 +358,7 @@ def eval_results(sim):
 
     # Get lake/gwf exchange information
     fname = gwfname + ".lak.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     lakobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
@@ -373,7 +375,7 @@ def eval_results(sim):
         "The wetted interfacial areas saved in the binary output file "
         "(.cbc) do not match the values calculated in the autotest script"
     )
-    for idx, itm in enumerate(lak_con):
+    for ii, itm in enumerate(lak_con):
         k, i, j = itm[2]
         ctype = itm[3]
         if ctype[0] == "h":
@@ -393,20 +395,16 @@ def eval_results(sim):
             width = delc[i]
             warea = length * width
 
-        assert np.isclose(warea, checks_out[idx], atol=1e-5), msg
+        assert np.isclose(warea, checks_out[ii], atol=1e-5), msg
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

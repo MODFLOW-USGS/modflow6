@@ -713,18 +713,12 @@ contains
       call get_mpitype_for_int(mt, el_displ, el_type)
     else if (associated(mt%aint1d)) then
       call get_mpitype_for_int1d(mt, el_displ, el_type, el_map)
-    else if (associated(mt%aint2d)) then
-      call get_mpitype_for_int2d(mt, el_displ, el_type, el_map)
-    else if (associated(mt%aint3d)) then
-      call get_mpitype_for_int3d(mt, el_displ, el_type, el_map)
     else if (associated(mt%dblsclr)) then
       call get_mpitype_for_dbl(mt, el_displ, el_type)
     else if (associated(mt%adbl1d)) then
       call get_mpitype_for_dbl1d(mt, el_displ, el_type, el_map)
     else if (associated(mt%adbl2d)) then
       call get_mpitype_for_dbl2d(mt, el_displ, el_type, el_map)
-    else if (associated(mt%adbl3d)) then
-      call get_mpitype_for_dbl3d(mt, el_displ, el_type, el_map)
     else
       write (*, *) 'unsupported datatype in MPI messaging for ', &
         virtual_data%var_name, virtual_data%mem_path
@@ -793,50 +787,6 @@ contains
 
   end subroutine get_mpitype_for_int1d
 
-  subroutine get_mpitype_for_int2d(mem, el_displ, el_type, el_map)
-    type(MemoryType), pointer :: mem
-    integer(kind=MPI_ADDRESS_KIND) :: el_displ
-    integer :: el_type
-    integer, dimension(:), pointer :: el_map
-    ! local
-    integer :: ierr
-    integer :: two_integer_type
-
-    call MPI_Get_address(mem%aint2d, el_displ, ierr)
-    if (associated(el_map)) then
-      call MPI_Type_contiguous(2, MPI_INTEGER, two_integer_type, ierr)
-      call MPI_Type_create_indexed_block( &
-        size(el_map), 1, el_map, two_integer_type, el_type, ierr)
-    else
-      call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
-    end if
-    call MPI_Type_commit(el_type, ierr)
-    call MPI_Type_free(two_integer_type, ierr)
-
-  end subroutine get_mpitype_for_int2d
-
-  subroutine get_mpitype_for_int3d(mem, el_displ, el_type, el_map)
-    type(MemoryType), pointer :: mem
-    integer(kind=MPI_ADDRESS_KIND) :: el_displ
-    integer :: el_type
-    integer, dimension(:), pointer :: el_map
-    ! local
-    integer :: ierr
-    integer :: three_integer_type
-
-    call MPI_Get_address(mem%aint3d, el_displ, ierr)
-    if (associated(el_map)) then
-      call MPI_Type_contiguous(3, MPI_INTEGER, three_integer_type, ierr)
-      call MPI_Type_create_indexed_block( &
-        size(el_map), 1, el_map, three_integer_type, el_type, ierr)
-    else
-      call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
-    end if
-    call MPI_Type_commit(el_type, ierr)
-    call MPI_Type_free(three_integer_type, ierr)
-
-  end subroutine get_mpitype_for_int3d
-
   subroutine get_mpitype_for_dbl(mem, el_displ, el_type)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
@@ -876,41 +826,19 @@ contains
     integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
-    integer :: two_double_type
+    integer :: entry_type
 
     call MPI_Get_address(mem%adbl2d, el_displ, ierr)
     if (associated(el_map)) then
-      call MPI_Type_contiguous(2, MPI_DOUBLE_PRECISION, two_double_type, ierr)
+      call MPI_Type_contiguous( &
+        size(mem%adbl2d, dim=1), MPI_DOUBLE_PRECISION, entry_type, ierr)
       call MPI_Type_create_indexed_block( &
-        size(el_map), 1, el_map, two_double_type, el_type, ierr)
+        size(el_map), 1, el_map, entry_type, el_type, ierr)
     else
       call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
     end if
     call MPI_Type_commit(el_type, ierr)
-    call MPI_Type_free(two_double_type, ierr)
 
   end subroutine get_mpitype_for_dbl2d
-
-  subroutine get_mpitype_for_dbl3d(mem, el_displ, el_type, el_map)
-    type(MemoryType), pointer :: mem
-    integer(kind=MPI_ADDRESS_KIND) :: el_displ
-    integer :: el_type
-    integer, dimension(:), pointer :: el_map
-    ! local
-    integer :: ierr
-    integer :: three_double_type
-
-    call MPI_Get_address(mem%adbl3d, el_displ, ierr)
-    if (associated(el_map)) then
-      call MPI_Type_contiguous(3, MPI_DOUBLE_PRECISION, three_double_type, ierr)
-      call MPI_Type_create_indexed_block( &
-        size(el_map), 1, el_map, three_double_type, el_type, ierr)
-    else
-      call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
-    end if
-    call MPI_Type_commit(el_type, ierr)
-    call MPI_Type_free(three_double_type, ierr)
-
-  end subroutine get_mpitype_for_dbl3d
 
 end module MpiMessageBuilderModule

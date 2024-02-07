@@ -1,9 +1,7 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that mf6 is failing with the correct error messages.  This
 test script is set up to be extensible so that simple models can be created
 very easily and tested with different options to succeed or fail correctly.
-
 """
 
 import subprocess
@@ -110,7 +108,7 @@ def get_minimal_gwf_simulation(
 
 
 def test_simple_model_success(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     # test a simple model to make sure it runs and terminates correctly
     sim = get_minimal_gwf_simulation(str(function_tmpdir), mf6)
@@ -124,7 +122,7 @@ def test_simple_model_success(function_tmpdir, targets):
 
 
 def test_empty_folder(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
     with pytest.raises(RuntimeError):
         # make sure mf6 fails when there is no simulation name file
         err_str = "mf6: mfsim.nam is not present in working directory."
@@ -132,7 +130,7 @@ def test_empty_folder(function_tmpdir, targets):
 
 
 def test_sim_errors(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     with pytest.raises(RuntimeError):
         # verify that the correct number of errors are reported
@@ -149,7 +147,7 @@ def test_sim_errors(function_tmpdir, targets):
 
 
 def test_sim_maxerrors(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     with pytest.raises(RuntimeError):
         # verify that the maxerrors keyword gives the correct error output
@@ -176,7 +174,7 @@ def test_sim_maxerrors(function_tmpdir, targets):
 
 
 def test_disu_errors(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     with pytest.raises(RuntimeError):
         disukwargs = get_disu_kwargs(
@@ -204,7 +202,7 @@ def test_disu_errors(function_tmpdir, targets):
 
 
 def test_solver_fail(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     with pytest.raises(RuntimeError):
         # test failed to converge
@@ -221,7 +219,7 @@ def test_solver_fail(function_tmpdir, targets):
 
 
 def test_fail_continue_success(function_tmpdir, targets):
-    mf6 = targets.mf6
+    mf6 = targets["mf6"]
 
     # test continue but failed to converge
     tdiskwargs = {"nper": 1, "perioddata": [(10.0, 10, 1.0)]}

@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the SSM FILEINPUT option for specifying source and sink
 concentrations.
 
@@ -8,7 +7,6 @@ Four different recharge packages are tested with the SSM FILEINPUT
 2.  array-based recharge, no time array series
 3.  list-based recharge with time series
 4.  array-based recharge with time array series
-
 """
 
 import os
@@ -17,8 +15,6 @@ from os.path import join
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
 testgroup = "ssm04fmi"
 
@@ -50,8 +46,8 @@ recharge_package_2 = True
 recharge_package_3 = False
 recharge_package_4 = False
 
-def run_flow_model(dir, exe):
 
+def run_flow_model(dir, exe):
     name = "flow"
     gwfname = name
     wsf = join(dir, testgroup, name)
@@ -175,7 +171,7 @@ def run_flow_model(dir, exe):
             nodeu = i * nrow + j
             tsnames.append(f"rch-{nodeu + 1}")
     ts_data = []
-    totim = 0.
+    totim = 0.0
     for kper in range(nper):
         totim += perlen[kper]
     for t in [0, totim]:
@@ -226,7 +222,9 @@ def run_flow_model(dir, exe):
             interpolation_methodrecord=interpolation_methodrecord,
         )
         np.savetxt(
-            os.path.join(wsf, f"{gwfname}.rch4.tas.dat"), recharge_rate, fmt="%7.1f"
+            os.path.join(wsf, f"{gwfname}.rch4.tas.dat"),
+            recharge_rate,
+            fmt="%7.1f",
         )
 
     # output control
@@ -246,7 +244,6 @@ def run_flow_model(dir, exe):
 
 
 def run_transport_model(dir, exe):
-
     name = "transport"
     gwtname = name
     wst = join(dir, testgroup, name)
@@ -368,7 +365,7 @@ def run_transport_model(dir, exe):
             nodeu = i * ncol + j
             tsnames.append(f"crch-{nodeu + 1}")
     ts_data = [tuple([0.0] + list(range(1, nrow * ncol + 1)))]
-    for t in [5., 10., 15.]:
+    for t in [5.0, 10.0, 15.0]:
         ts = tuple([float(t)] + list(range(1, nrow * ncol + 1)))
         ts_data.append(ts)
     ts_dict = {
@@ -400,7 +397,7 @@ def run_transport_model(dir, exe):
         # for now write the recharge concentration to a dat file because there
         # is a bug in flopy that will not correctly write this array as internal
         tas_array = {
-            0.0: f"{gwtname}.rch4.spc.tas.dat", 
+            0.0: f"{gwtname}.rch4.spc.tas.dat",
             5.0: f"{gwtname}.rch4.spc.tas.dat",
             10.0: f"{gwtname}.rch4.spc.tas.dat",
             15.0: f"{gwtname}.rch4.spc.tas.dat",
@@ -413,7 +410,9 @@ def run_transport_model(dir, exe):
             time_series_namerecord=time_series_namerecord,
             interpolation_methodrecord=interpolation_methodrecord,
         )
-        recharge_concentration = np.arange(nrow * ncol).reshape((nrow, ncol)) + 1
+        recharge_concentration = (
+            np.arange(nrow * ncol).reshape((nrow, ncol)) + 1
+        )
         np.savetxt(
             os.path.join(wst, f"{gwtname}.rch4.spc.tas.dat"),
             recharge_concentration,
@@ -464,8 +463,8 @@ def run_transport_model(dir, exe):
     eval_transport(wst)
     return
 
+
 def eval_transport(wst):
-    print("evaluating transport...")
     gwtname = "transport"
 
     # load concentration file
@@ -490,7 +489,7 @@ def eval_transport(wst):
         # Check records for each of the four recharge packages
         ssmbud = ssmbudall[itime]
         istart = 0
-        for irchpak in [2]: # [1, 2, 3, 4]:
+        for irchpak in [2]:  # [1, 2, 3, 4]:
             print(f"  Checking records for recharge package {irchpak}")
             istop = istart + 23
 
@@ -551,6 +550,5 @@ def eval_transport(wst):
 
 
 def test_ssm04fmi(function_tmpdir, targets):
-    mf6 = targets.mf6
-    run_flow_model(str(function_tmpdir), mf6)
-    run_transport_model(str(function_tmpdir), mf6)
+    run_flow_model(str(function_tmpdir), targets["mf6"])
+    run_transport_model(str(function_tmpdir), targets["mf6"])

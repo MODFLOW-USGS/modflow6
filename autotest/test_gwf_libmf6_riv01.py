@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi which is used update to set the river stages to
 the same values as they are in the non-bmi simulation.
 """
@@ -8,11 +7,11 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
-ex = ["libgwf_riv01"]
+from framework import TestFramework
+
+cases = ["libgwf_riv01"]
 
 # temporal discretization
 nper = 10
@@ -129,10 +128,10 @@ def get_model(ws, name, riv_spd):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    name = ex[idx]
+    ws = test.workspace
+    name = cases[idx]
 
     # create river data
     rd = [
@@ -146,7 +145,7 @@ def build_model(idx, dir):
     sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     rd_bmi = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
     mc = get_model(ws, name, riv_spd={0: rd_bmi})
 
@@ -154,7 +153,7 @@ def build_model(idx, dir):
 
 
 def api_func(exe, idx, model_ws=None):
-    name = ex[idx].upper()
+    name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
 
@@ -178,13 +177,16 @@ def api_func(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get copy of (multi-dim) array with river parameters
-    riv_tag = mf6.get_var_address("BOUND", name, riv_packname)
-    new_spd = mf6.get_value(riv_tag)
+    stage_tag = mf6.get_var_address("STAGE", name, riv_packname)
+    cond_tag = mf6.get_var_address("COND", name, riv_packname)
+    rbot_tag = mf6.get_var_address("RBOT", name, riv_packname)
+    new_stage = mf6.get_value(stage_tag)
+    new_cond = mf6.get_value(cond_tag)
+    new_rbot = mf6.get_value(rbot_tag)
 
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt
         dt = mf6.get_time_step()
 
@@ -192,16 +194,18 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_time_step(dt)
 
         # set the RIV data through the BMI
+        # change cond and rbot data
+        new_cond[:] = [riv_cond]
+        new_rbot[:] = [riv_bot]
+        mf6.set_value(cond_tag, new_cond)
+        mf6.set_value(rbot_tag, new_rbot)
+        # change stage data
         if current_time < 5:
-            # set columns of BOUND data (we're setting entire columns of the
-            # 2D array for convenience, setting only the value for the active
-            # stress period should work too)
-            new_spd[:] = [riv_stage, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            new_stage[:] = [riv_stage]
+            mf6.set_value(stage_tag, new_stage)
         else:
-            # change only stage data
-            new_spd[:] = [riv_stage2, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            new_stage[:] = [riv_stage2]
+            mf6.set_value(stage_tag, new_stage)
 
         kiter = 0
         mf6.prepare_solve()
@@ -242,16 +246,13 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

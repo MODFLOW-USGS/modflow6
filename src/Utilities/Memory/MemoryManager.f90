@@ -4,15 +4,17 @@ module MemoryManagerModule
   use ConstantsModule, only: DZERO, DONE, &
                              DEM3, DEM6, DEM9, DEP3, DEP6, DEP9, &
                              LENMEMPATH, LENMEMSEPARATOR, LENVARNAME, &
-                             LENCOMPONENTNAME, LINELENGTH, LENMEMTYPE, &
-                             LENMEMADDRESS, TABSTRING, TABUCSTRING, &
+                             LENMEMADDRESS, LENCOMPONENTNAME, &
+                             LENMEMTYPE, LINELENGTH, &
+                             TABSTRING, TABUCSTRING, &
                              TABINTEGER, TABREAL, TABCENTER, TABLEFT, &
                              TABRIGHT
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
   use MemoryListModule, only: MemoryListType
-  use MemoryHelperModule, only: mem_check_length, split_mem_path
+  use MemoryHelperModule, only: mem_check_length, split_mem_path, &
+                                strip_context_mem_path, get_mem_path_context
   use TableModule, only: TableType, table_cr
   use CharacterStringModule, only: CharacterStringType
 
@@ -67,8 +69,10 @@ module MemoryManagerModule
   interface mem_checkin
     module procedure &
       checkin_int1d, &
+      checkin_int2d, &
       checkin_dbl1d, &
-      checkin_dbl2d
+      checkin_dbl2d, &
+      checkin_charstr1d
   end interface mem_checkin
 
   interface mem_reallocate
@@ -997,6 +1001,49 @@ contains
     return
   end subroutine checkin_int1d
 
+  !> @brief Check in an existing 2d integer array with a new address (name + path)
+  !<
+  subroutine checkin_int2d(aint2d, name, mem_path, name2, mem_path2)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint2d !< the existing 2d array
+    character(len=*), intent(in) :: name !< new variable name
+    character(len=*), intent(in) :: mem_path !< new path where variable is stored
+    character(len=*), intent(in) :: name2 !< existing variable name
+    character(len=*), intent(in) :: mem_path2 !< existing path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: ncol, nrow, isize
+    ! -- code
+    !
+    ! -- check the variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- set isize
+    ncol = size(aint2d, dim=1)
+    nrow = size(aint2d, dim=2)
+    isize = ncol * nrow
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%aint2d => aint2d
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = mem_path2
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_int2d
+
   !> @brief Check in an existing 1d double precision array with a new address (name + path)
   !<
   subroutine checkin_dbl1d(adbl, name, mem_path, name2, mem_path2)
@@ -1081,6 +1128,50 @@ contains
     ! -- return
     return
   end subroutine checkin_dbl2d
+
+  !> @brief Check in an existing 1d CharacterStringType array with a new address (name + path)
+  !<
+  subroutine checkin_charstr1d(acharstr1d, ilen, name, mem_path, name2, mem_path2)
+    type(CharacterStringType), dimension(:), &
+      pointer, contiguous, intent(inout) :: acharstr1d !< the existing array
+    integer(I4B), intent(in) :: ilen
+    character(len=*), intent(in) :: name !< new variable name
+    character(len=*), intent(in) :: mem_path !< new path where variable is stored
+    character(len=*), intent(in) :: name2 !< existing variable name
+    character(len=*), intent(in) :: mem_path2 !< existing path where variable is stored
+    ! --local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: isize
+    ! -- code
+    !
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- set isize
+    isize = size(acharstr1d)
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%acharstr1d => acharstr1d
+    mt%element_size = ilen
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, isize
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = mem_path2
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_charstr1d
 
   !> @brief Reallocate a 1-dimensional defined length string array
   !<
@@ -2658,7 +2749,7 @@ contains
     !
     ! -- set table terms
     nterms = 2
-    nrows = 5
+    nrows = 6
     !
     ! -- set up table title
     title = 'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE, IN '//trim(cunits)
@@ -2703,6 +2794,11 @@ contains
     call memtab%add_term('Total')
     call memtab%add_term(smb)
     !
+    ! -- Virtual memory
+    smb = calc_virtual_mem() * fact
+    call memtab%add_term('Virtual')
+    call memtab%add_term(smb)
+    !
     ! -- deallocate table
     call mem_cleanup_table()
     !
@@ -2734,7 +2830,12 @@ contains
     integer(I4B), intent(in) :: iout !< unit number for mfsim.lst
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LENMEMPATH), allocatable, dimension(:) :: cunique
+    character(len=LENMEMADDRESS), allocatable, dimension(:) :: cunique
+    ! character(len=LENMEMPATH) :: mem_path
+    character(len=LENMEMPATH) :: context
+    character(len=LENCOMPONENTNAME) :: component
+    character(len=LENCOMPONENTNAME) :: subcomponent
+    character(len=LENMEMADDRESS) :: context_component
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -2778,7 +2879,10 @@ contains
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%path(1:ilen)) cycle
+          call split_mem_path(mt%path, component, subcomponent)
+          context = get_mem_path_context(mt%path)
+          context_component = trim(context)//component
+          if (cunique(icomp) /= context_component(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize * mt%element_size
@@ -2832,6 +2936,24 @@ contains
     call mem_cleanup_table()
 
   end subroutine mem_print_detailed
+
+  !> @brief Sum up virtual memory, i.e. memory
+  !< that is owned by other processes
+  function calc_virtual_mem() result(vmem_size)
+    real(DP) :: vmem_size
+    ! local
+    integer(I4B) :: i
+    type(MemoryType), pointer :: mt
+
+    vmem_size = DZERO
+    do i = 1, memorylist%count()
+      mt => memorylist%Get(i)
+      if (index(mt%path, "__P") == 1) then
+        vmem_size = mt%element_size * mt%isize + vmem_size
+      end if
+    end do
+
+  end function calc_virtual_mem
 
   !> @brief Deallocate memory in the memory manager
   !<
@@ -2892,11 +3014,14 @@ contains
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray, ifind
     ! -- dummy
-    character(len=LENMEMPATH), allocatable, dimension(:), intent(inout) :: cunique !< array with unique first components
+    character(len=LENMEMADDRESS), allocatable, dimension(:), intent(inout) :: &
+      cunique !< array with unique first components
     ! -- local
     class(MemoryType), pointer :: mt
+    character(len=LENMEMPATH) :: context
     character(len=LENCOMPONENTNAME) :: component
     character(len=LENCOMPONENTNAME) :: subcomponent
+    character(len=LENMEMADDRESS) :: context_component
     integer(I4B) :: ipos
     integer(I4B) :: ipa
     ! -- code
@@ -2908,10 +3033,12 @@ contains
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       call split_mem_path(mt%path, component, subcomponent)
-      ipa = ifind(cunique, component)
+      context = get_mem_path_context(mt%path)
+      context_component = trim(context)//component
+      ipa = ifind(cunique, context_component)
       if (ipa < 1) then
         call ExpandArray(cunique, 1)
-        cunique(size(cunique)) = component
+        cunique(size(cunique)) = context_component
       end if
     end do
     !

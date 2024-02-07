@@ -1,8 +1,10 @@
-# Second problem described by Prudic et al (2004)
-# This problem involves transport through an aquifers, lakes and streams.
-# It requires the use of the Water Mover Package to send water from a stream,
-# into a lake, and then back into another stream. Solute is also transport
-# through the system.
+"""
+Second problem described by Prudic et al (2004)
+This problem involves transport through an aquifers, lakes and streams.
+It requires the use of the Water Mover Package to send water from a stream,
+into a lake, and then back into another stream. Solute is also transport
+through the system.
+"""
 
 import os
 import sys
@@ -10,13 +12,13 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
+cases = ["prudic2004t2gwtgwt"]
 data_path = project_root_path / "autotest" / "data"
 model_path = str(data_path / "prudic2004test2gwtgwt")
-ex = ["prudic2004t2gwtgwt"]
 gwfnames = ["flow1", "flow2"]
 gwtnames = ["transport1", "transport2"]
 
@@ -56,14 +58,13 @@ fname = os.path.join(model_path, "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
-def build_model(idx, ws):
-
+def build_models(idx, test):
     name = "mf6sim"
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
         continue_=False,
     )
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
@@ -247,7 +248,7 @@ def sfr_packagedata_to_list(
         dt[14] = ("boundname", "S40")
     ra = np.genfromtxt(fname, dtype=dt)
     if convert_to_zero_base:
-        ra["rno"] -= 1
+        ra["ifno"] -= 1
         ra["layer"] -= 1
         ra["row"] -= 1
         ra["column"] -= 1
@@ -274,7 +275,6 @@ def sfr_connectiondata_to_list(fname, convert_to_zero_base=True):
 def build_gwfgwt_combo(
     sim, gwfname, gwtname, idomain, imodelcombo, icombo, imsgwf, imsgwt
 ):
-
     # number of time steps for period 2 are reduced from 12 * 25 to 25 in
     # order to speed up this autotest
 
@@ -388,7 +388,8 @@ def build_gwfgwt_combo(
                 mover=True,
                 pname=f"SFR-{isfrseg}",
                 filename=f"{gwfname}.sfr{isfrseg}",
-                unit_conversion=128390.00,
+                length_conversion=3.28084,
+                time_conversion=86400.0,
                 boundnames=False,
                 nreaches=nreaches,
                 packagedata=sfrpd,
@@ -407,7 +408,6 @@ def build_gwfgwt_combo(
             if lakibd[i, j] not in lakeibd_list:
                 continue
             else:
-
                 ilak = lakibd[i, j] - 1
                 ilak = 0
                 # back
@@ -524,7 +524,6 @@ def build_gwfgwt_combo(
         )
 
     if within_model_mvr_on:
-
         if icombo == 1:
             maxmvr, maxpackages = 1, 2
             mvrpack = [["SFR-1"], ["LAK-1"]]
@@ -548,7 +547,6 @@ def build_gwfgwt_combo(
         )
 
     if transport_on:
-
         gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
         sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -636,7 +634,6 @@ def build_gwfgwt_combo(
 
         #
         if sft_on:
-
             if icombo == 1:
                 isfrseglist = [1]
             else:
@@ -648,8 +645,8 @@ def build_gwfgwt_combo(
                 sfrpack = gwf.get_package(pname)
                 nreaches = sfrpack.nreaches.get_data()
                 sftpackagedata = []
-                for irno in range(nreaches):
-                    t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
+                for ifno in range(nreaches):
+                    t = (ifno, 0.0, 99.0, 999.0, f"myreach{ifno + 1}")
                     sftpackagedata.append(t)
 
                 sft_obs = {
@@ -724,7 +721,6 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
     sft3outflowconc = None
     sft4outflowconc = None
     if sft_on:
-
         # get southern model
         gwt = sim.get_model(gwtnames[1])
         sftpack = gwt.get_package(f"sft-3")
@@ -764,8 +760,6 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
         fname = os.path.join(ws, "fig-concentration_vs_time.png")
         print(f"Creating {fname}")
         plt.savefig(fname)
-
-    return
 
 
 def make_head_map(sim, ws):
@@ -880,9 +874,7 @@ def make_concentration_map(sim, ws):
     plt.savefig(fname)
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # these answer files are results from autotest/prudic2004test2
     fname = os.path.join(model_path, "result_conc_lak1.txt")
     ans_lak1 = np.loadtxt(fname)
@@ -892,11 +884,11 @@ def eval_results(sim):
     ans_sfr4 = np.loadtxt(fname)
 
     makeplot = False
-    for idx, arg in enumerate(sys.argv):
+    for arg in sys.argv:
         if arg.lower() == "--makeplot":
             makeplot = True
 
-    ws = sim.simpath
+    ws = test.workspace
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
 
     if makeplot:
@@ -906,7 +898,7 @@ def eval_results(sim):
             make_concentration_map(simfp, ws)
 
     # ensure concentrations were saved
-    ws = sim.simpath
+    ws = test.workspace
     gwfname = gwfnames[0]
     gwtname = gwtnames[0]
 
@@ -921,7 +913,6 @@ def eval_results(sim):
     sft3outflowconc = None
     sft4outflowconc = None
     if sft_on and transport_on:
-
         # get southern model
         gwt = simfp.get_model(gwtnames[1])
         sftpack = gwt.get_package(f"sft-3")
@@ -957,22 +948,15 @@ def eval_results(sim):
         msg = f"{res_sfr4} {ans_sfr4} {d}"
         assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
-    # uncomment when testing
-    # assert False
-
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

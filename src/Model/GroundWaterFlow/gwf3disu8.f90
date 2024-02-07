@@ -3,15 +3,20 @@ module GwfDisuModule
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, &
-                             DZERO, DONE
+                             DZERO, DONE, DHALF
   use ConnectionsModule, only: iac_to_ia
-  use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
+  use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06, &
+                               getunit, openfile
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, idm_context
   use BaseDisModule, only: DisBaseType
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
+                                 mem_reallocate, mem_setptr
+  use MemoryManagerExtModule, only: mem_set_value, memorylist_remove
   use TdisModule, only: kstp, kper, pertim, totim, delt
+  use GwfDisuInputModule, only: GwfDisuParamFoundType
+  use DisvGeom, only: line_unit_vector
 
   implicit none
 
@@ -40,7 +45,9 @@ module GwfDisuModule
     integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain => null() ! idomain (nodes)
     logical(LGP) :: readFromFile ! True, when DIS is read from file (almost always)
+
   contains
+
     procedure :: dis_df => disu_df
     procedure :: disu_load
     procedure :: dis_da => disu_da
@@ -78,20 +85,14 @@ module GwfDisuModule
     ! -- Read a node-sized model array (reduced or not)
     procedure :: read_int_array
     procedure :: read_dbl_array
+
   end type GwfDisuType
 
 contains
 
+  !> @brief Create a new unstructured discretization object
+  !<
   subroutine disu_cr(dis, name_model, input_mempath, inunit, iout)
-! ******************************************************************************
-! disu_cr -- Create discretization object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use KindModule, only: LGP
-    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
@@ -100,25 +101,18 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     type(GwfDisuType), pointer :: disnew
-    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
       &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- Create a new discretization object
     allocate (disnew)
     dis => disnew
     !
     ! -- Allocate scalars and assign data
-    call dis%allocate_scalars(name_model)
-    dis%input_mempath = input_mempath
+    call dis%allocate_scalars(name_model, input_mempath)
     dis%inunit = inunit
     dis%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
-                       found_fname)
     !
     ! -- If disu is enabled
     if (inunit > 0) then
@@ -132,21 +126,13 @@ contains
       call disnew%disu_load()
     end if
     !
-    ! -- Return
-    return
   end subroutine disu_cr
 
+  !> @brief Transfer IDM data into this discretization object
+  !<
   subroutine disu_load(this)
-! ******************************************************************************
-! disu_load -- transfer data into this discretization object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- source input data
     call this%source_options()
@@ -167,38 +153,21 @@ contains
     !    input
     call this%disu_ck()
     !
-    ! -- Return
-    return
   end subroutine disu_load
 
+  !> @brief Define the discretization
+  !<
   subroutine disu_df(this)
-! ******************************************************************************
-! disu_df -- Read discretization information from DISU input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfDisuType) :: this
-! ------------------------------------------------------------------------------
     !
-    ! -- Finalize the grid by creating the connection object and reducing the
-    !    grid using IDOMAIN, if necessary
     call this%grid_finalize()
     !
-    ! -- Return
-    return
   end subroutine disu_df
 
+  !> @brief Finalize the grid
+  !<
   subroutine grid_finalize(this)
-! ******************************************************************************
-! grid_finalize -- Finalize grid
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
@@ -214,7 +183,6 @@ contains
       "(/1x, 'The specified IDOMAIN results in a reduced number of cells.',&
       &/1x, 'Number of user nodes: ',I0,&
       &/1X, 'Number of nodes in solution: ', I0, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- count active cells
     this%nodes = 0
@@ -305,18 +273,11 @@ contains
     this%nja = this%con%nja
     this%njas = this%con%njas
     !
-    ! -- Return
-    return
   end subroutine grid_finalize
 
+  !> @brief Check discretization info
+  !<
   subroutine disu_ck(this)
-! ******************************************************************************
-! disu_ck -- Check the discretization information
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
@@ -339,7 +300,6 @@ contains
       "('Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
       &rules cell ', i0, ' must be below cell ', i0, '.')"
-! ------------------------------------------------------------------------------
     !
     ! -- Check connectivity
     do n = 1, this%nodesuser
@@ -433,24 +393,13 @@ contains
       end if
     end if
     !
-    ! -- Return
-    return
   end subroutine disu_ck
 
+  !> @brief Deallocate variables
+  !<
   subroutine disu_da(this)
-! ******************************************************************************
-! disu_da -- Deallocate discretization object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
-    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate idm memory
     call memorylist_remove(this%name_model, 'DISU', idm_context)
@@ -480,59 +429,41 @@ contains
       call mem_deallocate(this%hwvainp)
       call mem_deallocate(this%angldegxinp)
     end if
-
+    !
     call mem_deallocate(this%idomain)
     call mem_deallocate(this%cellxy)
-
+    !
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
     !
-    ! -- Return
-    return
   end subroutine disu_da
 
+  !> @brief Convert a user nodenumber to a string (nodenumber)
+  !<
   subroutine nodeu_to_string(this, nodeu, str)
-! ******************************************************************************
-! nodeu_to_string -- Convert user node number to a string in the form of
-! (nodenumber) or (k,i,j)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
     character(len=10) :: nstr
-! ------------------------------------------------------------------------------
     !
     write (nstr, '(i0)') nodeu
     str = '('//trim(adjustl(nstr))//')'
     !
-    ! -- return
-    return
   end subroutine nodeu_to_string
 
+  !> @brief Convert a user nodenumber to an array (nodenumber)
+  !<
   subroutine nodeu_to_array(this, nodeu, arr)
-! ******************************************************************************
-! nodeu_to_array -- Convert user node number to cellid and fill array with
-!                   (nodenumber) or (k,j) or (k,i,j)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use InputOutputModule, only: get_ijk
-    implicit none
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
     ! -- local
     integer(I4B) :: isize
-! ------------------------------------------------------------------------------
     !
     ! -- check the size of arr
     isize = size(arr)
@@ -546,69 +477,57 @@ contains
     ! -- fill array
     arr(1) = nodeu
     !
-    ! -- return
-    return
   end subroutine nodeu_to_array
 
   !> @brief Write user options to list file
   !<
   subroutine log_options(this, found)
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    ! -- dummy
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
-
+    !
     if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
     end if
-
+    !
     if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
         &set as ', this%nogrb
     end if
-
+    !
     if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
-
+    !
     if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
-
+    !
     if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
-
+    !
     if (found%voffsettol) then
       write (this%iout, '(4x,a,G0)') 'VERTICAL_OFFSET_TOLERANCE = ', &
         this%voffsettol
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
-
+    !
   end subroutine log_options
 
   !> @brief Copy options from IDM into package
   !<
   subroutine source_options(this)
-! ******************************************************************************
-! source_options -- source options from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerExtModule, only: mem_set_value
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
     type(GwfDisuParamFoundType) :: found
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', this%input_mempath, &
@@ -625,52 +544,40 @@ contains
       call this%log_options(found)
     end if
     !
-    ! -- Return
-    return
   end subroutine source_options
 
   !> @brief Write dimensions to list file
   !<
   subroutine log_dimensions(this, found)
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
-
+    !
     if (found%nodes) then
       write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodesuser
     end if
-
+    !
     if (found%nja) then
       write (this%iout, '(4x,a,i0)') 'NJA = ', this%njausr
     end if
-
+    !
     if (found%nvert) then
       write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
-
+    !
   end subroutine log_dimensions
 
   !> @brief Copy dimensions from IDM into package
   !<
   subroutine source_dimensions(this)
-! ******************************************************************************
-! source_dimensions -- source dimensions from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use MemoryManagerExtModule, only: mem_set_value
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     integer(I4B) :: n
     type(GwfDisuParamFoundType) :: found
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%nodesuser, 'NODES', this%input_mempath, found%nodes)
@@ -722,55 +629,44 @@ contains
       this%idomain(n) = 1
     end do
     !
-    ! -- Return
-    return
   end subroutine source_dimensions
 
   !> @brief Write griddata found to list file
   !<
   subroutine log_griddata(this, found)
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    ! -- dummy
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-
+    !
     if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
-
+    !
     if (found%bot) then
       write (this%iout, '(4x,a)') 'BOT set from input file'
     end if
-
+    !
     if (found%area) then
       write (this%iout, '(4x,a)') 'AREA set from input file'
     end if
-
+    !
     if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
-
+    !
   end subroutine log_griddata
 
+  !> @brief Copy grid data from IDM into package
+  !<
   subroutine source_griddata(this)
-! ******************************************************************************
-! source_griddata -- source griddata from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerExtModule, only: mem_set_value
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     type(GwfDisuParamFoundType) :: found
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%top1d, 'TOP', this%input_mempath, found%top)
@@ -783,66 +679,54 @@ contains
       call this%log_griddata(found)
     end if
     !
-    ! -- Return
-    return
   end subroutine source_griddata
 
   !> @brief Write griddata found to list file
   !<
   subroutine log_connectivity(this, found, iac)
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Connectivity'
-
+    !
     if (associated(iac)) then
       write (this%iout, '(4x,a)') 'IAC set from input file'
     end if
-
+    !
     if (found%ja) then
       write (this%iout, '(4x,a)') 'JA set from input file'
     end if
-
+    !
     if (found%ihc) then
       write (this%iout, '(4x,a)') 'IHC set from input file'
     end if
-
+    !
     if (found%cl12) then
       write (this%iout, '(4x,a)') 'CL12 set from input file'
     end if
-
+    !
     if (found%hwva) then
       write (this%iout, '(4x,a)') 'HWVA set from input file'
     end if
-
+    !
     if (found%angldegx) then
       write (this%iout, '(4x,a)') 'ANGLDEGX set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Connectivity'
-
+    !
   end subroutine log_connectivity
 
+  !> @brief Copy grid connectivity info from IDM into package
+  !<
   subroutine source_connectivity(this)
-! ******************************************************************************
-! source_connectivity -- source connection data from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
-    use MemoryManagerExtModule, only: mem_set_value
-    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     type(GwfDisuParamFoundType) :: found
     integer(I4B), dimension(:), contiguous, pointer :: iac => null()
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%jainp, 'JA', this%input_mempath, found%ja)
@@ -866,19 +750,11 @@ contains
       call this%log_connectivity(found, iac)
     end if
     !
-    ! -- Return
-    return
   end subroutine source_connectivity
 
+  !> @brief Copy grid vertex data from IDM into package
+  !<
   subroutine source_vertices(this)
-! ******************************************************************************
-! source_vertices -- source vertex data from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
@@ -886,7 +762,6 @@ contains
     real(DP), dimension(:), contiguous, pointer :: vert_x => null()
     real(DP), dimension(:), contiguous, pointer :: vert_y => null()
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- set pointers to memory manager input arrays
     call mem_setptr(vert_x, 'XV', this%input_mempath)
@@ -907,10 +782,10 @@ contains
       write (this%iout, '(1x,a)') 'Discretization Vertex data loaded'
     end if
     !
-    ! -- Return
-    return
   end subroutine source_vertices
 
+  !> @brief Build data structures to hold cell vertex info
+  !<
   subroutine define_cellverts(this, icell2d, ncvert, icvert)
     ! -- modules
     use SparseModule, only: sparsematrix
@@ -923,7 +798,6 @@ contains
     type(sparsematrix) :: vert_spm
     integer(I4B) :: i, j, ierr
     integer(I4B) :: icv_idx, startvert, maxnnz = 5
-! ------------------------------------------------------------------------------
     !
     ! -- initialize sparse matrix
     call vert_spm%init(this%nodesuser, this%nvert, maxnnz)
@@ -949,19 +823,11 @@ contains
     call vert_spm%filliaja(this%iavert, this%javert, ierr)
     call vert_spm%destroy()
     !
-    ! -- Return
-    return
   end subroutine define_cellverts
 
+  !> @brief Copy cell2d data from IDM into package
+  !<
   subroutine source_cell2d(this)
-! ******************************************************************************
-! source_cell2d -- source cell2d data from memory manager input path
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
@@ -971,8 +837,6 @@ contains
     real(DP), dimension(:), contiguous, pointer :: cell_x => null()
     real(DP), dimension(:), contiguous, pointer :: cell_y => null()
     integer(I4B) :: i
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- set pointers to input path ncvert and icvert
     call mem_setptr(icell2d, 'ICELL2D', this%input_mempath)
@@ -1006,19 +870,12 @@ contains
       write (this%iout, '(1x,a)') 'Discretization Cell2d data loaded'
     end if
     !
-    ! -- Return
-    return
   end subroutine source_cell2d
 
+  !> @brief Write a binary grid file
+  !<
   subroutine write_grb(this, icelltype)
-! ******************************************************************************
-! write_grb -- Write the binary grid file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: getunit, openfile
     use OpenSpecModule, only: access, form
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1029,10 +886,10 @@ contains
     character(len=50) :: txthdr
     character(len=lentxt) :: txt
     character(len=LINELENGTH) :: fname
+    ! -- formats
     character(len=*), parameter :: fmtgrdsave = &
       "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:', &
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     ntxt = 10
@@ -1134,30 +991,21 @@ contains
     ! -- Close the file
     close (iunit)
     !
-    ! -- return
-    return
   end subroutine write_grb
 
+  !> @brief Get reduced node number from user node number
+  !<
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
-! ******************************************************************************
-! get_nodenumber -- Return a nodenumber from the user specified node number
-!                   with an option to perform a check.  This subroutine
-!                   can be overridden by child classes to perform mapping
-!                   to a model node number
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(GwfDisuType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     integer(I4B) :: nodenumber
-! ------------------------------------------------------------------------------
     !
     if (icheck /= 0) then
       if (nodeu < 1 .or. nodeu > this%nodes) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
+        write (errmsg, '(a,i0,a,i0,a)') &
+          'Node number (', nodeu, ') is less than 1 or greater than nodes (', &
+          this%nodes, ').'
         call store_error(errmsg)
       end if
     end if
@@ -1170,33 +1018,25 @@ contains
       nodenumber = this%nodereduced(nodeu)
     end if
     !
-    ! -- return
-    return
   end function get_nodenumber_idx1
 
+  !> @brief Get normal vector components between the cell and a given neighbor
+  !!
+  !! The normal points outward from the shared face between noden and nodem.
+  !<
   subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
-! ******************************************************************************
-! connection_normal -- calculate the normal vector components for reduced
-!   nodenumber cell (noden) and its shared face with cell nodem.  ihc is the
-!   horizontal connection flag.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType) :: this
-    integer(I4B), intent(in) :: noden
-    integer(I4B), intent(in) :: nodem
-    integer(I4B), intent(in) :: ihc
+    integer(I4B), intent(in) :: noden !< cell (reduced nn)
+    integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
+    integer(I4B), intent(in) :: ihc !< horizontal connection flag
     real(DP), intent(inout) :: xcomp
     real(DP), intent(inout) :: ycomp
     real(DP), intent(inout) :: zcomp
     integer(I4B), intent(in) :: ipos
     ! -- local
     real(DP) :: angle, dmult
-! ------------------------------------------------------------------------------
     !
     ! -- Set vector components based on ihc
     if (ihc == 0) then
@@ -1224,25 +1064,15 @@ contains
       zcomp = DZERO
     end if
     !
-    ! -- return
-    return
   end subroutine connection_normal
 
+  !> @brief Get unit vector components between the cell and a given neighbor
+  !!
+  !! Saturation must be provided to compute cell center vertical coordinates.
+  !! Also return the straight-line connection length.
+  !<
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
-! ******************************************************************************
-! connection_vector -- calculate the unit vector components from reduced
-!   nodenumber cell (noden) to its neighbor cell (nodem).  The saturation for
-!   for these cells are also required so that the vertical position of the cell
-!   cell centers can be calculated.  ihc is the horizontal flag.  Also return
-!   the straight-line connection length.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DHALF
-    use DisvGeom, only: line_unit_vector
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: noden
@@ -1257,7 +1087,6 @@ contains
     real(DP), intent(inout) :: conlen
     ! -- local
     real(DP) :: xn, xm, yn, ym, zn, zm
-! ------------------------------------------------------------------------------
     !
     ! -- Terminate with error if requesting unit vector components for problems
     !    without cell data
@@ -1297,36 +1126,29 @@ contains
     call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
                           conlen)
     !
-    ! -- return
-    return
   end subroutine connection_vector
 
-  ! return discretization type
+  !> @brief Get the discretization type
+  !<
   subroutine get_dis_type(this, dis_type)
+    ! -- dummy
     class(GwfDisuType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
-
+    !
     dis_type = "DISU"
-
+    !
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model)
-! ******************************************************************************
-! allocate_scalars -- Allocate and initialize scalar variables in this class
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+  !> @brief Allocate and initialize scalar variables
+  !<
+  subroutine allocate_scalars(this, name_model, input_mempath)
     ! -- dummy
     class(GwfDisuType) :: this
     character(len=*), intent(in) :: name_model
-    ! -- local
-! ------------------------------------------------------------------------------
+    character(len=*), intent(in) :: input_mempath
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model)
+    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
     !
     ! -- Allocate variables for DISU
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
@@ -1342,23 +1164,13 @@ contains
     this%iangledegx = 0
     this%readFromFile = .false.
     !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
+  !> @brief Allocate and initialize arrays
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- Read discretization information from file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisuType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
     call this%DisBaseType%allocate_arrays()
@@ -1376,32 +1188,30 @@ contains
     ! -- Initialize
     this%mshape(1) = this%nodesuser
     !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
+  !> @brief Allocate arrays in memory manager
+  !<
   subroutine allocate_arrays_mem(this)
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
     class(GwfDisuType) :: this
-
+    !
     call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
     call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
     call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
-
+    !
   end subroutine allocate_arrays_mem
 
+  !> @brief Convert a string to a user nodenumber
+  !!
+  !! Parse and return user nodenumber.
+  !! If flag_string is present and true, the first token may be
+  !! non-numeric (e.g. boundary name). In this case, return -2.
+  !<
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)
-! ******************************************************************************
-! nodeu_from_string -- Receive a string and convert the string to a user
-!   nodenumber.  The model is unstructured; just read user nodenumber.
-!   If flag_string argument is present and true, the first token in string
-!   is allowed to be a string (e.g. boundary name). In this case, if a string
-!   is encountered, return value as -2.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(inout) :: lloc
@@ -1416,8 +1226,6 @@ contains
     ! -- local
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
-    character(len=LINELENGTH) :: fname
-! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
@@ -1444,36 +1252,26 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
+      write (errmsg, '(a,i0,a)') &
+        "Node number in list (", nodeu, ") is outside of the grid. "// &
+        "Cell number cannot be determined in line '"// &
+        trim(adjustl(line))//"'."
       call store_error(errmsg)
-      inquire (unit=in, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in line: ')
-      call store_error(trim(adjustl(line)))
       call store_error_unit(in)
     end if
     !
-    ! -- return
-    return
-
   end function nodeu_from_string
 
+  !> @brief Convert a cellid string to a user nodenumber
+  !!
+  !! If flag_string is present and true, the first token may be
+  !! non-numeric (e.g. boundary name). In this case, return -2.
+  !!
+  !! If allow_zero is present and true, and all indices are zero, the
+  !! result can be zero. If allow_zero is false, a zero in any index is an error.
+  !<
   function nodeu_from_cellid(this, cellid, inunit, iout, flag_string, &
                              allow_zero) result(nodeu)
-! ******************************************************************************
-! nodeu_from_cellid -- Receive cellid as a string and convert the string to a
-!   user nodenumber.
-!   If flag_string argument is present and true, the first token in string
-!   is allowed to be a string (e.g. boundary name). In this case, if a string
-!   is encountered, return value as -2.
-!   If allow_zero argument is present and true, if all indices equal zero, the
-!   result can be zero. If allow_zero is false, a zero in any index causes an
-!   error.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
@@ -1487,8 +1285,6 @@ contains
     integer(I4B) :: lloclocal, istart, istop, ndum, n
     integer(I4B) :: istat
     real(DP) :: r
-    character(len=LINELENGTH) :: fname
-! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
@@ -1516,59 +1312,42 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
+      write (errmsg, '(a,i0,a)') &
+        "Cell number cannot be determined for cellid ("// &
+        trim(adjustl(cellid))//") and results in a user "// &
+        "node number (", nodeu, ") that is outside of the grid."
       call store_error(errmsg)
-      inquire (unit=inunit, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in cellid: ')
-      call store_error(trim(adjustl(cellid)))
       call store_error_unit(inunit)
     end if
     !
-    ! -- return
-    return
   end function nodeu_from_cellid
 
+  !> @brief Indicates whether the grid discretization supports layers
+  !<
   logical function supports_layers(this)
-    implicit none
     ! -- dummy
     class(GwfDisuType) :: this
     !
     supports_layers = .false.
-    return
+    !
   end function supports_layers
 
+  !> @brief Get number of cells per layer (total nodes since DISU isn't layered)
+  !<
   function get_ncpl(this)
-! ******************************************************************************
-! get_ncpl -- Return number of cells per layer.  This is nodes
-!   for a DISU grid, as there are no layers.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- return
     integer(I4B) :: get_ncpl
     ! -- dummy
     class(GwfDisuType) :: this
-! ------------------------------------------------------------------------------
     !
     get_ncpl = this%nodesuser
     !
-    ! -- Return
-    return
   end function get_ncpl
 
+  !> @brief Read an integer array
+  !<
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
-! ******************************************************************************
-! read_int_array -- Read a GWF integer array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -1582,7 +1361,6 @@ contains
     ! -- local
     integer(I4B) :: nval
     integer(I4B), dimension(:), pointer, contiguous :: itemp
-! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
     !    subroutine.  The temporary array will point to ibuff if it is a
@@ -1605,19 +1383,12 @@ contains
       call this%fill_grid_array(itemp, iarray)
     end if
     !
-    ! -- return
-    return
   end subroutine read_int_array
 
+  !> @brief Read a double precision array
+  !<
   subroutine read_dbl_array(this, line, lloc, istart, istop, iout, in, &
                             darray, aname)
-! ******************************************************************************
-! read_dbl_array -- Read a GWF double precision array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -1631,7 +1402,6 @@ contains
     ! -- local
     integer(I4B) :: nval
     real(DP), dimension(:), pointer, contiguous :: dtemp
-! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
     !    subroutine.  The temporary array will point to dbuff if it is a
@@ -1653,45 +1423,27 @@ contains
       call this%fill_grid_array(dtemp, darray)
     end if
     !
-    ! -- return
-    return
   end subroutine read_dbl_array
 
+  !> @brief Record a double precision array
+  !!
+  !! The array is written to a formatted or unformatted external file
+  !! depending on the arguments.
+  !<
   subroutine record_array(this, darray, iout, iprint, idataun, aname, &
                           cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
-! ******************************************************************************
-! record_array -- Record a double precision array.  The array will be
-!   printed to an external file and/or written to an unformatted external file
-!   depending on the argument specifications.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-!      darray is the double precision array to record
-!      iout is the unit number for ascii output
-!      iprint is a flag indicating whether or not to print the array
-!      idataun is the unit number to which the array will be written in binary
-!        form; if negative then do not write by layers, write entire array
-!      aname is the text descriptor of the array
-!      cdatafmp is the fortran format for writing the array
-!      nvaluesp is the number of values per line for printing
-!      nwidthp is the width of the number for printing
-!      editdesc is the format type (I, G, F, S, E)
-!      dinact is the double precision value to use for cells that are excluded
-!        from the model domain
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfDisuType), intent(inout) :: this
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: iprint
-    integer(I4B), intent(in) :: idataun
-    character(len=*), intent(in) :: aname
-    character(len=*), intent(in) :: cdatafmp
-    integer(I4B), intent(in) :: nvaluesp
-    integer(I4B), intent(in) :: nwidthp
-    character(len=*), intent(in) :: editdesc
-    real(DP), intent(in) :: dinact
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray !< double precision array to record
+    integer(I4B), intent(in) :: iout !< ascii output unit number
+    integer(I4B), intent(in) :: iprint !< whether to print the array
+    integer(I4B), intent(in) :: idataun !< binary output unit number
+    character(len=*), intent(in) :: aname !< text descriptor
+    character(len=*), intent(in) :: cdatafmp ! write format
+    integer(I4B), intent(in) :: nvaluesp !< values per line
+    integer(I4B), intent(in) :: nwidthp !< number width
+    character(len=*), intent(in) :: editdesc !< format type (I, G, F, S, E)
+    real(DP), intent(in) :: dinact !< double precision value for cells excluded from model domain
     ! -- local
     integer(I4B) :: k, ifirst
     integer(I4B) :: nlay
@@ -1705,7 +1457,6 @@ contains
     character(len=*), parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
        &' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     nlay = 1
@@ -1763,19 +1514,13 @@ contains
                   iout, delt, pertim, totim)
     end if
     !
-    ! -- return
-    return
   end subroutine record_array
 
+  !> @brief Record list header for imeth=6
+  !<
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
                                        dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
-! ******************************************************************************
-! record_srcdst_list_header -- Record list header for imeth=6
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfDisuType) :: this
     character(len=16), intent(in) :: text
@@ -1790,7 +1535,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nlay, nrow, ncol
-! ------------------------------------------------------------------------------
     !
     nlay = 1
     nrow = 1
@@ -1801,22 +1545,22 @@ contains
                  ibdchn, naux, auxtxt, ncol, nrow, nlay, &
                  nlist, iout, delt, pertim, totim)
     !
-    ! -- return
-    return
   end subroutine record_srcdst_list_header
 
   !> @brief Cast base to DISU
   !<
   function CastAsDisuType(dis) result(disu)
+    ! -- dummy
     class(*), pointer :: dis !< base pointer to DISU object
+    ! -- return
     class(GwfDisuType), pointer :: disu !< the resulting DISU pointer
-
+    !
     disu => null()
     select type (dis)
     class is (GwfDisuType)
       disu => dis
     end select
-
+    !
   end function CastAsDisuType
 
 end module GwfDisuModule

@@ -9,7 +9,7 @@ module GridConnectionModule
   use CharacterStringModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use ListModule, only: ListType, isEqualIface, arePointersEqual
+  use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
@@ -218,11 +218,9 @@ contains
     class(VirtualModelType), pointer :: v_model !< the model to add to the region
     ! local
     class(*), pointer :: vm_obj
-    procedure(isEqualIface), pointer :: areEqualMethod
 
     vm_obj => v_model
-    areEqualMethod => arePointersEqual
-    if (.not. this%regionalModels%ContainsObject(vm_obj, areEqualMethod)) then
+    if (.not. this%regionalModels%ContainsObject(vm_obj)) then
       call this%regionalModels%Add(vm_obj)
     end if
 
@@ -1058,9 +1056,7 @@ contains
     ! first get the participating models
     call model_ids%init()
     do i = 1, this%nrOfCells
-      if (.not. model_ids%contains(this%idxToGlobal(i)%v_model%id)) then
-        call model_ids%push_back(this%idxToGlobal(i)%v_model%id)
-      end if
+      call model_ids%push_back_unique(this%idxToGlobal(i)%v_model%id)
     end do
 
     ! initialize the map

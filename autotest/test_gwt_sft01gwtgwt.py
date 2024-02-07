@@ -1,28 +1,30 @@
-# Based on sft01, but split into two gwf models and two gwt models
-# in order to test gwf-gwf and gwt-gwt.  There are sfr and sft models
-# for flow and transport.  The sfr flows and the sft concentrations
-# should match exactly with the gwf flows and the gwf concentrations.
+"""
+Based on sft01, but split into two gwf models and two gwt models
+in order to test gwf-gwf and gwt-gwt.  There are sfr and sft models
+for flow and transport.  The sfr flows and the sft concentrations
+should match exactly with the gwf flows and the gwf concentrations.
 
-#       flow1                        flow2
-#  sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
-#       -------------                -------------   (sfr leakance is zero so no flow between sfr and gwf)
-#  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
-#           |                            |
-#  gwfgwt (flow1-transport1)    gwfgwt (flow2-transport2)
-#           |                            |
-#       transport1                   transport2
-#  sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
-#       -------------                -------------
-#  gwt  1 2 3 4 5 6 7  gwtgwt     => 1 2 3 4 5 6 7
+      flow1                        flow2
+ sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
+      -------------                -------------   (sfr leakance is zero so no flow between sfr and gwf)
+ gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
+          |                            |
+ gwfgwt (flow1-transport1)    gwfgwt (flow2-transport2)
+          |                            |
+      transport1                   transport2
+ sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
+      -------------                -------------
+ gwt  1 2 3 4 5 6 7  gwtgwt     => 1 2 3 4 5 6 7
+"""
 
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
-ex = ["sft01gwtgwt"]
+from framework import TestFramework
+
+cases = ["sft01gwtgwt"]
 
 # properties for each model combination
 lx = 7.0
@@ -59,14 +61,13 @@ within_model_mvt_on = True and within_model_mvr_on
 across_model_mvt_on = True and across_model_mvr_on
 
 
-def build_model(idx, ws):
-
+def build_models(idx, test):
     name = "mf6sim"
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
         continue_=False,
     )
 
@@ -180,8 +181,7 @@ def build_model(idx, ws):
         mvrspd = [
             ["flow1", "sfr-1", ncol - 1, "flow2", "sfr-1", 0, "FACTOR", 1.00]
         ]
-        mvr = flopy.mf6.ModflowMvr(
-            sim,
+        gwfgwf.mvr.initialize(
             modelnames=True,
             maxmvr=maxmvr,
             print_flows=True,
@@ -212,14 +212,13 @@ def build_model(idx, ws):
 
     # simulation GWT-GWT Mover
     if across_model_mvt_on:
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(sim, filename=mvt_filerecord)
+        gwtgwt.mvt.initialize(filename=mvt_filerecord)
 
     regression = None
     return sim, regression
 
 
 def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
-
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
@@ -481,18 +480,16 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
     return sim, None
 
 
-def eval_results(sim):
-    print("evaluating results...")
-
+def check_output(idx, test):
     # load the simulations
-    ws = sim.simpath
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    ws = test.workspace
+    test = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     # construct head and conc for combined models
-    gwf1 = sim.gwf[0]
-    gwf2 = sim.gwf[1]
-    gwt1 = sim.gwt[0]
-    gwt2 = sim.gwt[1]
+    gwf1 = test.gwf[0]
+    gwf2 = test.gwf[1]
+    gwt1 = test.gwt[0]
+    gwt2 = test.gwt[1]
     head = list(gwf1.output.head().get_data().flatten()) + list(
         gwf2.output.head().get_data().flatten()
     )
@@ -513,17 +510,13 @@ def eval_results(sim):
     ), "aquifer concentration does not equal sfr concentration"
 
 
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
+    test.run()

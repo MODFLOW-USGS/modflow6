@@ -7,16 +7,16 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
 cell_dimensions = (300,)
-ex = ["gwf_obs02"]
+cases = ["gwf_obs02"]
 h0, h1 = 1.0, 0.0
 nlay, nrow, ncol = 1, 10, 10
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nper = 1
     perlen = [5.0]
     nstp = [1]
@@ -35,10 +35,10 @@ def build_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = ex[idx]
+    name = cases[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -124,13 +124,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
-    print("evaluating model observations...")
+def check_output(idx, test):
     headcsv = np.empty((nlay, nrow, ncol), dtype=float)
     for i in range(nrow):
-        fname = f"{sim.name}.{i}.obs.csv"
+        fname = f"{test.name}.{i}.obs.csv"
         print(f"Loading and testing {fname}")
-        fname = os.path.join(sim.simpath, fname)
+        fname = os.path.join(test.workspace, fname)
         rec = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
         for j in range(ncol):
             obsname_true = f"h_{i}_{j}".upper()
@@ -142,7 +141,7 @@ def eval_model(sim):
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
 
-    fn = os.path.join(sim.simpath, f"{sim.name}.hds")
+    fn = os.path.join(test.workspace, f"{test.name}.hds")
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
@@ -151,17 +150,13 @@ def eval_model(sim):
     ), "headcsv not equal head from binary file"
 
 
-@pytest.mark.parametrize(
-    "name",
-    ex,
-)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        targets=targets,
     )
+    test.run()

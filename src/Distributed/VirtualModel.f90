@@ -13,9 +13,15 @@ module VirtualModelModule
   public :: get_virtual_model_from_list
   public :: get_virtual_model
 
+  interface get_virtual_model
+    module procedure get_virtual_model_by_id, &
+      get_virtual_model_by_name
+  end interface
+
   type, public, extends(VirtualDataContainerType) :: VirtualModelType
     class(NumericalModelType), pointer :: local_model
     ! CON
+    type(VirtualIntType), pointer :: con_ianglex => null()
     type(VirtualInt1dType), pointer :: con_ia => null()
     type(VirtualInt1dType), pointer :: con_ja => null()
     type(VirtualInt1dType), pointer :: con_jas => null()
@@ -44,6 +50,8 @@ module VirtualModelModule
     type(VirtualDbl1dType), pointer :: x => null()
     type(VirtualDbl1dType), pointer :: x_old => null()
     type(VirtualInt1dType), pointer :: ibound => null()
+    ! Base Model fields
+    type(VirtualIntType), pointer :: idsoln => null()
   contains
     ! public
     procedure :: create => vm_create
@@ -86,6 +94,7 @@ contains
     class(VirtualModelType) :: this
 
     ! CON
+    call this%set(this%con_ianglex%base(), 'IANGLEX', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_ia%base(), 'IA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_ja%base(), 'JA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_jas%base(), 'JAS', 'CON', MAP_ALL_TYPE)
@@ -114,6 +123,8 @@ contains
     call this%set(this%x%base(), 'X', '', MAP_NODE_TYPE)
     call this%set(this%x_old%base(), 'XOLD', '', MAP_NODE_TYPE)
     call this%set(this%ibound%base(), 'IBOUND', '', MAP_NODE_TYPE)
+    ! Base model
+    call this%set(this%idsoln%base(), 'IDSOLN', '', MAP_ALL_TYPE)
 
   end subroutine init_virtual_data
 
@@ -126,6 +137,8 @@ contains
 
     if (stage == STG_AFT_MDL_DF) then
 
+      call this%map(this%idsoln%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%con_ianglex%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_ndim%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_nodes%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_nodesuser%base(), (/STG_AFT_MDL_DF/))
@@ -167,7 +180,11 @@ contains
       call this%map(this%con_hwva%base(), njas, (/STG_BFR_CON_DF/))
       call this%map(this%con_cl1%base(), njas, (/STG_BFR_CON_DF/))
       call this%map(this%con_cl2%base(), njas, (/STG_BFR_CON_DF/))
-      call this%map(this%con_anglex%base(), njas, (/STG_BFR_CON_DF/))
+      if (this%con_ianglex%get() > 0) then
+        call this%map(this%con_anglex%base(), njas, (/STG_BFR_CON_DF/))
+      else
+        call this%map(this%con_anglex%base(), 0, (/STG_NEVER/))
+      end if
 
     end if
 
@@ -216,6 +233,7 @@ contains
   subroutine allocate_data(this)
     class(VirtualModelType) :: this
 
+    allocate (this%con_ianglex)
     allocate (this%con_ia)
     allocate (this%con_ja)
     allocate (this%con_jas)
@@ -242,6 +260,7 @@ contains
     allocate (this%x)
     allocate (this%x_old)
     allocate (this%ibound)
+    allocate (this%idsoln)
 
   end subroutine allocate_data
 
@@ -249,6 +268,7 @@ contains
     class(VirtualModelType) :: this
 
     ! CON
+    deallocate (this%con_ianglex)
     deallocate (this%con_ia)
     deallocate (this%con_ja)
     deallocate (this%con_jas)
@@ -276,6 +296,8 @@ contains
     deallocate (this%x)
     deallocate (this%x_old)
     deallocate (this%ibound)
+    ! Base model
+    deallocate (this%idsoln)
 
   end subroutine deallocate_data
 
@@ -322,9 +344,9 @@ contains
 
   end function eq_numerical_model
 
-!> @brief Returns a virtual model with the specified id
-!< from the global list
-  function get_virtual_model(model_id) result(virtual_model)
+  !> @brief Returns a virtual model with the specified id
+  !< from the global list, or null
+  function get_virtual_model_by_id(model_id) result(virtual_model)
     use VirtualDataListsModule, only: virtual_model_list
     integer(I4B) :: model_id
     class(VirtualModelType), pointer :: virtual_model
@@ -344,6 +366,30 @@ contains
       end select
     end do
 
-  end function get_virtual_model
+  end function get_virtual_model_by_id
+
+  !> @brief Returns a virtual model with the specified name
+  !< from the global list, or null
+  function get_virtual_model_by_name(model_name) result(virtual_model)
+    use VirtualDataListsModule, only: virtual_model_list
+    character(len=*) :: model_name
+    class(VirtualModelType), pointer :: virtual_model
+    ! local
+    integer(I4B) :: i
+    class(*), pointer :: vm
+
+    virtual_model => null()
+    do i = 1, virtual_model_list%Count()
+      vm => virtual_model_list%GetItem(i)
+      select type (vm)
+      class is (VirtualModelType)
+        if (vm%name == model_name) then
+          virtual_model => vm
+          return
+        end if
+      end select
+    end do
+
+  end function get_virtual_model_by_name
 
 end module VirtualModelModule

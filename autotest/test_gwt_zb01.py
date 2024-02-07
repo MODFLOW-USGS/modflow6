@@ -1,6 +1,7 @@
-# test that zonebudget works on a cell budget file from GWT
-# https://github.com/MODFLOW-USGS/modflow6/discussions/1181
-
+"""
+Test that zonebudget works on a cell budget file from GWT
+https://github.com/MODFLOW-USGS/modflow6/discussions/1181
+"""
 
 import os
 from pathlib import Path
@@ -8,18 +9,14 @@ from pathlib import Path
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
-from simulation import TestSimulation
 
-
-name = "zbud6_zb01"
+cases = ["zbud6_zb01"]
 htol = None
 dtol = 1e-3
 budtol = 1e-2
-bud_lst = [
-    "STORAGE-AQUEOUS_IN",
-    "STORAGE-AQUEOUS_OUT"
-]
+bud_lst = ["STORAGE-AQUEOUS_IN", "STORAGE-AQUEOUS_OUT"]
 zone_lst = []
 for n in bud_lst:
     s = n.replace("_", "-")
@@ -44,7 +41,8 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 
 
-def build_model(dir, exe):
+def build_models(idx, test):
+    name = cases[idx]
     perlen = [timetoend]
     nstp = [50]
     tsmult = [1.0]
@@ -58,9 +56,9 @@ def build_model(dir, exe):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -108,11 +106,18 @@ def build_model(dir, exe):
     w = {0: wellist}
 
     # grid discretization
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                 delr=delr, delc=delc,
-                                 top=top, botm=botm,
-                                 idomain=np.ones((nlay, nrow, ncol), dtype=int),
-                                 filename=f"{gwfname}.dis")
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=f"{gwfname}.dis",
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
@@ -188,11 +193,18 @@ def build_model(dir, exe):
     sim.register_ims_package(imsgwt, [gwt.name])
 
     # gwt grid discretization
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                 delr=delr, delc=delc,
-                                 top=top, botm=botm,
-                                 idomain=np.ones((nlay, nrow, ncol), dtype=int),
-                                 filename=f"{gwtname}.dis")
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=f"{gwtname}.dis",
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
@@ -235,22 +247,21 @@ def build_model(dir, exe):
     return sim, None
 
 
-def eval_zb6(sim, exe):
-    print("evaluating zonebudget...")
-    ws = Path(sim.simpath)
+def check_output(idx, test):
+    ws = Path(test.workspace)
 
     # build zonebudget files
     # start with 1 since budget isn't calculated for zone 0
-    zones = [k + 1 for k in range(nlay)]  
+    zones = [k + 1 for k in range(nlay)]
     nzones = len(zones)
     with open(ws / "zonebudget.nam", "w") as f:
         f.write("BEGIN ZONEBUDGET\n")
-        f.write(f"  BUD gwt_{sim.name}.cbc\n")
-        f.write(f"  ZON {sim.name}.zon\n")
-        f.write(f"  GRB gwf_{sim.name}.dis.grb\n")
+        f.write(f"  BUD gwt_{test.name}.cbc\n")
+        f.write(f"  ZON {test.name}.zon\n")
+        f.write(f"  GRB gwf_{test.name}.dis.grb\n")
         f.write("END ZONEBUDGET\n")
 
-    with open(ws / f"{sim.name}.zon", "w") as f:
+    with open(ws / f"{test.name}.zon", "w") as f:
         f.write("BEGIN DIMENSIONS\n")
         f.write(f"  NCELLS {size3d}\n")
         f.write("END DIMENSIONS\n\n")
@@ -262,7 +273,7 @@ def eval_zb6(sim, exe):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        exe,
+        test.targets["zbud6"],
         "zonebudget.nam",
         model_ws=ws,
         silent=False,
@@ -270,10 +281,12 @@ def eval_zb6(sim, exe):
     )
 
     assert success
-    sim.success = success
+    test.success = success
 
     # read data from csv file
-    zbd = np.genfromtxt(ws / "zonebudget.csv", names=True, delimiter=",", deletechars="")
+    zbd = np.genfromtxt(
+        ws / "zonebudget.csv", names=True, delimiter=",", deletechars=""
+    )
 
     # sum the data for all zones
     nentries = int(zbd.shape[0] / nzones)
@@ -297,8 +310,8 @@ def eval_zb6(sim, exe):
     # get results from listing file
     # todo: should flopy have a subclass for GWT list file?
     budl = flopy.utils.mflistfile.ListBudget(
-        ws / f"gwt_{os.path.basename(sim.name)}.lst",
-        budgetkey="MASS BUDGET FOR ENTIRE MODEL"
+        ws / f"gwt_{os.path.basename(test.name)}.lst",
+        budgetkey="MASS BUDGET FOR ENTIRE MODEL",
     )
     names = list(bud_lst)
     found_names = budl.get_record_names()
@@ -307,19 +320,17 @@ def eval_zb6(sim, exe):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = [
-        "STORAGE-AQUEOUS"
-    ]
+    cbc_bud = ["STORAGE-AQUEOUS"]
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
     cobj = flopy.utils.CellBudgetFile(
-        ws / f"gwt_{os.path.basename(sim.name)}.cbc",
-        precision="double")
+        ws / f"gwt_{os.path.basename(test.name)}.cbc", precision="double"
+    )
     rec = cobj.list_records()
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
-    for idx, (k, t) in enumerate(zip(kk, times)):
+    for i, (k, t) in enumerate(zip(kk, times)):
         for text in cbc_bud:
             qin = 0.0
             qout = 0.0
@@ -337,86 +348,81 @@ def eval_zb6(sim, exe):
                             qout -= vv
                         else:
                             qin += vv
-            d["totim"][idx] = t
-            d["time_step"][idx] = k[0]
+            d["totim"][i] = t
+            d["time_step"][i] = k[0]
             d["stress_period"] = k[1]
             key = f"{text}_IN"
-            d[key][idx] = qin
+            d[key][i] = qin
             key = f"{text}_OUT"
-            d[key][idx] = qout
+            d[key][i] = qout
 
     # calculate absolute difference
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, key in enumerate(bud_lst):
-        diff[:, idx] = d0[key] - d[key]
+    for i, key in enumerate(bud_lst):
+        diff[:, i] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    with open(ws / f"{os.path.basename(sim.name)}.bud.cmp.out", "w") as f:
+    with open(ws / f"{os.path.basename(test.name)}.bud.cmp.out", "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
-                for idx, key in enumerate(bud_lst):
+                for key in bud_lst:
                     line += f"{key + '_LST':>25s}"
                     line += f"{key + '_CBC':>25s}"
                     line += f"{key + '_DIF':>25s}"
                 f.write(line + "\n")
             line = f"{d['totim'][i]:10g}"
-            for idx, key in enumerate(bud_lst):
+            for ii, key in enumerate(bud_lst):
                 line += f"{d0[key][i]:25g}"
                 line += f"{d[key][i]:25g}"
-                line += f"{diff[i, idx]:25g}"
+                line += f"{diff[i, ii]:25g}"
             f.write(line + "\n")
 
     # compare zone budget output to cbc output
     diffzb = np.zeros((nbud, len(bud_lst)), dtype=float)
-    for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
-        diffzb[:, idx] = zbsum[key0] - d[key]
+    for i, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
+        diffzb[:, i] = zbsum[key0] - d[key]
     diffzbmax = np.abs(diffzb).max()
     msg += (
         f"\nmaximum absolute zonebudget-cell by cell difference ({diffzbmax}) "
     )
 
     # write summary
-    with open(ws / f"{os.path.basename(sim.name)}.zbud.cmp.out", "w") as f:
+    with open(ws / f"{os.path.basename(test.name)}.zbud.cmp.out", "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:
                 line = f"{'TIME':>10s}"
-                for idx, key in enumerate(bud_lst):
+                for key in bud_lst:
                     line += f"{key + '_ZBUD':>25s}"
                     line += f"{key + '_CBC':>25s}"
                     line += f"{key + '_DIF':>25s}"
                 f.write(line + "\n")
             line = f"{d['totim'][i]:10g}"
-            for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
+            for ii, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
                 line += f"{zbsum[key0][i]:25g}"
                 line += f"{d[key][i]:25g}"
-                line += f"{diffzb[i, idx]:25g}"
+                line += f"{diffzb[i, ii]:25g}"
             f.write(line + "\n")
 
     if diffmax > budtol or diffzbmax > budtol:
-        sim.success = False
+        test.success = False
         msg += f"\n...exceeds {budtol}"
         assert diffmax < budtol and diffzbmax < budtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
-def test_mf6model(function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    mf6 = targets.mf6
-    zb6 = targets.zbud6
-    test = TestFramework()
-    test.build(lambda _, w: build_model(w, mf6), 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=lambda s: eval_zb6(s, zb6),
-            htol=htol,
-            idxsim=0,
-        ),
-        ws,
+@pytest.mark.parametrize("idx, name", enumerate(cases))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        htol=htol,
     )
+    test.run()

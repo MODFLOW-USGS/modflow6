@@ -1,13 +1,11 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmSimDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use SimNamInputModule, only: sim_nam_param_definitions, &
-                               sim_nam_aggregate_definitions, &
-                               sim_nam_block_definitions, &
-                               sim_nam_multi_package
+  use SimNamInputModule
 
   implicit none
   private
