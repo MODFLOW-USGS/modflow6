@@ -627,7 +627,8 @@ contains
     !
     ! -- reallocate diffc if not found
     if (.not. found%diffc) then
-      call mem_reallocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
+      call mem_reallocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath), &
+                          copy=.FALSE.)
     end if
     !
     ! -- set this%idisp flag
@@ -656,11 +657,13 @@ contains
         call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath), &
                              'ATH2', trim(this%memoryPath))
     else
-      call mem_reallocate(this%alh, 0, 'ALH', trim(this%memoryPath))
-      call mem_reallocate(this%alv, 0, 'ALV', trim(this%memoryPath))
-      call mem_reallocate(this%ath1, 0, 'ATH1', trim(this%memoryPath))
-      call mem_reallocate(this%ath2, 0, 'ATH2', trim(this%memoryPath))
-      call mem_reallocate(this%atv, 0, 'ATV', trim(this%memoryPath))
+      call mem_reallocate(this%alh, 0, 'ALH', trim(this%memoryPath), copy=.FALSE.)
+      call mem_reallocate(this%alv, 0, 'ALV', trim(this%memoryPath), copy=.FALSE.)
+      call mem_reallocate(this%ath1, 0, 'ATH1', trim(this%memoryPath), &
+                          copy=.FALSE.)
+      call mem_reallocate(this%ath2, 0, 'ATH2', trim(this%memoryPath), &
+                          copy=.FALSE.)
+      call mem_reallocate(this%atv, 0, 'ATV', trim(this%memoryPath), copy=.FALSE.)
     end if
     !
     ! -- log griddata

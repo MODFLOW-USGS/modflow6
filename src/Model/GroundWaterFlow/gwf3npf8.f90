@@ -1696,13 +1696,17 @@ contains
       call mem_set_value(this%k22, 'K', this%input_mempath, map, afound(2))
     end if
     if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
-                                                trim(this%memoryPath))
+                                                trim(this%memoryPath), &
+                                                copy=.FALSE.)
     if (.not. found%angle1 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
+      call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath), &
+                          copy=.FALSE.)
     if (.not. found%angle2 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
+      call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath), &
+                          copy=.FALSE.)
     if (.not. found%angle3 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
+      call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath), &
+                          copy=.FALSE.)
     !
     ! -- log griddata
     if (this%iout > 0) then

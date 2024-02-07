@@ -255,8 +255,8 @@ contains
         this%yc(noder) = this%cellxy(2, node)
       end do
     else
-      call mem_reallocate(this%xc, 0, 'XC', this%memoryPath)
-      call mem_reallocate(this%yc, 0, 'YC', this%memoryPath)
+      call mem_reallocate(this%xc, 0, 'XC', this%memoryPath, copy=.FALSE.)
+      call mem_reallocate(this%yc, 0, 'YC', this%memoryPath, copy=.FALSE.)
     end if
     !
     ! -- create and fill the connections object
