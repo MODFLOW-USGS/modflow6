@@ -9,6 +9,8 @@ module GwfRchInputModule
   public gwf_rch_block_definitions
   public GwfRchParamFoundType
   public gwf_rch_multi_package
+  public gwf_rch_advanced_package
+  public gwf_rch_subpackages
 
   type GwfRchParamFoundType
     logical :: fixed_cell = .false.
@@ -33,6 +35,13 @@ module GwfRchInputModule
   end type GwfRchParamFoundType
 
   logical :: gwf_rch_multi_package = .true.
+  logical :: gwf_rch_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_rch_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfrch_fixed_cell = InputParamDefinitionType &

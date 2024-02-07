@@ -9,11 +9,20 @@ module ExgGwfgwtInputModule
   public exg_gwfgwt_block_definitions
   public ExgGwfgwtParamFoundType
   public exg_gwfgwt_multi_package
+  public exg_gwfgwt_advanced_package
+  public exg_gwfgwt_subpackages
 
   type ExgGwfgwtParamFoundType
   end type ExgGwfgwtParamFoundType
 
   logical :: exg_gwfgwt_multi_package = .false.
+  logical :: exg_gwfgwt_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    exg_gwfgwt_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exg_gwfgwt_param_definitions(*) = &
