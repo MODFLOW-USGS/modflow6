@@ -23,10 +23,11 @@ module Mf6FileListInputModule
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
   use BoundInputContextModule, only: BoundInputContextType
   use StructVectorModule, only: StructVectorType, TSStringLocType
+  use DynamicParamFilterModule, only: DynamicParamFilterType
 
   implicit none
   private
-  public :: BoundListInputType
+  public :: BoundListInputType, ListInputType
 
   !> @brief Abstract base class for ascii list loaders
   !!
@@ -40,6 +41,7 @@ module Mf6FileListInputModule
     integer(I4B) :: oc_inunit
     type(TimeSeriesManagerType), pointer :: tsmanager => null()
     type(StructArrayType), pointer :: structarray => null()
+    type(DynamicParamFilterType) :: filter
   contains
     procedure :: base_init
     procedure :: base_destroy
@@ -48,6 +50,29 @@ module Mf6FileListInputModule
     procedure :: reset
     procedure :: read_control_record
   end type ListInputBaseType
+
+  !> @brief Non-boundary package list loader.
+  !!
+  !! Supports packages such as STO, TVK and TVS.
+  !! All of these packages contain SETTING dfn types (KEYSTRING
+  !! datatypes), however in these packages they behave
+  !! differently than those in advanced packages.
+  !!
+  !<
+  type, extends(ListInputBaseType) :: ListInputType
+    integer(I4B), pointer :: iprpak => null() ! print input option
+    type(InputParamDefinitionType), pointer :: setting_idt => null()
+    type(InputParamDefinitionType), pointer :: setval_idt => null()
+  contains
+    procedure :: ainit => list_init
+    procedure :: rp => list_rp
+    procedure :: destroy => list_destroy
+    procedure :: ts_link_bnd => list_ts_link_bnd
+    procedure :: ts_link_aux => list_ts_link_aux
+    procedure :: ts_link => list_ts_link
+    procedure :: ts_update => list_ts_update
+    procedure :: create_structarray => list_create_structarray
+  end type ListInputType
 
   !> @brief Boundary package list loader.
   !!
@@ -58,7 +83,7 @@ module Mf6FileListInputModule
   !<
   type, extends(ListInputBaseType) :: BoundListInputType
     integer(I4B) :: iboundname
-    type(BoundInputContextType) :: bound_ctx
+    type(BoundInputContextType) :: bound_context
   contains
     procedure :: ainit => bndlist_init
     procedure :: rp => bndlist_rp
@@ -96,7 +121,7 @@ contains
                         input_name, iperblock, parser, loader, iout)
     !
     ! -- initialize package input context
-    call this%bound_ctx%init(mf6_input, this%readasarrays)
+    call this%bound_context%init(mf6_input, this%readasarrays)
     !
     ! -- load blocks after OPTIONS and DIMENSIONS
     do iblk = 1, size(this%mf6_input%block_dfns)
@@ -125,14 +150,20 @@ contains
     !
     call loader%finalize()
     !
+    ! -- initialize input param filter
+    call this%filter%init(this%mf6_input, this%readasarrays, &
+                          this%bound_context%naux, &
+                          this%bound_context%inamedbound, &
+                          this%iout)
+    !
     ! -- store in scope SA cols for list input
-    call this%bound_ctx%filtered_params(this%param_names, this%nparam)
+    call this%filter%get_flt_params(this%param_names, this%nparam)
     !
     ! -- construct and set up the struct array object
     call this%create_structarray()
     !
     ! -- finalize input context setup
-    call this%bound_ctx%enable()
+    call this%bound_context%enable()
     !
     ! -- return
     return
@@ -159,7 +190,7 @@ contains
     !
     if (this%ibinary == 1) then
       !
-      this%bound_ctx%nbound = &
+      this%bound_context%nbound = &
         this%structarray%read_from_binary(this%oc_inunit, this%iout)
       !
       call parser%terminateblock()
@@ -172,7 +203,7 @@ contains
       !
       ts_active = (this%ts_active /= 0)
       !
-      this%bound_ctx%nbound = &
+      this%bound_context%nbound = &
         this%structarray%read_from_parser(parser, ts_active, this%iout)
     end if
     !
@@ -194,7 +225,7 @@ contains
     class(BoundListInputType), intent(inout) :: this !< BoundListInputType
     !
     call this%base_destroy()
-    call this%bound_ctx%destroy()
+    call this%bound_context%destroy()
     !
     ! -- return
     return
@@ -225,7 +256,7 @@ contains
                                    ts_strloc%structarray_col, bndElem, &
                                    this%mf6_input%subcomponent_name, &
                                    'BND', this%tsmanager, &
-                                   this%bound_ctx%iprpak, tsLinkBnd)
+                                   this%bound_context%iprpak, tsLinkBnd)
     !
     if (associated(tsLinkBnd)) then
       !
@@ -233,7 +264,7 @@ contains
       tsLinkBnd%Text = structvector%idt%mf6varname
       !
       ! -- set boundname if provided
-      if (this%bound_ctx%inamedbound > 0) then
+      if (this%bound_context%inamedbound > 0) then
         sv_bound => this%structarray%get(this%iboundname)
         boundname = sv_bound%charstr1d(ts_strloc%row)
         tsLinkBnd%BndName = boundname
@@ -269,15 +300,15 @@ contains
                                    ts_strloc%structarray_col, bndElem, &
                                    this%mf6_input%subcomponent_name, &
                                    'AUX', this%tsmanager, &
-                                   this%bound_ctx%iprpak, tsLinkAux)
+                                   this%bound_context%iprpak, tsLinkAux)
 
     if (associated(tsLinkAux)) then
       !
       ! -- set variable name
-      tsLinkAux%Text = this%bound_ctx%auxname_cst(ts_strloc%col)
+      tsLinkAux%Text = this%bound_context%auxname_cst(ts_strloc%col)
       !
       ! -- set boundname if provided
-      if (this%bound_ctx%inamedbound > 0) then
+      if (this%bound_context%inamedbound > 0) then
         sv_bound => this%structarray%get(this%iboundname)
         boundname = sv_bound%charstr1d(ts_strloc%row)
         tsLinkAux%BndName = boundname
@@ -357,7 +388,7 @@ contains
     !
     ! -- construct and set up the struct array object
     this%structarray => constructStructArray(this%mf6_input, this%nparam, &
-                                             this%bound_ctx%maxbound, 0, &
+                                             this%bound_context%maxbound, 0, &
                                              this%mf6_input%mempath, &
                                              this%mf6_input%component_mempath)
     !
@@ -381,6 +412,289 @@ contains
     ! -- return
     return
   end subroutine bndlist_create_structarray
+
+  subroutine list_init(this, mf6_input, component_name, component_input_name, &
+                       input_name, iperblock, parser, iout)
+    use MemoryManagerExtModule, only: mem_set_value
+    use BlockParserModule, only: BlockParserType
+    use LoadMf6FileModule, only: LoadMf6FileType
+    class(ListInputType), intent(inout) :: this
+    type(ModflowInputType), intent(in) :: mf6_input
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: component_input_name
+    character(len=*), intent(in) :: input_name
+    integer(I4B), intent(in) :: iperblock
+    type(BlockParserType), pointer, intent(inout) :: parser
+    integer(I4B), intent(in) :: iout
+    type(LoadMf6FileType) :: loader
+    character(len=LINELENGTH) :: blockname
+    integer(I4B) :: iblk
+    logical(LGP) :: found
+    !
+    ! -- initialize
+    nullify (this%setting_idt)
+    nullify (this%setval_idt)
+    !
+    ! -- allocate and update local iprpak input param
+    allocate (this%iprpak)
+    this%iprpak = 0
+    call mem_set_value(this%iprpak, 'IPRPAK', this%mf6_input%mempath, found)
+    !
+    ! -- base initializer
+    call this%base_init(mf6_input, component_name, component_input_name, &
+                        input_name, iperblock, parser, loader, iout)
+    !
+    ! -- load OPTIONS and DIMENSIONS blocks
+    do iblk = 1, size(this%mf6_input%block_dfns)
+      !
+      ! -- log block header via loader or directly here?
+      !
+      ! -- set blockname
+      blockname = this%mf6_input%block_dfns(iblk)%blockname
+      !
+      ! -- step 1 loads OPTIONS and DIMENSIONS blocks if defined
+      if (blockname == 'OPTIONS' .or. blockname == 'DIMENSIONS') cycle
+      if (blockname == 'PERIOD') exit
+      !
+      ! -- load block
+      call loader%load_block(iblk)
+      !
+      if (this%mf6_input%block_dfns(iblk)%aggregate) then
+        if (this%mf6_input%block_dfns(iblk)%timeseries) then
+          if (this%ts_active > 0) then
+            !call this%ts_update(loader%structarray)
+            ! -- TODO error?
+          end if
+        end if
+      end if
+      !
+    end do
+    !
+    call loader%finalize()
+    !
+    ! -- initialize parameter filter object
+    call this%filter%init(mf6_input, this%readasarrays, 0, 0, iout)
+    !
+    ! -- set SA cols in scope for list input
+    call this%filter%get_flt_params(this%param_names, this%nparam)
+    !
+    ! -- construct and set up the struct array object
+    call this%create_structarray()
+    !
+    ! -- return
+    return
+  end subroutine list_init
+
+  subroutine list_rp(this, parser)
+    ! -- modules
+    use BlockParserModule, only: BlockParserType
+    use StructVectorModule, only: StructVectorType
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    type(BlockParserType), pointer, intent(inout) :: parser
+    ! -- local
+    logical(LGP) :: ts_active
+    integer(I4B) :: readcnt
+    !
+    call this%reset()
+    !
+    !
+    ts_active = (this%ts_active /= 0)
+    !
+    !
+    if (this%settings) then
+      readcnt = this%structarray%read_from_parser_setting(parser, ts_active, &
+                                                          this%iout)
+    else
+      readcnt = this%structarray%read_from_parser(parser, ts_active, 0)
+    end if
+    !
+    ! update ts links
+    if (this%ts_active /= 0) then
+      call this%ts_update()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine list_rp
+
+  subroutine list_destroy(this)
+    class(ListInputType), intent(inout) :: this
+    !
+    deallocate (this%iprpak)
+    !
+    if (associated(this%setting_idt)) deallocate (this%setting_idt)
+    if (associated(this%setval_idt)) deallocate (this%setval_idt)
+    !
+    call this%base_destroy()
+    !
+  end subroutine list_destroy
+
+  subroutine list_ts_link_bnd(this, structvector, ts_strloc)
+    ! -- modules
+    use TimeSeriesLinkModule, only: TimeSeriesLinkType
+    use TimeSeriesManagerModule, only: read_value_or_time_series
+    use StructVectorModule, only: StructVectorType, TSStringLocType
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    type(StructVectorType), pointer, intent(in) :: structvector
+    type(TSStringLocType), pointer, intent(in) :: ts_strloc
+    ! -- local
+    real(DP), pointer :: bndElem
+    type(TimeSeriesLinkType), pointer :: tsLinkBnd
+    !
+    nullify (tsLinkBnd)
+    !
+    ! -- set bound element
+    bndElem => structvector%dbl1d(ts_strloc%row)
+    !
+    ! -- set link
+    call read_value_or_time_series(ts_strloc%token, ts_strloc%row, &
+                                   ts_strloc%structarray_col, bndElem, &
+                                   this%mf6_input%subcomponent_name, &
+                                   'BND', this%tsmanager, &
+                                   this%iprpak, tsLinkBnd)
+    !
+    ! -- return
+    return
+  end subroutine list_ts_link_bnd
+
+  subroutine list_ts_link_aux(this, structvector, ts_strloc)
+    ! -- modules
+    use TimeSeriesLinkModule, only: TimeSeriesLinkType
+    use TimeSeriesManagerModule, only: read_value_or_time_series
+    use StructVectorModule, only: StructVectorType, TSStringLocType
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    type(StructVectorType), pointer, intent(in) :: structvector
+    type(TSStringLocType), pointer, intent(in) :: ts_strloc
+    ! -- local
+    real(DP), pointer :: bndElem
+    type(TimeSeriesLinkType), pointer :: tsLinkAux
+    !
+    nullify (tsLinkAux)
+    !
+    ! -- set bound element
+    bndElem => structvector%dbl2d(ts_strloc%col, ts_strloc%row)
+    !
+    ! -- set link
+    call read_value_or_time_series(ts_strloc%token, ts_strloc%row, &
+                                   ts_strloc%structarray_col, bndElem, &
+                                   this%mf6_input%subcomponent_name, &
+                                   'AUX', this%tsmanager, &
+                                   this%iprpak, tsLinkAux)
+    !
+    ! -- return
+    return
+  end subroutine list_ts_link_aux
+
+  subroutine list_ts_link(this, structvector, ts_strloc)
+    ! -- modules
+    use StructVectorModule, only: StructVectorType, TSStringLocType
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    type(StructVectorType), pointer, intent(in) :: structvector
+    type(TSStringLocType), pointer, intent(in) :: ts_strloc
+    ! -- local
+    !
+    select case (structvector%memtype)
+    case (2) ! -- dbl1d
+      !
+      call this%ts_link_aux(structvector, ts_strloc)
+      !
+    case (6) ! -- dbl2d
+      !
+      call this%ts_link_bnd(structvector, ts_strloc)
+      !
+    case default
+      ! TODO: IDM UNIMPLEMENTED
+    end select
+    !
+    ! -- return
+    return
+  end subroutine list_ts_link
+
+  subroutine list_ts_update(this)
+    ! -- modules
+    use StructVectorModule, only: TSStringLocType
+    use StructVectorModule, only: StructVectorType
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: n, m
+    type(TSStringLocType), pointer :: ts_strloc
+    type(StructVectorType), pointer :: sv
+    !
+    do m = 1, this%structarray%count()
+
+      sv => this%structarray%get(m)
+
+      if (sv%idt%timeseries) then
+        !
+        do n = 1, sv%ts_strlocs%count()
+          ts_strloc => sv%get_ts_strloc(n)
+          call this%ts_link(sv, ts_strloc)
+        end do
+        !
+        call sv%clear()
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine list_ts_update
+
+  subroutine list_create_structarray(this)
+    ! -- modules
+    use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: get_param_definition_type, &
+                                      idt_datatype, idt_copy
+    ! -- dummy
+    class(ListInputType), intent(inout) :: this
+    ! -- local
+    type(InputParamDefinitionType), pointer :: idt
+    integer(I4B) :: icol
+    !
+    ! -- construct and set up the struct array object
+    this%structarray => constructStructArray(this%mf6_input, this%nparam, 0, & ! maxbound
+                                             0, this%mf6_input%mempath, &
+                                             this%mf6_input%component_mempath)
+    !
+    ! -- set up struct array
+    do icol = 1, this%nparam
+      !
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', &
+                                       this%param_names(icol), this%input_name)
+      ! -- check for settings dfn types
+      if (idt_datatype(idt) == 'KEYSTRING') then
+        ! -- create and store the setting dfn type
+        this%setting_idt => idt_copy(idt)
+        this%setting_idt%mf6varname = 'SETTING'
+        call this%structarray%mem_create_vector(icol, this%setting_idt)
+        cycle
+      else if (associated(this%setting_idt)) then
+        ! -- only create once regardless of number of params
+        if (.not. associated(this%setval_idt)) then
+          ! -- create and store the setting value dfn type
+          this%setval_idt => idt_copy(idt)
+          this%setval_idt%tagname = 'SETTING_VALUE'
+          this%setval_idt%mf6varname = 'SETTING_VALUE'
+          call this%structarray%mem_create_vector(icol, this%setval_idt)
+        end if
+        cycle
+      end if
+      !
+      ! -- allocate variable in memory manager
+      call this%structarray%mem_create_vector(icol, idt)
+      !
+    end do
+    !
+    ! -- return
+    return
+  end subroutine list_create_structarray
 
   subroutine base_init(this, mf6_input, component_name, component_input_name, &
                        input_name, iperblock, parser, loader, iout)

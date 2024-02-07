@@ -197,6 +197,7 @@ modflow_sources = files(
     'Utilities' / 'ArrayRead' / 'LayeredArrayReader.f90',
     'Utilities' / 'Idm' / 'BoundInputContext.f90',
     'Utilities' / 'Idm' / 'DefinitionSelect.f90',
+    'Utilities' / 'Idm' / 'DynamicParamFilter.f90',
     'Utilities' / 'Idm' / 'IdmLoad.f90',
     'Utilities' / 'Idm' / 'IdmLogger.f90',
     'Utilities' / 'Idm' / 'InputDefinition.f90',

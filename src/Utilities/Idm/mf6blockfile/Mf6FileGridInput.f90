@@ -20,6 +20,7 @@ module Mf6FileGridInputModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, &
                                           tasmanager_cr
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
+  use DynamicParamFilterModule, only: DynamicParamFilterType
 
   implicit none
   private
@@ -35,7 +36,8 @@ module Mf6FileGridInputModule
       pointer :: param_tasnames !< array of dynamic param TAS names
     type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
     type(TimeArraySeriesManagerType), pointer :: tasmanager !< TAS manager
-    type(BoundInputContextType) :: bound_ctx
+    type(BoundInputContextType) :: bound_context
+    type(DynamicParamFilterType) :: filter
   contains
     procedure :: ainit => bndgrid_init
     procedure :: df => bndgrid_df
@@ -107,7 +109,7 @@ contains
     end if
     !
     ! -- initialize input context memory
-    call this%bound_ctx%init(mf6_input, this%readasarrays)
+    call this%bound_context%init(mf6_input, this%readasarrays)
     !
     ! -- allocate dfn params
     call this%params_alloc()
@@ -178,7 +180,7 @@ contains
       call parser%GetStringCaps(param_tag)
       !
       ! -- is param tag an auxvar?
-      iaux = ifind_charstr(this%bound_ctx%auxname_cst, param_tag)
+      iaux = ifind_charstr(this%bound_context%auxname_cst, param_tag)
       !
       ! -- any auvxar corresponds to the definition tag 'AUX'
       if (iaux > 0) param_tag = 'AUX'
@@ -253,8 +255,10 @@ contains
       call this%tasmanager%reset(this%mf6_input%subcomponent_name)
       !
       ! -- reinitialize tas name arrays
-      call this%bound_ctx%param_init('CHARSTR1D', 'AUXTASNAME', this%input_name)
-      call this%bound_ctx%param_init('CHARSTR1D', 'PARAMTASNAME', this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                         this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                         this%input_name)
     end if
     !
     do n = 1, this%nparam
@@ -263,9 +267,9 @@ contains
     end do
     !
     ! -- explicitly reset auxvar array each period
-    do m = 1, this%bound_ctx%ncpl
-      do n = 1, this%bound_ctx%naux
-        this%bound_ctx%auxvar(n, m) = DZERO
+    do m = 1, this%bound_context%ncpl
+      do n = 1, this%bound_context%naux
+        this%bound_context%auxvar(n, m) = DZERO
       end do
     end do
     !
@@ -282,11 +286,15 @@ contains
     integer(I4B) :: iparam
     !
     ! -- set in scope param names
-    call this%bound_ctx%filtered_params(this%param_names, this%nparam)
+    call this%filter%init(this%mf6_input, this%readasarrays, &
+                          this%bound_context%naux, &
+                          this%bound_context%inamedbound, &
+                          this%iout)
+    call this%filter%get_flt_params(this%param_names, this%nparam)
     !
-    call this%bound_ctx%array_params_create(this%param_names, this%nparam, &
-                                            this%input_name)
-    call this%bound_ctx%enable()
+    call this%bound_context%array_params_create(this%param_names, this%nparam, &
+                                                this%input_name)
+    call this%bound_context%enable()
     !
     ! -- allocate and set param_reads pointer array
     allocate (this%param_reads(this%nparam))
@@ -294,7 +302,7 @@ contains
     ! store read state variable pointers
     do iparam = 1, this%nparam
       ! -- allocate and store name of read state variable
-      rs_varname = this%bound_ctx%rsv_alloc(this%param_names(iparam))
+      rs_varname = this%bound_context%rsv_alloc(this%param_names(iparam))
       call mem_setptr(intvar, rs_varname, this%mf6_input%mempath)
       this%param_reads(iparam)%invar => intvar
       this%param_reads(iparam)%invar = 0
@@ -377,13 +385,15 @@ contains
     if (this%tas_active /= 0) then
       !
       call mem_allocate(this%aux_tasnames, LENTIMESERIESNAME, &
-                        this%bound_ctx%naux, 'AUXTASNAME', &
+                        this%bound_context%naux, 'AUXTASNAME', &
                         this%mf6_input%mempath)
       call mem_allocate(this%param_tasnames, LENTIMESERIESNAME, this%nparam, &
                         'PARAMTASNAME', this%mf6_input%mempath)
       !
-      call this%bound_ctx%param_init('CHARSTR1D', 'AUXTASNAME', this%input_name)
-      call this%bound_ctx%param_init('CHARSTR1D', 'PARAMTASNAME', this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                         this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                         this%input_name)
       !
     else
       !
@@ -424,15 +434,15 @@ contains
     convertflux = .false.
     !
     ! Create AUX Time Array Series links
-    do n = 1, this%bound_ctx%naux
+    do n = 1, this%bound_context%naux
       tas_name = this%aux_tasnames(n)
       !
       if (tas_name /= '') then
         ! -- set auxvar pointer
-        auxArrayPtr => this%bound_ctx%auxvar(n, :)
-        aux_name = this%bound_ctx%auxname_cst(n)
+        auxArrayPtr => this%bound_context%auxvar(n, :)
+        aux_name = this%bound_context%auxname_cst(n)
         call this%tasmanager%MakeTasLink(this%mf6_input%subcomponent_name, &
-                                         auxArrayPtr, this%bound_ctx%iprpak, &
+                                         auxArrayPtr, this%bound_context%iprpak, &
                                          tas_name, aux_name, convertFlux, &
                                          nodelist, inunit)
       end if
@@ -454,7 +464,8 @@ contains
           ! -- set bound pointer
           bndArrayPtr => bound(:)
           call this%tasmanager%MakeTasLink(this%mf6_input%subcomponent_name, &
-                                           bndArrayPtr, this%bound_ctx%iprpak, &
+                                           bndArrayPtr, &
+                                           this%bound_context%iprpak, &
                                            tas_name, idt%mf6varname, &
                                            convertFlux, nodelist, inunit)
         end if

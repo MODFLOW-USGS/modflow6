@@ -7,11 +7,12 @@
 module BoundInputContextModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENAUXNAME, &
+  use ConstantsModule, only: DZERO, IZERO, LENAUXNAME, &
                              LENVARNAME, LENBOUNDNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType
+  use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
 
   implicit none
@@ -47,8 +48,6 @@ module BoundInputContextModule
     real(DP), dimension(:, :), pointer, &
       contiguous :: auxvar => null() !< auxiliary variable array
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< model shape
-    character(len=LINELENGTH), dimension(:), allocatable :: fltparams !< in scope input parameters
-    integer(I4B) :: nfltparam !< number of in scope input parameters
     logical(LGP) :: readasarrays !< grid or list based input
     type(ModflowInputType) :: mf6_input !< description of input
   contains
@@ -57,11 +56,7 @@ module BoundInputContextModule
     procedure :: enable
     procedure :: array_params_create
     procedure :: param_init
-    procedure :: allocate_read_state_var
     procedure :: destroy => bndctx_destroy
-    procedure :: set_filtered_cols
-    procedure :: set_filtered_params
-    procedure :: filtered_params
     procedure :: rsv_alloc
   end type BoundInputContextType
 
@@ -82,13 +77,6 @@ contains
     !
     ! -- create the dynamic package input context
     call this%create_context()
-    !
-    ! -- determine in scope list input columns
-    if (readasarrays) then
-      call this%set_filtered_params()
-    else
-      call this%set_filtered_cols()
-    end if
     !
     ! --return
     return
@@ -127,7 +115,6 @@ contains
     this%maxbound = 0
     this%inamedbound = 0
     this%iprpak = 0
-    this%nfltparam = 0
     !
     ! -- update optional scalars
     call mem_set_value(this%inamedbound, 'BOUNDNAMES', this%mf6_input%mempath, &
@@ -199,60 +186,21 @@ contains
     return
   end subroutine enable
 
-  !> @brief allocate a read state variable
-  !!
-  !! Create and set a read state variable, e.g. 'INRECHARGE',
-  !! which are updated per iper load as follows:
-  !! -1: unset, not in use
-  !!  0: not read in most recent period block
-  !!  1: numeric input read in most recent period block
-  !!  2: time series input read in most recent period block
-  !!
-  !<
-  function allocate_read_state_var(this, mf6varname) result(varname)
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr, mem_allocate
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    character(len=*), intent(in) :: mf6varname
-    ! -- local
-    character(len=LENVARNAME) :: varname
-    integer(I4B) :: ilen
-    integer(I4B), pointer :: intvar
-    character(len=2) :: prefix = 'IN'
-    !
-    ! -- assign first column as the block number
-    ilen = len_trim(mf6varname)
-    !
-    if (ilen > (LENVARNAME - len(prefix))) then
-      varname = prefix//mf6varname(1:(LENVARNAME - len(prefix)))
-    else
-      varname = prefix//trim(mf6varname)
-    end if
-    !
-    call mem_allocate(intvar, varname, this%mf6_input%mempath)
-    intvar = -1
-    !
-    ! -- return
-    return
-  end function allocate_read_state_var
-
   !> @brief allocate dfn array input period block parameters
   !!
   !! Currently supports numeric (i.e. array based) params
   !!
   !<
-  subroutine array_params_create(this, params, nparam, sourcename)
+  subroutine array_params_create(this, params, nparam, input_name)
     ! -- modules
     use ConstantsModule, only: DZERO, IZERO
     use MemoryManagerModule, only: mem_allocate
-    use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     ! -- dummy
     class(BoundInputContextType) :: this
     character(len=*), dimension(:), allocatable, intent(in) :: params
     integer(I4B), intent(in) :: nparam
-    character(len=*), intent(in) :: sourcename
+    character(len=*), intent(in) :: input_name
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B), dimension(:), pointer, contiguous :: int1d
@@ -274,7 +222,6 @@ contains
         case ('INTEGER1D')
           call mem_allocate(int1d, this%ncpl, idt%mf6varname, &
                             this%mf6_input%mempath)
-          !
           do n = 1, this%ncpl
             int1d(n) = IZERO
           end do
@@ -282,7 +229,6 @@ contains
         case ('DOUBLE1D')
           call mem_allocate(dbl1d, this%ncpl, idt%mf6varname, &
                             this%mf6_input%mempath)
-          !
           do n = 1, this%ncpl
             dbl1d(n) = DZERO
           end do
@@ -290,7 +236,6 @@ contains
         case ('DOUBLE2D')
           call mem_allocate(dbl2d, this%naux, this%ncpl, idt%mf6varname, &
                             this%mf6_input%mempath)
-          !
           do m = 1, this%ncpl
             do n = 1, this%naux
               dbl2d(n, m) = DZERO
@@ -301,7 +246,7 @@ contains
           errmsg = 'IDM unimplemented. BoundInputContext::array_params_create &
                    &datatype='//trim(idt%datatype)
           call store_error(errmsg)
-          call store_error_filename(sourcename)
+          call store_error_filename(input_name)
         end select
       end if
     end do
@@ -310,14 +255,14 @@ contains
     return
   end subroutine array_params_create
 
-  subroutine param_init(this, datatype, varname, sourcename)
+  subroutine param_init(this, datatype, varname, input_name)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(BoundInputContextType) :: this
     character(len=*), intent(in) :: datatype
     character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: sourcename
+    character(len=*), intent(in) :: input_name
     ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
@@ -328,21 +273,18 @@ contains
     !
     select case (datatype)
     case ('INTEGER1D')
-      !
       call mem_setptr(int1d, varname, this%mf6_input%mempath)
       do n = 1, this%ncpl
         int1d(n) = IZERO
       end do
       !
     case ('DOUBLE1D')
-      !
       call mem_setptr(dbl1d, varname, this%mf6_input%mempath)
       do n = 1, this%ncpl
         dbl1d(n) = DZERO
       end do
       !
     case ('DOUBLE2D')
-      !
       call mem_setptr(dbl2d, varname, this%mf6_input%mempath)
       do m = 1, this%ncpl
         do n = 1, this%naux
@@ -351,19 +293,16 @@ contains
       end do
       !
     case ('CHARSTR1D')
-      !
       call mem_setptr(charstr1d, varname, this%mf6_input%mempath)
       do n = 1, size(charstr1d)
         charstr1d(n) = ''
       end do
       !
     case default
-      !
       errmsg = 'IDM unimplemented. BoundInputContext::param_init &
                &datatype='//trim(datatype)
       call store_error(errmsg)
-      call store_error_filename(sourcename)
-      !
+      call store_error_filename(input_name)
     end select
     !
     ! -- return
@@ -395,180 +334,9 @@ contains
     nullify (this%auxvar)
     nullify (this%mshape)
     !
-    deallocate (this%fltparams)
-    !
     ! --return
     return
   end subroutine bndctx_destroy
-
-  !> @brief create array of in scope list input columns
-  !!
-  !! Filter the recarray description of list input parameters
-  !! to determine which columns are to be read in this run.
-  !<
-  subroutine set_filtered_cols(this)
-    ! -- modules
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_aggregate_definition_type
-    use ArrayHandlersModule, only: expandarray
-    use InputOutputModule, only: parseline
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    ! -- local
-    type(InputParamDefinitionType), pointer :: ra_idt
-    character(len=:), allocatable :: parse_str
-    character(len=LENVARNAME), dimension(:), allocatable :: dfncols
-    integer(I4B), dimension(:), allocatable :: idxs
-    integer(I4B) :: dfnncol, icol, keepcnt
-    logical(LGP) :: keep
-    !
-    ! -- initialize
-    keepcnt = 0
-    !
-    ! -- get aggregate param definition for period block
-    ra_idt => &
-      get_aggregate_definition_type(this%mf6_input%aggregate_dfns, &
-                                    this%mf6_input%component_type, &
-                                    this%mf6_input%subcomponent_type, &
-                                    'PERIOD')
-    !
-    ! -- split recarray definition
-    parse_str = trim(ra_idt%datatype)//' '
-    call parseline(parse_str, dfnncol, dfncols)
-    !
-    ! -- determine which columns are in scope
-    do icol = 1, dfnncol
-      !
-      keep = .false.
-      !
-      if (dfncols(icol) == 'RECARRAY') then
-        ! no-op
-      else if (dfncols(icol) == 'AUX') then
-        if (this%naux > 0) then
-          keep = .true.
-        end if
-      else if (dfncols(icol) == 'BOUNDNAME') then
-        if (this%inamedbound /= 0) then
-          keep = .true.
-        end if
-      else
-        keep = pkg_param_in_scope(this%mf6_input, dfncols(icol))
-      end if
-      !
-      if (keep) then
-        keepcnt = keepcnt + 1
-        call expandarray(idxs)
-        idxs(keepcnt) = icol
-      end if
-    end do
-    !
-    ! -- update nfiltcol
-    this%nfltparam = keepcnt
-    !
-    ! -- allocate filtered params
-    allocate (this%fltparams(this%nfltparam))
-    !
-    ! -- set filtered params
-    do icol = 1, this%nfltparam
-      this%fltparams(icol) = dfncols(idxs(icol))
-    end do
-    !
-    ! -- cleanup
-    deallocate (dfncols)
-    deallocate (idxs)
-    deallocate (parse_str)
-    !
-    ! -- return
-    return
-  end subroutine set_filtered_cols
-
-  !> @brief array based input dynamic param filter
-  !!
-  !<
-  subroutine set_filtered_params(this)
-    ! -- modules
-    use ArrayHandlersModule, only: expandarray
-    use InputDefinitionModule, only: InputParamDefinitionType
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    ! -- local
-    type(InputParamDefinitionType), pointer :: idt
-    integer(I4B), dimension(:), allocatable :: idt_idxs
-    integer(I4B) :: keepcnt, iparam
-    logical(LGP) :: keep
-    !
-    ! -- initialize
-    keepcnt = 0
-    !
-    ! -- allocate dfn input params
-    do iparam = 1, size(this%mf6_input%param_dfns)
-      !
-      keep = .true.
-      !
-      ! -- assign param definition pointer
-      idt => this%mf6_input%param_dfns(iparam)
-      !
-      if (idt%blockname /= 'PERIOD') then
-        keep = .false.
-      end if
-      !
-      if (idt%tagname == 'AUX') then
-        if (this%naux == 0) then
-          keep = .false.
-        end if
-      end if
-      !
-      if (keep) then
-        keepcnt = keepcnt + 1
-        call expandarray(idt_idxs)
-        idt_idxs(keepcnt) = iparam
-      end if
-    end do
-    !
-    ! -- update nfltparam
-    this%nfltparam = keepcnt
-    !
-    ! -- allocate filtered params
-    allocate (this%fltparams(this%nfltparam))
-    !
-    ! -- set filtered params
-    do iparam = 1, this%nfltparam
-      idt => this%mf6_input%param_dfns(idt_idxs(iparam))
-      this%fltparams(iparam) = trim(idt%tagname)
-    end do
-    !
-    ! -- cleanup
-    deallocate (idt_idxs)
-    !
-    ! -- return
-    return
-  end subroutine set_filtered_params
-
-  !> @brief allocate and set input array to filtered param set
-  !!
-  !<
-  subroutine filtered_params(this, params, nparam)
-    ! -- modules
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    character(len=LINELENGTH), dimension(:), allocatable, &
-      intent(inout) :: params
-    integer(I4B), intent(inout) :: nparam
-    integer(I4B) :: n
-    !
-    if (allocated(params)) deallocate (params)
-    !
-    nparam = this%nfltparam
-    !
-    allocate (params(nparam))
-    !
-    do n = 1, nparam
-      params(n) = this%fltparams(n)
-    end do
-    !
-    ! -- return
-    return
-  end subroutine filtered_params
 
   !> @brief allocate a read state variable
   !!
@@ -608,63 +376,5 @@ contains
     ! -- return
     return
   end function rsv_alloc
-
-  !> @brief determine if input param is in scope for a package
-  !!
-  !<
-  function pkg_param_in_scope(mf6_input, tagname) result(in_scope)
-    ! -- modules
-    use MemoryManagerModule, only: get_isize, mem_setptr
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
-    ! -- dummy
-    type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: tagname
-    ! -- return
-    logical(LGP) :: in_scope
-    ! -- local
-    type(InputParamDefinitionType), pointer :: idt
-    integer(I4B) :: pdim_isize, popt_isize
-    integer(I4B), pointer :: pdim
-    !
-    ! -- initialize
-    in_scope = .false.
-    !
-    idt => get_param_definition_type(mf6_input%param_dfns, &
-                                     mf6_input%component_type, &
-                                     mf6_input%subcomponent_type, &
-                                     'PERIOD', tagname, '')
-    !
-    if (idt%required) then
-      ! -- required params always included
-      in_scope = .true.
-    else
-      !
-      ! -- package specific logic to determine if input params to be read
-      select case (mf6_input%subcomponent_type)
-      case ('EVT')
-        !
-        if (tagname == 'PXDP' .or. tagname == 'PETM') then
-          call get_isize('NSEG', mf6_input%mempath, pdim_isize)
-          if (pdim_isize > 0) then
-            call mem_setptr(pdim, 'NSEG', mf6_input%mempath)
-            if (pdim > 1) then
-              in_scope = .true.
-            end if
-          end if
-        else if (tagname == 'PETM0') then
-          call get_isize('SURFRATESPEC', mf6_input%mempath, popt_isize)
-          if (popt_isize > 0) then
-            in_scope = .true.
-          end if
-        end if
-        !
-      case default
-      end select
-    end if
-    !
-    ! -- return
-    return
-  end function pkg_param_in_scope
 
 end module BoundInputContextModule

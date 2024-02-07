@@ -289,8 +289,12 @@ $(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
 <<<<<<< HEAD
+<<<<<<< HEAD
 $(OBJDIR)/Integer2dReader.o \
 =======
+=======
+$(OBJDIR)/DefinitionSelect.o \
+>>>>>>> 5c4949f92c (add input load subpackage support)
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
@@ -337,8 +341,11 @@ $(OBJDIR)/StructVector.o \
 =======
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
+<<<<<<< HEAD
 >>>>>>> a1e1fd51aa (rebuild makefiles)
 $(OBJDIR)/DefinitionSelect.o \
+=======
+>>>>>>> 5c4949f92c (add input load subpackage support)
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
@@ -352,6 +359,7 @@ $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ims8linear.o \
 $(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/LoadMf6File.o \
+$(OBJDIR)/DynamicParamFilter.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/ExplicitModel.o \

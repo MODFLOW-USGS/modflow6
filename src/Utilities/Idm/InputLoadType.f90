@@ -7,7 +7,10 @@
 module InputLoadTypeModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME
+  use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME, &
+                             LENVARNAME, LENMEMPATH, LENFTYPE
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType
   use ListModule, only: ListType
   use InputDefinitionModule, only: InputParamDefinitionType
@@ -19,6 +22,23 @@ module InputLoadTypeModule
   public :: ModelDynamicPkgsType
   public :: AddDynamicModelToList, GetDynamicModelFromList
   public :: StaticPkgLoadType, DynamicPkgLoadType
+  public :: SubPackageListType
+
+  !> @brief type representing package subpackage list
+  type :: SubPackageListType
+    character(len=LENCOMPONENTNAME), dimension(:), allocatable :: pkgtypes
+    character(len=LENCOMPONENTNAME), dimension(:), allocatable :: component_types
+    character(len=LENCOMPONENTNAME), dimension(:), &
+      allocatable :: subcomponent_types
+    character(len=LINELENGTH), dimension(:), allocatable :: filenames
+    character(len=LENMEMPATH) :: mempath
+    character(len=LENCOMPONENTNAME) :: component_name
+    integer(I4B) :: pnum
+  contains
+    procedure :: create => subpkg_create
+    procedure :: add => subpkg_add
+    procedure :: destroy => subpkg_destroy
+  end type SubPackageListType
 
   !> @brief Static loader type
   !!
@@ -31,8 +51,10 @@ module InputLoadTypeModule
     character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
     character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
     integer(I4B) :: iperblock !< index of period block on block definition list
+    type(SubPackageListType) :: subpkg_list
   contains
     procedure :: init => static_init
+    procedure :: create_subpkg_list
     procedure :: destroy => static_destroy
   end type StaticPkgLoadType
 
@@ -57,6 +79,8 @@ module InputLoadTypeModule
     character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
     character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
     logical(LGP) :: readasarrays !< is this array based input
+    logical(LGP) :: advanced !< is this an advanced package
+    logical(LGP) :: settings !< does this package have a SETTINGS dfn type
     integer(I4B) :: iperblock !< index of period block on block definition list
     integer(I4B) :: iout !< inunit number for logging
     integer(I4B) :: nparam !< number of in scope params
@@ -117,6 +141,109 @@ module InputLoadTypeModule
 
 contains
 
+  !> @brief create a new package type
+  !<
+  subroutine subpkg_create(this, mempath, component_name)
+    ! -- modules
+    ! -- dummy
+    class(SubPackageListType) :: this
+    character(len=*), intent(in) :: mempath
+    character(len=*), intent(in) :: component_name
+    ! -- local
+    !
+    ! -- initialize
+    this%pnum = 0
+    this%mempath = mempath
+    this%component_name = component_name
+    !
+    ! -- allocate arrays
+    allocate (this%pkgtypes(0))
+    allocate (this%component_types(0))
+    allocate (this%subcomponent_types(0))
+    allocate (this%filenames(0))
+    !
+    ! -- return
+    return
+  end subroutine subpkg_create
+
+  !> @brief create a new package type
+  !<
+  subroutine subpkg_add(this, pkgtype, component_type, subcomponent_type, &
+                        tagname, filename)
+    ! -- modules
+    use ArrayHandlersModule, only: expandarray
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: idm_context
+    ! -- dummy
+    class(SubPackageListType) :: this
+    character(len=*), intent(in) :: pkgtype
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: subcomponent_type
+    character(len=*), intent(in) :: tagname
+    character(len=*), intent(in) :: filename
+    ! -- local
+    character(len=LENVARNAME) :: mempath_tag
+    character(len=LENMEMPATH), pointer :: subpkg_mempath
+    integer(I4B) :: idx, trimlen
+    !
+    ! -- reallocate
+    call expandarray(this%pkgtypes)
+    call expandarray(this%component_types)
+    call expandarray(this%subcomponent_types)
+    call expandarray(this%filenames)
+    !
+    ! -- add new package instance
+    this%pnum = this%pnum + 1
+    this%pkgtypes(this%pnum) = pkgtype
+    this%component_types(this%pnum) = component_type
+    this%subcomponent_types(this%pnum) = subcomponent_type
+    this%filenames(this%pnum) = filename
+    !
+    ! -- initialize mempath tag
+    mempath_tag = tagname
+    trimlen = len_trim(tagname)
+    idx = 0
+    !
+    ! -- create mempath tagname
+    idx = index(tagname, '_')
+    if (idx > 0) then
+      if (tagname(idx + 1:trimlen) == 'FILENAME') then
+        write (mempath_tag, '(a)') tagname(1:idx)//'MEMPATH'
+      end if
+    end if
+    !
+    ! -- allocate mempath variable for subpackage
+    call mem_allocate(subpkg_mempath, LENMEMPATH, mempath_tag, &
+                      this%mempath)
+    !
+    ! -- create and set the mempath
+    subpkg_mempath = &
+      create_mem_path(this%component_name, &
+                      subcomponent_type, idm_context)
+    !
+    ! -- return
+    return
+  end subroutine subpkg_add
+
+  !> @brief create a new package type
+  !<
+  subroutine subpkg_destroy(this)
+    ! -- modules
+    ! -- dummy
+    class(SubPackageListType) :: this
+    ! -- local
+    !
+    ! -- allocate arrays
+    deallocate (this%pkgtypes)
+    deallocate (this%component_types)
+    deallocate (this%subcomponent_types)
+    deallocate (this%filenames)
+    !
+    ! -- return
+    return
+  end subroutine subpkg_destroy
+
   !> @brief initialize static package loader
   !!
   !<
@@ -135,6 +262,10 @@ contains
     this%input_name = input_name
     this%iperblock = 0
     !
+    ! -- create subpackage list
+    call this%subpkg_list%create(this%mf6_input%mempath, &
+                                 this%mf6_input%component_name)
+    !
     ! -- identify period block definition
     do iblock = 1, size(mf6_input%block_dfns)
       !
@@ -147,8 +278,63 @@ contains
     return
   end subroutine static_init
 
+  !> @brief create the subpackage list
+  !!
+  !<
+  subroutine create_subpkg_list(this, iout)
+    use IdmDfnSelectorModule, only: idm_subpackages, idm_integrated
+    use SourceCommonModule, only: filein_fname
+    class(StaticPkgLoadType), intent(inout) :: this
+    integer(I4B), intent(in) :: iout
+    character(len=16), dimension(:), pointer :: subpkgs
+    character(len=LINELENGTH) :: tag, fname, pkgtype
+    character(len=LENFTYPE) :: c_type, sc_type
+    character(len=16) :: subpkg
+    integer(I4B) :: idx, n
+    !
+    ! -- set pointer to package (idm integrated) subpackage list
+    subpkgs => idm_subpackages(this%mf6_input%component_type, &
+                               this%mf6_input%subcomponent_type)
+    !
+    ! -- check if tag matches subpackage
+    do n = 1, size(subpkgs)
+      subpkg = subpkgs(n)
+      idx = index(subpkg, '-')
+      ! -- split sp string into component/subcomponent
+      if (idx > 0) then
+        ! -- split string in component/subcomponent types
+        c_type = subpkg(1:idx - 1)
+        sc_type = subpkg(idx + 1:len_trim(subpkg))
+        !
+        if (idm_integrated(c_type, sc_type)) then
+          !
+          ! -- set pkgtype and input filename tag
+          pkgtype = trim(sc_type)//'6'
+          tag = trim(pkgtype)//'_FILENAME'
+          !
+          ! -- support single instance of each subpackage
+          if (filein_fname(fname, tag, this%mf6_input%mempath, &
+                           this%input_name)) then
+            call this%subpkg_list%add(pkgtype, c_type, sc_type, &
+                                      trim(tag), trim(fname))
+          end if
+        else
+          errmsg = 'Identified subpackage is not IDM integrated. Remove dfn &
+                   &subpackage tagline for package "'//trim(subpkg)//'".'
+          call store_error(errmsg)
+          call store_error_filename(this%input_name)
+        end if
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine create_subpkg_list
+
   subroutine static_destroy(this)
     class(StaticPkgLoadType), intent(inout) :: this
+    !
+    call this%subpkg_list%destroy()
     !
     return
   end subroutine static_destroy
@@ -162,8 +348,8 @@ contains
   subroutine dynamic_init(this, mf6_input, component_name, component_input_name, &
                           input_name, iperblock, iout)
     use SimVariablesModule, only: errmsg
-    use SimModule, only: store_error, store_error_filename
     use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: idt_datatype
     ! -- dummy
     class(DynamicPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
@@ -173,12 +359,15 @@ contains
     integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
     type(InputParamDefinitionType), pointer :: idt
+    integer(I4B) :: iparam
     !
     this%mf6_input = mf6_input
     this%component_name = component_name
     this%component_input_name = component_input_name
     this%input_name = input_name
     this%iperblock = iperblock
+    this%advanced = .false.
+    this%settings = .false.
     this%nparam = 0
     this%iout = iout
     nullify (idt)
@@ -192,6 +381,20 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_name)
     end if
+    !
+    ! -- determine if package has SETTINGS type dfn
+    do iparam = 1, size(mf6_input%param_dfns)
+      !
+      ! -- assign param definition pointer
+      idt => this%mf6_input%param_dfns(iparam)
+      !
+      if (idt%blockname == 'PERIOD') then
+        if (idt_datatype(idt) == 'KEYSTRING') then
+          this%settings = .true.
+          exit
+        end if
+      end if
+    end do
     !
     ! -- set readasarrays
     this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
