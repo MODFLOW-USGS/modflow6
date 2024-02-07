@@ -225,7 +225,10 @@ subdir('srcbmi')
 subdir('utils')
 
 # add autotest directory
-subdir('autotest')
+fs = import('fs')
+if fs.is_dir('autotest')
+  subdir('autotest')
+endif
 
 # meson tests to evaluate installation success
 testdir = meson.project_source_root() / '.mf6minsim'
