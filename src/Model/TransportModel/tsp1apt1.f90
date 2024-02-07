@@ -80,7 +80,6 @@ module TspAptModule
     integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
     integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
-    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
@@ -2311,7 +2310,7 @@ contains
     !
     ! -- individual package terms processed last
     idx = this%idxprepak
-    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
+    call this%pak_fill_budobj(idx, x, flowja, ccratin, ccratout)
     !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
@@ -2322,12 +2321,13 @@ contains
 
   !> @brief Copy flow terms into this%budobj, must be overridden
   !<
-  subroutine pak_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine pak_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local

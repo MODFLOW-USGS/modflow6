@@ -767,7 +767,7 @@ contains
     use GweCtpModule, only: ctp_create
     use GweEslModule, only: esl_create
     !use GweLkeModule, only: lke_create
-    !use GweSfeModule, only: sfe_create
+    use GweSfeModule, only: sfe_create
     !use GweMweModule, only: mwe_create
     !use GweUzeModule, only: uze_create
     use ApiModule, only: api_create
@@ -798,10 +798,10 @@ contains
       !  call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
       !                  this%gwecommon)
-      !case ('SFE6')
-      !  call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-      !                  this%gwecommon)
+    case ('SFE6')
+      call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%fmi, this%eqnsclfac, this%gwecommon, &
+                      this%depvartype, this%depvarunit, this%depvarunitabbrev)
       !case ('MWE6')
       !  call mwe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &

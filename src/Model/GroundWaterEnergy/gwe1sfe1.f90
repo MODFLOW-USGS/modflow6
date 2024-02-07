@@ -1,101 +1,107 @@
-! -- Lake Transport Module
-! -- todo: what to do about reactions in lake?  Decay?
-! -- todo: save the lkt concentration into the lak aux variable?
-! -- todo: calculate the lak DENSE aux variable using concentration?
+! -- Stream Energy Transport Module
+! -- todo: Temperature decay?
+! -- todo: save the sfe temperature into the sfr aux variable? (perhaps needed for GWT-GWE exchanges)
+! -- todo: calculate the sfr VISC aux variable using temperature?
 !
-! LAK flows (lakbudptr)     index var     LKT term              Transport Type
+! SFR flows (sfrbudptr)     index var     SFE term              Transport Type
 !---------------------------------------------------------------------------------
 
-! -- terms from LAK that will be handled by parent APT Package
+! -- terms from SFR that will be handled by parent APT Package
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
-! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * tmpext = this%qfrommvr(:)  ! kluge note: include rhow*cpw in comments for various terms
+! TO-MVR                    idxbudtmvr    TO-MVR                q * tfeat
 
-! -- LAK terms
-! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
-! RUNOFF                    idxbudroff    RUNOFF                q * croff
-! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
-! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
+! -- SFR terms
+! RAINFALL                  idxbudrain    RAINFALL              q * train
+! EVAPORATION               idxbudevap    EVAPORATION           tfeat<tevap: q*tfeat, else: q*tevap (latent heat will likely need to modify these calcs in the future) ! kluge note
+! RUNOFF                    idxbudroff    RUNOFF                q * troff
+! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * tiflw
+! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * tfeat
+! STRMBD-COND               idxbudsbcd    STRMBD-COND           ! kluge note: expression for this
 
 ! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
 
 ! -- terms that are written to the transport budget file
-! none                      none          STORAGE (aux MASS)    dM/dt
+! none                      none          STORAGE (aux MASS)    dE/dt
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
 !
 !
-module GwtLktModule
+module GweSfeModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
   use TspFmiModule, only: TspFmiType
-  use LakModule, only: LakType
+  use SfrModule, only: SfrType
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
+  use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
-
+  !
   implicit none
+  !
+  private
+  public :: sfe_create
+  !
+  character(len=*), parameter :: ftype = 'SFE'
+  character(len=*), parameter :: flowtype = 'SFR'
+  character(len=16) :: text = '             SFE'
 
-  public lkt_create
+  type, extends(TspAptType) :: GweSfeType
 
-  character(len=*), parameter :: ftype = 'LKT'
-  character(len=*), parameter :: flowtype = 'LAK'
-  character(len=16) :: text = '             LKT'
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
 
-  type, extends(TspAptType) :: GwtLktType
+    integer(I4B), pointer :: idxbudrain => null() !< index of rainfall terms in flowbudptr
+    integer(I4B), pointer :: idxbudevap => null() !< index of evaporation terms in flowbudptr
+    integer(I4B), pointer :: idxbudroff => null() !< index of runoff terms in flowbudptr
+    integer(I4B), pointer :: idxbudiflw => null() !< index of inflow terms in flowbudptr
+    integer(I4B), pointer :: idxbudoutf => null() !< index of outflow terms in flowbudptr
+    integer(I4B), pointer :: idxbudsbcd => null() !< index of streambed conduction terms in flowbudptr
 
-    integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
-    integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
-    integer(I4B), pointer :: idxbudroff => null() ! index of runoff terms in flowbudptr
-    integer(I4B), pointer :: idxbudiflw => null() ! index of inflow terms in flowbudptr
-    integer(I4B), pointer :: idxbudwdrl => null() ! index of withdrawal terms in flowbudptr
-    integer(I4B), pointer :: idxbudoutf => null() ! index of outflow terms in flowbudptr
+    real(DP), dimension(:), pointer, contiguous :: temprain => null() !< rainfall temperature
+    real(DP), dimension(:), pointer, contiguous :: tempevap => null() !< evaporation temperature
+    real(DP), dimension(:), pointer, contiguous :: temproff => null() !< runoff temperature
+    real(DP), dimension(:), pointer, contiguous :: tempiflw => null() !< inflow temperature
 
-    real(DP), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
-    real(DP), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
-    real(DP), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
-    real(DP), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
+    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
+    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
 
   contains
 
-    procedure :: bnd_da => lkt_da
+    procedure :: bnd_da => sfe_da
     procedure :: allocate_scalars
-    procedure :: apt_allocate_arrays => lkt_allocate_arrays
-    procedure :: find_apt_package => find_lkt_package
-    procedure :: pak_fc_expanded => lkt_fc_expanded
-    procedure :: pak_solve => lkt_solve
-    procedure :: pak_get_nbudterms => lkt_get_nbudterms
-    procedure :: pak_setup_budobj => lkt_setup_budobj
-    procedure :: pak_fill_budobj => lkt_fill_budobj
-    procedure :: lkt_rain_term
-    procedure :: lkt_evap_term
-    procedure :: lkt_roff_term
-    procedure :: lkt_iflw_term
-    procedure :: lkt_wdrl_term
-    procedure :: lkt_outf_term
-    procedure :: pak_df_obs => lkt_df_obs
-    procedure :: pak_rp_obs => lkt_rp_obs
-    procedure :: pak_bd_obs => lkt_bd_obs
-    procedure :: pak_set_stressperiod => lkt_set_stressperiod
+    procedure :: apt_allocate_arrays => sfe_allocate_arrays
+    procedure :: find_apt_package => find_sfe_package
+    procedure :: pak_fc_expanded => sfe_fc_expanded
+    procedure :: pak_solve => sfe_solve
+    procedure :: pak_get_nbudterms => sfe_get_nbudterms
+    procedure :: pak_setup_budobj => sfe_setup_budobj
+    procedure :: pak_fill_budobj => sfe_fill_budobj
+    procedure :: sfe_rain_term
+    procedure :: sfe_evap_term
+    procedure :: sfe_roff_term
+    procedure :: sfe_iflw_term
+    procedure :: sfe_outf_term
+    procedure :: pak_df_obs => sfe_df_obs
+    procedure :: pak_rp_obs => sfe_rp_obs
+    procedure :: pak_bd_obs => sfe_bd_obs
+    procedure :: pak_set_stressperiod => sfe_set_stressperiod
 
-  end type GwtLktType
+  end type GweSfeType
 
 contains
 
-  !> @brief Create a new lkt package
+  !> @brief Create a new sfe package
   !<
-  subroutine lkt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, eqnsclfac, dvt, dvu, dvua)
+  subroutine sfe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        fmi, eqnsclfac, gwecommon, dvt, dvu, dvua)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -105,58 +111,59 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
-    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
-    character(len=*), intent(in) :: dvt !< For GWT, set to "CONCENTRATION" in TspAptType
-    character(len=*), intent(in) :: dvu !< For GWT, set to "mass" in TspAptType
-    character(len=*), intent(in) :: dvua !< For GWT, set to "M" in TspAptType
+    real(DP), intent(in), pointer :: eqnsclfac !< Governing equation scale factor
+    type(GweInputDataType), intent(in), target :: gwecommon !< Shared data container for use by multiple GWE packages
+    character(len=*), intent(in) :: dvt !< For GWE, set to "TEMPERATURE" in TspAptType
+    character(len=*), intent(in) :: dvu !< For GWE, set to "energy" in TspAptType
+    character(len=*), intent(in) :: dvua !< For GWE, set to "E" in TspAptType
     ! -- local
-    type(GwtLktType), pointer :: lktobj
+    type(GweSfeType), pointer :: sfeobj
     !
-    ! -- allocate the object and assign values to object variables
-    allocate (lktobj)
-    packobj => lktobj
+    ! -- Allocate the object and assign values to object variables
+    allocate (sfeobj)
+    packobj => sfeobj
     !
-    ! -- create name and memory path
+    ! -- Create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
-    ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    ! -- Allocate scalars
+    call sfeobj%allocate_scalars()
     !
-    ! -- initialize package
+    ! -- Initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-
+    !
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    sfeobj%fmi => fmi
     !
     ! -- Store pointer to governing equation scale factor
-    lktobj%eqnsclfac => eqnsclfac
+    sfeobj%eqnsclfac => eqnsclfac
     !
     ! -- Set labels that will be used in generalized APT class
-    lktobj%depvartype = dvt
-    lktobj%depvarunit = dvu
-    lktobj%depvarunitabbrev = dvua
+    sfeobj%depvartype = dvt
+    sfeobj%depvarunit = dvu
+    sfeobj%depvarunitabbrev = dvua
     !
     ! -- Return
     return
-  end subroutine lkt_create
+  end subroutine sfe_create
 
-  !> @brief Find corresponding lkt package
+  !> @brief Find corresponding sfe package
   !<
-  subroutine find_lkt_package(this)
+  subroutine find_sfe_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
@@ -184,11 +191,11 @@ contains
           if (packobj%packName == this%flowpackagename) then
             found = .true.
             !
-            ! -- store BndType pointer to packobj, and then
+            ! -- Store BndType pointer to packobj, and then
             !    use the select type to point to the budobj in flow package
             this%flowpackagebnd => packobj
             select type (packobj)
-            type is (LakType)
+            type is (SfrType)
               this%flowbudptr => packobj%budobj
             end select
           end if
@@ -197,15 +204,15 @@ contains
       end if
     end if
     !
-    ! -- error if flow package not found
+    ! -- Error if flow package not found
     if (.not. found) then
-      write (errmsg, '(a)') 'Could not find flow package with name '&
+      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
                             &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- allocate space for idxbudssm, which indicates whether this is a
+    ! -- Allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
     nbudterm = this%flowbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
@@ -240,9 +247,6 @@ contains
       case ('EXT-INFLOW')
         this%idxbudiflw = ip
         this%idxbudssm(ip) = 0
-      case ('WITHDRAWAL')
-        this%idxbudwdrl = ip
-        this%idxbudssm(ip) = 0
       case ('EXT-OUTFLOW')
         this%idxbudoutf = ip
         this%idxbudssm(ip) = 0
@@ -257,7 +261,7 @@ contains
         this%idxbudssm(ip) = 0
       case default
         !
-        ! -- set idxbudssm equal to a column index for where the concentrations
+        ! -- Set idxbudssm equal to a column index for where the temperatures
         !    are stored in the concbud(nbudssm, ncv) array
         this%idxbudssm(ip) = icount
         icount = icount + 1
@@ -268,35 +272,43 @@ contains
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
     !
+    ! -- Streambed conduction term
+    this%idxbudsbcd = this%idxbudgwf
+    !
     ! -- Return
     return
-  end subroutine find_lkt_package
+  end subroutine find_sfe_package
 
-  !> @brief Add matrix terms related to LKT
+  !> @brief Add matrix terms related to SFE
   !!
   !! This will be called from TspAptType%apt_fc_expanded()
-  !! in order to add matrix terms specifically for LKT
+  !! in order to add matrix terms specifically for SFE
   !<
-  subroutine lkt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-    ! -- modules
+  subroutine sfe_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: j, n1, n2
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
-    integer(I4B) :: iposd
+    integer(I4B) :: iposd, iposoffd
+    integer(I4B) :: ipossymd, ipossymoffd
+    integer(I4B) :: auxpos
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
+    real(DP) :: ctherm
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material
+    real(DP) :: s !< thickness of conductive streambed material
     !
-    ! -- add rainfall contribution
+    ! -- Add rainfall contribution
     if (this%idxbudrain /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%lkt_rain_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%sfe_rain_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -304,10 +316,10 @@ contains
       end do
     end if
     !
-    ! -- add evaporation contribution
+    ! -- Add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%lkt_evap_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%sfe_evap_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -315,10 +327,10 @@ contains
       end do
     end if
     !
-    ! -- add runoff contribution
+    ! -- Add runoff contribution
     if (this%idxbudroff /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%lkt_roff_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%sfe_roff_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -326,10 +338,10 @@ contains
       end do
     end if
     !
-    ! -- add inflow contribution
+    ! -- Add inflow contribution
     if (this%idxbudiflw /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%lkt_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%sfe_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -337,126 +349,143 @@ contains
       end do
     end if
     !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%lkt_wdrl_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(iposd, hcofval)
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add outflow contribution
+    ! -- Add outflow contribution
     if (this%idxbudoutf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%lkt_outf_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%sfe_outf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
+    !
+    ! -- Add streambed conduction contribution
+    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+      !
+      ! -- Set n to feature number and process if active feature
+      n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n) /= 0) then
+        !
+        ! -- Set acoef and rhs to negative so they are relative to sfe and not gwe
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
+        ktf = this%ktf(n)
+        s = this%rfeatthk(n)
+        ctherm = ktf * wa / s
+        !
+        ! -- Add to sfe row
+        iposd = this%idxdglo(j)
+        iposoffd = this%idxoffdglo(j)
+        call matrix_sln%add_value_pos(iposd, -ctherm)
+        call matrix_sln%add_value_pos(iposoffd, ctherm)
+        !
+        ! -- Add to gwe row for sfe connection
+        ipossymd = this%idxsymdglo(j)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
+      end if
+    end do
     !
     ! -- Return
     return
-  end subroutine lkt_fc_expanded
+  end subroutine sfe_fc_expanded
 
-  !> @brief Add terms specific to lakes to the explicit lake solve
+  !> @ brief Add terms specific to sfr to the explicit sfe solve
   !<
-  subroutine lkt_solve(this)
+  subroutine sfe_solve(this)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n1, n2
     real(DP) :: rrate
     !
-    ! -- add rainfall contribution
+    ! -- Add rainfall contribution
     if (this%idxbudrain /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%lkt_rain_term(j, n1, n2, rrate)
+        call this%sfe_rain_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add evaporation contribution
+    ! -- Add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%lkt_evap_term(j, n1, n2, rrate)
+        call this%sfe_evap_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add runoff contribution
+    ! -- Add runoff contribution
     if (this%idxbudroff /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%lkt_roff_term(j, n1, n2, rrate)
+        call this%sfe_roff_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add inflow contribution
+    ! -- Add inflow contribution
     if (this%idxbudiflw /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%lkt_iflw_term(j, n1, n2, rrate)
+        call this%sfe_iflw_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%lkt_wdrl_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add outflow contribution
+    ! -- Add outflow contribution
     if (this%idxbudoutf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%lkt_outf_term(j, n1, n2, rrate)
+        call this%sfe_outf_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
+    !
+    ! Note: explicit streambed conduction terms???
     !
     ! -- Return
     return
-  end subroutine lkt_solve
+  end subroutine sfe_solve
 
   !> @brief Function to return the number of budget terms just for this package.
   !!
   !! This overrides a function in the parent class.
   !<
-  function lkt_get_nbudterms(this) result(nbudterms)
-    ! -- modules
+  function sfe_get_nbudterms(this) result(nbudterms)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     ! -- return
     integer(I4B) :: nbudterms
-    ! -- local
     !
-    ! -- Number of budget terms is 6
+    ! -- Number of budget terms is 6:
+    !    1. rainfall
+    !    2. evaporation
+    !    3. runoff
+    !    4. ext-inflow
+    !    5. ext-outflow
+    !    6. streambed-cond
     nbudterms = 6
     !
     ! -- Return
     return
-  end function lkt_get_nbudterms
+  end function sfe_get_nbudterms
 
-  !> @brief Set up the budget object that stores all the lake flows
+  !> @brief Set up the budget object that stores all the sfe flows
   !<
-  subroutine lkt_setup_budobj(this, idx)
+  subroutine sfe_setup_budobj(this, idx)
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
+    integer(I4B) :: n, n1, n2
     integer(I4B) :: maxlist, naux
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
     !
-    ! -- Addition of mass associated with rainfall directly on lake surface
+    ! --
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
@@ -469,8 +498,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Loss of dissolved mass associated with evaporation when a non-zero
-    !    evaporative concentration is specified
+    ! --
     text = '     EVAPORATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
@@ -483,7 +511,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Addition of mass associated with runoff that flows to the lake
+    ! --
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
@@ -496,7 +524,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Addition of mass associated with user-specified inflow to the lake
+    ! --
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
@@ -509,21 +537,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Removal of mass associated with user-specified withdrawal from lake
-    text = '      WITHDRAWAL'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudwdrl)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%packName, &
-                                             this%name_model, &
-                                             this%packName, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- Removal of heat associated with outflow from lake that leaves
-    !    model domain
+    ! --
     text = '     EXT-OUTFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
@@ -536,16 +550,35 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
+    ! -- Conduction through the wetted streambed
+    text = '  STREAMBED-COND'
+    idx = idx + 1
+    maxlist = this%flowbudptr%budterm(this%idxbudsbcd)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    call this%budobj%budterm(idx)%reset(maxlist)
+    q = DZERO
+    do n = 1, maxlist
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(n)
+      n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    end do
+    !
     ! -- Return
     return
-  end subroutine lkt_setup_budobj
+  end subroutine sfe_setup_budobj
 
   !> @brief Copy flow terms into this%budobj
   !<
-  subroutine lkt_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-    ! -- modules
+  subroutine sfe_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
@@ -554,84 +587,105 @@ contains
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
+    integer(I4B) :: igwfnode
+    integer(I4B) :: idiag
+    integer(I4B) :: auxpos
     real(DP) :: q
-    ! -- formats
+    real(DP) :: ctherm
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material
+    real(DP) :: s !< thickness of conductive streambed materia
     !
-    ! -- RAIN
+    ! -- Rain
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%lkt_rain_term(j, n1, n2, q)
+      call this%sfe_rain_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     !
-    ! -- EVAPORATION
+    ! -- Evaporation
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%lkt_evap_term(j, n1, n2, q)
+      call this%sfe_evap_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     !
-    ! -- RUNOFF
+    ! -- Runoff
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%lkt_roff_term(j, n1, n2, q)
+      call this%sfe_roff_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     !
-    ! -- EXT-INFLOW
+    ! -- Ext-inflow
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%lkt_iflw_term(j, n1, n2, q)
+      call this%sfe_iflw_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     !
-    ! -- WITHDRAWAL
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_wdrl_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    !
-    ! -- EXT-OUTFLOW
+    ! -- Ext-outflow
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%lkt_outf_term(j, n1, n2, q)
+      call this%sfe_outf_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     !
+    ! -- Strmbd-cond
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do j = 1, this%flowbudptr%budterm(this%idxbudsbcd)%nlist
+      q = DZERO
+      n1 = this%flowbudptr%budterm(this%idxbudsbcd)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
+        ! -- For now, there is only 1 aux variable under 'GWF'
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
+        ktf = this%ktf(n1)
+        s = this%rfeatthk(n1)
+        ctherm = ktf * wa / s
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1))
+      end if
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      if (this%iboundpak(n1) /= 0) then
+        ! -- Contribution to gwe cell budget
+        this%simvals(n1) = this%simvals(n1) - q
+        idiag = this%dis%con%ia(igwfnode)
+        flowja(idiag) = flowja(idiag) - q
+      end if
+    end do
+    !
     ! -- Return
     return
-  end subroutine lkt_fill_budobj
+  end subroutine sfe_fill_budobj
 
-  !> @brief Allocate scalars specific to the lake mass transport (LKT)
+  !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
   !! package.
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtLktType) :: this
-    ! -- local
+    class(GweSfeType) :: this
     !
-    ! -- allocate scalars in TspAptType
+    ! -- Allocate scalars in TspAptType
     call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
@@ -639,90 +693,87 @@ contains
     call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%memoryPath)
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%memoryPath)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
-    call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
+    call mem_allocate(this%idxbudsbcd, 'IDXBUDSBCD', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudrain = 0
     this%idxbudevap = 0
     this%idxbudroff = 0
     this%idxbudiflw = 0
-    this%idxbudwdrl = 0
     this%idxbudoutf = 0
+    this%idxbudsbcd = 0
     !
     ! -- Return
     return
   end subroutine allocate_scalars
 
-  !> @brief Allocate arrays specific to the lake mass transport (LKT)
+  !> @brief Allocate arrays specific to the streamflow energy transport (SFE)
   !! package.
   !<
-  subroutine lkt_allocate_arrays(this)
+  subroutine sfe_allocate_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtLktType), intent(inout) :: this
+    class(GweSfeType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
     !
-    ! -- time series
-    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%memoryPath)
-    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%memoryPath)
-    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%memoryPath)
-    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%memoryPath)
+    ! -- Time series
+    call mem_allocate(this%temprain, this%ncv, 'TEMPRAIN', this%memoryPath)
+    call mem_allocate(this%tempevap, this%ncv, 'TEMPEVAP', this%memoryPath)
+    call mem_allocate(this%temproff, this%ncv, 'TEMPROFF', this%memoryPath)
+    call mem_allocate(this%tempiflw, this%ncv, 'TEMPIFLW', this%memoryPath)
     !
-    ! -- call standard TspAptType allocate arrays
+    ! -- Call standard TspAptType allocate arrays
     call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
-      this%concrain(n) = DZERO
-      this%concevap(n) = DZERO
-      this%concroff(n) = DZERO
-      this%conciflw(n) = DZERO
+      this%temprain(n) = DZERO
+      this%tempevap(n) = DZERO
+      this%temproff(n) = DZERO
+      this%tempiflw(n) = DZERO
     end do
-    !
     !
     ! -- Return
     return
-  end subroutine lkt_allocate_arrays
+  end subroutine sfe_allocate_arrays
 
   !> @brief Deallocate memory
   !<
-  subroutine lkt_da(this)
+  subroutine sfe_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtLktType) :: this
-    ! -- local
+    class(GweSfeType) :: this
     !
-    ! -- deallocate scalars
+    ! -- Deallocate scalars
     call mem_deallocate(this%idxbudrain)
     call mem_deallocate(this%idxbudevap)
     call mem_deallocate(this%idxbudroff)
     call mem_deallocate(this%idxbudiflw)
-    call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudsbcd)
     !
-    ! -- deallocate time series
-    call mem_deallocate(this%concrain)
-    call mem_deallocate(this%concevap)
-    call mem_deallocate(this%concroff)
-    call mem_deallocate(this%conciflw)
+    ! -- Deallocate time series
+    call mem_deallocate(this%temprain)
+    call mem_deallocate(this%tempevap)
+    call mem_deallocate(this%temproff)
+    call mem_deallocate(this%tempiflw)
     !
-    ! -- deallocate scalars in TspAptType
+    ! -- Deallocate scalars in TspAptType
     call this%TspAptType%bnd_da()
     !
     ! -- Return
     return
-  end subroutine lkt_da
+  end subroutine sfe_da
 
   !> @brief Rain term
   !<
-  subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
+  subroutine sfe_rain_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -736,21 +787,20 @@ contains
     n1 = this%flowbudptr%budterm(this%idxbudrain)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
-    ctmp = this%concrain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    ctmp = this%temprain(n1)
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac ! kluge note: think about budget / sensible heat issue
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
     return
-  end subroutine lkt_rain_term
+  end subroutine sfe_rain_term
 
   !> @brief Evaporative term
   !<
-  subroutine lkt_evap_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
+  subroutine sfe_evap_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -759,35 +809,27 @@ contains
     real(DP), intent(inout), optional :: hcofval
     ! -- local
     real(DP) :: qbnd
-    real(DP) :: ctmp
-    real(DP) :: omega
+    real(DP) :: heatlat
     !
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    ctmp = this%concevap(n1)
-    if (this%xnewpak(n1) < ctmp) then
-      omega = DONE
-    else
-      omega = DZERO
-    end if
-    if (present(rrate)) &
-      rrate = omega * qbnd * this%xnewpak(n1) + &
-              (DONE - omega) * qbnd * ctmp
-    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-    if (present(hcofval)) hcofval = omega * qbnd
+    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap
+    if (present(rrate)) rrate = qbnd * heatlat
+    !!if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
     return
-  end subroutine lkt_evap_term
+  end subroutine sfe_evap_term
 
   !> @brief Runoff term
   !<
-  subroutine lkt_roff_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
+  subroutine sfe_roff_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -801,24 +843,24 @@ contains
     n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
-    ctmp = this%concroff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    ctmp = this%temproff(n1)
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
     return
-  end subroutine lkt_roff_term
+  end subroutine sfe_roff_term
 
   !> @brief Inflow Term
   !!
-  !! Accounts for mass flowing into a lake from a connected stream, for
-  !! example.
+  !! Accounts for energy added via streamflow entering into a stream channel;
+  !! for example, energy entering the model domain via a specified flow in a
+  !! stream channel.
   !<
-  subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
+  subroutine sfe_iflw_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -832,55 +874,23 @@ contains
     n1 = this%flowbudptr%budterm(this%idxbudiflw)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
-    ctmp = this%conciflw(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    ctmp = this%tempiflw(n1)
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
     return
-  end subroutine lkt_iflw_term
-
-  !> @brief Specified withdrawal term
-  !!
-  !! Accounts for mass associated with a withdrawal of water from a lake
-  !! or group of lakes.
-  !<
-  subroutine lkt_wdrl_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    ! -- dummy
-    class(GwtLktType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    !
-    n1 = this%flowbudptr%budterm(this%idxbudwdrl)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudwdrl)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudwdrl)%flow(ientry)
-    ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
-    !
-    ! -- Return
-    return
-  end subroutine lkt_wdrl_term
+  end subroutine sfe_iflw_term
 
   !> @brief Outflow term
   !!
-  !! Accounts for the mass leaving a lake, for example, mass exiting a
-  !! lake via a flow into a draining stream channel.
+  !! Accounts for the energy leaving a stream channel, for example, energy exiting the
+  !! model domain via a flow in a stream channel flowing out of the active domain.
   !<
-  subroutine lkt_outf_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
+  subroutine sfe_outf_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -895,33 +905,33 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- Return
     return
-  end subroutine lkt_outf_term
+  end subroutine sfe_outf_term
 
-  !> @brief Defined observation types
+  !> @brief Observations
   !!
   !! Store the observation type supported by the APT package and overide
   !! BndType%bnd_df_obs
   !<
-  subroutine lkt_df_obs(this)
+  subroutine sfe_df_obs(this)
     ! -- modules
     ! -- dummy
-    class(GwtLktType) :: this
+    class(GweSfeType) :: this
     ! -- local
     integer(I4B) :: indx
     !
     ! -- Store obs type and assign procedure pointer
-    !    for concentration observation type.
-    call this%obs%StoreObsType('concentration', .false., indx)
+    !    for temperature observation type.
+    call this%obs%StoreObsType('temperature', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for flow between features, such as lake to lake.
+    !    for flow between reaches.
     call this%obs%StoreObsType('flow-ja-face', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID12
     !
@@ -946,9 +956,9 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for observation type: lkt
-    call this%obs%StoreObsType('lkt', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID12
+    !    for observation type: sfe
+    call this%obs%StoreObsType('sfe', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for rainfall observation type.
@@ -971,26 +981,21 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for withdrawal observation type.
-    call this%obs%StoreObsType('withdrawal', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
     !    for ext-outflow observation type.
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Return
     return
-  end subroutine lkt_df_obs
+  end subroutine sfe_df_obs
 
   !> @brief Process package specific obs
   !!
   !! Method to process specific observations for this package.
   !<
-  subroutine lkt_rp_obs(this, obsrv, found)
+  subroutine sfe_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtLktType), intent(inout) :: this !< package class
+    class(GweSfeType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
     logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
@@ -1005,26 +1010,23 @@ contains
       call this%rp_obs_byfeature(obsrv)
     case ('EXT-INFLOW')
       call this%rp_obs_byfeature(obsrv)
-    case ('WITHDRAWAL')
-      call this%rp_obs_byfeature(obsrv)
     case ('EXT-OUTFLOW')
       call this%rp_obs_byfeature(obsrv)
     case ('TO-MVR')
-      call this%rp_obs_budterm(obsrv, &
-                               this%flowbudptr%budterm(this%idxbudtmvr))
+      call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
     end select
     !
     ! -- Return
     return
-  end subroutine lkt_rp_obs
+  end subroutine sfe_rp_obs
 
   !> @brief Calculate observation value and pass it back to APT
   !<
-  subroutine lkt_bd_obs(this, obstypeid, jj, v, found)
+  subroutine sfe_bd_obs(this, obstypeid, jj, v, found)
     ! -- dummy
-    class(GwtLktType), intent(inout) :: this
+    class(GweSfeType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
     real(DP), intent(inout) :: v
     integer(I4B), intent(in) :: jj
@@ -1036,27 +1038,23 @@ contains
     select case (obstypeid)
     case ('RAINFALL')
       if (this%iboundpak(jj) /= 0) then
-        call this%lkt_rain_term(jj, n1, n2, v)
+        call this%sfe_rain_term(jj, n1, n2, v)
       end if
     case ('EVAPORATION')
       if (this%iboundpak(jj) /= 0) then
-        call this%lkt_evap_term(jj, n1, n2, v)
+        call this%sfe_evap_term(jj, n1, n2, v)
       end if
     case ('RUNOFF')
       if (this%iboundpak(jj) /= 0) then
-        call this%lkt_roff_term(jj, n1, n2, v)
+        call this%sfe_roff_term(jj, n1, n2, v)
       end if
     case ('EXT-INFLOW')
       if (this%iboundpak(jj) /= 0) then
-        call this%lkt_iflw_term(jj, n1, n2, v)
-      end if
-    case ('WITHDRAWAL')
-      if (this%iboundpak(jj) /= 0) then
-        call this%lkt_wdrl_term(jj, n1, n2, v)
+        call this%sfe_iflw_term(jj, n1, n2, v)
       end if
     case ('EXT-OUTFLOW')
       if (this%iboundpak(jj) /= 0) then
-        call this%lkt_outf_term(jj, n1, n2, v)
+        call this%sfe_outf_term(jj, n1, n2, v)
       end if
     case default
       found = .false.
@@ -1064,14 +1062,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine lkt_bd_obs
+  end subroutine sfe_bd_obs
 
   !> @brief Sets the stress period attributes for keyword use.
   !<
-  subroutine lkt_set_stressperiod(this, itemno, keyword, found)
+  subroutine sfe_set_stressperiod(this, itemno, keyword, found)
+    ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtLktType), intent(inout) :: this
+    class(GweSfeType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
@@ -1080,12 +1079,11 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: jj
     real(DP), pointer :: bndElem => null()
-    ! -- formats
     !
     ! RAINFALL <rainfall>
     ! EVAPORATION <evaporation>
     ! RUNOFF <runoff>
-    ! EXT-INFLOW <inflow>
+    ! INFLOW <inflow>
     ! WITHDRAWAL <withdrawal>
     !
     found = .true.
@@ -1097,7 +1095,7 @@ contains
       end if
       call this%parser%GetString(text)
       jj = 1
-      bndElem => this%concrain(itemno)
+      bndElem => this%temprain(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
                                          this%iprpak, 'RAINFALL')
@@ -1108,7 +1106,7 @@ contains
       end if
       call this%parser%GetString(text)
       jj = 1
-      bndElem => this%concevap(itemno)
+      bndElem => this%tempevap(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
                                          this%iprpak, 'EVAPORATION')
@@ -1119,24 +1117,24 @@ contains
       end if
       call this%parser%GetString(text)
       jj = 1
-      bndElem => this%concroff(itemno)
+      bndElem => this%temproff(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
                                          this%iprpak, 'RUNOFF')
-    case ('EXT-INFLOW')
+    case ('INFLOW')
       ierr = this%apt_check_valid(itemno)
       if (ierr /= 0) then
         goto 999
       end if
       call this%parser%GetString(text)
       jj = 1
-      bndElem => this%conciflw(itemno)
+      bndElem => this%tempiflw(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
-                                         this%iprpak, 'EXT-INFLOW')
+                                         this%iprpak, 'INFLOW')
     case default
       !
-      ! -- keyword not recognized so return to caller with found = .false.
+      ! -- Keyword not recognized so return to caller with found = .false.
       found = .false.
     end select
     !
@@ -1144,6 +1142,6 @@ contains
     !
     ! -- Return
     return
-  end subroutine lkt_set_stressperiod
+  end subroutine sfe_set_stressperiod
 
-end module GwtLktModule
+end module GweSfeModule

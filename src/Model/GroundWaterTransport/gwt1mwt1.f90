@@ -473,12 +473,13 @@ contains
 
   !> @brief Copy flow terms into this%budobj
   !<
-  subroutine mwt_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine mwt_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(GwtMwtType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
