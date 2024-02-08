@@ -86,7 +86,7 @@ module GweModule
                    &'MWE6 ', 'UZE6 ', 'API6 ', '     ', '     ', & ! 10
                    &40*'     '/ ! 50
 
-  ! -- size of supported model package arrays
+  ! -- Size of supported model package arrays
   integer(I4B), parameter :: NIUNIT_GWE = GWE_NBASEPKG + GWE_NMULTIPKG
 
 contains
@@ -133,7 +133,7 @@ contains
     ! -- Call parent class routine
     call this%tsp_cr(filename, id, modelname, 'GWE', indis)
     !
-    ! -- create model packages
+    ! -- Create model packages
     call this%create_packages(indis)
     !
     ! -- Return
@@ -288,7 +288,7 @@ contains
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
     !
-    ! -- set up output control
+    ! -- Set up output control
     call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%depvartype)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
@@ -357,7 +357,7 @@ contains
     if (iFailedStepRetry > 0) irestore = 1
     if (irestore == 0) then
       !
-      ! -- copy x into xold
+      ! -- Copy x into xold
       do n = 1, this%dis%nodes
         if (this%ibound(n) == 0) then
           this%xold(n) = DZERO
@@ -367,7 +367,7 @@ contains
       end do
     else
       !
-      ! -- copy xold into x if this time step is a redo
+      ! -- Copy xold into x if this time step is a redo
       do n = 1, this%dis%nodes
         this%x(n) = this%xold(n)
       end do
@@ -400,7 +400,6 @@ contains
   !! subroutines
   !<
   subroutine gwe_cf(this, kiter)
-    ! -- modules
     ! -- dummy
     class(GweModelType) :: this
     integer(I4B), intent(in) :: kiter
@@ -424,7 +423,6 @@ contains
   !! subroutines
   !<
   subroutine gwe_fc(this, kiter, matrix_sln, inwtflag)
-    ! -- modules
     ! -- dummy
     class(GweModelType) :: this
     integer(I4B), intent(in) :: kiter
@@ -434,7 +432,7 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
     !
-    ! -- call fc routines
+    ! -- Call fc routines
     call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
                          this%idxglo, this%rhs)
     if (this%inmvt > 0) then
@@ -456,7 +454,7 @@ contains
       call this%ssm%ssm_fc(matrix_sln, this%idxglo, this%rhs)
     end if
     !
-    ! -- packages
+    ! -- Packages
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
@@ -481,8 +479,6 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
-    ! -- local
-    ! -- formats
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
@@ -740,10 +736,10 @@ contains
     class(GweModelType) :: this
     character(len=*), intent(in) :: modelname
     !
-    ! -- allocate parent class scalars
+    ! -- Allocate parent class scalars
     call this%allocate_tsp_scalars(modelname)
     !
-    ! -- allocate members that are part of model class
+    ! -- Allocate members that are part of model class
     call mem_allocate(this%inest, 'INEST', this%memoryPath)
     call mem_allocate(this%incnd, 'INCND', this%memoryPath)
     !
@@ -766,7 +762,7 @@ contains
     use SimModule, only: store_error
     use GweCtpModule, only: ctp_create
     use GweEslModule, only: esl_create
-    !use GweLkeModule, only: lke_create
+    use GweLkeModule, only: lke_create
     use GweSfeModule, only: sfe_create
     !use GweMweModule, only: mwe_create
     !use GweUzeModule, only: uze_create
@@ -794,10 +790,10 @@ contains
     case ('ESL6')
       call esl_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%gwecommon)
-      !case ('LKE6')
-      !  call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-      !                  this%gwecommon)
+    case ('LKE6')
+      call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%fmi, this%eqnsclfac, this%gwecommon, &
+                      this%depvartype, this%depvarunit, this%depvarunitabbrev)
     case ('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%eqnsclfac, this%gwecommon, &
@@ -838,9 +834,11 @@ contains
   !> @brief Cast to GweModelType
   !<
   function CastAsGweModel(model) result(gwemodel)
+    ! -- dummy
     class(*), pointer :: model !< The object to be cast
+    ! -- return
     class(GweModelType), pointer :: gwemodel !< The GWE model
-
+    !
     gwemodel => null()
     if (.not. associated(model)) return
     select type (model)
@@ -877,10 +875,10 @@ contains
     character(len=LENMEMPATH) :: mempath
     integer(I4B), pointer :: inunit
     integer(I4B) :: n
-
+    !
     if (allocated(bndpkgs)) then
       !
-      ! -- create stress packages
+      ! -- Create stress packages
       ipakid = 1
       bndptype = ''
       do n = 1, size(bndpkgs)
@@ -901,7 +899,7 @@ contains
         ipaknum = ipaknum + 1
       end do
       !
-      ! -- cleanup
+      ! -- Cleanup
       deallocate (bndpkgs)
     end if
     !
@@ -942,10 +940,10 @@ contains
     integer(I4B) :: n
     character(len=LENMEMPATH) :: mempathcnd = ''
     !
-    ! -- set input memory paths, input/model and input/model/namfile
+    ! -- Set input memory paths, input/model and input/model/namfile
     model_mempath = create_mem_path(component=this%name, context=idm_context)
     !
-    ! -- set pointers to model path package info
+    ! -- Set pointers to model path package info
     call mem_setptr(pkgtypes, 'PKGTYPES', model_mempath)
     call mem_setptr(pkgnames, 'PKGNAMES', model_mempath)
     call mem_setptr(mempaths, 'MEMPATHS', model_mempath)
@@ -953,13 +951,13 @@ contains
     !
     do n = 1, size(pkgtypes)
       !
-      ! attributes for this input package
+      ! -- Attributes for this input package
       pkgtype = pkgtypes(n)
       pkgname = pkgnames(n)
       mempath = mempaths(n)
       inunit => inunits(n)
       !
-      ! -- create dis package as it is a prerequisite for other packages
+      ! -- Create dis package as it is a prerequisite for other packages
       select case (pkgtype)
       case ('EST6')
         this%inest = inunit

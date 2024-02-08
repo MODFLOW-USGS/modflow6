@@ -1,0 +1,24 @@
+BEGIN OPTIONS
+  AUXILIARY  aux1  aux2
+  BOUNDNAMES
+  PRINT_INPUT
+  PRINT_TEMPERATURE
+  PRINT_FLOWS
+  SAVE_FLOWS
+  TEMPERATURE  FILEOUT  gwe_lke_02.lke.bin
+  BUDGET  FILEOUT  gwe_lke_02.lke.bud
+  OBS6  FILEIN  gwe_lke_02.lke.obs
+END OPTIONS
+
+BEGIN PACKAGEDATA
+# L      STRT      aux1      aux2       bname
+  1       5.0      99.0     999.0     MYLAKE1
+  2       6.0      99.0     999.0     MYLAKE2
+  3       7.0      99.0     999.0     MYLAKE3
+END PACKAGEDATA
+
+BEGIN PERIOD  1
+  1  STATUS  ACTIVE
+  2  STATUS  ACTIVE
+  3  STATUS  ACTIVE
+END PERIOD  1
