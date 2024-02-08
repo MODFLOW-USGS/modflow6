@@ -108,6 +108,7 @@ contains
 
     call MPI_Allreduce(MPI_IN_PLACE, this%model_proc_ids, nr_models, &
                        MPI_INTEGER, MPI_SUM, this%mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
     ! set the process id to the models and exchanges
     do i = 1, nr_models
@@ -296,6 +297,7 @@ contains
       if (msg_size > 0) then
         call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
                        this%mpi_world%comm, rcv_req(i), ierr)
+        call CHECK_MPI(ierr)
       end if
 
       if (this%enable_monitor) then
@@ -314,6 +316,7 @@ contains
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
                        this%mpi_world%comm, snd_req(i), ierr)
+        call CHECK_MPI(ierr)
       end if
 
       if (this%enable_monitor) then
@@ -423,6 +426,7 @@ contains
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      this%mpi_world%comm, rcv_req(i), ierr)
+      call CHECK_MPI(ierr)
     end do
 
     ! send header for incoming data
@@ -434,6 +438,7 @@ contains
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
+      call CHECK_MPI(ierr)
     end do
 
     ! wait for exchange of all headers
@@ -490,6 +495,7 @@ contains
                                                map_rcv_t(i))
       call MPI_Irecv(MPI_BOTTOM, 1, map_rcv_t(i), rnk, stage, &
                      this%mpi_world%comm, rcv_req(i), ierr)
+      call CHECK_MPI(ierr)
     end do
 
     ! send maps
@@ -502,6 +508,7 @@ contains
       call this%message_builder%create_map_snd(rnk, stage, map_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, map_snd_t(i), rnk, stage, &
                      this%mpi_world%comm, snd_req(i), ierr)
+      call CHECK_MPI(ierr)
     end do
 
     ! wait on receiving maps
