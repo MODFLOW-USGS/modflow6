@@ -170,9 +170,9 @@ contains
     real(DP) :: dt
     !
     if (it == 0) then
-      call cpu_time(t1)
+      call CPU_TIME(t1)
     else
-      call cpu_time(dt)
+      call CPU_TIME(dt)
       ts = ts + dt - t1
     end if
     !
