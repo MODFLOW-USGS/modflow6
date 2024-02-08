@@ -5,36 +5,36 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Model
-SOURCEDIR4=../src/Model/Geometry
-SOURCEDIR5=../src/Model/TransportModel
+SOURCEDIR2=../src/Model
+SOURCEDIR3=../src/Model/TransportModel
+SOURCEDIR4=../src/Model/GroundWaterFlow
+SOURCEDIR5=../src/Model/Geometry
 SOURCEDIR6=../src/Model/ModelUtilities
-SOURCEDIR7=../src/Model/Connection
-SOURCEDIR8=../src/Model/GroundWaterTransport
-SOURCEDIR9=../src/Model/GroundWaterFlow
-SOURCEDIR10=../src/Distributed
-SOURCEDIR11=../src/Solution
-SOURCEDIR12=../src/Solution/PETSc
-SOURCEDIR13=../src/Solution/LinearMethods
-SOURCEDIR14=../src/Timing
-SOURCEDIR15=../src/Utilities
-SOURCEDIR16=../src/Utilities/TimeSeries
-SOURCEDIR17=../src/Utilities/Libraries
-SOURCEDIR18=../src/Utilities/Libraries/rcm
-SOURCEDIR19=../src/Utilities/Libraries/sparsekit
-SOURCEDIR20=../src/Utilities/Libraries/sparskit2
-SOURCEDIR21=../src/Utilities/Libraries/blas
-SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Idm
-SOURCEDIR24=../src/Utilities/Idm/selector
-SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR26=../src/Utilities/Matrix
-SOURCEDIR27=../src/Utilities/Vector
-SOURCEDIR28=../src/Utilities/Observation
-SOURCEDIR29=../src/Utilities/OutputControl
-SOURCEDIR30=../src/Utilities/Memory
-SOURCEDIR31=../src/Utilities/ArrayRead
+SOURCEDIR7=../src/Model/GroundWaterTransport
+SOURCEDIR8=../src/Model/Connection
+SOURCEDIR9=../src/Distributed
+SOURCEDIR10=../src/Utilities
+SOURCEDIR11=../src/Utilities/Idm
+SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR13=../src/Utilities/Idm/selector
+SOURCEDIR14=../src/Utilities/Vector
+SOURCEDIR15=../src/Utilities/Matrix
+SOURCEDIR16=../src/Utilities/Observation
+SOURCEDIR17=../src/Utilities/ArrayRead
+SOURCEDIR18=../src/Utilities/OutputControl
+SOURCEDIR19=../src/Utilities/Libraries
+SOURCEDIR20=../src/Utilities/Libraries/blas
+SOURCEDIR21=../src/Utilities/Libraries/rcm
+SOURCEDIR22=../src/Utilities/Libraries/sparsekit
+SOURCEDIR23=../src/Utilities/Libraries/sparskit2
+SOURCEDIR24=../src/Utilities/Libraries/daglib
+SOURCEDIR25=../src/Utilities/Memory
+SOURCEDIR26=../src/Utilities/TimeSeries
+SOURCEDIR27=../src/Timing
+SOURCEDIR28=../src/Solution
+SOURCEDIR29=../src/Solution/PETSc
+SOURCEDIR30=../src/Solution/LinearMethods
+SOURCEDIR31=../src/Exchange
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -237,6 +237,7 @@ $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
@@ -268,7 +269,6 @@ $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ims8base.o \
 $(OBJDIR)/StructVector.o \
-$(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/DefinitionSelect.o \
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/Integer1dReader.o \
