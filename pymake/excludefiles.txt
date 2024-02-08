@@ -5,6 +5,8 @@
 ../src/Utilities/Matrix/PetscMatrix.F90
 ../src/Utilities/Vector/PetscVector.F90
 ../src/Distributed/MpiMessageBuilder.f90
+../src/Distributed/MpiMessageCache.f90
 ../src/Distributed/MpiRouter.f90
 ../src/Distributed/MpiRunControl.F90
+../src/Distributed/MpiUnitCache.f90
 ../src/Distributed/MpiWorld.f90

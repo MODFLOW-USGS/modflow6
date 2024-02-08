@@ -42,7 +42,6 @@ module MpiMessageBuilderModule
     procedure, private :: create_vdc_snd_map
     procedure, private :: create_vdc_snd_body
     procedure, private :: create_vdc_rcv_body
-    procedure, private :: create_element_map
   end type
 
 contains
@@ -114,7 +113,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: hdrs_snd_type
+    integer, intent(out) :: hdrs_snd_type
     ! local
     integer(I4B) :: i, offset, nr_types
     class(VirtualDataContainerType), pointer :: vdc
@@ -186,7 +185,7 @@ contains
 
   subroutine create_header_rcv(this, hdr_rcv_type)
     class(MpiMessageBuilderType) :: this
-    integer :: hdr_rcv_type
+    integer, intent(out) :: hdr_rcv_type
     ! local
     integer :: ierr
 
@@ -203,7 +202,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: map_snd_type
+    integer, intent(out) :: map_snd_type
     ! local
     integer(I4B) :: i, offset, nr_types
     class(VirtualDataContainerType), pointer :: vdc
@@ -280,7 +279,7 @@ contains
     class(MpiMessageBuilderType) :: this
     type(VdcReceiverMapsType), dimension(:) :: rcv_map
     integer(I4B) :: nr_headers
-    integer :: map_rcv_type
+    integer, intent(out) :: map_rcv_type
     ! local
     integer(I4B) :: i, j, nr_elems, type_cnt
     integer :: ierr, max_nr_maps
@@ -323,7 +322,7 @@ contains
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
-    integer :: body_rcv_type
+    integer, intent(out) :: body_rcv_type
     ! local
     integer(I4B) :: i, nr_types, offset
     class(VirtualDataContainerType), pointer :: vdc
@@ -400,7 +399,7 @@ contains
     integer(I4B) :: stage
     type(VdcHeaderType), dimension(:) :: headers
     type(VdcReceiverMapsType), dimension(:) :: maps
-    integer :: body_snd_type
+    integer, intent(out) :: body_snd_type
     ! local
     integer(I4B) :: i, nr_headers
     class(VirtualDataContainerType), pointer :: vdc
@@ -626,33 +625,6 @@ contains
     call items%destroy()
 
   end function create_vdc_snd_body
-
-  !> @brief Temp. function to generate a dummy (complete) map
-  !<
-  function create_element_map(this, rank, vdc, vd) result(el_map)
-    use MemoryManagerModule, only: get_mem_shape, get_mem_rank
-    use ConstantsModule, only: MAXMEMRANK
-    class(MpiMessageBuilderType) :: this
-    integer(I4B) :: rank
-    class(VirtualDataContainerType), pointer :: vdc
-    class(VirtualDataType), pointer :: vd
-    integer(I4B), dimension(:), pointer, contiguous :: el_map
-    ! local
-    integer(I4B), dimension(MAXMEMRANK) :: mem_shp
-    integer(I4B) :: i, nrow, mem_rank
-
-    el_map => null()
-    call get_mem_rank(vd%virtual_mt%name, vd%virtual_mt%path, mem_rank)
-    call get_mem_shape(vd%virtual_mt%name, vd%virtual_mt%path, mem_shp)
-    if (mem_rank > 0) then
-      nrow = mem_shp(mem_rank)
-      allocate (el_map(nrow))
-      do i = 1, nrow
-        el_map(i) = i - 1
-      end do
-    end if
-
-  end function create_element_map
 
   function get_vdc_from_hdr(this, header) result(vdc)
     class(MpiMessageBuilderType) :: this

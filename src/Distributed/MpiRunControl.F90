@@ -79,6 +79,7 @@ contains
 #else
     if (.not. mpi_world%has_comm()) then
       call MPI_Init(ierr)
+      call CHECK_MPI(ierr)
       call mpi_world%set_comm(MPI_COMM_WORLD)
     end if
 #endif
@@ -130,6 +131,7 @@ contains
     CHKERRQ(ierr)
 #else
     call MPI_Finalize(ierr)
+    call CHECK_MPI(ierr)
 #endif
 
     ! finish everything else by calling parent
