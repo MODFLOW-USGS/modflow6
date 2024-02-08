@@ -14,6 +14,7 @@ module TvsModule
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
   use TvBaseModule, only: TvBaseType, tvbase_da
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
 
@@ -32,7 +33,7 @@ module TvsModule
 
     procedure :: da => tvs_da
     procedure :: ar_set_pointers => tvs_ar_set_pointers
-    procedure :: read_option => tvs_read_option
+    procedure :: source_options => tvs_source_options
     procedure :: get_pointer_to_value => tvs_get_pointer_to_value
     procedure :: set_changed_at => tvs_set_changed_at
     procedure :: reset_change_flags => tvs_reset_change_flags
@@ -45,15 +46,16 @@ contains
   !!
   !! Create a new time-varying storage (TVS) object.
   !<
-  subroutine tvs_cr(tvs, name_model, inunit, iout)
+  subroutine tvs_cr(tvs, name_model, mempath, inunit, iout)
     ! -- dummy
     type(TvsType), pointer, intent(out) :: tvs
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     !
     allocate (tvs)
-    call tvs%init(name_model, 'TVS', 'TVS', inunit, iout)
+    call tvs%init(name_model, 'TVS', 'TVS', mempath, inunit, iout)
     !
     ! -- Return
     return
@@ -72,10 +74,10 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttvs = &
       "(1x,/1x,'TVS -- TIME-VARYING S PACKAGE, VERSION 1, 08/18/2021', &
-      &' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM MEMPATH ', A, //)"
     !
     ! -- Print a message identifying the TVS package
-    write (this%iout, fmttvs) this%inunit
+    write (this%iout, fmttvs) this%input_mempath
     !
     ! -- Set pointers to other package variables
     ! -- STO
@@ -97,29 +99,52 @@ contains
   !! Process a single TVS-specific option. Used when reading the OPTIONS block
   !! of the TVS package input file.
   !<
-  function tvs_read_option(this, keyword) result(success)
+  subroutine tvs_source_options(this)
+    ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use UtlTvsInputModule, only: UtlTvsParamFoundType
     ! -- dummy
     class(TvsType) :: this
-    character(len=*), intent(in) :: keyword
-    ! -- return
-    logical :: success
+    ! -- locals
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: ts6_filenames
+    type(UtlTvsParamFoundType) :: found
     ! -- formats
     character(len=*), parameter :: fmtdsci = &
       "(4X, 'DISABLE_STORAGE_CHANGE_INTEGRATION OPTION:', /, 1X, &
       &'Storage derivative terms will not be added to STO matrix formulation')"
     !
-    select case (keyword)
-    case ('DISABLE_STORAGE_CHANGE_INTEGRATION')
-      success = .true.
+    write (this%iout, '(1x,a)') &
+      'PROCESSING '//trim(adjustl(this%packName))//' OPTIONS'
+    !
+    ! -- source package input
+    call mem_set_value(this%iprpak, 'PRINT_INPUT', this%input_mempath, &
+                       found%print_input)
+    call mem_set_value(ts6_filenames, 'TS6_FILENAME', this%input_mempath, &
+                       found%ts6_filename)
+    call mem_set_value(this%integratechanges, 'DISABLESTOCHG', &
+                       this%input_mempath, found%disablestochg)
+    !
+    if (found%print_input) then
+      write (this%iout, '(4x,a)') 'TIME-VARYING INPUT WILL BE PRINTED.'
+    end if
+    !
+    !
+    if (found%ts6_filename) then
+      this%ts_active = .true.
+    end if
+    !
+    if (found%disablestochg) then
       this%integratechanges = 0
       write (this%iout, fmtdsci)
-    case default
-      success = .false.
-    end select
+    end if
+    !
+    write (this%iout, '(1x,a)') &
+      'END OF '//trim(adjustl(this%packName))//' OPTIONS'
     !
     ! -- Return
     return
-  end function tvs_read_option
+  end subroutine tvs_source_options
 
   !> @brief Get an array value pointer given a variable name and node index
   !!

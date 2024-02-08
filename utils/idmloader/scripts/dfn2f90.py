@@ -970,6 +970,10 @@ if __name__ == "__main__":
             SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3riv8idm.f90",
         ],
         [
+            DFN_PATH / "gwf-sto.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3sto8idm.f90",
+        ],
+        [
             DFN_PATH / "gwf-wel.dfn",
             SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3wel8idm.f90",
         ],
@@ -1060,6 +1064,13 @@ if __name__ == "__main__":
         [
             DFN_PATH / "sim-tdis.dfn",
             SRC_PATH / "Timing" / "simtdisidm.f90",
+        ],
+            DFN_PATH / "utl-tvk.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3tvk8idm.f90",
+        ],
+        [
+            DFN_PATH / "utl-tvs.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3tvs8idm.f90",
         ],
     ]
 

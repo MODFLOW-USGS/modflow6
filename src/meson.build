@@ -111,9 +111,12 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3riv8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3sfr8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3sto8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3sto8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3tvbase8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3tvk8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3tvk8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3tvs8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3tvs8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3uzf8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3vsc8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3wel8.f90',
@@ -218,6 +221,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'selector' / 'IdmGwfDfnSelector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmGwtDfnSelector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmSimDfnSelector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmUtlDfnSelector.f90',
     'Utilities' / 'Matrix' / 'MatrixBase.f90',
     'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
@@ -312,7 +316,7 @@ modflow_mpi_sources = files(
 )
 
 if with_petsc
-  modflow_sources += modflow_petsc_sources  
+  modflow_sources += modflow_petsc_sources
 endif
 
 if with_mpi

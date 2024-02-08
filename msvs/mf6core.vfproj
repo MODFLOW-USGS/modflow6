@@ -194,9 +194,12 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvk8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvk8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3vsc8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/>
@@ -338,7 +341,8 @@
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGweDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmUtlDfnSelector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>

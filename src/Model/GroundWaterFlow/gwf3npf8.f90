@@ -1367,14 +1367,13 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
-    use SourceCommonModule, only: filein_fname
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
-    character(len=LINELENGTH) :: tvk6_filename
+    character(len=LINELENGTH) :: tvk6_mempath
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%iprflow, 'IPRFLOW', this%input_mempath, found%iprflow)
@@ -1409,6 +1408,8 @@ contains
     call mem_set_value(this%wetfct, 'WETFCT', this%input_mempath, found%wetfct)
     call mem_set_value(this%iwetit, 'IWETIT', this%input_mempath, found%iwetit)
     call mem_set_value(this%ihdwet, 'IHDWET', this%input_mempath, found%ihdwet)
+    call mem_set_value(tvk6_mempath, 'TVK6_MEMPATH', this%input_mempath, &
+                       found%tvk6_filename)
     !
     ! -- save flows option active
     if (found%ipakcb) this%ipakcb = -1
@@ -1425,11 +1426,10 @@ contains
       this%iasym = 0
     end if
     !
-    ! -- enforce 0 or 1 TVK6_FILENAME entries in option block
-    if (filein_fname(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
-                     this%input_fname)) then
-      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
-      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
+    ! -- TVK6 subpackage input file
+    if (found%tvk6_filename) then
+      this%intvk = 1 ! tvk active
+      call tvk_cr(this%tvk, this%name_model, tvk6_mempath, this%intvk, this%iout)
     end if
     !
     ! -- log options

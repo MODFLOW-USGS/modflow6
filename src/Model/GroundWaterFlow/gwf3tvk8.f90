@@ -14,6 +14,7 @@ module TvkModule
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
   use TvBaseModule, only: TvBaseType, tvbase_da
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
 
@@ -36,7 +37,7 @@ module TvkModule
 
     procedure :: da => tvk_da
     procedure :: ar_set_pointers => tvk_ar_set_pointers
-    procedure :: read_option => tvk_read_option
+    procedure :: source_options => tvk_source_options
     procedure :: get_pointer_to_value => tvk_get_pointer_to_value
     procedure :: set_changed_at => tvk_set_changed_at
     procedure :: reset_change_flags => tvk_reset_change_flags
@@ -49,15 +50,16 @@ contains
   !!
   !! Create a new time-varying conductivity (TvkType) object.
   !<
-  subroutine tvk_cr(tvk, name_model, inunit, iout)
+  subroutine tvk_cr(tvk, name_model, mempath, inunit, iout)
     ! -- dummy
     type(TvkType), pointer, intent(out) :: tvk
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     !
     allocate (tvk)
-    call tvk%init(name_model, 'TVK', 'TVK', inunit, iout)
+    call tvk%init(name_model, 'TVK', 'TVK', mempath, inunit, iout)
     !
     ! -- Return
     return
@@ -76,10 +78,10 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttvk = &
       "(1x,/1x,'TVK -- TIME-VARYING K PACKAGE, VERSION 1, 08/18/2021', &
-      &' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM MEMPATH ', A, //)"
     !
     ! -- Print a message identifying the TVK package
-    write (this%iout, fmttvk) this%inunit
+    write (this%iout, fmttvk) this%input_mempath
     !
     ! -- Set pointers to other package variables
     ! -- NPF
@@ -102,19 +104,40 @@ contains
   !! Process a single TVK-specific option. Used when reading the OPTIONS block
   !! of the TVK package input file.
   !<
-  function tvk_read_option(this, keyword) result(success)
+  subroutine tvk_source_options(this)
+    ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use UtlTvkInputModule, only: UtlTvkParamFoundType
     ! -- dummy
     class(TvkType) :: this
-    character(len=*), intent(in) :: keyword
-    ! -- return
-    logical :: success
+    ! -- locals
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: ts6_filenames
+    type(UtlTvkParamFoundType) :: found
     !
-    ! -- There are no TVK-specific options, so just return false
-    success = .false.
+    write (this%iout, '(1x,a)') &
+      'PROCESSING '//trim(adjustl(this%packName))//' OPTIONS'
+    !
+    ! -- source package input
+    call mem_set_value(this%iprpak, 'PRINT_INPUT', this%input_mempath, &
+                       found%print_input)
+    call mem_set_value(ts6_filenames, 'TS6_FILENAME', this%input_mempath, &
+                       found%ts6_filename)
+    !
+    if (found%print_input) then
+      write (this%iout, '(4x,a)') 'TIME-VARYING INPUT WILL BE PRINTED.'
+    end if
+    !
+    if (found%ts6_filename) then
+      this%ts_active = .true.
+    end if
+    !
+    write (this%iout, '(1x,a)') &
+      'END OF '//trim(adjustl(this%packName))//' OPTIONS'
     !
     ! -- Return
     return
-  end function tvk_read_option
+  end subroutine tvk_source_options
 
   !> @brief Get an array value pointer given a variable name and node index
   !!

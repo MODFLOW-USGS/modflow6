@@ -10,6 +10,7 @@ module IdmDfnSelectorModule
   use IdmGweDfnSelectorModule
   use IdmExgDfnSelectorModule
   use IdmSimDfnSelectorModule
+  use IdmUtlDfnSelectorModule
 
   implicit none
   private
@@ -38,6 +39,8 @@ contains
       input_definition => exg_param_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_param_definitions(subcomponent)
+    case ('UTL')
+      input_definition => utl_param_definitions(subcomponent)
     case default
     end select
     return
@@ -59,6 +62,8 @@ contains
       input_definition => exg_aggregate_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_aggregate_definitions(subcomponent)
+    case ('UTL')
+      input_definition => utl_aggregate_definitions(subcomponent)
     case default
     end select
     return
@@ -80,6 +85,8 @@ contains
       input_definition => exg_block_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_block_definitions(subcomponent)
+    case ('UTL')
+      input_definition => utl_block_definitions(subcomponent)
     case default
     end select
     return
@@ -100,6 +107,8 @@ contains
       multi_package = exg_idm_multi_package(subcomponent)
     case ('SIM')
       multi_package = sim_idm_multi_package(subcomponent)
+    case ('UTL')
+      multi_package = utl_idm_multi_package(subcomponent)
     case default
       call store_error('Idm selector component not found; '//&
                        &'component="'//trim(component)//&
@@ -124,6 +133,8 @@ contains
       integrated = exg_idm_integrated(subcomponent)
     case ('SIM')
       integrated = sim_idm_integrated(subcomponent)
+    case ('UTL')
+      integrated = utl_idm_integrated(subcomponent)
     case default
     end select
     return
@@ -143,6 +154,8 @@ contains
     case ('EXG')
       integrated = .true.
     case ('SIM')
+      integrated = .true.
+    case ('UTL')
       integrated = .true.
     case default
     end select
