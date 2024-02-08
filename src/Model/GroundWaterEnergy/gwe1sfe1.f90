@@ -70,9 +70,6 @@ module GweSfeModule
     real(DP), dimension(:), pointer, contiguous :: temproff => null() !< runoff temperature
     real(DP), dimension(:), pointer, contiguous :: tempiflw => null() !< inflow temperature
 
-    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
-    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
-
   contains
 
     procedure :: bnd_da => sfe_da
@@ -147,6 +144,11 @@ contains
     !
     ! -- Store pointer to governing equation scale factor
     sfeobj%eqnsclfac => eqnsclfac
+    !
+    ! -- Store pointer to shared data module for accessing cpw, rhow
+    !    for the budget calculations, and for accessing the latent heat of
+    !    vaporization for evaporative cooling.
+    sfeobj%gwecommon => gwecommon
     !
     ! -- Set labels that will be used in generalized APT class
     sfeobj%depvartype = dvt
