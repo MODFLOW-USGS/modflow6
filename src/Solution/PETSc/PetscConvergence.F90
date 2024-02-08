@@ -132,10 +132,10 @@ contains
     call VecDestroy(res, ierr)
     CHKERRQ(ierr)
 
-    ! get dv and dr per local model
-    call VecGetArrayF90(context%delta_x, local_dx, ierr)
+    ! get dv and dr per local model (readonly!)
+    call VecGetArrayReadF90(context%delta_x, local_dx, ierr)
     CHKERRQ(ierr)
-    call VecGetArrayF90(context%delta_res, local_dr, ierr)
+    call VecGetArrayReadF90(context%delta_res, local_dr, ierr)
     CHKERRQ(ierr)
     do i = 1, summary%convnmod
       ! reset
@@ -163,9 +163,9 @@ contains
         summary%convlocdr(i, iter_cnt) = idx_dr
       end if
     end do
-    call VecRestoreArrayF90(x, local_dx, ierr)
+    call VecRestoreArrayF90(context%delta_x, local_dx, ierr)
     CHKERRQ(ierr)
-    call VecRestoreArrayF90(x, local_dr, ierr)
+    call VecRestoreArrayF90(context%delta_res, local_dr, ierr)
     CHKERRQ(ierr)
 
     if (norm < context%dvclose) then
