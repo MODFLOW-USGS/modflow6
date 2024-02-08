@@ -158,7 +158,7 @@ contains
     end if
     !
     ! -- create subpackage list
-    call static_loader%create_subpkg_list(iout)
+    call static_loader%create_subpkg_list()
     !
     ! -- load idm integrated subpackges
     do n = 1, static_loader%subpkg_list%pnum

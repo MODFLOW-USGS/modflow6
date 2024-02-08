@@ -329,7 +329,6 @@ contains
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: charstr1d
     integer(I4B) :: nrow, n, m
-    write (iout, '(a,i0)') 'IDM allocate_int1d_type nrow=', this%nrow
     !
     if (sv%idt%shape == 'NCELLDIM') then
       !
@@ -919,7 +918,6 @@ contains
     character(len=:), allocatable :: line
     logical(LGP) :: preserve_case
     !
-    !write(iout, '(a)') 'IDM SA write_struct_vector tag='//trim(this%struct_vectors(sv_col)%idt%tagname)
     select case (this%struct_vectors(sv_col)%memtype)
       !
     case (1) ! -- memtype integer
@@ -1233,7 +1231,7 @@ contains
       !
     end do
     !
-    ! -- set the SETTING_VAL col index
+    ! -- set the SETTING_VALUE col index
     iparam_setval = ifind(this%tagnames, 'SETTING_VALUE')
     !
     ! -- initialize index irow

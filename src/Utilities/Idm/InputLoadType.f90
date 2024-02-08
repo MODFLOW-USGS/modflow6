@@ -281,11 +281,10 @@ contains
   !> @brief create the subpackage list
   !!
   !<
-  subroutine create_subpkg_list(this, iout)
+  subroutine create_subpkg_list(this)
     use IdmDfnSelectorModule, only: idm_subpackages, idm_integrated
     use SourceCommonModule, only: filein_fname
     class(StaticPkgLoadType), intent(inout) :: this
-    integer(I4B), intent(in) :: iout
     character(len=16), dimension(:), pointer :: subpkgs
     character(len=LINELENGTH) :: tag, fname, pkgtype
     character(len=LENFTYPE) :: c_type, sc_type
