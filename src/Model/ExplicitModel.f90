@@ -5,7 +5,6 @@ module ExplicitModelModule
   use ConstantsModule, only: LINELENGTH
   use ListModule, only: ListType
   use BaseModelModule, only: BaseModelType
-  use BaseDisModule, only: DisBaseType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
 
   implicit none
@@ -22,9 +21,6 @@ module ExplicitModelModule
   !<
   type, extends(BaseModelType) :: ExplicitModelType
     character(len=LINELENGTH), pointer :: filename => null() !< input file name
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound array
-    type(ListType), pointer :: bndlist => null() !< array of boundary packages
-    class(DisBaseType), pointer :: dis => null() !< discretization object
   contains
     ! -- Overridden methods
     procedure :: model_ad
@@ -34,7 +30,6 @@ module ExplicitModelModule
     procedure :: model_da
     ! -- Utility methods
     procedure :: allocate_scalars
-    procedure :: allocate_arrays
     procedure :: set_idsoln
   end type ExplicitModelType
 
@@ -76,17 +71,6 @@ contains
     ! -- deallocate scalars
     deallocate (this%filename)
 
-    ! -- deallocate arrays
-    call mem_deallocate(this%ibound)
-
-    ! -- nullify pointers
-    if (associated(this%ibound)) &
-      call mem_deallocate(this%ibound, 'IBOUND', this%memoryPath)
-
-    ! -- member derived types
-    call this%bndlist%Clear()
-    deallocate (this%bndlist)
-
     ! -- deallocate base tpye
     call this%BaseModelType%model_da()
   end subroutine model_da
@@ -98,22 +82,9 @@ contains
     character(len=*), intent(in) :: modelname
 
     call this%BaseModelType%allocate_scalars(modelname)
-    allocate (this%bndlist)
     allocate (this%filename)
     this%filename = ''
   end subroutine allocate_scalars
-
-  !> @brief Allocate array variables
-  !<
-  subroutine allocate_arrays(this)
-    class(ExplicitModelType) :: this
-    integer(I4B) :: i
-
-    call mem_allocate(this%ibound, this%dis%nodes, 'IBOUND', this%memoryPath)
-    do i = 1, this%dis%nodes
-      this%ibound(i) = 1 ! active by default
-    end do
-  end subroutine allocate_arrays
 
   !> @ brief Cast a generic object into an explicit model
   !<

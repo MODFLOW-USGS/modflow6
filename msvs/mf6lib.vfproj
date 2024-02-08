@@ -164,5 +164,6 @@
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6lib.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
-		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
+		<File RelativePath="..\src\ModelFactory.f90"/>
+		<File RelativePath="..\src\Simulation.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

@@ -1,3 +1,34 @@
+fs = import('fs')
+pymod = import('python')
+
+# define paths
+root_path = meson.project_source_root()
+src_path = root_path / 'src'
+idm_path = src_path / 'IDM'
+dfn_path = root_path / 'doc' / 'mf6io' / 'mf6ivar' / 'dfn'
+
+# locate programs
+py = pymod.find_installation()
+fypp = find_program('fypp', required : false)
+
+# model selection
+models = get_option('models')
+message(f'Selected models: @models@')
+if not models.contains('gwf')
+  error('gwf is mandatory, other models are optional')
+endif
+
+# define exchanges
+exchanges = ['gwf-gwf']
+foreach m : models
+  if m == 'gwf'
+    continue
+  endif
+  exchanges += [f'gwf-@m@']
+  exchanges += [f'@m@-@m@']
+endforeach
+
+# external source files
 external_libraries = files(
     'Utilities' / 'Libraries' / 'daglib' / 'dag_module.f90',
     'Utilities' / 'Libraries' / 'rcm' / 'rcm.f90',
@@ -6,6 +37,7 @@ external_libraries = files(
     'Utilities' / 'Libraries' / 'sparskit2' / 'ilut.f90',
 )
 
+# mf6 core source files
 modflow_sources = files(
     'Distributed' / 'IndexMap.f90',
     'Distributed' / 'InterfaceMap.f90',
@@ -19,112 +51,31 @@ modflow_sources = files(
     'Distributed' / 'VirtualDataLists.f90',
     'Distributed' / 'VirtualDataManager.f90',
     'Distributed' / 'VirtualExchange.f90',    
-    'Distributed' / 'VirtualGwfExchange.f90',
-    'Distributed' / 'VirtualGwtExchange.f90',
     'Distributed' / 'VirtualModel.f90',
-    'Distributed' / 'VirtualGwfModel.f90',
-    'Distributed' / 'VirtualGwtModel.f90',
     'Distributed' / 'VirtualSolution.f90',
     'Exchange' / 'BaseExchange.f90',
     'Exchange' / 'DisConnExchange.f90',
     'Exchange' / 'GhostNode.f90',
-    'Exchange' / 'GwfExchangeMover.f90',
-    'Exchange' / 'GwfGwfExchange.f90',
-    'Exchange' / 'GwfGwtExchange.f90',
-    'Exchange' / 'GwtGwtExchange.f90',
     'Exchange' / 'NumericalExchange.f90',
-    'Exchange' / 'gwfgwfidm.f90',
-    'Exchange' / 'gwfgwtidm.f90',
-    'Exchange' / 'gwtgwtidm.f90',
-    'Model' / 'Connection' / 'ConnectionBuilder.f90',
     'Model' / 'Connection' / 'CellWithNbrs.f90',
     'Model' / 'Connection' / 'CsrUtils.f90',
     'Model' / 'Connection' / 'GridConnection.f90',
     'Model' / 'Connection' / 'GridSorting.f90',
-    'Model' / 'Connection' / 'GwfGwfConnection.f90',
-    'Model' / 'Connection' / 'GwtGwtConnection.f90',
-    'Model' / 'Connection' / 'GwfInterfaceModel.f90',
-    'Model' / 'Connection' / 'GwtInterfaceModel.f90',
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
     'Model' / 'Connection' / 'DistributedVariable.f90',
+    'Model' / 'Discretization' / 'Dis.f90',
+    'Model' / 'Discretization' / 'Disu.f90',
+    'Model' / 'Discretization' / 'Disv.f90',
     'Model' / 'Geometry' / 'BaseGeometry.f90',
     'Model' / 'Geometry' / 'CircularGeometry.f90',
     'Model' / 'Geometry' / 'RectangularGeometry.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3api8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3buy8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3chd8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3chd8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3csub8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3dis8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3dis8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3disu8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3disu8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3disv8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3disv8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3drn8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3drn8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3evt8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3evt8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3evta8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3ghb8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3ghb8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3hfb8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3ic8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3ic8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3lak8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3maw8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3mvr8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3npf8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3npf8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3obs8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3oc8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3rch8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3rch8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3rcha8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3riv8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3riv8idm.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3sfr8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3sto8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3tvbase8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3tvk8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3tvs8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3uzf8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3vsc8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3wel8.f90',
-    'Model' / 'GroundWaterFlow' / 'gwf3wel8idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1cnc1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1cnc1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1dis1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1disu1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1disv1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1dsp1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1dsp1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1ic1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1idm.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1ist1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1lkt1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1mst1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1mwt1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1sft1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1src1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1uzt1.f90',
     'Model' / 'ModelUtilities' / 'BoundaryPackage.f90',
     'Model' / 'ModelUtilities' / 'BoundaryPackageExt.f90',
     'Model' / 'ModelUtilities' / 'Connections.f90',
     'Model' / 'ModelUtilities' / 'DiscretizationBase.f90',
     'Model' / 'ModelUtilities' / 'DisvGeom.f90',
     'Model' / 'ModelUtilities' / 'FlowModelInterface.f90',
-    'Model' / 'ModelUtilities' / 'GwfBuyInputData.f90',
-    'Model' / 'ModelUtilities' / 'GwfMvrPeriodData.f90',
-    'Model' / 'ModelUtilities' / 'GwfNpfOptions.f90',
-    'Model' / 'ModelUtilities' / 'GwfStorageUtils.f90',
-    'Model' / 'ModelUtilities' / 'GwfVscInputData.f90',
-    'Model' / 'ModelUtilities' / 'GwtDspOptions.f90',
-    'Model' / 'ModelUtilities' / 'GwtSpc.f90',
-    'Model' / 'ModelUtilities' / 'ModelPackageInput.f90',
+    'Model' / 'ModelUtilities' / 'InitialConditions.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionManager.f90',
@@ -133,25 +84,26 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',
     'Model' / 'ModelUtilities' / 'Xt3dAlgorithm.f90',
     'Model' / 'ModelUtilities' / 'Xt3dInterface.f90',
-    'Model' / 'TransportModel' / 'tsp1.f90',
-    'Model' / 'TransportModel' / 'tsp1adv1.f90',
-    'Model' / 'TransportModel' / 'tsp1apt1.f90',
-    'Model' / 'TransportModel' / 'tsp1fmi1.f90',
-    'Model' / 'TransportModel' / 'tsp1ic1.f90',
-    'Model' / 'TransportModel' / 'tsp1obs1.f90',
-    'Model' / 'TransportModel' / 'tsp1oc1.f90',
-    'Model' / 'TransportModel' / 'tsp1mvt1.f90',
-    'Model' / 'TransportModel' / 'tsp1ssm1.f90',
+    'Model' / 'TransportModel' / 'tsp.f90',
+    'Model' / 'TransportModel' / 'tsp-adv.f90',
+    'Model' / 'TransportModel' / 'tsp-apt.f90',
+    'Model' / 'TransportModel' / 'tsp-fmi.f90',
+    'Model' / 'TransportModel' / 'tsp-ic.f90',
+    'Model' / 'TransportModel' / 'tsp-obs.f90',
+    'Model' / 'TransportModel' / 'tsp-oc.f90',
+    'Model' / 'TransportModel' / 'tsp-mvt.f90',
+    'Model' / 'TransportModel' / 'tsp-spc.f90',
+    'Model' / 'TransportModel' / 'tsp-ssm.f90',
     'Model' / 'BaseModel.f90',
     'Model' / 'ExplicitModel.f90',
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
     'Solution' / 'ConvergenceSummary.f90',
     'Solution' / 'LinearMethods' / 'ImsLinearSettings.f90',
-    'Solution' / 'LinearMethods' / 'ims8base.f90',
-    'Solution' / 'LinearMethods' / 'ims8linear.f90',
-    'Solution' / 'LinearMethods' / 'ims8reordering.f90',
-    'Solution' / 'LinearMethods' / 'ims8misc.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearBase.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinear.f90',
+    'Solution' / 'LinearMethods' / 'ImsReordering.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearMisc.f90',
     'Solution' / 'LinearMethods' / 'ImsLinearSolver.f90',
     'Solution' / 'BaseSolution.f90',
     'Solution' / 'ExplicitSolution.f90',
@@ -168,28 +120,23 @@ modflow_sources = files(
     'Utilities' / 'ArrayRead' / 'Integer1dReader.f90',
     'Utilities' / 'ArrayRead' / 'Integer2dReader.f90',
     'Utilities' / 'ArrayRead' / 'LayeredArrayReader.f90',
-    'Utilities' / 'Idm' / 'BoundInputContext.f90',
-    'Utilities' / 'Idm' / 'DefinitionSelect.f90',
-    'Utilities' / 'Idm' / 'IdmLoad.f90',
-    'Utilities' / 'Idm' / 'IdmLogger.f90',
-    'Utilities' / 'Idm' / 'InputDefinition.f90',
-    'Utilities' / 'Idm' / 'InputLoadType.f90',
-    'Utilities' / 'Idm' / 'ModelPackageInputs.f90',
-    'Utilities' / 'Idm' / 'ModflowInput.f90',
-    'Utilities' / 'Idm' / 'SourceCommon.f90',
-    'Utilities' / 'Idm' / 'SourceLoad.F90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'AsciiInputLoadType.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'IdmMf6File.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'LoadMf6File.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'StressGridInput.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'StressListInput.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'StructArray.f90',
-    'Utilities' / 'Idm' / 'mf6blockfile' / 'StructVector.f90',
-    'Utilities' / 'Idm' / 'selector' / 'IdmDfnSelector.f90',
-    'Utilities' / 'Idm' / 'selector' / 'IdmExgDfnSelector.f90',
-    'Utilities' / 'Idm' / 'selector' / 'IdmGwfDfnSelector.f90',
-    'Utilities' / 'Idm' / 'selector' / 'IdmGwtDfnSelector.f90',
-    'Utilities' / 'Idm' / 'selector' / 'IdmSimDfnSelector.f90',
+    'Utilities' / 'IDM' / 'BoundInputContext.f90',
+    'Utilities' / 'IDM' / 'DefinitionSelect.f90',
+    'Utilities' / 'IDM' / 'IdmLoad.f90',
+    'Utilities' / 'IDM' / 'IdmLogger.f90',
+    'Utilities' / 'IDM' / 'InputDefinition.f90',
+    'Utilities' / 'IDM' / 'InputLoadType.f90',
+    'Utilities' / 'IDM' / 'ModelPackageInputs.f90',
+    'Utilities' / 'IDM' / 'ModflowInput.f90',
+    'Utilities' / 'IDM' / 'SourceCommon.f90',
+    'Utilities' / 'IDM' / 'SourceLoad.F90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'AsciiInputLoadType.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'IdmMf6File.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'LoadMf6File.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'StressGridInput.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'StressListInput.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'StructArray.f90',
+    'Utilities' / 'IDM' / 'mf6blockfile' / 'StructVector.f90',
     'Utilities' / 'Matrix' / 'MatrixBase.f90',
     'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
@@ -198,7 +145,7 @@ modflow_sources = files(
     'Utilities' / 'Memory' / 'MemoryManager.f90',
     'Utilities' / 'Memory' / 'MemoryManagerExt.f90',
     'Utilities' / 'Memory' / 'MemorySetHandler.f90',
-    'Utilities' / 'Observation' / 'Obs3.f90',
+    'Utilities' / 'Observation' / 'Obs.f90',
     'Utilities' / 'Observation' / 'ObsContainer.f90',
     'Utilities' / 'Observation' / 'Observe.f90',
     'Utilities' / 'Observation' / 'ObsOutput.f90',
@@ -236,6 +183,7 @@ modflow_sources = files(
     'Utilities' / 'HashTable.f90',
     'Utilities' / 'HeadFileReader.f90',
     'Utilities' / 'InputOutput.f90',
+    'Utilities' / 'HGeoUtil.f90',
     'Utilities' / 'Iunit.f90',
     'Utilities' / 'kind.f90',
     'Utilities' / 'List.f90',
@@ -259,34 +207,57 @@ modflow_sources = files(
     'Utilities' / 'version.f90',
     'mf6core.f90',
     'mf6lists.f90',
-    'simnamidm.f90',
-    'SimulationCreate.f90',
+    'Simulation.f90',
     'RunControl.f90',
-    'RunControlFactory.F90'
+    'RunControlFactory.F90',
 )
 
-modflow_petsc_sources = files(
-  'Utilities' / 'Vector' / 'PetscVector.F90',
-  'Utilities' / 'Matrix' / 'PetscMatrix.F90',
-  'Solution' / 'PETSc' / 'PetscSolver.F90',
-  'Solution' / 'PETSc' / 'PetscConvergence.F90',
-  'Solution' / 'PETSc' / 'PetscImsPreconditioner.F90'
-)
+# model source files
+foreach m : models
+  subdir(m.to_upper())
+endforeach
 
-modflow_mpi_sources = files(
-  'Distributed' / 'MpiMessageBuilder.f90',
-  'Distributed' / 'MpiRouter.f90',
-  'Distributed' / 'MpiRunControl.F90',
-  'Distributed' / 'MpiWorld.f90',
-  'Solution' / 'ParallelSolution.f90'
-)
+# IDM files
+subdir('IDM')
 
+# generate factories for configurable mf6 components
+foreach f : ['Model', 'Exchange', 'Connection']
+  input = f'@f@Factory.fypp'
+  output = f'@f@Factory.f90'
+  configure_file(
+    command: [
+      fypp,
+      src_path / input,
+      src_path / output,
+      '-DMODELS=' + (models.length() > 0 ? ('["' + '", "'.join(models) + '"]') : '[]'),
+      '-DEXCHANGES=' + (exchanges.length() > 0 ? ('["' + '", "'.join(exchanges) + '"]') : '[]')
+    ],
+    input: input,
+    output: output
+  )
+  modflow_sources += files(output)
+endforeach
+
+# PETSc-related source files
 if with_petsc
-  modflow_sources += modflow_petsc_sources  
+  modflow_sources += files(
+    'Utilities' / 'Vector' / 'PetscVector.F90',
+    'Utilities' / 'Matrix' / 'PetscMatrix.F90',
+    'Solution' / 'PETSc' / 'PetscSolver.F90',
+    'Solution' / 'PETSc' / 'PetscConvergence.F90',
+    'Solution' / 'PETSc' / 'PetscImsPreconditioner.F90'
+  )  
 endif
 
+# MPI-related source files
 if with_mpi
-  modflow_sources += modflow_mpi_sources
+  modflow_sources += files(
+    'Distributed' / 'MpiMessageBuilder.f90',
+    'Distributed' / 'MpiRouter.f90',
+    'Distributed' / 'MpiRunControl.F90',
+    'Distributed' / 'MpiWorld.f90',
+    'Solution' / 'ParallelSolution.f90'
+  )
 endif
 
 mf6_external = static_library('mf6_external', external_libraries)

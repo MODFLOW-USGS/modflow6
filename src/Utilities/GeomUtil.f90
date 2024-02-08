@@ -1,20 +1,15 @@
+!> Geometry/spatial utilities.
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
   use ConstantsModule, only: DZERO, DONE
+  use MathUtilModule, only: between
   implicit none
   private
-  public :: between, point_in_polygon, &
+  public :: point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, &
-            compose
+            skew, transform, compose
 contains
-
-  !> @brief Check if a value is between two other values (inclusive).
-  logical function between(x, a, b)
-    real(DP), intent(in) :: x, a, b
-    between = ((x >= a .and. x <= b) .or. (x <= a .and. x >= b))
-  end function between
 
   !> @brief Check if a point is within a polygon.
   !! Vertices and edge points are considered in.

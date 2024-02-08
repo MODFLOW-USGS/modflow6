@@ -11,7 +11,7 @@ module GridConnectionModule
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
-  use GwfDisuModule
+  use DisuModule
   use DisConnExchangeModule
   use VirtualModelModule, only: VirtualModelType, get_virtual_model, &
                                 get_virtual_model_from_list
@@ -973,7 +973,7 @@ contains
     use ConnectionsModule
     use SparseModule, only: sparsematrix
     class(GridConnectionType) :: this !< the grid connection
-    class(GwfDisuType), pointer :: disu !< the target disu object
+    class(DisuType), pointer :: disu !< the target disu object
     ! local
     integer(I4B) :: icell, nrOfCells, idx
     class(VirtualModelType), pointer :: v_model
