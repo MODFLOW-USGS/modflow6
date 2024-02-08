@@ -57,8 +57,11 @@ jobs:
       - name: Check Fortran source formatting
         run: python .github/common/fortran_format_check.py
 
-      - name: Check msvs project files
+      - name: Check MSVS project files
         run: python .github/common/msvs_vfproj_check.py
+      
+      - name: Check CITATION.cff
+        uses: dieghernan/cff-validator@v3
 
   build:
     name: Build
