@@ -239,7 +239,6 @@ contains
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
     integer, dimension(:, :), allocatable :: rcv_stat
-    integer, dimension(:, :), allocatable :: snd_stat
 
     ! message body
     integer, dimension(:), allocatable :: body_rcv_t
@@ -262,7 +261,6 @@ contains
     allocate (rcv_req(this%receivers%size))
     allocate (snd_req(this%senders%size))
     allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
-    allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! always initialize request handles
     rcv_req = MPI_REQUEST_NULL
@@ -325,10 +323,10 @@ contains
     end do
 
     ! wait for exchange of all messages
-    call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
+    call MPI_WaitAll(this%senders%size, rcv_req, rcv_stat, ierr)
     call CHECK_MPI(ierr)
 
-    deallocate (rcv_req, snd_req, rcv_stat, snd_stat)
+    deallocate (rcv_req, snd_req, rcv_stat)
     deallocate (body_rcv_t, body_snd_t)
 
   end subroutine route_active
@@ -380,7 +378,6 @@ contains
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
     integer, dimension(:, :), allocatable :: rcv_stat
-    integer, dimension(:, :), allocatable :: snd_stat
     ! message header
     integer(I4B) :: max_headers
     type(VdcHeaderType), dimension(:, :), allocatable :: headers
@@ -396,7 +393,6 @@ contains
     allocate (rcv_req(this%receivers%size))
     allocate (snd_req(this%senders%size))
     allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
-    allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! init handles
     rcv_req = MPI_REQUEST_NULL
@@ -575,7 +571,7 @@ contains
       end do
     end do
 
-    deallocate (rcv_req, snd_req, rcv_stat, snd_stat)
+    deallocate (rcv_req, snd_req, rcv_stat)
     deallocate (hdr_rcv_t, hdr_snd_t, hdr_rcv_cnt)
     deallocate (headers)
     deallocate (map_rcv_t, map_snd_t)
