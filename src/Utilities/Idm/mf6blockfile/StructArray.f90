@@ -318,7 +318,7 @@ contains
   subroutine allocate_int1d_type(this, sv)
     use ConstantsModule, only: LENMODELNAME
     use MemoryHelperModule, only: create_mem_path
-    use SimVariablesModule, only: idm_context, iout
+    use SimVariablesModule, only: idm_context
     class(StructArrayType) :: this !< StructArrayType
     type(StructVectorType), intent(inout) :: sv
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d

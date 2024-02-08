@@ -185,6 +185,7 @@ contains
     ! -- local
     character(len=LENVARNAME) :: mempath_tag
     character(len=LENMEMPATH), pointer :: subpkg_mempath
+    character(len=LINELENGTH), pointer :: input_fname
     integer(I4B) :: idx, trimlen
     !
     ! -- reallocate
@@ -221,6 +222,10 @@ contains
     subpkg_mempath = &
       create_mem_path(this%component_name, &
                       subcomponent_type, idm_context)
+    !
+    ! -- allocate and initialize filename for subpackage
+    call mem_allocate(input_fname, LINELENGTH, 'INPUT_FNAME', subpkg_mempath)
+    input_fname = filename
     !
     ! -- return
     return
