@@ -281,6 +281,7 @@ $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/gwe1sfe1.o \
+$(OBJDIR)/gwe1mwe1.o \
 $(OBJDIR)/gwe1lke1.o \
 $(OBJDIR)/gwe1est1.o \
 $(OBJDIR)/gwe1esl1.o \

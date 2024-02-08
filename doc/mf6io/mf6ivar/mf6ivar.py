@@ -749,6 +749,7 @@ if __name__ == "__main__":
         "gwe-est",
         "gwe-ic",
         "gwe-lke",
+        "gwe-mwe",
         "gwe-nam",
         "gwe-oc",
         "gwe-ssm",
