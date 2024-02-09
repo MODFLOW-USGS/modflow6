@@ -860,107 +860,107 @@ if __name__ == "__main__":
         # [relative path of input dnf, relative path of output f90 definition file]
         [
             DFN_PATH / "gwf-chd.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3chd8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-chdidm.f90",
         ],
         [
             DFN_PATH / "gwf-dis.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3dis8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-disidm.f90",
         ],
         [
             DFN_PATH / "gwf-disu.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disu8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-disuidm.f90",
         ],
         [
             DFN_PATH / "gwf-disv.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disv8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-disvidm.f90",
         ],
         [
             DFN_PATH / "gwf-drn.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3drn8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-drnidm.f90",
         ],
         [
             DFN_PATH / "gwf-evt.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evt8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-evtidm.f90",
         ],
         [
             DFN_PATH / "gwf-evta.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evta8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-evtaidm.f90",
         ],
         [
             DFN_PATH / "gwf-ghb.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ghb8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-ghbidm.f90",
         ],
         [
             DFN_PATH / "gwf-ic.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ic8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-icidm.f90",
         ],
         [
             DFN_PATH / "gwf-npf.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3npf8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-npfidm.f90",
         ],
         [
             DFN_PATH / "gwf-rch.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rch8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-rchidm.f90",
         ],
         [
             DFN_PATH / "gwf-rcha.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rcha8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-rchaidm.f90",
         ],
         [
             DFN_PATH / "gwf-riv.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3riv8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-rividm.f90",
         ],
         [
             DFN_PATH / "gwf-wel.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3wel8idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-welidm.f90",
         ],
         [
             DFN_PATH / "gwt-dis.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dis1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-disidm.f90",
         ],
         [
             DFN_PATH / "gwt-disu.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disu1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-disuidm.f90",
         ],
         [
             DFN_PATH / "gwt-disv.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disv1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-disvidm.f90",
         ],
         [
             DFN_PATH / "gwt-dsp.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dsp1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-dspidm.f90",
         ],
         [
             DFN_PATH / "gwt-cnc.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1cnc1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-cncidm.f90",
         ],
         [
             DFN_PATH / "gwt-ic.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1ic1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-icidm.f90",
         ],
         [
             DFN_PATH / "gwf-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3idm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-namidm.f90",
         ],
         [
             DFN_PATH / "gwt-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-namidm.f90",
         ],
         [
             DFN_PATH / "exg-gwfgwf.dfn",
-            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwfgwfidm.f90",
         ],
         [
             DFN_PATH / "exg-gwfgwt.dfn",
-            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwfgwtidm.f90",
         ],
         [
             DFN_PATH / "exg-gwtgwt.dfn",
-            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwtgwtidm.f90",
         ],
         [
             DFN_PATH / "sim-nam.dfn",
-            SRC_PATH / "simnamidm.f90",
+            SRC_PATH / "sim-namidm.f90",
         ],
     ]
 
