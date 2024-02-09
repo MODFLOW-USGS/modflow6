@@ -21,6 +21,7 @@ module IdmLoadModule
   implicit none
   private
   public :: simnam_load
+  public :: simtdis_load
   public :: load_models
   public :: load_exchanges
   public :: idm_df
@@ -108,6 +109,11 @@ contains
         call memorylist_remove(exg_comp, exg_subcomp, idm_context)
       end if
     end do
+    !
+    ! -- deallocate input context SIM paths
+    call memorylist_remove('SIM', 'TDIS', idm_context)
+    call memorylist_remove('SIM', 'NAM', idm_context)
+    call memorylist_remove(component='SIM', context=idm_context)
     !
     ! -- return
     return
@@ -441,6 +447,18 @@ contains
     ! --return
     return
   end subroutine simnam_load
+
+  !> @brief MODFLOW 6 tdis input load routine
+  !<
+  subroutine simtdis_load()
+    use SourceLoadModule, only: load_simtdis
+    !
+    ! -- load sim tdis file
+    call load_simtdis()
+    !
+    ! --return
+    return
+  end subroutine simtdis_load
 
   !> @brief retrieve list of model dynamic loaders
   !<
