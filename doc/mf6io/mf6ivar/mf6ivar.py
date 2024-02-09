@@ -145,7 +145,7 @@ for arg in sys.argv:
 
 
 def parse_mf6var_file(fname):
-    f = open(fname, 'r')
+    f = open(fname, "r")
     lines = f.readlines()
     f.close()
 
@@ -153,80 +153,79 @@ def parse_mf6var_file(fname):
     vd = {}
 
     for line in lines:
-
         # skip blank lines
         if len(line.strip()) == 0:
             if len(vd) > 0:
-                name = vd['name']
-                if 'block' in vd:
-                    block = vd['block']
+                name = vd["name"]
+                if "block" in vd:
+                    block = vd["block"]
                     key = (name, block)
                 else:
                     key = name
                 if key in vardict:
                     raise Exception(
-                        'Variable already exists in dictionary: ' + name)
+                        "Variable already exists in dictionary: " + name
+                    )
                 vardict[key] = vd
             vd = {}
             continue
 
         # skip comments
-        if '#' in line.strip()[0]:
+        if "#" in line.strip()[0]:
             continue
 
         ll = line.strip().split()
         if len(ll) > 1:
             k = ll[0]
-            istart = line.index(' ')
+            istart = line.index(" ")
             v = line[istart:].strip()
             if k in vd:
-                raise Exception('Attribute already exists in dictionary: ' + k)
+                raise Exception("Attribute already exists in dictionary: " + k)
             vd[k] = v
 
     if len(vd) > 0:
-        name = vd['name']
-        if 'block' in vd:
-            block = vd['block']
+        name = vd["name"]
+        if "block" in vd:
+            block = vd["block"]
             key = (name, block)
         else:
             key = name
         if key in vardict:
-            raise Exception(
-                'Variable already exists in dictionary: ' + name)
+            raise Exception("Variable already exists in dictionary: " + name)
         vardict[key] = vd
     return vardict
 
 
-COMMONDESCRIPTIONS = parse_mf6var_file(os.path.join('.', 'dfn', 'common.dfn'))
+COMMONDESCRIPTIONS = parse_mf6var_file(os.path.join(".", "dfn", "common.dfn"))
 
 VALID_TYPES = [
-    'integer',
-    'double precision',
-    'string',
-    'keystring',
-    'keyword',
-    'recarray',
-    'record',
+    "integer",
+    "double precision",
+    "string",
+    "keystring",
+    "keyword",
+    "recarray",
+    "record",
 ]
 
 
-def block_entry(varname, block, vardict, prefix='  '):
+def block_entry(varname, block, vardict, prefix="  "):
     key = (varname, block)
     v = vardict[key]
 
-    s = '{}'.format(varname.upper())
-    if 'tagged' in v:
-        if v['tagged'] == 'false':
-            s = ''
+    s = "{}".format(varname.upper())
+    if "tagged" in v:
+        if v["tagged"] == "false":
+            s = ""
 
     # set up the time series marker @
-    tsmarker = ''
-    if 'time_series' in v:
-        if v['time_series'] == 'true':
-            tsmarker = '@'
+    tsmarker = ""
+    if "time_series" in v:
+        if v["time_series"] == "true":
+            tsmarker = "@"
 
     # check valid type
-    vtype = v['type']
+    vtype = v["type"]
     if vtype == "double precision":
         pass
     elif " " in vtype:
@@ -234,65 +233,67 @@ def block_entry(varname, block, vardict, prefix='  '):
     if vtype not in VALID_TYPES:
         raise ValueError(
             "{}: {}: {!r} is not a valid type from {}".format(
-                fname, key, vtype, VALID_TYPES)
+                fname, key, vtype, VALID_TYPES
+            )
         )
 
     # record or recarray
-    if v['type'].startswith('rec'):
-        varnames = v['type'].strip().split()[1:]
-        s = ''
+    if v["type"].startswith("rec"):
+        varnames = v["type"].strip().split()[1:]
+        s = ""
         for vn in varnames:
-            blockentry = block_entry(vn, block, vardict, prefix='')
-            s += '{} '.format(blockentry.strip())
-        if v['type'].startswith('recarray'):
+            blockentry = block_entry(vn, block, vardict, prefix="")
+            s += "{} ".format(blockentry.strip())
+        if v["type"].startswith("recarray"):
             s = s.strip()
-            s = '{}{}\n{}{}\n{}{}'.format('', s, prefix, s, prefix, '...')
+            s = "{}{}\n{}{}\n{}{}".format("", s, prefix, s, prefix, "...")
 
     # layered
-    elif v['reader'] in ['readarray', 'u1ddbl', 'u2ddbl', 'u1dint']:
-        shape = v['shape']
-        reader = v['reader'].upper()
-        layered = ''
-        if 'layered' in v:
-            if v['layered'] == 'true':
-                layered = ' [LAYERED]'
-        s = '{}{}\n{}{}<{}{}> -- {}'.format(s, layered, prefix, prefix,
-                                            varname,
-                                            shape, reader)
+    elif v["reader"] in ["readarray", "u1ddbl", "u2ddbl", "u1dint"]:
+        shape = v["shape"]
+        reader = v["reader"].upper()
+        layered = ""
+        if "layered" in v:
+            if v["layered"] == "true":
+                layered = " [LAYERED]"
+        s = "{}{}\n{}{}<{}{}> -- {}".format(
+            s, layered, prefix, prefix, varname, shape, reader
+        )
 
     # keyword
-    elif v['type'] != 'keyword':
+    elif v["type"] != "keyword":
         vtmp = varname
-        if 'shape' in v:
-            shape = v['shape']
+        if "shape" in v:
+            shape = v["shape"]
             vtmp += shape
-        s = '{} <{}{}{}>'.format(s, tsmarker, vtmp, tsmarker)
+        s = "{} <{}{}{}>".format(s, tsmarker, vtmp, tsmarker)
 
     # if optional, wrap string in square brackets
-    if 'optional' in v:
-        if v['optional'] == 'true':
-            s = '[{}]'.format(s.strip())
+    if "optional" in v:
+        if v["optional"] == "true":
+            s = "[{}]".format(s.strip())
 
     # prepend with prefix and return string
-    s = '{}{}'.format(prefix, s)
+    s = "{}{}".format(prefix, s)
     return s
 
 
-def write_block(vardict, block, blk_var_list, varexcludeprefix=None,
-                indent=None):
+def write_block(
+    vardict, block, blk_var_list, varexcludeprefix=None, indent=None
+):
     if indent is None:
         prepend = ""
     else:
         prepend = indent * " "
 
-    s = prepend + 'BEGIN {}'.format(block.upper())
+    s = prepend + "BEGIN {}".format(block.upper())
     for variable in blk_var_list:
         ts = block_entry(variable[0], block, vardict).strip()
         if variable[1]:
-            s = '{} [{}]'.format(s, ts)
+            s = "{} [{}]".format(s, ts)
         else:
-            s = '{} {}'.format(s, ts)
-    s += '\n'
+            s = "{} {}".format(s, ts)
+    s += "\n"
     for iv, key in enumerate(vardict):
         name, b = key
         v = vardict[key]
@@ -304,23 +305,23 @@ def write_block(vardict, block, blk_var_list, varexcludeprefix=None,
                 n = name.upper()
                 if n.startswith(varexcludeprefix.upper()):
                     addv = False
-            if 'in_record' in v:
-                if v['in_record'] == 'true':
+            if "in_record" in v:
+                if v["in_record"] == "true":
                     # do not separately include this variable
                     # because it is part of a record
                     addv = False
-            if 'block_variable' in v:
-                if v['block_variable'] == 'true':
+            if "block_variable" in v:
+                if v["block_variable"] == "true":
                     # do not separately include this variable
                     # because it is part of a record
                     addv = False
-            if 'deprecated' in v:
-                if v['deprecated'] != '':
+            if "deprecated" in v:
+                if v["deprecated"] != "":
                     addv = False
             if addv:
                 ts = block_entry(name, block, vardict, prefix="  " + prepend)
-                s += '{}\n'.format(ts)
-    s += prepend + 'END {}'.format(block.upper())
+                s += "{}\n".format(ts)
+    s += prepend + "END {}".format(block.upper())
     return s
 
 
@@ -330,11 +331,11 @@ def get_description(desc):
     substitutions if so.
 
     """
-    if desc.strip().split()[0] == 'REPLACE':
+    if desc.strip().split()[0] == "REPLACE":
         bcoption = desc.strip().split()[1]
-        constantstring = COMMONDESCRIPTIONS[bcoption]['description']
-        istart = desc.index('{')
-        istop = desc.rfind('}') + 1
+        constantstring = COMMONDESCRIPTIONS[bcoption]["description"]
+        istart = desc.index("{")
+        istop = desc.rfind("}") + 1
         d = eval(desc[istart:istop])
         # d = eval(desc[desc.index('{'):])
         for k in d:
@@ -345,13 +346,13 @@ def get_description(desc):
 
 
 def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
-    s = ''
+    s = ""
     for iv, (name, b) in enumerate(vardict):
         v = vardict[(name, b)]
-        if v['block'] == block:
-            if 'block_variable' in v and v['block_variable']:
-                optional = 'optional' in v and v['optional'] == 'true'
-                blk_var_list.append((v['name'], optional))
+        if v["block"] == block:
+            if "block_variable" in v and v["block_variable"]:
+                optional = "optional" in v and v["optional"] == "true"
+                blk_var_list.append((v["name"], optional))
             addv = True
             if varexcludeprefix is not None:
                 # exclude variables that start with `dev_`.  These are
@@ -359,61 +360,61 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                 n = name.upper()
                 if n.startswith(varexcludeprefix.upper()):
                     addv = False
-            if v['type'].startswith('rec'):
+            if v["type"].startswith("rec"):
                 addv = False
-            if 'deprecated' in v:
-                if v['deprecated'] != '':
+            if "deprecated" in v:
+                if v["deprecated"] != "":
                     addv = False
-            if 'removed' in v:
-                if v['removed'] != '':
+            if "removed" in v:
+                if v["removed"] != "":
                     addv = False
             if addv:
-                if v['type'] == 'keyword':
+                if v["type"] == "keyword":
                     n = name.upper()
                 else:
-                    if 'tagged' in v:
+                    if "tagged" in v:
                         # could be used in future to write tag and name
-                        n = '{}'.format(name)
+                        n = "{}".format(name)
                     else:
                         n = name
-                n = n.replace('_', '\\_')
-                if 'description' in v:
-                    desc = get_description(v['description'])
+                n = n.replace("_", "\\_")
+                if "description" in v:
+                    desc = get_description(v["description"])
                 else:
-                    msg = ''
+                    msg = ""
                     for k, v in v.items():
-                        msg += '  {}: {}\n'.format(k, v)
+                        msg += "  {}: {}\n".format(k, v)
                     print(msg)
                     raise Exception(msg)
-                ss = '\\texttt{' + n + '}---' + desc
-                if 'time_series' in v:
-                    if v['time_series'] == 'true':
-                        fmt = '\\textcolor{blue}\{\}'
-                        ss = '\\textcolor{blue}{' + ss + '}'
+                ss = "\\texttt{" + n + "}---" + desc
+                if "time_series" in v:
+                    if v["time_series"] == "true":
+                        fmt = "\\textcolor{blue}\{\}"
+                        ss = "\\textcolor{blue}{" + ss + "}"
                         # \textcolor{declared-color}{text}
-                s += '\\item ' + ss + '\n\n'
+                s += "\\item " + ss + "\n\n"
 
-                t = v['type']
-                if t.startswith('keystring'):
+                t = v["type"]
+                if t.startswith("keystring"):
                     # s += '\\begin{verbatim}\n'
-                    s += '\\begin{lstlisting}[style=blockdefinition]\n'
+                    s += "\\begin{lstlisting}[style=blockdefinition]\n"
                     for vn in t.strip().split()[1:]:
-                        blockentry = block_entry(vn, block, vardict, '')
-                        s += '{}\n'.format(blockentry)
+                        blockentry = block_entry(vn, block, vardict, "")
+                        s += "{}\n".format(blockentry)
                     # s += '\\end{verbatim}\n\n'
-                    s += '\\end{lstlisting}\n\n'
+                    s += "\\end{lstlisting}\n\n"
 
     return s
 
 
 def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
-    s = ''
+    s = ""
     for iv, (name, b) in enumerate(vardict):
         v = vardict[(name, b)]
-        if v['block'] == block:
-            if 'block_variable' in v and v['block_variable']:
-                optional = 'optional' in v and v['optional'] == 'true'
-                blk_var_list.append((v['name'], optional))
+        if v["block"] == block:
+            if "block_variable" in v and v["block_variable"]:
+                optional = "optional" in v and v["optional"] == "true"
+                blk_var_list.append((v["name"], optional))
             addv = True
             if varexcludeprefix is not None:
                 # exclude variables that start with `dev_`.  These are
@@ -421,45 +422,45 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                 n = name.upper()
                 if n.startswith(varexcludeprefix.upper()):
                     addv = False
-            if v['type'].startswith('rec'):
+            if v["type"].startswith("rec"):
                 addv = False
-            if 'deprecated' in v:
-                if v['deprecated'] != '':
+            if "deprecated" in v:
+                if v["deprecated"] != "":
                     addv = False
-            if 'removed' in v:
-                if v['removed'] != '':
+            if "removed" in v:
+                if v["removed"] != "":
                     addv = False
             if addv:
-                if v['type'] == 'keyword':
+                if v["type"] == "keyword":
                     n = name.upper()
                 else:
-                    if 'tagged' in v:
+                    if "tagged" in v:
                         # could be used in future to write tag and name
-                        n = '{}'.format(name)
+                        n = "{}".format(name)
                     else:
                         n = name
-                if 'description' in v:
-                    desc = get_description(v['description'])
+                if "description" in v:
+                    desc = get_description(v["description"])
                 else:
-                    msg = ''
+                    msg = ""
                     for k, v in v.items():
-                        msg += '  {}: {}\n'.format(k, v)
+                        msg += "  {}: {}\n".format(k, v)
                     print(msg)
                     raise Exception(msg)
                 desc = md_replace(desc)
-                ss = '`' + n + '` ' + desc
-                if 'time_series' in v:
-                    if v['time_series'] == 'true':
-                        ss = '<span style="color:blue">' + ss + '</span>'
-                s += '  * ' + ss + '\n\n'
+                ss = "`" + n + "` " + desc
+                if "time_series" in v:
+                    if v["time_series"] == "true":
+                        ss = '<span style="color:blue">' + ss + "</span>"
+                s += "  * " + ss + "\n\n"
 
-                t = v['type']
-                if t.startswith('keystring'):
+                t = v["type"]
+                if t.startswith("keystring"):
                     for vn in t.strip().split()[1:]:
                         blockentry = md_replace(
                             block_entry(vn, block, vardict, 10 * " ")
                         )
-                        s += '{}\n'.format(blockentry)
+                        s += "{}\n".format(blockentry)
 
     return s
 
@@ -470,7 +471,7 @@ def md_replace(s):
         re.compile("\\\\cite{(.*?)\\}"): ("\\cite{{{}}}", None),
         re.compile("\\\\citep{(.*?)\\}"): ("\\citep{{{}}}", None),
         re.compile("\\\\texttt{(.*?)\\}"): ("\\texttt{{{}}}", "`{}`"),
-        re.compile("\\$(.*?)\\$"): ("${}$", '{}'),
+        re.compile("\\$(.*?)\\$"): ("${}$", "{}"),
         re.compile("\\^{(.*?)\\}"): ("^{{{}}}", "<sup>{}</sup>"),
         re.compile("\\^(.*?)\\ "): ("^{:.1}", "<sup>{:.1}</sup>"),
         re.compile("\\``(.*?)\\''"): ("``{}''", '"{}"'),
@@ -487,7 +488,7 @@ def md_replace(s):
 
     # replace individual characters
     replace_dict = {
-        "\mf": 'MODFLOW 6',
+        "\mf": "MODFLOW 6",
         "~": " ",
         "@": "",
         "$": "",
@@ -505,9 +506,12 @@ def md_replace(s):
 
 def get_examples(component):
     pth = os.path.join("examples")
-    files = [filename for filename in sorted(os.listdir(pth)) if
-             component.lower() in filename.lower() and
-             "-obs" not in filename.lower()]
+    files = [
+        filename
+        for filename in sorted(os.listdir(pth))
+        if component.lower() in filename.lower()
+        and "-obs" not in filename.lower()
+    ]
     s = ""
     for idx, filename in enumerate(files):
         if idx == 0:
@@ -515,7 +519,7 @@ def get_examples(component):
         if len(files) > 1:
             s += "Example {}\n\n".format(idx + 1)
         fpth = os.path.join(pth, filename)
-        with open(fpth, 'r') as f:
+        with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
         for line in lines:
@@ -527,16 +531,18 @@ def get_examples(component):
 
 def get_obs_examples(component):
     pth = os.path.join("examples")
-    files = [filename for filename in sorted(os.listdir(pth)) if
-             component.lower() in filename.lower() and
-             "-obs" in filename.lower()]
+    files = [
+        filename
+        for filename in sorted(os.listdir(pth))
+        if component.lower() in filename.lower() and "-obs" in filename.lower()
+    ]
     s = ""
     for idx, filename in enumerate(files):
         s += "#### Example Observation Input File\n"
         if len(files) > 1:
             s += "Example {}\n\n".format(idx + 1)
         fpth = os.path.join(pth, filename)
-        with open(fpth, 'r') as f:
+        with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
         for line in lines:
@@ -548,17 +554,24 @@ def get_obs_examples(component):
 
 def get_obs_table(component):
     pth = os.path.join("..", "..", "Common")
-    files = [filename for filename in sorted(os.listdir(pth)) if
-             component.lower() in filename.lower() and
-             filename.lower().endswith("obs.tex")]
+    files = [
+        filename
+        for filename in sorted(os.listdir(pth))
+        if component.lower() in filename.lower()
+        and filename.lower().endswith("obs.tex")
+    ]
     s = ""
     if files:
         s += "#### Available Observation Types\n\n"
-        s += "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
-        s += "|----------------|------------------|-----|-----|-------------|\n"
+        s += (
+            "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
+        )
+        s += (
+            "|----------------|------------------|-----|-----|-------------|\n"
+        )
     for idx, filename in enumerate(files):
         fpth = os.path.join(pth, filename)
-        with open(fpth, 'r') as f:
+        with open(fpth, "r") as f:
             lines = f.readlines()
         for line in lines:
             line = md_replace(line.rstrip())
@@ -575,14 +588,15 @@ def get_obs_table(component):
 
 
 def write_md_header(f):
-    s = '# MODFLOW 6 INPUT VARIABLES\n\n'
+    s = "# MODFLOW 6 INPUT VARIABLES\n\n"
     fmd.write(s)
-    s = '| {} | {} | {} | {} | {} | {} |\n'.format('component', 'package',
-                                                   'block', 'variable name',
-                                                   'type', 'description')
+    s = "| {} | {} | {} | {} | {} | {} |\n".format(
+        "component", "package", "block", "variable name", "type", "description"
+    )
     fmd.write(s)
-    s = '| {} | {} | {} | {} | {} | {} |\n'.format(':---:', ':---:', ':---:',
-                                                   ':---:', ':---:', '---')
+    s = "| {} | {} | {} | {} | {} | {} |\n".format(
+        ":---:", ":---:", ":---:", ":---:", ":---:", "---"
+    )
     fmd.write(s)
     return
 
@@ -593,142 +607,173 @@ def write_md(f, vardict, component, package):
     for iv, (name, b) in enumerate(vardict):
         n = name.upper()
         v = vardict[(name, b)]
-        b = v['block'].upper()
-        t = v['type'].upper()
-        s = ''
-        if t.startswith('REC'):
+        b = v["block"].upper()
+        t = v["type"].upper()
+        s = ""
+        if t.startswith("REC"):
             pass
         else:
-            if t.startswith('KEYSTRING'):
-                t = 'KEYSTRING'
-            t = '{}'.format(t)
-            if 'shape' in v:
-                shape = v['shape'].upper()
-                t = '{} {}'.format(t, shape)
-            d = get_description(v['description'])
-            s = '| {} | {} | {} | {} | {} | {} |\n'.format(c, p, b, n, t, d)
+            if t.startswith("KEYSTRING"):
+                t = "KEYSTRING"
+            t = "{}".format(t)
+            if "shape" in v:
+                shape = v["shape"].upper()
+                t = "{} {}".format(t, shape)
+            d = get_description(v["description"])
+            s = "| {} | {} | {} | {} | {} | {} |\n".format(c, p, b, n, t, d)
         f.write(s)
     return
 
 
 def write_appendix(texdir, allblocks):
-    fname = os.path.join(texdir, 'appendixA.tex')
-    with open(fname, 'w') as f:
-        f.write('\\small\n\\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}\n')
+    fname = os.path.join(texdir, "appendixA.tex")
+    with open(fname, "w") as f:
+        f.write("\\small\n\\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}\n")
         f.write(
-            '\\caption{List of block names organized by component and input file '
-            'type.  OPEN/CLOSE indicates whether or not the block information '
-            'can be contained in separate file} \\tabularnewline \n\n')
-        f.write('\\hline\n\\hline\n')
+            "\\caption{List of block names organized by component and input file "
+            "type.  OPEN/CLOSE indicates whether or not the block information "
+            "can be contained in separate file} \\tabularnewline \n\n"
+        )
+        f.write("\\hline\n\\hline\n")
         f.write(
-            '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
-        f.write('\\hline\n\\endfirsthead\n\n\n')
+            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n"
+        )
+        f.write("\\hline\n\\endfirsthead\n\n\n")
 
-        f.write('\captionsetup{textformat=simple}\n')
-        f.write('\caption*{\\textbf{Table A--\\arabic{table}.}{\quad}List of block'
-                ' names organized by component and input file type.  OPEN/CLOSE '
-                'indicates whether or not the block information can be contained '
-                'in separate file.---Continued} \\tabularnewline\n')
-
-        f.write('\n\\hline\n\\hline\n')
+        f.write("\captionsetup{textformat=simple}\n")
         f.write(
-            '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
-        f.write('\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n')
+            "\caption*{\\textbf{Table A--\\arabic{table}.}{\quad}List of block"
+            " names organized by component and input file type.  OPEN/CLOSE "
+            "indicates whether or not the block information can be contained "
+            "in separate file.---Continued} \\tabularnewline\n"
+        )
 
-        lastftype = ''
+        f.write("\n\\hline\n\\hline\n")
+        f.write(
+            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n"
+        )
+        f.write("\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n")
+
+        lastftype = ""
         for b in allblocks:
-            l = b.strip().split('-')
+            l = b.strip().split("-")
             component, ftype, blockname = l
             if lastftype != ftype:
-                f.write('\\hline\n')
-            oc = 'yes'
-            if 'griddata' in blockname.lower():
-                oc = 'no'
-            if 'utl' in component.lower() and \
-                    'tas' in ftype.lower() and 'time' in blockname.lower():
-                oc = 'no'
-            s = '{} & {} & {} & {} \\\\ \n'.format(component.upper(),
-                                                ftype.upper(),
-                                                blockname.upper(), oc)
+                f.write("\\hline\n")
+            oc = "yes"
+            if "griddata" in blockname.lower():
+                oc = "no"
+            if (
+                "utl" in component.lower()
+                and "tas" in ftype.lower()
+                and "time" in blockname.lower()
+            ):
+                oc = "no"
+            s = "{} & {} & {} & {} \\\\ \n".format(
+                component.upper(), ftype.upper(), blockname.upper(), oc
+            )
             f.write(s)
             lastftype = ftype
 
         f.write(
-            '\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n')
+            "\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n"
+        )
 
 
-if __name__ == '__main__':
-
-    file_order = ['sim-nam',  # dfn completed  tex updated
-                  'sim-tdis',  # dfn completed  tex updated
-                  'exg-gwfgwf',  # dfn completed  tex updated
-                  'exg-gwfgwt',
-                  'exg-gwtgwt',
-                  'sln-ims',  # dfn completed  tex updated
-                  'sln-ems',  # dfn completed  tex updated
-                  'gwf-nam',  # dfn completed  tex updated
-                  'gwf-dis',  # dfn completed  tex updated
-                  'gwf-disv',  # dfn completed  tex updated
-                  'gwf-disu',  # dfn completed  tex updated
-                  'gwf-ic',  # dfn completed  tex updated
-                  'gwf-npf',  # dfn completed  tex updated
-                  'gwf-buy',  # dfn completed  tex updated
-                  'gwf-sto',  # dfn completed  tex updated
-                  'gwf-csub',  # dfn completed  tex updated
-                  'gwf-hfb',  # dfn completed  tex updated
-                  'gwf-chd',  # dfn completed  tex updated
-                  'gwf-wel',  # dfn completed  tex updated
-                  'gwf-drn',  # dfn completed  tex updated
-                  'gwf-riv',  # dfn completed  tex updated
-                  'gwf-ghb',  # dfn completed  tex updated
-                  'gwf-rch',  # dfn completed  tex updated
-                  'gwf-rcha',  # dfn completed  tex updated
-                  'gwf-evt',  # dfn completed  tex updated
-                  'gwf-evta',  # dfn completed  tex updated
-                  'gwf-maw',  # dfn completed  tex updated
-                  'gwf-sfr',  # dfn completed  tex updated
-                  'gwf-lak',  # dfn completed  tex updated
-                  'gwf-uzf',  # dfn completed  tex updated
-                  'gwf-mvr',  # dfn completed  tex updated
-                  'gwf-gnc',  # dfn completed  tex updated
-                  'gwf-oc',  # dfn completed  tex updated
-                  'gwf-vsc',
-                  'gwf-api',
-                  'gwt-adv',
-                  'gwt-dsp',
-                  'gwt-cnc',
-                  'gwt-dis',
-                  'gwt-disv',
-                  'gwt-disu',
-                  'gwt-ic',
-                  'gwt-nam',
-                  'gwt-oc',
-                  'gwt-ssm',
-                  'gwt-src',
-                  'gwt-mst',
-                  'gwt-ist',
-                  'gwt-sft',
-                  'gwt-lkt',
-                  'gwt-mwt',
-                  'gwt-uzt',
-                  'gwt-fmi',
-                  'gwt-mvt',
-                  'gwt-api',
-                  'utl-spc',
-                  'utl-spca',
-                  'utl-obs',
-                  'utl-laktab',
-                  'utl-sfrtab',
-                  'utl-ts',
-                  'utl-tas',
-                  'utl-ats',
-                  'utl-tvk',
-                  'utl-tvs']
+if __name__ == "__main__":
+    file_order = [
+        "sim-nam",  # dfn completed  tex updated
+        "sim-tdis",  # dfn completed  tex updated
+        "exg-gwfgwf",  # dfn completed  tex updated
+        "exg-gwfgwt",
+        "exg-gwtgwt",
+        "exg-gwfgwe",
+        "exg-gwegwe",
+        "sln-ims",  # dfn completed  tex updated
+        "sln-ems",  # dfn completed  tex updated
+        "gwf-nam",  # dfn completed  tex updated
+        "gwf-dis",  # dfn completed  tex updated
+        "gwf-disv",  # dfn completed  tex updated
+        "gwf-disu",  # dfn completed  tex updated
+        "gwf-ic",  # dfn completed  tex updated
+        "gwf-npf",  # dfn completed  tex updated
+        "gwf-buy",  # dfn completed  tex updated
+        "gwf-sto",  # dfn completed  tex updated
+        "gwf-csub",  # dfn completed  tex updated
+        "gwf-hfb",  # dfn completed  tex updated
+        "gwf-chd",  # dfn completed  tex updated
+        "gwf-wel",  # dfn completed  tex updated
+        "gwf-drn",  # dfn completed  tex updated
+        "gwf-riv",  # dfn completed  tex updated
+        "gwf-ghb",  # dfn completed  tex updated
+        "gwf-rch",  # dfn completed  tex updated
+        "gwf-rcha",  # dfn completed  tex updated
+        "gwf-evt",  # dfn completed  tex updated
+        "gwf-evta",  # dfn completed  tex updated
+        "gwf-maw",  # dfn completed  tex updated
+        "gwf-sfr",  # dfn completed  tex updated
+        "gwf-lak",  # dfn completed  tex updated
+        "gwf-uzf",  # dfn completed  tex updated
+        "gwf-mvr",  # dfn completed  tex updated
+        "gwf-gnc",  # dfn completed  tex updated
+        "gwf-oc",  # dfn completed  tex updated
+        "gwf-vsc",
+        "gwf-api",
+        "gwt-adv",
+        "gwt-dsp",
+        "gwt-cnc",
+        "gwt-dis",
+        "gwt-disv",
+        "gwt-disu",
+        "gwt-ic",
+        "gwt-nam",
+        "gwt-oc",
+        "gwt-ssm",
+        "gwt-src",
+        "gwt-mst",
+        "gwt-ist",
+        "gwt-sft",
+        "gwt-lkt",
+        "gwt-mwt",
+        "gwt-uzt",
+        "gwt-fmi",
+        "gwt-mvt",
+        "gwt-api",
+        "gwe-adv",
+        "gwe-cnd",
+        "gwe-ctp",
+        "gwe-dis",
+        "gwe-disv",
+        "gwe-disu",
+        "gwe-esl",
+        "gwe-est",
+        "gwe-ic",
+        "gwe-lke",
+        "gwe-mwe",
+        "gwe-nam",
+        "gwe-oc",
+        "gwe-ssm",
+        "gwe-sfe",
+        "gwe-uze",
+        "gwe-fmi",
+        "utl-spc",
+        "utl-spca",
+        "utl-spt",
+        "utl-spta",
+        "utl-obs",
+        "utl-laktab",
+        "utl-sfrtab",
+        "utl-ts",
+        "utl-tas",
+        "utl-ats",
+        "utl-tvk",
+        "utl-tvs",
+    ]
 
     # directories
-    dfndir = os.path.join('.', 'dfn')
-    texdir = os.path.join('.', 'tex')
-    mddir = os.path.join('.', 'md')
+    dfndir = os.path.join(".", "dfn")
+    texdir = os.path.join(".", "tex")
+    mddir = os.path.join(".", "md")
     docdir = os.path.join("..", "..", "..", ".build_rtd_docs", "_mf6io")
 
     # regenerate docdir
@@ -740,20 +785,22 @@ if __name__ == '__main__':
     allblocks = []
 
     # setup a markdown file
-    fname = os.path.join(mddir, 'mf6ivar.md')
-    with open(fname, 'w') as fmd:
+    fname = os.path.join(mddir, "mf6ivar.md")
+    with open(fname, "w") as fmd:
         write_md_header(fmd)
 
         # construct list of dfn files to process in the order of file_order
         files = os.listdir(dfndir)
         for f in files:
-            if 'common' in f:
+            if "common" in f:
                 continue
-            if '.DS_Store' in f:
+            if ".DS_Store" in f:
                 continue
             if os.path.splitext(f)[0] not in file_order:
-                raise Exception('File not in file_order: ', f)
-        files = [fname + '.dfn' for fname in file_order if fname + '.dfn' in files]
+                raise Exception("File not in file_order: ", f)
+        files = [
+            fname + ".dfn" for fname in file_order if fname + ".dfn" in files
+        ]
         # files = ['gwf-obs.dfn']
 
         # # create rst file for markdown
@@ -765,48 +812,57 @@ if __name__ == '__main__':
         # frst.write(s)
 
         for txtname in files:
-            component, package = os.path.splitext(txtname)[0].split('-')[0:2]
+            component, package = os.path.splitext(txtname)[0].split("-")[0:2]
             vardict = parse_mf6var_file(os.path.join(dfndir, txtname))
 
             # make list of unique block names
             blocks = []
             for k in vardict:
                 v = vardict[k]
-                b = v['block']
+                b = v["block"]
                 if b not in blocks:
                     blocks.append(b)
 
             # add a full block name to allblocks
             for block in blocks:
-                b = '{}-{}-{}'.format(component, package, block)
+                b = "{}-{}-{}".format(component, package, block)
                 allblocks.append(b)
 
             # go through each block and write information
-            desc = '% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n'
+            desc = "% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n"
             for b in blocks:
                 blk_var_list = []
 
                 # Write the name of the block to the latex file
-                desc += '\item \\textbf{}\n\n'.format('{Block: ' + b.upper() + '}')
+                desc += "\item \\textbf{}\n\n".format(
+                    "{Block: " + b.upper() + "}"
+                )
 
-                desc += '\\begin{description}\n'
-                desc += write_desc(vardict, b, blk_var_list,
-                                varexcludeprefix='dev_')
-                desc += '\\end{description}\n'
+                desc += "\\begin{description}\n"
+                desc += write_desc(
+                    vardict, b, blk_var_list, varexcludeprefix="dev_"
+                )
+                desc += "\\end{description}\n"
 
-                fname = os.path.join(texdir, os.path.splitext(txtname)[
-                    0] + '-' + b + '.dat')
-                f = open(fname, 'w')
-                s = write_block(vardict, b, blk_var_list,
-                                varexcludeprefix='dev_') + '\n'
+                fname = os.path.join(
+                    texdir, os.path.splitext(txtname)[0] + "-" + b + ".dat"
+                )
+                f = open(fname, "w")
+                s = (
+                    write_block(
+                        vardict, b, blk_var_list, varexcludeprefix="dev_"
+                    )
+                    + "\n"
+                )
                 f.write(s)
                 if VERBOSE:
                     print(s)
                 f.close()
-            fname = os.path.join(texdir,
-                                os.path.splitext(txtname)[0] + '-desc' + '.tex')
-            f = open(fname, 'w')
-            s = desc + '\n'
+            fname = os.path.join(
+                texdir, os.path.splitext(txtname)[0] + "-desc" + ".tex"
+            )
+            f = open(fname, "w")
+            s = desc + "\n"
             f.write(s)
             if VERBOSE:
                 print(s)
@@ -814,8 +870,8 @@ if __name__ == '__main__':
 
             # write markdown description
             mdname = os.path.splitext(txtname)[0]
-            fname = os.path.join(docdir, mdname + '.md')
-            f = open(fname, 'w')
+            fname = os.path.join(docdir, mdname + ".md")
+            f = open(fname, "w")
             f.write("### {}\n\n".format(mdname.upper()))
             f.write("#### Structure of Blocks\n\n")
             f.write("_FOR EACH SIMULATION_\n\n")
@@ -824,17 +880,27 @@ if __name__ == '__main__':
                 blk_var_list = []
 
                 # Write the name of the block to the latex file
-                desc += '##### Block: {}\n\n'.format(b.upper())
+                desc += "##### Block: {}\n\n".format(b.upper())
 
-                desc += write_desc_md(vardict, b, blk_var_list,
-                                    varexcludeprefix='dev_')
+                desc += write_desc_md(
+                    vardict, b, blk_var_list, varexcludeprefix="dev_"
+                )
 
                 if "period" in b.lower():
                     f.write("\n_FOR ANY STRESS PERIOD_\n\n")
                 f.write("```\n")
-                s = md_replace(write_block(vardict, b, blk_var_list,
-                                        varexcludeprefix='dev_',
-                                        indent=4)) + "\n"
+                s = (
+                    md_replace(
+                        write_block(
+                            vardict,
+                            b,
+                            blk_var_list,
+                            varexcludeprefix="dev_",
+                            indent=4,
+                        )
+                    )
+                    + "\n"
+                )
                 # s = s.replace("@", "") + "\n"
                 f.write(s)
                 f.write("```\n")
@@ -877,5 +943,3 @@ if __name__ == '__main__':
             for b in allblocks:
                 print(b)
         write_appendix(texdir, allblocks)
-
-    

@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <mawno> <strt> <ktf> <fthk> [<@aux(naux)@>] [<boundname>]
+  <mawno> <strt> <ktf> <fthk> [<@aux(naux)@>] [<boundname>]
+  ...
+END PACKAGEDATA

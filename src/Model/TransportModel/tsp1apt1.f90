@@ -61,7 +61,6 @@ module TspAptModule
 
   character(len=LENFTYPE) :: ftype = 'APT'
   character(len=LENVARNAME) :: text = '             APT'
-  character(len=LENVARNAME) :: tsptype = 'GWT' !< to be removed once TSP refactor is further sorted out
 
   type, extends(BndType) :: TspAptType
 
@@ -80,6 +79,7 @@ module TspAptModule
     integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
     integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
+    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
     real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
@@ -1274,6 +1274,8 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%ccterm)
     call mem_deallocate(this%strt)
+    call mem_deallocate(this%ktf)
+    call mem_deallocate(this%rfeatthk)
     call mem_deallocate(this%lauxvar)
     call mem_deallocate(this%xoldpak)
     if (this%imatrows == 0) then
@@ -1546,6 +1548,8 @@ contains
     !
     ! -- allocate apt data
     call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
+    call mem_allocate(this%ktf, this%ncv, 'KTF', this%memoryPath)
+    call mem_allocate(this%rfeatthk, this%ncv, 'RFEATTHK', this%memoryPath)
     call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', &
                       this%memoryPath)
     !
@@ -1562,6 +1566,8 @@ contains
     !
     do n = 1, this%ncv
       this%strt(n) = DEP20
+      this%ktf(n) = DZERO
+      this%rfeatthk(n) = DZERO
       this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
       if (this%imatrows == 0) then
@@ -1608,6 +1614,22 @@ contains
         !
         ! -- strt
         this%strt(n) = this%parser%GetDouble()
+        !
+        ! -- If GWE model, read additional thermal conductivity terms
+        if (this%depvartype == 'TEMPERATURE') then
+          ! -- Skip for UZE
+          if (trim(adjustl(this%text)) /= 'UZE') then
+            this%ktf(n) = this%parser%GetDouble()
+            this%rfeatthk(n) = this%parser%GetDouble()
+            if (this%rfeatthk(n) <= DZERO) then
+              write (errmsg, '(4x,a)') &
+              '****ERROR. Specified thickness used for thermal &
+              &conduction MUST BE > 0 else divide by zero error occurs'
+              call store_error(errmsg)
+              cycle
+            end if
+          end if
+        end if
         !
         ! -- get aux data
         do iaux = 1, this%naux
@@ -2311,7 +2333,7 @@ contains
     !
     ! -- individual package terms processed last
     idx = this%idxprepak
-    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
+    call this%pak_fill_budobj(idx, x, flowja, ccratin, ccratout)
     !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
@@ -2322,12 +2344,13 @@ contains
 
   !> @brief Copy flow terms into this%budobj, must be overridden
   !<
-  subroutine pak_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine pak_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
@@ -2790,7 +2813,7 @@ contains
               ' must be assigned to a feature with a unique boundname.'
             call store_error(errmsg)
           end if
-        case ('LKT', 'SFT', 'MWT', 'UZT')
+        case ('LKT', 'SFT', 'MWT', 'UZT', 'LKE', 'SFE', 'MWE', 'UZE')
           call this%rp_obs_budterm(obsrv, &
                                    this%flowbudptr%budterm(this%idxbudgwf))
         case ('FLOW-JA-FACE')
@@ -2875,7 +2898,7 @@ contains
             if (this%iboundpak(jj) /= 0) then
               v = this%xnewpak(jj)
             end if
-          case ('LKT', 'SFT', 'MWT', 'UZT')
+          case ('LKT', 'SFT', 'MWT', 'UZT', 'LKE', 'SFE', 'MWE', 'UZE')
             n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
             if (this%iboundpak(n) /= 0) then
               igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(jj)

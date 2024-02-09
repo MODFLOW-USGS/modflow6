@@ -1,0 +1,24 @@
+BEGIN OPTIONS
+  AUXILIARY  aux1  aux2
+  BOUNDNAMES
+  PRINT_INPUT
+  PRINT_TEMPERATURE
+  PRINT_FLOWS
+  SAVE_FLOWS
+  TEMPERATURE  FILEOUT  gwe_sfe_02.sfe.bin
+  BUDGET  FILEOUT  gwe_sfe_02.sfe.bud
+  OBS6  FILEIN  gwe_sfe_02.sfe.obs
+END OPTIONS
+
+BEGIN PACKAGEDATA
+# L        STRT      aux1       aux2      bname
+  1       5.000      9.90      99.90     REACH1
+  2       5.000      9.90      99.90     REACH2
+  3       5.000      9.90      99.90     REACH3
+END PACKAGEDATA
+
+BEGIN PERIOD  1
+  1  STATUS  ACTIVE
+  2  STATUS  ACTIVE
+  3  STATUS  ACTIVE
+END PERIOD  1

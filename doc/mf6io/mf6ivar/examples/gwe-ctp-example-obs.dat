@@ -1,0 +1,16 @@
+BEGIN OPTIONS
+  DIGITS 8
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.cnc01.csv
+#   obsname     obstype     ID
+  ctemp_3_1     CTP         3 1 1
+  ctemp_3_2     CTP         3 2 1
+  ctemp_3_3     CTP         3 3 1
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.chd02.csv
+#      obsname     obstype      ID
+  ctemp_3_flow     CTP          CTEMP_3_1
+END CONTINUOUS

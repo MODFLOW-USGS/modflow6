@@ -7,7 +7,9 @@ module IdmExgDfnSelectorModule
                                    InputBlockDefinitionType
   use ExgGwfgwfInputModule
   use ExgGwfgwtInputModule
+  use ExgGwfgweInputModule
   use ExgGwtgwtInputModule
+  use ExgGwegweInputModule
 
   implicit none
   private
@@ -40,8 +42,12 @@ contains
       call set_param_pointer(input_definition, exg_gwfgwf_param_definitions)
     case ('GWFGWT')
       call set_param_pointer(input_definition, exg_gwfgwt_param_definitions)
+    case ('GWFGWE')
+      call set_param_pointer(input_definition, exg_gwfgwe_param_definitions)
     case ('GWTGWT')
       call set_param_pointer(input_definition, exg_gwtgwt_param_definitions)
+    case ('GWEGWE')
+      call set_param_pointer(input_definition, exg_gwegwe_param_definitions)
     case default
     end select
     return
@@ -56,8 +62,12 @@ contains
       call set_param_pointer(input_definition, exg_gwfgwf_aggregate_definitions)
     case ('GWFGWT')
       call set_param_pointer(input_definition, exg_gwfgwt_aggregate_definitions)
+    case ('GWFGWE')
+      call set_param_pointer(input_definition, exg_gwfgwe_aggregate_definitions)
     case ('GWTGWT')
       call set_param_pointer(input_definition, exg_gwtgwt_aggregate_definitions)
+    case ('GWEGWE')
+      call set_param_pointer(input_definition, exg_gwegwe_aggregate_definitions)
     case default
     end select
     return
@@ -72,8 +82,12 @@ contains
       call set_block_pointer(input_definition, exg_gwfgwf_block_definitions)
     case ('GWFGWT')
       call set_block_pointer(input_definition, exg_gwfgwt_block_definitions)
+    case ('GWFGWE')
+      call set_block_pointer(input_definition, exg_gwfgwe_block_definitions)
     case ('GWTGWT')
       call set_block_pointer(input_definition, exg_gwtgwt_block_definitions)
+    case ('GWEGWE')
+      call set_block_pointer(input_definition, exg_gwegwe_block_definitions)
     case default
     end select
     return
@@ -87,8 +101,12 @@ contains
       multi_package = exg_gwfgwf_multi_package
     case ('GWFGWT')
       multi_package = exg_gwfgwt_multi_package
+    case ('GWFGWE')
+      multi_package = exg_gwfgwe_multi_package
     case ('GWTGWT')
       multi_package = exg_gwtgwt_multi_package
+    case ('GWEGWE')
+      multi_package = exg_gwegwe_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="EXG"'//&
@@ -106,7 +124,11 @@ contains
       integrated = .true.
     case ('GWFGWT')
       integrated = .true.
+    case ('GWFGWE')
+      integrated = .true.
     case ('GWTGWT')
+      integrated = .true.
+    case ('GWEGWE')
       integrated = .true.
     case default
     end select

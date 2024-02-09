@@ -1,0 +1,25 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{READASARRAYS}---indicates that array-based input will be used for the SPT Package.  This keyword must be specified to use array-based input.
+
+\item \texttt{PRINT\_INPUT}---keyword to indicate that the list of spt information will be written to the listing file immediately after it is read.
+
+\item \texttt{TAS6}---keyword to specify that record corresponds to a time-array-series file.
+
+\item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
+
+\item \texttt{tas6\_filename}---defines a time-array-series file defining a time-array series that can be used to assign time-varying values. See the Time-Variable Input section for instructions on using the time-array series capability.
+
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+
+\item \texttt{temperature}---is the temperature of the associated Recharge or Evapotranspiration stress package.  The temperature array may be defined by a time-array series (see the ``Using Time-Array Series in a Package'' section).
+
+\end{description}
+

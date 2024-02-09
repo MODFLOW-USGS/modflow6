@@ -806,7 +806,7 @@ contains
     ! -- set iavgmeth = 1 to use arithmetic averaging for effective dispersion
     iavgmeth = 1
     !
-    ! -- Proces connections
+    ! -- Process connections
     nodes = size(this%d11)
     do n = 1, nodes
       if (this%fmi%ibdgwfsat0(n) == 0) cycle

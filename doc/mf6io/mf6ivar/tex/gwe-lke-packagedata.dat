@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <lakeno> <strt> <ktf> <rbthcnd> [<@aux(naux)@>] [<boundname>]
+  <lakeno> <strt> <ktf> <rbthcnd> [<@aux(naux)@>] [<boundname>]
+  ...
+END PACKAGEDATA

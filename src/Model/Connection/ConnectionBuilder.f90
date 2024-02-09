@@ -147,6 +147,7 @@ contains
     use SimModule, only: ustop
     use GwfGwfConnectionModule, only: GwfGwfConnectionType
     use GwtGwtConnectionModule, only: GwtGwtConnectionType
+    use GweGweConnectionModule, only: GweGweConnectionType
     use GwfModule, only: GwfModelType
 
     class(NumericalModelType), pointer, intent(in) :: model !< the model for which the connection will be created
@@ -156,6 +157,7 @@ contains
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: flowConnection => null()
     class(GwtGwtConnectionType), pointer :: transportConnection => null()
+    class(GweGweConnectionType), pointer :: energyTransportConnection => null()
 
     connection => null()
 
@@ -171,6 +173,11 @@ contains
       call transportConnection%construct(model, exchange)
       connection => transportConnection
       transportConnection => null()
+    case ('GWE-GWE')
+      allocate (GweGweConnectionType :: energyTransportConnection)
+      call energyTransportConnection%construct(model, exchange)
+      connection => energyTransportConnection
+      energyTransportConnection => null()
     case default
       write (*, *) 'Error (which should never happen): '// &
         'undefined exchangetype found'

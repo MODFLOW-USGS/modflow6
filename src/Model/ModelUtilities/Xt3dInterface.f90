@@ -520,7 +520,7 @@ contains
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: nodes
-    logical, intent(in) :: lsat !< if true, then calculations made with saturated areas (should be false for dispersion)
+    logical, intent(in) :: lsat !< if true, then calculations made with saturated areas (should be false for solute dispersion; should be true for heat)
     ! -- local
     integer(I4B) :: n, m, ipos
     !
