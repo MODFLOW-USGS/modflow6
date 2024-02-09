@@ -1023,11 +1023,11 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "gwf-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwfidm.f90",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf-namidm.f90",
         ],
         [
             DFN_PATH / "gwt-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwtidm.f90",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt-namidm.f90",
         ],
         [
             DFN_PATH / "gwe-nam.dfn",
@@ -1035,11 +1035,11 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "exg-gwfgwf.dfn",
-            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwfgwfidm.f90",
         ],
         [
             DFN_PATH / "exg-gwfgwt.dfn",
-            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwfgwtidm.f90",
         ],
         [
             DFN_PATH / "exg-gwfgwe.dfn",
@@ -1047,7 +1047,7 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "exg-gwtgwt.dfn",
-            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwtgwtidm.f90",
         ],
         [
             DFN_PATH / "exg-gwegwe.dfn",
@@ -1091,7 +1091,7 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "sim-nam.dfn",
-            SRC_PATH / "simnamidm.f90",
+            SRC_PATH / "sim-namidm.f90",
         ],
         [
             DFN_PATH / "sim-tdis.dfn",

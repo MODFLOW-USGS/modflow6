@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -30,13 +30,12 @@ SOURCEDIR23=../src/Utilities/Matrix
 SOURCEDIR24=../src/Utilities/Observation
 SOURCEDIR25=../src/Model
 SOURCEDIR26=../src/Model/Connection
-SOURCEDIR27=../src/Model/SurfaceWaterFlow
-SOURCEDIR28=../src/Model/GroundWaterTransport
-SOURCEDIR29=../src/Model/ModelUtilities
-SOURCEDIR30=../src/Model/GroundWaterFlow
-SOURCEDIR31=../src/Model/TransportModel
-SOURCEDIR32=../src/Model/Geometry
-SOURCEDIR33=../src/Model/GroundWaterEnergy
+SOURCEDIR27=../src/Model/GroundWaterTransport
+SOURCEDIR28=../src/Model/ModelUtilities
+SOURCEDIR29=../src/Model/GroundWaterFlow
+SOURCEDIR30=../src/Model/TransportModel
+SOURCEDIR31=../src/Model/Geometry
+SOURCEDIR32=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -70,8 +69,7 @@ ${SOURCEDIR28} \
 ${SOURCEDIR29} \
 ${SOURCEDIR30} \
 ${SOURCEDIR31} \
-${SOURCEDIR32} \
-${SOURCEDIR33} 
+${SOURCEDIR32} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -95,17 +93,9 @@ $(OBJDIR)/CharString.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/swf1zdg1idm.o \
-$(OBJDIR)/swf1idm.o \
-$(OBJDIR)/swf1ic1idm.o \
-$(OBJDIR)/swf1flw1idm.o \
-$(OBJDIR)/swf1disl1idm.o \
-$(OBJDIR)/swf1dfw1idm.o \
-$(OBJDIR)/swf1cxs1idm.o \
-$(OBJDIR)/swf1chd1idm.o \
 $(OBJDIR)/simtdisidm.o \
-$(OBJDIR)/simnamidm.o \
-$(OBJDIR)/gwtidm.o \
+$(OBJDIR)/sim-namidm.o \
+$(OBJDIR)/gwt-namidm.o \
 $(OBJDIR)/gwt-icidm.o \
 $(OBJDIR)/gwt-dspidm.o \
 $(OBJDIR)/gwt-disvidm.o \
@@ -117,7 +107,7 @@ $(OBJDIR)/gwf-rividm.o \
 $(OBJDIR)/gwf-rchidm.o \
 $(OBJDIR)/gwf-rchaidm.o \
 $(OBJDIR)/gwf-npfidm.o \
-$(OBJDIR)/gwfidm.o \
+$(OBJDIR)/gwf-namidm.o \
 $(OBJDIR)/gwf-icidm.o \
 $(OBJDIR)/gwf-ghbidm.o \
 $(OBJDIR)/gwf-evtidm.o \
@@ -127,23 +117,21 @@ $(OBJDIR)/gwf-disvidm.o \
 $(OBJDIR)/gwf-disuidm.o \
 $(OBJDIR)/gwf-disidm.o \
 $(OBJDIR)/gwf-chdidm.o \
-$(OBJDIR)/gwe1idm.o \
-$(OBJDIR)/gwe1ic1idm.o \
-$(OBJDIR)/gwe1disv1idm.o \
-$(OBJDIR)/gwe1disu1idm.o \
-$(OBJDIR)/gwe1dis1idm.o \
-$(OBJDIR)/gwe1ctp1idm.o \
-$(OBJDIR)/gwe1cnd1idm.o \
-$(OBJDIR)/swfgwfidm.o \
-$(OBJDIR)/gwtgwtidm.o \
-$(OBJDIR)/gwfgwtidm.o \
-$(OBJDIR)/gwfgwfidm.o \
-$(OBJDIR)/gwfgweidm.o \
-$(OBJDIR)/gwegweidm.o \
+$(OBJDIR)/gwe-namidm.o \
+$(OBJDIR)/gwe-icidm.o \
+$(OBJDIR)/gwe-disvidm.o \
+$(OBJDIR)/gwe-disuidm.o \
+$(OBJDIR)/gwe-disidm.o \
+$(OBJDIR)/gwe-ctpidm.o \
+$(OBJDIR)/gwe-cndidm.o \
+$(OBJDIR)/exg-gwtgwtidm.o \
+$(OBJDIR)/exg-gwfgwtidm.o \
+$(OBJDIR)/exg-gwfgwfidm.o \
+$(OBJDIR)/exg-gwfgweidm.o \
+$(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
-$(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmGwtDfnSelector.o \
 $(OBJDIR)/IdmGwfDfnSelector.o \
@@ -166,7 +154,6 @@ $(OBJDIR)/HashTable.o \
 $(OBJDIR)/VectorBase.o \
 $(OBJDIR)/Sparse.o \
 $(OBJDIR)/DisvGeom.o \
-$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
@@ -185,7 +172,7 @@ $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
-$(OBJDIR)/Obs3.o \
+$(OBJDIR)/Obs.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Budget.o \
 $(OBJDIR)/BudgetTerm.o \
@@ -267,7 +254,6 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer2dReader.o \
-$(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -294,14 +280,14 @@ $(OBJDIR)/gwf-buy.o \
 $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf-evt.o \
 $(OBJDIR)/gwf-chd.o \
-$(OBJDIR)/gwe1uze1.o \
-$(OBJDIR)/gwe1sfe1.o \
-$(OBJDIR)/gwe1mwe1.o \
-$(OBJDIR)/gwe1lke1.o \
-$(OBJDIR)/gwe1est1.o \
-$(OBJDIR)/gwe1esl1.o \
-$(OBJDIR)/gwe1ctp1.o \
-$(OBJDIR)/gwe1cnd1.o \
+$(OBJDIR)/gwe-uze.o \
+$(OBJDIR)/gwe-sfe.o \
+$(OBJDIR)/gwe-mwe.o \
+$(OBJDIR)/gwe-lke.o \
+$(OBJDIR)/gwe-est.o \
+$(OBJDIR)/gwe-esl.o \
+$(OBJDIR)/gwe-ctp.o \
+$(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
@@ -311,15 +297,12 @@ $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
-$(OBJDIR)/swf1disl1.o \
-$(OBJDIR)/swf1cxs1.o \
-$(OBJDIR)/swf1ic1.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
 $(OBJDIR)/gwf.o \
 $(OBJDIR)/GwfExchangeMover.o \
-$(OBJDIR)/gwe1.o \
+$(OBJDIR)/gwe.o \
 $(OBJDIR)/SerialRouter.o \
 $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
@@ -329,27 +312,20 @@ $(OBJDIR)/StructArray.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/LayeredArrayReader.o \
-$(OBJDIR)/swf1zdg1.o \
-$(OBJDIR)/swf1sto1.o \
-$(OBJDIR)/swf1oc1.o \
-$(OBJDIR)/swf1obs1.o \
-$(OBJDIR)/swf1flw1.o \
-$(OBJDIR)/swf1dfw1.o \
 $(OBJDIR)/ExplicitModel.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
-$(OBJDIR)/GwtGwtExchange.o \
+$(OBJDIR)/exg-gwtgwt.o \
 $(OBJDIR)/GwfInterfaceModel.o \
-$(OBJDIR)/GwfGwfExchange.o \
+$(OBJDIR)/exg-gwfgwf.o \
 $(OBJDIR)/GweInterfaceModel.o \
-$(OBJDIR)/GweGweExchange.o \
+$(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
 $(OBJDIR)/StressListInput.o \
 $(OBJDIR)/StressGridInput.o \
 $(OBJDIR)/LoadMf6File.o \
-$(OBJDIR)/swf1.o \
 $(OBJDIR)/ExplicitSolution.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
@@ -364,11 +340,10 @@ $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
-$(OBJDIR)/SwfGwfExchange.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
-$(OBJDIR)/GwfGwtExchange.o \
-$(OBJDIR)/GwfGweExchange.o \
+$(OBJDIR)/exg-gwfgwt.o \
+$(OBJDIR)/exg-gwfgwe.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \
