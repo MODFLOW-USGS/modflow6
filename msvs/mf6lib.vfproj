@@ -116,7 +116,7 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
 		<Filter Name="Observation">
-		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\Obs.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\Observe.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsOutput.f90"/>

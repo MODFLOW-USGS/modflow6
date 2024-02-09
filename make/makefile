@@ -120,8 +120,8 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/DiscretizationBase.o \
-$(OBJDIR)/simnamidm.o \
-$(OBJDIR)/gwtidm.o \
+$(OBJDIR)/sim-namidm.o \
+$(OBJDIR)/gwt-namidm.o \
 $(OBJDIR)/gwt-icidm.o \
 $(OBJDIR)/gwt-dspidm.o \
 $(OBJDIR)/gwt-disvidm.o \
@@ -133,7 +133,7 @@ $(OBJDIR)/gwf-rividm.o \
 $(OBJDIR)/gwf-rchidm.o \
 $(OBJDIR)/gwf-rchaidm.o \
 $(OBJDIR)/gwf-npfidm.o \
-$(OBJDIR)/gwfidm.o \
+$(OBJDIR)/gwf-namidm.o \
 $(OBJDIR)/gwf-icidm.o \
 $(OBJDIR)/gwf-ghbidm.o \
 $(OBJDIR)/gwf-evtidm.o \
@@ -143,9 +143,9 @@ $(OBJDIR)/gwf-disvidm.o \
 $(OBJDIR)/gwf-disuidm.o \
 $(OBJDIR)/gwf-disidm.o \
 $(OBJDIR)/gwf-chdidm.o \
-$(OBJDIR)/gwtgwtidm.o \
-$(OBJDIR)/gwfgwtidm.o \
-$(OBJDIR)/gwfgwfidm.o \
+$(OBJDIR)/exg-gwtgwtidm.o \
+$(OBJDIR)/exg-gwfgwtidm.o \
+$(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
@@ -160,7 +160,7 @@ $(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/IdmDfnSelector.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
-$(OBJDIR)/Obs3.o \
+$(OBJDIR)/Obs.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Budget.o \
 $(OBJDIR)/BudgetTerm.o \
@@ -293,9 +293,9 @@ $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/ExplicitModel.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
-$(OBJDIR)/GwtGwtExchange.o \
+$(OBJDIR)/exg-gwtgwt.o \
 $(OBJDIR)/GwfInterfaceModel.o \
-$(OBJDIR)/GwfGwfExchange.o \
+$(OBJDIR)/exg-gwfgwf.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
@@ -315,7 +315,7 @@ $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
-$(OBJDIR)/GwfGwtExchange.o \
+$(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \

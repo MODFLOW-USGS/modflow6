@@ -217,7 +217,7 @@ $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/OutputControl.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/gwf-ic.o \
-$(OBJDIR)/Obs3.o \
+$(OBJDIR)/Obs.o \
 $(OBJDIR)/gwf-tvk.o \
 $(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/IdmSimulation.o \
