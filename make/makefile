@@ -5,38 +5,6 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-<<<<<<< HEAD
-SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/TransportModel
-SOURCEDIR4=../src/Model/GroundWaterFlow
-SOURCEDIR5=../src/Model/Geometry
-SOURCEDIR6=../src/Model/ModelUtilities
-SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/Connection
-SOURCEDIR9=../src/Distributed
-SOURCEDIR10=../src/Utilities
-SOURCEDIR11=../src/Utilities/Idm
-SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR13=../src/Utilities/Idm/selector
-SOURCEDIR14=../src/Utilities/Vector
-SOURCEDIR15=../src/Utilities/Matrix
-SOURCEDIR16=../src/Utilities/Observation
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/OutputControl
-SOURCEDIR19=../src/Utilities/Libraries
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/rcm
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Libraries/sparskit2
-SOURCEDIR24=../src/Utilities/Libraries/daglib
-SOURCEDIR25=../src/Utilities/Memory
-SOURCEDIR26=../src/Utilities/TimeSeries
-SOURCEDIR27=../src/Timing
-SOURCEDIR28=../src/Solution
-SOURCEDIR29=../src/Solution/PETSc
-SOURCEDIR30=../src/Solution/LinearMethods
-SOURCEDIR31=../src/Exchange
-=======
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Timing
 SOURCEDIR4=../src/Model
@@ -67,7 +35,6 @@ SOURCEDIR28=../src/Utilities/Libraries/sparskit2
 SOURCEDIR29=../src/Utilities/Libraries/sparsekit
 SOURCEDIR30=../src/Utilities/Libraries/blas
 SOURCEDIR31=../src/Utilities/Libraries/daglib
->>>>>>> 73519cf4e7 (rebuild makefiles)
 
 VPATH = \
 ${SOURCEDIR1} \
