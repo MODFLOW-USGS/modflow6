@@ -765,7 +765,7 @@ contains
     use GweLkeModule, only: lke_create
     use GweSfeModule, only: sfe_create
     use GweMweModule, only: mwe_create
-    !use GweUzeModule, only: uze_create
+    use GweUzeModule, only: uze_create
     use ApiModule, only: api_create
     ! -- dummy
     class(GweModelType) :: this
@@ -802,10 +802,10 @@ contains
       call mwe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%eqnsclfac, this%gwecommon, &
                       this%depvartype, this%depvarunit, this%depvarunitabbrev)
-      !case ('UZE6')
-      !  call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-      !                  this%gwecommon)
+    case ('UZE6')
+      call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%fmi, this%eqnsclfac, this%gwecommon, &
+                      this%depvartype, this%depvarunit, this%depvarunitabbrev)
       !case('API6')
       !  call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname)

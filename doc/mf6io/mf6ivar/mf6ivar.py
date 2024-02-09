@@ -754,6 +754,7 @@ if __name__ == "__main__":
         "gwe-oc",
         "gwe-ssm",
         "gwe-sfe",
+        "gwe-uze",
         "gwe-fmi",
         "utl-spc",
         "utl-spca",
