@@ -102,7 +102,7 @@
 !      if(this%inmvr > 0) call this%mvr%mvr_ot()
 !
 module GwfMvrModule
-  use KindModule, only: DP, I4B, LGP
+  use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMEMPATH, LENPACKAGENAME, LENMODELNAME, &
                              LENBUDTXT, LENAUXNAME, LENPAKLOC, &
                              DZERO, DNODATA, MAXCHARLEN, TABCENTER, &
@@ -123,7 +123,6 @@ module GwfMvrModule
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
-    logical(LGP), pointer :: reset_mapped_id ! flag to indicate mapped ids must be reset; true when movers change
     integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: maxmvr => null() !< max number of movers to be specified
@@ -173,7 +172,6 @@ module GwfMvrModule
     procedure, private :: mvr_setup_budobj
     procedure, private :: mvr_setup_outputtab
     procedure, private :: mvr_print_outputtab
-    procedure, private :: set_mapped_id
 
   end type GwfMvrType
 
@@ -339,7 +337,6 @@ contains
       write (this%iout, '(/,2x,a,i0)') 'READING WATER MOVERS FOR PERIOD ', kper
       nlist = -1
       i = 1
-      this%reset_mapped_id = .true.
       !
       ! -- set mname to '' if this is an exchange mover, or to the model name
       if (this%iexgmvr == 0) then
@@ -495,16 +492,19 @@ contains
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- locals
+    integer(I4B) :: i, mapped_id
+    class(PackageMoverType), pointer :: pkg_mvr
     ! -- formats
+! ------------------------------------------------------------------------------
     !
-    ! -- set the feature maps; for performance reasons,
-    !    this should only be called for the first time
-    !    step of a stress period in which a new set of
-    !    movers was provided in a period block.
-    if (this%reset_mapped_id) then
-      call this%set_mapped_id()
-      this%reset_mapped_id = .false.
-    end if
+    ! -- set the feature maps
+    allocate (pkg_mvr)
+    do i = 1, this%nmvr
+      call set_packagemover_pointer(pkg_mvr, this%mvr(i)%mem_path_src)
+      mapped_id = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
+      this%mvr(i)%iRchNrSrcMapped = mapped_id
+    end do
+    deallocate (pkg_mvr)
     !
     ! -- fill the budget object
     call this%fill_budobj()
@@ -699,7 +699,6 @@ contains
     end if
     !
     ! -- Scalars
-    call mem_deallocate(this%reset_mapped_id)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%maxmvr)
@@ -1046,7 +1045,6 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%reset_mapped_id, 'RESET_MAPPED_ID', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%maxmvr, 'MAXMVR', this%memoryPath)
@@ -1057,7 +1055,6 @@ contains
     call mem_allocate(this%imodelnames, 'IMODELNAMES', this%memoryPath)
     !
     ! -- Initialize
-    this%reset_mapped_id = .false.
     this%ibudgetout = 0
     this%ibudcsv = 0
     this%maxmvr = -1
@@ -1347,42 +1344,5 @@ contains
     ! -- Return
     return
   end subroutine mvr_print_outputtab
-
-  !> @brief Set mapped id
-  !!
-  !! For the budget output, we don't write outlet number,
-  !! instead we write the lake number.  Normally the receiver
-  !! number is the same as the feature number provided by the
-  !! user.  For moving water from a lake, the user specifies the
-  !! outlet number, not the lake number, in the mover package.
-  !! The iRchNrSrcMapped variable contains the lake number, not
-  !! the outlet number, and is written to the budget files.  For
-  !! other packages, the iRchNrSrcMapped value is simply the well
-  !! number, the stream reach, or the uzf cell number.
-  !! This routine needs to be called each time a new set of movers
-  !! is read.  It can't be called from within mvr_rp because the
-  !! iprmap isn't updated by lake until lak_rp, which is called
-  !! after mvr_rp.
-  !<
-  subroutine set_mapped_id(this)
-    ! -- dummy
-    class(GwfMvrType) :: this
-    ! -- locals
-    integer(I4B) :: i, mapped_id
-    class(PackageMoverType), pointer :: pkg_mvr
-    ! -- formats
-    !
-    ! -- set the feature maps
-    allocate (pkg_mvr)
-    do i = 1, this%nmvr
-      call set_packagemover_pointer(pkg_mvr, this%mvr(i)%mem_path_src)
-      mapped_id = pkg_mvr%iprmap(this%mvr(i)%iRchNrSrc)
-      this%mvr(i)%iRchNrSrcMapped = mapped_id
-    end do
-    deallocate (pkg_mvr)
-    !
-    ! -- Return
-    return
-  end subroutine set_mapped_id
 
 end module
