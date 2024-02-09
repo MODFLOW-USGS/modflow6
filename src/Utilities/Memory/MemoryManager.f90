@@ -313,22 +313,15 @@ contains
     logical(LGP), intent(in), optional :: check !< to suppress aborting the program when not found,
                                                 !! set check = .false.
     ! -- local
-    integer(I4B) :: ipos
     logical(LGP) check_opt
     ! -- code
     !
     ! -- initialize
     mt => null()
     found = .false.
-    !
-    ! -- iterate over the memory list
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if (mt%name == name .and. mt%path == mem_path) then
-        found = .true.
-        exit
-      end if
-    end do
+    mt => memorylist%Get(mem_path, name)
+    if (associated(mt)) found = .true.
+
     check_opt = .true.
     if (present(check)) then
       check_opt = check

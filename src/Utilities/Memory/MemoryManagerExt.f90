@@ -60,11 +60,13 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      if (mt%intsclr == 0) then
-        p_mem = .false.
-      else
-        p_mem = .true.
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        if (mt%intsclr == 0) then
+          p_mem = .false.
+        else
+          p_mem = .true.
+        end if
       end if
     end if
   end subroutine mem_set_value_logical
@@ -80,8 +82,10 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      p_mem = mt%intsclr
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        p_mem = mt%intsclr
+      end if
     end if
   end subroutine mem_set_value_int
 
@@ -112,12 +116,14 @@ contains
     integer(I4B) :: i
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
-      do i = 1, size(str_list)
-        if (mt%strsclr == str_list(i)) then
-          p_mem = i
-        end if
-      end do
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+        do i = 1, size(str_list)
+          if (mt%strsclr == str_list(i)) then
+            p_mem = i
+          end if
+        end do
+      end if
     end if
   end subroutine mem_set_value_str_mapped_int
 
@@ -133,14 +139,16 @@ contains
     integer(I4B) :: n
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      if (size(mt%aint1d) /= size(p_mem)) then
-        call store_error('mem_set_value() size mismatch int1d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        if (size(mt%aint1d) /= size(p_mem)) then
+          call store_error('mem_set_value() size mismatch int1d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do n = 1, size(mt%aint1d)
+          p_mem(n) = mt%aint1d(n)
+        end do
       end if
-      do n = 1, size(mt%aint1d)
-        p_mem(n) = mt%aint1d(n)
-      end do
     end if
   end subroutine mem_set_value_int1d
 
@@ -158,19 +166,21 @@ contains
     integer(I4B) :: n
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      if (associated(map)) then
-        do n = 1, size(p_mem)
-          p_mem(n) = mt%aint1d(map(n))
-        end do
-      else
-        if (size(mt%aint1d) /= size(p_mem)) then
-          call store_error('mem_set_value() size mismatch int1d, varname='//&
-                           &trim(varname), terminate=.TRUE.)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        if (associated(map)) then
+          do n = 1, size(p_mem)
+            p_mem(n) = mt%aint1d(map(n))
+          end do
+        else
+          if (size(mt%aint1d) /= size(p_mem)) then
+            call store_error('mem_set_value() size mismatch int1d, varname='//&
+                            &trim(varname), terminate=.TRUE.)
+          end if
+          do n = 1, size(mt%aint1d)
+            p_mem(n) = mt%aint1d(n)
+          end do
         end if
-        do n = 1, size(mt%aint1d)
-          p_mem(n) = mt%aint1d(n)
-        end do
       end if
     end if
   end subroutine mem_set_value_int1d_mapped
@@ -187,17 +197,19 @@ contains
     integer(I4B) :: i, j
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      if (size(mt%aint2d, dim=1) /= size(p_mem, dim=1) .or. &
-          size(mt%aint2d, dim=2) /= size(p_mem, dim=2)) then
-        call store_error('mem_set_value() size mismatch int2d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
-      end if
-      do j = 1, size(mt%aint2d, dim=2)
-        do i = 1, size(mt%aint2d, dim=1)
-          p_mem(i, j) = mt%aint2d(i, j)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        if (size(mt%aint2d, dim=1) /= size(p_mem, dim=1) .or. &
+            size(mt%aint2d, dim=2) /= size(p_mem, dim=2)) then
+          call store_error('mem_set_value() size mismatch int2d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do j = 1, size(mt%aint2d, dim=2)
+          do i = 1, size(mt%aint2d, dim=1)
+            p_mem(i, j) = mt%aint2d(i, j)
+          end do
         end do
-      end do
+      end if
     end if
   end subroutine mem_set_value_int2d
 
@@ -213,20 +225,22 @@ contains
     integer(I4B) :: i, j, k
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
-      if (size(mt%aint3d, dim=1) /= size(p_mem, dim=1) .or. &
-          size(mt%aint3d, dim=2) /= size(p_mem, dim=2) .or. &
-          size(mt%aint3d, dim=3) /= size(p_mem, dim=3)) then
-        call store_error('mem_set_value() size mismatch int3d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
-      end if
-      do k = 1, size(mt%aint3d, dim=3)
-        do j = 1, size(mt%aint3d, dim=2)
-          do i = 1, size(mt%aint3d, dim=1)
-            p_mem(i, j, k) = mt%aint3d(i, j, k)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+        if (size(mt%aint3d, dim=1) /= size(p_mem, dim=1) .or. &
+            size(mt%aint3d, dim=2) /= size(p_mem, dim=2) .or. &
+            size(mt%aint3d, dim=3) /= size(p_mem, dim=3)) then
+          call store_error('mem_set_value() size mismatch int3d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do k = 1, size(mt%aint3d, dim=3)
+          do j = 1, size(mt%aint3d, dim=2)
+            do i = 1, size(mt%aint3d, dim=1)
+              p_mem(i, j, k) = mt%aint3d(i, j, k)
+            end do
           end do
         end do
-      end do
+      end if
     end if
   end subroutine mem_set_value_int3d
 
@@ -241,8 +255,10 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
-      p_mem = mt%dblsclr
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+        p_mem = mt%dblsclr
+      end if
     end if
   end subroutine mem_set_value_dbl
 
@@ -258,14 +274,16 @@ contains
     integer(I4B) :: n
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
-      if (size(mt%adbl1d) /= size(p_mem)) then
-        call store_error('mem_set_value() size mismatch dbl1d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+        if (size(mt%adbl1d) /= size(p_mem)) then
+          call store_error('mem_set_value() size mismatch dbl1d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do n = 1, size(mt%adbl1d)
+          p_mem(n) = mt%adbl1d(n)
+        end do
       end if
-      do n = 1, size(mt%adbl1d)
-        p_mem(n) = mt%adbl1d(n)
-      end do
     end if
   end subroutine mem_set_value_dbl1d
 
@@ -283,19 +301,21 @@ contains
     integer(I4B) :: n
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
-      if (associated(map)) then
-        do n = 1, size(p_mem)
-          p_mem(n) = mt%adbl1d(map(n))
-        end do
-      else
-        if (size(mt%adbl1d) /= size(p_mem)) then
-          call store_error('mem_set_value() size mismatch dbl1d, varname='//&
-                           &trim(varname), terminate=.TRUE.)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+        if (associated(map)) then
+          do n = 1, size(p_mem)
+            p_mem(n) = mt%adbl1d(map(n))
+          end do
+        else
+          if (size(mt%adbl1d) /= size(p_mem)) then
+            call store_error('mem_set_value() size mismatch dbl1d, varname='//&
+                            &trim(varname), terminate=.TRUE.)
+          end if
+          do n = 1, size(mt%adbl1d)
+            p_mem(n) = mt%adbl1d(n)
+          end do
         end if
-        do n = 1, size(mt%adbl1d)
-          p_mem(n) = mt%adbl1d(n)
-        end do
       end if
     end if
   end subroutine mem_set_value_dbl1d_mapped
@@ -312,17 +332,19 @@ contains
     integer(I4B) :: i, j
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
-      if (size(mt%adbl2d, dim=1) /= size(p_mem, dim=1) .or. &
-          size(mt%adbl2d, dim=2) /= size(p_mem, dim=2)) then
-        call store_error('mem_set_value() size mismatch dbl2d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
-      end if
-      do j = 1, size(mt%adbl2d, dim=2)
-        do i = 1, size(mt%adbl2d, dim=1)
-          p_mem(i, j) = mt%adbl2d(i, j)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+        if (size(mt%adbl2d, dim=1) /= size(p_mem, dim=1) .or. &
+            size(mt%adbl2d, dim=2) /= size(p_mem, dim=2)) then
+          call store_error('mem_set_value() size mismatch dbl2d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do j = 1, size(mt%adbl2d, dim=2)
+          do i = 1, size(mt%adbl2d, dim=1)
+            p_mem(i, j) = mt%adbl2d(i, j)
+          end do
         end do
-      end do
+      end if
     end if
   end subroutine mem_set_value_dbl2d
 
@@ -338,20 +360,22 @@ contains
     integer(I4B) :: i, j, k
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
-      if (size(mt%adbl3d, dim=1) /= size(p_mem, dim=1) .or. &
-          size(mt%adbl3d, dim=2) /= size(p_mem, dim=2) .or. &
-          size(mt%adbl3d, dim=3) /= size(p_mem, dim=3)) then
-        call store_error('mem_set_value() size mismatch dbl3d, varname='//&
-                         &trim(varname), terminate=.TRUE.)
-      end if
-      do k = 1, size(mt%adbl3d, dim=3)
-        do j = 1, size(mt%adbl3d, dim=2)
-          do i = 1, size(mt%adbl3d, dim=1)
-            p_mem(i, j, k) = mt%adbl3d(i, j, k)
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+        if (size(mt%adbl3d, dim=1) /= size(p_mem, dim=1) .or. &
+            size(mt%adbl3d, dim=2) /= size(p_mem, dim=2) .or. &
+            size(mt%adbl3d, dim=3) /= size(p_mem, dim=3)) then
+          call store_error('mem_set_value() size mismatch dbl3d, varname='//&
+                          &trim(varname), terminate=.TRUE.)
+        end if
+        do k = 1, size(mt%adbl3d, dim=3)
+          do j = 1, size(mt%adbl3d, dim=2)
+            do i = 1, size(mt%adbl3d, dim=1)
+              p_mem(i, j, k) = mt%adbl3d(i, j, k)
+            end do
           end do
         end do
-      end do
+      end if
     end if
   end subroutine mem_set_value_dbl3d
 
@@ -364,8 +388,10 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
-      p_mem = mt%strsclr
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+        p_mem = mt%strsclr
+      end if
     end if
   end subroutine mem_set_value_str
 
@@ -381,10 +407,12 @@ contains
     integer(I4B) :: n
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
-      do n = 1, size(mt%acharstr1d)
-        p_mem(n) = mt%acharstr1d(n)
-      end do
+    if (found) then
+      if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+        do n = 1, size(mt%acharstr1d)
+          p_mem(n) = mt%acharstr1d(n)
+        end do
+      end if
     end if
   end subroutine mem_set_value_charstr1d
 
