@@ -173,10 +173,17 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode"
+            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode" --keep-failed temp
           else
-            pytest -v -n auto --durations 0 -S
+            pytest -v -n auto --durations 0 -S --keep-failed temp
           fi
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: smoke_test_output
+          path: modflow6/autotest/temp
 
   test_gfortran:
     name: Test gnu fortran
@@ -261,10 +268,17 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed temp
           else
-            pytest -v -n auto --durations 0 -m "not large"
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed temp
           fi
+      
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gfortran_test_output
+          path: modflow6/autotest/temp
       
       - name: Checkout usgslatex
         if: runner.os == 'Linux'
@@ -376,10 +390,17 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed temp
           else
-            pytest -v -n auto --durations 0 -m "not large"
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed temp
           fi
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: intel_test_output
+          path: modflow6/autotest/temp
 
       - name: Test scripts
         working-directory: modflow6/distribution
@@ -533,5 +554,12 @@ jobs:
           branch="${{ github.ref_name }}"
           marker="not large"
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
-          pytest -v -n auto --parallel --durations 0 -m "$markers"
+          pytest -v -n auto --parallel --durations 0 -m "$markers" --keep-failed temp
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: parallel_test_output
+          path: modflow6/autotest/temp
           
