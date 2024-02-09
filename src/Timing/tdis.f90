@@ -496,7 +496,7 @@ contains
       itmuni = itmuni - 1
     end if
     !
-    ! -- enforce 0 or 1 TVK6_FILENAME entries in option block
+    ! -- enforce 0 or 1 ATS6_FILENAME entries in option block
     if (filein_fname(fname, 'ATS6_FILENAME', input_mempath, &
                      input_fname)) then
       inats = GetUnit()
