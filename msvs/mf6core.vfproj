@@ -106,12 +106,12 @@
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
 		<File RelativePath="..\src\Exchange\GwfExchangeMover.f90"/>
-		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
-		<File RelativePath="..\src\Exchange\gwfgwfidm.f90"/>
-		<File RelativePath="..\src\Exchange\GwfGwtExchange.f90"/>
-		<File RelativePath="..\src\Exchange\gwfgwtidm.f90"/>
-		<File RelativePath="..\src\Exchange\GwtGwtExchange.f90"/>
-		<File RelativePath="..\src\Exchange\gwtgwtidm.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfgwf.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfgwfidm.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfgwt.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfgwtidm.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwtgwt.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwtgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
@@ -154,7 +154,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-hfb.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-ic.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-icidm.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwfidm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-namidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-lak.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-maw.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-mvr.f90"/>
@@ -186,7 +186,7 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-dsp.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-dspidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-icidm.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwtidm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-namidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-ist.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-lkt.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-mst.f90"/>
@@ -437,6 +437,6 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
-		<File RelativePath="..\src\simnamidm.f90"/>
+		<File RelativePath="..\src\sim-namidm.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
