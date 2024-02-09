@@ -62,7 +62,7 @@ def flux_analyt(t, z, qt0, qtinfil, v, d):
                 0.3480242 + zeta * (-0.0958798 + zeta * 0.7478556)
             )
             flux = qt0 + 0.5 * (qtinfil - qt0) * (
-                math.erfc(ztermm) + math.exp(vterm - ztermp ** 2) * polyterm
+                math.erfc(ztermm) + math.exp(vterm - ztermp**2) * polyterm
             )
     return flux
 
@@ -86,7 +86,7 @@ def temp_analyt(t, z, t0, tinfil, v, d):
                 0.3480242 + zeta * (-0.0958798 + zeta * 0.7478556)
             )
             temp = t0 + 0.5 * (tinfil - t0) * (
-                math.erfc(ztermm) + math.exp(vterm - ztermp ** 2) * polyterm
+                math.erfc(ztermm) + math.exp(vterm - ztermp**2) * polyterm
             )
     return temp
 
@@ -292,7 +292,7 @@ def build_models(idx, test):
     )
 
     # output control
-    flopy.mf6.ModflowGwfoc(
+    oc = flopy.mf6.ModflowGwfoc(
         gwf,
         budget_filerecord=f"{name}.cbc",
         head_filerecord=f"{name}.hds",
@@ -302,9 +302,9 @@ def build_models(idx, test):
         filename=f"{gwfname}.oc",
     )
 
-    # ----------------------------------
+    # ----------------------------------------------------
     # Instantiating MODFLOW 6 GWE model
-    # ----------------------------------
+    # ----------------------------------------------------
     gwe = flopy.mf6.ModflowGwe(
         sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
     )
