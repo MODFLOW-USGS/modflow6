@@ -829,7 +829,7 @@ contains
             'DNODATA (', DNODATA, ') value.'
           !
           ! -- create deprecation warning
-          call deprecation_warning('CONNECTIONDATA', 'bedleak=NONE', '6.5.0', &
+          call deprecation_warning('CONNECTIONDATA', 'bedleak=NONE', '6.4.3', &
                                    warnmsg, this%parser%GetUnit())
         case default
           read (keyword, *) rval
