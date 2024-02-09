@@ -20,6 +20,7 @@
 ../../../src/Utilities/OpenSpec.f90
 ../../../src/Utilities/defmacro.F90
 ../../../src/Utilities/version.f90
+../../../src/Utilities/STLVecInt.f90
 ../../../src/Utilities/Table.f90
 ../../../src/Utilities/TableTerm.f90
 ../../../src/Utilities/DevFeature.f90

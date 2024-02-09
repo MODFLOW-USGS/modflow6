@@ -44,6 +44,7 @@ $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
 $(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/STLVecInt.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
