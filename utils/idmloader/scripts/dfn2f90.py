@@ -999,27 +999,27 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "gwe-dis.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1dis1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-disidm.f90",
         ],
         [
             DFN_PATH / "gwe-disu.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1disu1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-disuidm.f90",
         ],
         [
             DFN_PATH / "gwe-disv.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1disv1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-disvidm.f90",
         ],
         [
             DFN_PATH / "gwe-cnd.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1cnd1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-cndidm.f90",
         ],
         [
             DFN_PATH / "gwe-ctp.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1ctp1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-ctpidm.f90",
         ],
         [
             DFN_PATH / "gwe-ic.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1ic1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-icidm.f90",
         ],
         [
             DFN_PATH / "gwf-nam.dfn",
@@ -1031,7 +1031,7 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "gwe-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe1idm.f90",
+            SRC_PATH / "Model" / "GroundWaterEnergy" / "gwe-namidm.f90",
         ],
         [
             DFN_PATH / "exg-gwfgwf.dfn",
@@ -1043,7 +1043,7 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "exg-gwfgwe.dfn",
-            SRC_PATH / "Exchange" / "gwfgweidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwfgweidm.f90",
         ],
         [
             DFN_PATH / "exg-gwtgwt.dfn",
@@ -1051,7 +1051,7 @@ if __name__ == "__main__":
         ],
         [
             DFN_PATH / "exg-gwegwe.dfn",
-            SRC_PATH / "Exchange" / "gwegweidm.f90",
+            SRC_PATH / "Exchange" / "exg-gwegweidm.f90",
         ],
         [
             DFN_PATH / "swf-nam.dfn",
