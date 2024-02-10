@@ -103,6 +103,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       advanced_package = sim_nam_advanced_package
+    case ('TDIS')
+      advanced_package = sim_tdis_advanced_package
     case default
     end select
     return
@@ -114,6 +116,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_subpkg_pointer(subpackages, sim_nam_subpackages)
+    case ('TDIS')
+      call set_subpkg_pointer(subpackages, sim_tdis_subpackages)
     case default
     end select
     return

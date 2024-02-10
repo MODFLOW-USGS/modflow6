@@ -9,12 +9,21 @@ module GweIcInputModule
   public gwe_ic_block_definitions
   public GweIcParamFoundType
   public gwe_ic_multi_package
+  public gwe_ic_advanced_package
+  public gwe_ic_subpackages
 
   type GweIcParamFoundType
     logical :: strt = .false.
   end type GweIcParamFoundType
 
   logical :: gwe_ic_multi_package = .false.
+  logical :: gwe_ic_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gweic_strt = InputParamDefinitionType &
@@ -66,13 +75,15 @@ module GweIcInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

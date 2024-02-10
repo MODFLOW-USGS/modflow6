@@ -1,43 +1,10 @@
-# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-<<<<<<< HEAD
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Model
-SOURCEDIR5=../src/Model/Connection
-SOURCEDIR6=../src/Model/Geometry
-SOURCEDIR7=../src/Model/GroundWaterEnergy
-SOURCEDIR8=../src/Model/GroundWaterFlow
-SOURCEDIR9=../src/Model/GroundWaterTransport
-SOURCEDIR10=../src/Model/ModelUtilities
-SOURCEDIR11=../src/Model/TransportModel
-SOURCEDIR12=../src/Solution
-SOURCEDIR13=../src/Solution/LinearMethods
-SOURCEDIR14=../src/Solution/PETSc
-SOURCEDIR15=../src/Timing
-SOURCEDIR16=../src/Utilities
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/Idm
-SOURCEDIR19=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR20=../src/Utilities/Idm/selector
-SOURCEDIR21=../src/Utilities/Libraries
-SOURCEDIR22=../src/Utilities/Libraries/blas
-SOURCEDIR23=../src/Utilities/Libraries/daglib
-SOURCEDIR24=../src/Utilities/Libraries/rcm
-SOURCEDIR25=../src/Utilities/Libraries/sparsekit
-SOURCEDIR26=../src/Utilities/Libraries/sparskit2
-SOURCEDIR27=../src/Utilities/Matrix
-SOURCEDIR28=../src/Utilities/Memory
-SOURCEDIR29=../src/Utilities/Observation
-SOURCEDIR30=../src/Utilities/OutputControl
-SOURCEDIR31=../src/Utilities/TimeSeries
-SOURCEDIR32=../src/Utilities/Vector
-=======
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Timing
 SOURCEDIR4=../src/Model
@@ -47,28 +14,28 @@ SOURCEDIR7=../src/Model/GroundWaterFlow
 SOURCEDIR8=../src/Model/Geometry
 SOURCEDIR9=../src/Model/TransportModel
 SOURCEDIR10=../src/Model/GroundWaterTransport
-SOURCEDIR11=../src/Solution
-SOURCEDIR12=../src/Solution/LinearMethods
-SOURCEDIR13=../src/Solution/PETSc
-SOURCEDIR14=../src/Distributed
-SOURCEDIR15=../src/Utilities
-SOURCEDIR16=../src/Utilities/TimeSeries
-SOURCEDIR17=../src/Utilities/Idm
-SOURCEDIR18=../src/Utilities/Idm/selector
-SOURCEDIR19=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR20=../src/Utilities/ArrayRead
-SOURCEDIR21=../src/Utilities/Memory
-SOURCEDIR22=../src/Utilities/Matrix
-SOURCEDIR23=../src/Utilities/Vector
-SOURCEDIR24=../src/Utilities/Observation
-SOURCEDIR25=../src/Utilities/OutputControl
-SOURCEDIR26=../src/Utilities/Libraries
-SOURCEDIR27=../src/Utilities/Libraries/rcm
-SOURCEDIR28=../src/Utilities/Libraries/sparskit2
-SOURCEDIR29=../src/Utilities/Libraries/sparsekit
-SOURCEDIR30=../src/Utilities/Libraries/blas
-SOURCEDIR31=../src/Utilities/Libraries/daglib
->>>>>>> a1e1fd51aa (rebuild makefiles)
+SOURCEDIR11=../src/Model/GroundWaterEnergy
+SOURCEDIR12=../src/Solution
+SOURCEDIR13=../src/Solution/LinearMethods
+SOURCEDIR14=../src/Solution/PETSc
+SOURCEDIR15=../src/Distributed
+SOURCEDIR16=../src/Utilities
+SOURCEDIR17=../src/Utilities/TimeSeries
+SOURCEDIR18=../src/Utilities/Idm
+SOURCEDIR19=../src/Utilities/Idm/selector
+SOURCEDIR20=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR21=../src/Utilities/ArrayRead
+SOURCEDIR22=../src/Utilities/Memory
+SOURCEDIR23=../src/Utilities/Matrix
+SOURCEDIR24=../src/Utilities/Vector
+SOURCEDIR25=../src/Utilities/Observation
+SOURCEDIR26=../src/Utilities/OutputControl
+SOURCEDIR27=../src/Utilities/Libraries
+SOURCEDIR28=../src/Utilities/Libraries/rcm
+SOURCEDIR29=../src/Utilities/Libraries/sparskit2
+SOURCEDIR30=../src/Utilities/Libraries/sparsekit
+SOURCEDIR31=../src/Utilities/Libraries/blas
+SOURCEDIR32=../src/Utilities/Libraries/daglib
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -288,17 +255,10 @@ $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
-<<<<<<< HEAD
-<<<<<<< HEAD
-$(OBJDIR)/Integer2dReader.o \
-=======
-=======
 $(OBJDIR)/DefinitionSelect.o \
->>>>>>> 5c4949f92c (add input load subpackage support)
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
->>>>>>> a1e1fd51aa (rebuild makefiles)
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -336,16 +296,8 @@ $(OBJDIR)/gwe1cnd1.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ims8base.o \
-<<<<<<< HEAD
-$(OBJDIR)/StructVector.o \
-=======
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
-<<<<<<< HEAD
->>>>>>> a1e1fd51aa (rebuild makefiles)
-$(OBJDIR)/DefinitionSelect.o \
-=======
->>>>>>> 5c4949f92c (add input load subpackage support)
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \

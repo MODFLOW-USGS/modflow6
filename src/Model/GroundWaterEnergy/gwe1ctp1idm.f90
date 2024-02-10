@@ -9,6 +9,8 @@ module GweCtpInputModule
   public gwe_ctp_block_definitions
   public GweCtpParamFoundType
   public gwe_ctp_multi_package
+  public gwe_ctp_advanced_package
+  public gwe_ctp_subpackages
 
   type GweCtpParamFoundType
     logical :: auxiliary = .false.
@@ -32,6 +34,13 @@ module GweCtpInputModule
   end type GweCtpParamFoundType
 
   logical :: gwe_ctp_multi_package = .true.
+  logical :: gwe_ctp_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_ctp_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwectp_auxiliary = InputParamDefinitionType &
@@ -392,19 +401,22 @@ module GweCtpInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'PERIOD', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .true. & ! block_variable
+    .true., & ! block_variable
+    .true. & ! timeseries
     ) &
     ]
 

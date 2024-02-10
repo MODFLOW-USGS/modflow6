@@ -9,6 +9,8 @@ module GweNamInputModule
   public gwe_nam_block_definitions
   public GweNamParamFoundType
   public gwe_nam_multi_package
+  public gwe_nam_advanced_package
+  public gwe_nam_subpackages
 
   type GweNamParamFoundType
     logical :: list = .false.
@@ -21,6 +23,13 @@ module GweNamInputModule
   end type GweNamParamFoundType
 
   logical :: gwe_nam_multi_package = .false.
+  logical :: gwe_nam_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwenam_list = InputParamDefinitionType &
@@ -183,13 +192,15 @@ module GweNamInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'PACKAGES', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

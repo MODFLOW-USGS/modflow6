@@ -9,6 +9,8 @@ module SimTdisInputModule
   public sim_tdis_block_definitions
   public SimTdisParamFoundType
   public sim_tdis_multi_package
+  public sim_tdis_advanced_package
+  public sim_tdis_subpackages
 
   type SimTdisParamFoundType
     logical :: time_units = .false.
@@ -24,6 +26,13 @@ module SimTdisInputModule
   end type SimTdisParamFoundType
 
   logical :: sim_tdis_multi_package = .false.
+  logical :: sim_tdis_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    sim_tdis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     simtdis_time_units = InputParamDefinitionType &
@@ -240,19 +249,22 @@ module SimTdisInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'PERIODDATA', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

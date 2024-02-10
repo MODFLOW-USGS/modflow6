@@ -132,8 +132,12 @@ contains
       advanced_package = exg_gwfgwf_advanced_package
     case ('GWFGWT')
       advanced_package = exg_gwfgwt_advanced_package
+    case ('GWFGWE')
+      advanced_package = exg_gwfgwe_advanced_package
     case ('GWTGWT')
       advanced_package = exg_gwtgwt_advanced_package
+    case ('GWEGWE')
+      advanced_package = exg_gwegwe_advanced_package
     case default
     end select
     return
@@ -147,8 +151,12 @@ contains
       call set_subpkg_pointer(subpackages, exg_gwfgwf_subpackages)
     case ('GWFGWT')
       call set_subpkg_pointer(subpackages, exg_gwfgwt_subpackages)
+    case ('GWFGWE')
+      call set_subpkg_pointer(subpackages, exg_gwfgwe_subpackages)
     case ('GWTGWT')
       call set_subpkg_pointer(subpackages, exg_gwtgwt_subpackages)
+    case ('GWEGWE')
+      call set_subpkg_pointer(subpackages, exg_gwegwe_subpackages)
     case default
     end select
     return

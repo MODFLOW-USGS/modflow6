@@ -9,6 +9,8 @@ module ExgGwegweInputModule
   public exg_gwegwe_block_definitions
   public ExgGwegweParamFoundType
   public exg_gwegwe_multi_package
+  public exg_gwegwe_advanced_package
+  public exg_gwegwe_subpackages
 
   type ExgGwegweParamFoundType
     logical :: gwfmodelname1 = .false.
@@ -41,6 +43,13 @@ module ExgGwegweInputModule
   end type ExgGwegweParamFoundType
 
   logical :: exg_gwegwe_multi_package = .true.
+  logical :: exg_gwegwe_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    exg_gwegwe_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exggwegwe_gwfmodelname1 = InputParamDefinitionType &
@@ -563,19 +572,22 @@ module ExgGwegweInputModule
     'OPTIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'EXCHANGEDATA', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 

@@ -9,6 +9,8 @@ module GweDisuInputModule
   public gwe_disu_block_definitions
   public GweDisuParamFoundType
   public gwe_disu_multi_package
+  public gwe_disu_advanced_package
+  public gwe_disu_subpackages
 
   type GweDisuParamFoundType
     logical :: length_units = .false.
@@ -41,6 +43,13 @@ module GweDisuInputModule
   end type GweDisuParamFoundType
 
   logical :: gwe_disu_multi_package = .false.
+  logical :: gwe_disu_advanced_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_disu_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwedisu_length_units = InputParamDefinitionType &
@@ -581,37 +590,43 @@ module GweDisuInputModule
     'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'CONNECTIONDATA', & ! blockname
     .true., & ! required
     .false., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'VERTICES', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ), &
     InputBlockDefinitionType( &
     'CELL2D', & ! blockname
     .true., & ! required
     .true., & ! aggregate
-    .false. & ! block_variable
+    .false., & ! block_variable
+    .false. & ! timeseries
     ) &
     ]
 
