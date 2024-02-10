@@ -1065,6 +1065,7 @@ if __name__ == "__main__":
             DFN_PATH / "sim-tdis.dfn",
             SRC_PATH / "Timing" / "simtdisidm.f90",
         ],
+        [
             DFN_PATH / "utl-tvk.dfn",
             SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3tvk8idm.f90",
         ],
