@@ -92,8 +92,8 @@ GNU Fortran can be installed on all three major platforms.
 
 ##### Linux
 
-- fedora-based: `dnf install gcc-gfortran`
-- debian-based: `apt install gfortran`
+- Fedora-based: `dnf install gcc-gfortran`
+- Debian-based: `apt install gfortran`
 
 ##### macOS
 
@@ -110,7 +110,13 @@ See [this ticket](https://github.com/mesonbuild/meson/issues/12282) on the Meson
 
 ##### Windows
 
-- Download the Minimalist GNU for Windows (MinGW) installer from Source Forge:
+[Minimalist GNU for Windows](https://www.mingw-w64.org/) is the recommended way to obtain the GCC toolchain on Windows. Several MinGW distributions are available.
+
+To install with Chocolatey: `choco install mingw`
+
+To install from SourceForge:
+
+- Download the MinGW installer:
   https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe
 - Run the installer. Make sure to change `Architecture` to `x86_64`. Leave the
   other settings on default.
@@ -119,6 +125,10 @@ See [this ticket](https://github.com/mesonbuild/meson/issues/12282) on the Meson
   Start Screen. Click the `Environmental Variables` button and double-click the
   `Path` variable in the User Variables (the top table). Click the `New` button
   and enter the location of the `mingw64/bin` directory.
+
+Binaries may also be downloaded and installed from the [releases here](https://github.com/brechtsanders/winlibs_mingw/releases).
+
+**Note:** the MinGW distribution [available on conda-forge](https://anaconda.org/conda-forge/m2w64-toolchain_win-64) includes an outdated version of GCC and is not compatible with MODFLOW 6.
 
 #### Intel Fortran
 
