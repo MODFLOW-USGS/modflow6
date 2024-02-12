@@ -41,7 +41,7 @@ def p01mt3d(
     prsity2=None,
     rc2=None,
     zero_order_decay=False,
-    mf2005s="mf2005s",
+    mf2005="mf2005",
     mt3dms="mt3dms",
 ):
     nlay = 1
@@ -66,7 +66,7 @@ def p01mt3d(
 
     modelname_mf = "p01_mf"
     mf = flopy.modflow.Modflow(
-        modelname=modelname_mf, model_ws=model_ws, exe_name=mf2005s
+        modelname=modelname_mf, model_ws=model_ws, exe_name=mf2005
     )
     dis = flopy.modflow.ModflowDis(
         mf,
@@ -476,7 +476,7 @@ def p01mf6(
 def get_binaries(targets) -> Tuple[Path, Path, Path]:
     return (
         targets["mf6"],
-        try_get_target(targets, "mf2005s"),
+        try_get_target(targets, "mf2005"),
         try_get_target(targets, "mt3dms"),
     )
 
@@ -512,7 +512,7 @@ def test_mt3dmsp01a(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -577,7 +577,7 @@ def test_mt3dmsp01b(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -617,7 +617,7 @@ def test_mt3dmsp01c(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -657,7 +657,7 @@ def test_mt3dmsp01d(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -697,7 +697,7 @@ def test_mt3dmsp01e(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -738,7 +738,7 @@ def test_mt3dmsp01f(function_tmpdir, targets):
         mixelm,
         zeta,
         prsity2,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
@@ -781,7 +781,7 @@ def test_mt3dmsp01g(function_tmpdir, targets):
         prsity2,
         rc2=0.0,
         zero_order_decay=True,
-        mf2005s=mf2005,
+        mf2005=mf2005,
         mt3dms=mt3dms,
     )
 
