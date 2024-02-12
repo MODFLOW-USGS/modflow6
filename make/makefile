@@ -5,6 +5,7 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
+<<<<<<< HEAD
 SOURCEDIR2=../src/Model
 SOURCEDIR3=../src/Model/SurfaceWaterFlow
 SOURCEDIR4=../src/Model/TransportModel
@@ -41,6 +42,39 @@ SOURCEDIR34=../src/Solution/ParticleTracker
 SOURCEDIR35=../src/Solution/PETSc
 SOURCEDIR36=../src/Solution/LinearMethods
 SOURCEDIR37=../src/Exchange
+=======
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Timing
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/ModelUtilities
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/Geometry
+SOURCEDIR9=../src/Model/TransportModel
+SOURCEDIR10=../src/Model/GroundWaterTransport
+SOURCEDIR11=../src/Model/GroundWaterEnergy
+SOURCEDIR12=../src/Solution
+SOURCEDIR13=../src/Solution/LinearMethods
+SOURCEDIR14=../src/Solution/PETSc
+SOURCEDIR15=../src/Distributed
+SOURCEDIR16=../src/Utilities
+SOURCEDIR17=../src/Utilities/TimeSeries
+SOURCEDIR18=../src/Utilities/Idm
+SOURCEDIR19=../src/Utilities/Idm/selector
+SOURCEDIR20=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR21=../src/Utilities/ArrayRead
+SOURCEDIR22=../src/Utilities/Memory
+SOURCEDIR23=../src/Utilities/Matrix
+SOURCEDIR24=../src/Utilities/Vector
+SOURCEDIR25=../src/Utilities/Observation
+SOURCEDIR26=../src/Utilities/OutputControl
+SOURCEDIR27=../src/Utilities/Libraries
+SOURCEDIR28=../src/Utilities/Libraries/rcm
+SOURCEDIR29=../src/Utilities/Libraries/sparskit2
+SOURCEDIR30=../src/Utilities/Libraries/sparsekit
+SOURCEDIR31=../src/Utilities/Libraries/blas
+SOURCEDIR32=../src/Utilities/Libraries/daglib
+>>>>>>> a78746dadc (rebuild makefiles)
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -246,10 +280,14 @@ $(OBJDIR)/GwfVscInputData.o \
 $(OBJDIR)/gwf-ghb.o \
 $(OBJDIR)/gwf-drn.o \
 $(OBJDIR)/IndexMap.o \
+<<<<<<< HEAD
 $(OBJDIR)/MethodSubcellPool.o \
 $(OBJDIR)/CellPoly.o \
 $(OBJDIR)/CellRectQuad.o \
 $(OBJDIR)/CellRect.o \
+=======
+$(OBJDIR)/ArrayReaderBase.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/tsp-fmi.o \
@@ -269,11 +307,15 @@ $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/SeqVector.o \
 $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
+<<<<<<< HEAD
 $(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/MethodCellTernary.o \
 $(OBJDIR)/MethodCellPollockQuad.o \
 $(OBJDIR)/MethodCellPollock.o \
 $(OBJDIR)/MethodCellPassToBot.o \
+=======
+$(OBJDIR)/Integer2dReader.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/tsp-ssm.o \
@@ -299,6 +341,7 @@ $(OBJDIR)/GweCndOptions.o \
 $(OBJDIR)/VirtualSolution.o \
 $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
+<<<<<<< HEAD
 $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
@@ -307,6 +350,15 @@ $(OBJDIR)/DislGeom.o \
 $(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/MethodCellPool.o \
 $(OBJDIR)/CellUtil.o \
+=======
+$(OBJDIR)/ims8reordering.o \
+$(OBJDIR)/StructVector.o \
+$(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/IdmLogger.o \
+$(OBJDIR)/Integer1dReader.o \
+$(OBJDIR)/Double2dReader.o \
+$(OBJDIR)/Double1dReader.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -343,6 +395,7 @@ $(OBJDIR)/gwe-ctp.o \
 $(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
+<<<<<<< HEAD
 $(OBJDIR)/ImsLinearBase.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/DefinitionSelect.o \
@@ -355,6 +408,13 @@ $(OBJDIR)/swf-cxs.o \
 $(OBJDIR)/swf-ic.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
+=======
+$(OBJDIR)/ims8base.o \
+$(OBJDIR)/StructArray.o \
+$(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/DefinitionSelect.o \
+$(OBJDIR)/InputLoadType.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
@@ -367,9 +427,11 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
-$(OBJDIR)/StructArray.o \
+$(OBJDIR)/LoadMf6File.o \
+$(OBJDIR)/DynamicParamFilter.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
+<<<<<<< HEAD
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/swf-zdg.o \
 $(OBJDIR)/swf-sto.o \
@@ -382,6 +444,9 @@ $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-obs.o \
 $(OBJDIR)/prt-mip.o \
 $(OBJDIR)/MethodPool.o \
+=======
+$(OBJDIR)/ExplicitModel.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
 $(OBJDIR)/exg-gwtgwt.o \
@@ -392,11 +457,16 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+<<<<<<< HEAD
 $(OBJDIR)/StressListInput.o \
 $(OBJDIR)/StressGridInput.o \
 $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/swf.o \
 $(OBJDIR)/prt.o \
+=======
+$(OBJDIR)/Mf6FileListInput.o \
+$(OBJDIR)/Mf6FileGridInput.o \
+>>>>>>> a78746dadc (rebuild makefiles)
 $(OBJDIR)/ExplicitSolution.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
