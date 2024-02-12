@@ -409,12 +409,13 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\AsciiInputLoadType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StressGridInput.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StressListInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileGridInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileListInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\DynamicParamFilter.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>

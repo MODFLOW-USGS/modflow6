@@ -1,13 +1,13 @@
-!> @brief This module contains the StressGridInputModule
+!> @brief This module contains the Mf6FileGridInputModule
 !!
 !! This module contains the routines for reading period block
 !! array based input.
 !!
 !<
-module StressGridInputModule
+module Mf6FileGridInputModule
 
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENMEMPATH, LENVARNAME, &
+  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENVARNAME, &
                              LENTIMESERIESNAME, LENAUXNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
@@ -16,72 +16,75 @@ module StressGridInputModule
   use CharacterStringModule, only: CharacterStringType
   use BlockParserModule, only: BlockParserType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
-  use BoundInputContextModule, only: BoundInputContextType
+  use BoundInputContextModule, only: BoundInputContextType, ReadStateVarType
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, &
                                           tasmanager_cr
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
+  use DynamicParamFilterModule, only: DynamicParamFilterType
 
   implicit none
   private
-  public :: StressGridInputType
-
-  !> @brief Pointer type for read state variable
-  !<
-  type ReadStateVar
-    integer, pointer :: invar
-  end type ReadStateVar
+  public :: BoundGridInputType
 
   !> @brief Ascii grid based dynamic loader type
   !<
-  type, extends(AsciiDynamicPkgLoadBaseType) :: StressGridInputType
+  type, extends(AsciiDynamicPkgLoadBaseType) :: BoundGridInputType
     integer(I4B) :: tas_active !< Are TAS6 inputs defined
-    integer(I4B) :: nparam !< number of dynamic parameters other than AUX
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: aux_tasnames => null() !< array of AUXVAR TAS names
+      pointer :: aux_tasnames !< array of AUXVAR TAS names
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: param_tasnames => null() !< array of dynamic param TAS names
-    character(len=LENVARNAME), dimension(:), &
-      allocatable :: param_names !< dynamic param names
-    type(ReadStateVar), dimension(:), allocatable :: param_reads !< read states for current load
-    integer(I4B), dimension(:), allocatable :: idt_idxs !< idt indexes corresponding to dfn param list
-    type(TimeArraySeriesManagerType), pointer :: tasmanager => null() !< TAS manager object
-    type(BoundInputContextType) :: bndctx !< boundary package input context
+      pointer :: param_tasnames !< array of dynamic param TAS names
+    type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
+    type(TimeArraySeriesManagerType), pointer :: tasmanager !< TAS manager
+    type(BoundInputContextType) :: bound_context
+    type(DynamicParamFilterType) :: filter
   contains
-    procedure :: init => ingrid_init
-    procedure :: df => ingrid_df
-    procedure :: ad => ingrid_ad
-    procedure :: rp => ingrid_rp
-    procedure :: destroy => ingrid_destroy
-    procedure :: reset => ingrid_reset
-    procedure :: params_alloc => ingrid_params_alloc
-    procedure :: param_load => ingrid_param_load
-    procedure :: tas_arrays_alloc => ingrid_tas_arrays_alloc
-    procedure :: tas_links_create => ingrid_tas_links_create
-  end type StressGridInputType
+    procedure :: ainit => bndgrid_init
+    procedure :: df => bndgrid_df
+    procedure :: ad => bndgrid_ad
+    procedure :: rp => bndgrid_rp
+    procedure :: destroy => bndgrid_destroy
+    procedure :: reset => bndgrid_reset
+    procedure :: params_alloc => bndgrid_params_alloc
+    procedure :: param_load => bndgrid_param_load
+    procedure :: tas_arrays_alloc => bndgrid_tas_arrays_alloc
+    procedure :: tas_links_create => bndgrid_tas_links_create
+  end type BoundGridInputType
 
 contains
 
-  subroutine ingrid_init(this, mf6_input, modelname, modelfname, &
-                         source, iperblock, iout)
+  subroutine bndgrid_init(this, mf6_input, component_name, &
+                          component_input_name, input_name, &
+                          iperblock, parser, iout)
     use MemoryManagerModule, only: get_isize
-    class(StressGridInputType), intent(inout) :: this
+    use BlockParserModule, only: BlockParserType
+    use LoadMf6FileModule, only: LoadMf6FileType
+    class(BoundGridInputType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modelfname
-    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: component_input_name
+    character(len=*), intent(in) :: input_name
     integer(I4B), intent(in) :: iperblock
+    type(BlockParserType), pointer, intent(inout) :: parser
     integer(I4B), intent(in) :: iout
+    type(LoadMf6FileType) :: loader
     type(CharacterStringType), dimension(:), pointer, &
       contiguous :: tas_fnames
     character(len=LINELENGTH) :: fname
     integer(I4B) :: tas6_size, n
     !
-    call this%DynamicPkgLoadType%init(mf6_input, modelname, modelfname, &
-                                      source, iperblock, iout)
+    ! -- initialize base type
+    call this%DynamicPkgLoadType%init(mf6_input, component_name, &
+                                      component_input_name, &
+                                      input_name, iperblock, iout)
     ! -- initialize
+    nullify (this%aux_tasnames)
+    nullify (this%param_tasnames)
     this%tas_active = 0
-    this%nparam = 0
     this%iout = iout
+    !
+    ! -- load static input
+    call loader%load(parser, mf6_input, this%input_name, iout)
     !
     ! -- create tasmanager
     allocate (this%tasmanager)
@@ -106,7 +109,7 @@ contains
     end if
     !
     ! -- initialize input context memory
-    call this%bndctx%init(mf6_input, .true.)
+    call this%bound_context%init(mf6_input, this%readasarrays)
     !
     ! -- allocate dfn params
     call this%params_alloc()
@@ -116,29 +119,30 @@ contains
     !
     ! -- return
     return
-  end subroutine ingrid_init
+  end subroutine bndgrid_init
 
-  subroutine ingrid_df(this)
+  subroutine bndgrid_df(this)
     ! -- modules
-    class(StressGridInputType), intent(inout) :: this !< Mf6FileGridInputType
+    ! -- dummy
+    class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     call this%tasmanager%tasmanager_df()
     !
     ! -- return
     return
-  end subroutine ingrid_df
+  end subroutine bndgrid_df
 
-  subroutine ingrid_ad(this)
+  subroutine bndgrid_ad(this)
     ! -- modules
-    class(StressGridInputType), intent(inout) :: this !< Mf6FileGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     call this%tasmanager%ad()
     !
     ! -- return
     return
-  end subroutine ingrid_ad
+  end subroutine bndgrid_ad
 
-  subroutine ingrid_rp(this, parser)
+  subroutine bndgrid_rp(this, parser)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use BlockParserModule, only: BlockParserType
@@ -147,9 +151,9 @@ contains
     use ArrayHandlersModule, only: ifind
     use SourceCommonModule, only: ifind_charstr
     use IdmLoggerModule, only: idm_log_header, idm_log_close, idm_log_var
-    class(StressGridInputType), intent(inout) :: this !< Mf6FileGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     type(BlockParserType), pointer, intent(inout) :: parser
-    ! -- locals
+    ! -- local
     logical(LGP) :: endOfBlock
     character(len=LINELENGTH) :: keyword, param_tag
     type(InputParamDefinitionType), pointer :: idt
@@ -176,7 +180,7 @@ contains
       call parser%GetStringCaps(param_tag)
       !
       ! -- is param tag an auxvar?
-      iaux = ifind_charstr(this%bndctx%auxname_cst, param_tag)
+      iaux = ifind_charstr(this%bound_context%auxname_cst, param_tag)
       !
       ! -- any auvxar corresponds to the definition tag 'AUX'
       if (iaux > 0) param_tag = 'AUX'
@@ -185,7 +189,7 @@ contains
       idt => get_param_definition_type(this%mf6_input%param_dfns, &
                                        this%mf6_input%component_type, &
                                        this%mf6_input%subcomponent_type, &
-                                       'PERIOD', param_tag, this%sourcename)
+                                       'PERIOD', param_tag, this%input_name)
       !
       ! -- look for TAS keyword if tas is active
       if (this%tas_active /= 0) then
@@ -228,24 +232,21 @@ contains
     !
     ! -- return
     return
-  end subroutine ingrid_rp
+  end subroutine bndgrid_rp
 
-  subroutine ingrid_destroy(this)
+  subroutine bndgrid_destroy(this)
     ! -- modules
-    class(StressGridInputType), intent(inout) :: this !< Mf6FileGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     deallocate (this%tasmanager)
     !
     ! -- return
     return
-  end subroutine ingrid_destroy
+  end subroutine bndgrid_destroy
 
-  subroutine ingrid_reset(this)
+  subroutine bndgrid_reset(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate, mem_setptr, get_isize
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     integer(I4B) :: n, m
     !
     if (this%tas_active /= 0) then
@@ -254,96 +255,65 @@ contains
       call this%tasmanager%reset(this%mf6_input%subcomponent_name)
       !
       ! -- reinitialize tas name arrays
-      call this%bndctx%param_init('CHARSTR1D', 'AUXTASNAME', &
-                                  this%mf6_input%mempath, this%sourcename)
-      call this%bndctx%param_init('CHARSTR1D', 'PARAMTASNAME', &
-                                  this%mf6_input%mempath, this%sourcename)
+      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                         this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                         this%input_name)
     end if
     !
     do n = 1, this%nparam
-      if (this%param_reads(n)%invar /= 0) then
-        !
-        ! -- reset read state
-        this%param_reads(n)%invar = 0
-        !
-      end if
+      ! -- reset read state
+      this%param_reads(n)%invar = 0
     end do
     !
     ! -- explicitly reset auxvar array each period
-    do m = 1, this%bndctx%ncpl
-      do n = 1, this%bndctx%naux
-        this%bndctx%auxvar(n, m) = DZERO
+    do m = 1, this%bound_context%ncpl
+      do n = 1, this%bound_context%naux
+        this%bound_context%auxvar(n, m) = DZERO
       end do
     end do
     !
     ! -- return
     return
-  end subroutine ingrid_reset
+  end subroutine bndgrid_reset
 
-  subroutine ingrid_params_alloc(this)
+  subroutine bndgrid_params_alloc(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
-    use ArrayHandlersModule, only: expandarray
     ! -- dummy
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    type(InputParamDefinitionType), pointer :: idt
-    character(len=LENVARNAME), dimension(:), allocatable :: read_state_varnames
+    class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
+    character(len=LENVARNAME) :: rs_varname
     integer(I4B), pointer :: intvar
     integer(I4B) :: iparam
     !
-    ! -- allocate period dfn params
-    call this%bndctx%bound_params_allocate(this%sourcename)
+    ! -- set in scope param names
+    call this%filter%init(this%mf6_input, this%readasarrays, &
+                          this%bound_context%naux, &
+                          this%bound_context%inamedbound, &
+                          this%iout)
+    call this%filter%get_flt_params(this%param_names, this%nparam)
     !
-    ! -- allocate dfn input params
-    do iparam = 1, size(this%mf6_input%param_dfns)
-      !
-      ! -- assign param definition pointer
-      idt => this%mf6_input%param_dfns(iparam)
-      !
-      if (idt%blockname == 'PERIOD') then
-        !
-        ! -- store parameter info
-        if (idt%tagname /= 'AUX') then
-          this%nparam = this%nparam + 1
-          !
-          ! -- reallocate param info arrays
-          call expandarray(this%param_names)
-          call expandarray(this%idt_idxs)
-          call expandarray(read_state_varnames)
-          !
-          ! -- internal mf6 param name
-          this%param_names(this%nparam) = idt%mf6varname
-          ! -- idt list index of param
-          this%idt_idxs(this%nparam) = iparam
-          ! -- allocate and store name of read state variable
-          read_state_varnames(this%nparam) = &
-            this%bndctx%allocate_read_state_var(idt%mf6varname)
-          !
-        end if
-        !
-      end if
-    end do
+    call this%bound_context%array_params_create(this%param_names, this%nparam, &
+                                                this%input_name)
+    call this%bound_context%enable()
     !
     ! -- allocate and set param_reads pointer array
     allocate (this%param_reads(this%nparam))
     !
     ! store read state variable pointers
     do iparam = 1, this%nparam
-      call mem_setptr(intvar, read_state_varnames(iparam), this%mf6_input%mempath)
+      ! -- allocate and store name of read state variable
+      rs_varname = this%bound_context%rsv_alloc(this%param_names(iparam))
+      call mem_setptr(intvar, rs_varname, this%mf6_input%mempath)
       this%param_reads(iparam)%invar => intvar
+      this%param_reads(iparam)%invar = 0
     end do
-    !
-    ! -- cleanup
-    deallocate (read_state_varnames)
     !
     ! -- return
     return
-  end subroutine ingrid_params_alloc
+  end subroutine bndgrid_params_alloc
 
-  subroutine ingrid_param_load(this, parser, datatype, varname, &
-                               tagname, mempath, iaux)
+  subroutine bndgrid_param_load(this, parser, datatype, varname, &
+                                tagname, mempath, iaux)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use ArrayHandlersModule, only: ifind
@@ -354,14 +324,14 @@ contains
     use Integer1dReaderModule, only: read_int1d
     use IdmLoggerModule, only: idm_log_var
     ! -- dummy
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     type(BlockParserType), intent(in) :: parser
     character(len=*), intent(in) :: datatype
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: iaux
-    ! -- locals
+    ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
@@ -388,9 +358,10 @@ contains
       !
     case default
       !
-      call store_error('Programming error. (IDM) unsupported memload &
-                       &data type for param='//trim(tagname))
-      call store_error_filename(this%sourcename)
+      errmsg = 'IDM unimplemented. Mf6FileGridInput::param_load &
+               &datatype='//trim(datatype)
+      call store_error(errmsg)
+      call store_error_filename(this%input_name)
       !
     end select
     !
@@ -403,27 +374,26 @@ contains
     !
     ! -- return
     return
-  end subroutine ingrid_param_load
+  end subroutine bndgrid_param_load
 
-  subroutine ingrid_tas_arrays_alloc(this)
+  subroutine bndgrid_tas_arrays_alloc(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     !
     ! -- count params other than AUX
     if (this%tas_active /= 0) then
       !
-      call mem_allocate(this%aux_tasnames, LENTIMESERIESNAME, this%bndctx%naux, &
-                        'AUXTASNAME', this%mf6_input%mempath)
+      call mem_allocate(this%aux_tasnames, LENTIMESERIESNAME, &
+                        this%bound_context%naux, 'AUXTASNAME', &
+                        this%mf6_input%mempath)
       call mem_allocate(this%param_tasnames, LENTIMESERIESNAME, this%nparam, &
                         'PARAMTASNAME', this%mf6_input%mempath)
       !
-      call this%bndctx%param_init('CHARSTR1D', 'AUXTASNAME', &
-                                  this%mf6_input%mempath, &
-                                  this%sourcename)
-      call this%bndctx%param_init('CHARSTR1D', 'PARAMTASNAME', &
-                                  this%mf6_input%mempath, &
-                                  this%sourcename)
+      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                         this%input_name)
+      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                         this%input_name)
       !
     else
       !
@@ -436,16 +406,17 @@ contains
     !
     ! -- return
     return
-  end subroutine ingrid_tas_arrays_alloc
+  end subroutine bndgrid_tas_arrays_alloc
 
   ! FLUX and SFAC are handled in model context
-  subroutine ingrid_tas_links_create(this, inunit)
+  subroutine bndgrid_tas_links_create(this, inunit)
     ! -- modules
     use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: get_param_definition_type
     ! -- dummy
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
+    class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     integer(I4B), intent(in) :: inunit
-    ! -- locals
+    ! -- local
     type(InputParamDefinitionType), pointer :: idt
     ! -- non-contiguous beacuse a slice of bound is passed
     real(DP), dimension(:), pointer :: auxArrayPtr, bndArrayPtr
@@ -463,51 +434,46 @@ contains
     convertflux = .false.
     !
     ! Create AUX Time Array Series links
-    do n = 1, this%bndctx%naux
+    do n = 1, this%bound_context%naux
       tas_name = this%aux_tasnames(n)
       !
       if (tas_name /= '') then
-        !
         ! -- set auxvar pointer
-        auxArrayPtr => this%bndctx%auxvar(n, :)
-        !
-        aux_name = this%bndctx%auxname_cst(n)
-        !
+        auxArrayPtr => this%bound_context%auxvar(n, :)
+        aux_name = this%bound_context%auxname_cst(n)
         call this%tasmanager%MakeTasLink(this%mf6_input%subcomponent_name, &
-                                         auxArrayPtr, this%bndctx%iprpak, &
+                                         auxArrayPtr, this%bound_context%iprpak, &
                                          tas_name, aux_name, convertFlux, &
                                          nodelist, inunit)
       end if
-      !
     end do
     !
     ! Create BND Time Array Series links
     do n = 1, this%nparam
-      !
       ! -- assign param definition pointer
-      idt => this%mf6_input%param_dfns(this%idt_idxs(n))
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', this%param_names(n), &
+                                       this%input_name)
       !
       if (idt%timeseries) then
-        !
         if (this%param_reads(n)%invar == 2) then
           tas_name = this%param_tasnames(n)
-          !
           call mem_setptr(bound, idt%mf6varname, this%mf6_input%mempath)
-          !
           ! -- set bound pointer
           bndArrayPtr => bound(:)
-          !
           call this%tasmanager%MakeTasLink(this%mf6_input%subcomponent_name, &
-                                           bndArrayPtr, this%bndctx%iprpak, &
+                                           bndArrayPtr, &
+                                           this%bound_context%iprpak, &
                                            tas_name, idt%mf6varname, &
                                            convertFlux, nodelist, inunit)
         end if
       end if
     end do
-
     !
     ! -- return
     return
-  end subroutine ingrid_tas_links_create
+  end subroutine bndgrid_tas_links_create
 
-end module StressGridInputModule
+end module Mf6FileGridInputModule

@@ -18,8 +18,80 @@ module DefinitionSelectModule
   public :: get_param_definition_type
   public :: get_aggregate_definition_type
   public :: split_record_definition
+  public :: idt_parse_rectype
 
 contains
+
+  !> @brief allocate and set RECARRAY, KEYSTRING or RECORD param list
+  !<
+  subroutine idt_parse_rectype(idt, cols, ncol)
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    use InputOutputModule, only: parseline
+    ! -- dummy
+    type(InputParamDefinitionType), pointer, intent(in) :: idt
+    character(len=LINELENGTH), dimension(:), allocatable, &
+      intent(inout) :: cols
+    integer(I4B), intent(inout) :: ncol
+    ! -- local
+    character(len=:), allocatable :: parse_str
+    character(len=LINELENGTH), dimension(:), allocatable :: param_cols
+    integer(I4B) :: param_ncol, n
+    !
+    ! -- initialize
+    if (allocated(cols)) deallocate (cols)
+    ncol = 0
+    !
+    ! -- split definition
+    parse_str = trim(idt%datatype)//' '
+    call parseline(parse_str, param_ncol, param_cols)
+    !
+    if (param_ncol > 1) then
+      if (param_cols(1) == 'RECARRAY' .or. &
+          param_cols(1) == 'KEYSTRING' .or. &
+          param_cols(1) == 'RECORD') then
+        ! -- exclude 1st column
+        allocate (cols(param_ncol - 1))
+        do n = 2, param_ncol
+          cols(n - 1) = param_cols(n)
+        end do
+        !
+        ! -- set ncol
+        ncol = param_ncol - 1
+      end if
+    end if
+    !
+    ! -- cleanup
+    if (allocated(param_cols)) deallocate (param_cols)
+    if (allocated(parse_str)) deallocate (parse_str)
+    !
+    ! -- return
+    return
+  end subroutine idt_parse_rectype
+
+  !> @brief return input definition type datatype
+  !<
+  function idt_datatype(idt) result(datatype)
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    type(InputParamDefinitionType), pointer, intent(in) :: idt
+    ! -- result
+    character(len=LINELENGTH) :: datatype
+    !
+    if (idt%datatype(1:9) == 'KEYSTRING') then
+      datatype = 'KEYSTRING'
+    else if (idt%datatype(1:8) == 'RECARRAY') then
+      datatype = 'RECARRAY'
+    else if (idt%datatype(1:6) == 'RECORD') then
+      datatype = 'RECORD'
+    else
+      datatype = idt%datatype
+    end if
+    !
+    ! -- return
+    return
+  end function idt_datatype
 
   !> @brief Return parameter definition
   !<
@@ -38,7 +110,7 @@ contains
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
     !
-    idt => null()
+    nullify (idt)
     do i = 1, size(input_definition_types)
       tmp_ptr => input_definition_types(i)
       if (tmp_ptr%component_type == component_type .and. &
@@ -76,7 +148,7 @@ contains
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
     !
-    idt => null()
+    nullify (idt)
     do i = 1, size(input_definition_types)
       tmp_ptr => input_definition_types(i)
       if (tmp_ptr%component_type == component_type .and. &
@@ -134,7 +206,7 @@ contains
       ! -- match for definition to split
       if (tmp_ptr%component_type == component_type .and. &
           tmp_ptr%subcomponent_type == subcomponent_type .and. &
-          tmp_ptr%datatype(1:6) == 'RECORD') then
+          idt_datatype(tmp_ptr) == 'RECORD') then
         !
         ! -- set split string
         parse_str = trim(input_definition_types(i)%datatype)//' '
@@ -145,7 +217,6 @@ contains
         ! -- check for match and manage memory
         if (nwords >= 2) then
           if (words(1) == 'RECORD' .and. words(2) == tagname) then
-            if (allocated(parse_str)) deallocate (parse_str)
             exit
           end if
         end if
