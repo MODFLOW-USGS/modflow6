@@ -71,17 +71,17 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 13
+      FC_V: 13
     steps:
 
       - name: Checkout modflow6
         uses: actions/checkout@v4
       
-      - name: Setup gfortran ${{ env.GCC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.FC_V }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -111,7 +111,7 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC: 13
+      FC_V: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -124,11 +124,11 @@ jobs:
           repository: fortran-lang/test-drive
           path: test-drive
 
-      - name: Setup GNU Fortran ${{ env.GCC }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC }}
+          version: ${{ env.FC_V }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -173,17 +173,17 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode" --keep-failed temp
+            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode" --keep-failed .failed
           else
-            pytest -v -n auto --durations 0 -S --keep-failed temp
+            pytest -v -n auto --durations 0 -S --keep-failed .failed
           fi
 
-      - name: Upload test artifacts
+      - name: Upload failed test output
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: smoke_test_output
-          path: modflow6/autotest/temp
+          name: failed-smoke-${{ runner.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
 
   test_gfortran:
     name: Test gnu fortran
@@ -201,7 +201,7 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC: 13
+      FC_V: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -220,11 +220,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup GNU Fortran ${{ env.GCC }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC }}
+          version: ${{ env.FC_V }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -259,8 +259,7 @@ jobs:
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          pytest -v --durations 0 get_exes.py
+        run: pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
         working-directory: modflow6/autotest
@@ -268,17 +267,17 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed temp
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
           else
-            pytest -v -n auto --durations 0 -m "not large" --keep-failed temp
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
           fi
       
-      - name: Upload test artifacts
+      - name: Upload failed test output
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: gfortran_test_output
-          path: modflow6/autotest/temp
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
       
       - name: Checkout usgslatex
         if: runner.os == 'Linux'
@@ -315,14 +314,13 @@ jobs:
       - build
       - smoke_test
     runs-on: ${{ matrix.os }}
+    env:
+      FC: intel-classic
+      FC_V: "2021.7"
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7}
-          - {os: macos-12, compiler: intel-classic, version: 2021.7}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.7}
-
+        os: [ubuntu-22.04, macos-12, windows-2022]
     defaults:
       run:
         shell: bash -l {0}
@@ -349,11 +347,11 @@ jobs:
           cache-environment: true
           cache-downloads: true
 
-      - name: Setup Intel Fortran
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
-          compiler: ${{ matrix.compiler }}
-          version: ${{ matrix.version }}
+          compiler: ${{ env.FC }}
+          version: ${{ env.FC_V }}
 
       - name: Update version files
         working-directory: modflow6/distribution
@@ -390,17 +388,17 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed temp
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
           else
-            pytest -v -n auto --durations 0 -m "not large" --keep-failed temp
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
           fi
-
-      - name: Upload test artifacts
+      
+      - name: Upload failed test output
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: intel_test_output
-          path: modflow6/autotest/temp
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
 
       - name: Test scripts
         working-directory: modflow6/distribution
@@ -424,7 +422,7 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      FC_V: 12
     steps:
 
       - name: Checkout modflow6
@@ -451,11 +449,11 @@ jobs:
         with:
           mpi: msmpi
 
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.FC_V }}
 
       - name: Cache PETSc
         id: cache-petsc
@@ -554,12 +552,12 @@ jobs:
           branch="${{ github.ref_name }}"
           marker="not large"
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
-          pytest -v -n auto --parallel --durations 0 -m "$markers" --keep-failed temp
+          pytest -v -n auto --parallel --durations 0 -m "$markers" --keep-failed .failed
 
-      - name: Upload test artifacts
+      - name: Upload failed test output
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: parallel_test_output
-          path: modflow6/autotest/temp
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
           

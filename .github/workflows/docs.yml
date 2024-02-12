@@ -19,8 +19,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      GCC_V: 12
-
+      FC: gfortran
+      FC_V: 12
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -66,11 +66,11 @@ jobs:
         working-directory: modflow6/autotest
         run: pytest -v build_mfio_tex.py
 
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.FC_V }}
 
       - name: Cache modflow6 examples
         id: cache-examples
