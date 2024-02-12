@@ -1,7 +1,11 @@
 name: MODFLOW 6 large models
 on:
+  # run at 6 AM UTC every day
   schedule:
-    - cron: '0 6 * * *' # run at 6 AM UTC every day
+    - cron: '0 6 * * *' 
+  # workflow_dispatch trigger to run tests via GitHub UI or CLI,
+  # see https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
+  workflow_dispatch:
 jobs:
   # caching only necessary on Windows
   cache_ifort:
@@ -61,7 +65,7 @@ jobs:
           cache-downloads: true
           cache-environment: true
 
-      - name: Setup compilers (${{ matrix.compiler }} ${{ matrix.version }})
+      - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
@@ -87,14 +91,6 @@ jobs:
           pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
 
-      - name: Add Micromamba Scripts dir to path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # add micromamba scripts dir to system path
-          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
       - name: Build modflow6
         working-directory: modflow6
         run: |
@@ -113,4 +109,11 @@ jobs:
 
       - name: Run tests
         working-directory: modflow6/autotest
-        run: pytest -v -n auto --durations 0 test_${{ matrix.repo }}.py
+        run: pytest -v -n auto --durations 0 test_${{ matrix.repo }}.py --keep-failed .failed
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.version }}
+          path: modflow6/autotest/.failed
