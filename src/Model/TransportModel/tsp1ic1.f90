@@ -48,6 +48,9 @@ contains
     !
     ! -- Give package access to the assigned labelsd based on dependent variable
     ic%depvartype = depvartype
+    !
+    ! -- Return
+    return
   end subroutine ic_cr
 
 end module TspIcModule

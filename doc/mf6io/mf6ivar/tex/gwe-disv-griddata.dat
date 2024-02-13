@@ -1,0 +1,8 @@
+BEGIN GRIDDATA
+  TOP
+    <top(ncpl)> -- READARRAY
+  BOTM [LAYERED]
+    <botm(ncpl, nlay)> -- READARRAY
+  [IDOMAIN [LAYERED]
+    <idomain(ncpl, nlay)> -- READARRAY]
+END GRIDDATA

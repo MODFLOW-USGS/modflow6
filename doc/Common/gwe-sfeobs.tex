@@ -1,0 +1,17 @@
+% general APT observations
+SFE & temperature & rno or boundname & -- & Reach temperature. If boundname is specified, boundname must be unique for each reach. \\
+SFE & flow-ja-face & rno or boundname & rno or -- & Energy flow between two reaches.  If a boundname is specified for ID1, then the result is the total energy flow for all reaches. If a boundname is specified for ID1 then ID2 is not used.\\
+SFE & storage & rno or boundname & -- & Simulated energy storage flow rate for a reach or group of reaches. \\
+SFE & constant & rno or boundname & -- & Simulated energy constant-flow rate for a reach or group of reaches. \\
+SFE & from-mvr & rno or boundname & -- & Simulated energy inflow into a reach or group of reaches from the MVE package. Energy inflow is calculated as the product of provider temperature and the mover flow rate. \\
+SFE & to-mvr & rno or boundname & -- & Energy outflow from a reach, or a group of reaches that is available for the MVR package. If boundname is not specified for ID, then the outflow available for the MVR package from a specific reach is observed. \\
+SFE & sfe & rno or boundname & -- & Energy flow rate for a reach or group of reaches and its aquifer connection(s). \\
+
+%observations specific to the stream energy transport package
+% rainfall evaporation runoff ext-inflow withdrawal outflow
+SFE & rainfall & rno or boundname & -- & Rainfall rate applied to a reach or group of reaches multiplied by the rainfall temperature. \\
+SFE & evaporation & rno or boundname & -- & Simulated evaporation rate from a reach or group of reaches multiplied by the latent heat of vaporization for determining the amount of energy lost from a reach. \\
+SFE & runoff & rno or boundname & -- & Runoff rate applied to a reach or group of reaches multiplied by the runoff temperature. \\
+SFE & ext-inflow & rno or boundname & -- & Energy inflow into a reach or group of reaches calculated as the external inflow rate multiplied by the inflow temperature. \\
+SFE & ext-outflow & rno or boundname & -- & External outflow from a reach or group of reaches to an external boundary. If boundname is not specified for ID, then the external outflow from a specific reach is observed. In this case, ID is the reach rno. \\
+SFE & strmbd-cond & rno or boundname & -- & Amount of heat conductively exchanged with the streambed material. 

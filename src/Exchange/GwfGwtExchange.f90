@@ -132,7 +132,7 @@ contains
     return
   end subroutine set_model_pointers
 
-  !> @brief Define GwfGwt Exchange object
+  !> @brief Define the GwfGwt Exchange object
   !<
   subroutine exg_df(this)
     ! -- modules

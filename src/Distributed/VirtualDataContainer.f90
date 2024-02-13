@@ -16,10 +16,13 @@ module VirtualDataContainerModule
   integer(I4B), public, parameter :: VDC_UNKNOWN_TYPE = 0
   integer(I4B), public, parameter :: VDC_GWFMODEL_TYPE = 1
   integer(I4B), public, parameter :: VDC_GWTMODEL_TYPE = 2
-  integer(I4B), public, parameter :: VDC_GWFEXG_TYPE = 3
-  integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 4
-  integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
-  integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
+  integer(I4B), public, parameter :: VDC_GWEMODEL_TYPE = 3
+  integer(I4B), public, parameter :: VDC_GWFEXG_TYPE = 4
+  integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 5
+  integer(I4B), public, parameter :: VDC_GWEEXG_TYPE = 6
+  integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 7
+  integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 8
+  integer(I4B), public, parameter :: VDC_GWEMVE_TYPE = 9
 
   !> @brief Wrapper for virtual data containers
   !!
@@ -449,10 +452,13 @@ contains
     if (cntr_type == VDC_UNKNOWN_TYPE) then; cntr_str = "unknown"
     else if (cntr_type == VDC_GWFMODEL_TYPE) then; cntr_str = "GWF Model"
     else if (cntr_type == VDC_GWTMODEL_TYPE) then; cntr_str = "GWT Model"
+    else if (cntr_type == VDC_GWEMODEL_TYPE) then; cntr_str = "GWE Model"
     else if (cntr_type == VDC_GWFEXG_TYPE) then; cntr_str = "GWF Exchange"
     else if (cntr_type == VDC_GWTEXG_TYPE) then; cntr_str = "GWT Exchange"
+    else if (cntr_type == VDC_GWEEXG_TYPE) then; cntr_str = "GWE Exchange"
     else if (cntr_type == VDC_GWFMVR_TYPE) then; cntr_str = "GWF Mover"
     else if (cntr_type == VDC_GWTMVT_TYPE) then; cntr_str = "GWT Mover"
+    else if (cntr_type == VDC_GWEMVE_TYPE) then; cntr_str = "GWE Mover"
     else; cntr_str = "Undefined"
     end if
 

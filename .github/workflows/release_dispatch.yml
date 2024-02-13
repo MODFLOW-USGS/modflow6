@@ -203,9 +203,7 @@ jobs:
           
           The release can be approved by merging this PR into `master`. Merging rather than squashing is necessary to preserve the commit history.
           
-          When this PR is merged, a final job will be triggered to:
-          1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
-          2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
+          When this PR is merged, a final job will be triggered to draft a tagged GitHub release, then upload assets (OS distributions and release notes).
           '
           gh pr create -B "master" -H "${{ github.ref }}" --title "Release $ver" --draft --body "$body"
 
@@ -240,82 +238,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # create draft release
-          ver=$(python distribution/update_version.py -g)
-          title="MODFLOW $ver"
+          version=$(python distribution/update_version.py -g)
+          title="MODFLOW $version"
+          citation=$(python distribution/update_version.py -c)
           notes='
-          This is the approved USGS MODFLOW '$ver' release.
+          This is the approved USGS MODFLOW '$version' release.
       
-          *Insert citation here*
+          '$citation'
       
           Visit the USGS "MODFLOW and Related Programs" site for information on MODFLOW 6 and related software: https://doi.org/10.5066/F76Q1VQV
           '
-          gh release create "$ver" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
-
-  reset:
-    name: Draft reset PR
-    # runs only after GitHub release post is published (promoted from draft to public)
-    # to bring release commits from master back into develop and reset IDEVELOPMODE=1.
-    if: github.event_name == 'release' && (inputs.reset == 'true' || inputs.reset == '')
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-
-      - name: Checkout modflow6
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/modflow6
-          path: modflow6
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Get release tag
-        uses: oprypin/find-latest-tag@v1
-        id: latest_tag
-        with:
-          repository: ${{ github.repository }}
-          releases-only: true
-
-      - name: Create pull request
-        working-directory: modflow6
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          # create reset branch from master
-          reset_branch="post-release-${{ steps.latest_tag.outputs.tag }}-reset"
-          git fetch origin
-          git checkout master
-          git switch -c $reset_branch
-
-          # configure git
-          git config core.sharedRepository true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # updating version numbers if enabled
-          if [[ ("${{ inputs.commit_version }}" == "true") || ("${{ inputs.commit_version }}" == "") ]]; then
-            ver="${{ steps.latest_tag.outputs.tag }}"
-            python distribution/update_version.py -v "$ver"
-            git add -A
-            git commit -m "ci(release): update version to $ver, reset IDEVELOPMODE to 1"
-          else
-            # in either case we at least need to reset IDEVELOPMODE to 1
-            python distribution/update_version.py
-            git add -A
-            git commit -m "ci(release): reset IDEVELOPMODE to 1"
-          fi
-          
-          # push reset branch
-          git push -u origin $reset_branch
-
-          # create PR into develop
-          body='
-          Reinitialize the `develop` branch following a successful release.
-          '
-          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body
+          gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest

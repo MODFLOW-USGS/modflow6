@@ -63,6 +63,7 @@ module TspFmiModule
     procedure :: read_options => gwtfmi_read_options
     procedure :: set_aptbudobj_pointer
     procedure :: read_packagedata => gwtfmi_read_packagedata
+    procedure :: set_active_status
 
   end type TspFmiType
 
@@ -148,10 +149,6 @@ contains
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: m
-    integer(I4B) :: ipos
-    real(DP) :: crewet, tflow, flownm
-    character(len=15) :: nodestr
     character(len=*), parameter :: fmtdry = &
      &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
      &WITH DRY CONCENTRATION = ', G13.5)"
@@ -186,59 +183,10 @@ contains
       end do
     end if
     !
-    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
-    do n = 1, this%dis%nodes
-      !
-      ! -- Calculate the ibound-like array that has 0 if saturation
-      !    is zero and 1 otherwise
-      if (this%gwfsat(n) > DZERO) then
-        this%ibdgwfsat0(n) = 1
-      else
-        this%ibdgwfsat0(n) = 0
-      end if
-      !
-      ! -- Check if active transport cell is inactive for flow
-      if (this%ibound(n) > 0) then
-        if (this%gwfhead(n) == DHDRY) then
-          ! -- transport cell should be made inactive
-          this%ibound(n) = 0
-          cnew(n) = DHDRY
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtdry) trim(nodestr), DHDRY
-        end if
-      end if
-      !
-      ! -- Convert dry transport cell to active if flow has rewet
-      if (cnew(n) == DHDRY) then
-        if (this%gwfhead(n) /= DHDRY) then
-          !
-          ! -- obtain weighted concentration
-          crewet = DZERO
-          tflow = DZERO
-          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-            m = this%dis%con%ja(ipos)
-            flownm = this%gwfflowja(ipos)
-            if (flownm > 0) then
-              if (this%ibound(m) /= 0) then
-                crewet = crewet + cnew(m) * flownm
-                tflow = tflow + this%gwfflowja(ipos)
-              end if
-            end if
-          end do
-          if (tflow > DZERO) then
-            crewet = crewet / tflow
-          else
-            crewet = DZERO
-          end if
-          !
-          ! -- cell is now wet
-          this%ibound(n) = 1
-          cnew(n) = crewet
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtrewet) trim(nodestr), crewet
-        end if
-      end if
-    end do
+    ! -- set inactive transport cell status
+    if (this%idryinactive /= 0) then
+      call this%set_active_status(cnew)
+    end if
     !
     ! -- Return
     return
@@ -258,6 +206,7 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, idiag, idiag_sln
+    real(DP) :: qcorr
     !
     ! -- Calculate the flow imbalance error and make a correction for it
     if (this%iflowerr /= 0) then
@@ -267,7 +216,9 @@ contains
       do n = 1, nodes
         idiag = this%dis%con%ia(n)
         idiag_sln = idxglo(idiag)
-        call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
+        !call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
+        qcorr = -this%gwfflowja(idiag) * this%eqnsclfac
+        call matrix_sln%add_value_pos(idiag_sln, qcorr)
       end do
     end if
     !
@@ -422,6 +373,7 @@ contains
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
     call mem_deallocate(this%nflowpack)
+    call mem_deallocate(this%idryinactive)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -488,6 +440,93 @@ contains
     ! -- return
     return
   end subroutine gwtfmi_allocate_arrays
+
+  !> @brief Set gwt transport cell status
+  !!
+  !! Dry GWF cells are treated differently by GWT and GWE.  Transport does not
+  !! occur in deactivated GWF cells; however, GWE still simulates conduction
+  !! through dry cells.
+  !<
+  subroutine set_active_status(this, cnew)
+    ! -- modules
+    use ConstantsModule, only: DHDRY
+    ! -- dummy
+    class(TspFmiType) :: this
+    real(DP), intent(inout), dimension(:) :: cnew
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    real(DP) :: crewet, tflow, flownm
+    character(len=15) :: nodestr
+    ! -- formats
+    character(len=*), parameter :: fmtoutmsg1 = &
+      "(1x,'WARNING: DRY CELL ENCOUNTERED AT ', a,'; RESET AS INACTIVE WITH &
+      &DRY ', a, '=', G13.5)"
+    character(len=*), parameter :: fmtoutmsg2 = &
+      &"(1x,'DRY CELL REACTIVATED AT', a, 'WITH STARTING', a, '=', G13.5)"
+    !
+    do n = 1, this%dis%nodes
+      ! -- Calculate the ibound-like array that has 0 if saturation
+      !    is zero and 1 otherwise
+      if (this%gwfsat(n) > DZERO) then
+        this%ibdgwfsat0(n) = 1
+      else
+        this%ibdgwfsat0(n) = 0
+      end if
+      !
+      ! -- Check if active transport cell is inactive for flow
+      if (this%ibound(n) > 0) then
+        if (this%gwfhead(n) == DHDRY) then
+          ! -- transport cell should be made inactive
+          this%ibound(n) = 0
+          cnew(n) = DHDRY
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, fmtoutmsg1) &
+            trim(nodestr), trim(adjustl(this%depvartype)), DHDRY
+        end if
+      end if
+    end do
+    !
+    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
+    do n = 1, this%dis%nodes
+      !
+      ! -- Convert dry transport cell to active if flow has rewet
+      if (cnew(n) == DHDRY) then
+        if (this%gwfhead(n) /= DHDRY) then
+          !
+          ! -- obtain weighted concentration/temperature
+          crewet = DZERO
+          tflow = DZERO
+          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+            m = this%dis%con%ja(ipos)
+            flownm = this%gwfflowja(ipos)
+            if (flownm > 0) then
+              if (this%ibound(m) /= 0) then
+                crewet = crewet + cnew(m) * flownm ! kluge note: apparently no need to multiply flows by eqnsclfac
+                tflow = tflow + this%gwfflowja(ipos) !             since it will divide out below anyway
+              end if
+            end if
+          end do
+          if (tflow > DZERO) then
+            crewet = crewet / tflow
+          else
+            crewet = DZERO
+          end if
+          !
+          ! -- cell is now wet
+          this%ibound(n) = 1
+          cnew(n) = crewet
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, fmtoutmsg2) &
+            trim(nodestr), trim(adjustl(this%depvartype)), crewet
+        end if
+      end if
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine set_active_status
 
   !> @brief Calculate the previous saturation level
   !!

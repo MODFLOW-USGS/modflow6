@@ -268,7 +268,8 @@ contains
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use SimVariablesModule, only: iout
-    use IdmLoadModule, only: simnam_load, load_models, load_exchanges
+    use IdmLoadModule, only: simnam_load, simtdis_load, &
+                             load_models, load_exchanges
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
@@ -281,6 +282,9 @@ contains
     !
     ! -- load simnam input context
     call simnam_load(iparamlog)
+    !
+    ! -- load tdis to input context
+    call simtdis_load()
     !
     ! -- allocate model load mask
     input_mempath = create_mem_path(component='SIM', context=idm_context)

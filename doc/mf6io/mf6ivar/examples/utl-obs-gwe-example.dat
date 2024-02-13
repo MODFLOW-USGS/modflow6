@@ -1,0 +1,18 @@
+BEGIN OPTIONS
+  DIGITS 10
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.gwe.temperature.csv
+# obsname   obstype         ID
+  L1        TEMPERATURE     1 51 51 # temps at lay 1 row 51 col 51
+  L2        TEMPERATURE     2 51 51 # temps at lay 2 row 51 col 51
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.gwe.eflow.csv
+# obsname    obstype         ID         ID2
+  L1rfflow   FLOW-JA-FACE    1 51 51    1 51 52
+  L2rfflow   FLOW-JA-FACE    2 51 51    2 51 52
+  L1-L2flow  FLOW-JA-FACE    1 51 51    2 51 51
+END CONTINUOUS
+

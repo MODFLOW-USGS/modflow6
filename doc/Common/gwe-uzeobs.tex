@@ -1,0 +1,14 @@
+% general APT observations
+UZE & temperature & uzeno or boundname & -- & uze cell temperature. If boundname is specified, boundname must be unique for each uze cell. \\
+UZE & flow-ja-face & uzeno or boundname & uzeno or -- & Energy flow between two uze cells.  If a boundname is specified for ID1, then the result is the total energy flow for all uze cells. If a boundname is specified for ID1 then ID2 is not used.\\
+UZE & storage & uzeno or boundname & -- & Simulated energy storage flow rate for a uze cell or group of uze cells. \\
+UZE & constant & uzeno or boundname & -- & Simulated energy constant-flow rate for a uze cell or a group of uze cells. \\
+UZE & from-mvr & uzeno or boundname & -- & Simulated energy inflow into a uze cell or group of uze cells from the MVE package. Energy inflow is calculated as the product of provider temperature and the mover flow rate. \\
+UZE & uze & uzeno or boundname & -- & Energy flow rate for a uze cell or group of uze cells and its aquifer connection(s). \\
+
+%observations specific to the uze package
+% infiltration rej-inf uzet rej-inf-to-mvr
+UZE & infiltration & uzeno or boundname & -- & Infiltration rate applied to a uze cell or group of uze cells multiplied by the infiltration temperature. \\
+UZE & rej-inf & uzeno or boundname & -- & Rejected infiltration rate applied to a uze cell or group of uze cells multiplied by the infiltration temperature. \\
+UZE & uzet & uzeno or boundname & -- & Unsaturated zone evapotranspiration rate applied to a uze cell or group of uze cells multiplied by the uze cell temperature. \\
+UZE & rej-inf-to-mvr & uzeno or boundname & -- & Rejected infiltration rate applied to a uze cell or group of uze cells multiplied by the infiltration temperature that is sent to the mover package. \\

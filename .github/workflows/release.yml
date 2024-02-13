@@ -54,8 +54,6 @@ on:
       distname:
         description: 'Distribution name used for release'
         value: ${{ jobs.build.outputs.distname }}
-env:
-  FC: ifort
 jobs:
   build:
     name: Build binaries (${{ matrix.os }})
@@ -199,7 +197,14 @@ jobs:
           if ("${{ inputs.developmode }}" -eq "false") {
             $markers="$markers and not developmode"
           }
-          pytest -v -n auto --durations 0 -m "$markers"
+          pytest -v -n auto --durations 0 -m "$markers" --keep-failed .failed
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ inputs.compiler_toolchain }}-${{ inputs.compiler_version }}
+          path: modflow6/autotest/.failed
       
       # steps below run only on Linux to test distribution procedures, e.g.
       # compiling binaries, building documentation

@@ -16,6 +16,7 @@ module TspSsmModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
+  use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixBaseModule
@@ -87,7 +88,7 @@ contains
     integer(I4B), intent(in) :: iout !< fortran unit for output
     type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
-    character(len=LENVARNAME), intent(in) :: depvartype
+    character(len=LENVARNAME), intent(in) :: depvartype !< dependent variable type ('concentration' or 'temperature')
     !
     ! -- Create the object
     allocate (ssmobj)

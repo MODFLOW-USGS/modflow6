@@ -50,14 +50,8 @@ contains
   subroutine simulation_da()
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
-    use SimVariablesModule, only: idm_context
     ! -- local
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Deallocate input memory
-    call memorylist_remove('SIM', 'NAM', idm_context)
-    call memorylist_remove(component='SIM', context=idm_context)
     !
     ! -- variables
     deallocate (model_names)
@@ -183,11 +177,13 @@ contains
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
+    character(len=LENMEMPATH) :: tdis_input_mempath
     character(len=:), pointer :: tdis6
     logical :: terminate = .true.
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    tdis_input_mempath = create_mem_path('SIM', 'TDIS', idm_context)
     !
     write (iout, '(/1x,a)') 'READING SIMULATION TIMING'
     !
@@ -196,7 +192,7 @@ contains
     !
     ! -- create timing
     if (tdis6 /= '') then
-      call tdis_cr(tdis6)
+      call tdis_cr(tdis6, tdis_input_mempath)
     else
       call store_error('TIMING block variable TDIS6 is unset'// &
                        ' in simulation control input.', terminate)
@@ -217,9 +213,11 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
+    use GweModule, only: gwe_cr
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     use VirtualGwfModelModule, only: add_virtual_gwf_model
     use VirtualGwtModelModule, only: add_virtual_gwt_model
+    use VirtualGweModelModule, only: add_virtual_gwe_model
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- locals
@@ -296,6 +294,16 @@ contains
           model_loc_idx(n) = im
         end if
         call add_virtual_gwt_model(n, model_names(n), num_model)
+      case ('GWE6')
+        if (model_ranks(n) == proc_id) then
+          im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
+            n, ' will be created'
+          call gwe_cr(fname, n, model_names(n))
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          model_loc_idx(n) = im
+        end if
+        call add_virtual_gwe_model(n, model_names(n), num_model)
       case default
         write (errmsg, '(a,a)') &
           'Unknown simulation model type: ', trim(model_type)
@@ -326,9 +334,12 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
+    use GwfGweExchangeModule, only: gwfgwe_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
+    use GweGweExchangeModule, only: gweexchange_create
     use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
     use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
+    use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -419,6 +430,10 @@ contains
         if (both_local) then
           call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
         end if
+      case ('GWF6-GWE6')
+        if (both_local) then
+          call gwfgwe_cr(fname, exg_id, m1_id, m2_id)
+        end if
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
         if (.not. both_remote) then
@@ -426,6 +441,13 @@ contains
                                   exg_mempath)
         end if
         call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
+      case ('GWE6-GWE6')
+        write (exg_name, '(a,i0)') 'GWE-GWE_', exg_id
+        if (.not. both_remote) then
+          call gweexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
+                                  exg_mempath)
+        end if
+        call add_virtual_gwe_exchange(exg_name, exg_id, m1_id, m2_id)
       case default
         write (errmsg, '(a,a)') &
           'Unknown simulation exchange type: ', trim(exgtype)

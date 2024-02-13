@@ -1,0 +1,11 @@
+BEGIN OPTIONS
+  DIGITS 7
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.esl.obs.csv
+# obsname           obstype    ID
+  esl_7_102_17      ESL        7  102  17
+  esl_7_102_17      ESL        CW_1
+  esources          ESL        esources
+END CONTINUOUS

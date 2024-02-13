@@ -134,10 +134,13 @@ contains
   !> @brief Constant concentration/temperature read and prepare (rp) routine
   !<
   subroutine cnc_rp(this)
+    ! -- modules
     use SimModule, only: store_error
     use InputOutputModule, only: lowcase
     implicit none
+    ! -- dummy
     class(GwtCncType), intent(inout) :: this
+    ! -- local
     integer(I4B) :: i, node, ibd, ierr
     character(len=30) :: nodestr
     character(len=LENVARNAME) :: dvtype

@@ -1,0 +1,5 @@
+BEGIN PACKAGES
+  <ftype> <fname> [<pname>]
+  <ftype> <fname> [<pname>]
+  ...
+END PACKAGES
