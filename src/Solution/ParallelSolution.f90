@@ -43,6 +43,7 @@ contains
     abs_max_dvc = abs(max_dvc)
     call MPI_Allreduce(abs_max_dvc, global_max_dvc, 1, MPI_DOUBLE_PRECISION, &
                        MPI_MAX, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
     if (global_max_dvc <= this%dvclose) then
       has_converged = .true.
     end if
@@ -68,6 +69,7 @@ contains
 
     call MPI_Allreduce(icnvg_local, icnvg_global, 1, MPI_INTEGER, &
                        MPI_MIN, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
   end function par_package_convergence
 
@@ -82,6 +84,7 @@ contains
     mpi_world => get_mpi_world()
     call MPI_Allreduce(inewtonur, ivalue, 1, MPI_INTEGER, &
                        MPI_MAX, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
   end function par_sync_newtonur_flag
 
@@ -108,6 +111,7 @@ contains
 
     call MPI_Allreduce(icnvg_local, icnvg_global, 1, MPI_INTEGER, &
                        MPI_MIN, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
     if (icnvg_global == 1) has_converged = .true.
 
   end function par_nur_has_converged
@@ -131,6 +135,7 @@ contains
     ! now reduce
     call MPI_Allreduce(ptcf_loc, ptcf_glo_max, 1, MPI_DOUBLE_PRECISION, &
                        MPI_MAX, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
     iptc = 0
     ptcf = DZERO
@@ -161,8 +166,10 @@ contains
     ! first reduce largest change over all processes
     call MPI_Allreduce(bigch, dvc_global_max, 1, MPI_DOUBLE_PRECISION, &
                        MPI_MAX, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
     call MPI_Allreduce(bigch, dvc_global_min, 1, MPI_DOUBLE_PRECISION, &
                        MPI_MIN, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
     if (abs(dvc_global_min) > abs(dvc_global_max)) then
       dvc_global_max = dvc_global_min
@@ -192,6 +199,7 @@ contains
 
     call MPI_Allreduce(btflag_local, btflag, 1, MPI_INTEGER, &
                        MPI_MAX, mpi_world%comm, ierr)
+    call CHECK_MPI(ierr)
 
   end subroutine par_backtracking_xupdate
 

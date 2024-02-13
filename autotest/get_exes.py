@@ -97,7 +97,9 @@ def test_rebuild_release(rebuilt_bin_path: Path):
 def test_get_executables(downloaded_bin_path: Path):
     print(f"Installing MODFLOW-related executables to: {downloaded_bin_path}")
     downloaded_bin_path.mkdir(exist_ok=True, parents=True)
-    flopy.utils.get_modflow(str(downloaded_bin_path))
+    # todo: remove release_id workaround when double-precision comparison issues fixed
+    # https://github.com/MODFLOW-USGS/modflow6/pull/1612
+    flopy.utils.get_modflow(str(downloaded_bin_path), release_id="14.0")
 
 
 if __name__ == "__main__":

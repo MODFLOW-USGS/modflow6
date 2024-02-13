@@ -923,7 +923,7 @@ contains
                       'of 0 0 0 should be specified for unconnected reaches'
             !
             ! -- create deprecation warning
-            call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.5.0', &
+            call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.4.3', &
                                      warnmsg, this%parser%GetUnit())
           else
 

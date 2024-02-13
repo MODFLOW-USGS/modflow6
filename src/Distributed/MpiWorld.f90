@@ -6,6 +6,7 @@ module MpiWorldModule
   private
 
   public :: get_mpi_world
+  public :: CHECK_MPI
 
   type, public :: MpiWorldType
     integer(I4B) :: mpi_rank !< the id for this process
@@ -107,5 +108,22 @@ contains
     end if
 
   end subroutine mpiw_destroy
+
+  !> @brief Check the MPI error code, report, and
+  !< terminate when not MPI_SUCCESS
+  subroutine CHECK_MPI(mpi_error_code)
+    use SimModule, only: store_error
+    integer :: mpi_error_code
+    ! local
+    character(len=1024) :: mpi_err_msg
+    integer :: err_len
+    integer :: ierr
+
+    if (mpi_error_code /= MPI_SUCCESS) then
+      call MPI_Error_string(mpi_error_code, mpi_err_msg, err_len, ierr)
+      call store_error("Internal error: "//trim(mpi_err_msg), terminate=.true.)
+    end if
+
+  end subroutine CHECK_MPI
 
 end module MpiWorldModule

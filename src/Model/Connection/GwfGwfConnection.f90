@@ -13,7 +13,7 @@ module GwfGwfConnectionModule
   use DisConnExchangeModule
   use GwfGwfExchangeModule, only: GwfExchangeType, GetGwfExchangeFromList, &
                                   CastAsGwfExchange
-  use GwfNpfModule, only: GwfNpfType, hcond, vcond
+  use GwfNpfModule, only: GwfNpfType
   use GwfBuyModule, only: GwfBuyType
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
