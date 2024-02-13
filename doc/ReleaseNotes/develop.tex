@@ -42,7 +42,7 @@
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 		\item Refactoring of the Water Mover package in version 6.4.3 introduced a reduction in performance for GWF models with a large number of movers.  The program was corrected so that performance is similar to previous versions.
-	%	\item xxx
+		\item Deprecation warnings in the Lake and Streamflow Routing Packages, which can be issued by MODFLOW 6 at run time, incorrectly listed the version number as 6.5.0.  The warning was modified to show 6.4.3 as the version number for the deprecation.
 	%	\item xxx
 	\end{itemize}
 
@@ -59,4 +59,11 @@
 	%	\item xxx
 	%	\item xxx
 	%\end{itemize}
+
+	\underline{PARALLEL}
+	\begin{itemize}
+		\item A memory leak was identified in the way MPI messages were constructed and cached.  The memory leak caused problems for large models with many time steps.  The message construction and caching was fixed and tests confirm that the memory leak is no longer present.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
 
