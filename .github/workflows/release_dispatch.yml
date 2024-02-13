@@ -203,9 +203,7 @@ jobs:
           
           The release can be approved by merging this PR into `master`. Merging rather than squashing is necessary to preserve the commit history.
           
-          When this PR is merged, a final job will be triggered to:
-          1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
-          2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
+          When this PR is merged, a final job will be triggered to draft a tagged GitHub release, then upload assets (OS distributions and release notes).
           '
           gh pr create -B "master" -H "${{ github.ref }}" --title "Release $ver" --draft --body "$body"
 
