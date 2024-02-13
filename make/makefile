@@ -1,41 +1,41 @@
-# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Model
-SOURCEDIR5=../src/Model/Connection
-SOURCEDIR6=../src/Model/Geometry
-SOURCEDIR7=../src/Model/GroundWaterEnergy
-SOURCEDIR8=../src/Model/GroundWaterFlow
-SOURCEDIR9=../src/Model/GroundWaterTransport
-SOURCEDIR10=../src/Model/ModelUtilities
-SOURCEDIR11=../src/Model/TransportModel
-SOURCEDIR12=../src/Solution
-SOURCEDIR13=../src/Solution/LinearMethods
-SOURCEDIR14=../src/Solution/PETSc
-SOURCEDIR15=../src/Timing
-SOURCEDIR16=../src/Utilities
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/Idm
-SOURCEDIR19=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR20=../src/Utilities/Idm/selector
-SOURCEDIR21=../src/Utilities/Libraries
-SOURCEDIR22=../src/Utilities/Libraries/blas
-SOURCEDIR23=../src/Utilities/Libraries/daglib
-SOURCEDIR24=../src/Utilities/Libraries/rcm
-SOURCEDIR25=../src/Utilities/Libraries/sparsekit
-SOURCEDIR26=../src/Utilities/Libraries/sparskit2
-SOURCEDIR27=../src/Utilities/Matrix
-SOURCEDIR28=../src/Utilities/Memory
-SOURCEDIR29=../src/Utilities/Observation
-SOURCEDIR30=../src/Utilities/OutputControl
-SOURCEDIR31=../src/Utilities/TimeSeries
-SOURCEDIR32=../src/Utilities/Vector
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Distributed
+SOURCEDIR4=../src/Solution
+SOURCEDIR5=../src/Solution/LinearMethods
+SOURCEDIR6=../src/Solution/PETSc
+SOURCEDIR7=../src/Timing
+SOURCEDIR8=../src/Utilities
+SOURCEDIR9=../src/Utilities/Idm
+SOURCEDIR10=../src/Utilities/Idm/selector
+SOURCEDIR11=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR12=../src/Utilities/TimeSeries
+SOURCEDIR13=../src/Utilities/Memory
+SOURCEDIR14=../src/Utilities/OutputControl
+SOURCEDIR15=../src/Utilities/ArrayRead
+SOURCEDIR16=../src/Utilities/Libraries
+SOURCEDIR17=../src/Utilities/Libraries/rcm
+SOURCEDIR18=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/sparskit2
+SOURCEDIR20=../src/Utilities/Libraries/daglib
+SOURCEDIR21=../src/Utilities/Libraries/sparsekit
+SOURCEDIR22=../src/Utilities/Vector
+SOURCEDIR23=../src/Utilities/Matrix
+SOURCEDIR24=../src/Utilities/Observation
+SOURCEDIR25=../src/Model
+SOURCEDIR26=../src/Model/Connection
+SOURCEDIR27=../src/Model/GroundWaterTransport
+SOURCEDIR28=../src/Model/ModelUtilities
+SOURCEDIR29=../src/Model/GroundWaterFlow
+SOURCEDIR30=../src/Model/TransportModel
+SOURCEDIR31=../src/Model/Geometry
+SOURCEDIR32=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
