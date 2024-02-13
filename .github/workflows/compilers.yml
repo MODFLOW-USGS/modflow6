@@ -1,12 +1,5 @@
 name: MODFLOW 6 compiler checks
 on:
-  push:
-    branches:
-      - v[0-9]+.[0-9]+.[0-9]+*
-      - master
-  pull_request:
-    branches:
-      - master
   schedule:
     - cron: 0 0 * * 0 # 12am utc every sunday
   # workflow_dispatch trigger to start release via GitHub UI or CLI, see
