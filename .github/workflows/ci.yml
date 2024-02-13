@@ -415,7 +415,6 @@ jobs:
   parallel_test:
     name: Parallel testing
     needs:
-      - lint
       - build
       - smoke_test
     runs-on: ${{ matrix.os }}
@@ -522,16 +521,23 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          create-args: >-
+            netcdf-fortran
           init-shell: >-
             bash
             powershell
           cache-environment: true
           cache-downloads: true
 
+      - name: Update PKG_CONFIG_PATH
+        working-directory: modflow6
+        run: |
+          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+          meson setup builddir -Ddebug=false -Dextended=true --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
@@ -549,6 +555,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
+
+      - name: Confirm netcdf license logged
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          pytest test_gwf_chd01.py --keep temp
+          if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[chd01]0/mfsim.lst
+          then
+            echo "NetCDF license logging confirmed."
+          else
+            echo "NetCDF license logging not found."
+            exit 1
+          fi
 
       - name: Test programs (parallel)
         working-directory: modflow6/autotest
