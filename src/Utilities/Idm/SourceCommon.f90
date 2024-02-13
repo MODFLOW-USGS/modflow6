@@ -8,8 +8,8 @@ module SourceCommonModule
 
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
-  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
-                             LENPACKAGETYPE, LENPACKAGENAME, LENCOMPONENTNAME
+  use ConstantsModule, only: LINELENGTH, LENPACKAGETYPE, LENPACKAGENAME, &
+                             LENCOMPONENTNAME
   use SimModule, only: store_error, store_error_filename
 
   implicit none
@@ -38,12 +38,14 @@ contains
     character(len=*), intent(in) :: sourcename
     ! -- result
     character(len=LENPACKAGENAME) :: sourcetype
-    ! -- locals
+    ! -- local
+    character(len=LENPACKAGENAME) :: ext
     !
-    sourcetype = sourcename
-    call upcase(sourcetype)
+    ext = file_ext(sourcename)
     !
-    select case (sourcetype)
+    select case (ext)
+    case ('nc')
+      sourcetype = 'NETCDF4'
     case default
       sourcetype = 'MF6FILE'
     end select
@@ -168,7 +170,7 @@ contains
 
   !> @brief input file extension
   !!
-  !! Return the input file extension, or an empty string if
+  !! Return a file extension, or an empty string if
   !! not identified.
   !!
   !<
@@ -180,24 +182,18 @@ contains
     ! -- return
     character(len=LENPACKAGETYPE) :: ext
     ! -- local
-    integer(I4B) :: i, istart, istop
+    integer(I4B) :: idx
     !
     ! -- initialize
     ext = ''
-    istart = 0
-    istop = len_trim(filename)
+    idx = 0
     !
     ! -- identify '.' character position from back of string
-    do i = istop, 1, -1
-      if (filename(i:i) == '.') then
-        istart = i
-        exit
-      end if
-    end do
+    idx = index(filename, '.', back=.true.)
     !
     !
-    if (istart > 0) then
-      ext = filename(istart + 1:istop)
+    if (idx > 0) then
+      ext = filename(idx + 1:len_trim(filename))
     end if
     !
     ! -- return
@@ -340,8 +336,11 @@ contains
   subroutine mem_allocate_naux(mempath)
     use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     character(len=*), intent(in) :: mempath
-    integer(I4B), pointer :: naux => null()
+    integer(I4B), pointer :: naux
     integer(I4B) :: isize
+    !
+    ! -- initialize
+    nullify (naux)
     !
     ! -- allocate optional input scalars locally
     call get_isize('NAUX', mempath, isize)

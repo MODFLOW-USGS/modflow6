@@ -18,6 +18,7 @@ module ModelPackageInputsModule
   implicit none
   private
   public :: ModelPackageInputsType
+  public :: LoadablePackageType
 
   !> @brief derived type for loadable package type
   !!

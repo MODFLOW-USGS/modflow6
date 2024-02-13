@@ -20,6 +20,7 @@ module SourceLoadModule
   public :: open_source_file
   public :: load_modelnam, load_simnam, load_simtdis
   public :: remote_model_ndim
+  public :: create_context
 
 contains
 
@@ -54,7 +55,7 @@ contains
     source_type = package_source_type(input_fname)
     !
     ! -- set source loader for model package
-    loader => package_loader(source_type)
+    loader => package_loader(source_type, component_fname)
     !
     ! -- initialize loader
     call loader%init(mf6_input, component_name, component_fname, input_fname)
@@ -65,11 +66,18 @@ contains
 
   !> @brief allocate source model package static loader
   !<
-  function package_loader(source_type) result(loader)
+  function package_loader(source_type, modelfname) result(loader)
     use InputLoadTypeModule, only: StaticPkgLoadBaseType
     use IdmMf6FileModule, only: Mf6FileStaticPkgLoadType
+#if defined(__WITH_NETCDF__)
+    use IdmNCFileModule, only: NCStaticPkgLoadType
+#endif
     character(len=*), intent(inout) :: source_type
+    character(len=*), intent(in) :: modelfname
     class(Mf6FileStaticPkgLoadType), pointer :: mf6file_loader
+#if defined(__WITH_NETCDF__)
+    class(NCStaticPkgLoadType), pointer :: nc_loader
+#endif
     class(StaticPkgLoadBaseType), pointer :: loader
     !
     ! -- initialize
@@ -80,11 +88,23 @@ contains
     case ('MF6FILE')
       allocate (mf6file_loader)
       loader => mf6file_loader
+    case ('NETCDF4')
+#if defined(__WITH_NETCDF__)
+      allocate (nc_loader)
+      loader => nc_loader
+#else
+      write (errmsg, '(a)') &
+        'Cannot load package inputs. NetCDF4 input file provided &
+        &but NetCDF4 libraries not available.'
+      call store_error(errmsg)
+      call store_error_filename(modelfname)
+#endif
     case default
       write (errmsg, '(a)') &
         'Simulation package input source type "'//trim(source_type)// &
         '" not currently supported.'
-      call store_error(errmsg, .true.)
+      call store_error(errmsg)
+      call store_error_filename(modelfname)
     end select
     !
     ! -- return
@@ -110,6 +130,16 @@ contains
     select case (source_type)
     case ('MF6FILE')
       fd = open_mf6file(pkgtype, filename, modelfname, iout)
+    case ('NETCDF4')
+#if defined(__WITH_NETCDF__)
+      ! -- no-op, don't provide ncid fd to a package
+#else
+      write (errmsg, '(a)') &
+        'Cannot open source input file. NetCDF4 input file provided &
+        &but NetCDF4 libraries not available.'
+      call store_error(errmsg)
+      call store_error_filename(modelfname)
+#endif
     case default
     end select
     !
@@ -132,12 +162,25 @@ contains
     source_type = package_source_type(mfname)
     !
     ! -- create description of input
-    mf6_input = getModflowInput(mtype, idm_component_type(mtype), 'NAM', &
-                                mname, 'NAM', mfname)
+    mf6_input = getModflowInput(mtype, idm_component_type(mtype), &
+                                'NAM', mname, 'NAM')
     !
     select case (source_type)
     case ('MF6FILE')
       call input_load(mfname, mf6_input, simfile, iout)
+    case ('NETCDF4')
+#if defined(__WITH_NETCDF__)
+      write (errmsg, '(a)') &
+        'NetCDF4 Model name files not currently supported.'
+      call store_error(errmsg)
+      call store_error_filename(simfile)
+#else
+      write (errmsg, '(a)') &
+        'Cannot load name file. NetCDF4 input file provided &
+        &but but NetCDF4 libraries not available.'
+      call store_error(errmsg)
+      call store_error_filename(simfile)
+#endif
     case default
     end select
     !
@@ -311,5 +354,179 @@ contains
     ! -- return
     return
   end function remote_model_ndim
+
+  !> @brief create model context
+  !<
+  subroutine create_context(modeltype, component_type, modelname, &
+                            modelfname, pkglist, iout)
+    ! -- modules
+    use ModelPackageInputsModule, only: LoadablePackageType
+    ! -- drummy
+    character(len=*), intent(in) :: modeltype
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
+    type(LoadablePackageType), dimension(:), &
+      allocatable, intent(in) :: pkglist
+    integer(I4B), intent(in) :: iout
+    ! -- local
+    !
+    ! -- create netcdf4 context
+    call create_nc_context(modeltype, component_type, modelname, &
+                           modelfname, pkglist, iout)
+    !
+    ! -- return
+    return
+  end subroutine create_context
+
+  !> @brief create model netcdf4 context
+  !<
+  subroutine create_nc_context(modeltype, component_type, modelname, &
+                               modelfname, pkglist, iout)
+    use ModelPackageInputsModule, only: LoadablePackageType
+    use NCModelInputsModule, only: NCModelInputsType
+    use InputModelContextModule, only: AddModelNCContext
+#if defined(__WITH_NETCDF__)
+    use NCContextBuildModule, only: create_ncpkg_context
+    use IdmNCFileModule, only: open_ncfile
+#endif
+    ! -- drummy
+    character(len=*), intent(in) :: modeltype
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
+    type(LoadablePackageType), dimension(:), &
+      allocatable, intent(in) :: pkglist
+    integer(I4B), intent(in) :: iout
+    ! -- local
+    character(len=LINELENGTH) :: nc_fname
+    type(NCModelInputsType), pointer :: nc_context
+    integer(I4B) :: ncid
+    !
+    ! -- allocate context object
+    allocate (nc_context)
+    !
+    ! -- set model nc filename if provided
+    nc_fname = nc_filename(pkglist, modelfname)
+    !
+    if (nc_fname /= '') then
+#if defined(__WITH_NETCDF__)
+      !
+      ! -- open nc input file
+      ncid = open_ncfile(nc_fname, iout)
+      !
+      ! -- init model context object
+      call nc_context%init(modeltype, component_type, modelname, nc_fname, ncid)
+      !
+      ! -- add NETCDF4 packages to context
+      call set_nc_pkglist(component_type, modelfname, pkglist, &
+                          nc_context, nc_fname)
+      !
+      ! -- read the file and build the context
+      call create_ncpkg_context(nc_context, iout)
+      !
+#else
+      write (errmsg, '(a)') &
+        'Cannot load model packages. NetCDF4 input file &
+        &specified in model namefile options block but &
+        &NetCDF4 libraries are not available.'
+      call store_error(errmsg)
+      call store_error_filename(modelfname)
+#endif
+    else
+      !
+      ! -- initialize object
+      call nc_context%init(modeltype, component_type, modelname, '', 0)
+      !
+    end if
+    !
+    ! -- add context to model context list
+    call AddModelNCContext(modelname, modelfname, nc_context)
+    !
+    ! -- return
+    return
+  end subroutine create_nc_context
+
+  subroutine set_nc_pkglist(component_type, modelfname, pkglist, &
+                            nc_context, nc_fname)
+    use SourceCommonModule, only: package_source_type
+    use IdmDfnSelectorModule, only: idm_integrated
+    use ModelPackageInputsModule, only: LoadablePackageType
+    use NCModelInputsModule, only: NCModelInputsType
+    ! -- drummy
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: modelfname
+    type(LoadablePackageType), dimension(:), &
+      allocatable, intent(in) :: pkglist
+    type(NCModelInputsType), pointer, &
+      intent(inout) :: nc_context
+    character(len=*) :: nc_fname
+    ! -- local
+    integer(I4B) :: m, n
+    !
+    ! -- add NETCDF4 packages to context list
+    do n = 1, size(pkglist)
+      ! -- load package instances
+      do m = 1, pkglist(n)%pnum
+        !
+        if (package_source_type(pkglist(n)%filenames(m)) == 'NETCDF4') then
+          !
+          if (idm_integrated(component_type, pkglist(n)%subcomponent_type)) then
+            !
+            ! -- add pkg instance to context object
+            call nc_context%add(pkglist(n)%pkgtype, &
+                                pkglist(n)%subcomponent_type, &
+                                pkglist(n)%pkgnames(m))
+            !
+          else
+            errmsg = 'NetCDF4 is unsupported for package type "'// &
+                     trim(pkglist(n)%pkgtype)//'".'
+            call store_error(errmsg)
+            call store_error_filename(modelfname)
+          end if
+        end if
+      end do
+    end do
+    !
+    ! -- return
+    return
+  end subroutine set_nc_pkglist
+
+  !> @brief set model netcdf4 input filename
+  !<
+  function nc_filename(pkglist, modelfname) result(nc_fname)
+    use ModelPackageInputsModule, only: LoadablePackageType
+    use SourceCommonModule, only: package_source_type
+    ! -- drummy
+    type(LoadablePackageType), dimension(:), &
+      allocatable, intent(in) :: pkglist
+    character(len=*), intent(in) :: modelfname
+    ! -- local
+    character(len=LINELENGTH) :: nc_fname
+    integer(I4B) :: m, n
+    !
+    ! -- initialize
+    nc_fname = ''
+    !
+    ! -- verify single model nc file
+    do n = 1, size(pkglist)
+      do m = 1, pkglist(n)%pnum
+        if (package_source_type(pkglist(n)%filenames(m)) == 'NETCDF4') then
+          if (nc_fname == '') then
+            nc_fname = pkglist(n)%filenames(m)
+          else if (nc_fname /= pkglist(n)%filenames(m)) then
+            nc_fname = ''
+            errmsg = 'Multiple *.nc model input files detected in packages &
+                     &block. Only one model NetCDF4 input supported.'
+            call store_error(errmsg)
+            call store_error_filename(modelfname)
+          end if
+        end if
+      end do
+    end do
+    !
+    ! -- return
+    return
+  end function nc_filename
 
 end module SourceLoadModule

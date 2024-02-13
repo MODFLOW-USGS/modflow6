@@ -1,6 +1,6 @@
 !> @brief This module contains the InputLoadTypeModule
 !!
-!! This module defines types that support generic IDP
+!! This module defines types that support generic IDM
 !! static and dynamic input loading.
 !!
 !<
@@ -8,6 +8,8 @@ module InputLoadTypeModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType
   use ListModule, only: ListType
   use InputDefinitionModule, only: InputParamDefinitionType
@@ -20,24 +22,23 @@ module InputLoadTypeModule
   public :: AddDynamicModelToList, GetDynamicModelFromList
   public :: StaticPkgLoadType, DynamicPkgLoadType
 
-  !> @brief derived type for source static load
+  !> @brief Static loader type
   !!
-  !! This derived type is a base concrete type for a model
-  !! package static load
+  !! This type is a base concrete type for a static input loader
   !!
   !<
   type StaticPkgLoadType
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
     character(len=LENCOMPONENTNAME) :: component_name !< name of component
-    character(len=LINELENGTH) :: component_input_name !< name of component input name, e.g. filename
-    character(len=LINELENGTH) :: input_name !< source name, e.g. name of input file
-    integer(I4B) :: iperblock
+    character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
+    character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
+    integer(I4B) :: iperblock !< index of period block on block definition list
   contains
     procedure :: init => static_init
     procedure :: destroy => static_destroy
   end type StaticPkgLoadType
 
-  !> @brief base abstract type for source static load
+  !> @brief Base abstract type for static input loader
   !!
   !! IDM sources should extend and implement this type
   !!
@@ -47,20 +48,21 @@ module InputLoadTypeModule
     procedure(load_if), deferred :: load
   end type StaticPkgLoadBaseType
 
-  !> @brief derived type for source dynamic load
+  !> @brief Dynamic loader type
   !!
-  !! This derived type is a base concrete type for a model
-  !! package dynamic (period) load
+  !! This type is a base concrete type for a dynamic (period) input loader
   !!
   !<
   type :: DynamicPkgLoadType
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
-    character(len=LENMODELNAME) :: modelname !< name of model
-    character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
-    logical(LGP) :: readasarrays
-    integer(I4B) :: iperblock
-    integer(I4B) :: iout
+    character(len=LENCOMPONENTNAME) :: component_name !< name of component
+    character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
+    character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
+    logical(LGP) :: readasarrays !< is this array based input
+    integer(I4B) :: iperblock !< index of period block on block definition list
+    integer(I4B) :: iout !< inunit number for logging
+    integer(I4B) :: nparam !< number of in scope params
+    character(len=LINELENGTH), dimension(:), allocatable :: param_names !< dynamic param tagnames
   contains
     procedure :: init => dynamic_init
     procedure :: df => dynamic_df
@@ -68,7 +70,7 @@ module InputLoadTypeModule
     procedure :: destroy => dynamic_destroy
   end type DynamicPkgLoadType
 
-  !> @brief base abstract type for source dynamic load
+  !> @brief Base abstract type for dynamic input loader
   !!
   !! IDM sources should extend and implement this type
   !!
@@ -93,9 +95,9 @@ module InputLoadTypeModule
     end subroutine
   end interface
 
-  !> @brief derived type for storing a dynamic package load list
+  !> @brief type for storing a dynamic package load list
   !!
-  !! This derived type is used to store a list of package
+  !! This type is used to store a list of package
   !! dynamic load types for a model
   !!
   !<
@@ -156,27 +158,31 @@ contains
   !> @brief initialize dynamic package loader
   !!
   !! Any managed memory pointed to from model/package context
-  !! must be allocated when derived dynamic loader is initialized.
+  !! must be allocated when dynamic loader is initialized.
   !!
   !<
-  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, &
-                          iperblock, iout)
+  subroutine dynamic_init(this, mf6_input, component_name, component_input_name, &
+                          input_name, iperblock, iout)
     use SimVariablesModule, only: errmsg
-    use SimModule, only: store_error, store_error_filename
+    use InputDefinitionModule, only: InputParamDefinitionType
+    ! -- dummy
     class(DynamicPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modelfname
-    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: component_input_name
+    character(len=*), intent(in) :: input_name
     integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
+    type(InputParamDefinitionType), pointer :: idt
     !
     this%mf6_input = mf6_input
-    this%modelname = modelname
-    this%modelfname = modelfname
-    this%sourcename = source
+    this%component_name = component_name
+    this%component_input_name = component_input_name
+    this%input_name = input_name
     this%iperblock = iperblock
+    this%nparam = 0
     this%iout = iout
+    nullify (idt)
     !
     ! -- throw error and exit if not found
     if (this%iperblock == 0) then
@@ -185,11 +191,11 @@ contains
         &'dynamic package input block dfns: ', &
         trim(mf6_input%subcomponent_name)
       call store_error(errmsg)
-      call store_error_filename(this%sourcename)
-    else
-      !
-      this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
+      call store_error_filename(this%input_name)
     end if
+    !
+    ! -- set readasarrays
+    this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
     !
     ! -- return
     return
@@ -399,7 +405,7 @@ contains
     class(*), pointer :: obj
     !
     ! -- initialize res
-    res => null()
+    nullify (res)
     !
     ! -- get the object from the list
     obj => list%GetItem(idx)

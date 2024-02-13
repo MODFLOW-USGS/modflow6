@@ -130,7 +130,10 @@ contains
     integer(I4B), intent(in) :: iout
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
-    class(ModelDynamicPkgsType), pointer :: dynamic_pkgs => null()
+    class(ModelDynamicPkgsType), pointer :: dynamic_pkgs
+    !
+    ! -- initialize
+    nullify (dynamic_pkgs)
     !
     ! -- create model package loader
     static_loader => &
@@ -169,11 +172,18 @@ contains
   !<
   subroutine load_model_pkgs(model_pkg_inputs, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceLoadModule, only: open_source_file
+    use SourceLoadModule, only: open_source_file, create_context
     use IdmDfnSelectorModule, only: idm_integrated
     type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
     integer(i4B), intent(in) :: iout
     integer(I4B) :: itype, ipkg
+    !
+    ! -- create package context object
+    call create_context(model_pkg_inputs%modeltype, &
+                        model_pkg_inputs%component_type, &
+                        model_pkg_inputs%modelname, &
+                        model_pkg_inputs%modelfname, &
+                        model_pkg_inputs%pkglist, iout)
     !
     ! -- load package instances by type
     do itype = 1, size(model_pkg_inputs%pkglist)
@@ -216,7 +226,7 @@ contains
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
-    ! -- locals
+    ! -- local
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mtypes !< model types
@@ -284,7 +294,7 @@ contains
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
-    ! -- locals
+    ! -- local
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< exg types
     type(CharacterStringType), dimension(:), contiguous, &
@@ -547,8 +557,12 @@ contains
       pointer :: mtypes !< model types
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< model types
-    integer(I4B), pointer :: nummodels => null()
-    integer(I4B), pointer :: numexchanges => null()
+    integer(I4B), pointer :: nummodels
+    integer(I4B), pointer :: numexchanges
+    !
+    ! -- initialize
+    nullify (nummodels)
+    nullify (numexchanges)
     !
     ! -- set memory paths
     sim_mempath = create_mem_path(component='SIM', context=idm_context)
@@ -577,7 +591,7 @@ contains
     use SimVariablesModule, only: isimcontinue, isimcheck, simfile
     character(len=LENMEMPATH), intent(in) :: input_mempath
     type(InputParamDefinitionType), pointer, intent(in) :: idt
-    integer(I4B), pointer :: intvar => null()
+    integer(I4B), pointer :: intvar
     !
     ! -- allocate and set default
     call mem_allocate(intvar, idt%mf6varname, input_mempath)
@@ -595,7 +609,7 @@ contains
       intvar = 0
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. Idm SIMNAM Load default value setting '&
+        'Idm SIMNAM Load default value setting '&
         &'is unhandled for this variable: ', &
         trim(idt%mf6varname)
       call store_error(errmsg)
@@ -614,9 +628,9 @@ contains
     use CharacterStringModule, only: CharacterStringType
     character(len=LENMEMPATH), intent(in) :: input_mempath
     type(InputParamDefinitionType), pointer, intent(in) :: idt
-    character(len=LINELENGTH), pointer :: cstr => null()
+    character(len=LINELENGTH), pointer :: cstr
     type(CharacterStringType), dimension(:), &
-      pointer, contiguous :: acharstr1d => null()
+      pointer, contiguous :: acharstr1d
     !
     ! -- initialize
     !
@@ -642,7 +656,7 @@ contains
       end if
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. IdmLoad unhandled datatype: ', &
+        'IdmLoad allocate simnam param unhandled datatype: ', &
         trim(idt%datatype)
       call store_error(errmsg)
       call store_error_filename(simfile)
