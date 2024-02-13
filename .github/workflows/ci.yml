@@ -562,7 +562,7 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           pytest test_gwf_chd01.py --keep temp
-          if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[chd01]0/mfsim.lst
+          if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[0-chd01]0/mfsim.lst
           then
             echo "NetCDF license logging confirmed."
           else
