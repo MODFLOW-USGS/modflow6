@@ -193,8 +193,23 @@ ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 
 
 # variant SUB package problem 3
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
+
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        drn_fname = f"{name}.nc"
+        wel_fname = f"{name}.nc"
+        chd_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        drn_fname = f"{name}.drn"
+        wel_fname = f"{name}.wel"
+        chd_fname = f"{name}.chd"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -241,15 +256,20 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=idomain,
-        filename=f"{name}.dis",
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=vka
+        gwf,
+        save_flows=False,
+        icelltype=laytyp,
+        k=hk,
+        k33=vka,
+        filename=npf_fname,
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -300,7 +320,7 @@ def build_models(idx, test):
 
     # drain
     drn = flopy.mf6.ModflowGwfdrn(
-        gwf, maxbound=maxdrd, stress_period_data=drd6
+        gwf, maxbound=maxdrd, stress_period_data=drd6, filename=drn_fname
     )
 
     # wel file
@@ -310,11 +330,16 @@ def build_models(idx, test):
         print_flows=True,
         maxbound=maxwel,
         stress_period_data=wd6,
+        filename=wel_fname,
     )
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
-        gwf, maxbound=maxchd, stress_period_data=cd6, save_flows=False
+        gwf,
+        maxbound=maxchd,
+        stress_period_data=cd6,
+        save_flows=False,
+        filename=chd_fname,
     )
 
     # output control
@@ -553,13 +578,17 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         htol=htol[idx],
+        netcdf=netcdf,
     )
     test.run()

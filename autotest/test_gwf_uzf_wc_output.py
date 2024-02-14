@@ -222,12 +222,23 @@ uzf_spd = {
 }
 
 
-def build_mf6_model(idx, ws):
+def build_mf6_model(idx, ws, netcdf=None):
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     name = cases[idx]
+
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        ghb_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        ghb_fname = f"{name}.ghb"
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -271,14 +282,20 @@ def build_mf6_model(idx, ws):
         delc=delc,
         top=top,
         botm=botm,
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=icelltype, k=k, k33=k33
+        gwf,
+        save_flows=True,
+        icelltype=icelltype,
+        k=k,
+        k33=k33,
+        filename=npf_fname,
     )
 
     # aquifer storage
@@ -288,7 +305,7 @@ def build_mf6_model(idx, ws):
 
     # ghb files
     ghb = flopy.mf6.ModflowGwfghb(
-        gwf, print_flows=True, stress_period_data=ghbspd
+        gwf, print_flows=True, stress_period_data=ghbspd, filename=ghb_fname
     )
 
     # transient uzf info
@@ -433,9 +450,9 @@ def build_mfnwt_model(idx, ws):
     return mf
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # Start by building the MF6 model
-    sim = build_mf6_model(idx, test.workspace)
+    sim = build_mf6_model(idx, test.workspace, netcdf)
 
     # Construct MF-NWT model for comparing water contents
     #   Commented out to avoid NWT dependency, but left behind for
@@ -537,12 +554,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

@@ -119,13 +119,25 @@ def pytest_addoption(parser):
         default=False,
         help="include parallel test cases",
     )
+    parser.addoption(
+        "--netcdf",
+        action="store_true",
+        default=False,
+        help="include netcdf test cases",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--parallel"):
-        # --parallel given in cli: do not skip parallel tests
-        return
-    skip_parallel = pytest.mark.skip(reason="need --parallel option to run")
-    for item in items:
-        if "parallel" in item.keywords:
-            item.add_marker(skip_parallel)
+    if not config.getoption("--parallel"):
+        skip_parallel = pytest.mark.skip(
+            reason="need --parallel option to run"
+        )
+        for item in items:
+            if "parallel" in item.keywords:
+                item.add_marker(skip_parallel)
+
+    if not config.getoption("--netcdf"):
+        skip_netcdf = pytest.mark.skip(reason="need --netcdf option to run")
+        for item in items:
+            if "netcdf" in item.keywords:
+                item.add_marker(skip_netcdf)

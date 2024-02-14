@@ -11,13 +11,13 @@ cases = [
 ]
 
 
-def build_models(idx, test):
-    sim = get_model(idx, test.workspace)
-    mc = get_model(idx, os.path.join(test.workspace, "mf6"))
+def build_models(idx, test, netcdf=None):
+    sim = get_model(idx, test.workspace, netcdf)
+    mc = get_model(idx, os.path.join(test.workspace, "mf6"), netcdf)
     return sim, mc
 
 
-def get_model(idx, ws):
+def get_model(idx, ws, netcdf=None):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -81,6 +81,17 @@ def get_model(idx, ws):
         save_flows=True,
     )
 
+    if netcdf:
+        dis_fname = f"{gwfname}.nc"
+        npf_fname = f"{gwfname}.nc"
+        ic_fname = f"{gwfname}.nc"
+        chd_fname = f"{gwfname}.nc"
+    else:
+        dis_fname = f"{gwfname}.dis"
+        npf_fname = f"{gwfname}.npf"
+        ic_fname = f"{gwfname}.ic"
+        chd_fname = f"{gwfname}.chd"
+
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -91,17 +102,24 @@ def get_model(idx, ws):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=dis_fname,
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
         gwf,
         strt=strt,
+        filename=ic_fname,
     )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_specific_discharge=True, icelltype=laytyp, k=hk, k33=hk
+        gwf,
+        save_specific_discharge=True,
+        icelltype=laytyp,
+        k=hk,
+        k33=hk,
+        filename=npf_fname,
     )
 
     # chd files
@@ -114,6 +132,7 @@ def get_model(idx, ws):
         save_flows=False,
         print_flows=True,
         pname="CHD-1",
+        filename=chd_fname,
     )
     fname = f"{gwfname}.chd.obs"
     chd_obs = {
@@ -164,12 +183,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

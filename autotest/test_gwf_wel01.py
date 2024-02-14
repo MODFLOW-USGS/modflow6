@@ -3,6 +3,7 @@ Test to confirm that the sum wel and wel-reduced observations is equal
 to the specified well pumping rate when the AUTO_FLOW_REDUCE option is
 specified.
 """
+
 import os
 
 import flopy
@@ -31,8 +32,19 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
+
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        wel_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        wel_fname = f"{name}.wel"
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
@@ -81,12 +93,14 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
+        filename=dis_fname,
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
         gwf,
         strt=strt,
+        filename=ic_fname,
     )
 
     # node property flow
@@ -96,6 +110,7 @@ def build_models(idx, test):
         icelltype=1,
         k=hk,
         k33=hk,
+        filename=npf_fname,
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -127,6 +142,7 @@ def build_models(idx, test):
         auto_flow_reduce="auto_flow_reduce 0.5",
         stress_period_data=wel_spd,
         afrcsv_filerecord=f"{name}.afr.csv",
+        filename=wel_fname,
     )
     welobs = wel.obs.initialize(
         print_input=True,
@@ -187,12 +203,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

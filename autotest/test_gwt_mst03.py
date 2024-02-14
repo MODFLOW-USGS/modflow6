@@ -19,7 +19,7 @@ sy = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -59,6 +59,17 @@ def build_models(idx, test):
         newtonoptions=newtonoptions,
     )
 
+    if netcdf:
+        dis_fname = f"{gwfname}.nc"
+        npf_fname = f"{gwfname}.nc"
+        ic_fname = f"{gwfname}.nc"
+        wel_fname = f"{gwfname}.nc"
+    else:
+        dis_fname = f"{gwfname}.dis"
+        npf_fname = f"{gwfname}.npf"
+        ic_fname = f"{gwfname}.ic"
+        wel_fname = f"{gwfname}.wel"
+
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -88,14 +99,20 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp[idx], k=hk, k33=hk
+        gwf,
+        save_flows=False,
+        icelltype=laytyp[idx],
+        k=hk,
+        k33=hk,
+        filename=npf_fname,
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -118,6 +135,7 @@ def build_models(idx, test):
         save_flows=False,
         auxiliary="CONCENTRATION",
         pname="WEL-1",
+        filename=wel_fname,
     )
 
     # output control
@@ -282,12 +300,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

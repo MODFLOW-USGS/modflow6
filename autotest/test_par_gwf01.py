@@ -30,7 +30,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
 
-def get_model(idx, dir):
+def get_model(idx, dir, netcdf=None):
     name = cases[idx]
 
     # parameters and spd
@@ -66,6 +66,25 @@ def get_model(idx, dir):
 
     # initial head
     h_start = 0.0
+
+    if netcdf:
+        dis_lfname = f"{name_left}.nc"
+        npf_lfname = f"{name_left}.nc"
+        ic_lfname = f"{name_left}.nc"
+        chd_lfname = f"{name_left}.nc"
+        dis_rfname = f"{name_right}.nc"
+        npf_rfname = f"{name_right}.nc"
+        ic_rfname = f"{name_right}.nc"
+        chd_rfname = f"{name_right}.nc"
+    else:
+        dis_lfname = f"{name_left}.dis"
+        npf_lfname = f"{name_left}.npf"
+        ic_lfname = f"{name_left}.ic"
+        chd_lfname = f"{name_left}.chd"
+        dis_rfname = f"{name_right}.dis"
+        npf_rfname = f"{name_right}.npf"
+        ic_rfname = f"{name_right}.ic"
+        chd_rfname = f"{name_right}.chd"
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -109,16 +128,22 @@ def get_model(idx, dir):
         delc=delc,
         top=tops[0],
         botm=tops[1 : nlay + 1],
+        filename=dis_lfname,
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start, filename=ic_lfname)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         save_flows=True,
         icelltype=0,
         k=k11,
+        filename=npf_lfname,
     )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd_left,
+        filename=chd_lfname,
+    )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=f"{name_left}.hds",
@@ -147,16 +172,26 @@ def get_model(idx, dir):
         yorigin=shift_y,
         top=tops[0],
         botm=tops[1 : nlay + 1],
+        filename=dis_rfname,
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=h_start,
+        filename=ic_rfname,
+    )
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         save_flows=True,
         icelltype=0,
         k=k11,
+        filename=npf_rfname,
     )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd_right,
+        filename=chd_rfname,
+    )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=f"{name_right}.hds",
@@ -190,14 +225,13 @@ def get_model(idx, dir):
         exgmnameb=name_right,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        print_input=True,
     )
 
     return sim
 
 
-def build_models(idx, test):
-    sim = get_model(idx, test.workspace)
+def build_models(idx, test, netcdf=None):
+    sim = get_model(idx, test.workspace, netcdf)
     return sim, None
 
 
@@ -221,15 +255,19 @@ def check_output(idx, test):
 
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
         ncpus=2,
+        netcdf=netcdf,
     )
     test.run()

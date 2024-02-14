@@ -139,7 +139,7 @@ for k in ldnd:
 
 
 # SUB package problem 3
-def get_model(idx, ws):
+def get_model(idx, ws, netcdf=None):
     name = cases[idx]
     # ibc packagedata container counter
     sub6 = []
@@ -217,6 +217,21 @@ def get_model(idx, ws):
 
     maxibc = len(sub6)
 
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        rcha_fname = f"{name}.nc"
+        wel_fname = f"{name}.nc"
+        chd_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        rcha_fname = f"{name}.rcha"
+        wel_fname = f"{name}.wel"
+        chd_fname = f"{name}.chd"
+
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -254,11 +269,11 @@ def get_model(idx, ws):
         delc=delc,
         top=top,
         botm=botm,
-        filename=f"{name}.dis",
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -268,6 +283,7 @@ def get_model(idx, ws):
         cvoptions=cvopt[idx],
         k=hk,
         k33=vka,
+        filename=npf_fname,
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -283,7 +299,9 @@ def get_model(idx, ws):
     )
 
     # recharge
-    rch = flopy.mf6.ModflowGwfrcha(gwf, readasarrays=True, recharge=rech)
+    rch = flopy.mf6.ModflowGwfrcha(
+        gwf, readasarrays=True, recharge=rech, filename=rcha_fname
+    )
 
     # wel file
     wel = flopy.mf6.ModflowGwfwel(
@@ -293,11 +311,16 @@ def get_model(idx, ws):
         maxbound=maxwel,
         stress_period_data=wd6,
         save_flows=False,
+        filename=wel_fname,
     )
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
-        gwf, maxbound=maxchd, stress_period_data=cd6, save_flows=False
+        gwf,
+        maxbound=maxchd,
+        stress_period_data=cd6,
+        save_flows=False,
+        filename=chd_fname,
     )
     # csub files
     opth = f"{name}.csub.obs"
@@ -344,11 +367,11 @@ def get_model(idx, ws):
     return sim
 
 
-def build_models(idx, test):
-    sim = get_model(idx, test.workspace)
+def build_models(idx, test, netcdf=None):
+    sim = get_model(idx, test.workspace, netcdf)
 
     ws = os.path.join(test.workspace, cmppth)
-    mc = get_model(idx, ws)
+    mc = get_model(idx, ws, netcdf)
 
     return sim, mc
 
@@ -433,14 +456,19 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
+    compare = None if netcdf else "mf6_regression"
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
         htol=htol[idx],
-        compare="mf6_regression",
+        compare=compare,
+        netcdf=netcdf,
     )
     test.run()

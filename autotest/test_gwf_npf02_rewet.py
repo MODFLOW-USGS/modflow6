@@ -50,7 +50,7 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
     nlay = nlays[idx]
 
@@ -141,6 +141,19 @@ def build_models(idx, test):
     for jdx in range(nmodels):
         mname = mnames[jdx]
 
+        if netcdf:
+            dis_fname = f"{mname}.nc"
+            npf_fname = f"{mname}.nc"
+            ic_fname = f"{mname}.nc"
+            chd1_fname = f"{mname}.nc"
+            chd2_fname = f"{mname}.nc"
+        else:
+            dis_fname = f"{mname}.dis"
+            npf_fname = f"{mname}.npf"
+            ic_fname = f"{mname}.ic"
+            chd1_fname = f"{mname}.chd1.chd"
+            chd2_fname = f"{mname}.chd2.chd"
+
         gwf = flopy.mf6.ModflowGwf(
             sim, modelname=mname, model_nam_file=f"{mname}.nam"
         )
@@ -154,11 +167,11 @@ def build_models(idx, test):
             delc=delc,
             top=top,
             botm=botm,
-            filename=f"{mname}.dis",
+            filename=dis_fname,
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{mname}.ic")
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(
@@ -168,6 +181,7 @@ def build_models(idx, test):
             icelltype=1,
             k=hk,
             wetdry=wetdry,
+            filename=npf_fname,
         )
 
         # chd files
@@ -177,7 +191,7 @@ def build_models(idx, test):
                 gwf,
                 stress_period_data=cd6left,
                 save_flows=False,
-                filename=fn,
+                filename=chd1_fname,
                 pname="chd1",
                 print_input=True,
             )
@@ -187,7 +201,7 @@ def build_models(idx, test):
                 gwf,
                 stress_period_data=cd6right,
                 save_flows=False,
-                filename=fn,
+                filename=chd2_fname,
                 pname="chd2",
                 print_input=True,
             )
@@ -335,12 +349,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()
