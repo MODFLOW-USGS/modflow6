@@ -151,7 +151,10 @@ def write_input(
                 print(
                     f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}"
                 )
-            sim.write_simulation(write_netcdf=netcdf)
+            if netcdf:
+                sim.write_simulation(write_netcdf=netcdf)
+            else:
+                sim.write_simulation()
         elif isinstance(sim, flopy.mbase.BaseModel):
             workspace = Path(sim.model_ws)
             if any(workspace.glob("*")) and not overwrite:
