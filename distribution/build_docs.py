@@ -117,7 +117,9 @@ def download_benchmarks(
         reverse=True,
     )
     artifacts = [
-        a for a in artifacts if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
+        a
+        for a in artifacts
+        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
     ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
@@ -158,7 +160,9 @@ def build_benchmark_tex(
 
     # download benchmark artifacts if any exist on GitHub
     if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(_benchmarks_dir_path, repo_owner=repo_owner)
+        benchmarks_path = download_benchmarks(
+            _benchmarks_dir_path, repo_owner=repo_owner
+        )
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
     if overwrite or not benchmarks_path.is_file():
@@ -179,7 +183,7 @@ def build_benchmark_tex(
         )
         assert not ret, out + err
         assert tex_path.is_file()
-    
+
     if (_distribution_path / f"{benchmarks_path.stem}.md").is_file():
         assert (_docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex").is_file()
 
@@ -209,7 +213,7 @@ def build_deprecations_tex():
         )
         assert not ret, out + err
         assert tex_path.is_file()
-    
+
     assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
 
 
@@ -489,7 +493,9 @@ def build_documentation(
 
     if not full:
         # convert LaTeX to PDF
-        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path, overwrite=overwrite)
+        build_pdfs_from_tex(
+            tex_paths=_dev_dist_tex_paths, output_path=output_path, overwrite=overwrite
+        )
     else:
         # convert benchmarks to LaTex, running them first if necessary
         build_benchmark_tex(

@@ -103,39 +103,6 @@ def test_copy_sources(tmp_path):
     assert (tmp_path / "utils" / "mf5to6" / "pymake").is_dir()
     assert (tmp_path / "utils" / "zonebudget" / "pymake").is_dir()
     assert not (tmp_path / "utils" / "idmloader").is_dir()
-    
-
-
-def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
-
-    # create examples, but don't run them
-    examples_path = examples_repo_path / "examples"
-    examples_path.mkdir(parents=True, exist_ok=True)
-    if not overwrite and any(get_model_paths(examples_path)):
-        print(f"Examples already built")
-    else:
-        print(f"Building examples")
-        scripts_folder = examples_repo_path / "scripts"
-        exclude_list = ["ex-gwf-capture.py"]
-        scripts = [
-            fname
-            for fname in scripts_folder.glob("*")
-            if fname.suffix == ".py"
-            and fname.stem.startswith("ex-")
-            and fname.stem not in exclude_list
-        ]
-        for script in scripts:
-            argv = [
-                sys.executable,
-                script,
-                "--no_run",
-                "--no_plot",
-                "--destination",
-                examples_path,
-            ]
-            print(f"running {argv} in {scripts_folder}")
-            run_command(argv, scripts_folder)
 
 
 def setup_examples(
