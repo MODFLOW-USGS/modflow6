@@ -8,7 +8,6 @@ This document describes release procedures for MODFLOW 6. This folder contains s
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Steps](#steps)
-  - [Update deprecations](#update-deprecations)
   - [Update release notes](#update-release-notes)
   - [Update version info](#update-version-info)
   - [Build makefiles](#build-makefiles)
@@ -65,7 +64,6 @@ This document assumes a MODFLOW 6 development environment has been configured as
 
 Broadly, steps to prepare an official release for distribution include:
 
-- update deprecations with `doc/ReleaseNotes/mk_deprecations.py`
 - update release notes for the release (and reset them after)
 - update version information with `update_version.py`
 - (re)build makefiles with `build_makefiles.py`
@@ -77,10 +75,6 @@ Broadly, steps to prepare an official release for distribution include:
 These should occur roughly in the order presented above. The procedure is automated in the `.github/workflows/release.yml` and `release_dispatch.yml` workflows.
 
 **Note**: `git`- and/or GitHub-related steps are omitted from this section. See the [Procedure](#procedure) section below for a step-by-step recipe for creating and distributing release with the help of GitHub Actions.
-
-### Update deprecations
-
-Newly deprecated MF6IO options are included in the release notes. See the [developer docs](../DEVELOPER.md#deprecation-policy) for more info on MF6's deprecation policy, searching for deprecations among DFNs, and generating a deprecations table for insertion into the release notes.
 
 ### Update release notes
 
@@ -95,6 +89,8 @@ After each release is made, several steps are required to reset the release note
 - overwrite `develop.tex` with the contents of `doc/ReleaseNotes/vx.y.z-template.tex`
 
 Now new changes can be added to `develop.tex` as development proceeds.
+
+**Note**: Newly deprecated MF6IO options are included in the release notes. See the [developer docs](../DEVELOPER.md#deprecation-policy) for more info on MF6's deprecation policy, searching for deprecations among DFNs, and generating a deprecations table for insertion into the release notes.
 
 ### Update version info
 
@@ -120,13 +116,15 @@ python update_version.py -v 6.4.2rc
 
 The label must start immediately following the patch version number, with no space in between. The label may contain numeric characters or symbols, but *must not* start with a number (otherwise there is no way to distinguish it from the patch version number).
 
-The `--approved` (short `-a`) flag can be used to approve an official release. If the `--approved` flag is provided, disclaimer language is altered to reflect approval. If the flag is not provided, the language reflects preliminary/provisional status and `(preliminary)` is appended to version numbers.
+The `update_version.py` script has a few other flags:
 
-The `--releasemode` flag can be used to control whether binaries are built in development or release mode by editing the contents of `src/Utilities/version.f90`. If the `--releasemode` flag is provided, `IDEVELOPMODE` is set to 0. If `--releasemode` is not provided, `IDEVELOPMODE` is set to 1.
+- `--approved` (short `-a`): approve an official release. If the `--approved` flag is provided, disclaimer language is altered to reflect approval. If the flag is not provided, the language reflects preliminary/provisional status and `(preliminary)` is appended to version numbers.
 
-The `--get` (short `-g`) flag causes the script to print the current version number to `stdout` without making any updates.
+- `--releasemode` (short `-r`): toggle whether binaries are built in development or release mode by editing the contents of `src/Utilities/version.f90`. If the `--releasemode` flag is provided, `IDEVELOPMODE` is set to 0. If `--releasemode` is not provided, `IDEVELOPMODE` is set to 1.
 
-The `--citation` (short `-c`) flag generates a citation from the contents of `CITATION.cff` and prints it to `stdout`, again without making any updates.
+- `--get` (short `-g`): print the current version number to `stdout` without making any updates.
+
+- `--citation` (short `-c`): generate a citation from the contents of `CITATION.cff` and print it to `stdout`, again without making any updates.
 
 ### Build makefiles
 
