@@ -22,7 +22,7 @@ rsync /home/software/denali/contrib/impd/modulefiles/modflow/6.5.0.dev0 /home/so
 ```
 On _Hovenweep_ make a copy of an existing module file using
 ```
-rsync /home/software/hovenweep/contrib/impd/modulefiles/modflow/6.5.0.dev0 /home/software/denali/contrib/impd/modulefiles/modflow/6.x.x
+rsync /home/software/hovenweep/contrib/impd/modulefiles/modflow/6.5.0.dev0 /home/software/hovenweep/contrib/impd/modulefiles/modflow/6.x.x
 ```
 
 Edit `product_version` in the new module file from `6.5.0.dev0` to `6.x.x` on both systems.
