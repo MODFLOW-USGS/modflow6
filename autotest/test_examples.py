@@ -1,6 +1,9 @@
+from shutil import copytree
+
 import pytest
 
 from framework import TestFramework
+from common_regression import setup_mf6
 
 # skip nested models
 # ex-gwf-csub-p02c has subdirs like 'es-001', 'hb-100'
@@ -49,12 +52,14 @@ def test_scenario(
     for model_path in model_paths:
         model_name = f"{name}_{model_path.name}"
         workspace = function_tmpdir / model_name
+        setup_mf6(src=model_path, dst=workspace)
         test = TestFramework(
             name=model_name,
-            workspace=model_path,
+            workspace=workspace,
             targets=targets,
             compare="mf6_regression",
             verbose=False,
         )
+        copytree(workspace, workspace / "mf6_regression")
         test.setup(model_path, workspace)
         test.run()
