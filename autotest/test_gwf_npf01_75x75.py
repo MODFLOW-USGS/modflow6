@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
+from conftest import try_get_target
 
 cases = ["npf01a_75x75", "npf01b_75x75"]
 top = [100.0, 0.0]
@@ -149,7 +150,9 @@ def build_models(idx, test):
 
     # build MODFLOW-2005 files
     ws = os.path.join(test.workspace, "mf2005")
-    mc = flopy.modflow.Modflow(name, model_ws=ws, exe_name=test.targets["mf2005"])
+    mc = flopy.modflow.Modflow(
+        name, model_ws=ws, exe_name=try_get_target(test.targets, "mf2005")
+    )
     dis = flopy.modflow.ModflowDis(
         mc,
         nlay=nlay,
