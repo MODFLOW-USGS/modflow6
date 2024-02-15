@@ -10,6 +10,7 @@ from warnings import warn
 
 import flopy
 import numpy as np
+import pytest
 from common_regression import (
     COMPARE_PROGRAMS,
     adjust_htol,
@@ -777,17 +778,20 @@ class TestFramework:
 
                 # run comparison simulation if libmf6 or mf6 regression
                 if self.compare in ["mf6_regression", "libmf6"]:
-                    # todo: don't hardcode workspace or assume agreement with test case
-                    # simulation workspace, set & access simulation workspaces directly
-                    workspace = self.workspace / self.compare
-                    success, _ = self.run_sim_or_model(
-                        workspace,
-                        self.targets.get(self.compare, self.targets["mf6"]),
-                    )
-                    assert success, f"Comparison model failed: {workspace}"
+                    if self.compare not in self.targets:
+                        warn(f"Couldn't find comparison program '{self.compare}', skipping comparison")
+                    else:
+                        # todo: don't hardcode workspace or assume agreement with test case
+                        # simulation workspace, set & access simulation workspaces directly
+                        workspace = self.workspace / self.compare
+                        success, _ = self.run_sim_or_model(
+                            workspace,
+                            self.targets.get(self.compare, self.targets["mf6"]),
+                        )
+                        assert success, f"Comparison model failed: {workspace}"
 
                 # compare model results, if enabled
-                if self.verbose:
+                if self.verbose and self.compare in self.targets:
                     print("Comparing outputs")
                 self.compare_output(self.compare)
 

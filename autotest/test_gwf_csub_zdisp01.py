@@ -6,6 +6,7 @@ import pytest
 from flopy.utils.compare import compare_heads
 
 from framework import TestFramework
+from conftest import try_get_target
 
 cases = ["csub_zdisp01"]
 cmppth = "mfnwt"
@@ -330,7 +331,10 @@ def build_models(idx, test):
     cpth = cmppth
     ws = os.path.join(test.workspace, cpth)
     mc = flopy.modflow.Modflow(
-        name, model_ws=ws, version=cpth, exe_name=test.targets["mfnwt"]
+        name,
+        model_ws=ws,
+        version=cpth,
+        exe_name=try_get_target(test.targets, "mfnwt"),
     )
     dis = flopy.modflow.ModflowDis(
         mc,
