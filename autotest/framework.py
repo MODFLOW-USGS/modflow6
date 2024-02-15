@@ -510,9 +510,44 @@ class TestFramework:
         fcmp.close()
         return success
 
-    # public
+    def _compare_output(self, compare):
+        """
+        Compare the main simulation's output with that of another simulation or model.
 
-    def run_sim_or_model(
+        compare : str
+            The comparison executable name: mf6, mf6_regression, libmf6, mf2005,
+            mfnwt, mflgr, or mfusg.
+        """
+
+        if compare not in COMPARE_PROGRAMS:
+            raise ValueError(f"Unsupported comparison program: {compare}")
+
+        if self.verbose:
+            print("Comparison test", self.name)
+
+        # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
+        htol = adjust_htol(self.workspace, self.htol)
+        rclose = get_rclose(self.workspace)
+        cmp_path = self.workspace / compare
+        if "mf6_regression" in compare:
+            assert self._compare_heads(
+                extensions=HDS_EXT, htol=htol
+            ), "head comparison failed"
+            assert self._compare_budgets(
+                extensions=CBC_EXT, rclose=rclose
+            ), "budget comparison failed"
+            assert self._compare_concentrations(
+                htol=htol
+            ), "concentration comparison failed"
+        else:
+            assert self._compare_heads(
+                cpth=cmp_path,
+                extensions=HDS_EXT,
+                mf6="mf6" in compare,
+                htol=htol,
+            ), "head comparison failed"
+
+    def _run_sim_or_model(
         self,
         workspace: Union[str, os.PathLike],
         target: Union[str, os.PathLike],
@@ -626,42 +661,7 @@ class TestFramework:
 
         return success, buff
 
-    def compare_output(self, compare):
-        """
-        Compare the main simulation's output with that of another simulation or model.
-
-        compare : str
-            The comparison executable name: mf6, mf6_regression, libmf6, mf2005,
-            mfnwt, mflgr, or mfusg.
-        """
-
-        if compare not in COMPARE_PROGRAMS:
-            raise ValueError(f"Unsupported comparison program: {compare}")
-
-        if self.verbose:
-            print("Comparison test", self.name)
-
-        # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
-        htol = adjust_htol(self.workspace, self.htol)
-        rclose = get_rclose(self.workspace)
-        cmp_path = self.workspace / compare
-        if "mf6_regression" in compare:
-            assert self._compare_heads(
-                extensions=HDS_EXT, htol=htol
-            ), "head comparison failed"
-            assert self._compare_budgets(
-                extensions=CBC_EXT, rclose=rclose
-            ), "budget comparison failed"
-            assert self._compare_concentrations(
-                htol=htol
-            ), "concentration comparison failed"
-        else:
-            assert self._compare_heads(
-                cpth=cmp_path,
-                extensions=HDS_EXT,
-                mf6="mf6" in compare,
-                htol=htol,
-            ), "head comparison failed"
+    # public
 
     def run(self):
         """
@@ -719,7 +719,7 @@ class TestFramework:
             )
             xfail = self.xfail[i]
             ncpus = self.ncpus[i]
-            success, buff = self.run_sim_or_model(
+            success, buff = self._run_sim_or_model(
                 workspace, target, xfail, ncpus
             )
             self.buffs[i] = buff  # store model output for assertions later
@@ -767,7 +767,7 @@ class TestFramework:
                         # todo: don't hardcode workspace or assume agreement with test case
                         # simulation workspace, set & access simulation workspaces directly
                         workspace = self.workspace / self.compare
-                        success, _ = self.run_sim_or_model(
+                        success, _ = self._run_sim_or_model(
                             workspace,
                             self.targets.get(
                                 self.compare, self.targets["mf6"]
@@ -778,7 +778,7 @@ class TestFramework:
                 # compare model results, if enabled
                 if self.verbose and self.compare in self.targets:
                     print("Comparing outputs")
-                self.compare_output(self.compare)
+                self._compare_output(self.compare)
 
         # check results, if enabled
         if self.check:
