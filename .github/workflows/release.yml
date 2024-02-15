@@ -66,6 +66,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
+          - os: macos-14
+            ostag: macm1
           - os: windows-2022
             ostag: win64
     defaults:
@@ -405,6 +407,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
+          - os: macos-14
+            ostag: macm1
           - os: windows-2022
             ostag: win64
     defaults:
