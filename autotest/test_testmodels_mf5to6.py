@@ -1,10 +1,17 @@
 import os
 from pathlib import Path
+from shutil import copytree
 
 import flopy
 import pytest
 
-from common_regression import get_namefiles, setup_model
+from common_regression import (
+    get_namefiles,
+    setup_model,
+    setup_mf6,
+    setup_mf6_comparison,
+    get_mf6_comparison,
+)
 from framework import TestFramework
 
 excluded_models = ["alt_model", "mf2005"]
@@ -56,14 +63,6 @@ def test_model(
     if model_name in excluded_models:
         pytest.skip(f"Skipping: {model_name} (excluded)")
 
-    test = TestFramework(
-        name=model_path.name,
-        workspace=model_path,
-        targets=targets,
-        compare="auto" if original_regression else "mf6_regression",
-        verbose=False,
-    )
-
     # run the mf5to6 converter
     mf5to6_workspace = function_tmpdir / "mf5to6"
     npth = setup_mf5to6(model_path, mf5to6_workspace)
@@ -79,7 +78,25 @@ def test_model(
     )
     assert success
 
-    # run mf6
+    # setup mf6 workspace and framework
     mf6_workspace = function_tmpdir / "mf6"
-    test.setup(mf5to6_workspace, mf6_workspace)
+    setup_mf6(src=mf5to6_workspace, dst=mf6_workspace)
+    compare = get_mf6_comparison(mf5to6_workspace) if original_regression else "mf6_regression"
+    test = TestFramework(
+        name=model_path.name,
+        workspace=mf6_workspace,
+        targets=targets,
+        compare=compare,
+        verbose=False,
+    )
+
+    # setup comparison workspace
+    if compare == "mf6_regression":
+        copytree(mf5to6_workspace, mf6_workspace / compare)
+    else:
+        setup_mf6_comparison(
+            mf5to6_workspace, mf6_workspace, compare, overwrite=True
+        )
+
+    # run the test
     test.run()

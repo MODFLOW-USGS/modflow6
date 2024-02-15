@@ -1,6 +1,13 @@
+from shutil import copytree
+
 import pytest
 
 from framework import TestFramework
+from common_regression import (
+    setup_mf6,
+    setup_mf6_comparison,
+    get_mf6_comparison,
+)
 
 excluded_models = []
 
@@ -20,17 +27,29 @@ def test_model(
     model_path = large_test_model.parent
     model_name = model_path.name
     excluded = model_name in excluded_models
+    compare = get_mf6_comparison(model_path) if original_regression else "mf6_regression"
     dev_only = "dev" in model_name and "not developmode" in markers
     if excluded or dev_only:
         reason = "excluded" if excluded else "developmode only"
         pytest.skip(f"Skipping: {model_name} ({reason})")
 
+    # setup test workspace and framework
+    setup_mf6(src=model_path, dst=function_tmpdir)
     test = TestFramework(
         name=model_name,
-        workspace=model_path,
+        workspace=function_tmpdir,
         targets=targets,
-        compare="auto" if original_regression else "mf6_regression",
+        compare=compare,
         verbose=False,
     )
-    test.setup(model_path, function_tmpdir)
+
+    # setup comparison workspace
+    if compare == "mf6_regression":
+        copytree(function_tmpdir, function_tmpdir / compare)
+    else:
+        setup_mf6_comparison(
+            model_path, function_tmpdir, compare, overwrite=True
+        )
+
+    # run the test
     test.run()

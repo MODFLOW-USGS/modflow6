@@ -512,23 +512,6 @@ class TestFramework:
 
     # public
 
-    def setup(self, src, dst):
-        print("Setting up MF6 test", self.name)
-        print("  Source:", src)
-        print("  Destination:", dst)
-        self.workspace = dst
-
-        # setup workspace and expected output files
-        _, self.outp = setup_mf6(src=src, dst=dst)
-        print("waiting...")
-        time.sleep(0.5)
-
-        if self.compare == "mf6_regression":
-            shutil.copytree(self.workspace, self.workspace / self.compare)
-        else:
-            self.compare = get_mf6_comparison(src)  # detect comparison
-            setup_mf6_comparison(src, dst, self.compare, overwrite=True)
-
     def run_sim_or_model(
         self,
         workspace: Union[str, os.PathLike],
@@ -568,9 +551,7 @@ class TestFramework:
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(nf)
-            if nf
-            else None
+            else os.path.basename(nf) if nf else None
         )
 
         # run the model
@@ -779,14 +760,18 @@ class TestFramework:
                 # run comparison simulation if libmf6 or mf6 regression
                 if self.compare in ["mf6_regression", "libmf6"]:
                     if self.compare not in self.targets:
-                        warn(f"Couldn't find comparison program '{self.compare}', skipping comparison")
+                        warn(
+                            f"Couldn't find comparison program '{self.compare}', skipping comparison"
+                        )
                     else:
                         # todo: don't hardcode workspace or assume agreement with test case
                         # simulation workspace, set & access simulation workspaces directly
                         workspace = self.workspace / self.compare
                         success, _ = self.run_sim_or_model(
                             workspace,
-                            self.targets.get(self.compare, self.targets["mf6"]),
+                            self.targets.get(
+                                self.compare, self.targets["mf6"]
+                            ),
                         )
                         assert success, f"Comparison model failed: {workspace}"
 
