@@ -295,6 +295,10 @@ contains
             ncelldim = 1
             exit
           case default
+            write (errmsg, '(a)') &
+              'Unknown discretization type "'//trim(ptype)// &
+              '" not currently supported.'
+            call store_error(errmsg, .true.)
           end select
         end do
       end if

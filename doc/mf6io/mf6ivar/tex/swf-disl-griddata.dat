@@ -1,0 +1,10 @@
+BEGIN GRIDDATA
+  REACH_LENGTH
+    <reach_length(nodes)> -- READARRAY
+  REACH_BOTTOM
+    <reach_bottom(nodes)> -- READARRAY
+  [TOREACH
+    <toreach(nodes)> -- READARRAY]
+  [IDOMAIN
+    <idomain(nodes)> -- READARRAY]
+END GRIDDATA

@@ -16,6 +16,8 @@ module ModelPackageInputModule
                        GWT_BASEPKG, GWT_MULTIPKG
   use GweModule, only: GWE_NBASEPKG, GWE_NMULTIPKG, &
                        GWE_BASEPKG, GWE_MULTIPKG
+  use SwfModule, only: SWF_NBASEPKG, SWF_NMULTIPKG, &
+                       SWF_BASEPKG, SWF_MULTIPKG
 
   implicit none
 
@@ -56,6 +58,11 @@ contains
       numpkgs = GWE_NBASEPKG + GWE_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWE_BASEPKG, GWE_MULTIPKG]
+      !
+    case ('SWF6')
+      numpkgs = SWF_NBASEPKG + SWF_NMULTIPKG
+      allocate (pkgtypes(numpkgs))
+      pkgtypes = [SWF_BASEPKG, SWF_MULTIPKG]
       !
     case default
     end select

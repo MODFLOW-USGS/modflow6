@@ -689,6 +689,7 @@ if __name__ == "__main__":
         "exg-gwtgwt",
         "exg-gwfgwe",
         "exg-gwegwe",
+        "exg-swfgwf",
         "sln-ims",  # dfn completed  tex updated
         "sln-ems",  # dfn completed  tex updated
         "gwf-nam",  # dfn completed  tex updated
@@ -756,6 +757,16 @@ if __name__ == "__main__":
         "gwe-sfe",
         "gwe-uze",
         "gwe-fmi",
+        "swf-nam",
+        "swf-disl",
+        "swf-dfw",
+        "swf-cxs",
+        "swf-ic",
+        "swf-sto",
+        "swf-oc",
+        "swf-chd",
+        "swf-flw",
+        "swf-zdg",
         "utl-spc",
         "utl-spca",
         "utl-spt",

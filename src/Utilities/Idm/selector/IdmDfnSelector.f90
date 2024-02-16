@@ -9,6 +9,7 @@ module IdmDfnSelectorModule
   use IdmGwtDfnSelectorModule
   use IdmGweDfnSelectorModule
   use IdmExgDfnSelectorModule
+  use IdmSwfDfnSelectorModule
   use IdmSimDfnSelectorModule
 
   implicit none
@@ -36,6 +37,8 @@ contains
       input_definition => gwe_param_definitions(subcomponent)
     case ('EXG')
       input_definition => exg_param_definitions(subcomponent)
+    case ('SWF')
+      input_definition => swf_param_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_param_definitions(subcomponent)
     case default
@@ -57,6 +60,8 @@ contains
       input_definition => gwe_aggregate_definitions(subcomponent)
     case ('EXG')
       input_definition => exg_aggregate_definitions(subcomponent)
+    case ('SWF')
+      input_definition => swf_aggregate_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_aggregate_definitions(subcomponent)
     case default
@@ -78,6 +83,8 @@ contains
       input_definition => gwe_block_definitions(subcomponent)
     case ('EXG')
       input_definition => exg_block_definitions(subcomponent)
+    case ('SWF')
+      input_definition => swf_block_definitions(subcomponent)
     case ('SIM')
       input_definition => sim_block_definitions(subcomponent)
     case default
@@ -98,6 +105,8 @@ contains
       multi_package = gwe_idm_multi_package(subcomponent)
     case ('EXG')
       multi_package = exg_idm_multi_package(subcomponent)
+    case ('SWF')
+      multi_package = swf_idm_multi_package(subcomponent)
     case ('SIM')
       multi_package = sim_idm_multi_package(subcomponent)
     case default
@@ -122,6 +131,8 @@ contains
       integrated = gwe_idm_integrated(subcomponent)
     case ('EXG')
       integrated = exg_idm_integrated(subcomponent)
+    case ('SWF')
+      integrated = swf_idm_integrated(subcomponent)
     case ('SIM')
       integrated = sim_idm_integrated(subcomponent)
     case default
@@ -141,6 +152,8 @@ contains
     case ('GWE')
       integrated = .true.
     case ('EXG')
+      integrated = .true.
+    case ('SWF')
       integrated = .true.
     case ('SIM')
       integrated = .true.

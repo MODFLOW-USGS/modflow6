@@ -313,7 +313,7 @@ contains
       else
         call store_error_filename(fname)
       end if
-    case ('DISU6')
+    case ('DISU6', 'DISL6')
       !
       call get_isize('NODES', dis_mempath, dim1_size)
       !
