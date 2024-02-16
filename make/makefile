@@ -335,6 +335,7 @@ $(OBJDIR)/swf1oc1.o \
 $(OBJDIR)/swf1obs1.o \
 $(OBJDIR)/swf1flw1.o \
 $(OBJDIR)/swf1dfw1.o \
+$(OBJDIR)/ExplicitModel.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
 $(OBJDIR)/GwtGwtExchange.o \
@@ -387,8 +388,7 @@ $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
 $(OBJDIR)/RectangularGeometry.o \
-$(OBJDIR)/CircularGeometry.o \
-$(OBJDIR)/ExplicitModel.o
+$(OBJDIR)/CircularGeometry.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)
