@@ -61,5 +61,4 @@ def test_scenario(
             verbose=False,
         )
         copytree(workspace, workspace / "mf6_regression")
-        test.setup(model_path, workspace)
         test.run()
