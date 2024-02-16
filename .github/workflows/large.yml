@@ -1,13 +1,12 @@
 name: MODFLOW 6 large models
 on:
-  # run at 6 AM UTC every day
   schedule:
-    - cron: '0 6 * * *' 
+    - cron: '0 6 * * *'
   # workflow_dispatch trigger to run tests via GitHub UI or CLI,
   # see https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
   workflow_dispatch:
+
 jobs:
-  # caching only necessary on Windows
   cache_ifort:
     name: Cache Intel OneAPI compilers
     runs-on: ${{ matrix.os }}
@@ -15,9 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ifx
           - {os: windows-2022, compiler: intel, version: 2022.2}
-          # ifort
           - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
           - {os: windows-2022, compiler: intel-classic, version: 2021.9}
           - {os: windows-2022, compiler: intel-classic, version: 2021.8}
@@ -29,6 +26,11 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
+        # Error handling for setup failure
+        continue-on-error: true
+        if: ${{ failure() }}
+        run: exit 1
+
   test:
     name: Test
     runs-on: ubuntu-22.04
@@ -46,17 +48,22 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v4
         with:
           path: modflow6
+        # Error handling for checkout failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Checkout modflow6-${{ matrix.repo }}
         uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-${{ matrix.repo }}
           path: modflow6-${{ matrix.repo }}
+        # Error handling for checkout failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -64,12 +71,18 @@ jobs:
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-environment: true
+        # Error handling for setup failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
+        # Error handling for setup failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Cache modflow6 examples
         id: cache-examples
@@ -77,12 +90,18 @@ jobs:
         with:
           path: modflow6-examples/examples
           key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+        # Error handling for cache failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Install extra Python packages
         if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
         run: |
           pip install -r requirements.pip.txt
+        # Error handling for installation failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Build example models
         if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
@@ -90,30 +109,48 @@ jobs:
         run: |
           pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
+        # Error handling for build failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Build modflow6
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
+        # Error handling for build failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Get executables
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
+        # Error handling for execution failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Update flopy
         working-directory: modflow6/autotest
         run: python update_flopy.py
+        # Error handling for update failure
+        if: ${{ failure() }}
+        run: exit 1
 
       - name: Run tests
         working-directory: modflow6/autotest
         run: pytest -v -n auto --durations 0 test_${{ matrix.repo }}.py --keep-failed .failed
-      
+        # Error handling for test failure
+        if: ${{ failure() }}
+        run: exit 1
+
       - name: Upload failed test output
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: failed-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.version }}
           path: modflow6/autotest/.failed
+        # Error handling for upload failure
+        if: ${{ failure() }}
+        run: exit 1
