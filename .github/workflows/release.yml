@@ -63,13 +63,9 @@ jobs:
       matrix:
         include:
           - os: ${{ inputs.linux_version }}
-            ostag: linux
           - os: macos-12
-            ostag: mac
           - os: macos-14
-            ostag: macm1
           - os: windows-2022
-            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -143,10 +139,16 @@ jobs:
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
+      - name: Get OS tag
+        id: ostag
+        run: |
+          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          echo "ostag=$ostag" >> $GITHUB_OUTPUT
+
       - name: Upload binaries
         uses: actions/upload-artifact@v3
         with:
-          name: bin-${{ runner.os }}
+          name: bin-${{ steps.ostag.outputs.ostag }}
           path: modflow6/bin
 
       # only run steps below if inputs.run_tests is true
@@ -311,10 +313,16 @@ jobs:
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
+      - name: Get OS tag
+        id: ostag
+        run: |
+          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          echo "ostag=$ostag" >> $GITHUB_OUTPUT
+
       - name: Download pre-built binaries
         uses: actions/download-artifact@v3
         with:
-          name: bin-${{ runner.os }}
+          name: bin-${{ steps.ostag.outputs.ostag }}
           path: bin
 
       # execute permissions may not have survived artifact upload/download
@@ -404,13 +412,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            ostag: linux
           - os: macos-12
-            ostag: mac
           - os: macos-14
-            ostag: macm1
           - os: windows-2022
-            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -457,22 +461,28 @@ jobs:
             cmd="$cmd --releasemode"
           fi
           eval "$cmd"
+ 
+      - name: Get OS tag
+        id: ostag
+        run: |
+          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
+          path: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
       
       - name: Select artifacts
-        working-directory: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
+        working-directory: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
         run: |
-          echo "selecting ${{ matrix.ostag }} artifacts"
+          echo "selecting ${{ steps.ostag.outputs.ostag }} artifacts"
           # remove dists for other systems
           rm -rf ${{ needs.build.outputs.distname }}_*
           # remove release notes
           rm -rf release_notes
           # rename dist bin directory
-          mv bin-${{ runner.os }} bin
+          mv bin-${{ steps.ostag.outputs.ostag }} bin
           # remove binaries for other systems
           rm -rf bin-*
 
@@ -484,7 +494,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           pip install -r modflow6-examples/etc/requirements.pip.txt
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           echo "$distname/bin" >> $GITHUB_PATH
           # execute permissions may not have survived artifact upload/download
           chmod +x "$distname/bin/mf6"
@@ -511,7 +521,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # build distribution
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           cmd="python modflow6/distribution/build_dist.py -o $distname -e modflow6-examples"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
@@ -526,7 +536,7 @@ jobs:
       - name: Zip distribution
         if: runner.os != 'Windows'
         run: |
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             zip -r $distname.zip \
               $distname/bin \
@@ -561,7 +571,7 @@ jobs:
       - name: Zip distribution (Windows)
         if: runner.os == 'Windows'
         run: |
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             7z a -tzip $distname.zip \
               $distname/bin \
@@ -594,20 +604,20 @@ jobs:
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
-          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
+          name: "${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
+          path: "${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}.zip"
 
       - name: Upload release notes
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:
           name: release_notes
-          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}/doc/release.pdf"
+          path: "${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}/doc/release.pdf"
 
       - name: Check distribution
         run: |
           # unzip and validate the archive
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           distfile="$distname.zip"
           checkdir="check"
           mkdir $checkdir
