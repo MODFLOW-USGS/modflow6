@@ -415,6 +415,7 @@ jobs:
   parallel_test:
     name: Parallel testing
     needs:
+      - lint
       - build
       - smoke_test
     runs-on: ${{ matrix.os }}
@@ -521,23 +522,16 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
-          create-args: >-
-            netcdf-fortran
           init-shell: >-
             bash
             powershell
           cache-environment: true
           cache-downloads: true
 
-      - name: Update PKG_CONFIG_PATH
-        working-directory: modflow6
-        run: |
-          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false -Dextended=true --prefix=$(pwd) --libdir=bin
+          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
@@ -555,20 +549,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
-
-      - name: Confirm netcdf license logged
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          pytest test_gwf_chd01.py --keep temp
-          if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[0-chd01]0/mfsim.lst
-          then
-            echo "NetCDF license logging confirmed."
-          else
-            echo "NetCDF license logging not found."
-            exit 1
-          fi
 
       - name: Test programs (parallel)
         working-directory: modflow6/autotest
@@ -588,7 +568,7 @@ jobs:
           path: modflow6/autotest/.failed
 
   netcdf_test:
-    name: Netcdf testing
+    name: NetCDF testing
     needs:
       - build
       - smoke_test
@@ -596,7 +576,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
+        os: [ ubuntu-22.04 ] #, macos-12 ] #, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}
@@ -609,25 +589,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: modflow6
-
-      - name: Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: |
-            git
-            make
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-python-pytest
-
-      - name: Setup MPI
-        if: runner.os == 'Windows'
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: msmpi
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
@@ -645,13 +606,6 @@ jobs:
       - name: Clone PETSc
         if: runner.os != 'Windows' && steps.cache-petsc.outputs.cache-hit != 'true'
         run: git clone -b release https://gitlab.com/petsc/petsc.git petsc
-
-      - name: Download PETSc
-        if: runner.os == 'Windows'
-        run: |
-          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.4.tar.gz -O -J
-          mkdir petsc
-          tar -xzf petsc-3.18.4.tar.gz -C petsc --strip-components=1
 
       - name: Configure environment
         if: runner.os == 'Linux'
@@ -679,35 +633,28 @@ jobs:
           sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
           sudo make all
 
-      - name: Configure PETSc
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        working-directory: petsc
+      - name: Install netcdf
+        if: runner.os == 'Linux'
         run: |
-          pacman -Syu
-          pacman -Sy --noconfirm autoconf automake-wrapper bison bsdcpio make git \
-            mingw-w64-x86_64-toolchain patch python flex \
-            pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
-            mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq
-          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
-          make all
+          sudo apt-get update
+          sudo apt-get install build-essential \
+            libnetcdf-dev \
+            libnetcdff-dev \
+            netcdf-bin
+          nc-config --all
+          nf-config --all
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment-nctest.yml
           create-args: >-
-            netcdf-fortran
+            netcdf4
           init-shell: >-
             bash
             powershell
           cache-environment: true
           cache-downloads: true
-
-      - name: Update PKG_CONFIG_PATH
-        working-directory: modflow6
-        run: |
-          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6
@@ -720,10 +667,6 @@ jobs:
         if: failure()
         working-directory: modflow6
         run: cat builddir/meson-logs/meson-log.txt
-
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
 
       - name: Get executables
         working-directory: modflow6/autotest
@@ -755,4 +698,3 @@ jobs:
         with:
           name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
           path: modflow6/autotest/.failed
-          
