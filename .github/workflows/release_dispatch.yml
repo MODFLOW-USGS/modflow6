@@ -34,16 +34,6 @@ on:
         required: false
         type: string
         default: '2021.7'
-      commit_version:
-        description: 'Commit version numbers back to the develop branch. Not considered if reset is false.'
-        required: false
-        type: boolean
-        default: false
-      reset:
-        description: 'Reset the develop branch from the master branch. Not considered if approve is false.'
-        required: false
-        type: boolean
-        default: false
       run_tests:
         description: 'Run tests after building binaries.'
         required: false
@@ -129,8 +119,8 @@ jobs:
           echo "version=$ver" >> $GITHUB_OUTPUT
   make_dist:
     name: Make distribution
-    needs: set_options
     uses: MODFLOW-USGS/modflow6/.github/workflows/release.yml@develop
+    needs: set_options
     with:
       # If the workflow is manually triggered, the maintainer must manually set approve=true to approve a release.
       # If triggered by pushing a release branch, the release is approved if the branch name doesn't contain "rc".
