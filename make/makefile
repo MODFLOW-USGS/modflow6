@@ -96,7 +96,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/swf-zdgidm.o \
-$(OBJDIR)/swfidm.o \
+$(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
 $(OBJDIR)/swf-dislidm.o \
@@ -134,8 +134,8 @@ $(OBJDIR)/gwe-disuidm.o \
 $(OBJDIR)/gwe-disidm.o \
 $(OBJDIR)/gwe-ctpidm.o \
 $(OBJDIR)/gwe-cndidm.o \
-$(OBJDIR)/exg-gwfswfidm.o \
 $(OBJDIR)/exg-gwtgwtidm.o \
+$(OBJDIR)/exg-gwfswfidm.o \
 $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/exg-gwfgweidm.o \
@@ -166,7 +166,6 @@ $(OBJDIR)/HashTable.o \
 $(OBJDIR)/VectorBase.o \
 $(OBJDIR)/Sparse.o \
 $(OBJDIR)/DisvGeom.o \
-$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
@@ -267,6 +266,7 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
@@ -364,9 +364,9 @@ $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
-$(OBJDIR)/exg-gwfswf.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
+$(OBJDIR)/exg-gwfswf.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
 $(OBJDIR)/RunControl.o \
