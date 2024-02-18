@@ -821,7 +821,7 @@ contains
           this%bedleak(ipos) = DNODATA
           !
           ! -- create warning message
-          write (warnmsg, '(2(a,1x,i0,1x),a,1pe7.1,a)') &
+          write (warnmsg, '(2(a,1x,i0,1x),a,1pe8.1,a)') &
             'BEDLEAK for connection', j, 'in lake', n, 'is specified to '// &
             'be NONE. Lake connections where the lake-GWF connection '// &
             'conductance is solely a function of aquifer properties '// &
