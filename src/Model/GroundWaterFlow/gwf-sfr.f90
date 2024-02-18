@@ -2363,6 +2363,7 @@ contains
     real(DP) :: qext
     ! -- for budget
     integer(I4B) :: n
+    integer(I4B) :: n2
     real(DP) :: qoutflow
     real(DP) :: qfrommvr
     real(DP) :: qtomvr
@@ -2393,6 +2394,8 @@ contains
       end if
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
+        n2 = this%ja(i)
+        if (this%iboundpak(n2) == 0) cycle        
         qext = DZERO
         exit
       end do
@@ -3829,6 +3832,7 @@ contains
         if (this%idir(i) > 0) cycle
         if (this%idiv(i) > 0) cycle
         n2 = this%ja(i)
+        if (this%iboundpak(n2) == 0) cycle
         f = this%ustrf(n2) / this%ftotnd(n)
         this%qconn(i) = qd * f
       end do
