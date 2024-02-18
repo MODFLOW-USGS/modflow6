@@ -2395,7 +2395,7 @@ contains
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
         if (this%idir(i) > 0) cycle
         n2 = this%ja(i)
-        if (this%iboundpak(n2) == 0) cycle        
+        if (this%iboundpak(n2) == 0) cycle
         qext = DZERO
         exit
       end do
