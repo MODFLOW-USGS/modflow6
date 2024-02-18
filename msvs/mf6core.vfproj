@@ -118,6 +118,8 @@
 		<File RelativePath="..\src\Exchange\exg-gwfgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwtidm.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfswf.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfswfidm.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
@@ -219,11 +221,32 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-sft.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-src.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-uzt.f90"/></Filter>
+		<Filter Name="SurfaceWaterFlow">
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-disl.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-dislidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-namidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-cxs.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-cxsidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-dfw.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-dfwidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-ic.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-icidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-obs.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-oc.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-flw.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-flwidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-chdidm.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-sto.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-zdg.f90"/>
+		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-zdgidm.f90"/>
+		</Filter>
 		<Filter Name="ModelUtilities">
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackageExt.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\DislGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\FlowModelInterface.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GweCndOptions.f90"/>
@@ -240,6 +263,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionUtils.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\SwfCxsUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\TspAdvOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
@@ -338,6 +362,7 @@
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGweDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmSwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>

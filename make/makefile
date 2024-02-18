@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -30,12 +30,13 @@ SOURCEDIR23=../src/Utilities/Matrix
 SOURCEDIR24=../src/Utilities/Observation
 SOURCEDIR25=../src/Model
 SOURCEDIR26=../src/Model/Connection
-SOURCEDIR27=../src/Model/GroundWaterTransport
-SOURCEDIR28=../src/Model/ModelUtilities
-SOURCEDIR29=../src/Model/GroundWaterFlow
-SOURCEDIR30=../src/Model/TransportModel
-SOURCEDIR31=../src/Model/Geometry
-SOURCEDIR32=../src/Model/GroundWaterEnergy
+SOURCEDIR27=../src/Model/SurfaceWaterFlow
+SOURCEDIR28=../src/Model/GroundWaterTransport
+SOURCEDIR29=../src/Model/ModelUtilities
+SOURCEDIR30=../src/Model/GroundWaterFlow
+SOURCEDIR31=../src/Model/TransportModel
+SOURCEDIR32=../src/Model/Geometry
+SOURCEDIR33=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -69,7 +70,8 @@ ${SOURCEDIR28} \
 ${SOURCEDIR29} \
 ${SOURCEDIR30} \
 ${SOURCEDIR31} \
-${SOURCEDIR32} 
+${SOURCEDIR32} \
+${SOURCEDIR33} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -93,6 +95,14 @@ $(OBJDIR)/CharString.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
+$(OBJDIR)/swf-zdgidm.o \
+$(OBJDIR)/swfidm.o \
+$(OBJDIR)/swf-icidm.o \
+$(OBJDIR)/swf-flwidm.o \
+$(OBJDIR)/swf-dislidm.o \
+$(OBJDIR)/swf-dfwidm.o \
+$(OBJDIR)/swf-cxsidm.o \
+$(OBJDIR)/swf-chdidm.o \
 $(OBJDIR)/simtdisidm.o \
 $(OBJDIR)/sim-namidm.o \
 $(OBJDIR)/gwt-namidm.o \
@@ -124,6 +134,7 @@ $(OBJDIR)/gwe-disuidm.o \
 $(OBJDIR)/gwe-disidm.o \
 $(OBJDIR)/gwe-ctpidm.o \
 $(OBJDIR)/gwe-cndidm.o \
+$(OBJDIR)/exg-gwfswfidm.o \
 $(OBJDIR)/exg-gwtgwtidm.o \
 $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
@@ -132,6 +143,7 @@ $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmGwtDfnSelector.o \
 $(OBJDIR)/IdmGwfDfnSelector.o \
@@ -154,6 +166,7 @@ $(OBJDIR)/HashTable.o \
 $(OBJDIR)/VectorBase.o \
 $(OBJDIR)/Sparse.o \
 $(OBJDIR)/DisvGeom.o \
+$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
@@ -254,6 +267,7 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -297,6 +311,9 @@ $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/swf-disl.o \
+$(OBJDIR)/swf-cxs.o \
+$(OBJDIR)/swf-ic.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
@@ -312,6 +329,12 @@ $(OBJDIR)/StructArray.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/swf-zdg.o \
+$(OBJDIR)/swf-sto.o \
+$(OBJDIR)/swf-oc.o \
+$(OBJDIR)/swf-obs.o \
+$(OBJDIR)/swf-flw.o \
+$(OBJDIR)/swf-dfw.o \
 $(OBJDIR)/ExplicitModel.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
@@ -326,6 +349,7 @@ $(OBJDIR)/MappedMemory.o \
 $(OBJDIR)/StressListInput.o \
 $(OBJDIR)/StressGridInput.o \
 $(OBJDIR)/LoadMf6File.o \
+$(OBJDIR)/swf.o \
 $(OBJDIR)/ExplicitSolution.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
@@ -340,6 +364,7 @@ $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
+$(OBJDIR)/exg-gwfswf.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
 $(OBJDIR)/exg-gwfgwt.o \

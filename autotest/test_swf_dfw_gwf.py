@@ -58,20 +58,20 @@ def build_models(idx, test):
     add_swf_model(sim)
     add_gwf_model(sim)
 
-    swfgwf_data = [
+    gwfswf_data = [
         ((0,), (0, 0, 0), 1.0),
         ((1,), (0, 0, 1), 1.0),
         ((2,), (0, 0, 2), 1.0),
     ]
-    swfgwf = flopy.mf6.ModflowSwfgwf(
+    gwfswf = flopy.mf6.ModflowGwfswf(
         sim,
         print_input=True,
         print_flows=True,
-        exgtype="SWF6-GWF6",
-        nexg=len(swfgwf_data),
+        exgtype="GWF6-SWF6",
+        nexg=len(gwfswf_data),
         exgmnamea="swfmodel",
         exgmnameb="gwfmodel",
-        exchangedata=swfgwf_data,
+        exchangedata=gwfswf_data,
     )
 
     return sim, None
