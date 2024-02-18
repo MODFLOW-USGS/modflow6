@@ -31,20 +31,14 @@ module SwfObsModule
 
 contains
 
+  !> @brief Create a new obs object
+  !!
+  !! Create observation object, allocate pointers, initialize values
+  !<
   subroutine swf_obs_cr(obs, inobs)
-! ******************************************************************************
-! swf_obs_cr -- Create a new SwfObsType object
-! Subroutine: (1) creates object
-!             (2) allocates pointers
-!             (3) initializes values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(SwfObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
-! ------------------------------------------------------------------------------
     !
     allocate (obs)
     call obs%allocate_scalars()
@@ -55,19 +49,14 @@ contains
     return
   end subroutine swf_obs_cr
 
+  !> @brief Allocate and read
+  !<
   subroutine swf_obs_ar(this, ic, x, flowja)
-! ******************************************************************************
-! swf_obs_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(SwfObsType), intent(inout) :: this
     type(SwfIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
-! ------------------------------------------------------------------------------
     !
     ! Call ar method of parent class
     call this%obs_ar()
@@ -78,13 +67,9 @@ contains
     return
   end subroutine swf_obs_ar
 
+  !> @brief Define
+  !<
   subroutine swf_obs_df(this, iout, pkgname, filtyp, dis)
-! ******************************************************************************
-! swf_obs_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(SwfObsType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
@@ -93,7 +78,6 @@ contains
     class(DisBaseType), pointer :: dis
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     ! Call overridden method of parent class
     call this%ObsType%obs_df(iout, pkgname, filtyp, dis)
@@ -112,20 +96,15 @@ contains
     return
   end subroutine swf_obs_df
 
+  !> @brief Save obs
+  !<
   subroutine swf_obs_bd(this)
-! ******************************************************************************
-! swf_obs_bd -- save obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(SwfObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, jaindex, nodenumber
     character(len=100) :: msg
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     call this%obs_bd_clear()
     !
@@ -151,30 +130,19 @@ contains
     return
   end subroutine swf_obs_bd
 
+  !> @brief Do GWF observations need any checking? If so, add checks here
+  !<
   subroutine swf_obs_rp(this)
-! ******************************************************************************
-! swf_obs_rp
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(SwfObsType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! Do SWF observations need any checking? If so, add checks here
     return
   end subroutine swf_obs_rp
 
+  !> @brief Deallocate memory
+  !<
   subroutine swf_obs_da(this)
-! ******************************************************************************
-! swf_obs_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
     class(SwfObsType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     nullify (this%ic)
     nullify (this%x)
@@ -184,19 +152,14 @@ contains
     return
   end subroutine swf_obs_da
 
+  !> @brief Set pointers
+  !<
   subroutine set_pointers(this, ic, x, flowja)
-! ******************************************************************************
-! set_pointers
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(SwfObsType), intent(inout) :: this
     type(SwfIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
-! ------------------------------------------------------------------------------
     !
     this%ic => ic
     this%x => x
@@ -207,13 +170,9 @@ contains
 
   ! -- Procedures related to SWF observations (NOT type-bound)
 
+  !> @brief Calculate stage observation when requested
+  !<
   subroutine swf_process_stage_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! swf_process_stage_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -223,7 +182,6 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -245,13 +203,9 @@ contains
     return
   end subroutine swf_process_stage_obs_id
 
+  !> @brief Process flow between two cells when requested
+  !<
   subroutine swf_process_intercell_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! swf_process_intercell_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -263,7 +217,6 @@ contains
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
 70  format('Error: No connection exists between cells identified in text: ', a)
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring

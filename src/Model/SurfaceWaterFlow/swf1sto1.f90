@@ -173,7 +173,6 @@ contains
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
-! ------------------------------------------------------------------------------
     !
     ! -- get stress period data
     if (this%ionper < kper) then
