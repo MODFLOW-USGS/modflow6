@@ -9,7 +9,7 @@ module SwfDislModule
                        store_warning
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
-  use DislGeom, only: calcdist, partialdist
+  use DislGeom, only: calcdist
 
   implicit none
 

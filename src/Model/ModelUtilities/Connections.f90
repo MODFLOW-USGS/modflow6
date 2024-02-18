@@ -1025,7 +1025,6 @@ contains
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
     use GeomUtilModule, only: get_node
-    use DislGeom, only: DislGeomType
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
     class(ConnectionsType) :: this
@@ -1048,7 +1047,6 @@ contains
     integer(I4B), dimension(:), allocatable :: javertcells
     type(sparsematrix) :: sparse, vertcellspm
     integer(I4B) :: n, m, i, j, ierror
-    ! type(DislGeomType) :: geol
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
@@ -1056,14 +1054,10 @@ contains
     ! -- Set scalars
     this%nodes = nodes
     this%ianglex = 1
-    ! -- Initialize DislGeomType objects
-    ! call geol%init(nodesuser, nodes, cellfdc, iavert, javert, iavertcells,     &
-    !                javertcells, vertices, cellxyz, centerverts,          &
-    !                nodereduced, nodeuser)
-
+    !
     ! -- Create a sparse matrix array with a row for each vertex.  The columns
     !    in the sparse matrix contains the cells that include that vertex.
-    !    This array will be used to determine horizontal cell connectivity.
+    !    This array will be used to determine cell connectivity.
     allocate (itemp(nvert))
     do i = 1, nvert
       itemp(i) = 4
@@ -1426,6 +1420,7 @@ contains
   end subroutine vertexconnect
 
   !> @brief Routine to make cell connections from vertices
+  !! for a linear network
   !<
   subroutine vertexconnectl(nodes, nrsize, maxnnz, nodeuser, sparse, &
                             iavertcells, javertcells, &
