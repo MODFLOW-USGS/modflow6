@@ -5,7 +5,7 @@ module DislGeom
   private
   public :: calcdist, line_unit_vector
 
-  contains
+contains
 
   !> @brief Calculate distance bewteen two vertices
   !<
@@ -27,11 +27,10 @@ module DislGeom
     return
   end function calcdist
 
-
   !> @brief Calculate distance bewteen two vertices
   !!
   !! Calculate the vector components (xcomp, ycomp, and zcomp)
-  !! for a line defined by two points, (x0, y0, z0), (x1, y1, z1). Also 
+  !! for a line defined by two points, (x0, y0, z0), (x1, y1, z1). Also
   !! return the magnitude of the original vector, vmag.
   !!
   !<
