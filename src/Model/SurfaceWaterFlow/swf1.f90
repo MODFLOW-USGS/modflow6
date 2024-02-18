@@ -979,7 +979,6 @@ contains
     real(DP), dimension(:, :), intent(in) :: budterm
     character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
     character(len=*), intent(in) :: rowlabel
-! ------------------------------------------------------------------------------
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
     !

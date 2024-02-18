@@ -9,7 +9,7 @@ module SwfDislModule
                        store_warning
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
-  use DislGeom, only: calcdist, partialdist
+  use DislGeom, only: calcdist
 
   implicit none
 
@@ -423,7 +423,6 @@ contains
     real(DP), dimension(:), contiguous, pointer :: vert_y => null()
     real(DP), dimension(:), contiguous, pointer :: vert_z => null()
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
@@ -531,7 +530,6 @@ contains
     type(sparsematrix) :: vert_spm
     integer(I4B) :: i, j, ierr
     integer(I4B) :: icv_idx, startvert, maxnnz = 2
-! ------------------------------------------------------------------------------
     !
     ! -- initialize sparse matrix
     call vert_spm%init(this%nodesuser, this%nvert, maxnnz)

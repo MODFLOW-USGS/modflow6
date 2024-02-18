@@ -35,7 +35,7 @@ contains
 
   !> @brief Create a new GwfObsType object
   !!
-  !! Create oseration object, allocate pointers, initialize values
+  !! Create observation object, allocate pointers, initialize values
   !<
   subroutine gwf_obs_cr(obs, inobs)
     ! -- dummy
@@ -194,7 +194,7 @@ contains
 
   ! -- Procedures related to GWF observations (NOT type-bound)
 
-  !> @brief Calculate drawdown obseration when requested
+  !> @brief Calculate drawdown observation when requested
   !<
   subroutine gwf_process_head_drawdown_obs_id(obsrv, dis, inunitobs, iout)
     ! -- dummy
