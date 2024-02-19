@@ -118,8 +118,8 @@
 		<File RelativePath="..\src\Exchange\exg-gwfgwtidm.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwtidm.f90"/>
-		<File RelativePath="..\src\Exchange\exg-gwfswf.f90"/>
-		<File RelativePath="..\src\Exchange\exg-gwfswfidm.f90"/>
+		<File RelativePath="..\src\Exchange\exg-swfgwf.f90"/>
+		<File RelativePath="..\src\Exchange\exg-swfgwfidm.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">

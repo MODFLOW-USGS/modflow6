@@ -348,7 +348,7 @@ contains
     use GwfGweExchangeModule, only: gwfgwe_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
     use GweGweExchangeModule, only: gweexchange_create
-    use GwfSwfExchangeModule, only: gwfswf_cr
+    use SwfGwfExchangeModule, only: swfgwf_cr
     use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
     use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
     use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
@@ -460,10 +460,10 @@ contains
                                   exg_mempath)
         end if
         call add_virtual_gwe_exchange(exg_name, exg_id, m1_id, m2_id)
-      case ('GWF6-SWF6')
-        write (exg_name, '(a,i0)') 'GWF-SWF_', exg_id
+      case ('SWF6-GWF6')
+        write (exg_name, '(a,i0)') 'SWF-GWF_', exg_id
         if (both_local) then
-          call gwfswf_cr(fname, exg_name, exg_id, m1_id, m2_id, exg_mempath)
+          call swfgwf_cr(fname, exg_name, exg_id, m1_id, m2_id, exg_mempath)
         end if
       case default
         write (errmsg, '(a,a)') &

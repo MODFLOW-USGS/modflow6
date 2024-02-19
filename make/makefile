@@ -135,7 +135,7 @@ $(OBJDIR)/gwe-disidm.o \
 $(OBJDIR)/gwe-ctpidm.o \
 $(OBJDIR)/gwe-cndidm.o \
 $(OBJDIR)/exg-gwtgwtidm.o \
-$(OBJDIR)/exg-gwfswfidm.o \
+$(OBJDIR)/exg-swfgwfidm.o \
 $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/exg-gwfgweidm.o \
@@ -366,7 +366,7 @@ $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
-$(OBJDIR)/exg-gwfswf.o \
+$(OBJDIR)/exg-swfgwf.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
 $(OBJDIR)/RunControl.o \

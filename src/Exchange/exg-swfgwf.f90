@@ -1,10 +1,10 @@
-!> @brief This module contains the GwfSwfExchangeModule Module
+!> @brief This module contains the SwfGwfExchangeModule Module
 !!
 !! This module contains the code for connecting a SWF model with
 !! a GWF model.
 !!
 !<
-module GwfSwfExchangeModule
+module SwfGwfExchangeModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, DZERO
@@ -27,9 +27,9 @@ module GwfSwfExchangeModule
   use TableModule, only: TableType, table_cr
 
   private
-  public :: gwfswf_cr
+  public :: swfgwf_cr
 
-  type, extends(NumericalExchangeType) :: GwfSwfExchangeType
+  type, extends(NumericalExchangeType) :: SwfGwfExchangeType
 
     class(NumericalModelType), pointer :: model1 => null() !< model 1
     class(NumericalModelType), pointer :: model2 => null() !< model 2
@@ -85,7 +85,7 @@ module GwfSwfExchangeModule
     procedure, pass(this) :: noder
     procedure, pass(this) :: cellstr
 
-  end type GwfSwfExchangeType
+  end type SwfGwfExchangeType
 
 contains
 
@@ -93,7 +93,7 @@ contains
   !!
   !! Create a new SWF to GWF exchange object.
   !<
-  subroutine gwfswf_cr(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine swfgwf_cr(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
@@ -103,7 +103,7 @@ contains
     integer(I4B), intent(in) :: m2_id !< id for model 2
     character(len=*), intent(in) :: input_mempath
     ! -- local
-    type(GwfSwfExchangeType), pointer :: exchange
+    type(SwfGwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
     integer(I4B) :: m1_index, m2_index
@@ -122,7 +122,7 @@ contains
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
     exchange%filename = filename
-    exchange%typename = 'GWF-SWF'
+    exchange%typename = 'SWF-GWF'
     !
     ! -- set swfmodel1
     m1_index = model_loc_idx(m1_id)
@@ -151,7 +151,7 @@ contains
     !
     ! -- Verify that gwf model1 is of the correct type
     if (.not. associated(exchange%swfmodel1) .and. m1_index > 0) then
-      write (errmsg, '(3a)') 'Problem with GWF-SWF exchange ', &
+      write (errmsg, '(3a)') 'Problem with SWF-GWF exchange ', &
         trim(exchange%name), &
         '.  Specified SWF Model does not appear to be of the correct type.'
       call store_error(errmsg, terminate=.true.)
@@ -159,7 +159,7 @@ contains
     !
     ! -- Verify that gwf model2 is of the correct type
     if (.not. associated(exchange%gwfmodel2) .and. m2_index > 0) then
-      write (errmsg, '(3a)') 'Problem with GWF-SWF exchange ', &
+      write (errmsg, '(3a)') 'Problem with SWF-GWF exchange ', &
         trim(exchange%name), &
         '.  Specified GWF Model does not appear to be of the correct type.'
       call store_error(errmsg, terminate=.true.)
@@ -170,7 +170,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwfswf_cr
+  end subroutine swfgwf_cr
 
   !> @ brief Define SWF GWF exchange
   !!
@@ -179,7 +179,7 @@ contains
   subroutine swf_gwf_df(this)
     ! -- modules
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     ! -- local
     !
     ! -- log the exchange
@@ -188,7 +188,7 @@ contains
     ! -- Ensure models are in same solution
     if (associated(this%swfmodel1) .and. associated(this%gwfmodel2)) then
       if (this%swfmodel1%idsoln /= this%gwfmodel2%idsoln) then
-        call store_error('Two models are connected in a GWF-SWF '// &
+        call store_error('Two models are connected in a SWF-GWF '// &
                          'exchange but they are in different solutions. '// &
                          'Models must be in same solution: '// &
                          trim(this%swfmodel1%name)//' '// &
@@ -212,7 +212,7 @@ contains
     ! -- Store obs
     ! call this%swf_gwf_df_obs()
     ! if (associated(this%swfmodel1)) then
-    !   call this%obs%obs_df(iout, this%name, 'GWF-SWF', this%swfmodel1%dis)
+    !   call this%obs%obs_df(iout, this%name, 'SWF-GWF', this%swfmodel1%dis)
     ! end if
     ! !
     ! ! -- validate
@@ -230,7 +230,7 @@ contains
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
     integer(I4B) :: n, iglo, jglo
@@ -255,7 +255,7 @@ contains
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     ! -- local
     integer(I4B) :: n, iglo, jglo
@@ -281,7 +281,7 @@ contains
   subroutine swf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     real(DP), dimension(:), intent(inout) :: rhs_sln
@@ -311,7 +311,7 @@ contains
   !<
   subroutine swf_gwf_cq(this, icnvg, isuppress_output, isolnid)
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
@@ -338,7 +338,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     !
     ! -- objects
     call this%obs%obs_da()
@@ -370,7 +370,7 @@ contains
   subroutine allocate_scalars(this)
     ! -- modules
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     !
     allocate (this%filename)
     this%filename = ''
@@ -394,7 +394,7 @@ contains
   !<
   subroutine allocate_arrays(this)
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< instance of exchange object
+    class(SwfGwfExchangeType) :: this !< instance of exchange object
     !
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
@@ -417,13 +417,13 @@ contains
     use InputOutputModule, only: getunit, openfile
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
-    use ExgGwfswfInputModule, only: ExgGwfswfParamFoundType
+    use ExgSwfgwfInputModule, only: ExgSwfgwfParamFoundType
     use SourceCommonModule, only: filein_fname
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
     ! -- local
-    type(ExgGwfswfParamFoundType) :: found
+    type(ExgSwfgwfParamFoundType) :: found
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%ipr_input, 'IPR_INPUT', &
@@ -431,7 +431,7 @@ contains
     call mem_set_value(this%ipr_flow, 'IPR_FLOW', &
                        this%input_mempath, found%ipr_flow)
     !
-    write (iout, '(1x,a)') 'PROCESSING GWF-SWF EXCHANGE OPTIONS'
+    write (iout, '(1x,a)') 'PROCESSING SWF-GWF EXCHANGE OPTIONS'
     !
     if (found%ipr_input) then
       write (iout, '(4x,a)') &
@@ -453,7 +453,7 @@ contains
     !   end if
     ! end if
     !
-    write (iout, '(1x,a)') 'END OF GWF-SWF EXCHANGE OPTIONS'
+    write (iout, '(1x,a)') 'END OF SWF-GWF EXCHANGE OPTIONS'
     !
     ! -- Return
     return
@@ -464,12 +464,12 @@ contains
   subroutine source_dimensions(this, iout)
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use ExgGwfswfInputModule, only: ExgGwfswfParamFoundType
+    use ExgSwfgwfInputModule, only: ExgSwfgwfParamFoundType
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< instance of exchange object
+    class(SwfGwfExchangeType) :: this !< instance of exchange object
     integer(I4B), intent(in) :: iout !< for logging
     ! -- local
-    type(ExgGwfswfParamFoundType) :: found
+    type(ExgSwfgwfParamFoundType) :: found
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%nexg, 'NEXG', this%input_mempath, found%nexg)
@@ -492,7 +492,7 @@ contains
     ! -- modules
     use GeomUtilModule, only: get_node
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< instance of exchange object
+    class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
     integer(I4B), dimension(:), pointer, intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
@@ -521,7 +521,7 @@ contains
   function cellstr(this, model, cellid, iout)
     ! -- modules
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< instance of exchange object
+    class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
     integer(I4B), dimension(:), pointer, intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
@@ -555,7 +555,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< instance of exchange object
+    class(SwfGwfExchangeType) :: this !< instance of exchange object
     integer(I4B), intent(in) :: iout !< the output file unit
     ! -- local
     integer(I4B), dimension(:, :), contiguous, pointer :: cellidm1
@@ -657,7 +657,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n1, n2
@@ -688,7 +688,7 @@ contains
     ! -- return
     real(DP) :: qcalc
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     integer(I4B), intent(in) :: iexg
     integer(I4B), intent(in) :: n1
     integer(I4B), intent(in) :: n2
@@ -706,7 +706,7 @@ contains
   !<
   subroutine swf_gwf_add_to_flowja(this)
     ! -- modules
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n
@@ -748,7 +748,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use BudgetModule, only: rate_accumulator
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
@@ -793,7 +793,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     character(len=LENBUDTXT), dimension(1) :: budtxt
     integer(I4B) :: n
@@ -856,7 +856,7 @@ contains
   !<
   subroutine swf_gwf_bdsav(this)
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     ! -- local
     integer(I4B) :: icbcfl, ibudfl
     ! !
@@ -889,7 +889,7 @@ contains
   !   use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
   !   use TdisModule, only: kstp, kper
   !   ! -- dummy
-  !   class(GwfSwfExchangeType) :: this !< this exchange
+  !   class(SwfGwfExchangeType) :: this !< this exchange
   !   class(NumericalModelType), pointer :: model !< the model to save budget for
   !   character(len=*), intent(in) :: neighbor_name !< name of the connected neighbor model
   !   ! -- local
@@ -1048,7 +1048,7 @@ contains
     use SimVariablesModule, only: iout
     use ConstantsModule, only: DZERO, LINELENGTH
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+    class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     ! -- local
     integer(I4B) :: iexg, n1, n2
     real(DP) :: flow
@@ -1098,7 +1098,7 @@ contains
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
     ! -- dummy
-    class(GwfSwfExchangeType), intent(inout) :: this
+    class(SwfGwfExchangeType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -1141,7 +1141,7 @@ contains
   !<
   function swf_gwf_connects_model(this, model) result(is_connected)
     ! -- dummy
-    class(GwfSwfExchangeType) :: this !< the instance of the exchange
+    class(SwfGwfExchangeType) :: this !< the instance of the exchange
     class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
     ! -- return
     logical(LGP) :: is_connected !< true, when connected
@@ -1162,9 +1162,9 @@ contains
     return
   end function
 
-end module GwfSwfExchangeModule
+end module SwfGwfExchangeModule
 
-! module GwfSwfExchangeModule
+! module SwfGwfExchangeModule
 
 !   use KindModule, only: DP, I4B, LGP
 !   use SimVariablesModule, only: errmsg
@@ -1192,17 +1192,17 @@ end module GwfSwfExchangeModule
 !   implicit none
 
 !   private
-!   public :: GwfSwfExchangeType
-!   public :: gwfswf_cr
-!   public :: GetGwfSwfExchangeFromList
-!   public :: CastAsGwfSwfExchange
+!   public :: SwfGwfExchangeType
+!   public :: swfgwf_cr
+!   public :: GetSwfGwfExchangeFromList
+!   public :: CastAsSwfGwfExchange
 
-!   !> @brief Derived type for GwfSwfExchangeType
+!   !> @brief Derived type for SwfGwfExchangeType
 !   !!
 !   !! This derived type contains information and methods for
 !   !! connecting a SWF model with a GWF model.
 !   !<
-!   type, extends(DisConnExchangeType) :: GwfSwfExchangeType
+!   type, extends(DisConnExchangeType) :: SwfGwfExchangeType
 !     class(SwfModelType), pointer :: swfmodel1 => null() !< pointer to SWF Model 1
 !     class(GwfModelType), pointer :: gwfmodel2 => null() !< pointer to GWF Model 2
 !     !
@@ -1270,7 +1270,7 @@ end module GwfSwfExchangeModule
 !     procedure, public :: swf_gwf_set_flow_to_npf
 !     procedure, private :: validate_exchange
 !     procedure :: swf_gwf_add_to_flowja
-!   end type GwfSwfExchangeType
+!   end type SwfGwfExchangeType
 
 ! contains
 
@@ -1278,7 +1278,7 @@ end module GwfSwfExchangeModule
 !   !!
 !   !! Create a new SWF to GWF exchange object.
 !   !<
-!   subroutine gwfswf_cr(filename, name, id, m1_id, m2_id)
+!   subroutine swfgwf_cr(filename, name, id, m1_id, m2_id)
 !     ! -- modules
 !     use ConstantsModule, only: LINELENGTH
 !     use BaseModelModule, only: BaseModelType
@@ -1293,7 +1293,7 @@ end module GwfSwfExchangeModule
 !     integer(I4B), intent(in) :: m1_id !< id for model 1
 !     integer(I4B), intent(in) :: m2_id !< id for model 2
 !     ! -- local
-!     type(GwfSwfExchangeType), pointer :: exchange
+!     type(SwfGwfExchangeType), pointer :: exchange
 !     class(BaseModelType), pointer :: mb
 !     class(BaseExchangeType), pointer :: baseexchange
 !     integer(I4B) :: m1_index, m2_index
@@ -1359,7 +1359,7 @@ end module GwfSwfExchangeModule
 !     !
 !     ! -- Return
 !     return
-!   end subroutine gwfswf_cr
+!   end subroutine swfgwf_cr
 
 !   !> @ brief Define GWF GWF exchange
 !   !!
@@ -1371,7 +1371,7 @@ end module GwfSwfExchangeModule
 !     use InputOutputModule, only: getunit, openfile
 !     use GhostNodeModule, only: gnc_cr
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: inunit
 !     !
@@ -1446,7 +1446,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine validate_exchange(this)
 !     ! -- modules
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     logical(LGP) :: has_k22, has_spdis, has_vsc
 !     !
@@ -1541,7 +1541,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use SparseModule, only: sparsematrix
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     type(sparsematrix), intent(inout) :: sparse
 !     ! -- local
 !     integer(I4B) :: n, iglo, jglo
@@ -1571,7 +1571,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use SparseModule, only: sparsematrix
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
 !     ! -- local
 !     integer(I4B) :: n, iglo, jglo
@@ -1599,7 +1599,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_ar(this)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     ! -- If mover is active, then call ar routine
 !     if (this%inmvr > 0) call this%mvr%mvr_ar()
@@ -1622,7 +1622,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use TdisModule, only: readnewdata
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     ! -- Check with TDIS on whether or not it is time to RP
 !     if (.not. readnewdata) return
@@ -1643,7 +1643,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_ad(this)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     ! -- Advance mover
 !     if (this%inmvr > 0) call this%mvr%mvr_ad()
@@ -1661,7 +1661,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_cf(this, kiter)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: kiter
 !     !
 !     ! -- Rewet cells across models using the wetdry parameters in each model's
@@ -1681,7 +1681,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DHALF
 !     use GwfNpfModule, only: hcond, vcond
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: kiter
 !     class(MatrixBaseType), pointer :: matrix_sln
 !     real(DP), dimension(:), intent(inout) :: rhs_sln
@@ -1751,7 +1751,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use SmoothingModule, only: sQuadraticSaturationDerivative
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: kiter
 !     class(MatrixBaseType), pointer :: matrix_sln
 !     ! -- local
@@ -1859,7 +1859,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_cq(this, icnvg, isuppress_output, isolnid)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(inout) :: icnvg
 !     integer(I4B), intent(in) :: isuppress_output
 !     integer(I4B), intent(in) :: isolnid
@@ -1884,7 +1884,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use ConstantsModule, only: DZERO
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: i
 !     integer(I4B) :: n1, n2
@@ -1915,7 +1915,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_add_to_flowja(this)
 !     ! -- modules
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: i
 !     integer(I4B) :: n
@@ -1951,7 +1951,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DZERO, DPIO180
 !     use GwfNpfModule, only: thksatnm
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: iusg
 !     integer(I4B) :: i
@@ -2069,7 +2069,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
 !     use BudgetModule, only: rate_accumulator
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(inout) :: icnvg
 !     integer(I4B), intent(in) :: isuppress_output
 !     integer(I4B), intent(in) :: isolnid
@@ -2111,7 +2111,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_bdsav(this)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: icbcfl, ibudfl
 !     !
@@ -2147,7 +2147,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
 !     use TdisModule, only: kstp, kper
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !< this exchange
+!     class(SwfGwfExchangeType) :: this !< this exchange
 !     class(GwfModelType), pointer :: model !< the model to save budget for
 !     ! -- local
 !     character(len=LENPACKAGENAME + 4) :: packname
@@ -2308,7 +2308,7 @@ end module GwfSwfExchangeModule
 !     use SimVariablesModule, only: iout
 !     use ConstantsModule, only: DZERO, LINELENGTH
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: iexg, n1, n2
 !     integer(I4B) :: ibudfl
@@ -2383,7 +2383,7 @@ end module GwfSwfExchangeModule
 !     use MemoryManagerModule, only: mem_allocate
 !     use SimModule, only: store_error, store_error_unit
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: iout
 !     ! -- local
 !     character(len=LINELENGTH) :: keyword
@@ -2439,7 +2439,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use InputOutputModule, only: getunit, openfile
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     character(len=LINELENGTH), intent(in) :: keyword !< the option name
 !     integer(I4B), intent(in) :: iout !< for logging
 !     logical(LGP) :: parsed !< true when parsed
@@ -2558,7 +2558,7 @@ end module GwfSwfExchangeModule
 !     use SimModule, only: store_error, store_error_unit, count_errors
 !     use ConstantsModule, only: LINELENGTH
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: i, nm1, nm2, nmgnc1, nmgnc2
 !     character(len=*), parameter :: fmterr = &
@@ -2615,7 +2615,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use GwfMvrModule, only: mvr_cr
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: iout
 !     !
 !     ! -- Create and initialize the mover object  Here, dis is set to the one
@@ -2639,7 +2639,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use TdisModule, only: kper, kstp
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: kiter
 !     ! -- local
 !     integer(I4B) :: iexg
@@ -2690,7 +2690,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
 !     use GwfNpfModule, only: condmean, vcond, hcond
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: iexg
 !     integer(I4B) :: n, m, ihc
@@ -2784,7 +2784,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DHALF, DZERO, DONE
 !     use GwfNpfModule, only: hcond, vcond
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: iexg
 !     integer(I4B) :: n, m, ihc
@@ -2878,7 +2878,7 @@ end module GwfSwfExchangeModule
 !     use MemoryManagerModule, only: mem_allocate
 !     use ConstantsModule, only: DZERO
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     call this%DisConnExchangeType%allocate_scalars()
 !     !
@@ -2917,7 +2917,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use MemoryManagerModule, only: mem_deallocate
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     ! -- objects
 !     if (this%ingnc > 0) then
@@ -2979,7 +2979,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use MemoryManagerModule, only: mem_allocate
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     character(len=LINELENGTH) :: text
 !     integer(I4B) :: ntabcol, i
@@ -3051,7 +3051,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_df_obs(this)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: indx
 !     !
@@ -3072,7 +3072,7 @@ end module GwfSwfExchangeModule
 !     ! -- modules
 !     use ConstantsModule, only: DZERO
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: i
 !     integer(I4B) :: j
@@ -3144,7 +3144,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   subroutine swf_gwf_fp(this)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     !
 !     ! -- Return
 !     return
@@ -3158,7 +3158,7 @@ end module GwfSwfExchangeModule
 !     ! -- return
 !     real(DP) :: qcalc
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: iexg
 !     integer(I4B), intent(in) :: n1
 !     integer(I4B), intent(in) :: n2
@@ -3178,7 +3178,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   function swf_gwf_get_iasym(this) result(iasym)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
 !     integer(I4B) :: iasym
 !     !
@@ -3202,7 +3202,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   function swf_gwf_connects_model(this, model) result(is_connected)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
 !     ! -- return
 !     logical(LGP) :: is_connected !< true, when connected
@@ -3231,7 +3231,7 @@ end module GwfSwfExchangeModule
 !   !<
 !   function use_interface_model(this) result(use_im)
 !     ! -- dummy
-!     class(GwfSwfExchangeType) :: this !<  GwfSwfExchangeType
+!     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- return
 !     logical(LGP) :: use_im !< true when interface model should be used
 !     !
@@ -3253,7 +3253,7 @@ end module GwfSwfExchangeModule
 !     use ConstantsModule, only: DZERO
 !     use ObserveModule, only: ObserveType
 !     ! -- dummy
-!     class(GwfSwfExchangeType), intent(inout) :: this
+!     class(SwfGwfExchangeType), intent(inout) :: this
 !     ! -- local
 !     integer(I4B) :: i
 !     integer(I4B) :: j
@@ -3337,45 +3337,45 @@ end module GwfSwfExchangeModule
 !   !!
 !   !! Cast polymorphic object as exchange
 !   !<
-!   function CastAsGwfSwfExchange(obj) result(res)
+!   function CastAsSwfGwfExchange(obj) result(res)
 !     implicit none
 !     ! -- dummy
 !     class(*), pointer, intent(inout) :: obj
 !     ! -- return
-!     class(GwfSwfExchangeType), pointer :: res
+!     class(SwfGwfExchangeType), pointer :: res
 !     !
 !     res => null()
 !     if (.not. associated(obj)) return
 !     !
 !     select type (obj)
-!     class is (GwfSwfExchangeType)
+!     class is (SwfGwfExchangeType)
 !       res => obj
 !     end select
 !     !
 !     ! -- Return
 !     return
-!   end function CastAsGwfSwfExchange
+!   end function CastAsSwfGwfExchange
 
 !   !> @ brief Get exchange from list
 !   !!
 !   !! Return an exchange from the list for specified index
 !   !<
-!   function GetGwfSwfExchangeFromList(list, idx) result(res)
+!   function GetSwfGwfExchangeFromList(list, idx) result(res)
 !     implicit none
 !     ! -- dummy
 !     type(ListType), intent(inout) :: list
 !     integer(I4B), intent(in) :: idx
 !     ! -- return
-!     class(GwfSwfExchangeType), pointer :: res
+!     class(SwfGwfExchangeType), pointer :: res
 !     ! -- local
 !     class(*), pointer :: obj
 !     !
 !     obj => list%GetItem(idx)
-!     res => CastAsGwfSwfExchange(obj)
+!     res => CastAsSwfGwfExchange(obj)
 !     !
 !     ! -- Return
 !     return
-!   end function GetGwfSwfExchangeFromList
+!   end function GetSwfGwfExchangeFromList
 
-! end module GwfSwfExchangeModule
+! end module SwfGwfExchangeModule
 

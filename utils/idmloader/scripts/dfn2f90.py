@@ -1086,8 +1086,8 @@ if __name__ == "__main__":
             SRC_PATH / "Model" / "SurfaceWaterFlow" / "swf-zdgidm.f90",
         ],
         [
-            DFN_PATH / "exg-gwfswf.dfn",
-            SRC_PATH / "Exchange" / "exg-gwfswfidm.f90",
+            DFN_PATH / "exg-swfgwf.dfn",
+            SRC_PATH / "Exchange" / "exg-swfgwfidm.f90",
         ],
         [
             DFN_PATH / "sim-nam.dfn",

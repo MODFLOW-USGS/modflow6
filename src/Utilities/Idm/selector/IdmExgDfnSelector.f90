@@ -10,7 +10,7 @@ module IdmExgDfnSelectorModule
   use ExgGwfgweInputModule
   use ExgGwtgwtInputModule
   use ExgGwegweInputModule
-  use ExgGwfswfInputModule
+  use ExgSwfgwfInputModule
 
   implicit none
   private
@@ -49,8 +49,8 @@ contains
       call set_param_pointer(input_definition, exg_gwtgwt_param_definitions)
     case ('GWEGWE')
       call set_param_pointer(input_definition, exg_gwegwe_param_definitions)
-    case ('GWFSWF')
-      call set_param_pointer(input_definition, exg_gwfswf_param_definitions)
+    case ('SWFGWF')
+      call set_param_pointer(input_definition, exg_swfgwf_param_definitions)
     case default
     end select
     return
@@ -71,8 +71,8 @@ contains
       call set_param_pointer(input_definition, exg_gwtgwt_aggregate_definitions)
     case ('GWEGWE')
       call set_param_pointer(input_definition, exg_gwegwe_aggregate_definitions)
-    case ('GWFSWF')
-      call set_param_pointer(input_definition, exg_gwfswf_aggregate_definitions)
+    case ('SWFGWF')
+      call set_param_pointer(input_definition, exg_swfgwf_aggregate_definitions)
     case default
     end select
     return
@@ -93,8 +93,8 @@ contains
       call set_block_pointer(input_definition, exg_gwtgwt_block_definitions)
     case ('GWEGWE')
       call set_block_pointer(input_definition, exg_gwegwe_block_definitions)
-    case ('GWFSWF')
-      call set_block_pointer(input_definition, exg_gwfswf_block_definitions)
+    case ('SWFGWF')
+      call set_block_pointer(input_definition, exg_swfgwf_block_definitions)
     case default
     end select
     return
@@ -114,8 +114,8 @@ contains
       multi_package = exg_gwtgwt_multi_package
     case ('GWEGWE')
       multi_package = exg_gwegwe_multi_package
-    case ('GWFSWF')
-      multi_package = exg_gwfswf_multi_package
+    case ('SWFGWF')
+      multi_package = exg_swfgwf_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="EXG"'//&
@@ -139,7 +139,7 @@ contains
       integrated = .true.
     case ('GWEGWE')
       integrated = .true.
-    case ('GWFSWF')
+    case ('SWFGWF')
       integrated = .true.
     case default
     end select

@@ -3,6 +3,16 @@
 | source file | module | type.variable name | variable name | dimensions |
 | :---: | :---: | :---: | :---: | :---: |
 | SimulationCreate.f90 | SimulationCreateModule | None |  MRANKS | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  IPR_INPUT | 0 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  IPR_FLOW | 0 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  NEXG | 0 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  INOBS | 0 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  NODEM1 | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  NODEM2 | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  COND | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  IDXGLO | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  IDXSYMGLO | 1 |
+| exg-swfgwf.f90 | SwfGwfExchangeModule | SwfGwfExchangeType |  SIMVALS | 1 |
 | exg-gwfgwt.f90 | GwfGwtExchangeModule | GwfGwtExchangeType |  M1ID | 0 |
 | exg-gwfgwt.f90 | GwfGwtExchangeModule | GwfGwtExchangeType |  M2ID | 0 |
 | exg-gwfgwf.f90 | GwfGwfExchangeModule | GwfExchangeType |  ICELLAVG | 0 |
@@ -51,16 +61,6 @@
 | exg-gwegwe.f90 | GweGweExchangeModule | GweExchangeType |  INMVT | 0 |
 | exg-gwegwe.f90 | GweGweExchangeModule | GweExchangeType |  COND | 1 |
 | exg-gwegwe.f90 | GweGweExchangeModule | GweExchangeType |  SIMVALS | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  IPR_INPUT | 0 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  IPR_FLOW | 0 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  NEXG | 0 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  INOBS | 0 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  NODEM1 | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  NODEM2 | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  COND | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  IDXGLO | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  IDXSYMGLO | 1 |
-| exg-gwfswf.f90 | GwfSwfExchangeModule | GwfSwfExchangeType |  SIMVALS | 1 |
 | GwfExchangeMover.f90 | GwfExgMoverModule | GwfExgMoverType |  QPACTUAL_M1 | 1 |
 | GwfExchangeMover.f90 | GwfExgMoverModule | GwfExgMoverType |  QPACTUAL_M2 | 1 |
 | GwfExchangeMover.f90 | GwfExgMoverModule | GwfExgMoverType |  QAVAILABLE_M1 | 1 |

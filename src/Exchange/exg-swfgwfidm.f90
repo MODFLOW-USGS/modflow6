@@ -1,16 +1,16 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module ExgGwfswfInputModule
+module ExgSwfgwfInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public exg_gwfswf_param_definitions
-  public exg_gwfswf_aggregate_definitions
-  public exg_gwfswf_block_definitions
-  public ExgGwfswfParamFoundType
-  public exg_gwfswf_multi_package
+  public exg_swfgwf_param_definitions
+  public exg_swfgwf_aggregate_definitions
+  public exg_swfgwf_block_definitions
+  public ExgSwfgwfParamFoundType
+  public exg_swfgwf_multi_package
 
-  type ExgGwfswfParamFoundType
+  type ExgSwfgwfParamFoundType
     logical :: ipr_input = .false.
     logical :: ipr_flow = .false.
     logical :: obs_filerecord = .false.
@@ -21,15 +21,15 @@ module ExgGwfswfInputModule
     logical :: cellidm1 = .false.
     logical :: cellidm2 = .false.
     logical :: cond = .false.
-  end type ExgGwfswfParamFoundType
+  end type ExgSwfgwfParamFoundType
 
-  logical :: exg_gwfswf_multi_package = .true.
+  logical :: exg_swfgwf_multi_package = .true.
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_ipr_input = InputParamDefinitionType &
+    exgswfgwf_ipr_input = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_INPUT', & ! tag name
     'IPR_INPUT', & ! fortran variable
@@ -43,10 +43,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_ipr_flow = InputParamDefinitionType &
+    exgswfgwf_ipr_flow = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_FLOWS', & ! tag name
     'IPR_FLOW', & ! fortran variable
@@ -60,10 +60,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_obs_filerecord = InputParamDefinitionType &
+    exgswfgwf_obs_filerecord = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'OBS_FILERECORD', & ! tag name
     'OBS_FILERECORD', & ! fortran variable
@@ -77,10 +77,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_obs6 = InputParamDefinitionType &
+    exgswfgwf_obs6 = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6', & ! tag name
     'OBS6', & ! fortran variable
@@ -94,10 +94,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_filein = InputParamDefinitionType &
+    exgswfgwf_filein = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'FILEIN', & ! tag name
     'FILEIN', & ! fortran variable
@@ -111,10 +111,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_obs6_filename = InputParamDefinitionType &
+    exgswfgwf_obs6_filename = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6_FILENAME', & ! tag name
     'OBS6_FILENAME', & ! fortran variable
@@ -128,10 +128,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_nexg = InputParamDefinitionType &
+    exgswfgwf_nexg = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'DIMENSIONS', & ! block
     'NEXG', & ! tag name
     'NEXG', & ! fortran variable
@@ -145,10 +145,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_cellidm1 = InputParamDefinitionType &
+    exgswfgwf_cellidm1 = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'CELLIDM1', & ! tag name
     'CELLIDM1', & ! fortran variable
@@ -162,10 +162,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_cellidm2 = InputParamDefinitionType &
+    exgswfgwf_cellidm2 = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'CELLIDM2', & ! tag name
     'CELLIDM2', & ! fortran variable
@@ -179,10 +179,10 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_cond = InputParamDefinitionType &
+    exgswfgwf_cond = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'COND', & ! tag name
     'COND', & ! fortran variable
@@ -196,25 +196,25 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exg_gwfswf_param_definitions(*) = &
+    exg_swfgwf_param_definitions(*) = &
     [ &
-    exggwfswf_ipr_input, &
-    exggwfswf_ipr_flow, &
-    exggwfswf_obs_filerecord, &
-    exggwfswf_obs6, &
-    exggwfswf_filein, &
-    exggwfswf_obs6_filename, &
-    exggwfswf_nexg, &
-    exggwfswf_cellidm1, &
-    exggwfswf_cellidm2, &
-    exggwfswf_cond &
+    exgswfgwf_ipr_input, &
+    exgswfgwf_ipr_flow, &
+    exgswfgwf_obs_filerecord, &
+    exgswfgwf_obs6, &
+    exgswfgwf_filein, &
+    exgswfgwf_obs6_filename, &
+    exgswfgwf_nexg, &
+    exgswfgwf_cellidm1, &
+    exgswfgwf_cellidm2, &
+    exgswfgwf_cond &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    exggwfswf_exchangedata = InputParamDefinitionType &
+    exgswfgwf_exchangedata = InputParamDefinitionType &
     ( &
     'EXG', & ! component
-    'GWFSWF', & ! subcomponent
+    'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'EXCHANGEDATA', & ! tag name
     'EXCHANGEDATA', & ! fortran variable
@@ -228,13 +228,13 @@ module ExgGwfswfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exg_gwfswf_aggregate_definitions(*) = &
+    exg_swfgwf_aggregate_definitions(*) = &
     [ &
-    exggwfswf_exchangedata &
+    exgswfgwf_exchangedata &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    exg_gwfswf_block_definitions(*) = &
+    exg_swfgwf_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -256,4 +256,4 @@ module ExgGwfswfInputModule
     ) &
     ]
 
-end module ExgGwfswfInputModule
+end module ExgSwfgwfInputModule
