@@ -46,7 +46,17 @@ def initial_conditions():
     return np.sqrt(h0**2 + x * (h1**2 - h0**2) / (xlen - delr))
 
 
-def get_model(idx, ws, name):
+def get_model(idx, ws, name, netcdf=None):
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        drn_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        drn_fname = f"{name}.drn"
     strt = initial_conditions()
     hdsfile = f"{name}.hds"
     if newton[idx]:
@@ -79,8 +89,9 @@ def get_model(idx, ws, name):
         delc=delc,
         top=top,
         botm=botm,
+        filename=dis_fname,
     )
-    npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
+    npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1, filename=npf_fname)
     sto = flopy.mf6.ModflowGwfsto(
         gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
     )
@@ -90,6 +101,7 @@ def get_model(idx, ws, name):
         auxdepthname="ddrn",
         stress_period_data=drn_spd,
         print_input=True,
+        filename=drn_fname,
     )
     drn.obs.initialize(
         filename=f"{name}.drn.obs",
@@ -97,7 +109,7 @@ def get_model(idx, ws, name):
         print_input=True,
         continuous=drn_obs,
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
     obs_package = flopy.mf6.ModflowUtlobs(
         gwf, digits=20, print_input=True, continuous=obs_recarray
     )
@@ -111,12 +123,12 @@ def get_model(idx, ws, name):
     return sim
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
     # build MODFLOW 6 files
     ws = test.workspace
-    sim = get_model(idx, ws, name)
+    sim = get_model(idx, ws, name, netcdf=netcdf)
 
     return sim, None
 
@@ -187,12 +199,16 @@ def drain_smoothing(xdiff, xrange, newton=False):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

@@ -570,6 +570,7 @@ jobs:
   netcdf_test:
     name: NetCDF testing
     needs:
+      - lint
       - build
       - smoke_test
     runs-on: ${{ matrix.os }}
@@ -679,18 +680,7 @@ jobs:
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          pytest -v test_gwf_boundname01.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_chd01.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_csub_sub03.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_csub_zdisp01.py --netcdf --durations 0 -keep-failed .failed
-          pytest -v test_gwf_disv_uzf.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_evt02.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_npf02_rewet.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_rch03.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_uzf_wc_output.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwf_wel01.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_gwt_mst03.py --netcdf --durations 0 --keep-failed .failed
-          pytest -v test_par_gwf01.py --parallel --netcdf --durations 0 --keep-failed .failed
+          pytest -v -n auto -m netcdf --netcdf --parallel --durations 0 --keep-failed .failed
 
       - name: Upload failed test output
         if: failure()

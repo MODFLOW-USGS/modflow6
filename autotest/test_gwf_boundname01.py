@@ -73,14 +73,8 @@ def get_model(idx, ws, netcdf=None):
         relaxation_factor=relax,
     )
 
-    # create gwf model
+    # set names
     gwfname = "gwf_" + name
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=gwfname,
-        save_flows=True,
-    )
-
     if netcdf:
         dis_fname = f"{gwfname}.nc"
         npf_fname = f"{gwfname}.nc"
@@ -91,6 +85,13 @@ def get_model(idx, ws, netcdf=None):
         npf_fname = f"{gwfname}.npf"
         ic_fname = f"{gwfname}.ic"
         chd_fname = f"{gwfname}.chd"
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(
+        sim,
+        modelname=gwfname,
+        save_flows=True,
+    )
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,

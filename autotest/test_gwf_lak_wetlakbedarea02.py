@@ -203,7 +203,7 @@ def calc_qSat(top, bot, thk):
 #
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # Base simulation and model name and workspace
     ws = test.workspace
     name = cases[idx]
@@ -212,6 +212,21 @@ def build_models(idx, test):
 
     # generate names for each model
     gwfname = "gwf-" + name
+
+    if netcdf:
+        dis_fname = f"{gwfname}.nc"
+        npf_fname = f"{gwfname}.nc"
+        ic_fname = f"{gwfname}.nc"
+        chd_fname = f"{gwfname}.nc"
+        rcha_fname = f"{name}.nc"
+        evta_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{gwfname}.dis"
+        npf_fname = f"{gwfname}.npf"
+        ic_fname = f"{gwfname}.ic"
+        chd_fname = f"{gwfname}.chd"
+        rcha_fname = f"{name}.rcha"
+        evta_fname = f"{name}.evta"
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
@@ -254,6 +269,7 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
+        filename=dis_fname,
     )
 
     # Instantiate node property flow package
@@ -263,22 +279,27 @@ def build_models(idx, test):
         icelltype=1,  # >0 means saturated thickness varies with computed head
         k=k11,
         k33=k33,
+        filename=npf_fname,
     )
 
     # Instantiate gw storage package
     flopy.mf6.ModflowGwfsto(gwf, iconvert=1, sy=sy, ss=ss, steady_state=True)
 
     # Instantiate initial conditions package
-    flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # Instantiate constant head boundary package
-    flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
+    flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=chd_spd, filename=chd_fname
+    )
 
     # Instantiate recharge package
-    flopy.mf6.ModflowGwfrcha(gwf, recharge=recharge)
+    flopy.mf6.ModflowGwfrcha(gwf, recharge=recharge, filename=rcha_fname)
 
     # Instantiate ET package
-    flopy.mf6.ModflowGwfevta(gwf, surface=surf, rate=etvrate, depth=etvdepth)
+    flopy.mf6.ModflowGwfevta(
+        gwf, surface=surf, rate=etvrate, depth=etvdepth, filename=evta_fname
+    )
 
     # Instantiate LAK package
     (
@@ -337,12 +358,6 @@ def check_output(idx, test):
     name = cases[idx]
     gwfname = "gwf-" + name
 
-    # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
-    gwf = sim1.get_model(gwfname)
-
     # get final lake stage
     lk_pth0 = os.path.join(test.workspace, f"{gwfname}.lak.obs.csv")
     lkstg = np.genfromtxt(lk_pth0, names=True, delimiter=",")
@@ -399,12 +414,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

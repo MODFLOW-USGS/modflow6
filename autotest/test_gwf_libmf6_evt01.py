@@ -49,7 +49,20 @@ nouter, ninner = 100, 100
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def get_model(ws, name, bmi=False):
+def get_model(ws, name, bmi=False, netcdf=None):
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        wel_fname = f"{name}.nc"
+        evt_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        wel_fname = f"{name}.wel"
+        evt_fname = f"{name}.evt"
+
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -96,13 +109,16 @@ def get_model(ws, name, bmi=False):
         delc=delc,
         top=top,
         botm=botm,
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, save_flows=True, icelltype=1, k=hk, filename=npf_fname
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf, save_flows=True, iconvert=1, ss=1e-5, sy=0.2, transient={0: True}
@@ -111,7 +127,7 @@ def get_model(ws, name, bmi=False):
     # evapotranspiration
     if not bmi:
         evt = flopy.mf6.ModflowGwfevta(
-            gwf, surface=top, rate=et_max, depth=et_depth
+            gwf, surface=top, rate=et_max, depth=et_depth, filename=evt_fname
         )
     wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
 
@@ -126,15 +142,15 @@ def get_model(ws, name, bmi=False):
     return sim
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # build MODFLOW 6 files
     ws = test.workspace
     name = cases[idx]
-    sim = get_model(ws, name)
+    sim = get_model(ws, name, netcdf=netcdf)
 
     # build comparison model
     ws = os.path.join(test.workspace, "libmf6")
-    mc = get_model(ws, name, bmi=True)
+    mc = get_model(ws, name, bmi=True, netcdf=netcdf)
 
     return sim, mc
 
@@ -251,12 +267,16 @@ def api_func(exe, idx, model_ws=None):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
+        netcdf=netcdf,
     )
     test.run()

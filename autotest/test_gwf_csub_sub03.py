@@ -145,6 +145,21 @@ def get_model(idx, ws, netcdf=None):
     sub6 = []
     ibcno = 0
 
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        rcha_fname = f"{name}.nc"
+        wel_fname = f"{name}.nc"
+        chd_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        rcha_fname = f"{name}.rcha"
+        wel_fname = f"{name}.wel"
+        chd_fname = f"{name}.chd"
+
     # create no delay bed packagedata entries
     if nndb > 0:
         cdelays = "nodelay"
@@ -216,21 +231,6 @@ def get_model(idx, ws, netcdf=None):
             S.append(sst)
 
     maxibc = len(sub6)
-
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        rcha_fname = f"{name}.nc"
-        wel_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        rcha_fname = f"{name}.rcha"
-        wel_fname = f"{name}.wel"
-        chd_fname = f"{name}.chd"
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(

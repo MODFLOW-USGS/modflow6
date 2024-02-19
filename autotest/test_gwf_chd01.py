@@ -46,16 +46,8 @@ def build_models(idx, test, netcdf=None):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # create gwf model
+    # set names
     gwfname = "gwf_" + name
-    gwf = flopy.mf6.MFModel(
-        sim,
-        model_type="gwf6",
-        modelname=gwfname,
-        model_nam_file=f"{gwfname}.nam",
-    )
-    gwf.name_file.save_flows = True
-
     if netcdf:
         dis_fname = f"{gwfname}.nc"
         npf_fname = f"{gwfname}.nc"
@@ -66,6 +58,15 @@ def build_models(idx, test, netcdf=None):
         npf_fname = f"{gwfname}.npf"
         chd_fname = f"{gwfname}.chd"
         ic_fname = f"{gwfname}.ic"
+
+    # create gwf model
+    gwf = flopy.mf6.MFModel(
+        sim,
+        model_type="gwf6",
+        modelname=gwfname,
+        model_nam_file=f"{gwfname}.nam",
+    )
+    gwf.name_file.save_flows = True
 
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(

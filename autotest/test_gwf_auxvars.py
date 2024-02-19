@@ -11,7 +11,7 @@ auxvar1 = 101.0
 auxvar2 = 102.0
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1.0, 1.0, 1.0]
@@ -30,6 +30,17 @@ def build_models(idx, test):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     name = cases[idx]
+
+    if netcdf:
+        dis_fname = f"{name}.nc"
+        npf_fname = f"{name}.nc"
+        ic_fname = f"{name}.nc"
+        chd_fname = f"{name}.nc"
+    else:
+        dis_fname = f"{name}.dis"
+        npf_fname = f"{name}.npf"
+        ic_fname = f"{name}.ic"
+        chd_fname = f"{name}.chd"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -70,14 +81,15 @@ def build_models(idx, test):
         delc=delc,
         top=90.0,
         botm=0.0,
+        filename=dis_fname,
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01
+        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01, filename=npf_fname
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -100,7 +112,7 @@ def build_models(idx, test):
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename=f"{name}.chd",
+        filename=chd_fname,
     )
 
     # MAW
@@ -298,12 +310,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()
