@@ -180,6 +180,8 @@ if is_extended_build
     with_netcdf = true
     extra_cmp_args += [ '-D__WITH_NETCDF__' ]
     dependencies += [ netcdf ]    
+  else
+    with_netcdf = false
   endif
 else
   with_netcdf = false
