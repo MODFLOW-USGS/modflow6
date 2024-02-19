@@ -6,7 +6,6 @@
 
 module TransportModelModule
   use KindModule, only: DP, I4B
-  use VersionModule, only: write_listfile_header
   use ConstantsModule, only: LENFTYPE, LINELENGTH, DZERO, LENPAKLOC, &
                              LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
@@ -79,7 +78,6 @@ module TransportModelModule
     procedure, private :: tsp_ot_flowja
     procedure, private :: tsp_ot_dv
     procedure, private :: tsp_ot_bdsummary
-    procedure, private :: create_lstfile
     procedure, private :: create_tsp_packages
     procedure, private :: log_namfile_options
 
@@ -128,7 +126,8 @@ contains
     call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
     !
     ! -- create the list file
-    call this%create_lstfile(lst_fname, filename, found%list)
+    call this%create_lstfile(lst_fname, filename, found%list, &
+                             'GROUNDWATER TRANSPORT MODEL (GWT)')
     !
     ! -- activate save_flows if found
     if (found%save_flows) then
@@ -673,56 +672,6 @@ contains
     ! -- Return
     return
   end subroutine ftype_check
-
-  !> @brief Create listing output file
-  !<
-  subroutine create_lstfile(this, lst_fname, model_fname, defined)
-    ! -- modules
-    use KindModule, only: LGP
-    use InputOutputModule, only: openfile, getunit
-    ! -- dummy
-    class(TransportModelType) :: this
-    character(len=*), intent(inout) :: lst_fname
-    character(len=*), intent(in) :: model_fname
-    logical(LGP), intent(in) :: defined
-    ! -- local
-    integer(I4B) :: i, istart, istop
-    !
-    ! -- Set list file name if not provided
-    if (.not. defined) then
-      !
-      ! -- Initialize
-      lst_fname = ' '
-      istart = 0
-      istop = len_trim(model_fname)
-      !
-      ! -- Identify '.' character position from back of string
-      do i = istop, 1, -1
-        if (model_fname(i:i) == '.') then
-          istart = i
-          exit
-        end if
-      end do
-      !
-      ! -- If not found start from string end
-      if (istart == 0) istart = istop + 1
-      !
-      ! -- Set list file name
-      lst_fname = model_fname(1:istart)
-      istop = istart + 3
-      lst_fname(istart:istop) = '.lst'
-    end if
-    !
-    ! -- Create the list file
-    this%iout = getunit()
-    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
-    !
-    ! -- Write list file header
-    call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
-    !
-    ! -- Return
-    return
-  end subroutine create_lstfile
 
   !> @brief Write model name file options to list file
   !<

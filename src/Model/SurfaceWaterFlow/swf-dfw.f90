@@ -19,7 +19,8 @@ module SwfDfwModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, LINELENGTH, &
                              DZERO, DHALF, DONE, DTWO, DTHREE, &
-                             DNODATA, DEM5, DTWOTHIRDS, DP9, DONETHIRD
+                             DNODATA, DEM5, DTWOTHIRDS, DP9, DONETHIRD, &
+                             DPREC
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
   use SimVariablesModule, only: errmsg, warnmsg
@@ -491,7 +492,8 @@ contains
 
   !> @brief fill coefficients
   !!
-  !! Calculate conductance and put into amat
+  !! The DFW Package is entirely Newton based.  All matrix and rhs terms
+  !! are added from thish routine.
   !!
   !<
   subroutine dfw_fc(this, kiter, matrix_sln, idxglo, rhs, stage, stage_old)
@@ -640,9 +642,9 @@ contains
     denom = DHALF * this%disl%reach_length(n) + &
             DHALF * this%disl%reach_length(m)
     cond = DZERO
-    if (denom > DZERO) then
+    if (denom > DPREC) then
       absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
-      if (absdhdxsqr == DZERO) then
+      if (absdhdxsqr < DPREC) then
         absdhdxsqr = 1.e-7
       end if
 
@@ -658,14 +660,17 @@ contains
         end if
       end if
 
+      ! -- Calculate a smoothed depth that goes to zero over
+      !    the specified range
       call sQuadratic(depth_n, range, dydx, smooth_factor)
       depth_n = depth_n * smooth_factor
       call sQuadratic(depth_m, range, dydx, smooth_factor)
       depth_m = depth_m * smooth_factor
+
       cn = this%get_cond_n(n, depth_n, absdhdxsqr)
       cm = this%get_cond_n(m, depth_m, absdhdxsqr)
 
-      if ((cn + cm) > DZERO) then
+      if ((cn + cm) > DPREC) then
         cond = cn * cm / (cn + cm)
       else
         cond = DZERO
@@ -681,13 +686,13 @@ contains
   !! using Manning's equation
   !!
   !<
-  function get_cond_n(this, n, depth, absdhdx) result(c)
+  function get_cond_n(this, n, depth, absdhdxsq) result(c)
     ! -- modules
     ! -- dummy
     class(SwfDfwType) :: this
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
-    real(DP), intent(in) :: absdhdx !< absolute value of simulated hydraulic gradient
+    real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
     ! -- local
     real(DP) :: c
     real(DP) :: width
@@ -709,7 +714,7 @@ contains
     r = this%cxs%get_hydraulic_radius(this%idcxs(n), width, depth, area=a)
 
     ! -- conductance from manning's equation
-    c = this%unitconv * a * r**DTWOTHIRDS / roughc / absdhdx / dx
+    c = this%unitconv * a * r**DTWOTHIRDS / roughc / absdhdxsq / dx
 
   end function get_cond_n
 

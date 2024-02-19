@@ -130,7 +130,7 @@ contains
     return
   end subroutine swf_obs_bd
 
-  !> @brief Do GWF observations need any checking? If so, add checks here
+  !> @brief Do observations need any checking? If so, add checks here
   !<
   subroutine swf_obs_rp(this)
     class(SwfObsType), intent(inout) :: this

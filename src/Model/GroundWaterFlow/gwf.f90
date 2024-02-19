@@ -1,12 +1,12 @@
 module GwfModule
 
   use KindModule, only: DP, I4B
-  use InputOutputModule, only: ParseLine, upcase, lowcase
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, LENPAKLOC, DZERO, &
-                             DEM1, DTEN, DEP20, LENPACKAGETYPE
-  use VersionModule, only: write_listfile_header
+                             DTEN, LENPACKAGETYPE
+  use SimModule, only: count_errors, store_error, store_error_filename
+  use BaseModelModule, only: BaseModelType
+  use SimVariablesModule, only: errmsg
   use NumericalModelModule, only: NumericalModelType
-  use BaseDisModule, only: DisBaseType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GwfIcModule, only: GwfIcType
   use GwfNpfModule, only: GwfNpfType
@@ -21,8 +21,6 @@ module GwfModule
   use GwfOcModule, only: GwfOcType
   use GhostNodeModule, only: GhostNodeType, gnc_cr
   use GwfObsModule, only: GwfObsType, gwf_obs_cr
-  use SimModule, only: count_errors, store_error, store_error_filename
-  use BaseModelModule, only: BaseModelType
   use MatrixBaseModule
   use VectorBaseModule
 
@@ -95,7 +93,6 @@ module GwfModule
     procedure :: gwf_ot_bdsummary
     procedure, private :: create_packages
     procedure, private :: create_bndpkgs
-    procedure, private :: create_lstfile
     procedure, private :: log_namfile_options
     procedure, private :: steady_period_check
     !
@@ -148,9 +145,9 @@ contains
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: filename !< input file
+    integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
+    character(len=*), intent(in) :: modelname !< name of the model
     ! -- local
     type(GwfModelType), pointer :: this
     class(BaseModelType), pointer :: model
@@ -158,7 +155,6 @@ contains
     character(len=LINELENGTH) :: lst_fname
     type(GwfNamParamFoundType) :: found
     ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate a new GWF Model (this) and add it to basemodellist
     allocate (this)
@@ -191,7 +187,8 @@ contains
     call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
     !
     ! -- create the list file
-    call this%create_lstfile(lst_fname, filename, found%list)
+    call this%create_lstfile(lst_fname, filename, found%list, &
+                             'GROUNDWATER FLOW MODEL (GWF)')
     !
     ! -- activate save_flows if found
     if (found%save_flows) then
@@ -226,7 +223,6 @@ contains
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
@@ -270,7 +266,6 @@ contains
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- Add the primary grid connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
@@ -301,7 +296,6 @@ contains
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
@@ -336,7 +330,6 @@ contains
     ! -- locals
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
@@ -386,7 +379,6 @@ contains
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
@@ -427,7 +419,6 @@ contains
     ! -- local
     integer(I4B) :: irestore
     integer(I4B) :: ip, n
-! ------------------------------------------------------------------------------
     !
     ! -- Reset state variable
     irestore = 0
@@ -478,7 +469,6 @@ contains
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- Call package cf routines
     if (this%innpf > 0) call this%npf%npf_cf(kiter, this%dis%nodes, this%x)
@@ -504,7 +494,6 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
     integer(I4B) :: inwt, inwtsto, inwtcsub, inwtpak
-! ------------------------------------------------------------------------------
     !
     ! -- newton flags
     inwt = inwtflag
@@ -608,7 +597,6 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvr > 0) then
@@ -641,7 +629,7 @@ contains
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(inout) :: iptc
-! ------------------------------------------------------------------------------
+    !
     ! -- determine if pseudo-transient continuation should be applied to this
     !    model - pseudo-transient continuation only applied to problems that
     !    use the Newton-Raphson formulation during steady-state stress periods
@@ -755,7 +743,6 @@ contains
     integer(I4B) :: i1
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- apply Newton-Raphson under-relaxation if model is using
     !    the Newton-Raphson formulation and this Newton-Raphson
@@ -797,7 +784,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Construct the flowja array.  Flowja is calculated each time, even if
     !    output is suppressed.  (flowja is positive into a cell.)  The diagonal
@@ -845,7 +831,6 @@ contains
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Finalize calculation of flowja by adding face flows to the diagonal.
     !    This results in the flow residual being stored in the diagonal
@@ -897,7 +882,6 @@ contains
     character(len=*), parameter :: fmtnocnvg = &
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
       &I0,' OF STRESS PERIOD ',I0,'****')"
-! ------------------------------------------------------------------------------
     !
     ! -- Set write and print flags
     idvsave = 0
@@ -1084,7 +1068,6 @@ contains
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- csub final processing
     if (this%incsub > 0) then
@@ -1105,7 +1088,6 @@ contains
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate idm memory
     call memorylist_remove(this%name, 'NAM', idm_context)
@@ -1189,7 +1171,6 @@ contains
     real(DP), dimension(:, :), intent(in) :: budterm
     character(len=LENBUDTXT), dimension(:), intent(in) :: budtxt
     character(len=*), intent(in) :: rowlabel
-! ------------------------------------------------------------------------------
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
     !
@@ -1206,7 +1187,6 @@ contains
     integer(I4B) :: iasym
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-! ------------------------------------------------------------------------------
     !
     ! -- Start by setting iasym to zero
     iasym = 0
@@ -1239,7 +1219,6 @@ contains
     ! -- dummy
     class(GwfModelType) :: this
     character(len=*), intent(in) :: modelname
-! ------------------------------------------------------------------------------
     !
     ! -- allocate members from parent class
     call this%NumericalModelType%allocate_scalars(modelname)
@@ -1303,7 +1282,6 @@ contains
     ! -- dummy
     class(GwfModelType) :: this
     character(len=*), intent(in) :: filtyp
-    character(len=LINELENGTH) :: errmsg
     integer(I4B), intent(in) :: ipakid
     integer(I4B), intent(in) :: ipaknum
     character(len=*), intent(in) :: pakname
@@ -1314,7 +1292,6 @@ contains
     class(BndType), pointer :: packobj
     class(BndType), pointer :: packobj2
     integer(I4B) :: ip
-! ------------------------------------------------------------------------------
     !
     ! -- This part creates the package object
     select case (filtyp)
@@ -1379,8 +1356,6 @@ contains
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: indis
     ! -- local
-    character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
     !
     ! -- Check for IC8, DIS(u), and NPF. Stop if not present.
     if (this%inic == 0) then
@@ -1613,54 +1588,6 @@ contains
     ! -- return
     return
   end subroutine create_packages
-
-  subroutine create_lstfile(this, lst_fname, model_fname, defined)
-    ! -- modules
-    use KindModule, only: LGP
-    use InputOutputModule, only: openfile, getunit
-    ! -- dummy
-    class(GwfModelType) :: this
-    character(len=*), intent(inout) :: lst_fname
-    character(len=*), intent(in) :: model_fname
-    logical(LGP), intent(in) :: defined
-    ! -- local
-    integer(I4B) :: i, istart, istop
-    !
-    ! -- set list file name if not provided
-    if (.not. defined) then
-      !
-      ! -- initialize
-      lst_fname = ' '
-      istart = 0
-      istop = len_trim(model_fname)
-      !
-      ! -- identify '.' character position from back of string
-      do i = istop, 1, -1
-        if (model_fname(i:i) == '.') then
-          istart = i
-          exit
-        end if
-      end do
-      !
-      ! -- if not found start from string end
-      if (istart == 0) istart = istop + 1
-      !
-      ! -- set list file name
-      lst_fname = model_fname(1:istart)
-      istop = istart + 3
-      lst_fname(istart:istop) = '.lst'
-    end if
-    !
-    ! -- create the list file
-    this%iout = getunit()
-    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
-    !
-    ! -- write list file header
-    call write_listfile_header(this%iout, 'GROUNDWATER FLOW MODEL (GWF)')
-    !
-    ! -- return
-    return
-  end subroutine create_lstfile
 
   !> @brief Write model namfile options to list file
   !<

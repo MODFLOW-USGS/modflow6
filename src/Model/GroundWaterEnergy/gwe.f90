@@ -6,7 +6,6 @@ module GweModule
   use InputOutputModule, only: ParseLine, upcase
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, LENPAKLOC, &
                              LENVARNAME, LENPACKAGETYPE
-  use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
@@ -104,9 +103,9 @@ contains
     use BudgetModule, only: budget_cr
     use GweInputDataModule, only: gweshared_dat_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: filename !< input file
+    integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
+    character(len=*), intent(in) :: modelname !< name of the model
     ! -- local
     integer(I4B) :: indis
     type(GweModelType), pointer :: this
