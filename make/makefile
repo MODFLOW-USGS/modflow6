@@ -473,8 +473,10 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/swf-disl.o \
 $(OBJDIR)/swf-cxs.o \
 $(OBJDIR)/swf-ic.o \
+$(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 $(OBJDIR)/Integer2dReader.o \
@@ -496,6 +498,8 @@ $(OBJDIR)/IdmLogger.o \
 =======
 >>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/StructVector.o \
+=======
+>>>>>>> 96fc98a8e8 (exclude netcdf from makefile for now)
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
@@ -588,6 +592,7 @@ $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
 $(OBJDIR)/swf-dfw.o \
+<<<<<<< HEAD
 >>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/DefinitionSelect.o \
@@ -598,6 +603,12 @@ $(OBJDIR)/LayeredArrayReader.o \
 >>>>>>> a513871ad0 (rebuild makefiles)
 =======
 >>>>>>> e7c9472cd9 (rebuild makefiles)
+=======
+$(OBJDIR)/StructArray.o \
+$(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/DefinitionSelect.o \
+$(OBJDIR)/InputLoadType.o \
+>>>>>>> 96fc98a8e8 (exclude netcdf from makefile for now)
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
@@ -611,11 +622,9 @@ $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/swf.o \
-$(OBJDIR)/NCInputLoadType.o \
-$(OBJDIR)/LoadNCFile.o \
+$(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/DynamicParamFilter.o \
 $(OBJDIR)/BoundInputContext.o \
-$(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -680,8 +689,6 @@ $(OBJDIR)/swf1.o \
 =======
 >>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/ModelPackageInput.o \
-$(OBJDIR)/NCFileListInput.o \
-$(OBJDIR)/NCFileGridInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
 <<<<<<< HEAD
@@ -702,9 +709,7 @@ $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GweGweConnection.o \
 $(OBJDIR)/VirtualDataManager.o \
 $(OBJDIR)/Mapper.o \
-$(OBJDIR)/NCContextBuild.o \
 $(OBJDIR)/ModelPackageInputs.o \
-$(OBJDIR)/IdmNCFile.o \
 $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/VirtualGwtModel.o \
 $(OBJDIR)/VirtualGwtExchange.o \

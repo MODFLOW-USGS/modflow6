@@ -10,3 +10,9 @@
 ../src/Distributed/MpiRunControl.F90
 ../src/Distributed/MpiUnitCache.f90
 ../src/Distributed/MpiWorld.f90
+../src/Utilities/Idm/netcdf/IdmNCFile.f90
+../src/Utilities/Idm/netcdf/LoadNCFile.f90
+../src/Utilities/Idm/netcdf/NCContextBuild.f90
+../src/Utilities/Idm/netcdf/NCFileGridInput.f90
+../src/Utilities/Idm/netcdf/NCFileListInput.f90
+../src/Utilities/Idm/netcdf/NCInputLoadType.f90
