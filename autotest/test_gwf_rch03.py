@@ -32,19 +32,6 @@ def build_models(idx, test, netcdf=None):
 
     name = "rch"
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-        rcha_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        chd_fname = f"{name}.chd"
-        rcha_fname = f"{name}.rcha"
-
     # build MODFLOW 6 files
     ws = test.workspace
     sim = flopy.mf6.MFSimulation(
@@ -106,21 +93,29 @@ def build_models(idx, test, netcdf=None):
         top=100.0,
         botm=[50.0, 0.0],
         idomain=idomain,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=100.0, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=100.0, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=0, k=1.0, filename=npf_fname
+        gwf,
+        save_flows=True,
+        icelltype=0,
+        k=1.0,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
 
     # chd
     chdspd = [[(1, 0, 0), 100.0]]
     chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdspd, filename=chd_fname
+        gwf,
+        stress_period_data=chdspd,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     recharge = np.arange(nrow * ncol).reshape(nrow, ncol) + 1.0
@@ -135,7 +130,7 @@ def build_models(idx, test, netcdf=None):
         print_flows=True,
         recharge=recharge,
         irch=irch,
-        filename=rcha_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.rcha",
     )
 
     # output control

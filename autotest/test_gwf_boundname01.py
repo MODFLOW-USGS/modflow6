@@ -73,20 +73,8 @@ def get_model(idx, ws, netcdf=None):
         relaxation_factor=relax,
     )
 
-    # set names
-    gwfname = "gwf_" + name
-    if netcdf:
-        dis_fname = f"{gwfname}.nc"
-        npf_fname = f"{gwfname}.nc"
-        ic_fname = f"{gwfname}.nc"
-        chd_fname = f"{gwfname}.nc"
-    else:
-        dis_fname = f"{gwfname}.dis"
-        npf_fname = f"{gwfname}.npf"
-        ic_fname = f"{gwfname}.ic"
-        chd_fname = f"{gwfname}.chd"
-
     # create gwf model
+    gwfname = "gwf_" + name
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=gwfname,
@@ -103,14 +91,14 @@ def get_model(idx, ws, netcdf=None):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename=dis_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
         gwf,
         strt=strt,
-        filename=ic_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic",
     )
 
     # node property flow
@@ -120,7 +108,7 @@ def get_model(idx, ws, netcdf=None):
         icelltype=laytyp,
         k=hk,
         k33=hk,
-        filename=npf_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # chd files
@@ -133,7 +121,7 @@ def get_model(idx, ws, netcdf=None):
         save_flows=False,
         print_flows=True,
         pname="CHD-1",
-        filename=chd_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
     fname = f"{gwfname}.chd.obs"
     chd_obs = {

@@ -141,19 +141,6 @@ def build_models(idx, test, netcdf=None):
     for jdx in range(nmodels):
         mname = mnames[jdx]
 
-        if netcdf:
-            dis_fname = f"{mname}.nc"
-            npf_fname = f"{mname}.nc"
-            ic_fname = f"{mname}.nc"
-            chd1_fname = f"{mname}.nc"
-            chd2_fname = f"{mname}.nc"
-        else:
-            dis_fname = f"{mname}.dis"
-            npf_fname = f"{mname}.npf"
-            ic_fname = f"{mname}.ic"
-            chd1_fname = f"{mname}.chd1.chd"
-            chd2_fname = f"{mname}.chd2.chd"
-
         gwf = flopy.mf6.ModflowGwf(
             sim, modelname=mname, model_nam_file=f"{mname}.nam"
         )
@@ -167,11 +154,15 @@ def build_models(idx, test, netcdf=None):
             delc=delc,
             top=top,
             botm=botm,
-            filename=dis_fname,
+            filename=f"{mname}.nc" if netcdf else f"{mname}.dis",
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+        ic = flopy.mf6.ModflowGwfic(
+            gwf,
+            strt=strt,
+            filename=f"{mname}.nc" if netcdf else f"{mname}.chd",
+        )
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(
@@ -181,7 +172,7 @@ def build_models(idx, test, netcdf=None):
             icelltype=1,
             k=hk,
             wetdry=wetdry,
-            filename=npf_fname,
+            filename=f"{mname}.nc" if netcdf else f"{mname}.npf",
         )
 
         # chd files
@@ -191,7 +182,7 @@ def build_models(idx, test, netcdf=None):
                 gwf,
                 stress_period_data=cd6left,
                 save_flows=False,
-                filename=chd1_fname,
+                filename=f"{mname}.nc" if netcdf else f"{mname}.chd1.chd",
                 pname="chd1",
                 print_input=True,
             )
@@ -201,7 +192,7 @@ def build_models(idx, test, netcdf=None):
                 gwf,
                 stress_period_data=cd6right,
                 save_flows=False,
-                filename=chd2_fname,
+                filename=f"{mname}.nc" if netcdf else f"{mname}.chd2.chd",
                 pname="chd2",
                 print_input=True,
             )

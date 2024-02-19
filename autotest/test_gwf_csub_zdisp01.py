@@ -196,21 +196,6 @@ ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        drn_fname = f"{name}.nc"
-        wel_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        drn_fname = f"{name}.drn"
-        wel_fname = f"{name}.wel"
-        chd_fname = f"{name}.chd"
-
     # build MODFLOW 6 files
     ws = test.workspace
     sim = flopy.mf6.MFSimulation(
@@ -256,11 +241,13 @@ def build_models(idx, test, netcdf=None):
         top=top,
         botm=botm,
         idomain=idomain,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -269,7 +256,7 @@ def build_models(idx, test, netcdf=None):
         icelltype=laytyp,
         k=hk,
         k33=vka,
-        filename=npf_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -320,7 +307,10 @@ def build_models(idx, test, netcdf=None):
 
     # drain
     drn = flopy.mf6.ModflowGwfdrn(
-        gwf, maxbound=maxdrd, stress_period_data=drd6, filename=drn_fname
+        gwf,
+        maxbound=maxdrd,
+        stress_period_data=drd6,
+        filename=f"{name}.nc" if netcdf else f"{name}.drn",
     )
 
     # wel file
@@ -330,7 +320,7 @@ def build_models(idx, test, netcdf=None):
         print_flows=True,
         maxbound=maxwel,
         stress_period_data=wd6,
-        filename=wel_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.wel",
     )
 
     # chd files
@@ -339,7 +329,7 @@ def build_models(idx, test, netcdf=None):
         maxbound=maxchd,
         stress_period_data=cd6,
         save_flows=False,
-        filename=chd_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     # output control

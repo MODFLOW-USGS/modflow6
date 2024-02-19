@@ -50,19 +50,6 @@ hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
 def get_model(ws, name, bmi=False, netcdf=None):
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        wel_fname = f"{name}.nc"
-        evt_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        wel_fname = f"{name}.wel"
-        evt_fname = f"{name}.evt"
-
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -109,15 +96,21 @@ def get_model(ws, name, bmi=False, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=hk, filename=npf_fname
+        gwf,
+        save_flows=True,
+        icelltype=1,
+        k=hk,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -127,7 +120,11 @@ def get_model(ws, name, bmi=False, netcdf=None):
     # evapotranspiration
     if not bmi:
         evt = flopy.mf6.ModflowGwfevta(
-            gwf, surface=top, rate=et_max, depth=et_depth, filename=evt_fname
+            gwf,
+            surface=top,
+            rate=et_max,
+            depth=et_depth,
+            filename=f"{name}.nc" if netcdf else f"{name}.evta",
         )
     wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data=[[(0, 0, 0), 0.0]])
 

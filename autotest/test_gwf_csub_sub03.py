@@ -145,21 +145,6 @@ def get_model(idx, ws, netcdf=None):
     sub6 = []
     ibcno = 0
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        rcha_fname = f"{name}.nc"
-        wel_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        rcha_fname = f"{name}.rcha"
-        wel_fname = f"{name}.wel"
-        chd_fname = f"{name}.chd"
-
     # create no delay bed packagedata entries
     if nndb > 0:
         cdelays = "nodelay"
@@ -269,11 +254,13 @@ def get_model(idx, ws, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -283,7 +270,7 @@ def get_model(idx, ws, netcdf=None):
         cvoptions=cvopt[idx],
         k=hk,
         k33=vka,
-        filename=npf_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -300,7 +287,10 @@ def get_model(idx, ws, netcdf=None):
 
     # recharge
     rch = flopy.mf6.ModflowGwfrcha(
-        gwf, readasarrays=True, recharge=rech, filename=rcha_fname
+        gwf,
+        readasarrays=True,
+        recharge=rech,
+        filename=f"{name}.nc" if netcdf else f"{name}.rcha",
     )
 
     # wel file
@@ -311,7 +301,7 @@ def get_model(idx, ws, netcdf=None):
         maxbound=maxwel,
         stress_period_data=wd6,
         save_flows=False,
-        filename=wel_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.wel",
     )
 
     # chd files
@@ -320,7 +310,7 @@ def get_model(idx, ws, netcdf=None):
         maxbound=maxchd,
         stress_period_data=cd6,
         save_flows=False,
-        filename=chd_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
     # csub files
     opth = f"{name}.csub.obs"

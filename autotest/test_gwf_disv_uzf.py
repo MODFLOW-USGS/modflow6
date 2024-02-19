@@ -130,17 +130,6 @@ for k in np.arange(3, 5, 1):
 def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
-    if netcdf:
-        disv_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        ghb_fname = f"{name}.nc"
-    else:
-        disv_fname = f"{name}.disv"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        ghb_fname = f"{name}.ghb"
-
     # build MODFLOW 6 files
     ws = test.workspace
     sim = flopy.mf6.MFSimulation(
@@ -181,14 +170,23 @@ def build_models(idx, test, netcdf=None):
     sim.register_ims_package(ims, [gwf.name])
 
     # disv
-    disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs, filename=disv_fname)
+    disv = flopy.mf6.ModflowGwfdisv(
+        gwf, **disvkwargs, filename=f"{name}.nc" if netcdf else f"{name}.disv"
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=0.1, k33=1, filename=npf_fname
+        gwf,
+        save_flows=True,
+        icelltype=1,
+        k=0.1,
+        k33=1,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
 
     # aquifer storage
@@ -198,7 +196,10 @@ def build_models(idx, test, netcdf=None):
 
     # general-head boundary
     ghb = flopy.mf6.ModflowGwfghb(
-        gwf, print_flows=True, stress_period_data=ghb_spd, filename=ghb_fname
+        gwf,
+        print_flows=True,
+        stress_period_data=ghb_spd,
+        filename=f"{name}.nc" if netcdf else f"{name}.ghb",
     )
 
     # unsaturated-zone flow

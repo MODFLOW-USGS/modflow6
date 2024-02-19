@@ -35,17 +35,6 @@ hclose, rclose, relax = 1e-9, 1e-6, 1.0
 def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        wel_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        wel_fname = f"{name}.wel"
-
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -93,14 +82,14 @@ def build_models(idx, test, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
         gwf,
         strt=strt,
-        filename=ic_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.ic",
     )
 
     # node property flow
@@ -110,7 +99,7 @@ def build_models(idx, test, netcdf=None):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename=npf_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -142,7 +131,7 @@ def build_models(idx, test, netcdf=None):
         auto_flow_reduce="auto_flow_reduce 0.5",
         stress_period_data=wel_spd,
         afrcsv_filerecord=f"{name}.afr.csv",
-        filename=wel_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.wel",
     )
     welobs = wel.obs.initialize(
         print_input=True,

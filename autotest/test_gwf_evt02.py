@@ -29,19 +29,6 @@ def build_models(idx, test, netcdf=None):
 
     name = cases[idx]
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-        evt_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        chd_fname = f"{name}.chd"
-        evt_fname = f"{name}.evt"
-        ic_fname = f"{name}.ic"
-
     # build MODFLOW 6 files
     ws = test.workspace
     sim = flopy.mf6.MFSimulation(
@@ -81,15 +68,21 @@ def build_models(idx, test, netcdf=None):
         delc=delc,
         top=100.0,
         botm=0.0,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=1.0, filename=npf_fname
+        gwf,
+        save_flows=True,
+        icelltype=1,
+        k=1.0,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
 
     # chd files
@@ -97,7 +90,9 @@ def build_models(idx, test, netcdf=None):
     for kper, chdval in enumerate(chdheads):
         chdspd[kper] = [[(0, 0, 0), chdval], [(0, 0, ncol - 1), chdval]]
     chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdspd, filename=chd_fname
+        gwf,
+        stress_period_data=chdspd,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     nseg = 1
@@ -119,7 +114,7 @@ def build_models(idx, test, netcdf=None):
         maxbound=1,
         nseg=nseg,
         stress_period_data=evtspd,
-        filename=evt_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.evt",
     )
 
     # output control

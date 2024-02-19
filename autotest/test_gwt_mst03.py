@@ -59,17 +59,6 @@ def build_models(idx, test, netcdf=None):
         newtonoptions=newtonoptions,
     )
 
-    if netcdf:
-        dis_fname = f"{gwfname}.nc"
-        npf_fname = f"{gwfname}.nc"
-        ic_fname = f"{gwfname}.nc"
-        wel_fname = f"{gwfname}.nc"
-    else:
-        dis_fname = f"{gwfname}.dis"
-        npf_fname = f"{gwfname}.npf"
-        ic_fname = f"{gwfname}.ic"
-        wel_fname = f"{gwfname}.wel"
-
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -99,11 +88,13 @@ def build_models(idx, test, netcdf=None):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename=dis_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -112,7 +103,7 @@ def build_models(idx, test, netcdf=None):
         icelltype=laytyp[idx],
         k=hk,
         k33=hk,
-        filename=npf_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -135,7 +126,7 @@ def build_models(idx, test, netcdf=None):
         save_flows=False,
         auxiliary="CONCENTRATION",
         pname="WEL-1",
-        filename=wel_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
     )
 
     # output control

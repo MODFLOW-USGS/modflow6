@@ -229,17 +229,6 @@ def build_mf6_model(idx, ws, netcdf=None):
 
     name = cases[idx]
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        ghb_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        ghb_fname = f"{name}.ghb"
-
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -282,11 +271,13 @@ def build_mf6_model(idx, ws, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -295,7 +286,7 @@ def build_mf6_model(idx, ws, netcdf=None):
         icelltype=icelltype,
         k=k,
         k33=k33,
-        filename=npf_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
 
     # aquifer storage
@@ -305,7 +296,10 @@ def build_mf6_model(idx, ws, netcdf=None):
 
     # ghb files
     ghb = flopy.mf6.ModflowGwfghb(
-        gwf, print_flows=True, stress_period_data=ghbspd, filename=ghb_fname
+        gwf,
+        print_flows=True,
+        stress_period_data=ghbspd,
+        filename=f"{name}.nc" if netcdf else f"{name}.ghb",
     )
 
     # transient uzf info

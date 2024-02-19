@@ -31,17 +31,6 @@ def build_models(idx, test, netcdf=None):
 
     name = cases[idx]
 
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        chd_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        chd_fname = f"{name}.chd"
-
     # build MODFLOW 6 files
     ws = test.workspace
     sim = flopy.mf6.MFSimulation(
@@ -81,15 +70,22 @@ def build_models(idx, test, netcdf=None):
         delc=delc,
         top=90.0,
         botm=0.0,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01, filename=npf_fname
+        gwf,
+        save_flows=True,
+        icelltype=1,
+        k=1.0,
+        k33=0.01,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -112,7 +108,7 @@ def build_models(idx, test, netcdf=None):
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename=chd_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     # MAW

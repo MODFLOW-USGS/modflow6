@@ -46,20 +46,8 @@ def build_models(idx, test, netcdf=None):
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
-    # set names
-    gwfname = "gwf_" + name
-    if netcdf:
-        dis_fname = f"{gwfname}.nc"
-        npf_fname = f"{gwfname}.nc"
-        chd_fname = f"{gwfname}.nc"
-        ic_fname = f"{gwfname}.nc"
-    else:
-        dis_fname = f"{gwfname}.dis"
-        npf_fname = f"{gwfname}.npf"
-        chd_fname = f"{gwfname}.chd"
-        ic_fname = f"{gwfname}.ic"
-
     # create gwf model
+    gwfname = "gwf_" + name
     gwf = flopy.mf6.MFModel(
         sim,
         model_type="gwf6",
@@ -96,11 +84,13 @@ def build_models(idx, test, netcdf=None):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename=dis_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -109,7 +99,7 @@ def build_models(idx, test, netcdf=None):
         icelltype=laytyp,
         k=hk,
         k33=hk,
-        filename=npf_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # chd files
@@ -120,7 +110,7 @@ def build_models(idx, test, netcdf=None):
         save_flows=False,
         print_flows=True,
         pname="CHD-1",
-        filename=chd_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
 
     # output control

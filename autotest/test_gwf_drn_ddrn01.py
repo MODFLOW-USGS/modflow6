@@ -47,16 +47,6 @@ def initial_conditions():
 
 
 def get_model(idx, ws, name, netcdf=None):
-    if netcdf:
-        dis_fname = f"{name}.nc"
-        npf_fname = f"{name}.nc"
-        ic_fname = f"{name}.nc"
-        drn_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{name}.dis"
-        npf_fname = f"{name}.npf"
-        ic_fname = f"{name}.ic"
-        drn_fname = f"{name}.drn"
     strt = initial_conditions()
     hdsfile = f"{name}.hds"
     if newton[idx]:
@@ -89,9 +79,14 @@ def get_model(idx, ws, name, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
-    npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1, filename=npf_fname)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf,
+        k=kh,
+        icelltype=1,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
+    )
     sto = flopy.mf6.ModflowGwfsto(
         gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
     )
@@ -101,7 +96,7 @@ def get_model(idx, ws, name, netcdf=None):
         auxdepthname="ddrn",
         stress_period_data=drn_spd,
         print_input=True,
-        filename=drn_fname,
+        filename=f"{name}.nc" if netcdf else f"{name}.drn",
     )
     drn.obs.initialize(
         filename=f"{name}.drn.obs",
@@ -109,7 +104,9 @@ def get_model(idx, ws, name, netcdf=None):
         print_input=True,
         continuous=drn_obs,
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
     obs_package = flopy.mf6.ModflowUtlobs(
         gwf, digits=20, print_input=True, continuous=obs_recarray
     )

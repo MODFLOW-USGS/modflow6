@@ -67,25 +67,6 @@ def get_model(idx, dir, netcdf=None):
     # initial head
     h_start = 0.0
 
-    if netcdf:
-        dis_lfname = f"{name_left}.nc"
-        npf_lfname = f"{name_left}.nc"
-        ic_lfname = f"{name_left}.nc"
-        chd_lfname = f"{name_left}.nc"
-        dis_rfname = f"{name_right}.nc"
-        npf_rfname = f"{name_right}.nc"
-        ic_rfname = f"{name_right}.nc"
-        chd_rfname = f"{name_right}.nc"
-    else:
-        dis_lfname = f"{name_left}.dis"
-        npf_lfname = f"{name_left}.npf"
-        ic_lfname = f"{name_left}.ic"
-        chd_lfname = f"{name_left}.chd"
-        dis_rfname = f"{name_right}.dis"
-        npf_rfname = f"{name_right}.npf"
-        ic_rfname = f"{name_right}.ic"
-        chd_rfname = f"{name_right}.chd"
-
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -128,21 +109,25 @@ def get_model(idx, dir, netcdf=None):
         delc=delc,
         top=tops[0],
         botm=tops[1 : nlay + 1],
-        filename=dis_lfname,
+        filename=f"{name_left}.nc" if netcdf else f"{name_left}.dis",
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start, filename=ic_lfname)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=h_start,
+        filename=f"{name_left}.nc" if netcdf else f"{name_left}.ic",
+    )
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         save_flows=True,
         icelltype=0,
         k=k11,
-        filename=npf_lfname,
+        filename=f"{name_left}.nc" if netcdf else f"{name_left}.npf",
     )
     chd = flopy.mf6.ModflowGwfchd(
         gwf,
         stress_period_data=chd_spd_left,
-        filename=chd_lfname,
+        filename=f"{name_left}.nc" if netcdf else f"{name_left}.chd",
     )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
@@ -172,12 +157,12 @@ def get_model(idx, dir, netcdf=None):
         yorigin=shift_y,
         top=tops[0],
         botm=tops[1 : nlay + 1],
-        filename=dis_rfname,
+        filename=f"{name_right}.nc" if netcdf else f"{name_right}.dis",
     )
     ic = flopy.mf6.ModflowGwfic(
         gwf,
         strt=h_start,
-        filename=ic_rfname,
+        filename=f"{name_right}.nc" if netcdf else f"{name_right}.ic",
     )
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
@@ -185,12 +170,12 @@ def get_model(idx, dir, netcdf=None):
         save_flows=True,
         icelltype=0,
         k=k11,
-        filename=npf_rfname,
+        filename=f"{name_right}.nc" if netcdf else f"{name_right}.npf",
     )
     chd = flopy.mf6.ModflowGwfchd(
         gwf,
         stress_period_data=chd_spd_right,
-        filename=chd_rfname,
+        filename=f"{name_right}.nc" if netcdf else f"{name_right}.chd",
     )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,

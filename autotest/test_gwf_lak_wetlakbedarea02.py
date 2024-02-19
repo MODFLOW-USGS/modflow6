@@ -213,21 +213,6 @@ def build_models(idx, test, netcdf=None):
     # generate names for each model
     gwfname = "gwf-" + name
 
-    if netcdf:
-        dis_fname = f"{gwfname}.nc"
-        npf_fname = f"{gwfname}.nc"
-        ic_fname = f"{gwfname}.nc"
-        chd_fname = f"{gwfname}.nc"
-        rcha_fname = f"{name}.nc"
-        evta_fname = f"{name}.nc"
-    else:
-        dis_fname = f"{gwfname}.dis"
-        npf_fname = f"{gwfname}.npf"
-        ic_fname = f"{gwfname}.ic"
-        chd_fname = f"{gwfname}.chd"
-        rcha_fname = f"{name}.rcha"
-        evta_fname = f"{name}.evta"
-
     sim = flopy.mf6.MFSimulation(
         sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
     )
@@ -269,7 +254,7 @@ def build_models(idx, test, netcdf=None):
         delc=delc,
         top=top,
         botm=botm,
-        filename=dis_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # Instantiate node property flow package
@@ -279,26 +264,38 @@ def build_models(idx, test, netcdf=None):
         icelltype=1,  # >0 means saturated thickness varies with computed head
         k=k11,
         k33=k33,
-        filename=npf_fname,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # Instantiate gw storage package
     flopy.mf6.ModflowGwfsto(gwf, iconvert=1, sy=sy, ss=ss, steady_state=True)
 
     # Instantiate initial conditions package
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=ic_fname)
+    flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # Instantiate constant head boundary package
     flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chd_spd, filename=chd_fname
+        gwf,
+        stress_period_data=chd_spd,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
 
     # Instantiate recharge package
-    flopy.mf6.ModflowGwfrcha(gwf, recharge=recharge, filename=rcha_fname)
+    flopy.mf6.ModflowGwfrcha(
+        gwf,
+        recharge=recharge,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.rcha",
+    )
 
     # Instantiate ET package
     flopy.mf6.ModflowGwfevta(
-        gwf, surface=surf, rate=etvrate, depth=etvdepth, filename=evta_fname
+        gwf,
+        surface=surf,
+        rate=etvrate,
+        depth=etvdepth,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.evta",
     )
 
     # Instantiate LAK package
