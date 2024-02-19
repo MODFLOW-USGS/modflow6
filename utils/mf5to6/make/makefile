@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.10.dev0) for the 'mf5to6' executable.
+# makefile created by pymake (version 1.2.9) for the 'mf5to6' executable.
 
 
 include ./makedefaults

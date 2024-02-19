@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # makedefaults created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+=======
+# makedefaults created by pymake (version 1.2.9) for the 'mf6' executable.
+>>>>>>> 8ebac18e70 (rebuild makefiles)
 
 # determine OS
 ifeq ($(OS), Windows_NT)

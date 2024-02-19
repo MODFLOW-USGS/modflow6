@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+=======
+# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
+>>>>>>> cee027286b (rebuild makefiles)
 
 
 include ./makedefaults
@@ -465,10 +469,13 @@ $(OBJDIR)/GweCndOptions.o \
 $(OBJDIR)/VirtualSolution.o \
 $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
-<<<<<<< HEAD
 $(OBJDIR)/ImsReordering.o \
+$(OBJDIR)/swf-disl.o \
+$(OBJDIR)/swf-cxs.o \
+$(OBJDIR)/swf-ic.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
+<<<<<<< HEAD
 <<<<<<< HEAD
 $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/DislGeom.o \
@@ -486,6 +493,8 @@ $(OBJDIR)/swf1ic1.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
 >>>>>>> 02da353f55 (rebuild makefiles)
+=======
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
@@ -531,8 +540,8 @@ $(OBJDIR)/gwe-ctp.o \
 $(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
-<<<<<<< HEAD
 $(OBJDIR)/ImsLinearBase.o \
+<<<<<<< HEAD
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/DefinitionSelect.o \
 =======
@@ -572,12 +581,23 @@ $(OBJDIR)/swf1oc1.o \
 $(OBJDIR)/swf1obs1.o \
 $(OBJDIR)/swf1flw1.o \
 $(OBJDIR)/swf1dfw1.o \
+=======
+$(OBJDIR)/swf-zdg.o \
+$(OBJDIR)/swf-sto.o \
+$(OBJDIR)/swf-oc.o \
+$(OBJDIR)/swf-obs.o \
+$(OBJDIR)/swf-flw.o \
+$(OBJDIR)/swf-dfw.o \
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/DefinitionSelect.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
+<<<<<<< HEAD
 >>>>>>> 02da353f55 (rebuild makefiles)
 >>>>>>> a513871ad0 (rebuild makefiles)
+=======
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
@@ -590,13 +610,14 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
-$(OBJDIR)/swf1.o \
+$(OBJDIR)/swf.o \
 $(OBJDIR)/NCInputLoadType.o \
 $(OBJDIR)/LoadNCFile.o \
 $(OBJDIR)/DynamicParamFilter.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/AsciiInputLoadType.o \
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 $(OBJDIR)/LayeredArrayReader.o \
@@ -626,6 +647,8 @@ $(OBJDIR)/swf1dfw1.o \
 >>>>>>> 6c9bcb2e0d (rebuild makefiles)
 =======
 >>>>>>> 02da353f55 (rebuild makefiles)
+=======
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/ExplicitModel.o \
 >>>>>>> 8851ac13d4 (rebuild makefiles)
 $(OBJDIR)/SpatialModelConnection.o \
@@ -638,6 +661,7 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 $(OBJDIR)/StressListInput.o \
@@ -653,11 +677,14 @@ $(OBJDIR)/swf1.o \
 =======
 =======
 >>>>>>> 02da353f55 (rebuild makefiles)
+=======
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/ModelPackageInput.o \
 $(OBJDIR)/NCFileListInput.o \
 $(OBJDIR)/NCFileGridInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 617f37a82b (rebuild makefiles)
 >>>>>>> 6c9bcb2e0d (rebuild makefiles)
@@ -667,6 +694,8 @@ $(OBJDIR)/Mf6FileGridInput.o \
 =======
 >>>>>>> 02da353f55 (rebuild makefiles)
 >>>>>>> a513871ad0 (rebuild makefiles)
+=======
+>>>>>>> e7c9472cd9 (rebuild makefiles)
 $(OBJDIR)/ExplicitSolution.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
