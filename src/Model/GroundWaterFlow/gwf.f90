@@ -1175,7 +1175,7 @@ contains
   !> @brief GroundWater Flow Model Budget Entry
   !!
   !! This subroutine adds a budget entry to the flow budget.  It was added as
-  !! a method for the gwf3 model object so that the exchange object could add its
+  !! a method for the gwf model object so that the exchange object could add its
   !! contributions.
   !!
   !! (1) adds the entry to the budget object
