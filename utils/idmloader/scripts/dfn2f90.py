@@ -17,7 +17,7 @@ IDM_PATH = SRC_PATH / "IDM"
 class Dfn2F90:
     """generate idm f90 file from dfn file"""
 
-     def __init__(self, dfnfspec: str = None, verbose: bool = False):
+    def __init__(self, dfnfspec: str = None, verbose: bool = False):
         """Dfn290 init"""
 
         self._dfnfspec = dfnfspec
