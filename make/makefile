@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.10.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -134,8 +134,8 @@ $(OBJDIR)/gwe-disuidm.o \
 $(OBJDIR)/gwe-disidm.o \
 $(OBJDIR)/gwe-ctpidm.o \
 $(OBJDIR)/gwe-cndidm.o \
-$(OBJDIR)/exg-gwtgwtidm.o \
 $(OBJDIR)/exg-swfgwfidm.o \
+$(OBJDIR)/exg-gwtgwtidm.o \
 $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/exg-gwfgweidm.o \
@@ -364,9 +364,9 @@ $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
+$(OBJDIR)/exg-swfgwf.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
-$(OBJDIR)/exg-swfgwf.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
 $(OBJDIR)/RunControl.o \
