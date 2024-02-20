@@ -275,11 +275,13 @@ Meson build configuration files are provided for MODFLOW 6, for the ZONEBUDGET a
 
 To build MODFLOW 6, first configure the build directory. By default Meson uses compiler flags for a release build. To create a debug build, add `-Doptimization=0` to the following `setup` command.
 
+Meson `setup` on linux and macOS:
 ```shell
-# bash (linux and macOS)
 meson setup builddir --prefix=$(pwd) --libdir=bin
+```
 
-# cmd (windows)
+Meson `setup` on windows:
+```shell
 meson setup builddir --prefix=%CD% --libdir=bin
 ```
 
