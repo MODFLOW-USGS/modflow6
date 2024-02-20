@@ -10,10 +10,9 @@ module SwfOcModule
   private
   public SwfOcType, oc_cr
 
-  !> @ brief Output control for GWF
+  !> @ brief Output control
   !!
-  !!  Concrete implementation of OutputControlType for the
-  !!  GWF Model
+  !!  Concrete implementation of OutputControlType
   !<
   type, extends(OutputControlType) :: SwfOcType
   contains

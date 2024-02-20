@@ -62,29 +62,32 @@ def build_models(idx, test):
         sim,
         modelname=swfname,
         save_flows=True,
+        newtonoptions="newton underrelaxation",
     )
 
-    nouter, ninner = 100, 50
+    nouter, ninner = 200, 50
     hclose, rclose, relax = 1e-8, 1e-8, 1.0
     imsswf = flopy.mf6.ModflowIms(
         sim,
-        print_option="SUMMARY",
+        print_option="summary",
         outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="DBD",
-        under_relaxation_theta=0.9,
+        under_relaxation_theta=0.95,
         under_relaxation_kappa=0.0001,
         under_relaxation_gamma=0.0,
+        under_relaxation_momentum=0.0,
         inner_maximum=ninner,
         inner_dvclose=hclose,
         linear_acceleration="BICGSTAB",
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        backtracking_number=5,
-        backtracking_tolerance=1.0,
-        backtracking_reduction_factor=0.3,
-        backtracking_residual_limit=100.0,
+        # backtracking_number=5,
+        # backtracking_tolerance=1.0,
+        # backtracking_reduction_factor=0.3,
+        # backtracking_residual_limit=100.0,
+        csv_outer_output_filerecord=f"{swfname}.ims.outer.csv",
         filename=f"{swfname}.ims",
     )
     sim.register_ims_package(imsswf, [swf.name])

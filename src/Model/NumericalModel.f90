@@ -7,6 +7,7 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
+  use VersionModule, only: write_listfile_header
   use MatrixBaseModule
   use VectorBaseModule
 
@@ -75,6 +76,7 @@ module NumericalModelModule
     procedure :: get_mcellid
     procedure :: get_mnodeu
     procedure :: get_iasym
+    procedure :: create_lstfile
   end type NumericalModelType
 
 contains
@@ -459,5 +461,54 @@ contains
     !
     return
   end function GetNumericalModelFromList
+
+  subroutine create_lstfile(this, lst_fname, model_fname, defined, headertxt)
+    ! -- modules
+    use KindModule, only: LGP
+    use InputOutputModule, only: openfile, getunit
+    ! -- dummy
+    class(NumericalModelType) :: this
+    character(len=*), intent(inout) :: lst_fname
+    character(len=*), intent(in) :: model_fname
+    logical(LGP), intent(in) :: defined
+    character(len=*), intent(in) :: headertxt
+    ! -- local
+    integer(I4B) :: i, istart, istop
+    !
+    ! -- set list file name if not provided
+    if (.not. defined) then
+      !
+      ! -- initialize
+      lst_fname = ' '
+      istart = 0
+      istop = len_trim(model_fname)
+      !
+      ! -- identify '.' character position from back of string
+      do i = istop, 1, -1
+        if (model_fname(i:i) == '.') then
+          istart = i
+          exit
+        end if
+      end do
+      !
+      ! -- if not found start from string end
+      if (istart == 0) istart = istop + 1
+      !
+      ! -- set list file name
+      lst_fname = model_fname(1:istart)
+      istop = istart + 3
+      lst_fname(istart:istop) = '.lst'
+    end if
+    !
+    ! -- create the list file
+    this%iout = getunit()
+    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
+    !
+    ! -- write list file header
+    call write_listfile_header(this%iout, headertxt)
+    !
+    ! -- return
+    return
+  end subroutine create_lstfile
 
 end module NumericalModelModule

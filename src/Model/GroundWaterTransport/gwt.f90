@@ -10,7 +10,6 @@ module GwtModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
                              LENPAKLOC, LENVARNAME, LENPACKAGETYPE
-  use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
 
   use BaseModelModule, only: BaseModelType
@@ -105,9 +104,9 @@ contains
     use GwtNamInputModule, only: GwtNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: filename !< input file
+    integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
+    character(len=*), intent(in) :: modelname !< name of the model
     ! -- local
     integer(I4B) :: indis
     type(GwtModelType), pointer :: this

@@ -6,7 +6,7 @@ type keyword
 reader urword
 optional true
 longname use central in space weighting
-description keyword to indicate conductance should be calculated using central-in-space weighting instead of the default upstream weighting approach.
+description keyword to indicate conductance should be calculated using central-in-space weighting instead of the default upstream weighting approach.  This option should be used with caution as it does not work well unless all of the stream reaches are saturated.  With this option, there is no way for water to flow into a dry reach from connected reaches.
 mf6internal icentral
 
 block options

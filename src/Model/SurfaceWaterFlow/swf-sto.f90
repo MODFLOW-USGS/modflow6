@@ -132,7 +132,7 @@ contains
     this%dis => dis
     this%ibound => ibound
     !
-    ! -- set pointer to gwf iss
+    ! -- set pointer to model iss
     call mem_setptr(this%iss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Allocate arrays

@@ -40,14 +40,11 @@ module SwfModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, LINELENGTH, &
                              LENMEMPATH, LENPACKAGETYPE
-  use InputOutputModule, only: ParseLine, upcase
   use SimModule, only: count_errors, store_error, store_error_filename
   use SimVariablesModule, only: errmsg
   use MemoryManagerModule, only: mem_allocate
-  use VersionModule, only: write_listfile_header
   use BaseModelModule, only: BaseModelType
   use NumericalModelModule, only: NumericalModelType
-  !use ExplicitModelModule, only: ExplicitModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use SwfIcModule, only: SwfIcType
   use SwfDfwModule, only: SwfDfwType
@@ -67,7 +64,6 @@ module SwfModule
   public :: SWF_BASEPKG, SWF_MULTIPKG
 
   type, extends(NumericalModelType) :: SwfModelType
-    ! character(len=LINELENGTH), pointer :: filename => null() !< input file name
     type(SwfIcType), pointer :: ic => null() ! initial conditions package
     type(SwfDfwType), pointer :: dfw => null() !< diffusive wave package
     type(SwfCxsType), pointer :: cxs => null() !< cross section package
@@ -83,14 +79,6 @@ module SwfModule
     integer(I4B), pointer :: inoc => null() !< unit number OC
     integer(I4B), pointer :: iss => null() ! steady state flag
     integer(I4B), pointer :: inewtonur => null() ! newton under relaxation flag
-
-    ! integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< csr row pointer
-    ! integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< csr columns
-    ! real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent variable (todo: not used)
-    ! real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector
-    ! real(DP), dimension(:), pointer, contiguous :: xold => null() !< dependent variable for previous timestep
-    ! real(DP), dimension(:), pointer, contiguous :: flowja => null() !< intercell flows
-    ! integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound array
   contains
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -117,7 +105,6 @@ module SwfModule
     procedure :: get_iasym => swf_get_iasym
     procedure, private :: create_packages
     procedure, private :: create_bndpkgs
-    procedure, private :: create_lstfile
     procedure, private :: log_namfile_options
     procedure, private :: steady_period_check
   end type SwfModelType
@@ -158,16 +145,15 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use SwfNamInputModule, only: SwfNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: filename !< input file
+    integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
+    character(len=*), intent(in) :: modelname !< name of the model
     ! -- local
     type(SwfModelType), pointer :: this
     class(BaseModelType), pointer :: model
@@ -207,7 +193,8 @@ contains
     call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
     !
     ! -- create the list file
-    call this%create_lstfile(lst_fname, filename, found%list)
+    call this%create_lstfile(lst_fname, filename, found%list, &
+                             'SURFACE WATER FLOW MODEL (SWF)')
     !
     ! -- activate save_flows if found
     if (found%save_flows) then
@@ -241,7 +228,6 @@ contains
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    !allocate (this%filename)
     call mem_allocate(this%inic, 'INIC', this%memoryPath)
     call mem_allocate(this%indfw, 'INDFW', this%memoryPath)
     call mem_allocate(this%incxs, 'INCXS', this%memoryPath)
@@ -251,7 +237,6 @@ contains
     call mem_allocate(this%iss, 'ISS', this%memoryPath)
     call mem_allocate(this%inewtonur, 'INEWTONUR', this%memoryPath)
     !
-    !this%filename = ''
     this%inic = 0
     this%indfw = 0
     this%incxs = 0
@@ -345,7 +330,7 @@ contains
     call this%dis%dis_ac(this%moffset, sparse)
     !
     ! -- Add any additional connections
-    !if (this%indfw > 0) call this%dfw%dfw_ac(this%moffset, sparse)
+    !    none
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -373,7 +358,7 @@ contains
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
     !
     ! -- Map any additional connections
-    ! if (this%indfw > 0) call this%dfw%dfw_mc(this%moffset, matrix_sln)
+    !    none
     !
     ! -- Map any package connections
     do ip = 1, this%bndlist%Count()
@@ -938,7 +923,6 @@ contains
     end do
     !
     ! -- Scalars
-    !deallocate (this%filename)
     call mem_deallocate(this%inic)
     call mem_deallocate(this%indfw)
     call mem_deallocate(this%incxs)
@@ -949,11 +933,6 @@ contains
     call mem_deallocate(this%inewtonur)
     !
     ! -- Arrays
-    ! call mem_deallocate(this%x)
-    ! call mem_deallocate(this%xold)
-    ! call mem_deallocate(this%rhs)
-    ! call mem_deallocate(this%ibound)
-    ! call mem_deallocate(this%flowja)
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
@@ -1025,7 +1004,8 @@ contains
                       pakname, mempath, this%dis, this%cxs, this%dfw%unitconv)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
-      call store_error(errmsg, terminate=.TRUE.)
+      call store_error(errmsg)
+      call store_error_filename(this%filename)
     end select
     !
     ! -- Check to make sure that the package name is unique, then store a
@@ -1052,7 +1032,7 @@ contains
     integer(I4B), intent(in) :: indis
     ! -- local
     !
-    ! -- Check for DISL, and DFW. Stop if not present.
+    ! -- Check for required packages. Stop if not present.
     if (indis == 0) then
       write (errmsg, '(1x,a)') &
         'Discretization (DISL6) Package not specified.'
@@ -1245,54 +1225,6 @@ contains
     ! -- return
     return
   end subroutine create_packages
-
-  subroutine create_lstfile(this, lst_fname, model_fname, defined)
-    ! -- modules
-    use KindModule, only: LGP
-    use InputOutputModule, only: openfile, getunit
-    ! -- dummy
-    class(SwfModelType) :: this
-    character(len=*), intent(inout) :: lst_fname
-    character(len=*), intent(in) :: model_fname
-    logical(LGP), intent(in) :: defined
-    ! -- local
-    integer(I4B) :: i, istart, istop
-    !
-    ! -- set list file name if not provided
-    if (.not. defined) then
-      !
-      ! -- initialize
-      lst_fname = ' '
-      istart = 0
-      istop = len_trim(model_fname)
-      !
-      ! -- identify '.' character position from back of string
-      do i = istop, 1, -1
-        if (model_fname(i:i) == '.') then
-          istart = i
-          exit
-        end if
-      end do
-      !
-      ! -- if not found start from string end
-      if (istart == 0) istart = istop + 1
-      !
-      ! -- set list file name
-      lst_fname = model_fname(1:istart)
-      istop = istart + 3
-      lst_fname(istart:istop) = '.lst'
-    end if
-    !
-    ! -- create the list file
-    this%iout = getunit()
-    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
-    !
-    ! -- write list file header
-    call write_listfile_header(this%iout, 'SURFACE WATER FLOW MODEL (SWF)')
-    !
-    ! -- return
-    return
-  end subroutine create_lstfile
 
   !> @brief Write model namfile options to list file
   !<
