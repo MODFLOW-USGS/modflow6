@@ -82,7 +82,7 @@ modflow_sources = files(
     'Idm' / 'swf-chdidm.f90',
     'Idm' / 'swf-zdgidm.f90',
     'Idm' / 'sim-namidm.f90',
-    'Idm' / 'simtdisidm.f90',
+    'Idm' / 'sim-tdisidm.f90',
     'Idm' / 'selector' / 'IdmDfnSelector.f90',
     'Idm' / 'selector' / 'IdmExgDfnSelector.f90',
     'Idm' / 'selector' / 'IdmGweDfnSelector.f90',

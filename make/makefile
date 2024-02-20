@@ -105,7 +105,7 @@ $(OBJDIR)/swf-dislidm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
 $(OBJDIR)/swf-chdidm.o \
-$(OBJDIR)/simtdisidm.o \
+$(OBJDIR)/sim-tdisidm.o \
 $(OBJDIR)/sim-namidm.o \
 $(OBJDIR)/gwt-namidm.o \
 $(OBJDIR)/gwt-icidm.o \

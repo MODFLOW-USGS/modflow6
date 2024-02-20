@@ -147,7 +147,7 @@
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-chdidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
-		<File RelativePath="..\src\Idm\simtdisidm.f90"/>
+		<File RelativePath="..\src\Idm\sim-tdisidm.f90"/>
 		<File RelativePath="..\src\Idm\sim-namidm.f90"/>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Idm\selector\IdmDfnSelector.f90"/>

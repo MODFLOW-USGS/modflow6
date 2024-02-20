@@ -4,6 +4,7 @@
 
 # simulation
 sim-nam.dfn
+sim-tdis.dfn
 
 # gwf model
 gwf-nam.dfn
