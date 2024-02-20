@@ -10,7 +10,7 @@ MODFLOW 6 reads simulation input from text and binary input files.  Traditionall
 The MODFLOW 6 IDP (Input Data Processor) is a subsystem meant to generically read and store simulation input data from more than one type of input source.  It is built upon existing MODFLOW 6 capabilities, specifically input parameter descriptions currently stored in \*.dfn (definition) files, and the Memory Manager.  The parameter descriptions provide IDP with input block and parameter attributes needed to create memory and store input data.  The Memory Manager provides a globally accessible way to create, update, access and remove input (and other) data.  Existing components that read a traditional ASCII input file can be updated to source their input from the Memory Manager.  This type of update is a significant step towards supporting sources of input data other than the traditional ASCII files. 
 
 ## Framework
-MODFLOW 6 \*.dfn files are used pre-compile time to generate fortran source files containing a subset of the parameter and block attribute information necessary to process input for the simulation. A single definition file is converted into one fortran source file that defines the component parameters and blocks and organizes them into lists.  This conversion from defintion file to fortran source file is currently managed by the [dfn2f90.py](scripts/dfn2f90.py) script.  This script also creates framework fortran source files with routines for generically accessing package definitions by component.  A package or other component intended to be updated and integrated with IDM must be added to the dfn2f90.py script.  This process is described below.
+MODFLOW 6 \*.dfn files are used pre-compile time to generate fortran source files containing a subset of the parameter and block attribute information necessary to process input for the simulation. A single definition file is converted into one fortran source file that defines the component parameters and blocks and organizes them into lists.  This conversion from defintion file to fortran source file is currently managed by the [dfn2f90.py](scripts/dfn2f90.py) script.  This script also creates framework fortran source files with routines for generically accessing package definitions by component.  A package or other component intended to be updated and integrated with IDM must be added to the `utils/idmloader/dfns.txt` file, which the `dfn2f90.py` script consumes.  This process is described below.
 
 ## Design
 Input data stored in the Memory Manager use the special identifier ```__INPUT__``` as a prefix to a memory path.  MODFLOW 6 refers to memory path prefixes such as these as a "context" and as such the collection of input data stored in the Memory Manager is referred to as the "input context".
@@ -22,15 +22,14 @@ IDM distinguishes between static and dynamic loader objects.  Static loader obje
 ## Integration
 A simulation component (package, etc) can be integrated with IDM by following these steps:
 - Create dfn file
-- Add component to dfn2f90.py and run script
+- Add component to `dfns.txt` and run `dfn2f90.py`
 - Update MODFLOW 6 build scripts (e.g. meson / msvs)
 - Use common intefaces to source input from input context
 
-The dfn file is already a requirement for MODFLOW 6 package integration and so is not an IDM specific requirement.  The dfn2f90.py update should be straightforward and currently amounts to specifying the input path to the package dfn file and an output path for the generated package \*idm.f90 file.  To run the script:
+The DFN file is already a requirement for MODFLOW 6 package integration and so is not an IDM specific requirement.  The DFN file should be added to `doc/mf6io/mf6ivar/dfn/`  and its filename added to `dfns.txt`. The generated package files are named `\*idm.f90` and located in the `src/Idm/` subdirectory by default.  To run the script:
 
 ```shell
-cd utils/idmloader/scripts
-python dfn2f90.py
+python utils/idmloader/scripts/dfn2f90.py
 ```
 Running this command will generate a new definition file for the package and update the IDM selector framework.  If the package also introduces a new model then a new selector framework file will also be created.  Update the MODFLOW 6 build system (meson and msvs) files with any newly generated files.
 

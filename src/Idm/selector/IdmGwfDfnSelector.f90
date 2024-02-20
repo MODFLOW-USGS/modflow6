@@ -5,6 +5,7 @@ module IdmGwfDfnSelectorModule
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
+  use GwfNamInputModule
   use GwfChdInputModule
   use GwfDisInputModule
   use GwfDisuInputModule
@@ -19,7 +20,6 @@ module IdmGwfDfnSelectorModule
   use GwfRchaInputModule
   use GwfRivInputModule
   use GwfWelInputModule
-  use GwfNamInputModule
 
   implicit none
   private
@@ -48,6 +48,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwf_nam_param_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, gwf_chd_param_definitions)
     case ('DIS')
@@ -76,8 +78,6 @@ contains
       call set_param_pointer(input_definition, gwf_riv_param_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_param_definitions)
-    case ('NAM')
-      call set_param_pointer(input_definition, gwf_nam_param_definitions)
     case default
     end select
     return
@@ -88,6 +88,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwf_nam_aggregate_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, gwf_chd_aggregate_definitions)
     case ('DIS')
@@ -116,8 +118,6 @@ contains
       call set_param_pointer(input_definition, gwf_riv_aggregate_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_aggregate_definitions)
-    case ('NAM')
-      call set_param_pointer(input_definition, gwf_nam_aggregate_definitions)
     case default
     end select
     return
@@ -128,6 +128,8 @@ contains
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_block_pointer(input_definition, gwf_nam_block_definitions)
     case ('CHD')
       call set_block_pointer(input_definition, gwf_chd_block_definitions)
     case ('DIS')
@@ -156,8 +158,6 @@ contains
       call set_block_pointer(input_definition, gwf_riv_block_definitions)
     case ('WEL')
       call set_block_pointer(input_definition, gwf_wel_block_definitions)
-    case ('NAM')
-      call set_block_pointer(input_definition, gwf_nam_block_definitions)
     case default
     end select
     return
@@ -167,6 +167,8 @@ contains
     character(len=*), intent(in) :: subcomponent
     logical :: multi_package
     select case (subcomponent)
+    case ('NAM')
+      multi_package = gwf_nam_multi_package
     case ('CHD')
       multi_package = gwf_chd_multi_package
     case ('DIS')
@@ -195,8 +197,6 @@ contains
       multi_package = gwf_riv_multi_package
     case ('WEL')
       multi_package = gwf_wel_multi_package
-    case ('NAM')
-      multi_package = gwf_nam_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="GWF"'//&
@@ -210,6 +210,8 @@ contains
     logical :: integrated
     integrated = .false.
     select case (subcomponent)
+    case ('NAM')
+      integrated = .true.
     case ('CHD')
       integrated = .true.
     case ('DIS')
@@ -237,8 +239,6 @@ contains
     case ('RIV')
       integrated = .true.
     case ('WEL')
-      integrated = .true.
-    case ('NAM')
       integrated = .true.
     case default
     end select

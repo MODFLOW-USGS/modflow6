@@ -5,13 +5,13 @@ module IdmGwtDfnSelectorModule
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
+  use GwtNamInputModule
   use GwtDisInputModule
   use GwtDisuInputModule
   use GwtDisvInputModule
   use GwtDspInputModule
   use GwtCncInputModule
   use GwtIcInputModule
-  use GwtNamInputModule
 
   implicit none
   private
@@ -40,6 +40,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwt_nam_param_definitions)
     case ('DIS')
       call set_param_pointer(input_definition, gwt_dis_param_definitions)
     case ('DISU')
@@ -52,8 +54,6 @@ contains
       call set_param_pointer(input_definition, gwt_cnc_param_definitions)
     case ('IC')
       call set_param_pointer(input_definition, gwt_ic_param_definitions)
-    case ('NAM')
-      call set_param_pointer(input_definition, gwt_nam_param_definitions)
     case default
     end select
     return
@@ -64,6 +64,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwt_nam_aggregate_definitions)
     case ('DIS')
       call set_param_pointer(input_definition, gwt_dis_aggregate_definitions)
     case ('DISU')
@@ -76,8 +78,6 @@ contains
       call set_param_pointer(input_definition, gwt_cnc_aggregate_definitions)
     case ('IC')
       call set_param_pointer(input_definition, gwt_ic_aggregate_definitions)
-    case ('NAM')
-      call set_param_pointer(input_definition, gwt_nam_aggregate_definitions)
     case default
     end select
     return
@@ -88,6 +88,8 @@ contains
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('NAM')
+      call set_block_pointer(input_definition, gwt_nam_block_definitions)
     case ('DIS')
       call set_block_pointer(input_definition, gwt_dis_block_definitions)
     case ('DISU')
@@ -100,8 +102,6 @@ contains
       call set_block_pointer(input_definition, gwt_cnc_block_definitions)
     case ('IC')
       call set_block_pointer(input_definition, gwt_ic_block_definitions)
-    case ('NAM')
-      call set_block_pointer(input_definition, gwt_nam_block_definitions)
     case default
     end select
     return
@@ -111,6 +111,8 @@ contains
     character(len=*), intent(in) :: subcomponent
     logical :: multi_package
     select case (subcomponent)
+    case ('NAM')
+      multi_package = gwt_nam_multi_package
     case ('DIS')
       multi_package = gwt_dis_multi_package
     case ('DISU')
@@ -123,8 +125,6 @@ contains
       multi_package = gwt_cnc_multi_package
     case ('IC')
       multi_package = gwt_ic_multi_package
-    case ('NAM')
-      multi_package = gwt_nam_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="GWT"'//&
@@ -138,6 +138,8 @@ contains
     logical :: integrated
     integrated = .false.
     select case (subcomponent)
+    case ('NAM')
+      integrated = .true.
     case ('DIS')
       integrated = .true.
     case ('DISU')
@@ -149,8 +151,6 @@ contains
     case ('CNC')
       integrated = .true.
     case ('IC')
-      integrated = .true.
-    case ('NAM')
       integrated = .true.
     case default
     end select
