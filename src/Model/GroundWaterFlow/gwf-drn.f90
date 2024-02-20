@@ -314,6 +314,12 @@ contains
     character(len=*), parameter :: fmtdrnerr = &
       "('DRN BOUNDARY (',i0,') ELEVATION (',f10.3,') IS LESS THAN CELL &
       &BOTTOM (',f10.3,')')"
+    character(len=*), parameter :: fmtcondmulterr = &
+      "('DRN BOUNDARY (',i0,') CONDUCTANCE MULTIPLIER (',g10.3,') IS &
+      &LESS THAN ZERO')"
+    character(len=*), parameter :: fmtconderr = &
+      "('DRN BOUNDARY (',i0,') CONDUCTANCE (',g10.3,') IS LESS THAN &
+      &ZERO')"
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -331,6 +337,17 @@ contains
         else
           write (errmsg, fmt=fmtdrnerr) i, drnbot, bt
         end if
+        call store_error(errmsg)
+      end if
+      if (this%iauxmultcol > 0) then
+        if (this%auxvar(this%iauxmultcol, i) < DZERO) then
+          write (errmsg, fmt=fmtcondmulterr) &
+            i, this%auxvar(this%iauxmultcol, i)
+          call store_error(errmsg)
+        end if
+      end if
+      if (this%cond(i) < DZERO) then
+        write (errmsg, fmt=fmtconderr) i, this%cond(i)
         call store_error(errmsg)
       end if
     end do

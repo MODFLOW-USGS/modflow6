@@ -221,6 +221,12 @@ contains
     character(len=*), parameter :: fmtghberr = &
       "('GHB BOUNDARY (',i0,') HEAD (',f10.3,') IS LESS THAN CELL &
       &BOTTOM (',f10.3,')')"
+    character(len=*), parameter :: fmtcondmulterr = &
+      "('GHB BOUNDARY (',i0,') CONDUCTANCE MULTIPLIER (',g10.3,') IS &
+      &LESS THAN ZERO')"
+    character(len=*), parameter :: fmtconderr = &
+      "('GHB BOUNDARY (',i0,') CONDUCTANCE (',g10.3,') IS LESS THAN &
+      &ZERO')"
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -229,6 +235,17 @@ contains
       ! -- accumulate errors
       if (this%bhead(i) < bt .and. this%icelltype(node) /= 0) then
         write (errmsg, fmt=fmtghberr) i, this%bhead(i), bt
+        call store_error(errmsg)
+      end if
+      if (this%iauxmultcol > 0) then
+        if (this%auxvar(this%iauxmultcol, i) < DZERO) then
+          write (errmsg, fmt=fmtcondmulterr) &
+            i, this%auxvar(this%iauxmultcol, i)
+          call store_error(errmsg)
+        end if
+      end if
+      if (this%cond(i) < DZERO) then
+        write (errmsg, fmt=fmtconderr) i, this%cond(i)
         call store_error(errmsg)
       end if
     end do
