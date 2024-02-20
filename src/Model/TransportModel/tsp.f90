@@ -724,9 +724,9 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GwfDisModule, only: dis_cr
-    use GwfDisvModule, only: disv_cr
-    use GwfDisuModule, only: disu_cr
+    use DisModule, only: dis_cr
+    use DisvModule, only: disv_cr
+    use DisuModule, only: disu_cr
     use TspIcModule, only: ic_cr
     use TspFmiModule, only: fmi_cr
     use TspAdvModule, only: adv_cr
