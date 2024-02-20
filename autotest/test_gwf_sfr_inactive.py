@@ -1,4 +1,13 @@
-# test based on issue 1585 fix
+# Test based on issue 1585
+# The test has 6 sfr reaches that are not connected to the 
+# groundwater model.
+# 1. initially all reaches are active
+# 2. in the 2nd stress period the last three are inactivated
+#    (this resulted in a divide by zero error previously)
+# 3. in the 3rd stress period the 4th reach is reactivated
+# 4. in the 4th stress period the 5th reach is reactivated
+# 5. in the 5th stress period the 6th reach is reactivated
+
 import flopy
 import numpy as np
 import pytest
@@ -12,7 +21,7 @@ cases = ["sfr-1585"]
 def build_models(idx, test):
     # static model data
     # temporal discretization
-    nper = 2
+    nper = 5
     tdis_rc = []
     for _ in range(nper):
         tdis_rc.append((1.0, 1, 1.0))
@@ -188,16 +197,22 @@ def build_models(idx, test):
             [4, "status", "inactive"],
             [5, "status", "inactive"],
         ],
+        2: [
+            [3, "status", "active"],
+        ],
+        3: [
+            [4, "status", "active"],
+        ],
+        4: [
+            [5, "status", "active"],
+        ],
     }
 
-    sfr_dict = {
-        f"{paktest}_obs.csv": [
-            ("r3_out", "outflow", (2,)),
-            ("r3_ext", "ext-outflow", (2,)),
-            ("r6_out", "outflow", (5,)),
-            ("r6_ext", "ext-outflow", (5,)),
-        ]
-    }
+    sfr_obs = []
+    for i in range(2, 6):
+        sfr_obs.append((f"r{i + 1}_out", "outflow", (i,)))
+        sfr_obs.append((f"r{i + 1}_ext", "ext-outflow", (i,)))
+    sfr_dict = {f"{paktest}_obs.csv": sfr_obs}
     sfr = flopy.mf6.ModflowGwfsfr(
         gwf,
         print_stage=True,
@@ -224,10 +239,14 @@ def check_output(idx, test):
     print("Checking sfr outflow and external outflow")
     obs_values = flopy.utils.Mf6Obs(test.workspace / f"{paktest}_obs.csv")
     test_values = {
-        "R3_OUT": [-1.0, 0.0],
-        "R3_EXT": [0.0, -1.0],
-        "R6_OUT": [0.0, 0.0],
-        "R6_EXT": [-1.0, 0.0],
+        "R3_OUT": [-1.0, 0.0, -1.0, -1.0, -1.0],
+        "R3_EXT": [0.0, -1.0, 0.0, 0.0, 0.0],
+        "R6_OUT": [0.0, 0.0, 0.0, 0.0, 0.0],
+        "R6_EXT": [-1.0, 0.0, 0.0, 0.0, -1.0],
+        "R4_OUT": [-1.0, 0.0, 0.0, -1.0, -1.0],
+        "R4_EXT": [0.0, 0.0, -1.0, 0.0, 0.0],
+        "R5_OUT": [-1.0, 0.0, 0.0, 0.0, -1.0],
+        "R5_EXT": [0.0, 0.0, 0.0, -1.0, 0.0],
     }
     for key, value in test_values.items():
         assert np.array_equal(
