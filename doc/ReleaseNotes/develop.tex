@@ -32,12 +32,12 @@
 	%	\item xxx
 	%\end{itemize}
 
-	%\underline{STRESS PACKAGES}
-	%\begin{itemize}
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item Floating point overflow errors would occur when negative conductance (COND) or auxiliary multiplier (AUXMULT) values were specified in the Drain, River, and General Head stress packages. This bug was fixed by checking if COND and AUXMULT values are greater than or equal to zero. The program will terminate with and error if negative COND or AUXMULT values are found.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
