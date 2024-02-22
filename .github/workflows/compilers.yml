@@ -1,7 +1,5 @@
 name: MODFLOW 6 compiler checks
 on:
-  schedule:
-    - cron: 0 0 * * 0 # 12am utc every sunday
   # workflow_dispatch trigger to start release via GitHub UI or CLI, see
   # https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
   workflow_dispatch:
