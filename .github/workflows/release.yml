@@ -63,9 +63,17 @@ jobs:
       matrix:
         include:
           - os: ${{ inputs.linux_version }}
-          - os: macos-12
+            compiler: ${{ inputs.compiler_toolchain }}
+            version: ${{ inputs.compiler_version }}
+          - os: macos-13
+            compiler: ${{ inputs.compiler_toolchain }}
+            version: ${{ inputs.compiler_version }}
           - os: macos-14
+            compiler: gcc
+            version: 13
           - os: windows-2022
+            compiler: ${{ inputs.compiler_toolchain }}
+            version: ${{ inputs.compiler_version }}
     defaults:
       run:
         shell: bash -l {0}
@@ -90,12 +98,13 @@ jobs:
             bash
             powershell
 
-      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+      - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+        id: setup-fortran
         uses: fortran-lang/setup-fortran@v1
         with:
-          compiler: ${{ inputs.compiler_toolchain }}
-          version: ${{ inputs.compiler_version }}
-
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+      
       - name: Set version number
         id: set_version
         run: |
@@ -122,6 +131,22 @@ jobs:
           fi
           eval "$cmd"
 
+      # for statically linked gfortran ARM mac build
+      - name: Hide dylibs (macOS)
+        if: matrix.os == 'macos-14'
+        run: |
+          mv /opt/homebrew/opt/gcc/lib/gcc/current/libgfortran.5.dylib /opt/homebrew/opt/gcc/lib/gcc/current/libgfortran.5.dylib.bak
+          mv /opt/homebrew/opt/gcc/lib/gcc/current/libquadmath.0.dylib /opt/homebrew/opt/gcc/lib/gcc/current/libquadmath.0.dylib.bak
+
+      - name: Set LDFLAGS (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          os_ver=$(sw_vers -productVersion | cut -d'.' -f1)
+          if (( "$os_ver" > 12 )); then
+            ldflags="$LDFLAGS -Wl,-ld_classic"
+            echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
+          fi
+
       - name: Build binaries
         if: runner.os != 'Windows'
         working-directory: modflow6
@@ -144,6 +169,13 @@ jobs:
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
+
+      - name: Check architecture (macOS)
+        working-directory: modflow6/bin
+        if: runner.os == 'macOS'
+        run: |
+          otool -L mf6
+          lipo -info mf6
 
       - name: Upload binaries
         uses: actions/upload-artifact@v3
@@ -412,7 +444,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: macos-13
           - os: macos-14
           - os: windows-2022
     defaults:

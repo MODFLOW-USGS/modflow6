@@ -130,7 +130,7 @@ jobs:
       branch: ${{ needs.set_options.outputs.branch }}
       developmode: false
       full: true
-      run_tests: ${{ inputs.run_tests == '' || inputs.run_tests == 'true' }}
+      run_tests: ${{ inputs.run_tests }}
       version: ${{ needs.set_options.outputs.version }}
   pr:
     name: Draft release PR
