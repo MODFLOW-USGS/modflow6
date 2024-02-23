@@ -10,6 +10,7 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 <<<<<<< HEAD
+<<<<<<< HEAD
 SOURCEDIR2=../src/Model
 SOURCEDIR3=../src/Model/SurfaceWaterFlow
 SOURCEDIR4=../src/Model/TransportModel
@@ -47,6 +48,8 @@ SOURCEDIR35=../src/Solution/PETSc
 SOURCEDIR36=../src/Solution/LinearMethods
 SOURCEDIR37=../src/Exchange
 =======
+=======
+>>>>>>> 514b799355 (rebuild makefiles)
 <<<<<<< HEAD
 SOURCEDIR2=../src/Idm
 SOURCEDIR3=../src/Idm/selector
@@ -195,7 +198,46 @@ SOURCEDIR33=../src/Utilities/Libraries/blas
 SOURCEDIR34=../src/Utilities/Libraries/daglib
 >>>>>>> d73a4230c8 (rebuild makefiles)
 >>>>>>> a513871ad0 (rebuild makefiles)
+<<<<<<< HEAD
 >>>>>>> 70d04fedf3 (rebuild makefiles)
+=======
+=======
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Idm
+SOURCEDIR4=../src/Idm/selector
+SOURCEDIR5=../src/Timing
+SOURCEDIR6=../src/Model
+SOURCEDIR7=../src/Model/Connection
+SOURCEDIR8=../src/Model/ModelUtilities
+SOURCEDIR9=../src/Model/GroundWaterFlow
+SOURCEDIR10=../src/Model/Geometry
+SOURCEDIR11=../src/Model/TransportModel
+SOURCEDIR12=../src/Model/GroundWaterTransport
+SOURCEDIR13=../src/Model/SurfaceWaterFlow
+SOURCEDIR14=../src/Model/GroundWaterEnergy
+SOURCEDIR15=../src/Solution
+SOURCEDIR16=../src/Solution/LinearMethods
+SOURCEDIR17=../src/Solution/PETSc
+SOURCEDIR18=../src/Distributed
+SOURCEDIR19=../src/Utilities
+SOURCEDIR20=../src/Utilities/TimeSeries
+SOURCEDIR21=../src/Utilities/Idm
+SOURCEDIR22=../src/Utilities/Idm/netcdf
+SOURCEDIR23=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR24=../src/Utilities/ArrayRead
+SOURCEDIR25=../src/Utilities/Memory
+SOURCEDIR26=../src/Utilities/Matrix
+SOURCEDIR27=../src/Utilities/Vector
+SOURCEDIR28=../src/Utilities/Observation
+SOURCEDIR29=../src/Utilities/OutputControl
+SOURCEDIR30=../src/Utilities/Libraries
+SOURCEDIR31=../src/Utilities/Libraries/rcm
+SOURCEDIR32=../src/Utilities/Libraries/sparskit2
+SOURCEDIR33=../src/Utilities/Libraries/sparsekit
+SOURCEDIR34=../src/Utilities/Libraries/blas
+SOURCEDIR35=../src/Utilities/Libraries/daglib
+>>>>>>> 58f1fcb48d (rebuild makefiles)
+>>>>>>> 514b799355 (rebuild makefiles)
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -232,9 +274,13 @@ ${SOURCEDIR31} \
 ${SOURCEDIR32} \
 ${SOURCEDIR33} \
 ${SOURCEDIR34} \
+<<<<<<< HEAD
 ${SOURCEDIR35} \
 ${SOURCEDIR36} \
 ${SOURCEDIR37} 
+=======
+${SOURCEDIR35} 
+>>>>>>> 58f1fcb48d (rebuild makefiles)
 
 .SUFFIXES: .f90 .F90 .o
 
