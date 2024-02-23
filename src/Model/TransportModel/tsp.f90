@@ -127,7 +127,7 @@ contains
     !
     ! -- create the list file
     call this%create_lstfile(lst_fname, filename, found%list, &
-                             'TRANSPORT MODEL (' // trim(macronym) // ')')
+                             'TRANSPORT MODEL ('//trim(macronym)//')')
     !
     ! -- activate save_flows if found
     if (found%save_flows) then
