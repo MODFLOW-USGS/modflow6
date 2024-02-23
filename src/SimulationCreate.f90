@@ -313,6 +313,8 @@ contains
           write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
             n, " will be created"
           call swf_cr(fname, n, model_names(n))
+          call dev_feature('SWF is still under development, install the &
+            &nightly build or compile from source with IDEVELOPMODE = 1.')
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
         end if
@@ -321,8 +323,8 @@ contains
         write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
           n, ' will be created'
         call prt_cr(fname, n, model_names(n))
-        call dev_feature("PRT is still under development, install the' &
-           &nightly build or compile from source with IDEVELOPMODE = 1.")
+        call dev_feature('PRT is still under development, install the &
+           &nightly build or compile from source with IDEVELOPMODE = 1.')
         num_model => GetNumericalModelFromList(basemodellist, im)
         model_loc_idx(n) = im
       case default
