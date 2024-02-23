@@ -4778,11 +4778,8 @@ contains
             end if
           case ('OUTLET')
             n = this%lakein(jj)
-            if (this%iboundpak(jj) /= 0) then
+            if (this%iboundpak(n) /= 0) then
               v = this%simoutrate(jj)
-              !if (this%imover == 1) then
-              !  v = v + this%pakmvrobj%get_qtomvr(jj)
-              !end if
             end if
           case ('VOLUME')
             if (this%iboundpak(jj) /= 0) then
