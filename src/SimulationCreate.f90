@@ -1,9 +1,9 @@
 module SimulationCreateModule
 
   use KindModule, only: DP, I4B, LGP, write_kindinfo
+  use DevFeatureModule, only: dev_feature
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, &
                              DZERO, LENEXCHANGENAME, LENMEMPATH, LENPACKAGETYPE
-
   use CharacterStringModule, only: CharacterStringType
   use SimVariablesModule, only: iout, simulation_mode, proc_id, &
                                 nr_procs, model_names, model_ranks, &
@@ -215,10 +215,12 @@ contains
     use GwtModule, only: gwt_cr
     use GweModule, only: gwe_cr
     use SwfModule, only: swf_cr
+    use PrtModule, only: prt_cr
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     use VirtualGwfModelModule, only: add_virtual_gwf_model
     use VirtualGwtModelModule, only: add_virtual_gwt_model
     use VirtualGweModelModule, only: add_virtual_gwe_model
+    ! use VirtualPrtModelModule, only: add_virtual_prt_model
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- locals
@@ -314,7 +316,15 @@ contains
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
         end if
-        !todo call add_virtual_gwt_model(n, model_names(n), num_model)
+      case ('PRT6')
+        im = im + 1
+        write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
+          n, ' will be created'
+        call prt_cr(fname, n, model_names(n))
+        call dev_feature("PRT is still under development, install the' &
+           &nightly build or compile from source with IDEVELOPMODE = 1.")
+        num_model => GetNumericalModelFromList(basemodellist, im)
+        model_loc_idx(n) = im
       case default
         write (errmsg, '(a,a)') &
           'Unknown simulation model type: ', trim(model_type)
@@ -346,12 +356,14 @@ contains
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
     use GwfGweExchangeModule, only: gwfgwe_cr
+    use GwfPrtExchangeModule, only: gwfprt_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
     use GweGweExchangeModule, only: gweexchange_create
     use SwfGwfExchangeModule, only: swfgwf_cr
     use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
     use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
     use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
+    ! use VirtualPrtExchangeModule, only: add_virtual_prt_exchange
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -446,6 +458,8 @@ contains
         if (both_local) then
           call gwfgwe_cr(fname, exg_id, m1_id, m2_id)
         end if
+      case ('GWF6-PRT6')
+        call gwfprt_cr(fname, exg_id, m1_id, m2_id)
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
         if (.not. both_remote) then

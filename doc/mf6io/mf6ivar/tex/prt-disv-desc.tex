@@ -1,0 +1,61 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{length\_units}---is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
+
+\item \texttt{NOGRB}---keyword to deactivate writing of the binary grid file.
+
+\item \texttt{xorigin}---x-position of the origin used for model grid vertices.  This value should be provided in a real-world coordinate system.  A default value of zero is assigned if not specified.  The value for XORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+
+\item \texttt{yorigin}---y-position of the origin used for model grid vertices.  This value should be provided in a real-world coordinate system.  If not specified, then a default value equal to zero is used.  The value for YORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+
+\item \texttt{angrot}---counter-clockwise rotation angle (in degrees) of the model grid coordinate system relative to a real-world coordinate system.  If not specified, then a default value of 0.0 is assigned.  The value for ANGROT does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+
+\end{description}
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
+\item \texttt{nlay}---is the number of layers in the model grid.
+
+\item \texttt{ncpl}---is the number of cells per layer.  This is a constant value for the grid and it applies to all layers.
+
+\item \texttt{nvert}---is the total number of (x, y) vertex pairs used to characterize the horizontal configuration of the model grid.
+
+\end{description}
+\item \textbf{Block: GRIDDATA}
+
+\begin{description}
+\item \texttt{top}---is the top elevation for each cell in the top model layer.
+
+\item \texttt{botm}---is the bottom elevation for each cell.
+
+\item \texttt{idomain}---is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell.
+
+\end{description}
+\item \textbf{Block: VERTICES}
+
+\begin{description}
+\item \texttt{iv}---is the vertex number.  Records in the VERTICES block must be listed in consecutive order from 1 to NVERT.
+
+\item \texttt{xv}---is the x-coordinate for the vertex.
+
+\item \texttt{yv}---is the y-coordinate for the vertex.
+
+\end{description}
+\item \textbf{Block: CELL2D}
+
+\begin{description}
+\item \texttt{icell2d}---is the CELL2D number.  Records in the CELL2D block must be listed in consecutive order from the first to the last.
+
+\item \texttt{xc}---is the x-coordinate for the cell center.
+
+\item \texttt{yc}---is the y-coordinate for the cell center.
+
+\item \texttt{ncvert}---is the number of vertices required to define the cell.  There may be a different number of vertices for each cell.
+
+\item \texttt{icvert}---is an array of integer values containing vertex numbers (in the VERTICES block) used to define the cell.  Vertices must be listed in clockwise order.  Cells that are connected must share vertices.
+
+\end{description}
+

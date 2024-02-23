@@ -980,7 +980,7 @@ contains
 
   !> @ brief Read observation blocks
   !!
-  !!  Subroutine to read CONTIGUIUS block from the observation input file.
+  !!  Subroutine to read CONTIGUOUS block from the observation input file.
   !!
   !<
   subroutine read_obs_blocks(this, fname)

@@ -336,6 +336,12 @@ jobs:
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
+      
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1

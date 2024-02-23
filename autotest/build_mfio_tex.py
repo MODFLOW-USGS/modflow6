@@ -31,7 +31,7 @@ def test_clean_latex():
     files = [
         f"{base_name}.pdf",
         f"{base_name}.aux",
-        f"{base_name}.bbl",
+        # f"{base_name}.bbl",
     ]
     delete_files(files, pth, allow_failure=True)
     return

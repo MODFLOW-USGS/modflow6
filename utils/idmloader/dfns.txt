@@ -51,6 +51,12 @@ swf-chd.dfn
 swf-flw.dfn
 swf-zdg.dfn
 
+# prt model
+prt-nam.dfn
+prt-dis.dfn
+prt-disv.dfn
+prt-mip.dfn
+
 # exchanges
 exg-gwfgwf.dfn
 exg-gwfgwt.dfn
@@ -58,3 +64,4 @@ exg-gwtgwt.dfn
 exg-gwfgwe.dfn
 exg-gwegwe.dfn
 exg-swfgwf.dfn
+exg-gwfprt.dfn

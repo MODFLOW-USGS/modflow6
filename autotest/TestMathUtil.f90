@@ -4,7 +4,7 @@ module TestMathUtil
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use MathUtilModule, only: f1d, is_close, mod_offset, &
-                            zeroch, zerotest, zeroin
+                            zero_ch, zero_test, zero_br
   implicit none
   private
   public :: collect_mathutil
@@ -19,12 +19,12 @@ contains
                              test_is_close_symmetric_near_0), &
                 new_unittest("mod_offset", &
                              test_mod_offset), &
-                new_unittest("zeroch", &
-                             test_zeroch), &
-                new_unittest("zeroin", &
-                             test_zeroin), &
-                new_unittest("zerotest", &
-                             test_zerotest) &
+                new_unittest("zero_ch", &
+                             test_zero_ch), &
+                new_unittest("zero_br", &
+                             test_zero_br), &
+                new_unittest("zero_test", &
+                             test_zero_test) &
                 ]
   end subroutine collect_mathutil
 
@@ -177,7 +177,7 @@ contains
     s = sin(bet)
   end function sine
 
-  subroutine test_zeroch(error)
+  subroutine test_zero_ch(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
@@ -185,20 +185,20 @@ contains
 
     f => sine
 
-    z = zeroch(-1.0_DP, 1.0_DP, f, 0.001_DP)
+    z = zero_ch(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zeroch(-4.0_DP, -1.0_DP, f, 0.001_DP)
+    z = zero_ch(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zeroch(1.0_DP, 4.0_DP, f, 0.001_DP)
+    z = zero_ch(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
-  end subroutine test_zeroch
+  end subroutine test_zero_ch
 
-  subroutine test_zeroin(error)
+  subroutine test_zero_br(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
@@ -206,20 +206,20 @@ contains
 
     f => sine
 
-    z = zeroin(-1.0_DP, 1.0_DP, f, 0.001_DP)
+    z = zero_br(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zeroin(-4.0_DP, -1.0_DP, f, 0.001_DP)
+    z = zero_br(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zeroin(1.0_DP, 4.0_DP, f, 0.001_DP)
+    z = zero_br(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
-  end subroutine test_zeroin
+  end subroutine test_zero_br
 
-  subroutine test_zerotest(error)
+  subroutine test_zero_test(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP), parameter :: pi = 4 * atan(1.0_DP)
     real(DP) :: z
@@ -227,17 +227,17 @@ contains
 
     f => sine
 
-    z = zerotest(-1.0_DP, 1.0_DP, f, 0.001_DP)
+    z = zero_test(-1.0_DP, 1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, 0.0_DP, atol=1d-6), &
                'expected 0, got: '//to_string(z))
 
-    z = zerotest(-4.0_DP, -1.0_DP, f, 0.001_DP)
+    z = zero_test(-4.0_DP, -1.0_DP, f, 0.001_DP)
     call check(error, is_close(z, -pi, atol=1d-6), &
                'expected -pi, got: '//to_string(z))
 
-    z = zerotest(1.0_DP, 4.0_DP, f, 0.001_DP)
+    z = zero_test(1.0_DP, 4.0_DP, f, 0.001_DP)
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
-  end subroutine test_zerotest
+  end subroutine test_zero_test
 
 end module TestMathUtil

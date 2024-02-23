@@ -18,6 +18,8 @@ module ModelPackageInputModule
                        GWE_BASEPKG, GWE_MULTIPKG
   use SwfModule, only: SWF_NBASEPKG, SWF_NMULTIPKG, &
                        SWF_BASEPKG, SWF_MULTIPKG
+  use PrtModule, only: PRT_NBASEPKG, PRT_NMULTIPKG, &
+                       PRT_BASEPKG, PRT_MULTIPKG
 
   implicit none
 
@@ -48,22 +50,22 @@ contains
       numpkgs = GWF_NBASEPKG + GWF_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWF_BASEPKG, GWF_MULTIPKG]
-      !
     case ('GWT6')
       numpkgs = GWT_NBASEPKG + GWT_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
-      !
     case ('GWE6')
       numpkgs = GWE_NBASEPKG + GWE_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWE_BASEPKG, GWE_MULTIPKG]
-      !
+    case ('PRT6')
+      numpkgs = PRT_NBASEPKG + PRT_NMULTIPKG
+      allocate (pkgtypes(numpkgs))
+      pkgtypes = [PRT_BASEPKG, PRT_MULTIPKG]
     case ('SWF6')
       numpkgs = SWF_NBASEPKG + SWF_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [SWF_BASEPKG, SWF_MULTIPKG]
-      !
     case default
     end select
     !
@@ -107,6 +109,14 @@ contains
     case ('GWE')
       do n = 1, GWE_NMULTIPKG
         if (GWE_MULTIPKG(n) == pkgtype) then
+          multi_package = .true.
+          exit
+        end if
+      end do
+      !
+    case ('PRT')
+      do n = 1, PRT_NMULTIPKG
+        if (PRT_MULTIPKG(n) == pkgtype) then
           multi_package = .true.
           exit
         end if

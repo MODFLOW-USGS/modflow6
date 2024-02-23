@@ -53,6 +53,9 @@ SLN & IMS & OPTIONS & yes \\
 SLN & IMS & NONLINEAR & yes \\ 
 SLN & IMS & LINEAR & yes \\ 
 \hline
+SLN & PTS & OPTIONS & yes \\ 
+SLN & PTS & NONLINEAR & yes \\ 
+\hline
 GWF & NAM & OPTIONS & yes \\ 
 GWF & NAM & PACKAGES & yes \\ 
 \hline
@@ -349,6 +352,33 @@ SWF & FLW & PERIOD & yes \\
 SWF & ZDG & OPTIONS & yes \\ 
 SWF & ZDG & DIMENSIONS & yes \\ 
 SWF & ZDG & PERIOD & yes \\ 
+\hline
+PRT & NAM & OPTIONS & yes \\ 
+PRT & NAM & PACKAGES & yes \\ 
+\hline
+PRT & DIS & OPTIONS & yes \\ 
+PRT & DIS & DIMENSIONS & yes \\ 
+PRT & DIS & GRIDDATA & no \\ 
+\hline
+PRT & DISV & OPTIONS & yes \\ 
+PRT & DISV & DIMENSIONS & yes \\ 
+PRT & DISV & GRIDDATA & no \\ 
+PRT & DISV & VERTICES & yes \\ 
+PRT & DISV & CELL2D & yes \\ 
+\hline
+PRT & MIP & OPTIONS & yes \\ 
+PRT & MIP & GRIDDATA & no \\ 
+\hline
+PRT & PRP & OPTIONS & yes \\ 
+PRT & PRP & DIMENSIONS & yes \\ 
+PRT & PRP & PACKAGEDATA & yes \\ 
+PRT & PRP & PERIOD & yes \\ 
+\hline
+PRT & OC & OPTIONS & yes \\ 
+PRT & OC & PERIOD & yes \\ 
+\hline
+PRT & FMI & OPTIONS & yes \\ 
+PRT & FMI & PACKAGEDATA & yes \\ 
 \hline
 UTL & SPC & OPTIONS & yes \\ 
 UTL & SPC & DIMENSIONS & yes \\ 

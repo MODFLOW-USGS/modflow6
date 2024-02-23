@@ -110,6 +110,7 @@
 		<File RelativePath="..\src\Idm\exg-gwfgwtidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwtgwtidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-swfgwfidm.f90"/>
+		<File RelativePath="..\src\Idm\exg-gwfprtidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-chdidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-disuidm.f90"/>
@@ -147,6 +148,10 @@
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-chdidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
+		<File RelativePath="..\src\Idm\prt-namidm.f90"/>
+		<File RelativePath="..\src\Idm\prt-disidm.f90"/>
+		<File RelativePath="..\src\Idm\prt-disvidm.f90"/>
+		<File RelativePath="..\src\Idm\prt-mipidm.f90"/>
 		<File RelativePath="..\src\Idm\sim-tdisidm.f90"/>
 		<File RelativePath="..\src\Idm\sim-namidm.f90"/>
 		<Filter Name="selector">
@@ -156,19 +161,23 @@
 		<File RelativePath="..\src\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/>
-		<File RelativePath="..\src\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Idm\selector\IdmPrtDfnSelector.f90"/>
+		<File RelativePath="..\src\Idm\selector\IdmSimDfnSelector.f90"/>
+		
+		</Filter>
 		</Filter>
 		<Filter Name="Exchange">
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
-		<File RelativePath="..\src\Exchange\exg-gwegwe.f90"/>
 		<File RelativePath="..\src\Exchange\GwfExchangeMover.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwegwe.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwe.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwf.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-swfgwf.f90"/>
+		<File RelativePath="..\src\Exchange\exg-gwfprt.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
@@ -234,7 +243,6 @@
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-cnc.f90"/>
-		
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-dsp.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-ist.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-lkt.f90"/>
@@ -246,7 +254,6 @@
 		<Filter Name="SurfaceWaterFlow">
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-disl.f90"/>
-		
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-cxs.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-dfw.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-ic.f90"/>
@@ -255,6 +262,14 @@
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-flw.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-sto.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-zdg.f90"/>
+		</Filter>
+		<Filter Name="ParticleTracking">
+		<File RelativePath="..\src\Model\ParticleTracking\prt.f90"/>
+		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
+		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
+		<File RelativePath="..\src\Model\ParticleTracking\prt-obs.f90"/>
+		<File RelativePath="..\src\Model\ParticleTracking\prt-oc.f90"/>
+		<File RelativePath="..\src\Model\ParticleTracking\prt-prp.f90"/>
 		</Filter>
 		<Filter Name="ModelUtilities">
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
@@ -280,6 +295,8 @@
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SwfCxsUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\TspAdvOptions.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TimeSelect.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TrackData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
@@ -321,6 +338,30 @@
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
+		<Filter Name="ParticleTracker">
+		<File RelativePath="..\src\Solution\ParticleTracker\Cell.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\CellDefn.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\CellPoly.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\CellRect.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\CellRectQuad.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\CellUtil.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\Method.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPassToBot.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPollock.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPollockQuad.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPool.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellTernary.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodDis.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodDisv.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodPool.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodSubcellPollock.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodSubcellPool.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodSubcellTernary.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\Particle.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\Subcell.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\SubcellRect.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\SubcellTri.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\TernarySolveTrack.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\ConvergenceSummary.f90"/>
 		<File RelativePath="..\src\Solution\ExplicitSolution.f90"/>
@@ -371,7 +412,6 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StressListInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
-		
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>

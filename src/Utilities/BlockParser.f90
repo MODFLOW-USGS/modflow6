@@ -6,7 +6,7 @@
 !<
 module BlockParserModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use DevFeatureModule, only: dev_feature
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, LINELENGTH, MAXCHARLEN
   use InputOutputModule, only: urword, upcase, openfile, &
@@ -39,6 +39,7 @@ module BlockParserModule
     procedure, public :: GetCellid
     procedure, public :: GetCurrentLine
     procedure, public :: GetDouble
+    procedure, public :: TryGetDouble
     procedure, public :: GetInteger
     procedure, public :: GetLinesRead
     procedure, public :: GetNextLine
@@ -313,10 +314,28 @@ contains
     if (istart == istop .and. istop == len(this%line)) then
       call this%ReadScalarError('DOUBLE PRECISION')
     end if
-    !
-    ! -- return
-    return
+
   end function GetDouble
+
+  subroutine TryGetDouble(this, r, success)
+    ! -- dummy variables
+    class(BlockParserType), intent(inout) :: this !< BlockParserType object
+    real(DP), intent(inout) :: r !< double precision real variable
+    logical(LGP), intent(inout) :: success !< whether parsing was successful
+    ! -- local variables
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ival
+
+    call urword(this%line, this%lloc, istart, istop, 3, ival, r, &
+                this%iout, this%iuext)
+
+    success = .true.
+    if (istart == istop .and. istop == len(this%line)) then
+      success = .false.
+    end if
+
+  end subroutine TryGetDouble
 
   !> @ brief Issue a read error
   !!

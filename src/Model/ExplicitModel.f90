@@ -22,7 +22,7 @@ module ExplicitModelModule
   !<
   type, extends(BaseModelType) :: ExplicitModelType
     character(len=LINELENGTH), pointer :: filename => null() !< input file name
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound array
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< ibound
     type(ListType), pointer :: bndlist => null() !< array of boundary packages
     class(DisBaseType), pointer :: dis => null() !< discretization object
   contains

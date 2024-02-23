@@ -202,7 +202,7 @@ def make_plot(test):
             label=f"Layer {ilay + 1}",
         )
     plt.legend()
-    plt.show()
+    # plt.show()
 
 
 def check_output(idx, test):

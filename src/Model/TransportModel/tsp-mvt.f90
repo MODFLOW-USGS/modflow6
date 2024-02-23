@@ -478,7 +478,6 @@ contains
   subroutine mvt_ot_bdsummary(this, ibudfl)
     ! -- modules
     use TdisModule, only: kstp, kper, delt, totim
-    use ArrayHandlersModule, only: ifind, expandarray
     ! -- dummy
     class(TspMvtType) :: this
     integer(I4B), intent(in) :: ibudfl

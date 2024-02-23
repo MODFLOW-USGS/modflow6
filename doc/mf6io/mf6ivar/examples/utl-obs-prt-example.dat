@@ -1,0 +1,18 @@
+BEGIN OPTIONS
+  DIGITS 10
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.gwt.conc.csv
+# obsname   obstype         ID
+  L1        CONCENTRATION   1 51 51 # concs at lay 1 row 51 col 51
+  L2        CONCENTRATION   2 51 51 # concs at lay 2 row 51 col 51
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.gwt.mflow.csv
+# obsname    obstype       ID       ID1
+  L1rfflow   FLOW-JA-FACE  1 51 51  1 51 52
+  L2rfflow   FLOW-JA-FACE  2 51 51  2 51 52
+  L1-L2flow  FLOW-JA-FACE  1 51 51  2 51 51
+END CONTINUOUS
+

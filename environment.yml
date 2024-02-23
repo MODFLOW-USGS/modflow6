@@ -17,6 +17,7 @@ dependencies:
   - numpy
   - pyshp
   - shapely
+  - scipy
   - pip
   - pip:
       - git+https://github.com/modflowpy/flopy.git
@@ -25,6 +26,7 @@ dependencies:
       - git+https://github.com/MODFLOW-USGS/modflowapi.git
       - git+https://github.com/MODFLOW-USGS/modflow-devtools.git
   - pytest
+  - pytest-benchmark
   - pytest-dotenv
   - pytest-order
   - pytest-xdist

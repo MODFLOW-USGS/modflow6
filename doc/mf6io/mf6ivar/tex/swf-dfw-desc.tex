@@ -3,7 +3,7 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{CENTRAL\_IN\_SPACE}---keyword to indicate conductance should be calculated using central-in-space weighting instead of the default upstream weighting approach.
+\item \texttt{CENTRAL\_IN\_SPACE}---keyword to indicate conductance should be calculated using central-in-space weighting instead of the default upstream weighting approach.  This option should be used with caution as it does not work well unless all of the stream reaches are saturated.  With this option, there is no way for water to flow into a dry reach from connected reaches.
 
 \item \texttt{length\_conversion}---real value that is used to convert user-specified Manning's roughness coefficients from meters to model length units. LENGTH\_CONVERSION should be set to 3.28081, 1.0, and 100.0 when using length units (LENGTH\_UNITS) of feet, meters, or centimeters in the simulation, respectively. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters.
 
