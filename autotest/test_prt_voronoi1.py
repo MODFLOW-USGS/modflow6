@@ -15,7 +15,9 @@ filters these but mf6 probably should too)
 """
 
 from math import isclose
+from os import environ
 from pathlib import Path
+from platform import system
 
 import flopy
 import matplotlib as mpl
@@ -29,6 +31,7 @@ from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
+from modflow_devtools.misc import is_in_ci
 
 from framework import TestFramework
 
@@ -401,6 +404,14 @@ def check_output(idx, test):
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
+    if (
+        "weli" in name
+        and system() == "Darwin"
+        and environ.get("FC") == "ifort"
+        and is_in_ci()
+    ):
+        pytest.skip(f"FPE (div by 0) with ifort 2021.7 in macOS CI")
+
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
