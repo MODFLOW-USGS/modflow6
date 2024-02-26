@@ -155,7 +155,6 @@ contains
 
   !> @brief Accumulate flows
   subroutine accumulate_flows(this)
-    use GwfDisvModule ! kluge???
     implicit none
     ! -- dummy
     class(PrtFmiType) :: this

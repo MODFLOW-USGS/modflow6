@@ -37,9 +37,10 @@ SOURCEDIR30=../src/Model/SurfaceWaterFlow
 SOURCEDIR31=../src/Model/GroundWaterTransport
 SOURCEDIR32=../src/Model/ModelUtilities
 SOURCEDIR33=../src/Model/GroundWaterFlow
-SOURCEDIR34=../src/Model/TransportModel
-SOURCEDIR35=../src/Model/Geometry
-SOURCEDIR36=../src/Model/GroundWaterEnergy
+SOURCEDIR34=../src/Model/Discretization
+SOURCEDIR35=../src/Model/TransportModel
+SOURCEDIR36=../src/Model/Geometry
+SOURCEDIR37=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -77,7 +78,8 @@ ${SOURCEDIR32} \
 ${SOURCEDIR33} \
 ${SOURCEDIR34} \
 ${SOURCEDIR35} \
-${SOURCEDIR36} 
+${SOURCEDIR36} \
+${SOURCEDIR37} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -206,7 +208,6 @@ $(OBJDIR)/BudgetObject.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/CellDefn.o \
 $(OBJDIR)/Particle.o \
-$(OBJDIR)/gwf-disv.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/Subcell.o \
 $(OBJDIR)/TrackData.o \
@@ -219,7 +220,6 @@ $(OBJDIR)/TernarySolveTrack.o \
 $(OBJDIR)/SubcellTri.o \
 $(OBJDIR)/Method.o \
 $(OBJDIR)/SubcellRect.o \
-$(OBJDIR)/gwf-dis.o \
 $(OBJDIR)/VirtualBase.o \
 $(OBJDIR)/STLVecInt.o \
 $(OBJDIR)/BaseModel.o \
@@ -279,7 +279,9 @@ $(OBJDIR)/tsp-oc.o \
 $(OBJDIR)/tsp-obs.o \
 $(OBJDIR)/tsp-mvt.o \
 $(OBJDIR)/tsp-adv.o \
-$(OBJDIR)/gwf-disu.o \
+$(OBJDIR)/Disv.o \
+$(OBJDIR)/Disu.o \
+$(OBJDIR)/Dis.o \
 $(OBJDIR)/gwf-uzf.o \
 $(OBJDIR)/tsp-apt.o \
 $(OBJDIR)/gwt-mst.o \

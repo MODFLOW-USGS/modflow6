@@ -59,6 +59,9 @@ module DisvModule
     procedure :: source_options
     procedure :: source_dimensions
     procedure :: source_griddata
+    procedure :: log_options
+    procedure :: log_dimensions
+    procedure :: log_griddata
     procedure :: source_vertices
     procedure :: source_cell2d
     procedure :: define_cellverts
@@ -74,6 +77,28 @@ module DisvModule
     procedure :: read_dbl_array
 
   end type DisvType
+
+  type DisvFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nlay = .false.
+    logical :: ncpl = .false.
+    logical :: nvert = .false.
+    logical :: top = .false.
+    logical :: botm = .false.
+    logical :: idomain = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: xc = .false.
+    logical :: yc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+  end type DisvFoundType
 
 contains
 
@@ -178,47 +203,57 @@ contains
     ! -- locals
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
-    logical(LGP) :: found_length_units, found_nogrb, &
-                    found_xorigin, found_yorigin, found_angrot
+    type(DisvFoundType) :: found
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', this%input_mempath, &
-                       lenunits, found_length_units)
-    call mem_set_value(this%nogrb, 'NOGRB', this%input_mempath, found_nogrb)
-    call mem_set_value(this%xorigin, 'XORIGIN', this%input_mempath, found_xorigin)
-    call mem_set_value(this%yorigin, 'YORIGIN', this%input_mempath, found_yorigin)
-    call mem_set_value(this%angrot, 'ANGROT', this%input_mempath, found_angrot)
+                       lenunits, found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', this%input_mempath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', this%input_mempath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', this%input_mempath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', this%input_mempath, found%angrot)
     !
     ! -- log values to list file
     if (this%iout > 0) then
-      write (this%iout, '(1x,a)') 'Setting Discretization Options'
-      !
-      if (found_length_units) then
-        write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
-        &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
-      end if
-      !
-      if (found_nogrb) then
-        write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
-          &set as ', this%nogrb
-      end if
-      !
-      if (found_xorigin) then
-        write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
-      end if
-      !
-      if (found_yorigin) then
-        write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
-      end if
-      !
-      if (found_angrot) then
-        write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
-      end if
-      !
-      write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+      call this%log_options(found)
     end if
     !
   end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found)
+    ! -- dummy
+    class(DisvType) :: this
+    type(DisvFoundType), intent(in) :: found
+    !
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
+    !
+    if (found%length_units) then
+      write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
+    end if
+    !
+    if (found%nogrb) then
+      write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
+        &set as ', this%nogrb
+    end if
+    !
+    if (found%xorigin) then
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
+    end if
+    !
+    if (found%yorigin) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
+    !
+    if (found%angrot) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+    !
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+    !
+  end subroutine log_options
 
   !> @brief Copy dimensions from IDM into package
   !<
@@ -227,30 +262,16 @@ contains
     class(DisvType) :: this
     ! -- locals
     integer(I4B) :: j, k
-    logical(LGP) :: found_nlay, found_ncpl, found_nvert
+    type(DisvFoundType) :: found
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nlay, 'NLAY', this%input_mempath, found_nlay)
-    call mem_set_value(this%ncpl, 'NCPL', this%input_mempath, found_ncpl)
-    call mem_set_value(this%nvert, 'NVERT', this%input_mempath, found_nvert)
+    call mem_set_value(this%nlay, 'NLAY', this%input_mempath, found%nlay)
+    call mem_set_value(this%ncpl, 'NCPL', this%input_mempath, found%ncpl)
+    call mem_set_value(this%nvert, 'NVERT', this%input_mempath, found%nvert)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
-      !
-      if (found_nlay) then
-        write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
-      end if
-      !
-      if (found_ncpl) then
-        write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
-      end if
-      !
-      if (found_nvert) then
-        write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
-      end if
-      !
-      write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+      call this%log_dimensions(found)
     end if
     !
     ! -- verify dimensions were set
@@ -293,40 +314,75 @@ contains
     !
   end subroutine source_dimensions
 
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dimensions(this, found)
+    ! -- dummy
+    class(DisvType) :: this
+    type(DisvFoundType), intent(in) :: found
+    !
+    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
+    !
+    if (found%nlay) then
+      write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
+    end if
+    !
+    if (found%ncpl) then
+      write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
+    end if
+    !
+    if (found%nvert) then
+      write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
+    end if
+    !
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+    !
+  end subroutine log_dimensions
+
   !> @brief Copy grid data from IDM into package
   !<
   subroutine source_griddata(this)
     ! -- dummy
     class(DisvType) :: this
     ! -- locals
-    logical(LGP) :: found_top, found_botm, found_idomain
-    ! -- formats
+    type(DisvFoundType) :: found
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%top1d, 'TOP', this%input_mempath, found_top)
-    call mem_set_value(this%bot2d, 'BOTM', this%input_mempath, found_botm)
-    call mem_set_value(this%idomain, 'IDOMAIN', this%input_mempath, found_idomain)
+    call mem_set_value(this%top1d, 'TOP', this%input_mempath, found%top)
+    call mem_set_value(this%bot2d, 'BOTM', this%input_mempath, found%botm)
+    call mem_set_value(this%idomain, 'IDOMAIN', this%input_mempath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-      !
-      if (found_top) then
-        write (this%iout, '(4x,a)') 'TOP set from input file'
-      end if
-      !
-      if (found_botm) then
-        write (this%iout, '(4x,a)') 'BOTM set from input file'
-      end if
-      !
-      if (found_idomain) then
-        write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
-      end if
-      !
-      write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+      call this%log_griddata(found)
     end if
     !
   end subroutine source_griddata
+
+  !> @brief Write griddata found to list file
+  !<
+  subroutine log_griddata(this, found)
+    ! -- dummy
+    class(DisvType) :: this
+    type(DisvFoundType), intent(in) :: found
+    !
+    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+    !
+    if (found%top) then
+      write (this%iout, '(4x,a)') 'TOP set from input file'
+    end if
+    !
+    if (found%botm) then
+      write (this%iout, '(4x,a)') 'BOTM set from input file'
+    end if
+    !
+    if (found%idomain) then
+      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+    end if
+    !
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+    !
+  end subroutine log_griddata
 
   !> @brief Finalize grid (check properties, allocate arrays, compute connections)
   !<
