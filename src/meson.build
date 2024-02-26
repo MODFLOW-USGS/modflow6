@@ -326,6 +326,7 @@ modflow_sources = files(
     'Utilities' / 'GeomUtil.f90',
     'Utilities' / 'HashTable.f90',
     'Utilities' / 'HeadFileReader.f90',
+    'Utilities' / 'HGeoUtil.f90',
     'Utilities' / 'InputOutput.f90',
     'Utilities' / 'Iunit.f90',
     'Utilities' / 'kind.f90',
