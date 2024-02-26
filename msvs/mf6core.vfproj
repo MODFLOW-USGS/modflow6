@@ -505,6 +505,7 @@
 		<File RelativePath="..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
+		<File RelativePath="..\src\Utilities\HGeoUtil.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>

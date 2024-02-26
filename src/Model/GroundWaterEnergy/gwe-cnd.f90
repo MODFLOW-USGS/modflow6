@@ -809,7 +809,7 @@ contains
   !<
   subroutine calcdispcoef(this)
     ! -- modules
-    use GwfNpfModule, only: hyeff_calc
+    use HGeoUtilModule, only: hyeff
     ! -- dummy
     class(GweCndType) :: this
     ! -- local
@@ -859,12 +859,12 @@ contains
         !    normal to the shared n-m face and for cell m in the direction
         !    normal to the shared n-m face.
         call this%dis%connection_normal(n, m, ihc, vg1, vg2, vg3, ipos)
-        dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n), &
-                        this%angle1(n), this%angle2(n), this%angle3(n), &
-                        vg1, vg2, vg3, iavgmeth)
-        dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m), &
-                        this%angle1(m), this%angle2(m), this%angle3(m), &
-                        vg1, vg2, vg3, iavgmeth)
+        dn = hyeff(this%d11(n), this%d22(n), this%d33(n), &
+                   this%angle1(n), this%angle2(n), this%angle3(n), &
+                   vg1, vg2, vg3, iavgmeth)
+        dm = hyeff(this%d11(m), this%d22(m), this%d33(m), &
+                   this%angle1(m), this%angle2(m), this%angle3(m), &
+                   vg1, vg2, vg3, iavgmeth)
         !
         ! -- Calculate dispersion conductance based on NPF subroutines and the
         !    effective dispersion coefficients dn and dm.
