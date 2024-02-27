@@ -1,7 +1,7 @@
-import os
-import sys
 import argparse
 import glob
+import os
+import sys
 from pathlib import Path
 from subprocess import run
 
