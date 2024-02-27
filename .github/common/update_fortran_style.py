@@ -118,7 +118,10 @@ class Rules:
                 nspaces = len(lines[0]) - len(lines[0].lstrip())
                 indent = "".join(repeat(" ", nspaces))
 
-                if not any(line):
+                if comment.startswith("#"):
+                    # preprocessor directives
+                    flines.extend(lines)
+                elif not any(line):
                     if any(pattern in comment for pattern in ["!!", "!<", "!>"]):
                         flines.extend(lines)
                     elif "SPECIFICATIONS" in comment:
