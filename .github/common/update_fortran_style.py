@@ -29,15 +29,17 @@ class Rules:
                 parts = line.rpartition("::")
                 comment = join_comments(comment)
 
-                if not parts[1] or "procedure" in parts[0]:
-                    for l in lines:
-                        flines.append(l.rstrip())
+                if (
+                    not parts[1]
+                    or "procedure" in parts[0]
+                    or parts[0].strip().startswith("use")
+                ):
+                    flines.extend(lines)
                     continue
 
-                nspaces = len(lines[0]) - len(lines[0].lstrip())
-                indent = "".join(repeat(" ", nspaces))
-                quals = [q.strip() for q in parts[0].split(",")]
-                vars = [v.strip() for v in parts[2].split(",")]
+                indent = "".join(repeat(" ", len(lines[0]) - len(lines[0].lstrip())))
+                quals = [q.strip() for q in parts[0].split(",")]  # qualifiers
+                vars = [v.strip() for v in parts[2].split(",")]  # variable names
 
                 if not line:
                     continue
@@ -117,12 +119,11 @@ class Rules:
                 indent = "".join(repeat(" ", nspaces))
 
                 if not any(line):
-                    c = comment.strip().replace(" ", "")
-                    if c in ["!!", "!<"]:
+                    if any(pattern in comment for pattern in ["!!", "!<", "!>"]):
                         flines.extend(lines)
-                    elif "SPECIFICATIONS" in c:
+                    elif "SPECIFICATIONS" in comment:
                         continue
-                    elif any(set(c) & ALPHANUMERICS):
+                    elif any(set(comment) & ALPHANUMERICS):
                         comment = comment.strip().replace("--", "")
                         i = 0
                         for c in comment:
@@ -131,7 +132,7 @@ class Rules:
                             i += 1
                         comment = f"! {comment[i:]}"
                         flines.append(indent + comment)
-                    elif "-" in c or "*" in c:
+                    elif "-" in comment or "*" in comment:
                         continue
                     else:
                         flines.append("")
