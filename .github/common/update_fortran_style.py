@@ -85,10 +85,15 @@ class Rules:
                     "!return"
                 ]:
                     continue
-                elif "return" in line:
-                    continue
-                else:
-                    flines.extend(lines)
+                elif "end subroutine" in line or "end function" in line:
+                    for i, fl in enumerate(reversed(flines)):
+                        l = fl.strip()
+                        if not any(l):
+                            continue
+                        elif l == "return":
+                            del flines[len(flines) - i - 1]
+                        break
+                flines.extend(lines)
 
         if check:
             warn("Check mode not implemented yet")
