@@ -13,7 +13,7 @@ def join_comments(comments) -> str:
     return "".join([c for c in comments if any(c)])
 
 
-class Transforms:
+class Rules:
     @staticmethod
     def separate_lines(path, check, diff):
         """Variables defined on separate lines"""
@@ -176,13 +176,13 @@ def reformat(
     no_double_dashes,
 ):
     if separate_lines:
-        Transforms.separate_lines(path, check, diff)
+        Rules.separate_lines(path, check, diff)
     if no_return_statements:
-        Transforms.no_trailing_returns(path, check, diff)
+        Rules.no_trailing_returns(path, check, diff)
     if no_empty_comments:
-        Transforms.no_empty_comments(path, check, diff)
+        Rules.no_empty_comments(path, check, diff)
     if no_double_dashes:
-        Transforms.no_double_dashes(path, check, diff)
+        Rules.no_double_dashes(path, check, diff)
 
 
 if __name__ == "__main__":
