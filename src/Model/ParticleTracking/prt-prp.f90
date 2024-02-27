@@ -295,8 +295,8 @@ contains
   subroutine prp_ad(this)
     ! -- modules
     use TdisModule, only: totimc, delt, kstp
-    use GwfDisModule, only: GwfDisType
-    use GwfDisvModule, only: GwfDisvType
+    use DisModule, only: DisType
+    use DisvModule, only: DisvType
     ! -- dummy
     class(PrtPrpType) :: this
     ! -- local
@@ -398,9 +398,9 @@ contains
         particle%istopzone = this%istopzone
         particle%icu = icu
         select type (dis => this%dis)
-        type is (GwfDisType)
+        type is (DisType)
           call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
-        type is (GwfDisvType)
+        type is (DisvType)
           call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
         end select
         particle%ilay = ilay

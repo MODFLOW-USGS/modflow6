@@ -68,9 +68,9 @@
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-chd.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-dis.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-disu.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-disv.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Dis.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disv.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-drn.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-evt.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-ghb.f90"/>

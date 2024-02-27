@@ -8,7 +8,7 @@ module MethodDisModule
   use CellRectModule
   use ParticleModule
   use PrtFmiModule, only: PrtFmiType
-  use GwfDisModule, only: GwfDisType
+  use DisModule, only: DisType
   use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: get_ijk, get_jk
   use ArrayHandlersModule, only: ExpandArray
@@ -79,7 +79,7 @@ contains
     select type (cell => this%cell)
     type is (CellRectType)
       select type (dis => this%fmi%dis)
-      type is (GwfDisType)
+      type is (DisType)
         ic = particle%idomain(next_level)
         call this%load_cell_defn(ic, cell%defn)
 
@@ -165,7 +165,7 @@ contains
     select type (cell => this%cell)
     type is (CellRectType)
       select type (dis => this%fmi%dis)
-      type is (GwfDisType)
+      type is (DisType)
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
           ! -- Exterior face; no neighbor to map to
@@ -259,7 +259,7 @@ contains
     type(CellDefnType), pointer, intent(inout) :: defn
 
     select type (dis => this%fmi%dis)
-    type is (GwfDisType)
+    type is (DisType)
       ! -- Set basic cell properties
       defn%icell = ic
       defn%npolyverts = 4 ! rectangular cell always has 4 vertices
@@ -319,7 +319,7 @@ contains
     call ExpandArray(defn%facenbr, defn%npolyverts + 3)
 
     select type (dis => this%fmi%dis)
-    type is (GwfDisType)
+    type is (DisType)
       ! -- Load face neighbors
       defn%facenbr = 0
       ic1 = defn%icell

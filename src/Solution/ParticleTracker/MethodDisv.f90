@@ -9,7 +9,7 @@ module MethodDisvModule
   use CellPolyModule
   use ParticleModule
   use PrtFmiModule, only: PrtFmiType
-  use GwfDisvModule, only: GwfDisvType
+  use DisvModule, only: DisvType
   use ArrayHandlersModule, only: ExpandArray
   use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: get_jk
@@ -126,7 +126,7 @@ contains
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_disv(this, particle)
     ! -- modules
-    use GwfDisvModule, only: GwfDisvType
+    use DisvModule, only: DisvType
     use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
@@ -148,7 +148,7 @@ contains
     select type (cell => this%cell)
     type is (CellPolyType)
       select type (dis => this%fmi%dis)
-      type is (GwfDisvType)
+      type is (DisvType)
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
           ! -- Exterior face; no neighbor to map to
@@ -281,7 +281,7 @@ contains
     integer(I4B) :: npolyverts
 
     select type (dis => this%fmi%dis)
-    type is (GwfDisvType)
+    type is (DisvType)
       ncpl = dis%get_ncpl()
       icu = dis%get_nodeuser(ic)
       icu2d = icu - ((icu - 1) / ncpl) * ncpl ! kluge note: use MOD or MODULO???
@@ -382,7 +382,7 @@ contains
     call ExpandArray(defn%facenbr, npolyverts + 3)
 
     select type (dis => this%fmi%dis)
-    type is (GwfDisvType)
+    type is (DisvType)
       ! -- Load face neighbors.
       defn%facenbr = 0
       ic1 = ic

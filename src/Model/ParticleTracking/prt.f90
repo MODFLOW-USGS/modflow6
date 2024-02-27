@@ -9,8 +9,9 @@ module PrtModule
   use NumericalModelModule, only: NumericalModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use GwfDisModule, only: GwfDisType
-  use GwfDisvModule, only: GwfDisvType
+  use DisModule, only: DisType, dis_cr
+  use DisvModule, only: DisvType, disv_cr
+  use DisuModule, only: DisuType, disu_cr
   use PrtPrpModule, only: PrtPrpType
   use PrtFmiModule, only: PrtFmiType
   use PrtMipModule, only: PrtMipType
@@ -262,7 +263,7 @@ contains
 
     ! -- Initialize tracking method
     select type (dis => this%dis)
-    type is (GwfDisType)
+    type is (DisType)
       call method_dis%init( &
         fmi=this%fmi, &
         trackfilectl=this%trackfilectl, &
@@ -272,7 +273,7 @@ contains
         retfactor=this%mip%retfactor, &
         tracktimes=this%oc%tracktimes)
       this%method => method_dis
-    type is (GwfDisvType)
+    type is (DisvType)
       call method_disv%init( &
         fmi=this%fmi, &
         trackfilectl=this%trackfilectl, &
@@ -1066,9 +1067,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GwfDisModule, only: dis_cr
-    use GwfDisvModule, only: disv_cr
-    use GwfDisuModule, only: disu_cr
     use BudgetModule, only: budget_cr
     use MethodPoolModule, only: create_method_pool
     use MethodCellPoolModule, only: create_method_cell_pool
