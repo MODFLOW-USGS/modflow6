@@ -35,7 +35,7 @@ class Rules:
                     continue
 
                 nspaces = len(lines[0]) - len(lines[0].lstrip())
-                prefix = "".join(repeat(" ", nspaces))
+                indent = "".join(repeat(" ", nspaces))
                 quals = [q.strip() for q in parts[0].split(",")]
                 vars = [v.strip() for v in parts[2].split(",")]
 
@@ -52,7 +52,7 @@ class Rules:
                     for s in vars:
                         if s == "&":
                             continue
-                        l = prefix + ", ".join(quals)
+                        l = indent + ", ".join(quals)
                         l += f" :: {s}"
                         flines.append(l + comment)
 
@@ -66,7 +66,7 @@ class Rules:
                     f.write(line.rstrip() + "\n")
 
     @staticmethod
-    def no_trailing_returns(path, check, diff):
+    def trailing_returns(path, check, diff):
         """Remove return statements at the end of routines"""
 
         flines = []
@@ -98,8 +98,11 @@ class Rules:
                     f.write(line.rstrip() + "\n")
 
     @staticmethod
-    def no_empty_comments(path, check, diff):
-        """Remove comments on lines with only whitespace"""
+    def cleanup_comments(path, check, diff):
+        """
+        Remove comments on lines with only whitespace, remove '--' from the beginnings
+        of comments, and make sure comment spacing is consistent (one space after '!')
+        """
 
         flines = []
         with open(path, "r") as f:
@@ -111,48 +114,27 @@ class Rules:
                 line = line.rstrip()
                 comment = join_comments(comment)
                 nspaces = len(lines[0]) - len(lines[0].lstrip())
-                prefix = "".join(repeat(" ", nspaces))
+                indent = "".join(repeat(" ", nspaces))
 
                 if not any(line):
                     c = comment.strip().replace(" ", "")
                     if c in ["!!", "!<"]:
                         flines.extend(lines)
+                    elif "SPECIFICATIONS" in c:
+                        continue
                     elif any(set(c) & ALPHANUMERICS):
-                        flines.append(prefix + comment)
-                    elif "-" in c:
+                        comment = comment.strip().replace("--", "")
+                        i = 0
+                        for c in comment:
+                            if c.isdigit() or c.isalnum():
+                                break
+                            i += 1
+                        comment = f"! {comment[i:]}"
+                        flines.append(indent + comment)
+                    elif "-" in c or "*" in c:
                         continue
                     else:
                         flines.append("")
-                else:
-                    flines.extend(lines)
-
-        if check:
-            warn("Check mode not implemented yet")
-        elif diff:
-            warn("Diff mode not implemented yet")
-        else:
-            with open(path, "w") as f:
-                for line in flines:
-                    f.write(line.rstrip() + "\n")
-
-    @staticmethod
-    def no_double_dashes(path, check, diff):
-        """Remove '--' from the beginnings of comments"""
-
-        flines = []
-        with open(path, "r") as f:
-            stream = InputStream(f)
-            while 1:
-                line, comment, lines = stream.next_fortran_line()
-                if not lines:
-                    break
-                line = line.rstrip()
-                comment = join_comments(comment)
-                nspaces = len(lines[0]) - len(lines[0].lstrip())
-                prefix = "".join(repeat(" ", nspaces))
-
-                if not any(line):
-                    flines.append(prefix + comment.strip().replace(" -- ", " "))
                 else:
                     flines.extend(lines)
 
@@ -171,18 +153,15 @@ def reformat(
     check,
     diff,
     separate_lines,
-    no_return_statements,
-    no_empty_comments,
-    no_double_dashes,
+    trailing_returns,
+    cleanup_comments,
 ):
     if separate_lines:
         Rules.separate_lines(path, check, diff)
-    if no_return_statements:
-        Rules.no_trailing_returns(path, check, diff)
-    if no_empty_comments:
-        Rules.no_empty_comments(path, check, diff)
-    if no_double_dashes:
-        Rules.no_double_dashes(path, check, diff)
+    if trailing_returns:
+        Rules.trailing_returns(path, check, diff)
+    if cleanup_comments:
+        Rules.cleanup_comments(path, check, diff)
 
 
 if __name__ == "__main__":
@@ -216,25 +195,18 @@ if __name__ == "__main__":
         help="Define dummy arguments and local variables on separate lines.",
     )
     parser.add_argument(
-        "--no-trailing-returns",
+        "--trailing-returns",
         action="store_true",
         default=True,
         required=False,
         help="Remove return statements at the end of routines.",
     )
     parser.add_argument(
-        "--no-empty-comments",
+        "--cleanup-comments",
         action="store_true",
         default=True,
         required=False,
-        help="Remove empty comments (containing only '!' or '!' followed by some number of '-' or '=').",
-    )
-    parser.add_argument(
-        "--no-double-dashes",
-        action="store_true",
-        default=True,
-        required=False,
-        help="Remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment').",
+        help="Remove empty comments (containing only '!', or '!' followed by some number of '-' or '='), remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment'), and make internal comment spacing consistent (one space after '!' before text begins).",
     )
     args = parser.parse_args()
     reformat(
@@ -242,7 +214,6 @@ if __name__ == "__main__":
         check=args.check,
         diff=args.diff,
         separate_lines=args.separate_lines,
-        no_return_statements=args.no_trailing_returns,
-        no_empty_comments=args.no_empty_comments,
-        no_double_dashes=args.no_double_dashes,
+        trailing_returns=args.trailing_returns,
+        cleanup_comments=args.cleanup_comments,
     )
