@@ -4,10 +4,10 @@
 !!
 !<
 program mf6
-  ! -- modules
+  ! modules
   use Mf6CoreModule
-  !
-  ! -- run
+
+  ! run
   call Mf6Run()
 
 end program
