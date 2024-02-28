@@ -1,112 +1,159 @@
 import argparse
-import re
-from contextlib import nullcontext
+import string
 from itertools import repeat
 from pathlib import Path
-from typing import Iterator, Optional
-from warnings import warn
 
 from fprettify.fparse_utils import InputStream
 
-INTENT_PATTERN = re.compile(r".*(intent\(.+\)).*")
+ALPHANUMERICS = set(string.ascii_letters + string.digits)
 
 
-def get_intent(s) -> Optional[str]:
-    result = INTENT_PATTERN.match(s)
-    return result.group(1) if result else None
+def join_comments(comments) -> str:
+    return "".join([c for c in comments if any(c)])
 
 
-def get_param(s) -> bool:
-    return "parameter" in s
-
-
-def get_comments(comments) -> Iterator[str]:
-    for comment in comments:
-        if not any(comment):
-            continue
-        yield comment.rstrip()
-
-
-class Transforms:
+class Rules:
     @staticmethod
-    def separate_lines(path, overwrite=False):
+    def separate_lines(path):
         """Variables defined on separate lines"""
 
         flines = []
         with open(path, "r") as f:
             stream = InputStream(f)
             while 1:
-                line, comments, lines = stream.next_fortran_line()
+                line, comment, lines = stream.next_fortran_line()
                 if not lines:
                     break
                 line = line.rstrip()
                 parts = line.rpartition("::")
-                comments = " " + "".join(get_comments(comments))
-                if not parts[1] or "procedure" in parts[0]:
-                    for l in lines:
-                        flines.append(l.rstrip())
+                comment = join_comments(comment)
+
+                if (
+                    not parts[1]
+                    or "procedure" in parts[0]
+                    or parts[0].strip().startswith("use")
+                ):
+                    flines.extend(lines)
                     continue
 
-                nspaces = len(lines[0]) - len(lines[0].lstrip())
-                prefix = "".join(repeat(" ", nspaces))
-                vtype = parts[0].split(",")[0].strip()
-                split = parts[2].split(",")
-                intent = get_intent(parts[0])
-                param = get_param(parts[0])
+                indent = "".join(repeat(" ", len(lines[0]) - len(lines[0].lstrip())))
+                quals = [q.strip() for q in parts[0].split(",")]  # qualifiers
+                vars = [v.strip() for v in parts[2].split(",")]  # variable names
 
                 if not line:
                     continue
-                if (len(parts[0]) == 0 and len(parts[1]) == 0) or (
-                    "(" in parts[2] or ")" in parts[2]
+                if (
+                    (len(parts[0]) == 0 and len(parts[1]) == 0)
+                    or ("(" in parts[2] or ")" in parts[2])
+                    or len(vars) == 1
+                    or "parameter" in parts[0]
                 ):
-                    flines.append(prefix + line + comments)
-                elif len(split) == 1:
-                    flines.append(prefix + line + comments)
-                elif param:
-                    flines.append(prefix + line + comments)
+                    flines.extend(lines)
                 else:
-                    for s in split:
-                        if s.strip() == "&":
+                    for s in vars:
+                        if s == "&":
                             continue
-                        l = prefix + vtype
-                        if intent:
-                            l += f", {intent}"
-                        l += f" :: {s.strip()}"
-                        flines.append(l + comments)
+                        l = indent + ", ".join(quals)
+                        l += f" :: {s}"
+                        flines.append(l + comment)
 
-        with open(path, "w") if overwrite else nullcontext() as f:
-
-            def write(line):
-                if overwrite:
-                    f.write(line + "\n")
-                else:
-                    print(line)
-
+        with open(path, "w") as f:
             for line in flines:
-                write(line)
+                f.write(line.rstrip() + "\n")
 
     @staticmethod
-    def no_return_statements(path, overwrite=False):
+    def trailing_returns(path):
         """Remove return statements at the end of routines"""
-        # todo
-        pass
+
+        flines = []
+        with open(path, "r") as f:
+            stream = InputStream(f)
+            while 1:
+                line, comment, lines = stream.next_fortran_line()
+                if not lines:
+                    break
+                line = line.rstrip()
+                comment = join_comments(comment)
+
+                if comment.strip().lower().replace("-", "").replace(" ", "") in [
+                    "!return"
+                ]:
+                    continue
+                elif "end subroutine" in line or "end function" in line:
+                    for i, fl in enumerate(reversed(flines)):
+                        l = fl.strip()
+                        if not any(l):
+                            continue
+                        elif l == "return":
+                            del flines[len(flines) - i - 1]
+                        break
+                flines.extend(lines)
+
+        with open(path, "w") as f:
+            for line in flines:
+                f.write(line.rstrip() + "\n")
 
     @staticmethod
-    def no_empty_comments(path, overwrite=False):
-        """Remove comments on lines with only whitespace"""
-        # todo
-        pass
+    def cleanup_comments(path):
+        """
+        Remove comments on lines with only whitespace, remove '--' from the beginnings
+        of comments, make sure comment spacing is consistent (one space after '!'),
+        remove horizontal dividers consisting of '-' or '*', remove 'SPECIFICATION'
+        """
+
+        flines = []
+        with open(path, "r") as f:
+            stream = InputStream(f)
+            while 1:
+                line, comment, lines = stream.next_fortran_line()
+                if not lines:
+                    break
+                line = line.rstrip()
+                comment = join_comments(comment)
+                nspaces = len(lines[0]) - len(lines[0].lstrip())
+                indent = "".join(repeat(" ", nspaces))
+
+                if comment.startswith("#"):
+                    # preprocessor directives
+                    flines.extend(lines)
+                elif not any(line):
+                    if any(pattern in comment for pattern in ["!!", "!<", "!>"]):
+                        flines.extend(lines)
+                    elif "SPECIFICATIONS" in comment:
+                        continue
+                    elif any(set(comment) & ALPHANUMERICS):
+                        comment = comment.strip().replace("--", "")
+                        i = 0
+                        for c in comment:
+                            if c.isdigit() or c.isalnum():
+                                break
+                            i += 1
+                        comment = f"! {comment[i:]}"
+                        flines.append(indent + comment)
+                    elif "-" in comment or "*" in comment:
+                        continue
+                    else:
+                        flines.append("")
+                else:
+                    flines.extend(lines)
+
+        with open(path, "w") as f:
+            for line in flines:
+                f.write(line.rstrip() + "\n")
 
 
-def reformat(path, overwrite, separate_lines, no_return_statements, no_empty_comments):
+def reformat(
+    path,
+    separate_lines,
+    trailing_returns,
+    cleanup_comments,
+):
     if separate_lines:
-        Transforms.separate_lines(path, overwrite=overwrite)
-    if no_return_statements:
-        Transforms.no_return_statements(path, overwrite=overwrite)
-        warn("--no-return not implemented yet")
-    if no_empty_comments:
-        Transforms.no_empty_comments(path, overwrite=overwrite)
-        warn("--no-empty-comments not implemented yet")
+        Rules.separate_lines(path)
+    if trailing_returns:
+        Rules.trailing_returns(path)
+    if cleanup_comments:
+        Rules.cleanup_comments(path)
 
 
 if __name__ == "__main__":
@@ -117,43 +164,32 @@ if __name__ == "__main__":
         styles.
         """
     )
-    parser.add_argument(
-        "-i", "--input", help="path to input file"  # todo: or directory
-    )
-    parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        default=False,
-        required=False,
-        help="overwrite/reformat files",
-    )
+    parser.add_argument("path")
     parser.add_argument(
         "--separate-lines",
         action="store_true",
         default=True,
         required=False,
-        help="define variables on separate lines",
+        help="Define dummy arguments and local variables on separate lines.",
     )
     parser.add_argument(
-        "--no-return_statements",
+        "--trailing-returns",
         action="store_true",
-        default=False,
+        default=True,
         required=False,
-        help="no return statements at the end of routines",
+        help="Remove return statements at the end of routines.",
     )
     parser.add_argument(
-        "--no-empty-comments",
+        "--cleanup-comments",
         action="store_true",
-        default=False,
+        default=True,
         required=False,
-        help="no empty comments",
+        help="Remove empty comments (containing only '!', or '!' followed by some number of '-' or '='), remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment'), and make internal comment spacing consistent (one space after '!' before text begins).",
     )
     args = parser.parse_args()
     reformat(
-        path=Path(args.input).expanduser().absolute(),
-        overwrite=args.force,
+        path=Path(args.path).expanduser().absolute(),
         separate_lines=args.separate_lines,
-        no_return_statements=args.no_return_statements,
-        no_empty_comments=args.no_empty_comments,
+        trailing_returns=args.trailing_returns,
+        cleanup_comments=args.cleanup_comments,
     )
