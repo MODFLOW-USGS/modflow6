@@ -35,7 +35,6 @@ contains
   subroutine lists_da()
 ! Deallocate the lists
 
-
     call basemodellist%Clear()
     call basesolutionlist%Clear()
     call solutiongrouplist%Clear()

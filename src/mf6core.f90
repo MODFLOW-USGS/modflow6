@@ -143,7 +143,6 @@ contains
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
 
-
     ! FINAL PROCESSING (FP)
     ! Final processing for each model
     do im = 1, basemodellist%Count()
@@ -742,7 +741,6 @@ contains
 
     ! Check if we're done
     call converge_check(hasConverged)
-
 
   end function Mf6FinalizeTimestep
 
