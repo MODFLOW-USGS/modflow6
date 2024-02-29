@@ -377,6 +377,7 @@ contains
     call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
+    this%filename = ''
     this%ipr_input = 0
     this%ipr_flow = 0
     this%nexg = 0
@@ -393,8 +394,6 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     !
-    allocate (this%filename)
-    this%filename = ''
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
