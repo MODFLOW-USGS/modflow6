@@ -101,6 +101,10 @@
 		<File RelativePath="..\src\Distributed\VirtualGwfModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualGwtExchange.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualGwtModel.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualPrtExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualPrtModel.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualSwfExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualSwfModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualSolution.f90"/></Filter>
 		<Filter Name="Idm">
@@ -531,6 +535,8 @@
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\RunControl.f90"/>
+		<File RelativePath="..\src\ModelFactory.f90"/>
+		<File RelativePath="..\src\ExchangeFactory.f90"/>
 		<File RelativePath="..\src\RunControlFactory.F90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
@@ -540,6 +546,5 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
-		
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

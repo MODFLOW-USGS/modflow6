@@ -22,10 +22,14 @@ modflow_sources = files(
     'Distributed' / 'VirtualGweExchange.f90',
     'Distributed' / 'VirtualGwfExchange.f90',
     'Distributed' / 'VirtualGwtExchange.f90',
+    'Distributed' / 'VirtualPrtExchange.f90',
+    'Distributed' / 'VirtualSwfExchange.f90',
     'Distributed' / 'VirtualModel.f90',
     'Distributed' / 'VirtualGweModel.f90',
     'Distributed' / 'VirtualGwfModel.f90',
     'Distributed' / 'VirtualGwtModel.f90',
+    'Distributed' / 'VirtualPrtModel.f90',
+    'Distributed' / 'VirtualSwfModel.f90',
     'Distributed' / 'VirtualSolution.f90',
     'Exchange' / 'BaseExchange.f90',
     'Exchange' / 'DisConnExchange.f90',
@@ -353,7 +357,9 @@ modflow_sources = files(
     'mf6lists.f90',
     'SimulationCreate.f90',
     'RunControl.f90',
-    'RunControlFactory.F90'
+    'RunControlFactory.F90',
+    'ModelFactory.f90',
+    'ExchangeFactory.f90'
 )
 
 modflow_petsc_sources = files(

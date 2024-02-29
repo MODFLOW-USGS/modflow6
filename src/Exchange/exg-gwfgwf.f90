@@ -35,7 +35,7 @@ module GwfGwfExchangeModule
 
   private
   public :: GwfExchangeType
-  public :: gwfexchange_create
+  public :: gwfgwf_cr
   public :: GetGwfExchangeFromList
   public :: CastAsGwfExchange
 
@@ -118,7 +118,7 @@ contains
   !!
   !! Create a new GWF to GWF exchange object.
   !<
-  subroutine gwfexchange_create(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine gwfgwf_cr(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     use BaseModelModule, only: BaseModelType
     use VirtualModelModule, only: get_virtual_model
@@ -200,7 +200,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwfexchange_create
+  end subroutine gwfgwf_cr
 
   !> @ brief Define GWF GWF exchange
   !!

@@ -14,8 +14,6 @@ module NumericalExchangeModule
             AddNumericalExchangeToList, GetNumericalExchangeFromList
 
   type, extends(BaseExchangeType) :: NumericalExchangeType
-    character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
-
   contains
 
     procedure :: exg_df

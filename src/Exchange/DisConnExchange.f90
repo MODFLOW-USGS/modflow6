@@ -21,8 +21,6 @@ module DisConnExchangeModule
   !! in the connections object: DisBaseType%con
   !<
   type, extends(NumericalExchangeType) :: DisConnExchangeType
-    character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
-
     class(NumericalModelType), pointer :: model1 => null() !< model 1
     class(NumericalModelType), pointer :: model2 => null() !< model 2
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
@@ -432,6 +430,7 @@ contains
     call mem_allocate(this%auxname_cst, LENAUXNAME, 0, &
                       'AUXNAME_CST', this%memoryPath)
     !
+    this%filename = ''
     this%nexg = 0
     this%naux = 0
     this%ianglex = 0
@@ -441,7 +440,6 @@ contains
     this%iprflow = 0
     this%ipakcb = 0
     this%inamedbound = 0
-    !
     this%dev_ifmod_on = .false.
     !
     ! -- Return

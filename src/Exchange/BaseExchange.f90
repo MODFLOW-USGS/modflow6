@@ -1,7 +1,7 @@
 module BaseExchangeModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENEXCHANGENAME, LENMEMPATH
+  use ConstantsModule, only: LENEXCHANGENAME, LENMEMPATH, LINELENGTH
   use ListModule, only: ListType
   use BaseModelModule, only: BaseModelType
 
@@ -13,6 +13,8 @@ module BaseExchangeModule
 
   type, abstract :: BaseExchangeType
     character(len=LENEXCHANGENAME) :: name !< the name of this exchange
+    character(len=7) :: typename !< name of the type (e.g., 'GWF-GWF')
+    character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
     character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH) :: input_mempath
     integer(I4B) :: id

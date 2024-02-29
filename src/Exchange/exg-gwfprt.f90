@@ -1,7 +1,7 @@
 module GwfPrtExchangeModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENPACKAGENAME
+  use ConstantsModule, only: LENPACKAGENAME, LINELENGTH
   use ListsModule, only: basemodellist, baseexchangelist
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
@@ -10,6 +10,8 @@ module GwfPrtExchangeModule
   use GwfModule, only: GwfModelType
   use PrtModule, only: PrtModelType
   use BndModule, only: BndType, GetBndFromList
+  use MemoryHelperModule, only: create_mem_path
+  use MemoryManagerModule, only: mem_allocate
 
   implicit none
   public :: GwfPrtExchangeType
@@ -36,18 +38,19 @@ module GwfPrtExchangeModule
 contains
 
   !> @brief Create a new GWF to PRT exchange object
-  subroutine gwfprt_cr(filename, id, m1id, m2id)
+  subroutine gwfprt_cr(filename, name, id, m1id, m2id, input_mempath)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    integer(I4B), intent(in) :: m1id
-    integer(I4B), intent(in) :: m2id
+    character(len=*), intent(in) :: filename !< filename for reading
+    character(len=*) :: name !< exchange name
+    integer(I4B), intent(in) :: id !< id for the exchange
+    integer(I4B), intent(in) :: m1id !< id for model 1
+    integer(I4B), intent(in) :: m2id !< id for model 2
+    character(len=*), intent(in) :: input_mempath
     ! -- local
-    class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfPrtExchangeType), pointer :: exchange => null()
-    character(len=20) :: cint
+    class(BaseExchangeType), pointer :: baseexchange => null()
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -56,12 +59,14 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWF-PRT_'//trim(adjustl(cint))
-    exchange%memoryPath = exchange%name
+    exchange%name = name
+    exchange%memoryPath = create_mem_path(exchange%name)
+    exchange%input_mempath = input_mempath
     !
-    ! -- allocate scalars
+    ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
+    exchange%filename = filename
+    exchange%typename = 'GWF-PRT'
     !
     ! -- NB: convert from id to local model index in base model list
     exchange%m1id = model_loc_idx(m1id)
@@ -75,7 +80,6 @@ contains
   end subroutine gwfprt_cr
 
   subroutine set_model_pointers(this)
-    ! -- modules
     ! -- dummy
     class(GwfPrtExchangeType) :: this
     ! -- local
@@ -290,8 +294,10 @@ contains
     class(GwfPrtExchangeType) :: this
     ! -- local
     !
+    allocate (this%filename)
     call mem_allocate(this%m1id, 'M1ID', this%memoryPath)
     call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
+    this%filename = ''
     this%m1id = 0
     this%m2id = 0
     !

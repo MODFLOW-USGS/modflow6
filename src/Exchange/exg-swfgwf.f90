@@ -25,6 +25,7 @@ module SwfGwfExchangeModule
   use SwfModule, only: SwfModelType
   use MatrixBaseModule
   use TableModule, only: TableType, table_cr
+  use MemoryManagerModule, only: mem_allocate
 
   private
   public :: swfgwf_cr
@@ -36,7 +37,6 @@ module SwfGwfExchangeModule
     class(SwfModelType), pointer :: swfmodel1 => null() !< pointer to SWF Model 1
     class(GwfModelType), pointer :: gwfmodel2 => null() !< pointer to GWF Model 2
 
-    character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
     integer(I4B), pointer :: ipr_input => null() !< flag to print input
     integer(I4B), pointer :: ipr_flow => null() !< print flag for cell by cell flows
 
@@ -94,7 +94,6 @@ contains
   !! Create a new SWF to GWF exchange object.
   !<
   subroutine swfgwf_cr(filename, name, id, m1_id, m2_id, input_mempath)
-    ! -- modules
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
     character(len=*) :: name !< exchange name
@@ -373,8 +372,6 @@ contains
     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
     !
     allocate (this%filename)
-    this%filename = ''
-    !
     call mem_allocate(this%ipr_input, 'IPR_INPUT', this%memoryPath)
     call mem_allocate(this%ipr_flow, 'IPR_FLOW', this%memoryPath)
     call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
@@ -396,6 +393,8 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     !
+    allocate (this%filename)
+    this%filename = ''
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)

@@ -208,19 +208,10 @@ contains
   !<
   subroutine models_create()
     ! -- modules
+    use SimVariablesModule, only: idm_context
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
-    use SimVariablesModule, only: idm_context
-    use GwfModule, only: gwf_cr
-    use GwtModule, only: gwt_cr
-    use GweModule, only: gwe_cr
-    use SwfModule, only: swf_cr
-    use PrtModule, only: prt_cr
-    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
-    use VirtualGwfModelModule, only: add_virtual_gwf_model
-    use VirtualGwtModelModule, only: add_virtual_gwt_model
-    use VirtualGweModelModule, only: add_virtual_gwe_model
-    ! use VirtualPrtModelModule, only: add_virtual_prt_model
+    use ModelFactoryModule, only: create_models
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- locals
@@ -231,13 +222,7 @@ contains
       pointer :: mfnames !< model file names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mnames !< model names
-    integer(I4B) :: im
-    class(NumericalModelType), pointer :: num_model
-    character(len=LINELENGTH) :: model_type
-    character(len=LINELENGTH) :: fname, model_name
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: n, nr_models_glob
-    logical :: terminate = .true.
+    integer(I4B) :: nr_models_glob
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -256,96 +241,11 @@ contains
     ! -- assign models to cpu cores (in serial all to rank 0)
     call create_load_balance(model_ranks)
     !
-    ! -- open model logging block
-    write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
-    !
     ! -- create models
-    im = 0
-    do n = 1, size(mtypes)
-      !
-      ! -- attributes for this model
-      model_type = mtypes(n)
-      fname = mfnames(n)
-      model_name = mnames(n)
-      !
-      call check_model_name(model_type, model_name)
-      !
-      ! increment global model id
-      model_names(n) = model_name(1:LENMODELNAME)
-      model_loc_idx(n) = -1
-      num_model => null()
-      !
-      ! -- add a new (local or global) model
-      select case (model_type)
-      case ('GWF6')
-        if (model_ranks(n) == proc_id) then
-          im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
-            n, ' will be created'
-          call gwf_cr(fname, n, model_names(n))
-          num_model => GetNumericalModelFromList(basemodellist, im)
-          model_loc_idx(n) = im
-        end if
-        call add_virtual_gwf_model(n, model_names(n), num_model)
-      case ('GWT6')
-        if (model_ranks(n) == proc_id) then
-          im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
-            n, ' will be created'
-          call gwt_cr(fname, n, model_names(n))
-          num_model => GetNumericalModelFromList(basemodellist, im)
-          model_loc_idx(n) = im
-        end if
-        call add_virtual_gwt_model(n, model_names(n), num_model)
-      case ('GWE6')
-        if (model_ranks(n) == proc_id) then
-          im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
-            n, ' will be created'
-          call gwe_cr(fname, n, model_names(n))
-          num_model => GetNumericalModelFromList(basemodellist, im)
-          model_loc_idx(n) = im
-        end if
-        call add_virtual_gwe_model(n, model_names(n), num_model)
-      case ('SWF6')
-        if (model_ranks(n) == proc_id) then
-          im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
-            n, " will be created"
-          call swf_cr(fname, n, model_names(n))
-          call dev_feature('SWF is still under development, install the &
-            &nightly build or compile from source with IDEVELOPMODE = 1.')
-          num_model => GetNumericalModelFromList(basemodellist, im)
-          model_loc_idx(n) = im
-        end if
-      case ('PRT6')
-        im = im + 1
-        write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
-          n, ' will be created'
-        call prt_cr(fname, n, model_names(n))
-        call dev_feature('PRT is still under development, install the &
-           &nightly build or compile from source with IDEVELOPMODE = 1.')
-        num_model => GetNumericalModelFromList(basemodellist, im)
-        model_loc_idx(n) = im
-      case default
-        write (errmsg, '(a,a)') &
-          'Unknown simulation model type: ', trim(model_type)
-        call store_error(errmsg, terminate)
-      end select
-    end do
-    !
-    ! -- close model logging block
+    write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
+    call create_models(mtypes, mfnames, mnames)
     write (iout, '(1x,a)') 'END OF SIMULATION MODELS'
     !
-    ! -- sanity check
-    if (simulation_mode == 'PARALLEL' .and. im == 0) then
-      write (errmsg, '(a, i0)') &
-        'No MODELS assigned to process ', proc_id
-      call store_error(errmsg, terminate)
-    end if
-    !
-    ! -- return
-    return
   end subroutine models_create
 
   !> @brief Set the exchanges to be used for the simulation
@@ -355,17 +255,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use SimVariablesModule, only: idm_context
-    use GwfGwfExchangeModule, only: gwfexchange_create
-    use GwfGwtExchangeModule, only: gwfgwt_cr
-    use GwfGweExchangeModule, only: gwfgwe_cr
-    use GwfPrtExchangeModule, only: gwfprt_cr
-    use GwtGwtExchangeModule, only: gwtexchange_create
-    use GweGweExchangeModule, only: gweexchange_create
-    use SwfGwfExchangeModule, only: swfgwf_cr
-    use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
-    use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
-    use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
-    ! use VirtualPrtExchangeModule, only: add_virtual_prt_exchange
+    use ExchangeFactoryModule, only: create_exchanges
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -379,19 +269,6 @@ contains
       pointer :: emnames_b !< model b names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: emempaths
-    character(len=LINELENGTH) :: exgtype
-    integer(I4B) :: exg_id
-    integer(I4B) :: m1_id, m2_id
-    character(len=LINELENGTH) :: fname, name1, name2
-    character(len=LENEXCHANGENAME) :: exg_name
-    character(len=LENMEMPATH) :: exg_mempath
-    integer(I4B) :: n
-    character(len=LINELENGTH) :: errmsg
-    logical(LGP) :: terminate = .true.
-    logical(LGP) :: both_remote, both_local
-    ! -- formats
-    character(len=*), parameter :: fmtmerr = "('Error in simulation control ', &
-      &'file.  Could not find model: ', a)"
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -403,96 +280,11 @@ contains
     call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
     call mem_setptr(emempaths, 'EXGMEMPATHS', input_mempath)
     !
-    ! -- open exchange logging block
-    write (iout, '(/1x,a)') 'READING SIMULATION EXCHANGES'
-    !
-    ! -- initialize
-    exg_id = 0
-    !
     ! -- create exchanges
-    do n = 1, size(etypes)
-      !
-      ! -- attributes for this exchange
-      exgtype = etypes(n)
-      fname = efiles(n)
-      name1 = emnames_a(n)
-      name2 = emnames_b(n)
-      exg_mempath = emempaths(n)
-
-      exg_id = exg_id + 1
-
-      ! find model index in list
-      m1_id = ifind(model_names, name1)
-      if (m1_id < 0) then
-        write (errmsg, fmtmerr) trim(name1)
-        call store_error(errmsg, terminate)
-      end if
-      m2_id = ifind(model_names, name2)
-      if (m2_id < 0) then
-        write (errmsg, fmtmerr) trim(name2)
-        call store_error(errmsg, terminate)
-      end if
-
-      ! both models on other process? then don't create it here...
-      both_remote = (model_loc_idx(m1_id) == -1 .and. &
-                     model_loc_idx(m2_id) == -1)
-      both_local = (model_loc_idx(m1_id) > 0 .and. &
-                    model_loc_idx(m2_id) > 0)
-      if (.not. both_remote) then
-        write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(exgtype), ' exchange ', &
-          exg_id, ' will be created to connect model ', m1_id, &
-          ' with model ', m2_id
-      end if
-
-      select case (exgtype)
-      case ('GWF6-GWF6')
-        write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-        if (.not. both_remote) then
-          call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
-                                  exg_mempath)
-        end if
-        call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
-      case ('GWF6-GWT6')
-        if (both_local) then
-          call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
-        end if
-      case ('GWF6-GWE6')
-        if (both_local) then
-          call gwfgwe_cr(fname, exg_id, m1_id, m2_id)
-        end if
-      case ('GWF6-PRT6')
-        call gwfprt_cr(fname, exg_id, m1_id, m2_id)
-      case ('GWT6-GWT6')
-        write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
-        if (.not. both_remote) then
-          call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
-                                  exg_mempath)
-        end if
-        call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
-      case ('GWE6-GWE6')
-        write (exg_name, '(a,i0)') 'GWE-GWE_', exg_id
-        if (.not. both_remote) then
-          call gweexchange_create(fname, exg_name, exg_id, m1_id, m2_id, &
-                                  exg_mempath)
-        end if
-        call add_virtual_gwe_exchange(exg_name, exg_id, m1_id, m2_id)
-      case ('SWF6-GWF6')
-        write (exg_name, '(a,i0)') 'SWF-GWF_', exg_id
-        if (both_local) then
-          call swfgwf_cr(fname, exg_name, exg_id, m1_id, m2_id, exg_mempath)
-        end if
-      case default
-        write (errmsg, '(a,a)') &
-          'Unknown simulation exchange type: ', trim(exgtype)
-        call store_error(errmsg, terminate)
-      end select
-    end do
-    !
-    ! -- close exchange logging block
+    write (iout, '(/1x,a)') 'READING SIMULATION EXCHANGES'
+    call create_exchanges(etypes, efiles, emnames_a, emnames_b, emempaths)
     write (iout, '(1x,a)') 'END OF SIMULATION EXCHANGES'
     !
-    ! -- return
-    return
   end subroutine exchanges_create
 
   !> @brief Check a solution_group to be used for the simulation
@@ -790,41 +582,6 @@ contains
       end do
     end do
   end subroutine assign_exchanges
-
-  !> @brief Check that the model name is valid
-  !<
-  subroutine check_model_name(mtype, mname)
-    ! -- dummy
-    character(len=*), intent(in) :: mtype
-    character(len=*), intent(inout) :: mname
-    ! -- local
-    integer :: ilen
-    integer :: i
-    character(len=LINELENGTH) :: errmsg
-    logical :: terminate = .true.
-    ! ------------------------------------------------------------------------------
-    ilen = len_trim(mname)
-    if (ilen > LENMODELNAME) then
-      write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
-      call store_error(errmsg)
-      write (errmsg, '(a,i0,a,i0)') &
-        'Name length of ', ilen, ' exceeds maximum length of ', &
-        LENMODELNAME
-      call store_error(errmsg, terminate)
-    end if
-    do i = 1, ilen
-      if (mname(i:i) == ' ') then
-        write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
-        call store_error(errmsg)
-        write (errmsg, '(a)') &
-          'Model name cannot have spaces within it.'
-        call store_error(errmsg, terminate)
-      end if
-    end do
-    !
-    ! -- return
-    return
-  end subroutine check_model_name
 
   !> @brief Create a load mask to determine which models
   !! should be loaded by idm on this process. This is in

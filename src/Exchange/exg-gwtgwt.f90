@@ -34,7 +34,7 @@ module GwtGwtExchangeModule
 
   private
   public :: GwtExchangeType
-  public :: gwtexchange_create
+  public :: gwtgwt_cr
   public :: GetGwtExchangeFromList
   public :: CastAsGwtExchange
 
@@ -106,7 +106,7 @@ contains
   !!
   !! Create a new GWT to GWT exchange object.
   !<
-  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine gwtgwt_cr(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
@@ -188,7 +188,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwtexchange_create
+  end subroutine gwtgwt_cr
 
   !> @ brief Define GWT GWT exchange
   !!
