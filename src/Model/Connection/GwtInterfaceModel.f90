@@ -45,7 +45,7 @@ module GwtInterfaceModelModule
 contains
 
   !> @brief Create the interface model, analogously to what
-  !< happens in gwt_cr
+  !< happens in register_gwt
   subroutine gwtifmod_cr(this, name, iout, gridConn)
     ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model

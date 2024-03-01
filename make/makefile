@@ -404,6 +404,7 @@ $(OBJDIR)/VirtualPrtModel.o \
 $(OBJDIR)/VirtualGwtModel.o \
 $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGweModel.o \
+$(OBJDIR)/ModelRegistrar.o \
 $(OBJDIR)/VirtualGwtExchange.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweExchange.o \

@@ -58,7 +58,7 @@ module SwfModule
   implicit none
 
   private
-  public :: swf_cr
+  public :: register_swf
   public :: SwfModelType
   public :: SWF_NBASEPKG, SWF_NMULTIPKG
   public :: SWF_BASEPKG, SWF_MULTIPKG
@@ -141,7 +141,7 @@ contains
   !! (2) assign values
   !!
   !<
-  subroutine swf_cr(filename, id, modelname)
+  subroutine register_swf(id, modelname, filename)
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
@@ -151,9 +151,9 @@ contains
     use SwfNamInputModule, only: SwfNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename !< input file
     integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
     character(len=*), intent(in) :: modelname !< name of the model
+    character(len=*), intent(in) :: filename !< input file
     ! -- local
     type(SwfModelType), pointer :: this
     class(BaseModelType), pointer :: model
@@ -214,7 +214,7 @@ contains
     !
     ! -- return
     return
-  end subroutine swf_cr
+  end subroutine register_swf
 
   !> @brief Allocate memory for scalar members
   subroutine allocate_scalars(this, modelname)

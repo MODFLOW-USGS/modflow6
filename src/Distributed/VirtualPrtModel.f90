@@ -7,12 +7,11 @@ module VirtualPrtModelModule
   implicit none
   private
 
-  public :: add_virtual_prt_model
+  public :: register_virtual_prt
 
   type, extends(VirtualModelType) :: VirtualPrtModelType
   contains
     ! public
-    procedure :: create => vprt_create
     procedure :: prepare_stage => vprt_prepare_stage
     procedure :: destroy => vprt_destroy
     ! private
@@ -23,20 +22,12 @@ module VirtualPrtModelModule
 
 contains
 
-  subroutine add_virtual_prt_model(model_id, model_name, model)
-    integer(I4B) :: model_id !< global model id
-    character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+  subroutine register_virtual_prt(model_id, model_name, model)
+    integer(I4B), intent(in) :: model_id !< global model id
+    character(len=*), intent(in) :: model_name !< model name
+    class(NumericalModelType), pointer, intent(inout) :: model !< the actual model (can be null() when remote)
     ! noop
-  end subroutine add_virtual_prt_model
-
-  subroutine vprt_create(this, name, id, model)
-    class(VirtualPrtModelType) :: this
-    character(len=*) :: name
-    integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
-    ! noop
-  end subroutine vprt_create
+  end subroutine register_virtual_prt
 
   subroutine init_virtual_data(this)
     class(VirtualPrtModelType) :: this

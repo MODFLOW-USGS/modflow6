@@ -49,7 +49,7 @@ module GweInterfaceModelModule
 contains
 
   !> @brief Create the interface model, analogously to what
-  !< happens in gwe_cr
+  !< happens in register_gwe
   subroutine gweifmod_cr(this, name, iout, gridConn)
     ! -- modules
     use GweInputDataModule, only: gweshared_dat_cr

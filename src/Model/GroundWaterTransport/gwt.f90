@@ -23,7 +23,7 @@ module GwtModule
   implicit none
 
   private
-  public :: gwt_cr
+  public :: register_gwt
   public :: GwtModelType
   public :: CastAsGwtModel
   public :: GWT_NBASEPKG, GWT_NMULTIPKG
@@ -94,7 +94,7 @@ contains
 
   !> @brief Create a new groundwater transport model object
   !<
-  subroutine gwt_cr(filename, id, modelname)
+  subroutine register_gwt(id, modelname, filename)
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
@@ -104,9 +104,9 @@ contains
     use GwtNamInputModule, only: GwtNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename !< input file
     integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
     character(len=*), intent(in) :: modelname !< name of the model
+    character(len=*), intent(in) :: filename !< input file
     ! -- local
     integer(I4B) :: indis
     type(GwtModelType), pointer :: this
@@ -135,7 +135,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwt_cr
+  end subroutine register_gwt
 
   !> @brief Define packages of the GWT model
   !!

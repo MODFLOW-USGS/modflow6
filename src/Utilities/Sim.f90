@@ -12,7 +12,7 @@ module SimModule
   use KindModule, only: DP, I4B
   use ErrorUtilModule, only: pstop
   use DefinedMacros, only: get_os
-  use ConstantsModule, only: MAXCHARLEN, LINELENGTH, &
+  use ConstantsModule, only: MAXCHARLEN, LINELENGTH, LENMODELNAME, &
                              DONE, &
                              IUSTART, IULAST, &
                              VSUMMARY, VALL, VDEBUG, &
@@ -25,6 +25,7 @@ module SimModule
   implicit none
 
   private
+  public :: check_model_name
   public :: count_errors
   public :: store_error
   public :: ustop
@@ -47,6 +48,39 @@ module SimModule
   type(MessagesType) :: sim_notes
 
 contains
+
+  !> @brief Check that the model name is valid
+  !<
+  subroutine check_model_name(mtype, mname)
+    ! -- dummy
+    character(len=*), intent(in) :: mtype
+    character(len=*), intent(inout) :: mname
+    ! -- local
+    integer :: ilen
+    integer :: i
+    character(len=LINELENGTH) :: errmsg
+    logical :: terminate = .true.
+    !
+    ilen = len_trim(mname)
+    if (ilen > LENMODELNAME) then
+      write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
+      call store_error(errmsg)
+      write (errmsg, '(a,i0,a,i0)') &
+        'Name length of ', ilen, ' exceeds maximum length of ', &
+        LENMODELNAME
+      call store_error(errmsg, terminate)
+    end if
+    do i = 1, ilen
+      if (mname(i:i) == ' ') then
+        write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
+        call store_error(errmsg)
+        write (errmsg, '(a)') &
+          'Model name cannot have spaces within it.'
+        call store_error(errmsg, terminate)
+      end if
+    end do
+
+  end subroutine check_model_name
 
   !> @brief Return number of errors
   !!

@@ -28,7 +28,7 @@ module PrtModule
   implicit none
 
   private
-  public :: prt_cr
+  public :: register_prt
   public :: PrtModelType
   public :: PRT_NBASEPKG, PRT_NMULTIPKG
   public :: PRT_BASEPKG, PRT_MULTIPKG
@@ -119,7 +119,7 @@ module PrtModule
 contains
 
   !> @brief Create a new particle tracking model object
-  subroutine prt_cr(filename, id, modelname)
+  subroutine register_prt(id, modelname, filename)
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
@@ -130,9 +130,9 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfNamInputModule, only: GwfNamParamFoundType
     ! -- dummy
-    character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: filename
     ! -- local
     type(PrtModelType), pointer :: this
     class(BaseModelType), pointer :: model
@@ -187,7 +187,7 @@ contains
 
     ! -- Create model packages
     call this%create_packages()
-  end subroutine prt_cr
+  end subroutine register_prt
 
   !> @brief Define packages
   !!

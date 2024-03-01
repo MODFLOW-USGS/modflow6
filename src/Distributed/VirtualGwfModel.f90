@@ -8,7 +8,7 @@ module VirtualGwfModelModule
   implicit none
   private
 
-  public :: add_virtual_gwf_model
+  public :: register_virtual_gwf
 
   type, public, extends(VirtualModelType) :: VirtualGwfModelType
     ! NPF
@@ -28,7 +28,6 @@ module VirtualGwfModelModule
     type(VirtualDbl1dType), pointer :: buy_dense => null()
   contains
     ! public
-    procedure :: create => vgwf_create
     procedure :: destroy => vgwf_destroy
     procedure :: prepare_stage => vgwf_prepare_stage
     ! private
@@ -39,39 +38,28 @@ module VirtualGwfModelModule
 
 contains
 
-  !> @brief Add virtual GWF model
+  !> @brief Create and register a virtual GWF model
   !<
-  subroutine add_virtual_gwf_model(model_id, model_name, model)
+  subroutine register_virtual_gwf(model_id, model_name, model)
     use VirtualDataListsModule, only: virtual_model_list
-    integer(I4B) :: model_id !< global model id
-    character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+    integer(I4B), intent(in) :: model_id !< global model id
+    character(len=*), intent(in) :: model_name !< model name
+    class(NumericalModelType), pointer, intent(inout) :: model !< the actual model (can be null() when remote)
     ! local
     class(VirtualGwfModelType), pointer :: virtual_gwf_model
     class(*), pointer :: obj
 
     allocate (virtual_gwf_model)
-    call virtual_gwf_model%create(model_name, model_id, model)
+    call virtual_gwf_model%VirtualModelType%create(model_name, model_id, model)
+    virtual_gwf_model%container_type = VDC_GWFMODEL_TYPE
+
+    call virtual_gwf_model%allocate_data()
+    call virtual_gwf_model%init_virtual_data()
 
     obj => virtual_gwf_model
     call virtual_model_list%Add(obj)
 
-  end subroutine add_virtual_gwf_model
-
-  subroutine vgwf_create(this, name, id, model)
-    class(VirtualGwfModelType) :: this
-    character(len=*) :: name
-    integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
-
-    ! create base
-    call this%VirtualModelType%create(name, id, model)
-    this%container_type = VDC_GWFMODEL_TYPE
-
-    call this%allocate_data()
-    call this%init_virtual_data()
-
-  end subroutine vgwf_create
+  end subroutine register_virtual_gwf
 
   subroutine init_virtual_data(this)
     class(VirtualGwfModelType) :: this

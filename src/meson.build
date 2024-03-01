@@ -359,6 +359,7 @@ modflow_sources = files(
     'RunControl.f90',
     'RunControlFactory.F90',
     'ModelFactory.f90',
+    'ModelRegistrar.f90',
     'ExchangeFactory.f90'
 )
 

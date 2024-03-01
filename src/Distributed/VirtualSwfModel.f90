@@ -7,12 +7,11 @@ module VirtualSwfModelModule
   implicit none
   private
 
-  public :: add_virtual_swf_model
+  public :: register_virtual_swf
 
   type, extends(VirtualModelType) :: VirtualSwfModelType
   contains
     ! public
-    procedure :: create => vswf_create
     procedure :: prepare_stage => vswf_prepare_stage
     procedure :: destroy => vswf_destroy
     ! private
@@ -23,20 +22,12 @@ module VirtualSwfModelModule
 
 contains
 
-  subroutine add_virtual_swf_model(model_id, model_name, model)
-    integer(I4B) :: model_id !< global model id
-    character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+  subroutine register_virtual_swf(model_id, model_name, model)
+    integer(I4B), intent(in) :: model_id !< global model id
+    character(len=*), intent(in) :: model_name !< model name
+    class(NumericalModelType), pointer, intent(inout) :: model !< the actual model (can be null() when remote)
     ! noop
-  end subroutine add_virtual_swf_model
-
-  subroutine vswf_create(this, name, id, model)
-    class(VirtualSwfModelType) :: this
-    character(len=*) :: name
-    integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
-    ! noop
-  end subroutine vswf_create
+  end subroutine register_virtual_swf
 
   subroutine init_virtual_data(this)
     class(VirtualSwfModelType) :: this
