@@ -27,6 +27,7 @@ module SwfCxsUtilsModule
   public :: get_hydraulic_radius_xf
   public :: get_mannings_section
   public :: calc_composite_roughness
+  public :: get_composite_conveyance
 
 contains
 
@@ -588,6 +589,64 @@ contains
     ! -- return
     return
   end function get_cross_section_area
+
+  !> @brief Calculate composite conveyance
+  !!
+  !! Function to calculate the composite conveyance.
+  !! This is based on the approach in HEC-RAS, where
+  !! a conveyance is calculated for each line segment
+  !! in the cross section, and then summed to produce
+  !! a total conveyance.
+  !!
+  !<
+  function get_composite_conveyance(npts, xfraction, heights, cxs_rf, &
+                                    width, rough, d) result(c)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    real(DP), dimension(:), intent(in) :: cxs_rf ! mannings fractions for this cross section
+    real(DP), intent(in) :: width !< reach width
+    real(DP), intent(in) :: rough !< reach roughness
+    real(DP), intent(in) :: d !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: c
+    real(DP) :: p
+    real(DP) :: rc
+    real(DP) :: rh
+    real(DP) :: cn
+    real(DP), dimension(npts) :: stations
+    real(DP), dimension(npts - 1) :: areas
+    real(DP), dimension(npts - 1) :: perimeters
+    !
+    ! -- calculate station from xfractions and width
+    do n = 1, npts
+      stations(n) = xfraction(n) * width
+    end do
+    !
+    ! -- calculate the cross-sectional area for each line segment
+    call get_cross_section_areas(npts, stations, heights, d, areas)
+    !
+    ! -- calculate the wetted perimeter for each line segment
+    call get_wetted_perimeters(npts, stations, heights, d, perimeters)
+    !
+    ! -- calculate the composite conveyance
+    c = DZERO
+    do n = 1, npts - 1
+      rc = cxs_rf(n) * rough
+      p = perimeters(n)
+      cn = DZERO
+      if (p > DZERO) then
+        rh = areas(n) / p
+        cn = areas(n) / rc * rh ** DTWOTHIRDS
+      end if
+      c = c + cn
+    end do
+    !
+    ! -- return
+    return
+  end function get_composite_conveyance
 
   !> @brief Calculate the hydraulic radius for a reach
   !!

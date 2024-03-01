@@ -5,7 +5,7 @@
 module SwfCxsModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, DZERO
+  use ConstantsModule, only: LENMEMPATH, DZERO, DTWOTHIRDS
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate
   use SimVariablesModule, only: errmsg, warnmsg
@@ -47,7 +47,9 @@ module SwfCxsModule
     procedure :: get_cross_section_info
     procedure :: get_area
     procedure :: get_roughness
+    procedure :: get_conveyance
     procedure :: get_hydraulic_radius
+    procedure :: write_cxs_table
 
   end type SwfCxsType
 
@@ -455,6 +457,78 @@ contains
 
   end subroutine log_crosssectiondata
 
+  subroutine write_cxs_table(this, idcxs, width, slope, rough, unitconv)
+    ! -- module
+    use SortModule, only: qsort, unique_values
+    ! -- dummy
+    class(SwfCxsType) :: this
+    integer(I4B), intent(in) :: idcxs
+    real(DP), intent(in) :: width
+    real(DP), intent(in) :: slope
+    real(DP), intent(in) :: rough
+    real(DP), intent(in) :: unitconv
+    ! -- local
+    integer(I4B) :: ipt
+    real(DP) :: d
+    real(DP) :: a
+    real(DP) :: rh
+    real(DP) :: r
+    real(DP) :: c
+    real(DP) :: q
+    integer(I4B) :: i0
+    integer(I4B) :: i1
+    integer(I4B) :: npts
+    integer(I4B) :: icalcmeth
+    real(DP), dimension(:), allocatable :: depths
+    real(DP), dimension(:), allocatable :: depths_unique
+    integer(I4B), dimension(:), allocatable :: indx
+  
+    call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
+
+    if (npts > 0) then
+
+      write(this%iout, *) 'Processing information for cross section ', idcxs
+      write(this%iout, *) 'Depth Area HydRad Rough Q'
+
+      allocate(depths(npts))
+      allocate (indx(size(depths)))
+
+      depths(:) = this%height(:)
+      call qsort(indx, depths)
+      call unique_values(depths, depths_unique)
+
+      ! TODO: THIS NEEDS WORK
+      ! do ipt = 1, size(depths_unique)
+      !   d = depths_unique(ipt)
+      !   a = this%get_area(idcxs, width, d)
+      !   rh = this%get_hydraulic_radius(idcxs, width, d, a)
+      !   r = this%get_roughness(idcxs, width, d, rough, slope)
+      !   q = unitconv * a * (rh**DTWOTHIRDS) * sqrt(slope) / r
+      !   write(this%iout, *) d, a, rh, r, q
+      ! end do
+
+      d = 0.d0
+      do ipt = 1, 20
+        a = this%get_area(idcxs, width, d)
+        rh = this%get_hydraulic_radius(idcxs, width, d, a)
+        r = this%get_roughness(idcxs, width, d, rough, slope)
+        c = this%get_conveyance(idcxs, width, d, rough)
+        !q = unitconv * a * (rh**DTWOTHIRDS) * sqrt(slope) / r
+        q = unitconv * c * sqrt(slope)
+        write(this%iout, *) d, a, rh, r, q
+        d = d + 0.5
+      end do
+      
+
+      deallocate(depths)
+      deallocate(depths_unique)
+      write(this%iout, *) 'Done processing information for cross section ', idcxs
+
+    end if
+
+    return
+  end subroutine write_cxs_table
+
   !> @brief deallocate memory
   !<
   subroutine cxs_da(this)
@@ -521,7 +595,7 @@ contains
       npts = i1 - i0 + 1
       icalcmeth = 0 ! linear composite mannings resistance
       if (npts > 4) then
-        icalcmeth = 1 ! sum q by cross section segments
+        icalcmeth = 0 ! sum q by cross section segments
       end if
     end if
     return
@@ -584,6 +658,39 @@ contains
                                         icalcmeth)
     end if
   end function get_roughness
+
+  function get_conveyance(this, idcxs, width, depth, &
+                          rough) result(conveyance)
+    ! -- modules
+    use SwfCxsUtilsModule, only: get_composite_conveyance
+    ! -- dummy
+    class(SwfCxsType) :: this
+    integer(I4B), intent(in) :: idcxs !< cross section id
+    real(DP), intent(in) :: width !< width in reach
+    real(DP), intent(in) :: depth !< stage in reach
+    real(DP), intent(in) :: rough !< mannings value provided for the reach
+    ! -- return
+    real(DP) :: conveyance !< calculated composite roughness
+    ! -- local
+    real(DP) :: a
+    real(DP) :: rh
+    integer(I4B) :: i0
+    integer(I4B) :: i1
+    integer(I4B) :: npts
+    integer(I4B) :: icalcmeth
+    call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
+    if (npts == 0) then
+      a = depth * width
+      rh = a / width
+      conveyance = a * rh ** DTWOTHIRDS / rough
+    else
+      conveyance = get_composite_conveyance(npts, &
+                                        this%xfraction(i0:i1), &
+                                        this%height(i0:i1), &
+                                        this%manfraction(i0:i1), &
+                                        width, rough, depth)
+    end if
+  end function get_conveyance
 
   function get_hydraulic_radius(this, idcxs, width, depth, area) result(r)
     ! -- modules

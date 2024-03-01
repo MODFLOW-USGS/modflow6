@@ -92,6 +92,7 @@ module SwfDfwModule
     procedure :: get_cond
     !procedure :: get_cond_swr
     procedure :: get_cond_n
+    procedure :: write_cxs_tables
 
   end type SwfDfwType
 
@@ -442,9 +443,30 @@ contains
       write (this%iout, '(4x,a)') 'IDCXS set from input file'
     end if
 
+    call this%write_cxs_tables()
+
     write (this%iout, '(1x,a,/)') 'End Setting DFW Griddata'
 
   end subroutine log_griddata
+
+  subroutine write_cxs_tables(this)
+    ! -- modules
+    ! -- dummy
+    class(SwfDfwType) :: this !< this instance
+    ! -- local
+    integer(I4B) :: idcxs
+    integer(I4B) :: n
+    !
+    do n = 1, this%dis%nodes
+      idcxs = this%idcxs(n)
+      if (idcxs > 0) then
+        call this%cxs%write_cxs_table(idcxs, this%width(n), this%slope(n), &
+                                      this%manningsn(n), this%unitconv)
+      end if
+
+    end do
+    return
+  end subroutine write_cxs_tables
 
   !> @brief allocate memory
   !<
@@ -645,12 +667,15 @@ contains
     if (denom > DPREC) then
       absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
       if (absdhdxsqr < DPREC) then
+        ! TODO: Set this differently somehow?
         absdhdxsqr = 1.e-7
       end if
-
+      !
+      ! -- Calculate depth in each reach
       depth_n = stage_n - this%disl%reach_bottom(n)
       depth_m = stage_m - this%disl%reach_bottom(m)
-
+      !
+      ! -- Assign upstream depth, if not central
       if (this%icentral == 0) then
         ! -- use upstream weighting
         if (stage_n > stage_m) then
@@ -659,17 +684,22 @@ contains
           depth_n = depth_m
         end if
       end if
-
+      !
       ! -- Calculate a smoothed depth that goes to zero over
       !    the specified range
       call sQuadratic(depth_n, range, dydx, smooth_factor)
       depth_n = depth_n * smooth_factor
       call sQuadratic(depth_m, range, dydx, smooth_factor)
       depth_m = depth_m * smooth_factor
-
+      !
+      ! -- Calculate half-cell conductance for reach
+      !    n and m
       cn = this%get_cond_n(n, depth_n, absdhdxsqr)
       cm = this%get_cond_n(m, depth_m, absdhdxsqr)
-
+      !
+      ! -- Use harmonic mean to calculated weighted
+      !    conductance bewteen the centers of reaches
+      !    n and m
       if ((cn + cm) > DPREC) then
         cond = cn * cm / (cn + cm)
       else
@@ -693,8 +723,9 @@ contains
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
     real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
-    ! -- local
+    ! -- return
     real(DP) :: c
+    ! -- local
     real(DP) :: width
     real(DP) :: rough
     real(DP) :: slope
@@ -702,10 +733,14 @@ contains
     real(DP) :: roughc
     real(DP) :: a
     real(DP) :: r
+    real(DP) :: conveyance
     !
     width = this%width(n)
     rough = this%manningsn(n)
     slope = this%slope(n)
+
+    ! -- TODO: this should probably come from cl1/cl2 in case the cell
+    !    center does not correspond to the middle of the reach.
     dx = DHALF * this%disl%reach_length(n)
 
     roughc = this%cxs%get_roughness(this%idcxs(n), width, depth, rough, &
@@ -714,7 +749,9 @@ contains
     r = this%cxs%get_hydraulic_radius(this%idcxs(n), width, depth, area=a)
 
     ! -- conductance from manning's equation
-    c = this%unitconv * a * r**DTWOTHIRDS / roughc / absdhdxsq / dx
+    !conveyance = a * r**DTWOTHIRDS / roughc
+    conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
+    c = this%unitconv * conveyance / absdhdxsq / dx
 
   end function get_cond_n
 
