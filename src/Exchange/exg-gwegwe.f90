@@ -34,7 +34,7 @@ module GweGweExchangeModule
 
   private
   public :: GweExchangeType
-  public :: gwegwe_cr
+  public :: register_gwegwe
   public :: GetGweExchangeFromList
   public :: CastAsGweExchange
 
@@ -107,7 +107,7 @@ contains
   !!
   !! Create a new GWT to GWT exchange object.
   !<
-  subroutine gwegwe_cr(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_gwegwe(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
@@ -189,7 +189,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwegwe_cr
+  end subroutine register_gwegwe
 
   !> @ brief Define GWE GWE exchange
   !!

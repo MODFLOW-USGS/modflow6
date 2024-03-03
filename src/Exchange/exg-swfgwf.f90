@@ -28,7 +28,7 @@ module SwfGwfExchangeModule
   use MemoryManagerModule, only: mem_allocate
 
   private
-  public :: swfgwf_cr
+  public :: register_swfgwf
 
   type, extends(NumericalExchangeType) :: SwfGwfExchangeType
 
@@ -93,7 +93,7 @@ contains
   !!
   !! Create a new SWF to GWF exchange object.
   !<
-  subroutine swfgwf_cr(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_swfgwf(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
     character(len=*) :: name !< exchange name
@@ -169,7 +169,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine swfgwf_cr
+  end subroutine register_swfgwf
 
   !> @ brief Define SWF GWF exchange
   !!

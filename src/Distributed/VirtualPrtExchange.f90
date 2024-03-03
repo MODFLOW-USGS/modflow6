@@ -7,12 +7,11 @@ module VirtualPrtExchangeModule
   implicit none
   private
 
-  public :: add_virtual_prt_exchange
+  public :: register_virtual_prtprt
 
   type, public, extends(VirtualExchangeType) :: VirtualPrtExchangeType
     type(VirtualDbl1dType), pointer :: gwfsimvals => null()
   contains
-    procedure :: create => vtx_create
     procedure :: destroy => vtx_destroy
     procedure :: prepare_stage => vtx_prepare_stage
     ! private
@@ -25,25 +24,14 @@ contains
 
   !> @brief Add a virtual PRT-PRT exchange to the simulation
   !<
-  subroutine add_virtual_prt_exchange(name, exchange_id, &
-                                      model1_id, model2_id)
+  subroutine register_virtual_prtprt(name, exchange_id, &
+                                     model1_id, model2_id)
     character(len=*) :: name
     integer(I4B) :: exchange_id
     integer(I4B) :: model1_id
     integer(I4B) :: model2_id
     ! noop
-  end subroutine add_virtual_prt_exchange
-
-  !> @brief Create a virtual PRT-PRT exchange
-  !<
-  subroutine vtx_create(this, name, exg_id, m1_id, m2_id)
-    class(VirtualPrtExchangeType) :: this
-    character(len=*) :: name
-    integer(I4B) :: exg_id
-    integer(I4B) :: m1_id
-    integer(I4B) :: m2_id
-    ! noop
-  end subroutine vtx_create
+  end subroutine register_virtual_prtprt
 
   subroutine init_virtual_data(this)
     class(VirtualPrtExchangeType) :: this

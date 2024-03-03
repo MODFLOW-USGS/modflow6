@@ -15,7 +15,7 @@ module GwfPrtExchangeModule
 
   implicit none
   public :: GwfPrtExchangeType
-  public :: gwfprt_cr
+  public :: register_gwfprt
 
   type, extends(BaseExchangeType) :: GwfPrtExchangeType
 
@@ -38,7 +38,7 @@ module GwfPrtExchangeModule
 contains
 
   !> @brief Create a new GWF to PRT exchange object
-  subroutine gwfprt_cr(filename, name, id, m1id, m2id, input_mempath)
+  subroutine register_gwfprt(filename, name, id, m1id, m2id, input_mempath)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
@@ -77,7 +77,7 @@ contains
     !
     ! -- return
     return
-  end subroutine gwfprt_cr
+  end subroutine register_gwfprt
 
   subroutine set_model_pointers(this)
     ! -- dummy

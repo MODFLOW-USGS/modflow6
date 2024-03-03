@@ -8,12 +8,11 @@ module VirtualGwtExchangeModule
   implicit none
   private
 
-  public :: add_virtual_gwt_exchange
+  public :: register_virtual_gwtgwt
 
   type, public, extends(VirtualExchangeType) :: VirtualGwtExchangeType
     type(VirtualDbl1dType), pointer :: gwfsimvals => null()
   contains
-    procedure :: create => vtx_create
     procedure :: destroy => vtx_destroy
     procedure :: prepare_stage => vtx_prepare_stage
     ! private
@@ -26,7 +25,7 @@ contains
 
 !> @brief Add a virtual GWT-GWT exchange to the simulation
 !<
-  subroutine add_virtual_gwt_exchange(name, exchange_id, model1_id, model2_id)
+  subroutine register_virtual_gwtgwt(name, exchange_id, model1_id, model2_id)
     character(len=*) :: name
     integer(I4B) :: exchange_id
     integer(I4B) :: model1_id
@@ -36,30 +35,16 @@ contains
     class(*), pointer :: obj_ptr
 
     allocate (v_exg)
-    call v_exg%create(name, exchange_id, model1_id, model2_id)
+    call v_exg%VirtualExchangeType%create(name, exchange_id, model1_id, model2_id)
+    v_exg%container_type = VDC_GWTEXG_TYPE
+
+    call v_exg%allocate_data()
+    call v_exg%init_virtual_data()
 
     obj_ptr => v_exg
     call virtual_exchange_list%Add(obj_ptr)
 
-  end subroutine add_virtual_gwt_exchange
-
-!> @brief Create a virtual GWT-GWT exchange
-!<
-  subroutine vtx_create(this, name, exg_id, m1_id, m2_id)
-    class(VirtualGwtExchangeType) :: this
-    character(len=*) :: name
-    integer(I4B) :: exg_id
-    integer(I4B) :: m1_id
-    integer(I4B) :: m2_id
-
-    ! create base
-    call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
-    this%container_type = VDC_GWTEXG_TYPE
-
-    call this%allocate_data()
-    call this%init_virtual_data()
-
-  end subroutine vtx_create
+  end subroutine register_virtual_gwtgwt
 
   subroutine init_virtual_data(this)
     class(VirtualGwtExchangeType) :: this

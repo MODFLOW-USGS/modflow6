@@ -5,17 +5,17 @@ module ExchangeFactoryModule
   use SimVariablesModule, only: iout, model_names, model_loc_idx
   use CharacterStringModule, only: CharacterStringType
   use ArrayHandlersModule, only: ifind
-  use GwfGwfExchangeModule, only: gwfgwf_cr
-  use GwfGwtExchangeModule, only: gwfgwt_cr
-  use GwfGweExchangeModule, only: gwfgwe_cr
-  use GwfPrtExchangeModule, only: gwfprt_cr
-  use GwtGwtExchangeModule, only: gwtgwt_cr
-  use GweGweExchangeModule, only: gwegwe_cr
-  use SwfGwfExchangeModule, only: swfgwf_cr
-  use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
-  use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
-  use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
-  use VirtualPrtExchangeModule, only: add_virtual_prt_exchange
+  use GwfGwfExchangeModule, only: register_gwfgwf
+  use GwfGwtExchangeModule, only: register_gwfgwt
+  use GwfGweExchangeModule, only: register_gwfgwe
+  use GwfPrtExchangeModule, only: register_gwfprt
+  use GwtGwtExchangeModule, only: register_gwtgwt
+  use GweGweExchangeModule, only: register_gwegwe
+  use SwfGwfExchangeModule, only: register_swfgwf
+  use VirtualGwfExchangeModule, only: register_virtual_gwfgwf
+  use VirtualGwtExchangeModule, only: register_virtual_gwtgwt
+  use VirtualGweExchangeModule, only: register_virtual_gwegwe
+  use VirtualPrtExchangeModule, only: register_virtual_prtprt
 
   implicit none
   private
@@ -81,14 +81,14 @@ contains
       case ('GWF6-GWF6')
         write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
         if (.not. both_remote) &
-          call gwfgwf_cr( &
+          call register_gwfgwf( &
           fname, &
           exg_name, &
           exg_id, &
           m1_id, &
           m2_id, &
           exg_mempath)
-        call add_virtual_gwf_exchange( &
+        call register_virtual_gwfgwf( &
           exg_name, &
           exg_id, &
           m1_id, &
@@ -96,14 +96,14 @@ contains
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
         if (.not. both_remote) &
-          call gwtgwt_cr( &
+          call register_gwtgwt( &
           fname, &
           exg_name, &
           exg_id, &
           m1_id, &
           m2_id, &
           exg_mempath)
-        call add_virtual_gwt_exchange( &
+        call register_virtual_gwtgwt( &
           exg_name, &
           exg_id, &
           m1_id, &
@@ -111,14 +111,14 @@ contains
       case ('GWE6-GWE6')
         write (exg_name, '(a,i0)') 'GWE-GWE_', exg_id
         if (.not. both_remote) &
-          call gwegwe_cr( &
+          call register_gwegwe( &
           fname, &
           exg_name, &
           exg_id, &
           m1_id, &
           m2_id, &
           exg_mempath)
-        call add_virtual_gwe_exchange( &
+        call register_virtual_gwegwe( &
           exg_name, &
           exg_id, &
           m1_id, &
@@ -126,7 +126,7 @@ contains
       case ('GWF6-GWT6')
         write (exg_name, '(a,i0)') 'GWF-GWT_', exg_id
         if (both_local) &
-          call gwfgwt_cr( &
+          call register_gwfgwt( &
           fname, &
           exg_name, &
           exg_id, &
@@ -136,7 +136,7 @@ contains
       case ('GWF6-GWE6')
         write (exg_name, '(a,i0)') 'GWF-GWE_', exg_id
         if (both_local) &
-          call gwfgwe_cr( &
+          call register_gwfgwe( &
           fname, &
           exg_name, &
           exg_id, &
@@ -146,7 +146,7 @@ contains
       case ('GWF6-PRT6')
         write (exg_name, '(a,i0)') 'GWF-PRT_', exg_id
         if (both_local) &
-          call gwfprt_cr( &
+          call register_gwfprt( &
           fname, &
           exg_name, &
           exg_id, &
@@ -156,7 +156,7 @@ contains
       case ('SWF6-GWF6')
         write (exg_name, '(a,i0)') 'SWF-GWF_', exg_id
         if (both_local) &
-          call swfgwf_cr( &
+          call register_swfgwf( &
           fname, &
           exg_name, &
           exg_id, &

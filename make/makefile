@@ -4,43 +4,43 @@
 include ./makedefaults
 
 # Define the source file directories
-SOURCEDIR1=../src
-SOURCEDIR2=../src/Idm
-SOURCEDIR3=../src/Idm/selector
-SOURCEDIR4=../src/Exchange
-SOURCEDIR5=../src/Distributed
-SOURCEDIR6=../src/Solution
-SOURCEDIR7=../src/Solution/LinearMethods
-SOURCEDIR8=../src/Solution/ParticleTracker
-SOURCEDIR9=../src/Solution/PETSc
-SOURCEDIR10=../src/Timing
-SOURCEDIR11=../src/Utilities
-SOURCEDIR12=../src/Utilities/Idm
-SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR14=../src/Utilities/TimeSeries
-SOURCEDIR15=../src/Utilities/Memory
-SOURCEDIR16=../src/Utilities/OutputControl
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/Libraries
-SOURCEDIR19=../src/Utilities/Libraries/rcm
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/sparskit2
-SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Libraries/sparsekit
-SOURCEDIR24=../src/Utilities/Vector
-SOURCEDIR25=../src/Utilities/Matrix
-SOURCEDIR26=../src/Utilities/Observation
-SOURCEDIR27=../src/Model
-SOURCEDIR28=../src/Model/Connection
-SOURCEDIR29=../src/Model/ParticleTracking
-SOURCEDIR30=../src/Model/SurfaceWaterFlow
-SOURCEDIR31=../src/Model/GroundWaterTransport
-SOURCEDIR32=../src/Model/ModelUtilities
-SOURCEDIR33=../src/Model/GroundWaterFlow
-SOURCEDIR34=../src/Model/Discretization
-SOURCEDIR35=../src/Model/TransportModel
-SOURCEDIR36=../src/Model/Geometry
-SOURCEDIR37=../src/Model/GroundWaterEnergy
+SOURCEDIR1=..\src
+SOURCEDIR2=..\src\Distributed
+SOURCEDIR3=..\src\Exchange
+SOURCEDIR4=..\src\Idm
+SOURCEDIR5=..\src\Idm\selector
+SOURCEDIR6=..\src\Model
+SOURCEDIR7=..\src\Model\Connection
+SOURCEDIR8=..\src\Model\Discretization
+SOURCEDIR9=..\src\Model\Geometry
+SOURCEDIR10=..\src\Model\GroundWaterEnergy
+SOURCEDIR11=..\src\Model\GroundWaterFlow
+SOURCEDIR12=..\src\Model\GroundWaterTransport
+SOURCEDIR13=..\src\Model\ModelUtilities
+SOURCEDIR14=..\src\Model\ParticleTracking
+SOURCEDIR15=..\src\Model\SurfaceWaterFlow
+SOURCEDIR16=..\src\Model\TransportModel
+SOURCEDIR17=..\src\Solution
+SOURCEDIR18=..\src\Solution\LinearMethods
+SOURCEDIR19=..\src\Solution\ParticleTracker
+SOURCEDIR20=..\src\Solution\PETSc
+SOURCEDIR21=..\src\Timing
+SOURCEDIR22=..\src\Utilities
+SOURCEDIR23=..\src\Utilities\ArrayRead
+SOURCEDIR24=..\src\Utilities\Idm
+SOURCEDIR25=..\src\Utilities\Idm\mf6blockfile
+SOURCEDIR26=..\src\Utilities\Libraries
+SOURCEDIR27=..\src\Utilities\Libraries\blas
+SOURCEDIR28=..\src\Utilities\Libraries\daglib
+SOURCEDIR29=..\src\Utilities\Libraries\rcm
+SOURCEDIR30=..\src\Utilities\Libraries\sparsekit
+SOURCEDIR31=..\src\Utilities\Libraries\sparskit2
+SOURCEDIR32=..\src\Utilities\Matrix
+SOURCEDIR33=..\src\Utilities\Memory
+SOURCEDIR34=..\src\Utilities\Observation
+SOURCEDIR35=..\src\Utilities\OutputControl
+SOURCEDIR36=..\src\Utilities\TimeSeries
+SOURCEDIR37=..\src\Utilities\Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -405,6 +405,7 @@ $(OBJDIR)/VirtualGwtModel.o \
 $(OBJDIR)/VirtualGwfModel.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/ModelRegistrar.o \
+$(OBJDIR)/VirtualPrtExchange.o \
 $(OBJDIR)/VirtualGwtExchange.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweExchange.o \
@@ -441,8 +442,7 @@ $(OBJDIR)/Iunit.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/ExplicitModel.o \
-$(OBJDIR)/VirtualSwfExchange.o \
-$(OBJDIR)/VirtualPrtExchange.o
+$(OBJDIR)/VirtualSwfExchange.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)

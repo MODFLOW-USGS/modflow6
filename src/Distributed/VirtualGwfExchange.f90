@@ -9,7 +9,7 @@ module VirtualGwfExchangeModule
   implicit none
   private
 
-  public :: add_virtual_gwf_exchange
+  public :: register_virtual_gwfgwf
 
   !> For synchronization of GWF specific exchange data:
   !< the exchange movers.
@@ -25,7 +25,6 @@ module VirtualGwfExchangeModule
     ! private
     logical(LGP), private :: has_mvr !< backing field for function
   contains
-    procedure :: create => vfx_create
     procedure :: prepare_stage => vfx_prepare_stage
     procedure :: destroy => vfx_destroy
     procedure :: get_send_items => vfx_get_send_items
@@ -41,7 +40,7 @@ contains
 
 !> @brief Add a virtual GWF-GWF exchange to the simulation
 !<
-  subroutine add_virtual_gwf_exchange(name, exchange_id, model1_id, model2_id)
+  subroutine register_virtual_gwfgwf(name, exchange_id, model1_id, model2_id)
     integer(I4B) :: exchange_id
     character(len=*) :: name
     integer(I4B) :: model1_id
@@ -51,31 +50,18 @@ contains
     class(*), pointer :: obj_ptr
 
     allocate (v_exg)
-    call v_exg%create(name, exchange_id, model1_id, model2_id)
+    call v_exg%VirtualExchangeType%create(name, exchange_id, model1_id, model2_id)
+    v_exg%container_type = VDC_GWFEXG_TYPE
+
+    call v_exg%allocate_data()
+    call v_exg%init_virtual_data()
+
+    v_exg%has_mvr = .false.
 
     obj_ptr => v_exg
     call virtual_exchange_list%Add(obj_ptr)
 
-  end subroutine add_virtual_gwf_exchange
-
-!> @brief Create a virtual GWF-GWF exchange
-!<
-  subroutine vfx_create(this, name, exg_id, m1_id, m2_id)
-    class(VirtualGwfExchangeType) :: this
-    character(len=*) :: name
-    integer(I4B) :: exg_id
-    integer(I4B) :: m1_id
-    integer(I4B) :: m2_id
-
-    call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
-    this%container_type = VDC_GWFEXG_TYPE
-
-    call this%allocate_data()
-    call this%init_virtual_data()
-
-    this%has_mvr = .false.
-
-  end subroutine vfx_create
+  end subroutine register_virtual_gwfgwf
 
   subroutine init_virtual_data(this)
     class(VirtualGwfExchangeType) :: this

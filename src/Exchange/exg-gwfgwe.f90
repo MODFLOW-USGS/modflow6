@@ -20,7 +20,7 @@ module GwfGweExchangeModule
 
   implicit none
   public :: GwfGweExchangeType
-  public :: gwfgwe_cr
+  public :: register_gwfgwe
 
   type, extends(BaseExchangeType) :: GwfGweExchangeType
 
@@ -44,7 +44,7 @@ contains
 
   !> @brief Create a new GWF to GWE exchange object
   !<
-  subroutine gwfgwe_cr(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_gwfgwe(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
@@ -83,7 +83,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwfgwe_cr
+  end subroutine register_gwfgwe
 
   !> @brief Allocate and read
   !<

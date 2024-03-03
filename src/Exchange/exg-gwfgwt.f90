@@ -20,7 +20,7 @@ module GwfGwtExchangeModule
 
   implicit none
   public :: GwfGwtExchangeType
-  public :: gwfgwt_cr
+  public :: register_gwfgwt
 
   type, extends(BaseExchangeType) :: GwfGwtExchangeType
 
@@ -44,7 +44,7 @@ contains
 
   !> @brief Create a new GWF to GWT exchange object
   !<
-  subroutine gwfgwt_cr(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_gwfgwt(filename, name, id, m1_id, m2_id, input_mempath)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
@@ -83,7 +83,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwfgwt_cr
+  end subroutine register_gwfgwt
 
   !> @brief Allocate and read
   !<
