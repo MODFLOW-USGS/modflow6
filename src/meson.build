@@ -360,7 +360,8 @@ modflow_sources = files(
     'RunControlFactory.F90',
     'ModelFactory.f90',
     'ModelRegistrar.f90',
-    'ExchangeFactory.f90'
+    'ExchangeFactory.f90',
+    'ExchangeRegistrar.f90'
 )
 
 modflow_petsc_sources = files(

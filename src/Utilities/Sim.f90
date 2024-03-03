@@ -54,7 +54,7 @@ contains
   subroutine check_model_name(mtype, mname)
     ! -- dummy
     character(len=*), intent(in) :: mtype
-    character(len=*), intent(inout) :: mname
+    character(len=*), intent(in) :: mname
     ! -- local
     integer :: ilen
     integer :: i

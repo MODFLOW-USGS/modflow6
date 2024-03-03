@@ -93,14 +93,20 @@ contains
   !!
   !! Create a new SWF to GWF exchange object.
   !<
-  subroutine register_swfgwf(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_swfgwf( &
+    exchange_id, &
+    exchange_name, &
+    exchange_file, &
+    exchange_mempath, &
+    model1_id, &
+    model2_id)
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading
-    character(len=*) :: name !< exchange name
-    integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1_id !< id for model 1
-    integer(I4B), intent(in) :: m2_id !< id for model 2
-    character(len=*), intent(in) :: input_mempath
+    integer(I4B), intent(in) :: exchange_id !< id for the exchange
+    character(len=*), intent(in) :: exchange_name !< exchange name
+    character(len=*), intent(in) :: exchange_file !< filename for reading
+    character(len=*), intent(in) :: exchange_mempath !< exchange input memory path
+    integer(I4B), intent(in) :: model1_id !< id for model 1
+    integer(I4B), intent(in) :: model2_id !< id for model 2
     ! -- local
     type(SwfGwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -113,18 +119,18 @@ contains
     call AddBaseExchangeToList(baseexchangelist, baseexchange)
     !
     ! -- Assign id and name
-    exchange%id = id
-    exchange%name = name
+    exchange%id = exchange_id
+    exchange%name = exchange_name
     exchange%memoryPath = create_mem_path(exchange%name)
-    exchange%input_mempath = input_mempath
+    exchange%input_mempath = exchange_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
-    exchange%filename = filename
+    exchange%filename = exchange_file
     exchange%typename = 'SWF-GWF'
     !
     ! -- set swfmodel1
-    m1_index = model_loc_idx(m1_id)
+    m1_index = model_loc_idx(model1_id)
     if (m1_index > 0) then
       mb => GetBaseModelFromList(basemodellist, m1_index)
       select type (mb)
@@ -137,7 +143,7 @@ contains
     ! exchange%is_datacopy = .not. exchange%v_model1%is_local
     !
     ! -- set gwfmodel2
-    m2_index = model_loc_idx(m2_id)
+    m2_index = model_loc_idx(model2_id)
     if (m2_index > 0) then
       mb => GetBaseModelFromList(basemodellist, m2_index)
       select type (mb)

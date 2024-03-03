@@ -118,7 +118,13 @@ contains
   !!
   !! Create a new GWF to GWF exchange object.
   !<
-  subroutine register_gwfgwf(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_gwfgwf( &
+    exchange_id, &
+    exchange_name, &
+    exchange_file, &
+    exchange_mempath, &
+    model1_id, &
+    model2_id)
     ! -- modules
     use BaseModelModule, only: BaseModelType
     use VirtualModelModule, only: get_virtual_model
@@ -126,12 +132,12 @@ contains
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading
-    character(len=*) :: name !< exchange name
-    integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1_id !< id for model 1
-    integer(I4B), intent(in) :: m2_id !< id for model 2
-    character(len=*), intent(in) :: input_mempath
+    integer(I4B), intent(in) :: exchange_id !< id for the exchange
+    character(len=*), intent(in) :: exchange_name !< exchange name
+    character(len=*), intent(in) :: exchange_file !< filename for reading
+    character(len=*), intent(in) :: exchange_mempath !< exchange input memory path
+    integer(I4B), intent(in) :: model1_id !< id for model 1
+    integer(I4B), intent(in) :: model2_id !< id for model 2
     ! -- local
     type(GwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
@@ -144,18 +150,18 @@ contains
     call AddBaseExchangeToList(baseexchangelist, baseexchange)
     !
     ! -- Assign id and name
-    exchange%id = id
-    exchange%name = name
+    exchange%id = exchange_id
+    exchange%name = exchange_name
     exchange%memoryPath = create_mem_path(exchange%name)
-    exchange%input_mempath = input_mempath
+    exchange%input_mempath = exchange_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
-    exchange%filename = filename
+    exchange%filename = exchange_file
     exchange%typename = 'GWF-GWF'
     !
     ! -- set gwfmodel1
-    m1_index = model_loc_idx(m1_id)
+    m1_index = model_loc_idx(model1_id)
     if (m1_index > 0) then
       mb => GetBaseModelFromList(basemodellist, m1_index)
       select type (mb)
@@ -164,11 +170,11 @@ contains
         exchange%gwfmodel1 => mb
       end select
     end if
-    exchange%v_model1 => get_virtual_model(m1_id)
+    exchange%v_model1 => get_virtual_model(model1_id)
     exchange%is_datacopy = .not. exchange%v_model1%is_local
     !
     ! -- set gwfmodel2
-    m2_index = model_loc_idx(m2_id)
+    m2_index = model_loc_idx(model2_id)
     if (m2_index > 0) then
       mb => GetBaseModelFromList(basemodellist, m2_index)
       select type (mb)
@@ -177,7 +183,7 @@ contains
         exchange%gwfmodel2 => mb
       end select
     end if
-    exchange%v_model2 => get_virtual_model(m2_id)
+    exchange%v_model2 => get_virtual_model(model2_id)
     !
     ! -- Verify that gwf model1 is of the correct type
     if (.not. associated(exchange%gwfmodel1) .and. m1_index > 0) then

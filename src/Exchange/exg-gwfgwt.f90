@@ -44,16 +44,22 @@ contains
 
   !> @brief Create a new GWF to GWT exchange object
   !<
-  subroutine register_gwfgwt(filename, name, id, m1_id, m2_id, input_mempath)
+  subroutine register_gwfgwt( &
+    exchange_id, &
+    exchange_name, &
+    exchange_file, &
+    exchange_mempath, &
+    model1_id, &
+    model2_id)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading
-    character(len=*) :: name !< exchange name
-    integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1_id !< id for model 1
-    integer(I4B), intent(in) :: m2_id !< id for model 2
-    character(len=*), intent(in) :: input_mempath
+    integer(I4B), intent(in) :: exchange_id !< id for the exchange
+    character(len=*), intent(in) :: exchange_name !< exchange name
+    character(len=*), intent(in) :: exchange_file !< filename for reading
+    character(len=*), intent(in) :: exchange_mempath !< exchange input memory path
+    integer(I4B), intent(in) :: model1_id !< id for model 1
+    integer(I4B), intent(in) :: model2_id !< id for model 2
     ! -- local
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGwtExchangeType), pointer :: exchange => null()
@@ -64,19 +70,19 @@ contains
     call AddBaseExchangeToList(baseexchangelist, baseexchange)
     !
     ! -- Assign id and name
-    exchange%id = id
-    exchange%name = name
+    exchange%id = exchange_id
+    exchange%name = exchange_name
     exchange%memoryPath = create_mem_path(exchange%name)
-    exchange%input_mempath = input_mempath
+    exchange%input_mempath = exchange_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
-    exchange%filename = filename
+    exchange%filename = exchange_file
     exchange%typename = 'GWF-GWT'
     !
     ! -- NB: convert from id to local model index in base model list
-    exchange%m1_idx = model_loc_idx(m1_id)
-    exchange%m2_idx = model_loc_idx(m2_id)
+    exchange%m1_idx = model_loc_idx(model1_id)
+    exchange%m2_idx = model_loc_idx(model2_id)
     !
     ! -- set model pointers
     call exchange%set_model_pointers()

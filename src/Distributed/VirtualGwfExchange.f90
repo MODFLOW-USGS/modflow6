@@ -40,17 +40,17 @@ contains
 
 !> @brief Add a virtual GWF-GWF exchange to the simulation
 !<
-  subroutine register_virtual_gwfgwf(name, exchange_id, model1_id, model2_id)
-    integer(I4B) :: exchange_id
-    character(len=*) :: name
-    integer(I4B) :: model1_id
-    integer(I4B) :: model2_id
+  subroutine register_virtual_gwfgwf(id, name, model1_id, model2_id)
+    integer(I4B), intent(in) :: id
+    character(len=*), intent(in) :: name
+    integer(I4B), intent(in) :: model1_id
+    integer(I4B), intent(in) :: model2_id
     ! local
     class(VirtualGwfExchangeType), pointer :: v_exg
     class(*), pointer :: obj_ptr
 
     allocate (v_exg)
-    call v_exg%VirtualExchangeType%create(name, exchange_id, model1_id, model2_id)
+    call v_exg%VirtualExchangeType%create(name, id, model1_id, model2_id)
     v_exg%container_type = VDC_GWFEXG_TYPE
 
     call v_exg%allocate_data()

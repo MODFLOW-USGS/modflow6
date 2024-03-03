@@ -24,12 +24,11 @@ contains
 
   !> @brief Add a virtual SWF-SWF exchange to the simulation
   !<
-  subroutine register_virtual_swfswf(name, exchange_id, &
-                                     model1_id, model2_id)
-    character(len=*) :: name
-    integer(I4B) :: exchange_id
-    integer(I4B) :: model1_id
-    integer(I4B) :: model2_id
+  subroutine register_virtual_swfswf(id, name, model1_id, model2_id)
+    integer(I4B), intent(in) :: id
+    character(len=*), intent(in) :: name
+    integer(I4B), intent(in) :: model1_id
+    integer(I4B), intent(in) :: model2_id
     ! noop
   end subroutine register_virtual_swfswf
 

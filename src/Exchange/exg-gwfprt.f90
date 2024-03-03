@@ -38,16 +38,22 @@ module GwfPrtExchangeModule
 contains
 
   !> @brief Create a new GWF to PRT exchange object
-  subroutine register_gwfprt(filename, name, id, m1id, m2id, input_mempath)
+  subroutine register_gwfprt( &
+    exchange_id, &
+    exchange_name, &
+    exchange_file, &
+    exchange_mempath, &
+    model1_id, &
+    model2_id)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading
-    character(len=*) :: name !< exchange name
-    integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
-    character(len=*), intent(in) :: input_mempath
+    integer(I4B), intent(in) :: exchange_id !< id for the exchange
+    character(len=*), intent(in) :: exchange_name !< exchange name
+    character(len=*), intent(in) :: exchange_file !< filename for reading
+    character(len=*), intent(in) :: exchange_mempath !< exchange input memory path
+    integer(I4B), intent(in) :: model1_id !< id for model 1
+    integer(I4B), intent(in) :: model2_id !< id for model 2
     ! -- local
     type(GwfPrtExchangeType), pointer :: exchange => null()
     class(BaseExchangeType), pointer :: baseexchange => null()
@@ -58,19 +64,19 @@ contains
     call AddBaseExchangeToList(baseexchangelist, baseexchange)
     !
     ! -- Assign id and name
-    exchange%id = id
-    exchange%name = name
+    exchange%id = exchange_id
+    exchange%name = exchange_name
     exchange%memoryPath = create_mem_path(exchange%name)
-    exchange%input_mempath = input_mempath
+    exchange%input_mempath = exchange_mempath
     !
     ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
-    exchange%filename = filename
+    exchange%filename = exchange_file
     exchange%typename = 'GWF-PRT'
     !
     ! -- NB: convert from id to local model index in base model list
-    exchange%m1id = model_loc_idx(m1id)
-    exchange%m2id = model_loc_idx(m2id)
+    exchange%m1id = model_loc_idx(model1_id)
+    exchange%m2id = model_loc_idx(model2_id)
     !
     ! -- set model pointers
     call exchange%set_model_pointers()

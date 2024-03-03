@@ -538,6 +538,7 @@
 		<File RelativePath="..\src\ModelFactory.f90"/>
 		<File RelativePath="..\src\ModelRegistrar.f90"/>
 		<File RelativePath="..\src\ExchangeFactory.f90"/>
+		<File RelativePath="..\src\ExchangeRegistrar.f90"/>
 		<File RelativePath="..\src\RunControlFactory.F90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>

@@ -1,11 +1,23 @@
 module ModelFactoryModule
   use KindModule, only: I4B
   use ConstantsModule, only: LINELENGTH, LENMODELNAME
-  use SimModule, only: check_model_name, store_error
+  use SimModule, only: store_error, check_model_name
   use SimVariablesModule, only: model_names, model_loc_idx, &
                                 proc_id, simulation_mode
   use CharacterStringModule, only: CharacterStringType
   use ModelRegistrarModule
+  ! TODO BEGIN TEMPLATING
+  use GwfModule, only: register_gwf
+  use VirtualGwfModelModule, only: register_virtual_gwf
+  use GwtModule, only: register_gwt
+  use VirtualGwtModelModule, only: register_virtual_gwt
+  use GweModule, only: register_gwe
+  use VirtualGweModelModule, only: register_virtual_gwe
+  use PrtModule, only: register_prt
+  use VirtualPrtModelModule, only: register_virtual_prt
+  use SwfModule, only: register_swf
+  use VirtualSwfModelModule, only: register_virtual_swf
+  ! TODO END TEMPLATING
 
   implicit none
   private
@@ -14,79 +26,78 @@ module ModelFactoryModule
 contains
 
   !> Create models
-  subroutine create_models(mtypes, mfnames, mnames)
-    ! -- modules
-    ! START TEMPLATING
-    use GwfModule, only: register_gwf
-    use VirtualGwfModelModule, only: register_virtual_gwf
-    use GwtModule, only: register_gwt
-    use VirtualGwtModelModule, only: register_virtual_gwt
-    use GweModule, only: register_gwe
-    use VirtualGweModelModule, only: register_virtual_gwe
-    use PrtModule, only: register_prt
-    use VirtualPrtModelModule, only: register_virtual_prt
-    use SwfModule, only: register_swf
-    use VirtualSwfModelModule, only: register_virtual_swf
-    ! END TEMPLATING
-    ! -- dummy
+  subroutine create_models( &
+    types, &
+    names, &
+    files)
+    ! dummy
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer, intent(in) :: mtypes !< model types
+      pointer, intent(in) :: types
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer, intent(in) :: mfnames !< model file names
+      pointer, intent(in) :: names
     type(CharacterStringType), dimension(:), contiguous, &
-      pointer, intent(in) :: mnames !< model names
-    ! -- local
-    integer(I4B) :: n, im
-    character(len=LINELENGTH) :: errmsg, model_name, model_type, fname
-    procedure(register_actual_model), pointer :: ram
-    procedure(register_virtual_model), pointer :: rvm
+      pointer, intent(in) :: files
+    ! local
+    integer(I4B) :: global_model_id
+    integer(I4B) :: model_id
+    character(len=LINELENGTH) :: model_type
+    character(len=LINELENGTH) :: model_name
+    character(len=LINELENGTH) :: model_file
+    character(len=LINELENGTH) :: errmsg
+    procedure(register_actual_model), pointer :: register_actual
+    procedure(register_virtual_model), pointer :: register_virtual
 
-    im = 0
-    do n = 1, size(mtypes)
-      ! -- attributes for this model
-      model_type = mtypes(n)
-      fname = mfnames(n)
-      model_name = mnames(n)
+    model_id = 0
+    do global_model_id = 1, size(types)
+      model_type = types(global_model_id)
+      model_name = names(global_model_id)
+      model_file = files(global_model_id)
 
       ! make sure model name is valid
       call check_model_name(model_type, model_name)
 
       ! increment global model id
-      model_names(n) = model_name(1:LENMODELNAME)
-      model_loc_idx(n) = -1
+      model_names(global_model_id) = model_name(1:LENMODELNAME)
+      model_loc_idx(global_model_id) = -1
 
-      ! -- pick the registration procedures for this model type
-      !    todo: hashmap not select case? (mtype -> register_*)
+      ! pick the registration procedures for this model type
       select case (model_type)
-        ! START TEMPLATING
+        ! TODO BEGIN TEMPLATING
       case ('GWF6')
-        ram => register_gwf
-        rvm => register_virtual_gwf
+        register_actual => register_gwf
+        register_virtual => register_virtual_gwf
       case ('GWT6')
-        ram => register_gwt
-        rvm => register_virtual_gwt
+        register_actual => register_gwt
+        register_virtual => register_virtual_gwt
       case ('GWE6')
-        ram => register_gwe
-        rvm => register_virtual_gwe
+        register_actual => register_gwe
+        register_virtual => register_virtual_gwe
       case ('PRT6')
-        ram => register_prt
-        rvm => register_virtual_prt
+        register_actual => register_prt
+        register_virtual => register_virtual_prt
       case ('SWF6')
-        ram => register_swf
-        rvm => register_virtual_swf
-        ! END TEMPLATING
+        register_actual => register_swf
+        register_virtual => register_virtual_swf
+        ! TODO END TEMPLATING
       case default
         write (errmsg, '(a,a)') &
           'Unknown simulation model type: ', trim(model_type)
         call store_error(errmsg, terminate=.true.)
       end select
 
-      ! -- register the model
-      call register_model(ram, rvm, n, im, model_names(n), model_type, fname)
+      ! register the model
+      call register_model( &
+        register_actual, &
+        register_virtual, &
+        global_model_id, &
+        model_id, &
+        model_names(global_model_id), &
+        model_type, &
+        model_file)
     end do
 
-    ! -- sanity check
-    if (simulation_mode == 'PARALLEL' .and. im == 0) then
+    ! sanity check
+    if (simulation_mode == 'PARALLEL' .and. model_id == 0) then
       write (errmsg, '(a, i0)') &
         'No MODELS assigned to process ', proc_id
       call store_error(errmsg, terminate=.true.)
