@@ -254,15 +254,6 @@ description use MODFLOW-NWT approach for upstream weighting
 mf6internal inwtupw
 
 block options
-name dev_minimum_saturated_thickness
-type double precision
-reader urword
-optional true
-longname set minimum allowed saturated thickness
-description set minimum allowed saturated thickness
-mf6internal satmin
-
-block options
 name dev_omega
 type double precision
 reader urword

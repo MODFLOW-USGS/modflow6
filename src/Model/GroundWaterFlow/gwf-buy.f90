@@ -1243,7 +1243,7 @@ contains
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
                    this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega, this%npf%satmin)
+                   this%npf%satomega)
     end if
     !
     ! -- Calculate buoyancy term
@@ -1326,7 +1326,7 @@ contains
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
                    this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega, this%npf%satmin)
+                   this%npf%satomega)
     end if
     !
     ! -- Calculate terms

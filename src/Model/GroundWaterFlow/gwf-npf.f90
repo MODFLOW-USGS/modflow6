@@ -87,7 +87,6 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous :: wetdry => null() !< wetdry array
     real(DP), dimension(:), pointer, contiguous :: sat => null() !< saturation (0. to 1.) for each cell
     real(DP), dimension(:), pointer, contiguous :: condsat => null() !< saturated conductance (symmetric array)
-    real(DP), pointer :: satmin => null() !< minimum saturated thickness
     integer(I4B), dimension(:), pointer, contiguous :: ibotnode => null() !< bottom node used if igwfnewtonur /= 0
     !
     real(DP), dimension(:, :), pointer, contiguous :: spdis => null() !< specific discharge : qx, qy, qz (nodes, 3)
@@ -566,7 +565,7 @@ contains
                          this%dis%con%cl1(this%dis%con%jas(ii)), &
                          this%dis%con%cl2(this%dis%con%jas(ii)), &
                          this%dis%con%hwva(this%dis%con%jas(ii)), &
-                         this%satomega, this%satmin)
+                         this%satomega)
           end if
           !
           ! -- Fill row n
@@ -672,7 +671,7 @@ contains
             !filledterm = cond
             filledterm = matrix_sln%get_value_pos(idxglo(ii))
             derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups), &
-                                                  this%satomega, this%satmin)
+                                                  this%satomega)
             idiagm = this%dis%con%ia(m)
             ! fill jacobian for n being the upstream node
             if (iups == n) then
@@ -825,8 +824,7 @@ contains
     ! -- Newton-Raphson Formulation
     if (this%inewton /= 0) then
       thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn, &
-                                    this%satomega, this%satmin)
-      !if (thksat < this%satmin) thksat = this%satmin
+                                    this%satomega)
     end if
     !
     ! -- Return
@@ -879,7 +877,7 @@ contains
                      this%dis%con%cl1(this%dis%con%jas(icon)), &
                      this%dis%con%cl2(this%dis%con%jas(icon)), &
                      this%dis%con%hwva(this%dis%con%jas(icon)), &
-                     this%satomega, this%satmin)
+                     this%satomega)
     end if
     !
     ! -- Initialize hntemp and hmtemp
@@ -1039,7 +1037,6 @@ contains
     call mem_deallocate(this%wetfct)
     call mem_deallocate(this%iwetit)
     call mem_deallocate(this%ihdwet)
-    call mem_deallocate(this%satmin)
     call mem_deallocate(this%ibotnode)
     call mem_deallocate(this%iwetdry)
     call mem_deallocate(this%iangle1)
@@ -1123,7 +1120,6 @@ contains
     call mem_allocate(this%wetfct, 'WETFCT', this%memoryPath)
     call mem_allocate(this%iwetit, 'IWETIT', this%memoryPath)
     call mem_allocate(this%ihdwet, 'IHDWET', this%memoryPath)
-    call mem_allocate(this%satmin, 'SATMIN', this%memoryPath)
     call mem_allocate(this%iangle1, 'IANGLE1', this%memoryPath)
     call mem_allocate(this%iangle2, 'IANGLE2', this%memoryPath)
     call mem_allocate(this%iangle3, 'IANGLE3', this%memoryPath)
@@ -1165,7 +1161,6 @@ contains
     this%wetfct = DONE
     this%iwetit = 1
     this%ihdwet = 0
-    this%satmin = DZERO ! DEM7
     this%iangle1 = 0
     this%iangle2 = 0
     this%iangle3 = 0
@@ -1336,9 +1331,6 @@ contains
     if (found%inwtupw) &
       write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting method will be &
                                   &used'
-    if (found%satmin) &
-      write (this%iout, '(4x,a,1pg15.6)') 'Minimum saturated thickness has been &
-                                          &set to: ', this%satmin
     if (found%satomega) &
       write (this%iout, '(4x,a,1pg15.6)') 'Saturation omega: ', this%satomega
     if (found%irewet) &
@@ -1402,7 +1394,6 @@ contains
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
     call mem_set_value(this%inwtupw, 'INWTUPW', this%input_mempath, found%inwtupw)
-    call mem_set_value(this%satmin, 'SATMIN', this%input_mempath, found%satmin)
     call mem_set_value(this%satomega, 'SATOMEGA', this%input_mempath, &
                        found%satomega)
     call mem_set_value(this%irewet, 'IREWET', this%input_mempath, found%irewet)
@@ -2167,7 +2158,7 @@ contains
                      botn, botm, &
                      this%dis%con%cl1(jj), &
                      this%dis%con%cl2(jj), &
-                     fawidth, this%satomega, this%satmin)
+                     fawidth, this%satomega)
       end if
       this%condsat(jj) = csat
     end do
@@ -2519,7 +2510,7 @@ contains
   !<
   function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, iusg, &
                  iupw, condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
-                 botn, botm, cln, clm, fawidth, satomega, satminopt) &
+                 botn, botm, cln, clm, fawidth, satomega) &
     result(condnm)
     ! -- return
     real(DP) :: condnm
@@ -2549,10 +2540,8 @@ contains
     real(DP), intent(in) :: clm
     real(DP), intent(in) :: fawidth
     real(DP), intent(in) :: satomega
-    real(DP), optional, intent(in) :: satminopt
     ! -- local
     integer(I4B) :: indk
-    real(DP) :: satmin
     real(DP) :: sn
     real(DP) :: sm
     real(DP) :: thksatn
@@ -2562,12 +2551,6 @@ contains
     real(DP) :: top, bot
     real(DP) :: athk
     real(DP) :: afac
-    !
-    if (present(satminopt)) then
-      satmin = satminopt
-    else
-      satmin = DZERO
-    end if
     !
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -2604,11 +2587,11 @@ contains
             top = topn
             bot = botn
           end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega, satmin)
-          sm = sQuadraticSaturation(top, bot, hm, satomega, satmin)
+          sn = sQuadraticSaturation(top, bot, hn, satomega)
+          sm = sQuadraticSaturation(top, bot, hm, satomega)
         else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega, satmin)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega, satmin)
+          sn = sQuadraticSaturation(topn, botn, hn, satomega)
+          sm = sQuadraticSaturation(topm, botm, hm, satomega)
         end if
         !
         if (hn > hm) then
@@ -2998,7 +2981,7 @@ contains
                         this%inewton, ihc, this%iusgnrhc, &
                         this%hnew(n), this%hnew(m), this%sat(n), this%sat(m), &
                         this%dis%top(n), this%dis%top(m), this%dis%bot(n), &
-                        this%dis%bot(m), this%satomega, this%satmin)
+                        this%dis%bot(m), this%satomega)
           area = area * dz
           call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
           call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
@@ -3298,8 +3281,7 @@ contains
                             this%dis%top(m), &
                             this%dis%bot(n), &
                             this%dis%bot(m), &
-                            this%satomega, &
-                            this%satmin)
+                            this%satomega)
     !
     ! -- Return
     return
@@ -3309,7 +3291,7 @@ contains
   !<
   function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg, &
                     hn, hm, satn, satm, topn, topm, botn, botm, &
-                    satomega, satminopt) result(res)
+                    satomega) result(res)
     ! -- return
     real(DP) :: res
     ! -- dummy
@@ -3329,10 +3311,8 @@ contains
     real(DP), intent(in) :: botn
     real(DP), intent(in) :: botm
     real(DP), intent(in) :: satomega
-    real(DP), optional, intent(in) :: satminopt
     ! -- local
     integer(I4B) :: indk
-    real(DP) :: satmin
     real(DP) :: sn
     real(DP) :: sm
     real(DP) :: thksatn
@@ -3340,12 +3320,6 @@ contains
     real(DP) :: sill_top, sill_bot
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
-    !
-    if (present(satminopt)) then
-      satmin = satminopt
-    else
-      satmin = DZERO
-    end if
     !
     ! -- If either n or m is inactive then saturated thickness is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -3389,11 +3363,11 @@ contains
             top = topn
             bot = botn
           end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega, satmin)
-          sm = sQuadraticSaturation(top, bot, hm, satomega, satmin)
+          sn = sQuadraticSaturation(top, bot, hn, satomega)
+          sm = sQuadraticSaturation(top, bot, hm, satomega)
         else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega, satmin)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega, satmin)
+          sn = sQuadraticSaturation(topn, botn, hn, satomega)
+          sm = sQuadraticSaturation(topm, botm, hm, satomega)
         end if
         !
         ! -- upstream weight the thickness
