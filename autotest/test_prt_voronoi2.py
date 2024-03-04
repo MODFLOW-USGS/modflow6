@@ -421,6 +421,7 @@ def check_output(idx, test):
         p.show()
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

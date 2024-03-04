@@ -1,51 +1,51 @@
-"""
- An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
- accompanying Techniques & Methods report.
- 
- Energy is added to the right hand side boundary using the energy source loading
- (ESL) package.  Basic model set up is below, with a slab of unit thickness 
- (1.0 m) that is 100 m "deep" with energy being loaded on right side.  
- Temperature will begin to rise on the right and propagate to the left. There are
- no sinks in this first example.  The titles that follow, for example
- "Section 43, case x" refer to specific analytical solutions found in Carslaw &
- Jaeger (1947)
- 
- Section 43, case i:
- -------------------
+r"""
+An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
+accompanying Techniques & Methods report.
 
-        | <--------------------------   10 m   --------------------------> |
-      
-        +------------------------------------------------------------------+
-        |                      Initial temperature = T_0                   | <-- *ESL
-        +------------------------------------------------------------------+
-        ^                                      * ESL: Energy Source Loading Boundary
-        |
-        No heat-flow boundary
+Energy is added to the right hand side boundary using the energy source loading
+(ESL) package.  Basic model set up is below, with a slab of unit thickness 
+(1.0 m) that is 100 m "deep" with energy being loaded on right side.  
+Temperature will begin to rise on the right and propagate to the left. There are
+no sinks in this first example.  The titles that follow, for example
+"Section 43, case x" refer to specific analytical solutions found in Carslaw &
+Jaeger (1947)
 
- 
- Section 43, case ii:
- --------------------
- 
-        +------------------------------------------------------------------+
-        |                     Initial temperature = 0.0                    | <-- *ESL
-        +------------------------------------------------------------------+
-        ^                                     
-        |
-        Specified temperature boundary, T_0
+Section 43, case i:
+-------------------
+
+       | <--------------------------   10 m   --------------------------> |
+     
+       +------------------------------------------------------------------+
+       |                      Initial temperature = T_0                   | <-- *ESL
+       +------------------------------------------------------------------+
+       ^                                      * ESL: Energy Source Loading Boundary
+       |
+       No heat-flow boundary
 
 
- Section 43, case iii:
- ---------------------
-         
+Section 43, case ii:
+--------------------
+
+       +------------------------------------------------------------------+
+       |                     Initial temperature = 0.0                    | <-- *ESL
+       +------------------------------------------------------------------+
+       ^                                     
+       |
+       Specified temperature boundary, T_0
+
+
+Section 43, case iii:
+---------------------
+        
         +------------------------------------------------------------------+
 CTP ->  |                                                                  | <- CTP = T_0
   = T_0 +------------------------------------------------------------------+
-          \-------------------------------------------------------------/
-                                    |
-               Uniform, constant heat production throughout the slab
-      
-      
-   Specified temperature boundary, T_0
+         \-------------------------------------------------------------/
+                                   |
+              Uniform, constant heat production throughout the slab
+     
+     
+  Specified temperature boundary, T_0
 
 """
 
