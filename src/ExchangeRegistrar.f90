@@ -1,7 +1,10 @@
+!> @brief This module exposes a single higher-order routine whose purpose is to register an exchange with
+!! the simulation. The routine accepts procedure pointers to exchange-scoped registration routines. This
+!! could be done in ExchangeFactory (indeed, the latter maps exchange acronyms to registration routines),
+!! but we do registration here to keep ExchangeFactory minimal since editing template files is annoying.
 module ExchangeRegistrarModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LINELENGTH
-  use ListsModule, only: basemodellist
   use SimVariablesModule, only: iout, model_names, model_loc_idx
   use ArrayHandlersModule, only: ifind
   use SimModule, only: store_error
@@ -46,6 +49,7 @@ module ExchangeRegistrarModule
 
 contains
 
+  !> @brief Register an exchange with the simulation.
   subroutine register_exchange( &
     register_actual, &
     register_virtual, &
@@ -99,7 +103,8 @@ contains
       ' will be created to connect model ', model1_id, &
       ' with model ', model2_id
 
-    ! check if models are of the same type
+    ! check if models are the same type
+    ! todo: factor out a routine? can we expect exg name format to stay consistent?
     same_type = exchange_name(1:3) == exchange_name(5:7)
 
     ! an actual exchange should be registered if the models

@@ -68,9 +68,7 @@ contains
       model_loc_idx(global_model_id) = model_id
     end if
 
-    ! proc pointer will be null if the model doesn't support parallel
-    if (associated(register_virtual)) &
-      call register_virtual(global_model_id, model_name, model)
+    call register_virtual(global_model_id, model_name, model)
 
   end subroutine register_model
 
