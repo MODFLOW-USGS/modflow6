@@ -245,15 +245,6 @@ description use MODFLOW-USG upstream-weighted saturation approach
 mf6internal iusgnrhc
 
 block options
-name dev_modflownwt_upstream_weighting
-type keyword
-reader urword
-optional true
-longname use MODFLOW-NWT approach for upstream weighting
-description use MODFLOW-NWT approach for upstream weighting
-mf6internal inwtupw
-
-block options
 name dev_omega
 type double precision
 reader urword

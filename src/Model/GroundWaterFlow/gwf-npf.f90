@@ -49,7 +49,6 @@ module GwfNpfModule
     integer(I4B), pointer :: ithickstrt => null() !< thickstrt option flag
     integer(I4B), pointer :: igwfnewtonur => null() !< newton head dampening using node bottom option flag
     integer(I4B), pointer :: iusgnrhc => null() !< MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer :: inwtupw => null() !< MODFLOW-NWT upstream weighting option flag
     integer(I4B), pointer :: icalcspdis => null() !< Calculate specific discharge at cell centers
     integer(I4B), pointer :: isavspdis => null() !< Save specific discharge at cell centers
     integer(I4B), pointer :: isavsat => null() !< Save sat to budget file
@@ -557,7 +556,7 @@ contains
                          this%icelltype(n), this%icelltype(m), &
                          this%inewton, this%inewton, &
                          this%dis%con%ihc(this%dis%con%jas(ii)), &
-                         this%icellavg, this%iusgnrhc, this%inwtupw, &
+                         this%icellavg, this%iusgnrhc, &
                          this%condsat(this%dis%con%jas(ii)), &
                          hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
                          this%dis%top(n), this%dis%top(m), &
@@ -609,11 +608,8 @@ contains
     real(DP) :: derv
     real(DP) :: hds
     real(DP) :: term
-    real(DP) :: afac
     real(DP) :: topup
     real(DP) :: botup
-    real(DP) :: topdn
-    real(DP) :: botdn
     !
     ! -- add newton terms to solution matrix
     nodes = this%dis%nodes
@@ -656,15 +652,6 @@ contains
             !
             ! get saturated conductivity for derivative
             cond = this%condsat(this%dis%con%jas(ii))
-            !
-            ! -- if using MODFLOW-NWT upstream weighting option apply
-            !    factor to remove average thickness
-            if (this%inwtupw /= 0) then
-              topdn = this%dis%top(idn)
-              botdn = this%dis%bot(idn)
-              afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
-              cond = cond * afac
-            end if
             !
             ! compute additional term
             consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
@@ -869,7 +856,7 @@ contains
                      this%icelltype(n), this%icelltype(m), &
                      this%inewton, this%inewton, &
                      this%dis%con%ihc(this%dis%con%jas(icon)), &
-                     this%icellavg, this%iusgnrhc, this%inwtupw, &
+                     this%icellavg, this%iusgnrhc, &
                      this%condsat(this%dis%con%jas(icon)), &
                      hn, hm, this%sat(n), this%sat(m), hyn, hym, &
                      this%dis%top(n), this%dis%top(m), &
@@ -1029,7 +1016,6 @@ contains
     call mem_deallocate(this%idewatcv)
     call mem_deallocate(this%ithickstrt)
     call mem_deallocate(this%iusgnrhc)
-    call mem_deallocate(this%inwtupw)
     call mem_deallocate(this%isavspdis)
     call mem_deallocate(this%isavsat)
     call mem_deallocate(this%icalcspdis)
@@ -1112,7 +1098,6 @@ contains
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
     call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%memoryPath)
     call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%memoryPath)
-    call mem_allocate(this%inwtupw, 'INWTUPW', this%memoryPath)
     call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%memoryPath)
     call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%memoryPath)
     call mem_allocate(this%isavsat, 'ISAVSAT', this%memoryPath)
@@ -1153,7 +1138,6 @@ contains
     this%idewatcv = 0
     this%ithickstrt = 0
     this%iusgnrhc = 0
-    this%inwtupw = 0
     this%icalcspdis = 0
     this%isavspdis = 0
     this%isavsat = 0
@@ -1328,9 +1312,6 @@ contains
     if (found%iusgnrhc) &
       write (this%iout, '(4x,a)') 'MODFLOW-USG saturation calculation method &
                                   &will be used'
-    if (found%inwtupw) &
-      write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting method will be &
-                                  &used'
     if (found%satomega) &
       write (this%iout, '(4x,a,1pg15.6)') 'Saturation omega: ', this%satomega
     if (found%irewet) &
@@ -1393,7 +1374,6 @@ contains
     call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
-    call mem_set_value(this%inwtupw, 'INWTUPW', this%input_mempath, found%inwtupw)
     call mem_set_value(this%satomega, 'SATOMEGA', this%input_mempath, &
                        found%satomega)
     call mem_set_value(this%irewet, 'IREWET', this%input_mempath, found%irewet)
@@ -1471,36 +1451,6 @@ contains
         'for a model that is using the standard conductance formulation.', &
         'Resetting DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION OPTION from', &
         '1 to 0.'
-    end if
-    !
-    ! -- check that the this%inwtupw option is not specified for non-newton
-    !    models
-    if (this%inwtupw /= 0 .and. this%inewton == 0) then
-      this%inwtupw = 0
-      write (this%iout, '(4x,a,3(1x,a))') &
-        '****WARNING. The DEV_MODFLOWNWT_UPSTREAM_WEIGHTING option has', &
-        'been specified for a model that is using the standard conductance', &
-        'formulation. Resetting DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION from', &
-        '1 to 0.'
-    end if
-    !
-    ! -- check that the transmissivity weighting functions are not specified with
-    !    with the this%inwtupw option
-    if (this%inwtupw /= 0 .and. this%icellavg < 2) then
-      write (errmsg, '(a,2(1x,a))') &
-        'THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
-        'ONLY BE SPECIFIED WITH THE AMT-LMK AND AMT-HMK', &
-        'ALTERNATIVE_CELL_AVERAGING OPTIONS IN THE NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- check that this%iusgnrhc and this%inwtupw have not both been enabled
-    if (this%iusgnrhc /= 0 .and. this%inwtupw /= 0) then
-      write (errmsg, '(a,2(1x,a))') &
-        'THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
-        'AND DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTIONS CANNOT BE', &
-        'SPECIFIED IN THE SAME NPF PACKAGE.'
-      call store_error(errmsg)
     end if
     !
     ! -- set omega value used for saturation calculations
@@ -2151,7 +2101,7 @@ contains
         fawidth = this%dis%con%hwva(jj)
         csat = hcond(1, 1, 1, 1, this%inewton, 0, &
                      ihc, &
-                     this%icellavg, this%iusgnrhc, this%inwtupw, &
+                     this%icellavg, this%iusgnrhc, &
                      DONE, &
                      hn, hm, satn, satm, hyn, hym, &
                      topn, topm, &
@@ -2509,7 +2459,7 @@ contains
   !! which use a weighted hydraulic conductivity.
   !<
   function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, iusg, &
-                 iupw, condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
+                 condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
                  botn, botm, cln, clm, fawidth, satomega) &
     result(condnm)
     ! -- return
@@ -2524,7 +2474,6 @@ contains
     integer(I4B), intent(in) :: ihc
     integer(I4B), intent(in) :: icellavg
     integer(I4B), intent(in) :: iusg
-    integer(I4B), intent(in) :: iupw
     real(DP), intent(in) :: condsat
     real(DP), intent(in) :: hn
     real(DP), intent(in) :: hm
@@ -2550,7 +2499,6 @@ contains
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
     real(DP) :: athk
-    real(DP) :: afac
     !
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -2598,18 +2546,6 @@ contains
           condnm = sn
         else
           condnm = sm
-        end if
-        !
-        ! -- if using MODFLOW-NWT upstream weighting option apply
-        !    factor to remove average thickness
-        if (iupw /= 0) then
-          if (hn > hm) then
-            afac = DTWO / (DONE + (topm - botm) / (topn - botn))
-            condnm = condnm * afac
-          else
-            afac = DTWO / (DONE + (topn - botn) / (topm - botm))
-            condnm = condnm * afac
-          end if
         end if
         !
         ! -- multiply condsat by condnm factor
