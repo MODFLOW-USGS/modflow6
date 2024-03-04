@@ -861,12 +861,12 @@ contains
     integer(I4B), dimension(:) :: mranks
     ! local
     integer(I4B) :: im, imm, ie, ip, cnt
-    integer(I4B) :: nr_models, nr_gwf_models, nr_gwt_models
+    integer(I4B) :: nr_models, nr_gwf_models
     integer(I4B) :: nr_exchanges
     integer(I4B) :: min_per_proc, nr_left
     integer(I4B) :: rank
     integer(I4B), dimension(:), allocatable :: nr_models_proc
-    character(len=:), allocatable :: model_type_str
+    character(len=LENPACKAGETYPE) :: model_type_str
     character(len=LINELENGTH) :: errmsg
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
@@ -894,18 +894,21 @@ contains
     ! count flow models
     nr_models = size(mnames)
     nr_gwf_models = 0
-    nr_gwt_models = 0
     do im = 1, nr_models
       if (mtypes(im) == 'GWF6') then
         nr_gwf_models = nr_gwf_models + 1
-      else if (mtypes(im) == 'GWT6') then
-        nr_gwt_models = nr_gwt_models + 1
-      else
-        model_type_str = mtypes(im)
-        write (errmsg, *) 'Model type ', model_type_str, &
-          ' not supported in parallel mode.'
-        call store_error(errmsg, terminate=.true.)
       end if
+
+      if (mtypes(im) == 'GWF6' .or. &
+          mtypes(im) == 'GWT6' .or. &
+          mtypes(im) == 'GWE6') then
+        cycle
+      end if
+
+      model_type_str = mtypes(im)
+      write (errmsg, *) 'Model type ', model_type_str, &
+        ' not supported in parallel mode.'
+      call store_error(errmsg, terminate=.true.)
     end do
 
     ! calculate nr of flow models for each rank
@@ -933,29 +936,44 @@ contains
       end if
     end do
 
-    ! match transport to flow
+    ! match other models to flow
     nr_exchanges = size(etypes)
-
     do im = 1, nr_models
-      if (.not. mtypes(im) == 'GWT6') cycle
+      if (mtypes(im) == 'GWT6') then
 
-      ! find match
-      do ie = 1, nr_exchanges
-        if (etypes(ie) == 'GWF6-GWT6' .and. mnames(im) == emnames_b(ie)) then
-          ! this is the exchange, now find the flow model's rank
-          rank = 0
-          do imm = 1, nr_models
-            if (mnames(imm) == emnames_a(ie)) then
-              rank = mranks(imm)
-              exit
-            end if
-          end do
+        ! find match
+        do ie = 1, nr_exchanges
+          if (etypes(ie) == 'GWF6-GWT6' .and. mnames(im) == emnames_b(ie)) then
+            rank = 0
+            do imm = 1, nr_models
+              if (mnames(imm) == emnames_a(ie)) then
+                rank = mranks(imm)
+                exit
+              end if
+            end do
+            mranks(im) = rank
+            exit
+          end if
+        end do
 
-          ! we have our rank, assign and go to next transport model
-          mranks(im) = rank
-          exit
-        end if
-      end do
+      else if (mtypes(im) == 'GWE6') then
+        do ie = 1, nr_exchanges
+          if (etypes(ie) == 'GWF6-GWE6' .and. mnames(im) == emnames_b(ie)) then
+            rank = 0
+            do imm = 1, nr_models
+              if (mnames(imm) == emnames_a(ie)) then
+                rank = mranks(imm)
+                exit
+              end if
+            end do
+            mranks(im) = rank
+            exit
+          end if
+        end do
+
+      else
+        cycle ! e.g., for a flow model
+      end if
     end do
 
     ! cleanup
