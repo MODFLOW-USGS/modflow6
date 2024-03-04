@@ -4,8 +4,8 @@
 include ./makedefaults
 
 # Define the source file directories
-SOURCEDIR1=..\src
-SOURCEDIR2=..\..\..\src\Utilities
+SOURCEDIR1=../src
+SOURCEDIR2=../../../src/Utilities
 
 VPATH = \
 ${SOURCEDIR1} \

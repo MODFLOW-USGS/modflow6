@@ -57,11 +57,11 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace $(OS_macro) -cpp
+		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -cpp
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace $(OS_macro) -cpp
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
 		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -Qdiag-disable:7416 -Qdiag-disable:7025 -Qdiag-disable:5268 -fpp
