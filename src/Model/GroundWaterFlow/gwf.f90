@@ -27,7 +27,7 @@ module GwfModule
   implicit none
 
   private
-  public :: gwf_cr
+  public :: register_gwf
   public :: GwfModelType
   public :: CastAsGwfModel
   public :: GWF_NBASEPKG, GWF_NMULTIPKG
@@ -134,7 +134,7 @@ contains
   !! (2) assign values
   !!
   !<
-  subroutine gwf_cr(filename, id, modelname)
+  subroutine register_gwf(id, modelname, filename)
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
@@ -145,9 +145,9 @@ contains
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename !< input file
     integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
     character(len=*), intent(in) :: modelname !< name of the model
+    character(len=*), intent(in) :: filename !< input file
     ! -- local
     type(GwfModelType), pointer :: this
     class(BaseModelType), pointer :: model
@@ -208,7 +208,7 @@ contains
     !
     ! -- return
     return
-  end subroutine gwf_cr
+  end subroutine register_gwf
 
   !> @brief Define packages of the model
   !!

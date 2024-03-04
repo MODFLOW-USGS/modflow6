@@ -41,7 +41,7 @@
 !      water, but this value decreases as the mover object consumes water from
 !      it.
 !
-!  2.  In gwf_cr create the mover package by calling the CR subroutine:
+!  2.  In register_gwf create the mover package by calling the CR subroutine:
 !
 !      call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
 !

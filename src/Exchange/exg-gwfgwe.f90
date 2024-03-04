@@ -1,6 +1,6 @@
 module GwfGweExchangeModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENPACKAGENAME
+  use ConstantsModule, only: LENPACKAGENAME, LINELENGTH
   use ListsModule, only: basemodellist, baseexchangelist, &
                          baseconnectionlist
   use SimModule, only: store_error
@@ -16,10 +16,11 @@ module GwfGweExchangeModule
   use GwfModule, only: GwfModelType
   use GweModule, only: GweModelType
   use BndModule, only: BndType, GetBndFromList
+  use MemoryHelperModule, only: create_mem_path
 
   implicit none
   public :: GwfGweExchangeType
-  public :: gwfgwe_cr
+  public :: register_gwfgwe
 
   type, extends(BaseExchangeType) :: GwfGweExchangeType
 
@@ -43,18 +44,25 @@ contains
 
   !> @brief Create a new GWF to GWE exchange object
   !<
-  subroutine gwfgwe_cr(filename, id, m1_id, m2_id)
+  subroutine register_gwfgwe( &
+    exchange_id, &
+    exchange_name, &
+    exchange_file, &
+    exchange_mempath, &
+    model1_id, &
+    model2_id)
     ! -- modules
     use SimVariablesModule, only: model_loc_idx
     ! -- dummy
-    character(len=*), intent(in) :: filename
-    integer(I4B), intent(in) :: id
-    integer(I4B), intent(in) :: m1_id
-    integer(I4B), intent(in) :: m2_id
+    integer(I4B), intent(in) :: exchange_id !< id for the exchange
+    character(len=*), intent(in) :: exchange_name !< the exchange name
+    character(len=*), intent(in) :: exchange_file !< filename for reading
+    character(len=*), intent(in) :: exchange_mempath !< exchange input memory path
+    integer(I4B), intent(in) :: model1_id !< id for model 1
+    integer(I4B), intent(in) :: model2_id !< id for model 2
     ! -- local
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGweExchangeType), pointer :: exchange => null()
-    character(len=20) :: cint
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -62,24 +70,26 @@ contains
     call AddBaseExchangeToList(baseexchangelist, baseexchange)
     !
     ! -- Assign id and name
-    exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWF-GWE_'//trim(adjustl(cint))
-    exchange%memoryPath = exchange%name
+    exchange%id = exchange_id
+    exchange%name = exchange_name
+    exchange%memoryPath = create_mem_path(exchange%name)
+    exchange%input_mempath = exchange_mempath
     !
-    ! -- allocate scalars
+    ! -- allocate scalars and set defaults
     call exchange%allocate_scalars()
+    exchange%filename = exchange_file
+    exchange%typename = 'GWF-GWE'
     !
     ! -- NB: convert from id to local model index in base model list
-    exchange%m1_idx = model_loc_idx(m1_id)
-    exchange%m2_idx = model_loc_idx(m2_id)
+    exchange%m1_idx = model_loc_idx(model1_id)
+    exchange%m2_idx = model_loc_idx(model2_id)
     !
     ! -- set model pointers
     call exchange%set_model_pointers()
     !
     ! -- Return
     return
-  end subroutine gwfgwe_cr
+  end subroutine register_gwfgwe
 
   !> @brief Allocate and read
   !<
@@ -480,8 +490,10 @@ contains
     ! -- dummy
     class(GwfGweExchangeType) :: this
     !
+    allocate (this%filename)
     call mem_allocate(this%m1_idx, 'M1ID', this%memoryPath)
     call mem_allocate(this%m2_idx, 'M2ID', this%memoryPath)
+    this%filename = ''
     this%m1_idx = 0
     this%m2_idx = 0
     !

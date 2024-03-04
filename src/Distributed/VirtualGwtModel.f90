@@ -8,7 +8,7 @@ module VirtualGwtModelModule
   implicit none
   private
 
-  public :: add_virtual_gwt_model
+  public :: register_virtual_gwt
 
   type, extends(VirtualModelType) :: VirtualGwtModelType
     ! DSP
@@ -32,7 +32,6 @@ module VirtualGwtModelModule
     type(VirtualIntType), pointer :: inmst => null()
   contains
     ! public
-    procedure :: create => vgwt_create
     procedure :: prepare_stage => vgwt_prepare_stage
     procedure :: destroy => vgwt_destroy
     ! private
@@ -43,37 +42,26 @@ module VirtualGwtModelModule
 
 contains
 
-  subroutine add_virtual_gwt_model(model_id, model_name, model)
+  subroutine register_virtual_gwt(model_id, model_name, model)
     use VirtualDataListsModule, only: virtual_model_list
-    integer(I4B) :: model_id !< global model id
-    character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+    integer(I4B), intent(in) :: model_id !< global model id
+    character(len=*), intent(in) :: model_name !< model name
+    class(NumericalModelType), pointer, intent(inout) :: model !< the actual model (can be null() when remote)
     ! local
     class(VirtualGwtModelType), pointer :: virtual_gwt_model
     class(*), pointer :: obj
 
     allocate (virtual_gwt_model)
-    call virtual_gwt_model%create(model_name, model_id, model)
+    call virtual_gwt_model%VirtualModelType%create(model_name, model_id, model)
+    virtual_gwt_model%container_type = VDC_GWTMODEL_TYPE
+
+    call virtual_gwt_model%allocate_data()
+    call virtual_gwt_model%init_virtual_data()
 
     obj => virtual_gwt_model
     call virtual_model_list%Add(obj)
 
-  end subroutine add_virtual_gwt_model
-
-  subroutine vgwt_create(this, name, id, model)
-    class(VirtualGwtModelType) :: this
-    character(len=*) :: name
-    integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
-
-    ! create base
-    call this%VirtualModelType%create(name, id, model)
-    this%container_type = VDC_GWTMODEL_TYPE
-
-    call this%allocate_data()
-    call this%init_virtual_data()
-
-  end subroutine vgwt_create
+  end subroutine register_virtual_gwt
 
   subroutine init_virtual_data(this)
     class(VirtualGwtModelType) :: this

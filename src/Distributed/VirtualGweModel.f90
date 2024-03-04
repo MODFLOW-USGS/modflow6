@@ -8,7 +8,7 @@ module VirtualGweModelModule
   implicit none
   private
 
-  public :: add_virtual_gwe_model
+  public :: register_virtual_gwe
 
   type, extends(VirtualModelType) :: VirtualGweModelType
     ! CND
@@ -34,7 +34,6 @@ module VirtualGweModelModule
     type(VirtualIntType), pointer :: inest => null()
   contains
     ! public
-    procedure :: create => vgwe_create
     procedure :: prepare_stage => vgwe_prepare_stage
     procedure :: destroy => vgwe_destroy
     ! private
@@ -45,37 +44,26 @@ module VirtualGweModelModule
 
 contains
 
-  subroutine add_virtual_gwe_model(model_id, model_name, model)
+  subroutine register_virtual_gwe(model_id, model_name, model)
     use VirtualDataListsModule, only: virtual_model_list
-    integer(I4B) :: model_id !< global model id
-    character(len=*) :: model_name !< model name
-    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+    integer(I4B), intent(in) :: model_id !< global model id
+    character(len=*), intent(in) :: model_name !< model name
+    class(NumericalModelType), pointer, intent(inout) :: model !< the actual model (can be null() when remote)
     ! local
     class(VirtualGweModelType), pointer :: virtual_gwe_model
     class(*), pointer :: obj
 
     allocate (virtual_gwe_model)
-    call virtual_gwe_model%create(model_name, model_id, model)
+    call virtual_gwe_model%VirtualModelType%create(model_name, model_id, model)
+    virtual_gwe_model%container_type = VDC_GWEMODEL_TYPE
+
+    call virtual_gwe_model%allocate_data()
+    call virtual_gwe_model%init_virtual_data()
 
     obj => virtual_gwe_model
     call virtual_model_list%Add(obj)
 
-  end subroutine add_virtual_gwe_model
-
-  subroutine vgwe_create(this, name, id, model)
-    class(VirtualGweModelType) :: this
-    character(len=*) :: name
-    integer(I4B) :: id
-    class(NumericalModelType), pointer :: model
-
-    ! create base
-    call this%VirtualModelType%create(name, id, model)
-    this%container_type = VDC_GWEMODEL_TYPE
-
-    call this%allocate_data()
-    call this%init_virtual_data()
-
-  end subroutine vgwe_create
+  end subroutine register_virtual_gwe
 
   subroutine init_virtual_data(this)
     class(VirtualGweModelType) :: this

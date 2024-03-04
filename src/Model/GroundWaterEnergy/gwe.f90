@@ -19,7 +19,7 @@ module GweModule
   implicit none
 
   private
-  public :: gwe_cr
+  public :: register_gwe
   public :: GweModelType
   public :: CastAsGweModel
 
@@ -92,7 +92,7 @@ contains
 
   !> @brief Create a new groundwater energy transport model object
   !<
-  subroutine gwe_cr(filename, id, modelname)
+  subroutine register_gwe(id, modelname, filename)
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
@@ -103,9 +103,9 @@ contains
     use BudgetModule, only: budget_cr
     use GweInputDataModule, only: gweshared_dat_cr
     ! -- dummy
-    character(len=*), intent(in) :: filename !< input file
     integer(I4B), intent(in) :: id !< consecutive model number listed in mfsim.nam
     character(len=*), intent(in) :: modelname !< name of the model
+    character(len=*), intent(in) :: filename !< input file
     ! -- local
     integer(I4B) :: indis
     type(GweModelType), pointer :: this
@@ -137,7 +137,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwe_cr
+  end subroutine register_gwe
 
   !> @brief Define packages of the GWE model
   !!

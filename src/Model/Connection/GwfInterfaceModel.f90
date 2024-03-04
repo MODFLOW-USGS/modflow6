@@ -42,7 +42,7 @@ module GwfInterfaceModelModule
 contains
 
   !> @brief set up the interface model, analogously to what
-  !< happens in gwf_cr
+  !< happens in register_gwf
   subroutine gwfifm_cr(this, name, iout, gridConn)
     class(GwfInterfaceModelType) :: this !< the GWF interface model
     character(len=*), intent(in) :: name !< the interface model's name
