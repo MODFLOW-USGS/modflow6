@@ -791,7 +791,6 @@ contains
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
-    integer(I4B) :: iusg
     integer(I4B) :: i
     integer(I4B) :: n1, n2
     integer(I4B) :: ibdn1, ibdn2
@@ -813,9 +812,6 @@ contains
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
-    !
-    ! -- initialize
-    iusg = 0
     !
     ! -- Loop through all exchanges using the flow rate
     !    stored in simvals
@@ -860,7 +856,7 @@ contains
         !
         ! -- Calculate the saturated thickness at interface between n1 and n2
         thksat = thksatnm(ibdn1, ibdn2, ictn1, ictn2, this%inewton, ihc, &
-                          iusg, hn1, hn2, satn1, satn2, &
+                          hn1, hn2, satn1, satn2, &
                           topn1, topn2, botn1, botn2, this%satomega)
         area = hwva * thksat
       end if
@@ -1602,7 +1598,7 @@ contains
         !
         fawidth = this%hwva(iexg)
         csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
-                     this%icellavg, 0, DONE, &
+                     this%icellavg, DONE, &
                      topn, topm, satn, satm, hyn, hym, &
                      topn, topm, &
                      botn, botm, &
@@ -1699,7 +1695,7 @@ contains
         !
         fawidth = this%hwva(iexg)
         cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton, &
-                     this%ihc(iexg), this%icellavg, 0, this%condsat(iexg), &
+                     this%ihc(iexg), this%icellavg, this%condsat(iexg), &
                      hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm, &
                      this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
       end if

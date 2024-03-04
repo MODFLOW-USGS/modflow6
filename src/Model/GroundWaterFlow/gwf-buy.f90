@@ -1234,7 +1234,7 @@ contains
                    this%npf%icelltype(n), this%npf%icelltype(m), &
                    this%npf%inewton, this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
-                   this%npf%icellavg, this%npf%iusgnrhc, &
+                   this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
                    hn, hm, this%npf%sat(n), this%npf%sat(m), &
                    hyn, hym, &
@@ -1317,7 +1317,7 @@ contains
                    this%npf%icelltype(n), this%npf%icelltype(m), &
                    this%npf%inewton, this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
-                   this%npf%icellavg, this%npf%iusgnrhc, &
+                   this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
                    hn, hm, this%npf%sat(n), this%npf%sat(m), &
                    hyn, hym, &

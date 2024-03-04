@@ -36,7 +36,6 @@ module GwfNpfInputModule
     logical :: filein = .false.
     logical :: tvk6_filename = .false.
     logical :: inewton = .false.
-    logical :: iusgnrhc = .false.
     logical :: satomega = .false.
     logical :: icelltype = .false.
     logical :: k = .false.
@@ -476,23 +475,6 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfnpf_iusgnrhc = InputParamDefinitionType &
-    ( &
-    'GWF', & ! component
-    'NPF', & ! subcomponent
-    'OPTIONS', & ! block
-    'DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', & ! tag name
-    'IUSGNRHC', & ! fortran variable
-    'KEYWORD', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
     gwfnpf_satomega = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -673,7 +655,6 @@ module GwfNpfInputModule
     gwfnpf_filein, &
     gwfnpf_tvk6_filename, &
     gwfnpf_inewton, &
-    gwfnpf_iusgnrhc, &
     gwfnpf_satomega, &
     gwfnpf_icelltype, &
     gwfnpf_k, &
