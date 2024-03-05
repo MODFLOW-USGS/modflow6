@@ -2480,9 +2480,9 @@ contains
       ! -- if both cells are non-convertible then use condsat
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
-    !
-    ! -- At least one of the cells is convertible and using the 
-    !    newton-raphson conductance formulation 
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    newton-raphson conductance formulation
     else if (inwtup == 1) then
       if (hn > hm) then
         condnm = sQuadraticSaturation(topn, botn, hn, satomega)
@@ -2492,9 +2492,9 @@ contains
       !
       ! -- multiply condsat by condnm factor
       condnm = condnm * condsat
-    !
-    ! -- At least one of the cells is convertible and using the 
-    !    standard conductance formulation
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    standard conductance formulation
     else
       thksatn = satn * (topn - botn)
       thksatm = satm * (topm - botm)
