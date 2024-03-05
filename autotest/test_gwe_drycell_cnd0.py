@@ -194,7 +194,6 @@ def build_models(idx, test):
         icelltype=icelltype,
         k=k11,
         k33=k33,
-        alternative_cell_averaging="AMT-HMK",
         save_specific_discharge=True,
         pname="NPF-1",
         filename="{}.npf".format(gwfname),

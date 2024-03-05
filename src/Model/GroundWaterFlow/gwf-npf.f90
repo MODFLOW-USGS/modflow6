@@ -499,7 +499,6 @@ contains
     if (this%ixt3d /= 0) then
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
-      !
       do n = 1, this%dis%nodes
         do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           if (this%dis%con%mask(ii) == 0) cycle
@@ -2481,18 +2480,21 @@ contains
       ! -- if both cells are non-convertible then use condsat
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
-      !
-      ! -- At least one of the cells is convertible, so calculate average saturated
-      !    thickness and multiply with saturated conductance
-    elseif (inwtup == 1) then
+    !
+    ! -- At least one of the cells is convertible and using the 
+    !    newton-raphson conductance formulation 
+    else if (inwtup == 1) then
       if (hn > hm) then
-        condnm = satn
+        condnm = sQuadraticSaturation(topn, botn, hn, satomega)
       else
-        condnm = satm
+        condnm = sQuadraticSaturation(topm, botm, hm, satomega)
       end if
       !
       ! -- multiply condsat by condnm factor
       condnm = condnm * condsat
+    !
+    ! -- At least one of the cells is convertible and using the 
+    !    standard conductance formulation
     else
       thksatn = satn * (topn - botn)
       thksatm = satm * (topm - botm)
@@ -2513,7 +2515,7 @@ contains
         thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
         thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
       end if
-      !
+      ! -- calculate the appropriate mean
       condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
                         fawidth, icellavg)
     end if
