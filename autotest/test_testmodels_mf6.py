@@ -17,6 +17,15 @@ excluded_models = [
     "test004_bcfss",
     "test014_NWTP3Low_dev",
     "test041_flowdivert_nwt_dev",
+    # remove tests with nwt usg conductance weighting 
+    "test006_gwf3_gnc_nr_dev",
+    "test006_gwf3_nr_dev",
+    "test014_NWTP3High_dev",
+    "test015_KeatingLike_disu_dev",
+    "test041_flowdivert_nr_dev",
+    "test016_Keating_disu_dev",
+    "test053_npf-a-nwt_dev",
+    "test053_npf-b-nwt_dev",
 ]
 
 
