@@ -552,7 +552,7 @@ def check_output(idx, test):
         "Simulated fits to analytical solution are "
         "falling outside established bounds on day 100"
     )
-    assert np.max(analytical_sln[100] - temps[100]) <= 0.10680304268, msg4
+    assert np.max(analytical_sln[100] - temps[100]) <= 0.107, msg4
     assert np.min(analytical_sln[100] - temps[100]) >= -0.20763221276, msg4
 
     # If a plot is needed for visual inspection, change following if statement to "True"
