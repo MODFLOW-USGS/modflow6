@@ -261,6 +261,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Test modflow6
         working-directory: modflow6/autotest
         env:
