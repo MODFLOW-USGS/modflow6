@@ -2470,8 +2470,6 @@ contains
     ! -- local
     real(DP) :: thksatn
     real(DP) :: thksatm
-    real(DP) :: sill_top, sill_bot
-    real(DP) :: tpn, tpm
     !
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -2496,24 +2494,15 @@ contains
       ! -- At least one of the cells is convertible and using the
       !    standard conductance formulation
     else
-      thksatn = satn * (topn - botn)
-      thksatm = satm * (topm - botm)
       !
       ! -- If staggered connection, subtract parts of cell that are above and
       !    below the sill top and bottom elevations
       if (ihc == 2) then
-        !
-        ! -- Calculate sill_top and sill_bot
-        sill_top = min(topn, topm)
-        sill_bot = max(botn, botm)
-        !
-        ! -- Calculate tpn and tpm
-        tpn = botn + thksatn
-        tpm = botm + thksatm
-        !
-        ! -- Calculate saturated thickness for cells n and m
-        thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
-        thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
+        thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
+        thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
+      else
+        thksatn = satn * (topn - botn)
+        thksatm = satm * (topm - botm)
       end if
       ! -- calculate the appropriate mean
       condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
@@ -3184,7 +3173,6 @@ contains
     real(DP) :: thksatn
     real(DP) :: thksatm
     real(DP) :: sill_top, sill_bot
-    real(DP) :: tpn, tpm
     !
     ! -- If either n or m is inactive then saturated thickness is zero
     if (ibdn == 0 .or. ibdm == 0) then
@@ -3192,8 +3180,6 @@ contains
       !
       ! -- if both cells are non-convertible then use average cell thickness
     elseif (ictn == 0 .and. ictm == 0) then
-      thksatn = topn - botn
-      thksatm = topm - botm
       !
       ! -- If staggered connection, subtract parts of cell that are above and
       !    below the sill top and bottom elevations
@@ -3206,51 +3192,73 @@ contains
         ! -- Saturated thickness is sill_top - sill_bot
         thksatn = max(sill_top - sill_bot, DZERO)
         thksatm = thksatn
+      else
+        thksatn = topn - botn
+        thksatm = topm - botm
       end if
-      !
       res = DHALF * (thksatn + thksatm)
       !
-      ! -- At least one of the cells is convertible, so calculate average saturated
-      !    thickness
+      ! -- At least one of the cells is convertible and using the
+      !    Newton-Raphson conductance formulation
+    elseif (inwtup == 1) then
+      sn = satn
+      sm = satm
+      !
+      ! -- upstream weight the thickness
+      if (hn > hm) then
+        res = sn * (topn - botn)
+      else
+        res = sm * (topm - botm)
+      end if
+      !
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    standard conductance formulation
     else
-      if (inwtup == 1) then
-        sn = satn
-        sm = satm
-        !
-        ! -- upstream weight the thickness
-        if (hn > hm) then
-          res = sn * (topn - botn)
-        else
-          res = sm * (topm - botm)
-        end if
-        !
+      !
+      ! -- If staggered connection, subtract parts of cell that are above and
+      !    below the sill top and bottom elevations
+      if (ihc == 2) then
+        thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
+        thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
       else
         thksatn = satn * (topn - botn)
         thksatm = satm * (topm - botm)
-        !
-        ! -- If staggered connection, subtract parts of cell that are above and
-        !    below the sill top and bottom elevations
-        if (ihc == 2) then
-          !
-          ! -- Calculate sill_top and sill_bot
-          sill_top = min(topn, topm)
-          sill_bot = max(botn, botm)
-          !
-          ! -- Calculate tpn and tpm
-          tpn = botn + thksatn
-          tpm = botm + thksatm
-          !
-          ! -- Calculate saturated thickness for cells n and m
-          thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
-          thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
-        end if
-        !
-        res = DHALF * (thksatn + thksatm)
       end if
+      res = DHALF * (thksatn + thksatm)
     end if
     !
     ! -- Return
     return
   end function thksatnm
+
+  !> @brief Calculate the thickness fraction for staggered grids
+  !<
+  function staggered_thkfrac(top, bot, sat, topc, botc) result(res)
+    ! return
+    real(DP) :: res !< staggered thickness fraction for cell
+    ! dummy
+    real(DP) :: top !< top of cell
+    real(DP) :: bot !< bottom of cell
+    real(DP) :: sat !< cell saturation
+    real(DP) :: topc !< top of connected cell
+    real(DP) :: botc !< bottom of connected cells
+    ! local
+    real(DP) :: sill_top
+    real(DP) :: sill_bot
+    real(DP) :: tp
+    !
+    ! -- Calculate sill_top and sill_bot
+    sill_top = min(top, topc)
+    sill_bot = max(bot, botc)
+    !
+    ! -- Calculate tp
+    tp = bot + sat * (top - bot)
+
+    ! -- Calculate saturated thickness
+    res = max(min(tp, sill_top) - sill_bot, DZERO)
+
+    return
+  end function staggered_thkfrac
 
 end module GwfNpfModule
