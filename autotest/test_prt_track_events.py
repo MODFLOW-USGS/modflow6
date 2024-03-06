@@ -31,7 +31,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.plot.plotutil import to_mp7_pathlines
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from prt_test_utils import (
@@ -307,6 +306,8 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
+    from flopy.plot.plotutil import to_mp7_pathlines
+
     name = test.name
     gwf_ws = test.workspace
     prt_ws = test.workspace / "prt"

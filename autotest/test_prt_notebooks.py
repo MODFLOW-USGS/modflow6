@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.mf6 import MFSimulation
-from flopy.plot.plotutil import to_mp7_pathlines
 from flopy.utils import PathlineFile
 from modflow_devtools.misc import run_cmd, set_env
 
@@ -41,6 +40,8 @@ def get_notebook_scripts(pattern=None, exclude=None):
     get_notebook_scripts(pattern="ex-prt", exclude=["ex-prt-mp7-p03"]),
 )
 def test_notebooks(notebook, function_tmpdir, targets):
+    from flopy.plot.plotutil import to_mp7_pathlines
+
     notebook = Path(notebook)
 
     # temporarily add testing binaries to PATH
