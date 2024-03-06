@@ -45,7 +45,7 @@ mname_gwtright = "rightgwtmodel"
 hclose_check = 1e-9
 
 # model spatial discretization
-nlay = 1
+nlay = 10
 ncol = 10
 ncol_left = 5
 ncol_right = 5
@@ -62,7 +62,7 @@ shift_x = 5 * delr
 shift_y = 0.0
 
 # top/bot of the aquifer
-tops = [0.0, -5.0]
+tops = [0.0 - ilay * 5.0 for ilay in range(nlay + 1)]
 
 # hydraulic conductivity
 k11 = 10.0
@@ -75,10 +75,24 @@ h_right = -2.0
 h_start = -2.0
 
 # head boundaries
-left_chd = [[(0, irow, 0), h_left] for irow in range(nrow)]
-right_chd = [[(0, irow, ncol - 1), h_right] for irow in range(nrow)]
+left_chd = [
+    [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
+]
+right_chd = [
+    [(ilay, irow, ncol - 1), h_right]
+    for irow in range(nrow)
+    for ilay in range(nlay)
+]
+right_chd_split = [
+    [(ilay, irow, ncol_right - 1), h_right]
+    for irow in range(nrow)
+    for ilay in range(nlay)
+]
+
 chd_data = left_chd + right_chd
 chd_spd = {0: chd_data}
+chd_spd_left = {0: left_chd}
+chd_spd_right = {0: right_chd_split}
 
 # initial conc
 c_strt = 1.1
@@ -232,8 +246,6 @@ def add_refmodel(sim):
 
 
 def add_leftmodel(sim):
-    left_chd = [[(0, irow, 0), h_left] for irow in range(nrow)]
-    chd_spd_left = {0: left_chd}
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_left, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -273,8 +285,6 @@ def add_leftmodel(sim):
 
 
 def add_rightmodel(sim):
-    right_chd = [[(0, irow, ncol_right - 1), h_right] for irow in range(nrow)]
-    chd_spd_right = {0: right_chd}
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_right, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -320,8 +330,8 @@ def add_gwfexchange(sim):
     cdist = delr
     gwfgwf_data = [
         [
-            (0, irow, ncol_left - 1),
-            (0, irow, 0),
+            (ilay, irow, ncol_left - 1),
+            (ilay, irow, 0),
             1,
             delr / 2.0,
             delr / 2.0,
@@ -330,6 +340,7 @@ def add_gwfexchange(sim):
             cdist,
         ]
         for irow in range(nrow)
+        for ilay in range(nlay)
     ]
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -339,7 +350,6 @@ def add_gwfexchange(sim):
         exgmnameb=mname_right,
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        dev_interfacemodel_on=True,
     )
 
 
@@ -488,8 +498,8 @@ def add_gwtexchange(sim):
     cdist = delr
     gwtgwt_data = [
         [
-            (0, irow, ncol_left - 1),
-            (0, irow, 0),
+            (ilay, irow, ncol_left - 1),
+            (ilay, irow, 0),
             1,
             delr / 2.0,
             delr / 2.0,
@@ -498,6 +508,7 @@ def add_gwtexchange(sim):
             cdist,
         ]
         for irow in range(nrow)
+        for ilay in range(nlay)
     ]
     gwtgwt = flopy.mf6.ModflowGwtgwt(
         sim,

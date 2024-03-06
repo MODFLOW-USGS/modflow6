@@ -288,7 +288,6 @@ def build_models(idx, test):
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="leftright.gwfgwf",
-        dev_interfacemodel_on=True,
     )
 
     # create transport models and GWT-GWT exchange

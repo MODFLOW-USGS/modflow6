@@ -2061,13 +2061,23 @@ contains
   !> @brief Should interface model be used for this exchange
   !<
   function use_interface_model(this) result(use_im)
+    use VirtualGwfModelModule, only: VirtualGwfModelType
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- return
     logical(LGP) :: use_im !< true when interface model should be used
-    !
+    ! -- local
+    integer(I4B) :: inbuy_m1
+
     use_im = this%DisConnExchangeType%use_interface_model()
     use_im = use_im .or. (this%ixt3d > 0)
+
+    inbuy_m1 = 0
+    select type (m => this%v_model1)
+    class is (VirtualGwfModelType)
+      inbuy_m1 = m%inbuy%get()
+    end select
+    use_im = use_im .or. (inbuy_m1 > 0)
     !
     ! -- Return
     return
