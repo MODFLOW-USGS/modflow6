@@ -577,7 +577,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04 ] #, macos-12 ] #, windows-2022 ]
+        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}
@@ -644,6 +644,15 @@ jobs:
             netcdf-bin
           nc-config --all
           nf-config --all
+
+      - name: Install netcdf
+        if: runner.os == 'macOS'
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install netcdf-fortran
+          brew install gcc
+          nc-config --all
+          nf-config
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
