@@ -20,8 +20,8 @@ module GwfNpfModule
                                  mem_reassignptr
   use MatrixBaseModule
   use HGeoUtilModule, only: hyeff
-  use GwfConductanceUtilsModule, only : hcond, vcond, &
-                                        condmean, thksatnm
+  use GwfConductanceUtilsModule, only: hcond, vcond, &
+                                       condmean, thksatnm
 
   implicit none
 

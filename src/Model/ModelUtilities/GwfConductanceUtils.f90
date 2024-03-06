@@ -70,13 +70,13 @@ contains
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
       condnm = DZERO
-    !
-    ! -- if both cells are non-convertible then use condsat
+      !
+      ! -- if both cells are non-convertible then use condsat
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
-    !
-    ! -- At least one of the cells is convertible and using the
-    !    newton-raphson conductance formulation
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    newton-raphson conductance formulation
     else if (inwtup == 1) then
       if (hn > hm) then
         condnm = sQuadraticSaturation(topn, botn, hn, satomega)
@@ -86,13 +86,13 @@ contains
       !
       ! -- multiply condsat by condnm factor
       condnm = condnm * condsat
-    !
-    ! -- At least one of the cells is convertible and using the
-    !    standard conductance formulation
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    standard conductance formulation
     else
-    !
-    ! -- If staggered connection, subtract parts of cell that are above and
-    !    below the sill top and bottom elevations
+      !
+      ! -- If staggered connection, subtract parts of cell that are above and
+      !    below the sill top and bottom elevations
       if (ihc == 2) then
         thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
         thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
@@ -143,26 +143,26 @@ contains
     ! -- If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
       condnm = DZERO
-    !
-    ! -- if constantcv then use condsat
+      !
+      ! -- if constantcv then use condsat
     elseif (ivarcv == 0) then
       condnm = condsat
-    !
-    ! -- if both cells are non-convertible then use condsat
+      !
+      ! -- if both cells are non-convertible then use condsat
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
-    !
-    ! -- if both cells are fully saturated then use condsat
+      !
+      ! -- if both cells are fully saturated then use condsat
     elseif (hn >= topn .and. hm >= topm) then
       condnm = condsat
-    !
-    ! -- At least one cell is partially saturated, so recalculate vertical
-    ! -- conductance for this connection
-    ! -- todo: upstream weighting?
+      !
+      ! -- At least one cell is partially saturated, so recalculate vertical
+      ! -- conductance for this connection
+      ! -- todo: upstream weighting?
     else
-    !
-    ! -- Default is for CV correction (dewatered option); use underlying
-    !    saturation of 1.
+      !
+      ! -- Default is for CV correction (dewatered option); use underlying
+      !    saturation of 1.
       satntmp = satn
       satmtmp = satm
       if (idewatcv == 0) then
@@ -228,16 +228,16 @@ contains
     !
     ! -- Averaging
     select case (iavgmeth)
-    !
-    ! -- Harmonic-mean method
+      !
+      ! -- Harmonic-mean method
     case (0)
       if (t1 * t2 > DZERO) then
         condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
       else
         condmean = DZERO
       end if
-    !
-    ! -- Logarithmic-mean method
+      !
+      ! -- Logarithmic-mean method
     case (1)
       if (t1 * t2 > DZERO) then
         tmean = logmean(t1, t2)
@@ -245,8 +245,8 @@ contains
         tmean = DZERO
       end if
       condmean = tmean * width / (cl1 + cl2)
-    !
-    ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
+      !
+      ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
     case (2)
       if (k1 * k2 > DZERO) then
         kmean = logmean(k1, k2)
@@ -254,8 +254,8 @@ contains
         kmean = DZERO
       end if
       condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
-    !
-    ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
+      !
+      ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
     case (3)
       denom = (k1 * cl2 + k2 * cl1)
       if (denom > DZERO) then
@@ -322,12 +322,12 @@ contains
     ! -- If either n or m is inactive then saturated thickness is zero
     if (ibdn == 0 .or. ibdm == 0) then
       res = DZERO
-    !
-    ! -- if both cells are non-convertible then use average cell thickness
+      !
+      ! -- if both cells are non-convertible then use average cell thickness
     elseif (ictn == 0 .and. ictm == 0) then
-    !
-    ! -- If staggered connection, subtract parts of cell that are above and
-    !    below the sill top and bottom elevations
+      !
+      ! -- If staggered connection, subtract parts of cell that are above and
+      !    below the sill top and bottom elevations
       if (ihc == 2) then
         !
         ! -- Calculate sill_top and sill_bot
@@ -342,9 +342,9 @@ contains
         thksatm = topm - botm
       end if
       res = DHALF * (thksatn + thksatm)
-    !
-    ! -- At least one of the cells is convertible and using the
-    !    Newton-Raphson conductance formulation
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    Newton-Raphson conductance formulation
     elseif (inwtup == 1) then
       sn = satn
       sm = satm
@@ -355,10 +355,10 @@ contains
       else
         res = sm * (topm - botm)
       end if
-    !
-    !
-    ! -- At least one of the cells is convertible and using the
-    !    standard conductance formulation
+      !
+      !
+      ! -- At least one of the cells is convertible and using the
+      !    standard conductance formulation
     else
       !
       ! -- If staggered connection, subtract parts of cell that are above and
