@@ -11,7 +11,6 @@ module MethodSubcellTernaryModule
   use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType
-  use GwfDisvModule, only: GwfDisvType
   implicit none
 
   private

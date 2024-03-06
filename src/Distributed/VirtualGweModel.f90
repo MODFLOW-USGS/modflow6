@@ -139,6 +139,7 @@ contains
         call this%map(this%cnd_ath2%base(), nr_nodes, (/STG_BFR_CON_AR/))
         call this%map(this%cnd_atv%base(), nr_nodes, (/STG_BFR_CON_AR/))
         call this%map(this%cnd_ktw%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%cnd_kts%base(), nr_nodes, (/STG_BFR_CON_AR/))
       end if
 
       call this%map(this%fmi_gwfhead%base(), nr_nodes, (/STG_BFR_EXG_AD/))

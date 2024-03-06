@@ -7,7 +7,6 @@ module MethodSubcellPollockModule
   use PrtFmiModule, only: PrtFmiType
   use TrackModule, only: TrackFileControlType
   use BaseDisModule, only: DisBaseType
-  use GwfDisModule, only: GwfDisType
   use CellModule, only: CellType
   implicit none
   private

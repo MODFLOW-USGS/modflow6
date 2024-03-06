@@ -5,7 +5,7 @@ module GwtInterfaceModelModule
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
-  use GwfDisuModule, only: disu_cr, CastAsDisuType
+  use DisuModule, only: disu_cr, CastAsDisuType
   use TspFmiModule, only: fmi_cr, TspFmiType
   use TspAdvModule, only: adv_cr, TspAdvType
   use TspAdvOptionsModule, only: TspAdvOptionsType

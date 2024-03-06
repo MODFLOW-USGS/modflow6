@@ -59,7 +59,6 @@ Cheap depiction of model in plan view follows (not to scale):
 
 """
 
-
 import os
 import sys
 
@@ -292,7 +291,7 @@ def build_models(idx, test):
         filename="{}.gwfgwt".format("lower"),
     )
 
-    return sim
+    return sim, None
 
 
 # Instatiate the upper and lower flow models

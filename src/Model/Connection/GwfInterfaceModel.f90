@@ -9,7 +9,7 @@ module GwfInterfaceModelModule
   use GwfBuyModule, only: buy_cr
   use GridConnectionModule
   use BaseDisModule
-  use GwfDisuModule
+  use DisuModule
   use GwfNpfModule
   use GwfNpfOptionsModule
   use GwfBuyInputDataModule

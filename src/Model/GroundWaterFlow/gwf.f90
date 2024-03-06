@@ -1468,9 +1468,9 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GwfDisModule, only: dis_cr
-    use GwfDisvModule, only: disv_cr
-    use GwfDisuModule, only: disu_cr
+    use DisModule, only: dis_cr
+    use DisvModule, only: disv_cr
+    use DisuModule, only: disu_cr
     use GwfNpfModule, only: npf_cr
     use Xt3dModule, only: xt3d_cr
     use GwfBuyModule, only: buy_cr

@@ -5,7 +5,7 @@ module GweInterfaceModelModule
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GweModule, only: GweModelType, CastAsGweModel
-  use GwfDisuModule, only: disu_cr, CastAsDisuType
+  use DisuModule, only: disu_cr, CastAsDisuType
   use TspFmiModule, only: fmi_cr, TspFmiType
   use TspAdvModule, only: adv_cr, TspAdvType
   use TspAdvOptionsModule, only: TspAdvOptionsType
