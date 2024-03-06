@@ -1171,7 +1171,7 @@ contains
   !<
   subroutine calcbuy(this, n, m, icon, hn, hm, buy)
     ! -- modules
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: n
@@ -1257,7 +1257,7 @@ contains
   !<
   subroutine calchhterms(this, n, m, icon, hn, hm, rhsterm, amatnn, amatnm)
     ! -- modules
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: n

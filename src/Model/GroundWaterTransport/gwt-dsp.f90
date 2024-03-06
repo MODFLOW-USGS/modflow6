@@ -791,6 +791,7 @@ contains
   subroutine calcdispcoef(this)
     ! -- modules
     use HGeoUtilModule, only: hyeff
+    use GwfConductanceUtilsModule, only: staggered_thkfrac
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
@@ -801,7 +802,7 @@ contains
     integer(I4B) :: iavgmeth
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
-    real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
+    real(DP) :: anm, amn, thksatn, thksatm
     !
     ! -- set iavgmeth = 1 to use arithmetic averaging for effective dispersion
     iavgmeth = 1
@@ -874,17 +875,14 @@ contains
         else
           !
           ! -- horizontal conductance
-          thksatn = (topn - botn) * satn
-          thksatm = (topm - botm) * satm
           !
           ! -- handle vertically staggered case
           if (ihc == 2) then
-            sill_top = min(topn, topm)
-            sill_bot = max(botn, botm)
-            tpn = botn + thksatn
-            tpm = botm + thksatm
-            thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
-            thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
+            thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
+            thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
+          else
+            thksatn = (topn - botn) * satn
+            thksatm = (topm - botm) * satm
           end if
           !
           ! -- calculate the saturated area term

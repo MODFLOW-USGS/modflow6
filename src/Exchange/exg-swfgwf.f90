@@ -1679,7 +1679,7 @@ end module SwfGwfExchangeModule
 !   subroutine swf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
 !     ! -- modules
 !     use ConstantsModule, only: DHALF
-!     use GwfNpfModule, only: hcond, vcond
+!     use GwfConductanceUtilsModule, only: hcond, vcond
 !     ! -- dummy
 !     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     integer(I4B), intent(in) :: kiter
@@ -1949,7 +1949,7 @@ end module SwfGwfExchangeModule
 !   subroutine swf_gwf_set_flow_to_npf(this)
 !     ! -- modules
 !     use ConstantsModule, only: DZERO, DPIO180
-!     use GwfNpfModule, only: thksatnm
+!     use GwfConductanceUtilsModule, only: thksatnm
 !     ! -- dummy
 !     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
@@ -2688,7 +2688,7 @@ end module SwfGwfExchangeModule
 !   subroutine calc_cond_sat(this)
 !     ! -- modules
 !     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-!     use GwfNpfModule, only: condmean, vcond, hcond
+!     use GwfConductanceUtilsModule, only: condmean, vcond, hcond
 !     ! -- dummy
 !     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local
@@ -2782,7 +2782,7 @@ end module SwfGwfExchangeModule
 !   subroutine condcalc(this)
 !     ! -- modules
 !     use ConstantsModule, only: DHALF, DZERO, DONE
-!     use GwfNpfModule, only: hcond, vcond
+!     use GwfConductanceUtilsModule, only: hcond, vcond
 !     ! -- dummy
 !     class(SwfGwfExchangeType) :: this !<  SwfGwfExchangeType
 !     ! -- local

@@ -264,6 +264,7 @@ $(OBJDIR)/gwf-tvk.o \
 $(OBJDIR)/HGeoUtil.o \
 $(OBJDIR)/gwf-vsc.o \
 $(OBJDIR)/GwfNpfOptions.o \
+$(OBJDIR)/GwfConductanceUtils.o \
 $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/SeqVector.o \
 $(OBJDIR)/ImsLinearSettings.o \
