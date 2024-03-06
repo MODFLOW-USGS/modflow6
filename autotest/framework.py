@@ -92,9 +92,14 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
     buff = []
 
     # parallel commands
-    mpiexec_cmd = (
-        ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
-    )
+    if get_ostag() in ["win64"]:
+        mpiexec_cmd = (
+        ["mpiexec", "-np", str(ncpus), target, "-p"]
+        )
+    else:
+        mpiexec_cmd = (
+            ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
+        )
 
     proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=workspace)
 

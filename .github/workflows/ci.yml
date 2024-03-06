@@ -422,101 +422,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
+        os: [ ubuntu-22.04, macos-12, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      FC: gfortran
-      FC_V: 12
+    
     steps:
 
       - name: Checkout modflow6
         uses: actions/checkout@v4
         with:
           path: modflow6
-
-      - name: Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: |
-            git
-            make
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-python-pytest
-
-      - name: Setup MPI
-        if: runner.os == 'Windows'
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: msmpi
-
-      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
-        uses: fortran-lang/setup-fortran@v1
-        with:
-          compiler: gcc
-          version: ${{ env.FC_V }}
-
-      - name: Cache PETSc
-        id: cache-petsc
-        uses: actions/cache@v4
-        with:
-          path: petsc
-          key: ${{ runner.os }}-petsc
-
-      - name: Clone PETSc
-        if: runner.os != 'Windows' && steps.cache-petsc.outputs.cache-hit != 'true'
-        run: git clone -b release https://gitlab.com/petsc/petsc.git petsc
-
-      - name: Download PETSc
-        if: runner.os == 'Windows'
-        run: |
-          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.4.tar.gz -O -J
-          mkdir petsc
-          tar -xzf petsc-3.18.4.tar.gz -C petsc --strip-components=1
-
-      - name: Configure environment
-        if: runner.os == 'Linux'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
-
-      - name: Configure environment
-        if: runner.os == 'macOS'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
-
-      - name: Configure PETSc
-        if: runner.os == 'Linux'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
-          sudo make all
-
-      - name: Configure PETSc
-        if: runner.os == 'macOS'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
-          sudo make all
-
-      - name: Configure PETSc
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        working-directory: petsc
-        run: |
-          pacman -Syu
-          pacman -Sy --noconfirm autoconf automake-wrapper bison bsdcpio make git \
-            mingw-w64-x86_64-toolchain patch python flex \
-            pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
-            mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq
-          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
-          make all
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -528,42 +444,17 @@ jobs:
           cache-environment: true
           cache-downloads: true
 
-      - name: Build modflow6
-        working-directory: modflow6
-        run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+      - name: Test parallel MF6
+        if: runner.os != 'Windows'
+        uses: ./modflow6/.github/actions/test-par
 
-      - name: Show Meson logs
-        if: failure()
-        working-directory: modflow6
-        run: cat builddir/meson-logs/meson-log.txt
-
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
-      - name: Get executables
-        working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-
-      - name: Test programs (parallel)
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          branch="${{ github.ref_name }}"
-          marker="not large"
-          markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
-          pytest -v -n auto --parallel --durations 0 -m "$markers" --keep-failed .failed
+      - name: Test parallel MF6 (Windows)
+        if: runner.os == 'Windows'
+        uses: ./modflow6/.github/actions/test-par-win
 
       - name: Upload failed test output
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          name: failed-${{ matrix.os }}
           path: modflow6/autotest/.failed
-          
