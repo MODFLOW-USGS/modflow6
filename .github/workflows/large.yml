@@ -38,8 +38,6 @@ jobs:
         include:
           - {compiler: gcc, version: 13, repo: examples}
           - {compiler: gcc, version: 13, repo: largetestmodels}
-          - {compiler: intel, version: 2022.2.1, repo: examples}
-          - {compiler: intel, version: 2022.2.1, repo: largetestmodels}
           - {compiler: intel-classic, version: 2021.6, repo: examples}
           - {compiler: intel-classic, version: 2021.6, repo: largetestmodels}
     defaults:
