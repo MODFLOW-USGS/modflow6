@@ -685,6 +685,11 @@ contains
         node = node + 1
       end do
     end if
+    !
+    ! -- Move reach_bottom into bot
+    do node = 1, this%nodesuser
+      this%bot(node) = this%reach_bottom(node)
+    end do
 
     ! -- Return
     return
