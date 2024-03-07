@@ -304,9 +304,7 @@ class TestFramework:
             cmp_namefile = (
                 None
                 if "mf6" in self.compare or "libmf6" in self.compare
-                else os.path.basename(nf)
-                if nf
-                else None
+                else os.path.basename(nf) if nf else None
             )
             if cmp_namefile is None:
                 pth = None
@@ -624,7 +622,7 @@ class TestFramework:
                     try:
                         success, buff = flopy.run_model(
                             target,
-                            self.workspace / "mfsim.nam",
+                            workspace / "mfsim.nam",
                             model_ws=workspace,
                             report=True,
                         )
@@ -742,13 +740,13 @@ class TestFramework:
                 f"{'should have failed' if xfail else 'failed'}: {workspace}"
             )
 
-        # get expected output files from main simulation
-        _, self.outp = get_mf6_files(
-            self.workspace / "mfsim.nam", self.verbose
-        )
-
         # setup and run comparison model(s), if enabled
         if self.compare:
+            # get expected output files from main simulation
+            _, self.outp = get_mf6_files(
+                self.workspace / "mfsim.nam", self.verbose
+            )
+
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
                 if self.verbose:
