@@ -1,6 +1,7 @@
 import argparse
 import string
 from itertools import repeat
+from multiprocessing import cpu_count, Pool
 from pathlib import Path
 
 from fprettify.fparse_utils import InputStream
@@ -15,7 +16,7 @@ def join_comments(comments) -> str:
 class Rules:
     @staticmethod
     def separate_lines(path):
-        """Variables defined on separate lines"""
+        """Define dummy arguments, local variables, and procedure declarations on separate lines."""
 
         flines = []
         with open(path, "r") as f:
@@ -63,7 +64,7 @@ class Rules:
 
     @staticmethod
     def trailing_returns(path):
-        """Remove return statements at the end of routines"""
+        """Remove return statements (and corresponding comments) at the end of routines."""
 
         flines = []
         with open(path, "r") as f:
@@ -96,9 +97,10 @@ class Rules:
     @staticmethod
     def cleanup_comments(path):
         """
-        Remove comments on lines with only whitespace, remove '--' from the beginnings
-        of comments, make sure comment spacing is consistent (one space after '!'),
-        remove horizontal dividers consisting of '-' or '*', remove 'SPECIFICATION'
+        Remove empty comments (containing only '!', or '!' followed by some number of '-' or '='),
+        remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment'),
+        remove 'SPECIFICATION' comment lines, and make internal comment spacing consistent (one space
+        after '!' before text begins).
         """
 
         flines = []
@@ -170,26 +172,42 @@ if __name__ == "__main__":
         action="store_true",
         default=True,
         required=False,
-        help="Define dummy arguments and local variables on separate lines.",
+        help="Define dummy arguments, local variables, and procedure declarations on separate lines.",
     )
     parser.add_argument(
         "--trailing-returns",
         action="store_true",
         default=True,
         required=False,
-        help="Remove return statements at the end of routines.",
+        help="Remove return statements (and corresponding comments) at the end of routines.",
     )
     parser.add_argument(
         "--cleanup-comments",
         action="store_true",
         default=True,
         required=False,
-        help="Remove empty comments (containing only '!', or '!' followed by some number of '-' or '='), remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment'), and make internal comment spacing consistent (one space after '!' before text begins).",
+        help="Remove empty comments (containing only '!', or '!' followed by some number of '-' or '='), remove double dashes from beginnings of comments (e.g., '! -- comment' becomes '! comment'), remove 'SPECIFICATION' comment lines, and make internal comment spacing consistent (one space after '!' before text begins).",
     )
     args = parser.parse_args()
-    reformat(
-        path=Path(args.path).expanduser().absolute(),
-        separate_lines=args.separate_lines,
-        trailing_returns=args.trailing_returns,
-        cleanup_comments=args.cleanup_comments,
-    )
+
+    # parse path
+    path = Path(args.path).expanduser().absolute()
+    assert path.exists(), f"Path not found: {path}"
+
+    # parse rules
+    sl = args.separate_lines
+    tr = args.trailing_returns
+    cc = args.cleanup_comments
+
+    # reformat
+    if path.is_file():
+        reformat(
+            path=Path(args.path).expanduser().absolute(),
+            separate_lines=sl,
+            trailing_returns=tr,
+            cleanup_comments=cc,
+        )
+    else:
+        with Pool(cpu_count()) as pool:
+            files = [p for p in path.rglob("*.f90") if p.is_file()]
+            pool.starmap(reformat, [(f, sl, tr, cc) for f in files])
