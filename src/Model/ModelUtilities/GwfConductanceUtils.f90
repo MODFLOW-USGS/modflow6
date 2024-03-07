@@ -24,7 +24,7 @@ module GwfConductanceUtilsModule
 
   !> @brief enumerator that defines the conductance options
   !<
-ENUM, BIND(C)
+  ENUM, BIND(C)
     ENUMERATOR :: CCOND_HMEAN = 0 !< Harmonic mean
     ENUMERATOR :: CCOND_LMEAN = 1 !< Logarithmic mean
     ENUMERATOR :: CCOND_AMTLMK = 2 !< Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
