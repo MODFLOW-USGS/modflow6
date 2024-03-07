@@ -12,14 +12,18 @@ cases = ["carslaw-jaeg"]
 
 
 def build_models(idx, test):
-    from test_gwegwe_exchng_with_comp2carslaw_jaeger import build_models as build
+    from test_gwegwe_exchng_with_comp2carslaw_jaeger import (
+        build_models as build,
+    )
 
     sim, dummy = build(idx, test)
     return sim, dummy
 
 
 def check_output(idx, test):
-    from test_gwegwe_exchng_with_comp2carslaw_jaeger import check_output as check
+    from test_gwegwe_exchng_with_comp2carslaw_jaeger import (
+        check_output as check,
+    )
 
     check(idx, test)
 

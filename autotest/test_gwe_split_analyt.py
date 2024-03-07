@@ -444,17 +444,23 @@ def assemble_half_model(
     return sim, imsgwf, imsgwe
 
 
-def build_models(idx, test):
-
+def get_ener_input(idx):
     if idx < 2:
         ener_input = calc_ener_input(1.0)
     elif idx == 2:
         ener_input = calc_ener_input(0.1)
 
+    return ener_input
+
+
+def build_models(idx, test):
+    ener_input = get_ener_input(idx)
+
     # left model
     sim, imsgwf, imsgwe = assemble_half_model(
         idx, test, ener_input, side="left"
     )
+    # right model
     sim, imsgwf, imsgwe = assemble_half_model(
         idx,
         test,
@@ -579,7 +585,9 @@ def eq7_26(x, t, el, D, T_0, ener_add_rate):
     return T
 
 
-def check_output(idx, test, ener_input):
+def check_output(idx, test):
+    ener_input = get_ener_input(idx)
+
     name = test.name
     gwename1 = "gwe-" + name + "-l"
     gwename2 = "gwe-" + name + "-r"
