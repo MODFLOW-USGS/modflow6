@@ -176,11 +176,15 @@ def build_models(idx, test, netcdf=None):
         top=top,
         botm=botm,
         idomain=1,
-        filename=f"{gwtname}.dis",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=100.0)
+    ic = flopy.mf6.ModflowGwtic(
+        gwt,
+        strt=100.0,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic",
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(

@@ -211,18 +211,18 @@ ds17 = [
 ]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     sim = build_mf6(idx, test.workspace)
 
     # build mf6 with interbeds
     wsc = os.path.join(test.workspace, "mf6")
-    mc = build_mf6(idx, wsc, interbed=True)
+    mc = build_mf6(idx, wsc, interbed=True, netcdf=netcdf)
 
     return sim, mc
 
 
 # build MODFLOW 6 files
-def build_mf6(idx, ws, interbed=False):
+def build_mf6(idx, ws, interbed=False, netcdf=None):
     name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -264,15 +264,22 @@ def build_mf6(idx, ws, interbed=False):
         top=top,
         botm=botm,
         idomain=ib,
-        filename=f"{name}.dis",
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
+        gwf,
+        save_flows=False,
+        icelltype=laytyp,
+        k=hk,
+        k33=hk,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -287,7 +294,11 @@ def build_mf6(idx, ws, interbed=False):
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
-        gwf, maxbound=len(chd6), stress_period_data=cd6, save_flows=False
+        gwf,
+        maxbound=len(chd6),
+        stress_period_data=cd6,
+        save_flows=False,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     # wel files
@@ -298,6 +309,7 @@ def build_mf6(idx, ws, interbed=False):
         maxbound=len(ws1),
         stress_period_data=wd6,
         save_flows=False,
+        filename=f"{name}.nc" if netcdf else f"{name}.wel",
     )
 
     # csub files
@@ -499,12 +511,16 @@ def cbc_compare(test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

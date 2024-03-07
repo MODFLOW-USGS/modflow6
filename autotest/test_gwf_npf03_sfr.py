@@ -55,7 +55,7 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
     # set local data for this model
@@ -194,37 +194,43 @@ def build_models(idx, test):
             delc=delc,
             top=top,
             botm=bot,
-            filename=f"{mname}.dis",
+            filename=f"{mname}.nc" if netcdf else f"{mname}.dis",
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{mname}.ic")
+        ic = flopy.mf6.ModflowGwfic(
+            gwf, strt=strt, filename=f"{mname}.nc" if netcdf else f"{mname}.ic"
+        )
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(
-            gwf, save_flows=False, icelltype=0, k=hkt
+            gwf,
+            save_flows=False,
+            icelltype=0,
+            k=hkt,
+            filename=f"{mname}.nc" if netcdf else f"{mname}.npf",
         )
 
         # chd files
         if jdx == 0:
-            fn = f"{mname}.chd1.chd"
+            fn = f"{mname}.chd1"
             chd1 = flopy.mf6.modflow.ModflowGwfchd(
                 gwf,
                 boundnames=True,
                 stress_period_data=cd6left,
                 save_flows=False,
-                filename=fn,
+                filename=f"{fn}.nc" if netcdf else f"{fn}.chd",
                 pname="chd1",
                 print_input=True,
             )
         if jdx == nmodels - 1:
-            fn = f"{mname}.chd2.chd"
+            fn = f"{mname}.chd2"
             chd2 = flopy.mf6.modflow.ModflowGwfchd(
                 gwf,
                 boundnames=True,
                 stress_period_data=cd6right,
                 save_flows=False,
-                filename=fn,
+                filename=f"{fn}.nc" if netcdf else f"{fn}.chd",
                 pname="chd2",
                 print_input=True,
             )
@@ -5777,12 +5783,16 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

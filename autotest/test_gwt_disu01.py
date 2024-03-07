@@ -16,7 +16,7 @@ from framework import TestFramework
 cases = ["disu01a"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -98,19 +98,34 @@ def build_models(idx, test):
 
     # use utility to make a disu version of a regular grid
     disu_kwargs = get_disu_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
-    disu = flopy.mf6.ModflowGwfdisu(gwf, **disu_kwargs)
+    disu = flopy.mf6.ModflowGwfdisu(
+        gwf,
+        **disu_kwargs,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.disu",
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk, k33=hk
+        gwf,
+        save_flows=False,
+        icelltype=laytyp,
+        k=hk,
+        k33=hk,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # chd files
     chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdspdict, save_flows=False, pname="CHD-1"
+        gwf,
+        stress_period_data=chdspdict,
+        save_flows=False,
+        pname="CHD-1",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
 
     # wel files
@@ -122,6 +137,7 @@ def build_models(idx, test):
         save_flows=False,
         auxiliary="CONCENTRATION",
         pname="WEL-1",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
     )
 
     # output control
@@ -163,10 +179,16 @@ def build_models(idx, test):
 
     # use utility to make a disu version of a regular grid
     disu_kwargs = get_disu_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
-    disu = flopy.mf6.ModflowGwtdisu(gwt, **disu_kwargs)
+    disu = flopy.mf6.ModflowGwtdisu(
+        gwt,
+        **disu_kwargs,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.disu",
+    )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic"
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
@@ -247,12 +269,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

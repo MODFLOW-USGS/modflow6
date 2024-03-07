@@ -11,7 +11,7 @@ cases = ["dsp01a_fmi", "dsp01b_fmi"]
 xt3d = [False, True]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -89,7 +89,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=1,
-        filename=f"{gwtname}.dis",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
@@ -105,7 +105,7 @@ def build_models(idx, test):
         alv=0.0,
         ath1=0.0,
         atv=0.0,
-        filename=f"{gwtname}.dsp",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dsp",
     )
 
     # constant concentration
@@ -116,6 +116,7 @@ def build_models(idx, test):
         stress_period_data=cncs,
         save_flows=False,
         pname="CNC-1",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.cnc",
     )
 
     # mass storage and transfer
@@ -319,12 +320,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

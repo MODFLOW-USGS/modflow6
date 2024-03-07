@@ -19,7 +19,7 @@ from framework import TestFramework
 cases = ["disv01a", "disv01b"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
     ws = test.workspace
     nlay = 3
@@ -57,18 +57,29 @@ def build_models(idx, test):
     tdis = flopy.mf6.ModflowTdis(sim)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
     ims = flopy.mf6.ModflowIms(sim, print_option="SUMMARY")
-    disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
-    npf = flopy.mf6.ModflowGwfnpf(gwf)
+    disv = flopy.mf6.ModflowGwfdisv(
+        gwf, **disvkwargs, filename=f"{name}.nc" if netcdf else f"{name}.disv"
+    )
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=0.0, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf, filename=f"{name}.nc" if netcdf else f"{name}.npf"
+    )
     spd = {0: [[(0, 0), 1.0], [(0, nrow * ncol - 1), 0.0]]}
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
+    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
+        gwf,
+        stress_period_data=spd,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
+    )
     return sim, None
 
 
-def check_output(idx, test):
+def check_output(idx, test, netcdf=None):
     name = test.name
 
-    fname = os.path.join(test.workspace, name + ".disv.grb")
+    ext = ".nc.grb" if netcdf else ".disv.grb"
+    fname = os.path.join(test.workspace, name + ext)
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
     ncpl = grbobj._datadict["NCPL"]
     ia = grbobj._datadict["IA"]
@@ -84,13 +95,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
+        check=lambda t: check_output(idx, t, netcdf),
         compare=None,
+        netcdf=netcdf,
     )
     test.run()
