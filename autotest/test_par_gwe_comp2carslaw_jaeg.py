@@ -12,7 +12,7 @@ cases = ["carslaw-jaeg"]
 
 
 def build_models(idx, test):
-    from test_gwegwe_exchng_with_comp2carslaw_jaeger import (
+    from test_gwe_split_analyt import (
         build_models as build,
     )
 
@@ -21,7 +21,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    from test_gwegwe_exchng_with_comp2carslaw_jaeger import (
+    from test_gwe_split_analyt import (
         check_output as check,
     )
 
