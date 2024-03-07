@@ -13,38 +13,39 @@
  Section 43, case i:
  -------------------
 
-        | <--------------------------   10 m   --------------------------> |
-      
-        +------------------------------------------------------------------+
-        |                      Initial temperature = T_0                   | <-- *ESL
-        +------------------------------------------------------------------+
-        ^                                      * ESL: Energy Source Loading Boundary
-        |
-        No heat-flow boundary
+     | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
+
+     +--------------------------------+              +--------------------------------+
+     |    Initial temperature = T_0   | <-exchange-> |   Initial temperature = T_0    | <-- *ESL
+     +--------------------------------+              +--------------------------------+
+     ^                                                * ESL: Energy Source Loading Boundary
+     |
+     No heat-flow boundary
 
  
  Section 43, case ii:
  --------------------
  
-        +------------------------------------------------------------------+
-        |                     Initial temperature = 0.0                    | <-- *ESL
-        +------------------------------------------------------------------+
-        ^                                     
-        |
-        Specified temperature boundary, T_0
+     | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
+
+     +--------------------------------+              +--------------------------------+
+     |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- *ESL
+     +--------------------------------+              +--------------------------------+
+     ^                                                * ESL: Energy Source Loading Boundary
+     |
+     Specified temperature boundary, T_0
 
 
  Section 43, case iii:
  ---------------------
-         
-        +------------------------------------------------------------------+
-CTP ->  |                                                                  | <- CTP = T_0
-  = T_0 +------------------------------------------------------------------+
-          \-------------------------------------------------------------/
-                                    |
-               Uniform, constant heat production throughout the slab
-      
-      
+
+       +--------------------------------+              +--------------------------------+
+CTP -> |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- CTP = T_0
+ = T_0 +--------------------------------+              +--------------------------------+
+       \--------------------------------/              \--------------------------------/
+                     |                                             |
+                  Uniform, constant heat production throughout the slab
+
    Specified temperature boundary, T_0
 
 """
@@ -59,7 +60,7 @@ import matplotlib.pyplot as plt
 from framework import TestFramework
 
 # Parameters that vary by scenario
-cases = ["esl_casei", "esl_caseii", "esl_caseiii"]
+cases = ["eslcasei", "eslcaseii", "eslcaseiii"]
 perlen = {0: [100, 900], 1: [100, 9900], 2: [100, 900]}
 nstp = [100, 900]
 tsmult = [
@@ -72,6 +73,7 @@ T_0 = 0.0  # Initial temperature in all scenarios.
 # Additionally serves as the CTP bnd temperature in scenarios ii and iii
 
 xt3d = [True]
+scheme = "UPSTREAM"
 
 # Parameters for tdis package
 
@@ -81,9 +83,10 @@ xt3d = [True]
 el = 10.0  # meters
 
 # Cell dimensions
-nlay, nrow, ncol = 1, 1, 1000
-delc = delz = 1.0
-delr = el / ncol
+nlay, nrow, ncol = 1, 1, 500
+delc = 1.0
+delz = 1.0
+delr = el / (ncol * 2)
 
 top = 1.0
 laytyp = 1
@@ -144,6 +147,7 @@ rho_C_bulk = Sw * theta * rhow * Cpw + (1 - theta) * rhos * Cps
 # Eqn 7-3: Bulk thermal diffusivity
 D = K_t_bulk / rho_C_bulk
 
+
 # Energy input to boundary (q_x term in the documentation)
 def calc_ener_input(primer_val):
     ener_add_rate = delr * delc * delz * rho_C_bulk * primer_val
@@ -151,30 +155,30 @@ def calc_ener_input(primer_val):
 
 
 # Define function to solve analytical solution
-# Function names derive from equation numbers in Techniques and Methods
+def assemble_half_model(
+    idx, test, ener_input, side="right", sim=None, imsgwf=None, imsgwe=None
+):
 
-
-def build_models(idx, test, ener_input):
-
-    name = cases[idx]
+    name = cases[idx] + "-" + side[0]
 
     # Build MODFLOW 6 files
     ws = test.workspace
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
-    )
+    if sim is None:
+        sim = flopy.mf6.MFSimulation(
+            sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        )
 
-    # Create tdis package
-    tdis_rc = []
-    for i in range(len(perlen[idx])):
-        tdis_rc.append((perlen[idx][i], nstp[i], tsmult[idx][i]))
+        # Create tdis package
+        tdis_rc = []
+        for i in range(len(perlen[idx])):
+            tdis_rc.append((perlen[idx][i], nstp[i], tsmult[idx][i]))
 
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=len(perlen[idx]), perioddata=tdis_rc
-    )
+        flopy.mf6.ModflowTdis(
+            sim, time_units="DAYS", nper=len(perlen[idx]), perioddata=tdis_rc
+        )
 
     # Create GWF model
-    gwfname = "gwf_" + name
+    gwfname = "gwf-" + name
     gwf = flopy.mf6.MFModel(
         sim,
         model_type="gwf6",
@@ -184,26 +188,32 @@ def build_models(idx, test, ener_input):
     gwf.name_file.save_flows = True
 
     # Create iterative model solution and register the gwf model with it
-    imsgwf = flopy.mf6.ModflowIms(
-        sim,
-        print_option="SUMMARY",
-        outer_dvclose=hclose,
-        outer_maximum=nouter,
-        under_relaxation="NONE",
-        inner_maximum=ninner,
-        inner_dvclose=hclose,
-        rcloserecord=rclose,
-        linear_acceleration="CG",
-        scaling_method="NONE",
-        reordering_method="NONE",
-        relaxation_factor=relax,
-        filename=f"{gwfname}.ims",
-    )
+    if imsgwf is None:
+        imsgwf = flopy.mf6.ModflowIms(
+            sim,
+            print_option="SUMMARY",
+            outer_dvclose=hclose,
+            outer_maximum=nouter,
+            under_relaxation="NONE",
+            inner_maximum=ninner,
+            inner_dvclose=hclose,
+            rcloserecord=rclose,
+            linear_acceleration="CG",
+            scaling_method="NONE",
+            reordering_method="NONE",
+            relaxation_factor=relax,
+            filename=f"{gwfname}.ims",
+        )
     sim.register_ims_package(imsgwf, [gwf.name])
+
+    xorigin = 0.0
+    if side == "right":
+        xorigin = ncol * delr
 
     # Discretization package
     flopy.mf6.ModflowGwfdis(
         gwf,
+        xorigin=xorigin,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -212,13 +222,13 @@ def build_models(idx, test, ener_input):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        pname="DIS-GWF",
+        pname="DIS-GWF-" + side[0],
         filename=f"{gwfname}.dis",
     )
 
     # Initial conditions
     flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, pname="IC-HD", filename=f"{gwfname}.ic"
+        gwf, strt=strt, pname="IC-" + side[0], filename=f"{gwfname}.ic"
     )
 
     # Node property flow
@@ -228,6 +238,7 @@ def build_models(idx, test, ener_input):
         icelltype=laytyp,
         k=hk,
         k33=hk,
+        pname="NPF-" + side[0],
         filename=f"{gwfname}.npf",
     )
 
@@ -239,7 +250,7 @@ def build_models(idx, test, ener_input):
         iconvert=1,
         steady_state=False,
         transient=True,
-        pname="STO",
+        pname="STO-" + side[0],
         filename="{}.sto".format(gwfname),
     )
 
@@ -250,25 +261,27 @@ def build_models(idx, test, ener_input):
     #        maxbound=len(chd_perdat[0]),
     #        stress_period_data=chd_perdat,
     #        save_flows=False,
-    #        pname="CHD-1",
+    #        pname="CHD-" + side[0],
     #        filename=f"{gwfname}.chd"
     #    )
 
     # Output control
     flopy.mf6.ModflowGwfoc(
         gwf,
+        pname="OC-" + side[0],
         budget_filerecord=f"{gwfname}.cbc",
         head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        filename=f"{gwfname}.oc",
     )
 
     # -----------------
     # Create GWE model
     # -----------------
 
-    gwename = "gwe_" + name
+    gwename = "gwe-" + name
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
@@ -278,25 +291,27 @@ def build_models(idx, test, ener_input):
     gwe.name_file.save_flows = True
 
     # Create iterative model solution and register the gwt model with it
-    imsgwe = flopy.mf6.ModflowIms(
-        sim,
-        print_option="SUMMARY",
-        outer_dvclose=hclose,
-        outer_maximum=nouter,
-        under_relaxation="NONE",
-        inner_maximum=ninner,
-        inner_dvclose=hclose,
-        rcloserecord=rclose,
-        linear_acceleration="BICGSTAB",
-        scaling_method="NONE",
-        reordering_method="NONE",
-        relaxation_factor=relax,
-        filename=f"{gwename}.ims",
-    )
+    if imsgwe is None:
+        imsgwe = flopy.mf6.ModflowIms(
+            sim,
+            print_option="SUMMARY",
+            outer_dvclose=hclose,
+            outer_maximum=nouter,
+            under_relaxation="NONE",
+            inner_maximum=ninner,
+            inner_dvclose=hclose,
+            rcloserecord=rclose,
+            linear_acceleration="BICGSTAB",
+            scaling_method="NONE",
+            reordering_method="NONE",
+            relaxation_factor=relax,
+            filename=f"{gwename}.ims",
+        )
     sim.register_ims_package(imsgwe, [gwe.name])
 
     flopy.mf6.ModflowGwedis(
         gwe,
+        xorigin=xorigin,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -305,17 +320,18 @@ def build_models(idx, test, ener_input):
         top=top,
         botm=botm,
         idomain=1,
+        pname="DIS-" + side[0],
         filename=f"{gwename}.dis",
     )
 
     # Initial conditions
     flopy.mf6.ModflowGweic(
-        gwe, strt=T_0, pname="IC-1", filename=f"{gwename}.ic"
+        gwe, strt=T_0, pname="IC-" + side[0], filename=f"{gwename}.ic"
     )
 
     # Advection
     flopy.mf6.ModflowGweadv(
-        gwe, scheme="UPSTREAM", pname="ADV-E", filename=f"{gwename}.adv"
+        gwe, scheme=scheme, pname="ADV-" + side[0], filename=f"{gwename}.adv"
     )
 
     # Heat conduction
@@ -327,7 +343,7 @@ def build_models(idx, test, ener_input):
         atv=atv,
         ktw=Ktw,
         kts=Kts,
-        pname="CND-1",
+        pname="CND-" + side[0],
         filename="{}.cnd".format(gwename),
     )
 
@@ -337,55 +353,74 @@ def build_models(idx, test, ener_input):
         cps=Cps,
         rhos=rhos,
         packagedata=[Cpw, rhow, lhv],
-        pname="EST-1",
+        pname="EST-" + side[0],
         filename="{}.est".format(gwename),
     )
 
-    # Constant temperature
+    # Constant temperature goes on the left side of the left model
     # Note: Implementation of the CTP boundary depends on which analytical sln is in view
     #       See notes at top of script regarding scenarios
-    if idx > 0:
-        if idx == 1:
+    if side == "left":
+        if idx > 0:
             ctp = {0: [[(0, 0, 0), T_0]]}
-        elif idx == 2:
-            ctp = {0: [[(0, 0, 0), T_0], [(0, 0, ncol - 1), T_0]]}
-        flopy.mf6.ModflowGwectp(
-            gwe,
-            maxbound=len(ctp),
-            stress_period_data=ctp,
-            save_flows=True,
-            pname="CTP-1",
-            filename=f"{gwename}.ctp",
-        )
+
+            flopy.mf6.ModflowGwectp(
+                gwe,
+                maxbound=len(ctp),
+                stress_period_data=ctp,
+                save_flows=True,
+                pname="CTP-" + side[0],
+                filename=f"{gwename}.ctp",
+            )
+
+    if side == "right":
+        if idx == 2:
+            ctp = {0: [[(0, 0, ncol - 1), T_0]]}
+
+            flopy.mf6.ModflowGwectp(
+                gwe,
+                maxbound=len(ctp),
+                stress_period_data=ctp,
+                save_flows=True,
+                pname="CTP-" + side[0],
+                filename=f"{gwename}.ctp",
+            )
 
     # Instantiate energy source loading (ESL) package
+    esrc = None
     if idx < 2:
-        esrc = {0: [[(0, 0, ncol - 1), ener_input]]}
+        if side == "right":
+            esrc = {0: [[(0, 0, ncol - 1), ener_input]]}
 
-    elif idx == 2:
+    elif idx == 2:  # do this for both models
         esrcs = []
         for j in np.arange(ncol):
             esrcs.append([(0, 0, j), ener_input])
         esrc = {0: esrcs}
 
-    flopy.mf6.ModflowGweesl(
-        gwe,
-        maxbound=len(esrc[0]),
-        stress_period_data=esrc,
-        save_flows=False,
-        pname="ESL-1",
-        filename=f"{gwename}.esl",
-    )
+    if esrc is not None:
+        flopy.mf6.ModflowGweesl(
+            gwe,
+            maxbound=len(esrc[0]),
+            stress_period_data=esrc,
+            save_flows=False,
+            pname="ESL-" + side[0],
+            filename=f"{gwename}.esl",
+        )
 
     # Sources
     if chd is not None:
         flopy.mf6.ModflowGwessm(
-            gwe, sources=[[]], pname="SSM-E", filename=f"{gwename}.ssm"
+            gwe,
+            sources=[[]],
+            pname="SSM-" + side[0],
+            filename=f"{gwename}.ssm",
         )
 
     # Output control
     flopy.mf6.ModflowGweoc(
         gwe,
+        pname="OC-" + side[0],
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
@@ -393,15 +428,79 @@ def build_models(idx, test, ener_input):
         ],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
+        filename=f"{gwename}.oc",
     )
 
-    # GWF GWE exchange
+    # GWF-GWE exchange
     flopy.mf6.ModflowGwfgwe(
         sim,
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
         filename=f"{name}.gwfgwe",
+    )
+
+    return sim, imsgwf, imsgwe
+
+
+def build_models(idx, test, ener_input):
+    # left model
+    sim, imsgwf, imsgwe = assemble_half_model(
+        idx, test, ener_input, side="left"
+    )
+    sim, imsgwf, imsgwe = assemble_half_model(
+        idx,
+        test,
+        ener_input,
+        side="right",
+        sim=sim,
+        imsgwf=imsgwf,
+        imsgwe=imsgwe,
+    )
+
+    all_mod_names = sim.model_names
+
+    # link up gwf-gwf and gwe-gwe
+    gwf_mod_names = [nm for nm in all_mod_names if "gwf-" in nm]
+    gwe_mod_names = [nm for nm in all_mod_names if "gwe-" in nm]
+
+    # Assert that the "left" model is listed first
+    assert (
+        "-l" in gwf_mod_names[0]
+    ), "assumed gwf model order is not as expected"
+    assert (
+        "-l" in gwe_mod_names[0]
+    ), "assumed gwe model order is not as expected"
+
+    # Add the exchange data
+    exgdata = [
+        ((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2, delr / 2, delc, 0.0, delr)
+    ]
+    flopy.mf6.ModflowGwfgwf(
+        sim,
+        exgtype="GWF6-GWF6",
+        nexg=len(exgdata),
+        exgmnamea=gwf_mod_names[0],
+        exgmnameb=gwf_mod_names[1],
+        exchangedata=exgdata,
+        xt3d=xt3d[0],
+        print_flows=True,
+        auxiliary=["ANGLDEGX", "CDIST"],
+        filename="{}.gwfgwf".format("exchng"),
+    )
+
+    flopy.mf6.ModflowGwegwe(
+        sim,
+        exgtype="GWE6-GWE6",
+        gwfmodelname1=gwf_mod_names[0],
+        gwfmodelname2=gwf_mod_names[1],
+        adv_scheme=scheme,
+        nexg=len(exgdata),
+        exgmnamea=gwe_mod_names[0],
+        exgmnameb=gwe_mod_names[1],
+        exchangedata=exgdata,
+        auxiliary=["ANGLDEGX", "CDIST"],
+        filename="{}.gwegwe".format("exchng"),
     )
 
     return sim, None
@@ -412,18 +511,18 @@ def eq7_24(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-24
-    term1 = (1 / 2) * (x_hat ** 2 - 1 / 3)
+    term1 = (1 / 2) * (x_hat**2 - 1 / 3)
     summation_terms = [
         ((-1) ** n)
-        / n ** 2
-        * math.exp(-1 * n ** 2 * math.pi ** 2 * t_hat)
+        / n**2
+        * math.exp(-1 * n**2 * math.pi**2 * t_hat)
         * math.cos(n * math.pi * x_hat)
         for n in np.arange(1, 1000)
     ]
-    term2 = 2 / (math.pi ** 2) * np.sum(summation_terms)
+    term2 = 2 / (math.pi**2) * np.sum(summation_terms)
     T = T_0 + ener_add_rate * l / K_t_bulk * (t_hat + term1 - term2)
 
     return T
@@ -434,17 +533,17 @@ def eq7_25(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-25
     summation_terms = [
         ((-1) ** n)
         / (2 * n + 1) ** 2
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat / 4)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat / 4)
         * math.sin((2 * n + 1) * math.pi * x_hat / 2)
         for n in np.arange(0, 1000)
     ]
-    term1 = (8 / math.pi ** 2) * np.sum(summation_terms)
+    term1 = (8 / math.pi**2) * np.sum(summation_terms)
 
     T = T_0 + ener_add_rate * l / K_t_bulk * (x_hat - term1)
 
@@ -456,30 +555,42 @@ def eq7_26(x, t, el, D, T_0, ener_add_rate):
     x_hat = x / el  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / el ** 2  # Dimensionless time
+    t_hat = D * t / el**2  # Dimensionless time
 
     # Solve equation 7-26
     term1 = x_hat * (1 - x_hat)
     summation_terms = [
         1
         / (2 * n + 1) ** 3
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat)
         * math.sin((2 * n + 1) * math.pi * x_hat)
         for n in np.arange(0, 1000)
     ]
-    term2 = (8 / math.pi ** 3) * np.sum(summation_terms)
-    T = T_0 + 0.5 * ener_add_rate * el ** 2 / K_t_bulk * (term1 - term2)
+    term2 = (8 / math.pi**3) * np.sum(summation_terms)
+    T = T_0 + 0.5 * ener_add_rate * el**2 / K_t_bulk * (term1 - term2)
 
     return T
 
 
 def check_output(idx, test, ener_input):
     name = test.name
-    gwename = "gwe_" + name
+    gwename1 = "gwe-" + name + "-l"
+    gwename2 = "gwe-" + name + "-r"
 
-    fpth = os.path.join(test.workspace, f"{gwename}.ucn")
-    tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
-    sim_temps = tobj.get_alldata()
+    # left side
+    fpth1 = os.path.join(test.workspace, f"{gwename1}.ucn")
+    tobj1 = flopy.utils.HeadFile(fpth1, precision="double", text="TEMPERATURE")
+    sim_temps_l = tobj1.get_alldata()
+
+    # right side
+    fpth2 = os.path.join(test.workspace, f"{gwename2}.ucn")
+    tobj2 = flopy.utils.HeadFile(fpth2, precision="double", text="TEMPERATURE")
+    sim_temps_r = tobj2.get_alldata()
+
+    # stitch the left and right sides together
+    sim_temps = np.concatenate(
+        (sim_temps_l, sim_temps_r), axis=len(sim_temps_l.shape) - 1
+    )
 
     # Compare simulated output to analytical solutions (scenario dependent)
     if idx < 2:
@@ -539,9 +650,16 @@ def check_output(idx, test, ener_input):
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
             ), "simulated solution is whacked"
 
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
-            # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
-            # plt.axhline(0.0, color='black')
+            # plt.plot(
+            #     cell_centroids,
+            #     analytical_temps,
+            #     "r-",
+            #     label="Analytical Solution",
+            # )
+            # plt.plot(
+            #     cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE"
+            # )
+            # plt.axhline(0.0, color="black")
             # plt.legend()
             # plt.show()
 
