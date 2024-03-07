@@ -10,7 +10,9 @@
 module GwfConductanceUtilsModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DHALF, DONE, &
-                             DLNLOW, DLNHIGH
+                             DLNLOW, DLNHIGH, &
+                             CCOND_HMEAN, CCOND_LMEAN, &
+                             CCOND_AMTLMK, CCOND_AMTHMK
 
   implicit none
   private
@@ -226,35 +228,31 @@ contains
     !
     ! -- Averaging
     select case (iavgmeth)
-      !
-      ! -- Harmonic-mean method
-    case (0)
+
+    case (CCOND_HMEAN)
       if (t1 * t2 > DZERO) then
         condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
       else
         condmean = DZERO
       end if
-      !
-      ! -- Logarithmic-mean method
-    case (1)
+
+    case (CCOND_LMEAN)
       if (t1 * t2 > DZERO) then
         tmean = logmean(t1, t2)
       else
         tmean = DZERO
       end if
       condmean = tmean * width / (cl1 + cl2)
-      !
-      ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
-    case (2)
+
+    case (CCOND_AMTLMK)
       if (k1 * k2 > DZERO) then
         kmean = logmean(k1, k2)
       else
         kmean = DZERO
       end if
       condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
-      !
-      ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
-    case (3)
+
+    case (CCOND_AMTHMK)
       denom = (k1 * cl2 + k2 * cl1)
       if (denom > DZERO) then
         kmean = k1 * k2 / denom

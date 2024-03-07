@@ -189,4 +189,12 @@ module ConstantsModule
     ENUMERATOR :: CCRAYFTN = 3 !< 3
   END ENUM
 
+  ! -- enumerator that defines the conductance options
+  ENUM, BIND(C)
+    ENUMERATOR :: CCOND_HMEAN = 0 !< 0
+    ENUMERATOR :: CCOND_LMEAN = 1 !< 1
+    ENUMERATOR :: CCOND_AMTLMK = 2 !< 2
+    ENUMERATOR :: CCOND_AMTHMK = 3 !< 3
+  END ENUM
+
 end module ConstantsModule

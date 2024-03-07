@@ -4,7 +4,8 @@ module GwfNpfModule
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
                              DHNOFLO, DHDRY, DEM10, &
-                             LENMEMPATH, LENVARNAME, LINELENGTH
+                             LENMEMPATH, LENVARNAME, LINELENGTH, &
+                             CCOND_HMEAN
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -1120,7 +1121,7 @@ contains
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
-    this%icellavg = 0
+    this%icellavg = CCOND_HMEAN
     this%iavgkeff = 0
     this%ik22 = 0
     this%ik33 = 0
