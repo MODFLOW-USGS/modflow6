@@ -35,8 +35,6 @@ contains
 
   !> @brief Horizontal conductance between two cells
   !!
-  !! iupstream: if 1, then upstream-weight condsat, otherwise recalculate
-  !!
   !! This function uses a weighted transmissivity in the harmonic mean
   !! conductance calculations. This differs from the MODFLOW-NWT and
   !! MODFLOW-USG conductance calculations for the Newton-Raphson formulation
@@ -142,7 +140,6 @@ contains
       thksatn = satn * (topn - botn)
       thksatm = satm * (topm - botm)
     end if
-    ! calculate the appropriate mean
     condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
                       fawidth, icellavg)
   end function convertible_standard
@@ -181,7 +178,7 @@ contains
     real(DP) :: bovk2
     real(DP) :: denom
     !
-    ! If either n or m is inactive then conductance is zero
+    ! Either n or m is inactive
     if (ibdn == 0 .or. ibdm == 0) then
       condnm = DZERO
       !
@@ -208,10 +205,8 @@ contains
       satmtmp = satm
       if (idewatcv == 0) then
       if (botn > botm) then
-        ! n is above m
         satmtmp = DONE
       else
-        ! m is above n
         satntmp = DONE
       end if
       end if
@@ -300,6 +295,7 @@ contains
     real(DP), intent(in) :: d2 !< second number
     ! local
     real(DP) :: drat
+
     drat = d2 / d1
     if (drat <= DLNLOW .or. drat >= DLNHIGH) then
       logmean = (d2 - d1) / log(drat)
@@ -390,15 +386,10 @@ contains
     real(DP) :: sill_top
     real(DP) :: sill_bot
     real(DP) :: tp
-    !
-    ! Calculate sill_top and sill_bot
+
     sill_top = min(top, topc)
     sill_bot = max(bot, botc)
-    !
-    ! Calculate tp
     tp = bot + sat * (top - bot)
-
-    ! Calculate saturated thickness
     res = max(min(tp, sill_top) - sill_bot, DZERO)
   end function staggered_thkfrac
 
