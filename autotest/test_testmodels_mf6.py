@@ -17,6 +17,8 @@ excluded_models = [
     "test004_bcfss",
     "test014_NWTP3Low_dev",
     "test041_flowdivert_nwt_dev",
+    # todo reinstate after 6.5.0 release
+    "test001d_Tnewton",
     # remove tests with nwt usg conductance weighting 
     "test006_gwf3_gnc_nr_dev",
     "test006_gwf3_nr_dev",
