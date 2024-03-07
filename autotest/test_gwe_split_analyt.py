@@ -4,36 +4,37 @@ r"""
  
  Energy is added to the right hand side boundary using the energy source loading
  (ESL) package.  Basic model set up is below, with a slab of unit thickness 
- (1.0 m) that is 100 m "deep" with energy being loaded on right side.  
- Temperature will begin to rise on the right and propagate to the left. There are
- no sinks in this first example.  The titles that follow, for example
+ (1.0 m) that is 1 m "deep" ("into the page") with energy being loaded on right
+ side.  Temperature will begin to rise on the right and propagate to the left. 
+ There are no sinks in this first example.  There are two additional conceptual
+ models named "case ii" and "case iii". The titles that follow, for example
  "Section 43, case x" refer to specific analytical solutions found in Carslaw &
  Jaeger (1947)
  
  Section 43, case i:
  -------------------
 
-     | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-
-     +--------------------------------+              +--------------------------------+
-     |    Initial temperature = T_0   | <-exchange-> |   Initial temperature = T_0    | <-- *ESL
-     +--------------------------------+              +--------------------------------+
-     ^                                                * ESL: Energy Source Loading Boundary
-     |
-     No heat-flow boundary
+       | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
+    
+       +--------------------------------+              +--------------------------------+
+       |    Initial temperature = T_0   | <-exchange-> |   Initial temperature = T_0    | <-- *ESL
+       +--------------------------------+              +--------------------------------+
+       ^                                                * ESL: Energy Source Loading Boundary
+       |
+       No heat-flow boundary
 
  
  Section 43, case ii:
  --------------------
  
-     | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-
-     +--------------------------------+              +--------------------------------+
-     |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- *ESL
-     +--------------------------------+              +--------------------------------+
-     ^                                                * ESL: Energy Source Loading Boundary
-     |
-     Specified temperature boundary, T_0
+       | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
+      
+       +--------------------------------+              +--------------------------------+
+       |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- *ESL
+       +--------------------------------+              +--------------------------------+
+       ^                                                * ESL: Energy Source Loading Boundary
+       |
+       Specified temperature boundary, T_0
 
 
  Section 43, case iii:
@@ -443,7 +444,13 @@ def assemble_half_model(
     return sim, imsgwf, imsgwe
 
 
-def build_models(idx, test, ener_input):
+def build_models(idx, test):
+
+    if idx < 2:
+        ener_input = calc_ener_input(1.0)
+    elif idx == 2:
+        ener_input = calc_ener_input(0.1)
+
     # left model
     sim, imsgwf, imsgwe = assemble_half_model(
         idx, test, ener_input, side="left"
@@ -667,15 +674,11 @@ def check_output(idx, test, ener_input):
 # - No need to change any code below
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    if idx < 2:
-        ener_input = calc_ener_input(1.0)
-    elif idx == 2:
-        ener_input = calc_ener_input(0.1)
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t, ener_input),
-        check=lambda t: check_output(idx, t, ener_input),
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()
