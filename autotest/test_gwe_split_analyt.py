@@ -650,18 +650,18 @@ def check_output(idx, test, ener_input):
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
             ), "simulated solution is whacked"
 
-            plt.plot(
-                cell_centroids,
-                analytical_temps,
-                "r-",
-                label="Analytical Solution",
-            )
-            plt.plot(
-                cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE"
-            )
-            plt.axhline(0.0, color="black")
-            plt.legend()
-            plt.show()
+            # plt.plot(
+            #     cell_centroids,
+            #     analytical_temps,
+            #     "r-",
+            #     label="Analytical Solution",
+            # )
+            # plt.plot(
+            #     cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE"
+            # )
+            # plt.axhline(0.0, color="black")
+            # plt.legend()
+            # plt.show()
 
 
 # - No need to change any code below
