@@ -1232,7 +1232,7 @@ contains
     else
       cond = hcond(this%ibound(n), this%ibound(m), &
                    this%npf%icelltype(n), this%npf%icelltype(m), &
-                   this%npf%inewton, this%npf%inewton, &
+                   this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
                    this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
@@ -1242,8 +1242,7 @@ contains
                    this%dis%bot(n), this%dis%bot(m), &
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
-                   this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega)
+                   this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Calculate buoyancy term
@@ -1315,7 +1314,7 @@ contains
     else
       cond = hcond(this%ibound(n), this%ibound(m), &
                    this%npf%icelltype(n), this%npf%icelltype(m), &
-                   this%npf%inewton, this%npf%inewton, &
+                   this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
                    this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
@@ -1325,8 +1324,7 @@ contains
                    this%dis%bot(n), this%dis%bot(m), &
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
-                   this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega)
+                   this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Calculate terms

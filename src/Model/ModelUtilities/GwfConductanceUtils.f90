@@ -11,8 +11,7 @@ module GwfConductanceUtilsModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DHALF, DONE, &
                              DLNLOW, DLNHIGH, &
-                             CCOND_HMEAN, CCOND_LMEAN, &
-                             CCOND_AMTLMK, CCOND_AMTHMK
+                             C3D_STAGGERED
 
   implicit none
   private
@@ -21,156 +20,198 @@ module GwfConductanceUtilsModule
   public :: condmean
   public :: thksatnm
   public :: staggered_thkfrac
+  public :: CCOND_HMEAN
+
+  !> @brief enumerator that defines the conductance options
+  !<
+ENUM, BIND(C)
+    ENUMERATOR :: CCOND_HMEAN = 0 !< Harmonic mean
+    ENUMERATOR :: CCOND_LMEAN = 1 !< Logarithmic mean
+    ENUMERATOR :: CCOND_AMTLMK = 2 !< Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
+    ENUMERATOR :: CCOND_AMTHMK = 3 !< Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
+  END ENUM
 
 contains
 
   !> @brief Horizontal conductance between two cells
   !!
-  !! inwtup: if 1, then upstream-weight condsat, otherwise recalculate
+  !! iupstream: if 1, then upstream-weight condsat, otherwise recalculate
   !!
   !! This function uses a weighted transmissivity in the harmonic mean
   !! conductance calculations. This differs from the MODFLOW-NWT and
   !! MODFLOW-USG conductance calculations for the Newton-Raphson formulation
   !! which use a weighted hydraulic conductivity.
   !<
-  function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, &
+  function hcond(ibdn, ibdm, ictn, ictm, iupstream, ihc, icellavg, &
                  condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
-                 botn, botm, cln, clm, fawidth, satomega) &
+                 botn, botm, cln, clm, fawidth) &
     result(condnm)
-    ! -- return
-    real(DP) :: condnm
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inewton
-    integer(I4B), intent(in) :: inwtup
-    integer(I4B), intent(in) :: ihc
-    integer(I4B), intent(in) :: icellavg
-    real(DP), intent(in) :: condsat
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: hkn
-    real(DP), intent(in) :: hkm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: cln
-    real(DP), intent(in) :: clm
-    real(DP), intent(in) :: fawidth
-    real(DP), intent(in) :: satomega
-    ! -- local
-    real(DP) :: thksatn
-    real(DP) :: thksatm
-    !
-    ! -- If either n or m is inactive then conductance is zero
+    ! return variable
+    real(DP) :: condnm !< horizontal conductance between two cells
+    ! dummy
+    integer(I4B), intent(in) :: ibdn !< cell n active flag
+    integer(I4B), intent(in) :: ibdm !< cell m active flag
+    integer(I4B), intent(in) :: ictn !< cell n convertible cell flag
+    integer(I4B), intent(in) :: ictm !< cell m convertible cell flag
+    integer(I4B), intent(in) :: iupstream !< flag for upstream weighting
+    integer(I4B), intent(in) :: ihc !< connection type
+    integer(I4B), intent(in) :: icellavg !< cell averaging option
+    real(DP), intent(in) :: condsat !< saturated conductance
+    real(DP), intent(in) :: hn !< cell n head
+    real(DP), intent(in) :: hm !< cell m head
+    real(DP), intent(in) :: satn !< cell n wetted cell fraction
+    real(DP), intent(in) :: satm !< cell m wetted cell fraction
+    real(DP), intent(in) :: hkn !< horizontal hydraulic conductivity for cell n (in the direction of cell m)
+    real(DP), intent(in) :: hkm !< horizontal hydraulic conductivity for cell m (in the direction of cell n)
+    real(DP), intent(in) :: topn !< top of cell n
+    real(DP), intent(in) :: topm !< top of cell m
+    real(DP), intent(in) :: botn !< bottom of cell n
+    real(DP), intent(in) :: botm !< bottom of cell m
+    real(DP), intent(in) :: cln !< distance from the center of cell n to the shared face with cell m
+    real(DP), intent(in) :: clm !< distance from the center of cell m to the shared face with cell n
+    real(DP), intent(in) :: fawidth !< width of cell perpendicular to flow
+
+    ! n or m is inactive
     if (ibdn == 0 .or. ibdm == 0) then
       condnm = DZERO
-      !
-      ! -- if both cells are non-convertible then use condsat
+      ! both cells are non-convertible
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
-      !
-      ! -- At least one of the cells is convertible and using the
-      !    newton-raphson conductance formulation
-    else if (inwtup == 1) then
-      if (hn > hm) then
-        condnm = satn
-      else
-        condnm = satm
-      end if
-      !
-      ! -- multiply condsat by condnm factor
-      condnm = condnm * condsat
-      !
-      ! -- At least one of the cells is convertible and using the
-      !    standard conductance formulation
+    else if (iupstream == 1) then
+      condnm = convertible_upstream(hn, hm, satn, satm, condsat)
     else
-      !
-      ! -- If staggered connection, subtract parts of cell that are above and
-      !    below the sill top and bottom elevations
-      if (ihc == 2) then
-        thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
-        thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
-      else
-        thksatn = satn * (topn - botn)
-        thksatm = satm * (topm - botm)
-      end if
-      ! -- calculate the appropriate mean
-      condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
-                        fawidth, icellavg)
+      condnm = convertible_standard(ihc, icellavg, &
+                                    satn, satm, hkn, hkm, &
+                                    topn, topm, botn, botm, &
+                                    cln, clm, fawidth)
     end if
-    return
   end function hcond
+
+  !> @brief Convertible cell(s) with upstream weighted horizontal conductance
+  !<
+  function convertible_upstream(hn, hm, satn, satm, condsat) &
+    result(condnm)
+    ! return variable
+    real(DP) :: condnm !< horizontal conductance between two cells
+    ! dummy
+    real(DP), intent(in) :: condsat !< saturated conductance
+    real(DP), intent(in) :: hn !< cell n head
+    real(DP), intent(in) :: hm !< cell m head
+    real(DP), intent(in) :: satn !< cell n wetted cell fraction
+    real(DP), intent(in) :: satm !< cell m wetted cell fraction
+    !  local
+    real(DP) :: sat_up
+
+    if (hn > hm) then
+      sat_up = satn
+    else
+      sat_up = satm
+    end if
+    condnm = sat_up * condsat
+  end function convertible_upstream
+
+  !> @brief Convertible cell(s) with standard weighted horizontal conductance
+  !<
+  function convertible_standard(ihc, icellavg, satn, satm, hkn, hkm, &
+                                topn, topm, botn, botm, cln, clm, fawidth) &
+    result(condnm)
+    ! return variable
+    real(DP) :: condnm !< horizontal conductance between two cells
+    ! dummy
+    integer(I4B), intent(in) :: ihc !< connection type
+    integer(I4B), intent(in) :: icellavg !< cell averaging option
+    real(DP), intent(in) :: satn !< cell n wetted cell fraction
+    real(DP), intent(in) :: satm !< cell m wetted cell fraction
+    real(DP), intent(in) :: hkn !< horizontal hydraulic conductivity for cell n (in the direction of cell m)
+    real(DP), intent(in) :: hkm !< horizontal hydraulic conductivity for cell m (in the direction of cell n)
+    real(DP), intent(in) :: topn !< top of cell n
+    real(DP), intent(in) :: topm !< top of cell m
+    real(DP), intent(in) :: botn !< bottom of cell n
+    real(DP), intent(in) :: botm !< bottom of cell m
+    real(DP), intent(in) :: cln !< distance from the center of cell n to the shared face with cell m
+    real(DP), intent(in) :: clm !< distance from the center of cell m to the shared face with cell n
+    real(DP), intent(in) :: fawidth !< width of cell perpendicular to flow
+    !  local
+    real(DP) :: thksatn
+    real(DP) :: thksatm
+
+    if (ihc == C3D_STAGGERED) then
+      thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
+      thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
+    else
+      thksatn = satn * (topn - botn)
+      thksatm = satm * (topm - botm)
+    end if
+    ! calculate the appropriate mean
+    condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
+                      fawidth, icellavg)
+  end function convertible_standard
 
   !> @brief Vertical conductance between two cells
   !<
   function vcond(ibdn, ibdm, ictn, ictm, inewton, ivarcv, idewatcv, &
                  condsat, hn, hm, vkn, vkm, satn, satm, topn, topm, botn, &
                  botm, flowarea) result(condnm)
-    ! -- return
+    ! return variable
     real(DP) :: condnm
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inewton
-    integer(I4B), intent(in) :: ivarcv
-    integer(I4B), intent(in) :: idewatcv
-    real(DP), intent(in) :: condsat
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: vkn
-    real(DP), intent(in) :: vkm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: flowarea
-    ! -- local
-    real(DP) :: satntmp, satmtmp
+    ! dummy
+    integer(I4B), intent(in) :: ibdn !< cell n active flag
+    integer(I4B), intent(in) :: ibdm !< cell m active flag
+    integer(I4B), intent(in) :: ictn !< cell n convertible cell flag
+    integer(I4B), intent(in) :: ictm !< cell m convertible cell flag
+    integer(I4B), intent(in) :: inewton !< flag for Newton-Raphson formulation
+    integer(I4B), intent(in) :: ivarcv !< variable vertical conductance flag
+    integer(I4B), intent(in) :: idewatcv !< dewatered vertical conductance flag
+    real(DP), intent(in) :: condsat !< saturated conductance
+    real(DP), intent(in) :: hn !< cell n head
+    real(DP), intent(in) :: hm !< cell m head
+    real(DP), intent(in) :: vkn !< vertical hydraulic conductivity for cell n (in the direction of cell m)
+    real(DP), intent(in) :: vkm !< vertical hydraulic conductivity for cell m (in the direction of cell n)
+    real(DP), intent(in) :: satn !< cell n wetted cell fraction
+    real(DP), intent(in) :: satm !< cell m wetted cell fraction
+    real(DP), intent(in) :: topn !< top of cell n
+    real(DP), intent(in) :: topm !< top of cell m
+    real(DP), intent(in) :: botn !< bottom of cell n
+    real(DP), intent(in) :: botm !< bottom of cell m
+    real(DP), intent(in) :: flowarea !< flow area between cell n and m
+    ! local
+    real(DP) :: satntmp
+    real(DP) :: satmtmp
     real(DP) :: bovk1
     real(DP) :: bovk2
     real(DP) :: denom
     !
-    ! -- If either n or m is inactive then conductance is zero
+    ! If either n or m is inactive then conductance is zero
     if (ibdn == 0 .or. ibdm == 0) then
       condnm = DZERO
       !
-      ! -- if constantcv then use condsat
+      ! constantcv
     elseif (ivarcv == 0) then
       condnm = condsat
       !
-      ! -- if both cells are non-convertible then use condsat
+      ! both cells are non-convertible
     elseif (ictn == 0 .and. ictm == 0) then
       condnm = condsat
       !
-      ! -- if both cells are fully saturated then use condsat
+      ! both cells are fully saturated
     elseif (hn >= topn .and. hm >= topm) then
       condnm = condsat
       !
-      ! -- At least one cell is partially saturated, so recalculate vertical
-      ! -- conductance for this connection
-      ! -- todo: upstream weighting?
+      ! At least one cell is partially saturated, so recalculate vertical
+      ! conductance for this connection
+      ! todo: upstream weighting?
     else
       !
-      ! -- Default is for CV correction (dewatered option); use underlying
+      ! Default is for CV correction (dewatered option); use underlying
       !    saturation of 1.
       satntmp = satn
       satmtmp = satm
       if (idewatcv == 0) then
       if (botn > botm) then
-        ! -- n is above m
+        ! n is above m
         satmtmp = DONE
       else
-        ! -- m is above n
+        ! m is above n
         satntmp = DONE
       end if
       end if
@@ -183,50 +224,34 @@ contains
         condnm = DZERO
       end if
     end if
-    return
   end function vcond
 
   !> @brief Calculate the conductance between two cells
-  !!
-  !! k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
-  !! k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
-  !! thick1 is the saturated thickness for cell 1
-  !! thick2 is the saturated thickness for cell 2
-  !! cl1 is the distance from the center of cell1 to the shared face with cell2
-  !! cl2 is the distance from the center of cell2 to the shared face with cell1
-  !! h1 is the head for cell1
-  !! h2 is the head for cell2
-  !! width is the width perpendicular to flow
-  !! iavgmeth is the averaging method:
-  !!   0 is harmonic averaging
-  !!   1 is logarithmic averaging
-  !!   2 is arithmetic averaging of sat thickness and logarithmic averaging of
-  !!     hydraulic conductivity
-  !!   3 is arithmetic averaging of sat thickness and harmonic averaging of
-  !!     hydraulic conductivity
   !<
   function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
-    ! -- return
-    real(DP) :: condmean
-    ! -- dummy
-    real(DP), intent(in) :: k1
-    real(DP), intent(in) :: k2
-    real(DP), intent(in) :: thick1
-    real(DP), intent(in) :: thick2
-    real(DP), intent(in) :: cl1
-    real(DP), intent(in) :: cl2
-    real(DP), intent(in) :: width
-    integer(I4B), intent(in) :: iavgmeth
-    ! -- local
+    ! return variable
+    real(DP) :: condmean !< mean conductance between two cell
+    ! dummy
+    real(DP), intent(in) :: k1 !< hydraulic conductivity for cell n (in the direction of cell m)
+    real(DP), intent(in) :: k2 !< hydraulic conductivity for cell m (in the direction of celln)
+    real(DP), intent(in) :: thick1 !< saturated thickness for cell 1
+    real(DP), intent(in) :: thick2 !< saturated thickness for cell 2
+    real(DP), intent(in) :: cl1 !< distance from the center of cell n to the shared face with cell m
+    real(DP), intent(in) :: cl2 !< distance from the center of cell m to the shared face with cell n
+    real(DP), intent(in) :: width !< width of cell perpendicular to flow
+    integer(I4B), intent(in) :: iavgmeth !< averaging method
+    ! local
     real(DP) :: t1
     real(DP) :: t2
-    real(DP) :: tmean, kmean, denom
+    real(DP) :: tmean
+    real(DP) :: kmean
+    real(DP) :: denom
     !
-    ! -- Initialize
+    ! Initialize
     t1 = k1 * thick1
     t2 = k2 * thick2
-    !
-    ! -- Averaging
+
+    ! Averaging method
     select case (iavgmeth)
 
     case (CCOND_HMEAN)
@@ -261,7 +286,6 @@ contains
       end if
       condmean = kmean * DHALF * (thick1 + thick2) * width
     end select
-    return
   end function condmean
 
   !> @brief Calculate the the logarithmic mean of two double precision numbers
@@ -269,12 +293,12 @@ contains
   !! Use an approximation if the ratio is near 1
   !<
   function logmean(d1, d2)
-    ! -- return
-    real(DP) :: logmean
-    ! -- dummy
-    real(DP), intent(in) :: d1
-    real(DP), intent(in) :: d2
-    ! -- local
+    ! return variable
+    real(DP) :: logmean !< logarithmic mean for two number
+    ! dummy
+    real(DP), intent(in) :: d1 !< first number
+    real(DP), intent(in) :: d2 !< second number
+    ! local
     real(DP) :: drat
     drat = d2 / d1
     if (drat <= DLNLOW .or. drat >= DLNHIGH) then
@@ -282,55 +306,45 @@ contains
     else
       logmean = DHALF * (d1 + d2)
     end if
-    return
   end function logmean
 
-  !> @brief Calculate saturated thickness at interface between two cells
+  !> @brief Calculate wetted cell thickness at interface between two cells
   !<
-  function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, &
-                    hn, hm, satn, satm, topn, topm, botn, botm, &
-                    satomega) result(res)
-    ! -- return
-    real(DP) :: res
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inwtup
-    integer(I4B), intent(in) :: ihc
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: satomega
-    ! -- local
-    real(DP) :: sn
-    real(DP) :: sm
+  function thksatnm(ibdn, ibdm, ictn, ictm, iupstream, ihc, &
+                    hn, hm, satn, satm, topn, topm, botn, botm) result(res)
+    ! return variable
+    real(DP) :: res !< wetted cell thickness for connection nm
+    ! dummy
+    integer(I4B), intent(in) :: ibdn !< cell n active flag
+    integer(I4B), intent(in) :: ibdm !< cell m active flag
+    integer(I4B), intent(in) :: ictn !< cell n convertible cell flag
+    integer(I4B), intent(in) :: ictm !< cell m convertible cell flag
+    integer(I4B), intent(in) :: iupstream !< flag for upstream weighting
+    integer(I4B), intent(in) :: ihc !< connection type
+    real(DP), intent(in) :: hn !< cell n head
+    real(DP), intent(in) :: hm !< cell m head
+    real(DP), intent(in) :: satn !< cell n wetted cell fraction
+    real(DP), intent(in) :: satm !< cell m wetted cell fraction
+    real(DP), intent(in) :: topn !< top of cell n
+    real(DP), intent(in) :: topm !< top of cell m
+    real(DP), intent(in) :: botn !< bottom of cell n
+    real(DP), intent(in) :: botm !< bottom of cell m
+    ! local
     real(DP) :: thksatn
     real(DP) :: thksatm
-    real(DP) :: sill_top, sill_bot
+    real(DP) :: sill_top
+    real(DP) :: sill_bot
     !
-    ! -- If either n or m is inactive then saturated thickness is zero
+    ! n or m is inactive
     if (ibdn == 0 .or. ibdm == 0) then
       res = DZERO
       !
-      ! -- if both cells are non-convertible then use average cell thickness
+      ! both cells are non-convertible
     elseif (ictn == 0 .and. ictm == 0) then
-      !
-      ! -- If staggered connection, subtract parts of cell that are above and
-      !    below the sill top and bottom elevations
-      if (ihc == 2) then
-        !
-        ! -- Calculate sill_top and sill_bot
+      if (ihc == C3D_STAGGERED) then
         sill_top = min(topn, topm)
         sill_bot = max(botn, botm)
-        !
-        ! -- Saturated thickness is sill_top - sill_bot
+
         thksatn = max(sill_top - sill_bot, DZERO)
         thksatm = thksatn
       else
@@ -339,27 +353,17 @@ contains
       end if
       res = DHALF * (thksatn + thksatm)
       !
-      ! -- At least one of the cells is convertible and using the
-      !    Newton-Raphson conductance formulation
-    elseif (inwtup == 1) then
-      sn = satn
-      sm = satm
-      !
-      ! -- upstream weight the thickness
+      ! At least one of the cells is convertible
+    elseif (iupstream == 1) then
       if (hn > hm) then
-        res = sn * (topn - botn)
+        res = satn * (topn - botn)
       else
-        res = sm * (topm - botm)
+        res = satm * (topm - botm)
       end if
       !
-      !
-      ! -- At least one of the cells is convertible and using the
-      !    standard conductance formulation
+      ! At least one of the cells is convertible and not upstream weighted
     else
-      !
-      ! -- If staggered connection, subtract parts of cell that are above and
-      !    below the sill top and bottom elevations
-      if (ihc == 2) then
+      if (ihc == C3D_STAGGERED) then
         thksatn = staggered_thkfrac(topn, botn, satn, topm, botm)
         thksatm = staggered_thkfrac(topm, botm, satm, topn, botn)
       else
@@ -374,29 +378,28 @@ contains
   !> @brief Calculate the thickness fraction for staggered grids
   !<
   function staggered_thkfrac(top, bot, sat, topc, botc) result(res)
-    ! -- return
+    ! return variable
     real(DP) :: res !< staggered thickness fraction for cell
-    ! -- dummy
+    ! dummy
     real(DP) :: top !< top of cell
     real(DP) :: bot !< bottom of cell
     real(DP) :: sat !< cell saturation
     real(DP) :: topc !< top of connected cell
     real(DP) :: botc !< bottom of connected cells
-    ! -- local
+    ! local
     real(DP) :: sill_top
     real(DP) :: sill_bot
     real(DP) :: tp
     !
-    ! -- Calculate sill_top and sill_bot
+    ! Calculate sill_top and sill_bot
     sill_top = min(top, topc)
     sill_bot = max(bot, botc)
     !
-    ! -- Calculate tp
+    ! Calculate tp
     tp = bot + sat * (top - bot)
 
-    ! -- Calculate saturated thickness
+    ! Calculate saturated thickness
     res = max(min(tp, sill_top) - sill_bot, DZERO)
-    return
   end function staggered_thkfrac
 
 end module GwfConductanceUtilsModule

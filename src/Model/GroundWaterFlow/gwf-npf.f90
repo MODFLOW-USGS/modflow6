@@ -5,7 +5,7 @@ module GwfNpfModule
                              DHALF, DP9, DONE, DTWO, &
                              DHNOFLO, DHDRY, DEM10, &
                              LENMEMPATH, LENVARNAME, LINELENGTH, &
-                             CCOND_HMEAN
+                             C3D_VERTICAL
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -22,7 +22,8 @@ module GwfNpfModule
   use MatrixBaseModule
   use HGeoUtilModule, only: hyeff
   use GwfConductanceUtilsModule, only: hcond, vcond, &
-                                       condmean, thksatnm
+                                       condmean, thksatnm, &
+                                       CCOND_HMEAN
 
   implicit none
 
@@ -511,7 +512,7 @@ contains
           hym = this%hy_eff(m, n, ihc, ipos=ii)
           !
           ! -- Vertical connection
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             !
             ! -- Calculate vertical conductance
             cond = vcond(this%ibound(n), this%ibound(m), &
@@ -550,7 +551,7 @@ contains
             ! -- Horizontal conductance
             cond = hcond(this%ibound(n), this%ibound(m), &
                          this%icelltype(n), this%icelltype(m), &
-                         this%inewton, this%inewton, &
+                         this%inewton, &
                          this%dis%con%ihc(this%dis%con%jas(ii)), &
                          this%icellavg, &
                          this%condsat(this%dis%con%jas(ii)), &
@@ -559,8 +560,7 @@ contains
                          this%dis%bot(n), this%dis%bot(m), &
                          this%dis%con%cl1(this%dis%con%jas(ii)), &
                          this%dis%con%cl2(this%dis%con%jas(ii)), &
-                         this%dis%con%hwva(this%dis%con%jas(ii)), &
-                         this%satomega)
+                         this%dis%con%hwva(this%dis%con%jas(ii)))
           end if
           !
           ! -- Fill row n
@@ -837,7 +837,7 @@ contains
     hym = this%hy_eff(m, n, ihc, ipos=icon)
     !
     ! -- Calculate conductance
-    if (ihc == 0) then
+    if (ihc == C3D_VERTICAL) then
       condnm = vcond(this%ibound(n), this%ibound(m), &
                      this%icelltype(n), this%icelltype(m), this%inewton, &
                      this%ivarcv, this%idewatcv, &
@@ -850,7 +850,7 @@ contains
     else
       condnm = hcond(this%ibound(n), this%ibound(m), &
                      this%icelltype(n), this%icelltype(m), &
-                     this%inewton, this%inewton, &
+                     this%inewton, &
                      this%dis%con%ihc(this%dis%con%jas(icon)), &
                      this%icellavg, &
                      this%condsat(this%dis%con%jas(icon)), &
@@ -859,8 +859,7 @@ contains
                      this%dis%bot(n), this%dis%bot(m), &
                      this%dis%con%cl1(this%dis%con%jas(icon)), &
                      this%dis%con%cl2(this%dis%con%jas(icon)), &
-                     this%dis%con%hwva(this%dis%con%jas(icon)), &
-                     this%satomega)
+                     this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Initialize hntemp and hmtemp
@@ -2062,7 +2061,7 @@ contains
       !
       ! -- Calculate conductance depending on whether connection is
       !    vertical (0), horizontal (1), or staggered horizontal (2)
-      if (ihc == 0) then
+      if (ihc == C3D_VERTICAL) then
         !
         ! -- Vertical conductance for fully saturated conditions
         csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
@@ -2076,7 +2075,7 @@ contains
         !
         ! -- Horizontal conductance for fully saturated conditions
         fawidth = this%dis%con%hwva(jj)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, &
+        csat = hcond(1, 1, 1, 1, 0, &
                      ihc, &
                      this%icellavg, &
                      DONE, &
@@ -2085,7 +2084,7 @@ contains
                      botn, botm, &
                      this%dis%con%cl1(jj), &
                      this%dis%con%cl2(jj), &
-                     fawidth, this%satomega)
+                     fawidth)
       end if
       this%condsat(jj) = csat
     end do
@@ -2258,7 +2257,7 @@ contains
           !
           ! -- Check head in adjacent cells to see if wetting elevation has
           !    been reached
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             !
             ! -- check cell below
             if (ibdm > 0 .and. hm >= turnon) irewet = 1
@@ -2373,7 +2372,7 @@ contains
     !
     ! -- Calculate effective K based on whether connection is vertical
     !    or horizontal
-    if (ihc == 0) then
+    if (ihc == C3D_VERTICAL) then
       !
       ! -- Handle rotated anisotropy case that would affect the effective
       !    vertical hydraulic conductivity
@@ -2535,7 +2534,7 @@ contains
         isympos = this%dis%con%jas(ipos)
         ihc = this%dis%con%ihc(isympos)
         area = this%dis%con%hwva(isympos)
-        if (ihc == 0) then
+        if (ihc == C3D_VERTICAL) then
           !
           ! -- vertical connection
           iz = iz + 1
@@ -2562,7 +2561,7 @@ contains
                         this%inewton, ihc, &
                         this%hnew(n), this%hnew(m), this%sat(n), this%sat(m), &
                         this%dis%top(n), this%dis%top(m), this%dis%bot(n), &
-                        this%dis%bot(m), this%satomega)
+                        this%dis%bot(m))
           area = area * dz
           call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
           call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
@@ -2593,7 +2592,7 @@ contains
           ! -- propsedge: (Q, area, nx, ny, distance)
           ihc = this%ihcedge(m)
           area = this%propsedge(2, m)
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             iz = iz + 1
             viz(iz) = this%propsedge(1, m) / area
             diz(iz) = this%propsedge(5, m)
@@ -2860,8 +2859,7 @@ contains
                             this%dis%top(n), &
                             this%dis%top(m), &
                             this%dis%bot(n), &
-                            this%dis%bot(m), &
-                            this%satomega)
+                            this%dis%bot(m))
     !
     ! -- Return
     return

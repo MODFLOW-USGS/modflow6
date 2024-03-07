@@ -857,7 +857,7 @@ contains
         ! -- Calculate the saturated thickness at interface between n1 and n2
         thksat = thksatnm(ibdn1, ibdn2, ictn1, ictn2, this%inewton, ihc, &
                           hn1, hn2, satn1, satn2, &
-                          topn1, topn2, botn1, botn2, this%satomega)
+                          topn1, topn2, botn1, botn2)
         area = hwva * thksat
       end if
       !
@@ -1597,13 +1597,13 @@ contains
         end if
         !
         fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
+        csat = hcond(1, 1, 1, 1, 0, ihc, &
                      this%icellavg, DONE, &
                      topn, topm, satn, satm, hyn, hym, &
                      topn, topm, &
                      botn, botm, &
                      this%cl1(iexg), this%cl2(iexg), &
-                     fawidth, this%satomega)
+                     fawidth)
       end if
       !
       ! -- store csat in condsat
@@ -1694,10 +1694,10 @@ contains
         end if
         !
         fawidth = this%hwva(iexg)
-        cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton, &
+        cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, &
                      this%ihc(iexg), this%icellavg, this%condsat(iexg), &
                      hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm, &
-                     this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
+                     this%cl1(iexg), this%cl2(iexg), fawidth)
       end if
       !
       this%cond(iexg) = cond
