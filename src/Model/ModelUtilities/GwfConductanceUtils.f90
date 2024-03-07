@@ -11,8 +11,6 @@ module GwfConductanceUtilsModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DHALF, DONE, &
                              DLNLOW, DLNHIGH
-  use SmoothingModule, only: sQuadraticSaturation, &
-                             sQuadraticSaturationDerivative
 
   implicit none
   private
@@ -79,9 +77,9 @@ contains
       !    newton-raphson conductance formulation
     else if (inwtup == 1) then
       if (hn > hm) then
-        condnm = sQuadraticSaturation(topn, botn, hn, satomega)
+        condnm = satn
       else
-        condnm = sQuadraticSaturation(topm, botm, hm, satomega)
+        condnm = satm
       end if
       !
       ! -- multiply condsat by condnm factor
