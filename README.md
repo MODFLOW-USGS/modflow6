@@ -84,17 +84,19 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 
 [Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the "XT3D" option in the Node Property Flow (NPF) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.](https://doi.org/10.3133/tm6A56)
 
-[Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362.](https://doi.org/10.1111/gwat.12967)
+[Langevin, C.D., Panday, S, and Provost, A.M., 2020, Hydraulic-head formulation for density-dependent flow and transport: Groundwater, v. 58, no. 3, p. 349–362, https://doi.org/10.1111/gwat.12967.](https://doi.org/10.1111/gwat.12967)
 
-[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. 59, no. 6, p. 913-924.](https://doi.org/10.1111/gwat.13117)
+[Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the MODFLOW 6 water mover package to represent natural and managed hydrologic connections: Groundwater, v. 59, no. 6, p. 913-924, https://doi.org/10.1111/gwat.13117.](https://doi.org/10.1111/gwat.13117)
 
-[Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R., 2022, The MODFLOW Application Programming Interface for simulation control and software interoperability: Environmental Modelling & Software, v. 148, 105257, https://doi.org/10.1016/j.envsoft.2021.105257](https://doi.org/10.1016/j.envsoft.2021.105257)
+[Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R., 2022, The MODFLOW Application Programming Interface for simulation control and software interoperability: Environmental Modelling & Software, v. 148, 105257, https://doi.org/10.1016/j.envsoft.2021.105257.](https://doi.org/10.1016/j.envsoft.2021.105257)
 
-[Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022, Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A61, 56 p., https://doi.org/10.3133/tm6A61](https://doi.org/10.3133/tm6A61)
+[Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022, Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A61, 56 p., https://doi.org/10.3133/tm6A61.](https://doi.org/10.3133/tm6A61)
 
-[Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022, Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A62, 57 p., https://doi.org/10.3133/tm6A62](https://doi.org/10.3133/tm6A62)
+[Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022, Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A62, 57 p., https://doi.org/10.3133/tm6A62.](https://doi.org/10.3133/tm6A62)
 
-[Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J. and Panday, S., 2023, MODFLOW as a Configurable Multi-Model Hydrologic Simulator: Groundwater, https://doi.org/10.1111/gwat.13351](https://doi.org/10.1111/gwat.13351)
+[Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J. and Panday, S., 2023, MODFLOW as a Configurable Multi-Model Hydrologic Simulator: Groundwater, v. 62, p. 111-123, https://doi.org/10.1111/gwat.13351.](https://doi.org/10.1111/gwat.13351)
+
+[Larsen, J.D., Langevin, C.D., Hughes, J.D. and Niswonger, R.G. (2024), An Agricultural Package for MODFLOW 6 Using the Application Programming Interface. Groundwater, v. 62, p. 157-166, https://doi.org/10.1111/gwat.13367.](https://doi.org/10.1111/gwat.13367)
 
 #### ***Software/Code***
 
