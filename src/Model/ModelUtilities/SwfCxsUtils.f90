@@ -648,9 +648,9 @@ contains
     end if
 
     ! make conveyance calculation
-    c = DZERO       
+    c = DZERO
     if (p > DZERO) then
-      c = a / ravg * (a / p) ** DTWOTHIRDS
+      c = a / ravg * (a / p)**DTWOTHIRDS
     end if
   end function get_rectangular_conveyance
 
