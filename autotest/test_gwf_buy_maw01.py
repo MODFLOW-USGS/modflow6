@@ -24,7 +24,7 @@ buy_on_list = [False]  # , True, True]
 concbuylist = [0.0]  # , 0., 35.]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -96,21 +96,24 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
     strt = 4.0
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        xt3doptions=False,
         save_flows=True,
         save_specific_discharge=True,
         icelltype=1,
         k=Kh,
         k33=Kv,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.3, ss=0.0, iconvert=1)
@@ -250,12 +253,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

@@ -60,7 +60,7 @@ mawsetting_d = {
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 1, 101, 101
     nper = 2
     perlen = [500.0, 500.0]
@@ -125,11 +125,13 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=1,
-        filename=f"{name}.dis",
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -138,7 +140,7 @@ def build_models(idx, test):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename=f"{name}.npf",
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
     )
 
     # storage
@@ -262,12 +264,16 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

@@ -9,7 +9,7 @@ from framework import TestFramework
 cases = ["aux02"]
 
 
-def build_models(idx, test, netcdf=None):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1.0, 1.0, 1.0]
@@ -68,22 +68,14 @@ def build_models(idx, test, netcdf=None):
         delc=delc,
         top=90.0,
         botm=0.0,
-        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        save_flows=True,
-        icelltype=1,
-        k=1.0,
-        k33=0.01,
-        filename=f"{name}.nc" if netcdf else f"{name}.npf",
+        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01
     )
 
     # chd files
@@ -98,7 +90,6 @@ def build_models(idx, test, netcdf=None):
         save_flows=True,
         auxiliary=[f"aux{i}" for i in range(100)],
         pname="CHD-1",
-        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     # output control
@@ -127,16 +118,12 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-@pytest.mark.parametrize(
-    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
-)
-def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
+def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t, netcdf),
+        build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         targets=targets,
-        netcdf=netcdf,
     )
     test.run()

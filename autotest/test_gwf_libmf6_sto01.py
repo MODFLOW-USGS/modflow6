@@ -69,7 +69,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def get_model(ws, name, sy):
+def get_model(ws, name, sy, netcdf=None):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -108,23 +108,40 @@ def get_model(ws, name, sy):
         delc=delc,
         top=top,
         botm=botm,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf,
+        save_flows=True,
+        icelltype=1,
+        k=hk,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
+    )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf, save_flows=True, iconvert=1, ss=0.0, sy=sy, transient={0: True}
     )
 
     # chd file
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd,
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
+    )
 
     # recharge file
-    rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rch_spd)
+    rch = flopy.mf6.ModflowGwfrcha(
+        gwf,
+        recharge=rch_spd,
+        filename=f"{name}.nc" if netcdf else f"{name}.rcha",
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -137,15 +154,15 @@ def get_model(ws, name, sy):
     return sim
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # build MODFLOW 6 files
     ws = test.workspace
     name = cases[idx]
-    sim = get_model(ws, name, sy=sy_val)
+    sim = get_model(ws, name, sy=sy_val, netcdf=netcdf)
 
     # build comparison model
     ws = os.path.join(test.workspace, "libmf6")
-    mc = get_model(ws, name, sy=0.0)
+    mc = get_model(ws, name, sy=0.0, netcdf=netcdf)
 
     return sim, mc
 
@@ -208,12 +225,16 @@ def api_func(exe, idx, model_ws=None):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
+        netcdf=netcdf,
     )
     test.run()

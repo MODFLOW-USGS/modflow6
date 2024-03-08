@@ -10,7 +10,7 @@ cases = ["moc3d02a", "moc3d02b"]
 xt3d = [None, True]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 40, 12, 30
     nper = 1
     perlen = [400]
@@ -91,11 +91,13 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename=f"{gwfname}.dis",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -105,6 +107,7 @@ def build_models(idx, test):
         icelltype=laytyp,
         k=hk,
         k33=hk,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # chd files
@@ -114,7 +117,11 @@ def build_models(idx, test):
         for i in range(nrow):
             chdlist.append([(k, i, j), 0.0])
     chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdlist, save_flows=False, pname="CHD-1"
+        gwf,
+        stress_period_data=chdlist,
+        save_flows=False,
+        pname="CHD-1",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
 
     # wel files
@@ -134,6 +141,7 @@ def build_models(idx, test):
         save_flows=False,
         auxiliary="CONCENTRATION",
         pname="WEL-1",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
     )
 
     # output control
@@ -183,13 +191,15 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=1,
-        filename=f"{gwtname}.dis",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
     strt = np.zeros((nlay, nrow, ncol))
     strt[0, 0, 0] = 0.0
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=strt, filename=f"{gwtname}.ic")
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=strt, filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic"
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme="TVD", filename=f"{gwtname}.adv")
@@ -204,7 +214,7 @@ def build_models(idx, test):
         alv=alphal,
         ath1=alphath,
         ath2=alphatv,
-        filename=f"{gwtname}.dsp",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dsp",
     )
 
     # mass storage and transfer
@@ -309,12 +319,16 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

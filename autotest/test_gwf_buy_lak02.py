@@ -32,7 +32,7 @@ gwt_conc = [0, 35, 35, 0]
 lak_conc = [0, 35, 0, 35]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
 
     lx = 7.0
@@ -109,6 +109,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=idomain,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
@@ -118,17 +119,19 @@ def build_models(idx, test):
     strt[1, 0, 1:6] = 2.5
     strt[2, 0, :] = 2.0
     strt[3, 0, :] = 1.0
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        xt3doptions=False,
         save_flows=True,
         save_specific_discharge=True,
         icelltype=1,
         k=Kh,
         k33=Kv,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.3, ss=0.0, iconvert=1)
@@ -306,10 +309,15 @@ def build_models(idx, test):
             top=top,
             botm=botm,
             idomain=idomain,
+            filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=gwt_conc[idx])
+        ic = flopy.mf6.ModflowGwtic(
+            gwt,
+            strt=gwt_conc[idx],
+            filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic",
+        )
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM")
@@ -447,12 +455,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, targets, function_tmpdir):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, targets, function_tmpdir, netcdf):
     framework = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     framework.run()

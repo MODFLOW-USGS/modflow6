@@ -14,7 +14,7 @@ from framework import TestFramework
 cases = ["buy_sfr_01"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -95,20 +95,23 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=idomain,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=0.0, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        xt3doptions=False,
         save_flows=True,
         save_specific_discharge=True,
         icelltype=0,
         k=Kh,
         k33=Kv,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     buy_on = True
@@ -128,7 +131,7 @@ def build_models(idx, test):
         save_flows=False,
         pname="CHD-1",
         auxiliary="CONCENTRATION",
-        filename=f"{gwfname}.chd",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
     )
 
     # wel files
@@ -143,7 +146,7 @@ def build_models(idx, test):
         save_flows=False,
         pname="WEL-1",
         auxiliary="CONCENTRATION",
-        filename=f"{gwfname}.wel",
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
     )
 
     # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
@@ -264,13 +267,14 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=idomain,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(
         gwt,
         strt=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        filename=f"{gwtname}.ic",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic",
     )
 
     # advection
@@ -302,6 +306,7 @@ def build_models(idx, test):
         print_input=True,
         print_flows=True,
         save_flows=False,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.cnc",
     )
 
     sftpackagedata = []
@@ -457,12 +462,16 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

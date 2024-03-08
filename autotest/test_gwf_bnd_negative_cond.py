@@ -25,7 +25,7 @@ cases = [
 ]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # static model data
     # temporal discretization
     nper = 1
@@ -87,13 +87,21 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
+        filename=f"{name}.nc" if netcdf else f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{name}.nc" if netcdf else f"{name}.ic"
+    )
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=0, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(
+        gwf,
+        icelltype=0,
+        k=hk,
+        filename=f"{name}.nc" if netcdf else f"{name}.npf",
+    )
 
     # chd files
     # chd data
@@ -101,7 +109,10 @@ def build_models(idx, test):
         [(0, 0, 0), 1.0],
     ]
     chd = flopy.mf6.modflow.ModflowGwfchd(
-        gwf, stress_period_data=spd, pname="chd-1"
+        gwf,
+        stress_period_data=spd,
+        pname="chd-1",
+        filename=f"{name}.nc" if netcdf else f"{name}.chd",
     )
 
     bnd_loc = (0, 0, 1)
@@ -117,6 +128,7 @@ def build_models(idx, test):
             auxiliary=["mult"],
             auxmultname="mult",
             stress_period_data=[(bnd_loc, top, cond, mult)],
+            filename=f"{name}.nc" if netcdf else f"{name}.drn",
         )
     elif name.startswith("riv"):
         riv = flopy.mf6.ModflowGwfriv(
@@ -124,6 +136,7 @@ def build_models(idx, test):
             auxiliary=["mult"],
             auxmultname="mult",
             stress_period_data=[(bnd_loc, 1.0, cond, top, mult)],
+            filename=f"{name}.nc" if netcdf else f"{name}.riv",
         )
     elif name.startswith("ghb"):
         ghb = flopy.mf6.ModflowGwfghb(
@@ -131,6 +144,7 @@ def build_models(idx, test):
             auxiliary=["mult"],
             auxmultname="mult",
             stress_period_data=[(bnd_loc, top, cond, mult)],
+            filename=f"{name}.nc" if netcdf else f"{name}.ghb",
         )
 
     return sim
@@ -169,13 +183,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
         xfail=True,
     )
     test.run()

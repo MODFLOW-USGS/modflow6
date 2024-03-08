@@ -9,7 +9,7 @@ from framework import TestFramework
 cases = ["gwtbuy"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     lx = 2000.0
     lz = 1000.0
 
@@ -79,20 +79,25 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=1000.0)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=1000.0,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic",
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
-        xt3doptions=False,
         save_flows=True,
         save_specific_discharge=True,
         icelltype=0,
         k=10.0,
         k33=0.1,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # storage
@@ -121,6 +126,7 @@ def build_models(idx, test):
         save_flows=False,
         pname="WEL-1",
         auxiliary=["SALINITY", "TEMPERATURE"],
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
     )
 
     # ghb files
@@ -151,6 +157,7 @@ def build_models(idx, test):
         save_flows=False,
         pname="GHB-1",
         auxiliary=["SALINITY", "TEMPERATURE", "DENSITY"],
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ghb",
     )
 
     # output control
@@ -194,16 +201,27 @@ def build_models(idx, test):
             delc=delc,
             top=top,
             botm=botm,
+            filename=f"{gwtsname}.nc" if netcdf else f"{gwtsname}.dis",
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwts, strt=35.0)
+        ic = flopy.mf6.ModflowGwtic(
+            gwts,
+            strt=35.0,
+            filename=f"{gwtsname}.nc" if netcdf else f"{gwtsname}.ic",
+        )
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwts, scheme="UPSTREAM")
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwts, alh=10.0, ath1=0.1, diffc=1.0e-10)
+        dsp = flopy.mf6.ModflowGwtdsp(
+            gwts,
+            alh=10.0,
+            ath1=0.1,
+            diffc=1.0e-10,
+            filename=f"{gwtsname}.nc" if netcdf else f"{gwtsname}.dsp",
+        )
 
         # mass storage and transfer
         porosity = 0.35
@@ -268,16 +286,26 @@ def build_models(idx, test):
             delc=delc,
             top=top,
             botm=botm,
+            filename=f"{gwthname}.nc" if netcdf else f"{gwthname}.dis",
         )
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwth, strt=5.0)
+        ic = flopy.mf6.ModflowGwtic(
+            gwth,
+            strt=5.0,
+            filename=f"{gwthname}.nc" if netcdf else f"{gwthname}.ic",
+        )
 
         # advection
         adv = flopy.mf6.ModflowGwtadv(gwth, scheme="UPSTREAM")
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwth, xt3d_off=True, diffc=0.150309621)
+        dsp = flopy.mf6.ModflowGwtdsp(
+            gwth,
+            xt3d_off=True,
+            diffc=0.150309621,
+            filename=f"{gwthname}.nc" if netcdf else f"{gwthname}.dsp",
+        )
 
         # mass storage and transfer
         porosity = 0.35
@@ -301,6 +329,7 @@ def build_models(idx, test):
             stress_period_data=cnclist,
             save_flows=False,
             pname="CNC-1",
+            filename=f"{gwthname}.nc" if netcdf else f"{gwthname}.cnc",
         )
 
         # output control
@@ -459,12 +488,16 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()
