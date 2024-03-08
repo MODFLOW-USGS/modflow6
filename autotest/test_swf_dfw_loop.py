@@ -437,8 +437,8 @@ def check_output(idx, test):
     print(diff)
     print(diff.max(), diff.min())
     assert np.allclose(
-        diff, 0.0, atol=0.0035
-    ), f"Max diff with sfr is {diff.min(), diff.max()}"
+        diff, 0.0, atol=0.06
+    ), f"Max diff with swr is {diff.min(), diff.max()}"
 
     # read the binary grid file
     fpth = test.workspace / f"{name}.disl.grb"

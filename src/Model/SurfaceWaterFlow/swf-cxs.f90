@@ -497,29 +497,20 @@ contains
       call qsort(indx, depths)
       call unique_values(depths, depths_unique)
 
-      ! TODO: THIS NEEDS WORK
-      ! do ipt = 1, size(depths_unique)
-      !   d = depths_unique(ipt)
-      !   a = this%get_area(idcxs, width, d)
-      !   rh = this%get_hydraulic_radius(idcxs, width, d, a)
-      !   r = this%get_roughness(idcxs, width, d, rough, slope)
-      !   q = unitconv * a * (rh**DTWOTHIRDS) * sqrt(slope) / r
-      !   write(this%iout, *) d, a, rh, r, q
-      ! end do
-
-      d = 0.d0
-      do ipt = 1, 20
+      do ipt = 1, size(depths_unique)
+        d = depths_unique(ipt)
         a = this%get_area(idcxs, width, d)
         rh = this%get_hydraulic_radius(idcxs, width, d, a)
         r = this%get_roughness(idcxs, width, d, rough, slope)
         c = this%get_conveyance(idcxs, width, d, rough)
-        !q = unitconv * a * (rh**DTWOTHIRDS) * sqrt(slope) / r
-        q = unitconv * c * sqrt(slope)
+        if (slope > DZERO) then
+          q = unitconv * c * sqrt(slope)
+        else
+          q = DZERO
+        end if
         write(this%iout, *) d, a, rh, r, q
-        d = d + 0.5
       end do
       
-
       deallocate(depths)
       deallocate(depths_unique)
       write(this%iout, *) 'Done processing information for cross section ', idcxs

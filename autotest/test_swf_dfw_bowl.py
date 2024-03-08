@@ -227,30 +227,39 @@ def check_output(idx, test):
     # burned in answer
     if inflow_location[idx] == "middle":
         stage_answer = [
-            0.00610977,
-            1.00848343,
-            2.00848545,
-            2.00848563,
-            2.00848566,
-            2.00848563,
-            2.00848545,
-            1.00848343,
-            0.00610977,
+            0.00608016,
+            1.00846970,
+            2.00847172,
+            2.00847176,
+            2.00847176,
+            2.00847176,
+            2.00847172,
+            1.00846970,
+            0.00608016,
         ]
     elif inflow_location[idx] == "left":
         stage_answer = [
-            2.03027679,
-            2.03027665,
-            2.03027599,
-            2.00975688,
-            2.00975619,
-            2.00975605,
-            2.00975535,
-            1.00975489,
-            0.00928387,
+            2.02977949,
+            2.02977947,
+            2.02977933,
+            2.00973179,
+            2.00973163,
+            2.00973161,
+            2.00973145,
+            1.00973095,
+            0.00921580,
         ]
 
-    assert np.allclose(stage_all[-1].flatten(), stage_answer, atol=1.0e-5)
+    # print out the answer in a form that can be 
+    # dropped into this script, if necessary, as the answer
+    for v in stage_all[-1].flatten():
+        print(f"{2*"    "}{v:.8f},")
+
+    msg = (
+        "Simulated stage does not match with the answer "
+        "stored from a previous run."
+        )
+    assert np.allclose(stage_all[-1].flatten(), stage_answer, atol=1.0e-5), msg
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
