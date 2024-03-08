@@ -482,15 +482,15 @@ contains
     real(DP), dimension(:), allocatable :: depths
     real(DP), dimension(:), allocatable :: depths_unique
     integer(I4B), dimension(:), allocatable :: indx
-  
+
     call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
 
     if (npts > 0) then
 
-      write(this%iout, *) 'Processing information for cross section ', idcxs
-      write(this%iout, *) 'Depth Area HydRad Rough Q'
+      write (this%iout, *) 'Processing information for cross section ', idcxs
+      write (this%iout, *) 'Depth Area HydRad Rough Q'
 
-      allocate(depths(npts))
+      allocate (depths(npts))
       allocate (indx(size(depths)))
 
       depths(:) = this%height(:)
@@ -508,12 +508,12 @@ contains
         else
           q = DZERO
         end if
-        write(this%iout, *) d, a, rh, r, q
+        write (this%iout, *) d, a, rh, r, q
       end do
-      
-      deallocate(depths)
-      deallocate(depths_unique)
-      write(this%iout, *) 'Done processing information for cross section ', idcxs
+
+      deallocate (depths)
+      deallocate (depths_unique)
+      write (this%iout, *) 'Done processing information for cross section ', idcxs
 
     end if
 
@@ -673,13 +673,13 @@ contains
     if (npts == 0) then
       a = depth * width
       rh = a / width
-      conveyance = a * rh ** DTWOTHIRDS / rough
+      conveyance = a * rh**DTWOTHIRDS / rough
     else
       conveyance = get_composite_conveyance(npts, &
-                                        this%xfraction(i0:i1), &
-                                        this%height(i0:i1), &
-                                        this%manfraction(i0:i1), &
-                                        width, rough, depth)
+                                            this%xfraction(i0:i1), &
+                                            this%height(i0:i1), &
+                                            this%manfraction(i0:i1), &
+                                            width, rough, depth)
     end if
   end function get_conveyance
 

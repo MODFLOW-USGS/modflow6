@@ -639,7 +639,7 @@ contains
       cn = DZERO
       if (p > DZERO) then
         rh = areas(n) / p
-        cn = areas(n) / rc * rh ** DTWOTHIRDS
+        cn = areas(n) / rc * rh**DTWOTHIRDS
       end if
       c = c + cn
     end do
