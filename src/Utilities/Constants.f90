@@ -189,4 +189,12 @@ module ConstantsModule
     ENUMERATOR :: CCRAYFTN = 3 !< 3
   END ENUM
 
+  !> @brief enumerator that defines the cell connection type
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: C3D_VERTICAL = 0 !< vertical connection
+    ENUMERATOR :: C3D_HORIZONTAL = 1 !< horizontal connection
+    ENUMERATOR :: C3D_STAGGERED = 2 !< horizontal connection for a vertically staggered grid
+  END ENUM
+
 end module ConstantsModule

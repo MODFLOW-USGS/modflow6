@@ -1171,7 +1171,7 @@ contains
   !<
   subroutine calcbuy(this, n, m, icon, hn, hm, buy)
     ! -- modules
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: n
@@ -1232,9 +1232,9 @@ contains
     else
       cond = hcond(this%ibound(n), this%ibound(m), &
                    this%npf%icelltype(n), this%npf%icelltype(m), &
-                   this%npf%inewton, this%npf%inewton, &
+                   this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
-                   this%npf%icellavg, this%npf%iusgnrhc, this%npf%inwtupw, &
+                   this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
                    hn, hm, this%npf%sat(n), this%npf%sat(m), &
                    hyn, hym, &
@@ -1242,8 +1242,7 @@ contains
                    this%dis%bot(n), this%dis%bot(m), &
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
-                   this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega)
+                   this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Calculate buoyancy term
@@ -1257,7 +1256,7 @@ contains
   !<
   subroutine calchhterms(this, n, m, icon, hn, hm, rhsterm, amatnn, amatnm)
     ! -- modules
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: n
@@ -1315,9 +1314,9 @@ contains
     else
       cond = hcond(this%ibound(n), this%ibound(m), &
                    this%npf%icelltype(n), this%npf%icelltype(m), &
-                   this%npf%inewton, this%npf%inewton, &
+                   this%npf%inewton, &
                    this%dis%con%ihc(this%dis%con%jas(icon)), &
-                   this%npf%icellavg, this%npf%iusgnrhc, this%npf%inwtupw, &
+                   this%npf%icellavg, &
                    this%npf%condsat(this%dis%con%jas(icon)), &
                    hn, hm, this%npf%sat(n), this%npf%sat(m), &
                    hyn, hym, &
@@ -1325,8 +1324,7 @@ contains
                    this%dis%bot(n), this%dis%bot(m), &
                    this%dis%con%cl1(this%dis%con%jas(icon)), &
                    this%dis%con%cl2(this%dis%con%jas(icon)), &
-                   this%dis%con%hwva(this%dis%con%jas(icon)), &
-                   this%npf%satomega)
+                   this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Calculate terms

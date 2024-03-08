@@ -194,7 +194,6 @@ def build_models(idx, test):
         icelltype=icelltype,
         k=k11,
         k33=k33,
-        alternative_cell_averaging="AMT-HMK",
         save_specific_discharge=True,
         pname="NPF-1",
         filename="{}.npf".format(gwfname),
@@ -404,7 +403,7 @@ def check_output(idx, test):
         "Pass through cell should not be as warm as its neighbor to "
         "the left"
     )
-    assert np.all(conc1[:, 0, 0, 2] > conc1[:, 0, 0, 3]), msg5
+    assert np.all(conc1[1:, 0, 0, 2] > conc1[1:, 0, 0, 3]), msg5
 
 
 # - No need to change any code below

@@ -513,7 +513,7 @@ contains
   subroutine gwf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     use ConstantsModule, only: DHALF
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
@@ -787,11 +787,10 @@ contains
   subroutine gwf_gwf_set_flow_to_npf(this)
     ! -- modules
     use ConstantsModule, only: DZERO, DPIO180
-    use GwfNpfModule, only: thksatnm
+    use GwfConductanceUtilsModule, only: thksatnm
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
-    integer(I4B) :: iusg
     integer(I4B) :: i
     integer(I4B) :: n1, n2
     integer(I4B) :: ibdn1, ibdn2
@@ -813,9 +812,6 @@ contains
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
-    !
-    ! -- initialize
-    iusg = 0
     !
     ! -- Loop through all exchanges using the flow rate
     !    stored in simvals
@@ -860,8 +856,8 @@ contains
         !
         ! -- Calculate the saturated thickness at interface between n1 and n2
         thksat = thksatnm(ibdn1, ibdn2, ictn1, ictn2, this%inewton, ihc, &
-                          iusg, hn1, hn2, satn1, satn2, &
-                          topn1, topn2, botn1, botn2, this%satomega)
+                          hn1, hn2, satn1, satn2, &
+                          topn1, topn2, botn1, botn2)
         area = hwva * thksat
       end if
       !
@@ -1531,7 +1527,7 @@ contains
   subroutine calc_cond_sat(this)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    use GwfNpfModule, only: condmean, vcond, hcond
+    use GwfConductanceUtilsModule, only: condmean, vcond, hcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
@@ -1601,13 +1597,13 @@ contains
         end if
         !
         fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
-                     this%icellavg, 0, 0, DONE, &
+        csat = hcond(1, 1, 1, 1, 0, ihc, &
+                     this%icellavg, DONE, &
                      topn, topm, satn, satm, hyn, hym, &
                      topn, topm, &
                      botn, botm, &
                      this%cl1(iexg), this%cl2(iexg), &
-                     fawidth, this%satomega)
+                     fawidth)
       end if
       !
       ! -- store csat in condsat
@@ -1625,7 +1621,7 @@ contains
   subroutine condcalc(this)
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DONE
-    use GwfNpfModule, only: hcond, vcond
+    use GwfConductanceUtilsModule, only: hcond, vcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
@@ -1698,10 +1694,10 @@ contains
         end if
         !
         fawidth = this%hwva(iexg)
-        cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton, &
-                     this%ihc(iexg), this%icellavg, 0, 0, this%condsat(iexg), &
+        cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, &
+                     this%ihc(iexg), this%icellavg, this%condsat(iexg), &
                      hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm, &
-                     this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
+                     this%cl1(iexg), this%cl2(iexg), fawidth)
       end if
       !
       this%cond(iexg) = cond

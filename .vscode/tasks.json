@@ -289,5 +289,19 @@
             },
             "problemMatcher": []
         },
+        {
+            "label": "Rebuild makefiles",
+            "type": "shell",
+            "command": "source activate modflow6; pwd; python build_makefiles.py",
+            "options": {"cwd": "${workspaceFolder}/distribution"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
     ]
 }

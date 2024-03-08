@@ -3,9 +3,9 @@ module GwfNpfModule
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
-                             DLNLOW, DLNHIGH, &
                              DHNOFLO, DHDRY, DEM10, &
-                             LENMEMPATH, LENVARNAME, LINELENGTH
+                             LENMEMPATH, LENVARNAME, LINELENGTH, &
+                             C3D_VERTICAL
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -21,16 +21,15 @@ module GwfNpfModule
                                  mem_reassignptr
   use MatrixBaseModule
   use HGeoUtilModule, only: hyeff
+  use GwfConductanceUtilsModule, only: hcond, vcond, &
+                                       condmean, thksatnm, &
+                                       CCOND_HMEAN
 
   implicit none
 
   private
   public :: GwfNpfType
   public :: npf_cr
-  public :: hcond
-  public :: vcond
-  public :: condmean
-  public :: thksatnm
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
@@ -48,8 +47,6 @@ module GwfNpfModule
     integer(I4B), pointer :: idewatcv => null() !< CV may be a discontinuous function of water table
     integer(I4B), pointer :: ithickstrt => null() !< thickstrt option flag
     integer(I4B), pointer :: igwfnewtonur => null() !< newton head dampening using node bottom option flag
-    integer(I4B), pointer :: iusgnrhc => null() !< MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer :: inwtupw => null() !< MODFLOW-NWT upstream weighting option flag
     integer(I4B), pointer :: icalcspdis => null() !< Calculate specific discharge at cell centers
     integer(I4B), pointer :: isavspdis => null() !< Save specific discharge at cell centers
     integer(I4B), pointer :: isavsat => null() !< Save sat to budget file
@@ -501,7 +498,6 @@ contains
     if (this%ixt3d /= 0) then
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
-      !
       do n = 1, this%dis%nodes
         do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           if (this%dis%con%mask(ii) == 0) cycle
@@ -516,7 +512,7 @@ contains
           hym = this%hy_eff(m, n, ihc, ipos=ii)
           !
           ! -- Vertical connection
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             !
             ! -- Calculate vertical conductance
             cond = vcond(this%ibound(n), this%ibound(m), &
@@ -555,17 +551,16 @@ contains
             ! -- Horizontal conductance
             cond = hcond(this%ibound(n), this%ibound(m), &
                          this%icelltype(n), this%icelltype(m), &
-                         this%inewton, this%inewton, &
+                         this%inewton, &
                          this%dis%con%ihc(this%dis%con%jas(ii)), &
-                         this%icellavg, this%iusgnrhc, this%inwtupw, &
+                         this%icellavg, &
                          this%condsat(this%dis%con%jas(ii)), &
                          hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
                          this%dis%top(n), this%dis%top(m), &
                          this%dis%bot(n), this%dis%bot(m), &
                          this%dis%con%cl1(this%dis%con%jas(ii)), &
                          this%dis%con%cl2(this%dis%con%jas(ii)), &
-                         this%dis%con%hwva(this%dis%con%jas(ii)), &
-                         this%satomega)
+                         this%dis%con%hwva(this%dis%con%jas(ii)))
           end if
           !
           ! -- Fill row n
@@ -609,11 +604,8 @@ contains
     real(DP) :: derv
     real(DP) :: hds
     real(DP) :: term
-    real(DP) :: afac
     real(DP) :: topup
     real(DP) :: botup
-    real(DP) :: topdn
-    real(DP) :: botdn
     !
     ! -- add newton terms to solution matrix
     nodes = this%dis%nodes
@@ -656,15 +648,6 @@ contains
             !
             ! get saturated conductivity for derivative
             cond = this%condsat(this%dis%con%jas(ii))
-            !
-            ! -- if using MODFLOW-NWT upstream weighting option apply
-            !    factor to remove average thickness
-            if (this%inwtupw /= 0) then
-              topdn = this%dis%top(idn)
-              botdn = this%dis%bot(idn)
-              afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
-              cond = cond * afac
-            end if
             !
             ! compute additional term
             consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
@@ -854,7 +837,7 @@ contains
     hym = this%hy_eff(m, n, ihc, ipos=icon)
     !
     ! -- Calculate conductance
-    if (ihc == 0) then
+    if (ihc == C3D_VERTICAL) then
       condnm = vcond(this%ibound(n), this%ibound(m), &
                      this%icelltype(n), this%icelltype(m), this%inewton, &
                      this%ivarcv, this%idewatcv, &
@@ -867,17 +850,16 @@ contains
     else
       condnm = hcond(this%ibound(n), this%ibound(m), &
                      this%icelltype(n), this%icelltype(m), &
-                     this%inewton, this%inewton, &
+                     this%inewton, &
                      this%dis%con%ihc(this%dis%con%jas(icon)), &
-                     this%icellavg, this%iusgnrhc, this%inwtupw, &
+                     this%icellavg, &
                      this%condsat(this%dis%con%jas(icon)), &
                      hn, hm, this%sat(n), this%sat(m), hyn, hym, &
                      this%dis%top(n), this%dis%top(m), &
                      this%dis%bot(n), this%dis%bot(m), &
                      this%dis%con%cl1(this%dis%con%jas(icon)), &
                      this%dis%con%cl2(this%dis%con%jas(icon)), &
-                     this%dis%con%hwva(this%dis%con%jas(icon)), &
-                     this%satomega)
+                     this%dis%con%hwva(this%dis%con%jas(icon)))
     end if
     !
     ! -- Initialize hntemp and hmtemp
@@ -1028,8 +1010,6 @@ contains
     call mem_deallocate(this%ivarcv)
     call mem_deallocate(this%idewatcv)
     call mem_deallocate(this%ithickstrt)
-    call mem_deallocate(this%iusgnrhc)
-    call mem_deallocate(this%inwtupw)
     call mem_deallocate(this%isavspdis)
     call mem_deallocate(this%isavsat)
     call mem_deallocate(this%icalcspdis)
@@ -1111,8 +1091,6 @@ contains
     call mem_allocate(this%ivarcv, 'IVARCV', this%memoryPath)
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%memoryPath)
     call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%memoryPath)
-    call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%memoryPath)
-    call mem_allocate(this%inwtupw, 'INWTUPW', this%memoryPath)
     call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%memoryPath)
     call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%memoryPath)
     call mem_allocate(this%isavsat, 'ISAVSAT', this%memoryPath)
@@ -1142,7 +1120,7 @@ contains
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
-    this%icellavg = 0
+    this%icellavg = CCOND_HMEAN
     this%iavgkeff = 0
     this%ik22 = 0
     this%ik33 = 0
@@ -1152,8 +1130,6 @@ contains
     this%ivarcv = 0
     this%idewatcv = 0
     this%ithickstrt = 0
-    this%iusgnrhc = 0
-    this%inwtupw = 0
     this%icalcspdis = 0
     this%isavspdis = 0
     this%isavsat = 0
@@ -1325,12 +1301,6 @@ contains
     if (found%inewton) &
       write (this%iout, '(4x,a)') 'NEWTON-RAPHSON method disabled for unconfined &
                                   &cells'
-    if (found%iusgnrhc) &
-      write (this%iout, '(4x,a)') 'MODFLOW-USG saturation calculation method &
-                                  &will be used'
-    if (found%inwtupw) &
-      write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting method will be &
-                                  &used'
     if (found%satomega) &
       write (this%iout, '(4x,a,1pg15.6)') 'Saturation omega: ', this%satomega
     if (found%irewet) &
@@ -1391,9 +1361,6 @@ contains
     call mem_set_value(this%ik33overk, 'IK33OVERK', this%input_mempath, &
                        found%ik33overk)
     call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
-    call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
-                       found%iusgnrhc)
-    call mem_set_value(this%inwtupw, 'INWTUPW', this%input_mempath, found%inwtupw)
     call mem_set_value(this%satomega, 'SATOMEGA', this%input_mempath, &
                        found%satomega)
     call mem_set_value(this%irewet, 'IREWET', this%input_mempath, found%irewet)
@@ -1461,47 +1428,6 @@ contains
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
-    !
-    ! -- check if this%iusgnrhc has been enabled for a model that is not using
-    !    the Newton-Raphson formulation
-    if (this%iusgnrhc > 0 .and. this%inewton == 0) then
-      this%iusgnrhc = 0
-      write (this%iout, '(4x,a,3(1x,a))') &
-        '****WARNING. MODFLOW-USG saturation calculation not needed', &
-        'for a model that is using the standard conductance formulation.', &
-        'Resetting DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION OPTION from', &
-        '1 to 0.'
-    end if
-    !
-    ! -- check that the this%inwtupw option is not specified for non-newton
-    !    models
-    if (this%inwtupw /= 0 .and. this%inewton == 0) then
-      this%inwtupw = 0
-      write (this%iout, '(4x,a,3(1x,a))') &
-        '****WARNING. The DEV_MODFLOWNWT_UPSTREAM_WEIGHTING option has', &
-        'been specified for a model that is using the standard conductance', &
-        'formulation. Resetting DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION from', &
-        '1 to 0.'
-    end if
-    !
-    ! -- check that the transmissivity weighting functions are not specified with
-    !    with the this%inwtupw option
-    if (this%inwtupw /= 0 .and. this%icellavg < 2) then
-      write (errmsg, '(a,2(1x,a))') &
-        'THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
-        'ONLY BE SPECIFIED WITH THE AMT-LMK AND AMT-HMK', &
-        'ALTERNATIVE_CELL_AVERAGING OPTIONS IN THE NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- check that this%iusgnrhc and this%inwtupw have not both been enabled
-    if (this%iusgnrhc /= 0 .and. this%inwtupw /= 0) then
-      write (errmsg, '(a,2(1x,a))') &
-        'THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
-        'AND DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTIONS CANNOT BE', &
-        'SPECIFIED IN THE SAME NPF PACKAGE.'
-      call store_error(errmsg)
-    end if
     !
     ! -- set omega value used for saturation calculations
     if (this%inewton > 0) then
@@ -2135,7 +2061,7 @@ contains
       !
       ! -- Calculate conductance depending on whether connection is
       !    vertical (0), horizontal (1), or staggered horizontal (2)
-      if (ihc == 0) then
+      if (ihc == C3D_VERTICAL) then
         !
         ! -- Vertical conductance for fully saturated conditions
         csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
@@ -2149,16 +2075,16 @@ contains
         !
         ! -- Horizontal conductance for fully saturated conditions
         fawidth = this%dis%con%hwva(jj)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, &
+        csat = hcond(1, 1, 1, 1, 0, &
                      ihc, &
-                     this%icellavg, this%iusgnrhc, this%inwtupw, &
+                     this%icellavg, &
                      DONE, &
                      hn, hm, satn, satm, hyn, hym, &
                      topn, topm, &
                      botn, botm, &
                      this%dis%con%cl1(jj), &
                      this%dis%con%cl2(jj), &
-                     fawidth, this%satomega)
+                     fawidth)
       end if
       this%condsat(jj) = csat
     end do
@@ -2331,7 +2257,7 @@ contains
           !
           ! -- Check head in adjacent cells to see if wetting elevation has
           !    been reached
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             !
             ! -- check cell below
             if (ibdm > 0 .and. hm >= turnon) irewet = 1
@@ -2446,7 +2372,7 @@ contains
     !
     ! -- Calculate effective K based on whether connection is vertical
     !    or horizontal
-    if (ihc == 0) then
+    if (ihc == C3D_VERTICAL) then
       !
       ! -- Handle rotated anisotropy case that would affect the effective
       !    vertical hydraulic conductivity
@@ -2498,352 +2424,6 @@ contains
     ! -- Return
     return
   end function hy_eff
-
-  !> @brief Horizontal conductance between two cells
-  !!
-  !! inwtup: if 1, then upstream-weight condsat, otherwise recalculate
-  !!
-  !! This function uses a weighted transmissivity in the harmonic mean
-  !! conductance calculations. This differs from the MODFLOW-NWT and
-  !! MODFLOW-USG conductance calculations for the Newton-Raphson formulation
-  !! which use a weighted hydraulic conductivity.
-  !<
-  function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, iusg, &
-                 iupw, condsat, hn, hm, satn, satm, hkn, hkm, topn, topm, &
-                 botn, botm, cln, clm, fawidth, satomega) &
-    result(condnm)
-    ! -- return
-    real(DP) :: condnm
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inewton
-    integer(I4B), intent(in) :: inwtup
-    integer(I4B), intent(in) :: ihc
-    integer(I4B), intent(in) :: icellavg
-    integer(I4B), intent(in) :: iusg
-    integer(I4B), intent(in) :: iupw
-    real(DP), intent(in) :: condsat
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: hkn
-    real(DP), intent(in) :: hkm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: cln
-    real(DP), intent(in) :: clm
-    real(DP), intent(in) :: fawidth
-    real(DP), intent(in) :: satomega
-    ! -- local
-    integer(I4B) :: indk
-    real(DP) :: sn
-    real(DP) :: sm
-    real(DP) :: thksatn
-    real(DP) :: thksatm
-    real(DP) :: sill_top, sill_bot
-    real(DP) :: tpn, tpm
-    real(DP) :: top, bot
-    real(DP) :: athk
-    real(DP) :: afac
-    !
-    ! -- If either n or m is inactive then conductance is zero
-    if (ibdn == 0 .or. ibdm == 0) then
-      condnm = DZERO
-      !
-      ! -- if both cells are non-convertible then use condsat
-    elseif (ictn == 0 .and. ictm == 0) then
-      if (icellavg /= 4) then
-        condnm = condsat
-      else
-        if (hn > hm) then
-          condnm = satn * (topn - botn)
-        else
-          condnm = satm * (topm - botm)
-        end if
-        condnm = condnm * condsat
-      end if
-      !
-      ! -- At least one of the cells is convertible, so calculate average saturated
-      !    thickness and multiply with saturated conductance
-    else
-      if (inwtup == 1) then
-        ! -- set flag use to determine if bottom of cells n and m are
-        !    significantly different
-        indk = 0
-        if (abs(botm - botn) < DEM2) indk = 1
-        ! -- recalculate saturation if using MODFLOW-USG saturation
-        !    calculation approach
-        if (iusg == 1 .and. indk == 0) then
-          if (botm > botn) then
-            top = topm
-            bot = botm
-          else
-            top = topn
-            bot = botn
-          end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega)
-          sm = sQuadraticSaturation(top, bot, hm, satomega)
-        else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega)
-        end if
-        !
-        if (hn > hm) then
-          condnm = sn
-        else
-          condnm = sm
-        end if
-        !
-        ! -- if using MODFLOW-NWT upstream weighting option apply
-        !    factor to remove average thickness
-        if (iupw /= 0) then
-          if (hn > hm) then
-            afac = DTWO / (DONE + (topm - botm) / (topn - botn))
-            condnm = condnm * afac
-          else
-            afac = DTWO / (DONE + (topn - botn) / (topm - botm))
-            condnm = condnm * afac
-          end if
-        end if
-        !
-        ! -- multiply condsat by condnm factor
-        condnm = condnm * condsat
-      else
-        thksatn = satn * (topn - botn)
-        thksatm = satm * (topm - botm)
-        !
-        ! -- If staggered connection, subtract parts of cell that are above and
-        !    below the sill top and bottom elevations
-        if (ihc == 2) then
-          !
-          ! -- Calculate sill_top and sill_bot
-          sill_top = min(topn, topm)
-          sill_bot = max(botn, botm)
-          !
-          ! -- Calculate tpn and tpm
-          tpn = botn + thksatn
-          tpm = botm + thksatm
-          !
-          ! -- Calculate saturated thickness for cells n and m
-          thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
-          thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
-        end if
-        !
-        athk = DONE
-        if (iusg == 1) then
-          if (ihc == 2) then
-            athk = min(thksatn, thksatm)
-          else
-            athk = DHALF * (thksatn + thksatm)
-          end if
-          thksatn = DONE
-          thksatm = DONE
-        end if
-        !
-        condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm, &
-                          fawidth, icellavg) * athk
-      end if
-    end if
-    !
-    ! -- Return
-    return
-  end function hcond
-
-  !> @brief Vertical conductance between two cells
-  !<
-  function vcond(ibdn, ibdm, ictn, ictm, inewton, ivarcv, idewatcv, &
-                 condsat, hn, hm, vkn, vkm, satn, satm, topn, topm, botn, &
-                 botm, flowarea) result(condnm)
-    ! -- return
-    real(DP) :: condnm
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inewton
-    integer(I4B), intent(in) :: ivarcv
-    integer(I4B), intent(in) :: idewatcv
-    real(DP), intent(in) :: condsat
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: vkn
-    real(DP), intent(in) :: vkm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: flowarea
-    ! -- local
-    real(DP) :: satntmp, satmtmp
-    real(DP) :: bovk1
-    real(DP) :: bovk2
-    real(DP) :: denom
-    !
-    ! -- If either n or m is inactive then conductance is zero
-    if (ibdn == 0 .or. ibdm == 0) then
-      condnm = DZERO
-      !
-      ! -- if constantcv then use condsat
-    elseif (ivarcv == 0) then
-      condnm = condsat
-      !
-      ! -- if both cells are non-convertible then use condsat
-    elseif (ictn == 0 .and. ictm == 0) then
-      condnm = condsat
-      !
-      ! -- if both cells are fully saturated then use condsat
-    elseif (hn >= topn .and. hm >= topm) then
-      condnm = condsat
-      !
-      ! -- At least one cell is partially saturated, so recalculate vertical
-      ! -- conductance for this connection
-      ! -- todo: upstream weighting?
-    else
-      !
-      ! -- Default is for CV correction (dewatered option); use underlying
-      !    saturation of 1.
-      satntmp = satn
-      satmtmp = satm
-      if (idewatcv == 0) then
-        if (botn > botm) then
-          ! -- n is above m
-          satmtmp = DONE
-        else
-          ! -- m is above n
-          satntmp = DONE
-        end if
-      end if
-      bovk1 = satntmp * (topn - botn) * DHALF / vkn
-      bovk2 = satmtmp * (topm - botm) * DHALF / vkm
-      denom = (bovk1 + bovk2)
-      if (denom /= DZERO) then
-        condnm = flowarea / denom
-      else
-        condnm = DZERO
-      end if
-    end if
-    !
-    ! -- Return
-    return
-  end function vcond
-
-  !> @brief Calculate the conductance between two cells
-  !!
-  !! k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
-  !! k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
-  !! thick1 is the saturated thickness for cell 1
-  !! thick2 is the saturated thickness for cell 2
-  !! cl1 is the distance from the center of cell1 to the shared face with cell2
-  !! cl2 is the distance from the center of cell2 to the shared face with cell1
-  !! h1 is the head for cell1
-  !! h2 is the head for cell2
-  !! width is the width perpendicular to flow
-  !! iavgmeth is the averaging method:
-  !!   0 is harmonic averaging
-  !!   1 is logarithmic averaging
-  !!   2 is arithmetic averaging of sat thickness and logarithmic averaging of
-  !!     hydraulic conductivity
-  !!   3 is arithmetic averaging of sat thickness and harmonic averaging of
-  !!     hydraulic conductivity
-  !<
-  function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
-    ! -- return
-    real(DP) :: condmean
-    ! -- dummy
-    real(DP), intent(in) :: k1
-    real(DP), intent(in) :: k2
-    real(DP), intent(in) :: thick1
-    real(DP), intent(in) :: thick2
-    real(DP), intent(in) :: cl1
-    real(DP), intent(in) :: cl2
-    real(DP), intent(in) :: width
-    integer(I4B), intent(in) :: iavgmeth
-    ! -- local
-    real(DP) :: t1
-    real(DP) :: t2
-    real(DP) :: tmean, kmean, denom
-    !
-    ! -- Initialize
-    t1 = k1 * thick1
-    t2 = k2 * thick2
-    !
-    ! -- Averaging
-    select case (iavgmeth)
-      !
-      ! -- Harmonic-mean method
-    case (0)
-      !
-      if (t1 * t2 > DZERO) then
-        condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
-      else
-        condmean = DZERO
-      end if
-      !
-      ! -- Logarithmic-mean method
-    case (1)
-      if (t1 * t2 > DZERO) then
-        tmean = logmean(t1, t2)
-      else
-        tmean = DZERO
-      end if
-      condmean = tmean * width / (cl1 + cl2)
-      !
-      ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
-    case (2)
-      if (k1 * k2 > DZERO) then
-        kmean = logmean(k1, k2)
-      else
-        kmean = DZERO
-      end if
-      condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
-      !
-      ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
-    case (3)
-      denom = (k1 * cl2 + k2 * cl1)
-      if (denom > DZERO) then
-        kmean = k1 * k2 / denom
-      else
-        kmean = DZERO
-      end if
-      condmean = kmean * DHALF * (thick1 + thick2) * width
-    end select
-    !
-    ! -- Return
-    return
-  end function condmean
-
-  !> @brief Calculate the the logarithmic mean of two double precision numbers
-  !!
-  !! Use an approximation if the ratio is near 1
-  !<
-  function logmean(d1, d2)
-    ! -- return
-    real(DP) :: logmean
-    ! -- dummy
-    real(DP), intent(in) :: d1
-    real(DP), intent(in) :: d2
-    ! -- local
-    real(DP) :: drat
-    !
-    drat = d2 / d1
-    if (drat <= DLNLOW .or. drat >= DLNHIGH) then
-      logmean = (d2 - d1) / log(drat)
-    else
-      logmean = DHALF * (d1 + d2)
-    end if
-    !
-    ! -- Return
-    return
-  end function logmean
 
   !> @brief Calculate the 3 conmponents of specific discharge at the cell center
   !<
@@ -2954,7 +2534,7 @@ contains
         isympos = this%dis%con%jas(ipos)
         ihc = this%dis%con%ihc(isympos)
         area = this%dis%con%hwva(isympos)
-        if (ihc == 0) then
+        if (ihc == C3D_VERTICAL) then
           !
           ! -- vertical connection
           iz = iz + 1
@@ -2978,10 +2558,10 @@ contains
           ic = ic + 1
           dz = thksatnm(this%ibound(n), this%ibound(m), &
                         this%icelltype(n), this%icelltype(m), &
-                        this%inewton, ihc, this%iusgnrhc, &
+                        this%inewton, ihc, &
                         this%hnew(n), this%hnew(m), this%sat(n), this%sat(m), &
                         this%dis%top(n), this%dis%top(m), this%dis%bot(n), &
-                        this%dis%bot(m), this%satomega)
+                        this%dis%bot(m))
           area = area * dz
           call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
           call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
@@ -3012,7 +2592,7 @@ contains
           ! -- propsedge: (Q, area, nx, ny, distance)
           ihc = this%ihcedge(m)
           area = this%propsedge(2, m)
-          if (ihc == 0) then
+          if (ihc == C3D_VERTICAL) then
             iz = iz + 1
             viz(iz) = this%propsedge(1, m) / area
             diz(iz) = this%propsedge(5, m)
@@ -3272,7 +2852,6 @@ contains
                             this%icelltype(m), &
                             this%inewton, &
                             ihc, &
-                            this%iusgnrhc, &
                             this%hnew(n), &
                             this%hnew(m), &
                             this%sat(n), &
@@ -3280,130 +2859,10 @@ contains
                             this%dis%top(n), &
                             this%dis%top(m), &
                             this%dis%bot(n), &
-                            this%dis%bot(m), &
-                            this%satomega)
+                            this%dis%bot(m))
     !
     ! -- Return
     return
   end function calcSatThickness
-
-  !> @brief Calculate saturated thickness at interface between two cells
-  !<
-  function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg, &
-                    hn, hm, satn, satm, topn, topm, botn, botm, &
-                    satomega) result(res)
-    ! -- return
-    real(DP) :: res
-    ! -- dummy
-    integer(I4B), intent(in) :: ibdn
-    integer(I4B), intent(in) :: ibdm
-    integer(I4B), intent(in) :: ictn
-    integer(I4B), intent(in) :: ictm
-    integer(I4B), intent(in) :: inwtup
-    integer(I4B), intent(in) :: ihc
-    integer(I4B), intent(in) :: iusg
-    real(DP), intent(in) :: hn
-    real(DP), intent(in) :: hm
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    real(DP), intent(in) :: topn
-    real(DP), intent(in) :: topm
-    real(DP), intent(in) :: botn
-    real(DP), intent(in) :: botm
-    real(DP), intent(in) :: satomega
-    ! -- local
-    integer(I4B) :: indk
-    real(DP) :: sn
-    real(DP) :: sm
-    real(DP) :: thksatn
-    real(DP) :: thksatm
-    real(DP) :: sill_top, sill_bot
-    real(DP) :: tpn, tpm
-    real(DP) :: top, bot
-    !
-    ! -- If either n or m is inactive then saturated thickness is zero
-    if (ibdn == 0 .or. ibdm == 0) then
-      res = DZERO
-      !
-      ! -- if both cells are non-convertible then use average cell thickness
-    elseif (ictn == 0 .and. ictm == 0) then
-      thksatn = topn - botn
-      thksatm = topm - botm
-      !
-      ! -- If staggered connection, subtract parts of cell that are above and
-      !    below the sill top and bottom elevations
-      if (ihc == 2) then
-        !
-        ! -- Calculate sill_top and sill_bot
-        sill_top = min(topn, topm)
-        sill_bot = max(botn, botm)
-        !
-        ! -- Saturated thickness is sill_top - sill_bot
-        thksatn = max(sill_top - sill_bot, DZERO)
-        thksatm = thksatn
-      end if
-      !
-      res = DHALF * (thksatn + thksatm)
-      !
-      ! -- At least one of the cells is convertible, so calculate average saturated
-      !    thickness
-    else
-      if (inwtup == 1) then
-        ! -- set flag used to determine if bottom of cells n and m are
-        !    significantly different
-        indk = 0
-        if (abs(botm - botn) < DEM2) indk = 1
-        ! -- recalculate saturation if using MODFLOW-USG saturation
-        !    calculation approach
-        if (iusg == 1 .and. indk == 0) then
-          if (botm > botn) then
-            top = topm
-            bot = botm
-          else
-            top = topn
-            bot = botn
-          end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega)
-          sm = sQuadraticSaturation(top, bot, hm, satomega)
-        else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega)
-        end if
-        !
-        ! -- upstream weight the thickness
-        if (hn > hm) then
-          res = sn * (topn - botn)
-        else
-          res = sm * (topm - botm)
-        end if
-        !
-      else
-        thksatn = satn * (topn - botn)
-        thksatm = satm * (topm - botm)
-        !
-        ! -- If staggered connection, subtract parts of cell that are above and
-        !    below the sill top and bottom elevations
-        if (ihc == 2) then
-          !
-          ! -- Calculate sill_top and sill_bot
-          sill_top = min(topn, topm)
-          sill_bot = max(botn, botm)
-          !
-          ! -- Calculate tpn and tpm
-          tpn = botn + thksatn
-          tpm = botm + thksatm
-          !
-          ! -- Calculate saturated thickness for cells n and m
-          thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
-          thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
-        end if
-        !
-        res = DHALF * (thksatn + thksatm)
-      end if
-    end if
-    !
-    ! -- Return
-    return
-  end function thksatnm
 
 end module GwfNpfModule
