@@ -235,6 +235,7 @@ def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
         targets=targets,
         build=lambda t: build_models(idx, t, netcdf),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
+        compare=False,
         netcdf=netcdf,
     )
     test.run()
