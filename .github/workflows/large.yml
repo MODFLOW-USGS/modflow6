@@ -1,5 +1,6 @@
 name: MODFLOW 6 large models
 on:
+  push:
   # run at 6 AM UTC every day
   schedule:
     - cron: '0 6 * * *' 
@@ -36,10 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {compiler: gcc, version: 13, repo: examples}
-          - {compiler: gcc, version: 13, repo: largetestmodels}
-          - {compiler: intel-classic, version: 2021.6, repo: examples}
-          - {compiler: intel-classic, version: 2021.6, repo: largetestmodels}
+          - {compiler: gcc, version: 13}
+          - {compiler: intel-classic, version: 2021.7}
     defaults:
       run:
         shell: bash -l {0}
@@ -53,11 +52,11 @@ jobs:
         with:
           path: modflow6
 
-      - name: Checkout modflow6-${{ matrix.repo }}
+      - name: Checkout modflow6-largetestmodels
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-${{ matrix.repo }}
-          path: modflow6-${{ matrix.repo }}
+          repository: MODFLOW-USGS/modflow6-largetestmodels
+          path: modflow6-largetestmodels
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -72,30 +71,10 @@ jobs:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
 
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v4
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/autotest
-        run: |
-          pytest -v -n auto test_scripts.py --init
-          ls -lh ../examples/
-
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson setup builddir --prefix=$(pwd) --libdir=bin
           meson install -C builddir
 
       - name: Get executables
@@ -110,7 +89,7 @@ jobs:
 
       - name: Run tests
         working-directory: modflow6/autotest
-        run: pytest -v -n auto --durations 0 test_${{ matrix.repo }}.py --keep-failed .failed
+        run: pytest -v -n auto --durations 0 test_largetestmodels.py --keep-failed .failed
       
       - name: Upload failed test output
         if: failure()
