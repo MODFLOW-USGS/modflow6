@@ -136,57 +136,64 @@ module ConstantsModule
      '     LAYER', '    CELL2D', '          ', &
      '     LAYER', '       ROW', '       COL'], [3, 3]) !< cellid labels for DIS, DISV, and DISU discretizations
 
-  ! -- enumerator used with TimeSeriesType
+  !> @brief enumerator used with TimeSeriesType
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: UNDEFINED = 0 !< 0
-    ENUMERATOR :: STEPWISE = 1 !< 1
-    ENUMERATOR :: LINEAR = 2 !< 2
-    ENUMERATOR :: LINEAREND = 3 !< 3
+    ENUMERATOR :: UNDEFINED = 0 !< undefined interpolation
+    ENUMERATOR :: STEPWISE = 1 !< stepwise interpolation
+    ENUMERATOR :: LINEAR = 2 !< linear interpolation
+    ENUMERATOR :: LINEAREND = 3 !< linear end interpolation
   END ENUM
 
-  ! -- enumerator used with table objects
+  !> @brief enumerator used with table objects
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: TABLEFT = 0 !< 0
-    ENUMERATOR :: TABCENTER = 1 !< 1
-    ENUMERATOR :: TABRIGHT = 2 !< 2
+    ENUMERATOR :: TABLEFT = 0 !< left justified table column
+    ENUMERATOR :: TABCENTER = 1 !< centered table column
+    ENUMERATOR :: TABRIGHT = 2 !< right justified table column
   END ENUM
 
-  ! -- enumerator used to define table column data type
+  !> @brief enumerator used to define table column data type
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: TABSTRING = 0 !< 0
-    ENUMERATOR :: TABUCSTRING = 1 !< 1
-    ENUMERATOR :: TABINTEGER = 2 !< 2
-    ENUMERATOR :: TABREAL = 3 !< 3
+    ENUMERATOR :: TABSTRING = 0 !< string table data
+    ENUMERATOR :: TABUCSTRING = 1 !< upper case string table data
+    ENUMERATOR :: TABINTEGER = 2 !< integer table data
+    ENUMERATOR :: TABREAL = 3 !< real table data
   END ENUM
 
-  ! -- enumerator used to define output option
+  !> @brief enumerator used to define output option
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: VSUMMARY = 0 !< 0
-    ENUMERATOR :: VALL = 1 !< 1
-    ENUMERATOR :: VDEBUG = 2 !< 2
+    ENUMERATOR :: VSUMMARY = 0 !< write summary output
+    ENUMERATOR :: VALL = 1 !< write all simulation notes and warnings
+    ENUMERATOR :: VDEBUG = 2 !< write debug output
   END ENUM
 
-  ! -- enumerator that defines the operating system
+  !> @brief enumerator that defines the operating system
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: OSUNDEF = 0 !< 0
-    ENUMERATOR :: OSLINUX = 1 !< 1
-    ENUMERATOR :: OSMAC = 2 !< 2
-    ENUMERATOR :: OSWIN = 3 !< 3
+    ENUMERATOR :: OSUNDEF = 0 !< unknown operating system
+    ENUMERATOR :: OSLINUX = 1 !< Linux operating system
+    ENUMERATOR :: OSMAC = 2 !< MacOS operating system
+    ENUMERATOR :: OSWIN = 3 !< Windows operating system
   END ENUM
 
-  ! -- enumerator that defines the simulation mode
+  !> @brief enumerator that defines the simulation mode
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: MVALIDATE = 0 !< 0
-    ENUMERATOR :: MNORMAL = 1 !< 1
-    ENUMERATOR :: MRUN = 2 !< 2
+    ENUMERATOR :: MVALIDATE = 0 !< validation mode - do not run time steps
+    ENUMERATOR :: MNORMAL = 1 !< normal output mode
+    ENUMERATOR :: MRUN = 2 !< run output mode
   END ENUM
 
-  ! -- enumerator that defines the compiler
+  !> @brief enumerator that defines the compiler
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: CUNKNOWN = 0 !< 0
-    ENUMERATOR :: CGFORTRAN = 1 !< 1
-    ENUMERATOR :: CINTEL = 3 !< 2
-    ENUMERATOR :: CCRAYFTN = 3 !< 3
+    ENUMERATOR :: CUNKNOWN = 0 !< unknown compiler
+    ENUMERATOR :: CGFORTRAN = 1 !< gfortran compiler
+    ENUMERATOR :: CINTEL = 3 !< intel ifort compiler
+    ENUMERATOR :: CCRAYFTN = 3 !< cray fortran compiler
   END ENUM
 
   !> @brief enumerator that defines the cell connection type
