@@ -47,7 +47,7 @@ module SwfCxsModule
     procedure :: get_cross_section_info
     procedure :: get_area
     procedure :: get_roughness
-    procedure :: get_conveyance
+    procedure :: get_conveyance => cxs_conveyance
     procedure :: get_hydraulic_radius
     procedure :: write_cxs_table
 
@@ -650,10 +650,10 @@ contains
     end if
   end function get_roughness
 
-  function get_conveyance(this, idcxs, width, depth, &
+  function cxs_conveyance(this, idcxs, width, depth, &
                           rough) result(conveyance)
     ! -- modules
-    use SwfCxsUtilsModule, only: get_composite_conveyance
+    use SwfCxsUtilsModule, only: get_conveyance
     ! -- dummy
     class(SwfCxsType) :: this
     integer(I4B), intent(in) :: idcxs !< cross section id
@@ -675,13 +675,13 @@ contains
       rh = a / width
       conveyance = a * rh**DTWOTHIRDS / rough
     else
-      conveyance = get_composite_conveyance(npts, &
-                                            this%xfraction(i0:i1), &
-                                            this%height(i0:i1), &
-                                            this%manfraction(i0:i1), &
-                                            width, rough, depth)
+      conveyance = get_conveyance(npts, &
+                                  this%xfraction(i0:i1), &
+                                  this%height(i0:i1), &
+                                  this%manfraction(i0:i1), &
+                                  width, rough, depth)
     end if
-  end function get_conveyance
+  end function cxs_conveyance
 
   function get_hydraulic_radius(this, idcxs, width, depth, area) result(r)
     ! -- modules

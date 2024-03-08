@@ -10,6 +10,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'MathUtil',
     'Message',
     'Sim',
+    'SwfUtils',
     'TimeSelect'
   ]
 
