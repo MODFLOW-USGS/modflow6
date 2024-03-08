@@ -1,10 +1,10 @@
-!> @brief This module contains stateless storage subroutines and functions
+!> @brief This module contains stateless conductance functions
 !!
-!! This module contains the functions to calculate the specific
-!! storage (SC1) and specific yield (SC2) capacities that are used in
-!! the storage (STO) package. It also contains subroutines to calculate
-!! the amat and rhs terms for specific storage and specific yield.
-!! This module does not depend on the STO package.
+!! This module contains the functions to calculate the horizontal
+!! and vertical conductance between two cells that are used in the
+!! the node property flow (NPF) package. It also contains functions
+!! to calculate the wetted cell fraction. This module does not
+!! depend on the NPF package.
 !!
 !<
 module GwfConductanceUtilsModule
@@ -225,7 +225,7 @@ contains
   !<
   function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
     ! return variable
-    real(DP) :: condmean !< mean conductance between two cell
+    real(DP) :: condmean !< mean conductance between two cells
     ! dummy
     real(DP), intent(in) :: k1 !< hydraulic conductivity for cell n (in the direction of cell m)
     real(DP), intent(in) :: k2 !< hydraulic conductivity for cell m (in the direction of celln)
