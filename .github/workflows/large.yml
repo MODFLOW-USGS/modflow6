@@ -44,6 +44,9 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
+      - name: Free disk space (Ubuntu)
+        if: runner.os == 'Linux'
+        uses: jlumbroso/free-disk-space@main
 
       - name: Checkout modflow6
         uses: actions/checkout@v4
