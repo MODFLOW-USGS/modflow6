@@ -8,7 +8,7 @@ import pytest
 
 from framework import TestFramework
 
-cases = ["car-jaeg"]
+cases = ["par_eslcasei", "par_eslcaseii", "par_eslcaseiii"]
 
 
 def build_models(idx, test):
