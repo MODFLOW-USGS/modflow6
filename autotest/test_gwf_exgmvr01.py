@@ -10,7 +10,6 @@ The final split model look like:
  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
 """
 
-
 import flopy
 import numpy as np
 import pytest
@@ -35,7 +34,7 @@ Kh = 20.0
 Kv = 20.0
 
 
-def build_simulation(idx, sim_ws, sim_type="single"):
+def build_simulation(idx, sim_ws, sim_type="single", netcdf=None):
     name = cases[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -62,7 +61,7 @@ def build_simulation(idx, sim_ws, sim_type="single"):
     else:
         gwf_types = ("left", "right")
     for gwf_type in gwf_types:
-        gwf = build_gwf(sim, gwf_type=gwf_type)
+        gwf = build_gwf(sim, gwf_type=gwf_type, netcdf=netcdf)
 
     if sim_type != "single":
         build_exchanges(sim)
@@ -70,7 +69,7 @@ def build_simulation(idx, sim_ws, sim_type="single"):
     return sim
 
 
-def build_gwf(sim, gwf_type="single"):
+def build_gwf(sim, gwf_type="single", netcdf=None):
     if gwf_type == "single":
         nc = ncol
     else:
@@ -92,10 +91,15 @@ def build_gwf(sim, gwf_type="single"):
         delc=delc,
         top=top,
         botm=botm,
+        filename=f"{gwf_type}.nc" if netcdf else f"{gwf_type}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=0.0,
+        filename=f"{gwf_type}.nc" if netcdf else f"{gwf_type}.ic",
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -104,6 +108,7 @@ def build_gwf(sim, gwf_type="single"):
         icelltype=0,
         k=Kh,
         k33=Kv,
+        filename=f"{gwf_type}.nc" if netcdf else f"{gwf_type}.npf",
     )
 
     # add chd to right edge
@@ -115,6 +120,7 @@ def build_gwf(sim, gwf_type="single"):
             gwf,
             stress_period_data=chdlist,
             pname="chd_right",
+            filename=f"{gwf_type}.nc" if netcdf else f"{gwf_type}.chd",
         )
 
     # inject water into left edge
@@ -126,6 +132,7 @@ def build_gwf(sim, gwf_type="single"):
             gwf,
             stress_period_data=wellist,
             pname="well_left",
+            filename=f"{gwf_type}.nc" if netcdf else f"{gwf_type}.wel",
         )
 
     # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
@@ -266,10 +273,12 @@ def build_exchanges(sim):
     )
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     sim_ws = test.workspace / "mf6"
-    sim_base = build_simulation(idx, sim_ws)
-    sim = build_simulation(idx, test.workspace, sim_type="split")
+    sim_base = build_simulation(idx, sim_ws, netcdf=netcdf)
+    sim = build_simulation(
+        idx, test.workspace, sim_type="split", netcdf=netcdf
+    )
     return sim, sim_base
 
 
@@ -297,13 +306,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
         compare=None,
     )
     test.run()

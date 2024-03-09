@@ -10,30 +10,34 @@ from framework import TestFramework
 cases = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     from test_gwt_adv01_gwtgwt import build_models as build
 
-    sim, dummy = build(idx, test)
+    sim, dummy = build(idx, test, netcdf)
     return sim, dummy
 
 
-def check_output(idx, test):
+def check_output(idx, test, netcdf=None):
     from test_gwt_adv01_gwtgwt import check_output as check
 
-    check(idx, test)
+    check(idx, test, netcdf)
 
 
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
+        check=lambda t: check_output(idx, t, netcdf),
         compare=None,
         parallel=True,
+        netcdf=netcdf,
         ncpus=2,
     )
     test.run()

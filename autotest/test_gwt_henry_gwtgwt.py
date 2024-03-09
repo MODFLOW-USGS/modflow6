@@ -40,7 +40,7 @@ conc_tol = 1e-06
 hc = 864.0
 
 
-def get_gwf_model(sim, model_shape, model_desc):
+def get_gwf_model(sim, model_shape, model_desc, netcdf=None):
     nlay, nrow, ncol = model_shape
 
     # create gwf model
@@ -65,19 +65,22 @@ def get_gwf_model(sim, model_shape, model_desc):
         botm=botm,
         xorigin=xoff,
         yorigin=yoff,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    _ = flopy.mf6.ModflowGwfic(gwf, strt=1.0)
+    _ = flopy.mf6.ModflowGwfic(
+        gwf, strt=1.0, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     _ = flopy.mf6.ModflowGwfnpf(
         gwf,
-        xt3doptions=False,
         save_flows=True,
         save_specific_discharge=True,
         icelltype=0,
         k=hc,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     pd = [(0, 0.7, 0.0, gwtname, "none")]
@@ -105,7 +108,7 @@ def get_gwf_model(sim, model_shape, model_desc):
             save_flows=False,
             pname="CHD-1",
             auxiliary="CONCENTRATION",
-            filename=f"{gwfname}.chd",
+            filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
         )
 
     # WEL for left model
@@ -122,7 +125,7 @@ def get_gwf_model(sim, model_shape, model_desc):
             save_flows=False,
             pname="WEL-1",
             auxiliary="CONCENTRATION",
-            filename=f"{gwfname}.wel",
+            filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
         )
 
     # output control
@@ -138,7 +141,7 @@ def get_gwf_model(sim, model_shape, model_desc):
     return gwf
 
 
-def get_gwt_model(sim, model_shape, model_desc, adv_scheme):
+def get_gwt_model(sim, model_shape, model_desc, adv_scheme, netcdf=None):
     nlay, nrow, ncol = model_shape
 
     # create gwf model
@@ -163,10 +166,15 @@ def get_gwt_model(sim, model_shape, model_desc, adv_scheme):
         botm=botm,
         xorigin=xoff,
         yorigin=yoff,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
-    _ = flopy.mf6.ModflowGwtic(gwt, strt=35.0, filename=f"{gwtname}.ic")
+    _ = flopy.mf6.ModflowGwtic(
+        gwt,
+        strt=35.0,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic",
+    )
 
     # advection
     _ = flopy.mf6.ModflowGwtadv(
@@ -180,7 +188,7 @@ def get_gwt_model(sim, model_shape, model_desc, adv_scheme):
         xt3d_off=True,
         diffc=diffc,
         # alh=0., alv=0., ath=0., atv=0.,
-        filename=f"{gwtname}.dsp",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dsp",
     )
 
     # mass storage and transfer
@@ -223,9 +231,9 @@ def get_gwt_model(sim, model_shape, model_desc, adv_scheme):
     return gwt
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     name = cases[idx]
-    print("RUINNING: ", name, advection_scheme[idx])
+    print("RUNNING: ", name, advection_scheme[idx])
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -241,9 +249,9 @@ def build_models(idx, test):
     )
 
     # create flow models and GWF-GWF exchange
-    gwf_ref = get_gwf_model(sim, (nlay, nrow, ncol), "ref")
-    gwf_left = get_gwf_model(sim, (nlay, nrow, ncol_sub), "left")
-    gwf_right = get_gwf_model(sim, (nlay, nrow, ncol_sub), "right")
+    gwf_ref = get_gwf_model(sim, (nlay, nrow, ncol), "ref", netcdf)
+    gwf_left = get_gwf_model(sim, (nlay, nrow, ncol_sub), "left", netcdf)
+    gwf_right = get_gwf_model(sim, (nlay, nrow, ncol_sub), "right", netcdf)
 
     imsgwf_ref = flopy.mf6.ModflowIms(
         sim,
@@ -292,13 +300,13 @@ def build_models(idx, test):
 
     # create transport models and GWT-GWT exchange
     gwt_ref = get_gwt_model(
-        sim, (nlay, nrow, ncol), "ref", advection_scheme[idx]
+        sim, (nlay, nrow, ncol), "ref", advection_scheme[idx], netcdf
     )
     gwt_left = get_gwt_model(
-        sim, (nlay, nrow, ncol_sub), "left", advection_scheme[idx]
+        sim, (nlay, nrow, ncol_sub), "left", advection_scheme[idx], netcdf
     )
     gwt_right = get_gwt_model(
-        sim, (nlay, nrow, ncol_sub), "right", advection_scheme[idx]
+        sim, (nlay, nrow, ncol_sub), "right", advection_scheme[idx], netcdf
     )
 
     imsgwt_ref = flopy.mf6.ModflowIms(
@@ -426,13 +434,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

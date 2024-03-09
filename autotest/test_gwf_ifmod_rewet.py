@@ -117,7 +117,7 @@ rewet_record = [("WETFCT", 1.0, "IWETIT", 1, "IHDWET", 1)]
 wetdry = -0.001
 
 
-def get_model(idx, dir):
+def get_model(idx, dir, netcdf=None):
     name = cases[idx]
 
     # parameters and spd
@@ -155,18 +155,18 @@ def get_model(idx, dir):
     )
 
     # the full gwf model as a reference
-    add_refmodel(sim)
+    add_refmodel(sim, netcdf)
 
     # now add two coupled models with the interface model enabled,
     # to be stored in the same solution as the reference model
-    add_leftmodel(sim)
-    add_rightmodel(sim)
+    add_leftmodel(sim, netcdf)
+    add_rightmodel(sim, netcdf)
     add_gwfexchange(sim)
 
     return sim
 
 
-def add_refmodel(sim):
+def add_refmodel(sim, netcdf=None):
     global mname_ref
     global nlay, nrow, ncol
     global delr, delc
@@ -191,10 +191,15 @@ def add_refmodel(sim):
         yorigin=0.0,
         top=tops[0],
         botm=tops[1:],
+        filename=f"{mname_ref}.nc" if netcdf else f"{mname_ref}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=h_start,
+        filename=f"{mname_ref}.nc" if netcdf else f"{mname_ref}.ic",
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -204,10 +209,15 @@ def add_refmodel(sim):
         icelltype=1,
         k=hk,
         wetdry=wetdry,
+        filename=f"{mname_ref}.nc" if netcdf else f"{mname_ref}.npf",
     )
 
     # chd file
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd,
+        filename=f"{mname_ref}.nc" if netcdf else f"{mname_ref}.chd",
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -221,7 +231,7 @@ def add_refmodel(sim):
     return gwf
 
 
-def add_leftmodel(sim):
+def add_leftmodel(sim, netcdf=None):
     global mname_left
     global nlay, nrow, ncol_left
     global delr, delc
@@ -244,8 +254,13 @@ def add_leftmodel(sim):
         delc=delc,
         top=tops[0],
         botm=tops[1:],
+        filename=f"{mname_left}.nc" if netcdf else f"{mname_left}.dis",
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=h_start,
+        filename=f"{mname_left}.nc" if netcdf else f"{mname_left}.ic",
+    )
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
@@ -254,8 +269,13 @@ def add_leftmodel(sim):
         icelltype=1,
         k=hk,
         wetdry=wetdry,
+        filename=f"{mname_left}.nc" if netcdf else f"{mname_left}.npf",
     )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd_left,
+        filename=f"{mname_left}.nc" if netcdf else f"{mname_left}.chd",
+    )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=f"{mname_left}.hds",
@@ -267,7 +287,7 @@ def add_leftmodel(sim):
     return gwf
 
 
-def add_rightmodel(sim):
+def add_rightmodel(sim, netcdf=None):
     global mname_right
     global nlay, nrow, ncol_right
     global h_right
@@ -293,8 +313,13 @@ def add_rightmodel(sim):
         yorigin=shift_y,
         top=tops[0],
         botm=tops[1:],
+        filename=f"{mname_right}.nc" if netcdf else f"{mname_right}.dis",
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf,
+        strt=h_start,
+        filename=f"{mname_right}.nc" if netcdf else f"{mname_right}.ic",
+    )
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
@@ -303,8 +328,13 @@ def add_rightmodel(sim):
         icelltype=1,
         k=hk,
         wetdry=wetdry,
+        filename=f"{mname_right}.nc" if netcdf else f"{mname_right}.npf",
     )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf,
+        stress_period_data=chd_spd_right,
+        filename=f"{mname_right}.nc" if netcdf else f"{mname_right}.chd",
+    )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=f"{mname_right}.hds",
@@ -350,8 +380,8 @@ def add_gwfexchange(sim):
     )
 
 
-def build_models(idx, test):
-    sim = get_model(idx, test.workspace)
+def build_models(idx, test, netcdf=None):
+    sim = get_model(idx, test.workspace, netcdf)
     return sim, None
 
 
@@ -407,13 +437,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        netcdf=netcdf,
     )
     test.run()

@@ -18,7 +18,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
 
-def get_gwf_model(sim, gwfname, gwfpath, modelshape):
+def get_gwf_model(sim, gwfname, gwfpath, modelshape, netcdf=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = gdelr
     delc = 1.0
@@ -45,10 +45,13 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape):
         botm=botm,
         xorigin=xshift,
         yorigin=yshift,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -56,6 +59,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape):
         icelltype=laytyp,
         k=hk,
         save_specific_discharge=True,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # output control
@@ -71,7 +75,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape):
     return gwf
 
 
-def get_gwt_model(sim, gwtname, gwtpath, modelshape):
+def get_gwt_model(sim, gwtname, gwtpath, modelshape, netcdf=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
     delc = 1.0
@@ -99,6 +103,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
         botm=botm,
         xorigin=xshift,
         yorigin=yshift,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
@@ -106,7 +111,11 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
     if gwtname == "transport1":
         initial_conc[40] = 100.0
 
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=initial_conc)
+    ic = flopy.mf6.ModflowGwtic(
+        gwt,
+        strt=initial_conc,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic",
+    )
 
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(
@@ -117,7 +126,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
         alv=0.0,
         ath1=0.0,
         atv=0.0,
-        filename=f"{gwtname}.dsp",
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dsp",
     )
 
     # mass storage and transfer
@@ -139,7 +148,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
     return gwt
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # temporal discretization
     nper = 1
     perlen = [5.0]
@@ -167,11 +176,13 @@ def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 50
 
     # Create gwf1 model
-    gwf1 = get_gwf_model(sim, "flow1", "flow1", (nlay, nrow, ncol, 0.0, 0.0))
+    gwf1 = get_gwf_model(
+        sim, "flow1", "flow1", (nlay, nrow, ncol, 0.0, 0.0), netcdf
+    )
 
     # Create gwf2 model
     gwf2 = get_gwf_model(
-        sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0 * gdelr, 0.0)
+        sim, "flow2", "flow2", (nlay, nrow, ncol, 50.0 * gdelr, 0.0), netcdf
     )
 
     # gwf-gwf with interface model enabled
@@ -208,12 +219,16 @@ def build_models(idx, test):
 
     # Create gwt model
     gwt1 = get_gwt_model(
-        sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0)
+        sim, "transport1", "transport1", (nlay, nrow, ncol, 0.0, 0.0), netcdf
     )
 
     # Create gwt model
     gwt2 = get_gwt_model(
-        sim, "transport2", "transport2", (nlay, nrow, ncol, 50.0 * gdelr, 0.0)
+        sim,
+        "transport2",
+        "transport2",
+        (nlay, nrow, ncol, 50.0 * gdelr, 0.0),
+        netcdf,
     )
 
     # Create GWT GWT exchange
@@ -297,13 +312,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
         check=lambda t: check_output(idx, t),
+        netcdf=netcdf,
     )
     test.run()

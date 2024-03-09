@@ -20,7 +20,9 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
 
-def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
+def get_gwf_model(
+    sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None, netcdf=None
+):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = gdelr
     delc = 1.0
@@ -47,10 +49,13 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         botm=botm,
         xorigin=xshift,
         yorigin=yshift,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, strt=strt, filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -58,6 +63,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         icelltype=laytyp,
         k=hk,
         save_specific_discharge=True,
+        filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.npf",
     )
 
     # chd files
@@ -68,6 +74,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
             stress_period_data=chdspd,
             save_flows=False,
             pname="CHD-1",
+            filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.chd",
         )
 
     # wel files
@@ -81,6 +88,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
             save_flows=False,
             auxiliary="CONCENTRATION",
             pname="WEL-1",
+            filename=f"{gwfname}.nc" if netcdf else f"{gwfname}.wel",
         )
 
     # output control
@@ -97,7 +105,13 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
 
 
 def get_gwt_model(
-    sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
+    sim,
+    gwtname,
+    gwtpath,
+    modelshape,
+    scheme,
+    sourcerecarray=None,
+    netcdf=None,
 ):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
@@ -126,10 +140,13 @@ def get_gwt_model(
         botm=botm,
         xorigin=xshift,
         yorigin=yshift,
+        filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, strt=0.0, filename=f"{gwtname}.nc" if netcdf else f"{gwtname}.ic"
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme)
@@ -177,7 +194,7 @@ def get_gwt_model(
     return gwt
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # temporal discretization
     nper = 1
     perlen = [5.0]
@@ -210,6 +227,7 @@ def build_models(idx, test):
         (nlay, nrow, ncol, 0.0, 0.0),
         chdspd=chdspd,
         welspd=welspd,
+        netcdf=netcdf,
     )
 
     # Create gwf2 model
@@ -222,6 +240,7 @@ def build_models(idx, test):
         (nlay, nrow, ncol, 50.0 * gdelr, 0.0),
         chdspd=chdspd,
         welspd=welspd,
+        netcdf=netcdf,
     )
 
     # gwf-gwf with interface model enabled
@@ -265,6 +284,7 @@ def build_models(idx, test):
         (nlay, nrow, ncol, 0.0, 0.0),
         scheme[idx],
         sourcerecarray=sourcerecarray,
+        netcdf=netcdf,
     )
 
     # Create gwt model
@@ -276,6 +296,7 @@ def build_models(idx, test):
         (nlay, nrow, ncol, 50.0 * gdelr, 0.0),
         scheme[idx],
         sourcerecarray=sourcerecarray,
+        netcdf=netcdf,
     )
 
     # Create GWT GWT exchange
@@ -330,7 +351,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test):
+def check_output(idx, test, netcdf=None):
     gwtname = "transport1"
 
     fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
@@ -699,7 +720,8 @@ def check_output(idx, test):
 
         # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
-        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}.dis.grb")
+        ext = ".nc.grb" if netcdf else ".dis.grb"
+        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}" + ext)
         grb = flopy.mf6.utils.MfGrdFile(fpth)
 
         # Check on residual, which is stored in diagonal position of
@@ -720,13 +742,17 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
+@pytest.mark.parametrize(
+    "netcdf", [0, pytest.param(1, marks=pytest.mark.netcdf)]
+)
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, netcdf):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        build=lambda t: build_models(idx, t, netcdf),
+        check=lambda t: check_output(idx, t, netcdf),
+        netcdf=netcdf,
     )
     test.run()
