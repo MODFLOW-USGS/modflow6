@@ -1,6 +1,5 @@
 name: MODFLOW 6 large models
 on:
-  push:
   # run at 6 AM UTC every day
   schedule:
     - cron: '0 6 * * *' 
