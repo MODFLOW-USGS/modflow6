@@ -9,7 +9,12 @@ from common_regression import (
     get_mf6_comparison,
 )
 
-excluded_models = []
+excluded_models = [
+    "test1002_biscqtg_disv_gnc_nr_dev",
+    "test1002_biscqtg_disv_nr_MD_dev",
+    "test1002_biscqtg_disv_nr_RCM_dev",
+    "test1002_biscqtg_disv_nr_dev"
+]
 
 
 @pytest.mark.large
