@@ -24,18 +24,18 @@ import pytest
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
-from prt_test_utils import get_model_name
 from shapely.geometry import LineString
 
 from framework import TestFramework
+from prt_test_utils import get_model_name
 from test_prt_triangle import (
     active_domain,
-    nlay,
-    top,
     botm,
-    porosity,
-    get_tri,
     build_gwf_sim,
+    get_tri,
+    nlay,
+    porosity,
+    top,
 )
 
 simname = "prtter"

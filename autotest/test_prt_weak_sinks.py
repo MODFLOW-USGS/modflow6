@@ -33,6 +33,8 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
+
+from framework import TestFramework
 from prt_test_utils import (
     FlopyReadmeCase,
     check_budget_data,
@@ -40,8 +42,6 @@ from prt_test_utils import (
     get_ireason_code,
     get_model_name,
 )
-
-from framework import TestFramework
 
 simname = "prtfmi04"
 cases = [simname, f"{simname}saws"]

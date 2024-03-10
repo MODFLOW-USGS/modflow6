@@ -29,11 +29,11 @@ from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
-from prt_test_utils import get_model_name
-from shapely.geometry import LineString, Point
 from modflow_devtools.misc import is_in_ci
+from shapely.geometry import LineString, Point
 
 from framework import TestFramework
+from prt_test_utils import get_model_name
 
 simname = "prtvor1"
 cases = [f"{simname}l2r", f"{simname}welp", f"{simname}weli"]
@@ -78,7 +78,7 @@ def build_gwf_sim(name, ws, targets):
     grid = get_grid(ws / "grid", targets)
     vgrid = VertexGrid(**grid.get_gridprops_vertexgrid(), nlay=1)
     ibd = np.zeros(vgrid.ncpl, dtype=int)
-    
+
     # Intersecting points with the grid is slow, so below we
     # hardcode the known cell IDs; if this test changes they
     # will need to be recomputed.
@@ -87,30 +87,148 @@ def build_gwf_sim(name, ws, targets):
     # identify cells on left edge
     # line = LineString([(xmin, ymin), (xmin, ymax)])
     # cells_left = gi.intersect(line)["cellids"]
-    left_cells = [   0,    3, 1197, 1268, 1442, 1443, 1459, 1461, 1474, 1499, 1515,
-       1520, 1529, 1545, 1552, 1563, 1581, 1584, 1586, 1590, 1596, 1608,
-       1609, 1614, 1616, 1625, 1643, 1649, 1652, 1655, 1659, 1662]
+    left_cells = [
+        0,
+        3,
+        1197,
+        1268,
+        1442,
+        1443,
+        1459,
+        1461,
+        1474,
+        1499,
+        1515,
+        1520,
+        1529,
+        1545,
+        1552,
+        1563,
+        1581,
+        1584,
+        1586,
+        1590,
+        1596,
+        1608,
+        1609,
+        1614,
+        1616,
+        1625,
+        1643,
+        1649,
+        1652,
+        1655,
+        1659,
+        1662,
+    ]
     left_cells = np.array(list(left_cells))
     ibd[left_cells] = 1
 
     # identify cells on right edge
     # line = LineString([(xmax, ymin), (xmax, ymax)])
     # cells_right = gi.intersect(line)["cellids"]
-    right_cells = [  1,   2,   6,  12, 210, 399, 400, 406, 412, 421, 519, 559, 601,
-       605, 617, 623, 624, 674, 770, 783, 785, 786, 792, 793, 801, 809,
-       812, 813, 814, 920]
+    right_cells = [
+        1,
+        2,
+        6,
+        12,
+        210,
+        399,
+        400,
+        406,
+        412,
+        421,
+        519,
+        559,
+        601,
+        605,
+        617,
+        623,
+        624,
+        674,
+        770,
+        783,
+        785,
+        786,
+        792,
+        793,
+        801,
+        809,
+        812,
+        813,
+        814,
+        920,
+    ]
     right_cells = np.array(list(right_cells))
     ibd[right_cells] = 2
 
     # identify cells on bottom edge
     # line = LineString([(xmin, ymin), (xmax, ymin)])
     # cells_bottom = gi.intersect(line)["cellids"]
-    bottom_cells = [   0,    1,    4,    8,  258,  274,  308,  328,  332,  333,  334,
-        342,  343,  345,  347,  353,  354,  355,  439,  445,  456,  460,
-        465,  475,  479,  485,  516,  527,  533,  541,  631,  752,  810,
-        819,  824,  830,  832,  834,  835,  927,  929,  932, 1091, 1096,
-       1207, 1212, 1215, 1217, 1242, 1247, 1249, 1257, 1262, 1269, 1276,
-       1389, 1393, 1447, 1455, 1462, 1677, 1685]
+    bottom_cells = [
+        0,
+        1,
+        4,
+        8,
+        258,
+        274,
+        308,
+        328,
+        332,
+        333,
+        334,
+        342,
+        343,
+        345,
+        347,
+        353,
+        354,
+        355,
+        439,
+        445,
+        456,
+        460,
+        465,
+        475,
+        479,
+        485,
+        516,
+        527,
+        533,
+        541,
+        631,
+        752,
+        810,
+        819,
+        824,
+        830,
+        832,
+        834,
+        835,
+        927,
+        929,
+        932,
+        1091,
+        1096,
+        1207,
+        1212,
+        1215,
+        1217,
+        1242,
+        1247,
+        1249,
+        1257,
+        1262,
+        1269,
+        1276,
+        1389,
+        1393,
+        1447,
+        1455,
+        1462,
+        1677,
+        1685,
+    ]
     bottom_cells = np.array(list(bottom_cells))
     ibd[bottom_cells] = 3
 
@@ -118,8 +236,6 @@ def build_gwf_sim(name, ws, targets):
     # points = [Point((1200, 500)), Point((700, 200)), Point((1600, 700))]
     # well_cells = [vgrid.intersect(p.x, p.y) for p in points]
     well_cells = [163, 1178, 67]
-
-    # import pdb; pdb.set_trace()
 
     # create simulation
     sim = flopy.mf6.MFSimulation(
@@ -184,7 +300,7 @@ def build_gwf_sim(name, ws, targets):
         "left": left_cells,
         "right": right_cells,
         "bottom": bottom_cells,
-        "well": well_cells
+        "well": well_cells,
     }
 
 
@@ -273,7 +389,12 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
 def build_models(idx, test):
     gwf_sim, cell_ids = build_gwf_sim(test.name, test.workspace, test.targets)
     prt_sim = build_prt_sim(
-        idx, test.name, test.workspace, test.workspace / "prt", test.targets, cell_ids
+        idx,
+        test.name,
+        test.workspace,
+        test.workspace / "prt",
+        test.targets,
+        cell_ids,
     )
     return gwf_sim, prt_sim
 

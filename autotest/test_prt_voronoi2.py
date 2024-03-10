@@ -26,10 +26,11 @@ from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
-from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
 
 from framework import TestFramework
+from prt_test_utils import get_model_name
+from test_prt_voronoi1 import build_gwf_sim, get_grid
 
 simname = "prtvor2"
 cases = [simname]
@@ -49,94 +50,6 @@ nodes = ncol * nrow
 porosity = 0.1
 
 
-def get_grid(workspace, targets):
-    workspace.mkdir(exist_ok=True, parents=True)
-    tri = Triangle(
-        maximum_area=area_max,
-        angle=angle_min,
-        model_ws=workspace,
-        exe_name=targets["triangle"],
-    )
-    poly = np.array(((xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)))
-    tri.add_polygon(poly)
-    tri.build(verbose=False)
-    return VoronoiGrid(tri)
-
-
-def build_gwf_sim(name, ws, targets):
-    ws = Path(ws)
-    gwf_name = get_model_name(name, "gwf")
-
-    # create grid
-    grid = get_grid(ws / "grid", targets)
-    vgrid = VertexGrid(**grid.get_gridprops_vertexgrid(), nlay=1)
-    ibd = np.zeros(vgrid.ncpl, dtype=int)
-    gi = GridIntersect(vgrid)
-
-    # identify cells on left edge
-    line = LineString([(xmin, ymin), (xmin, ymax)])
-    cells_left = gi.intersect(line)["cellids"]
-    cells_left = np.array(list(cells_left))
-    ibd[cells_left] = 1
-
-    # identify cells on right edge
-    line = LineString([(xmax, ymin), (xmax, ymax)])
-    cells_right = gi.intersect(line)["cellids"]
-    cells_right = np.array(list(cells_right))
-    ibd[cells_right] = 2
-
-    # identify cells on bottom edge
-    line = LineString([(xmin, ymin), (xmax, ymin)])
-    cells_bottom = gi.intersect(line)["cellids"]
-    cells_bottom = np.array(list(cells_bottom))
-    ibd[cells_bottom] = 3
-
-    # create simulation
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=ws
-    )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwf_name, save_flows=True)
-    ims = flopy.mf6.ModflowIms(
-        sim,
-        print_option="SUMMARY",
-        complexity="complex",
-        outer_dvclose=1.0e-8,
-        inner_dvclose=1.0e-8,
-    )
-    disv = flopy.mf6.ModflowGwfdisv(
-        gwf, nlay=nlay, **grid.get_disv_gridprops(), top=top, botm=botm
-    )
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        xt3doptions=[(True)],
-        k=10.0,
-        save_saturation=True,
-        save_specific_discharge=True,
-    )
-    ic = flopy.mf6.ModflowGwfic(gwf)
-
-    chdlist = []
-    icpl_seen = []
-    for icpl in cells_left:
-        chdlist.append([(0, icpl), 1.0])
-        icpl_seen.append(icpl)
-    for icpl in cells_right:
-        chdlist.append([(0, icpl), 0.0])
-        icpl_seen.append(icpl)
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist)
-    oc = flopy.mf6.ModflowGwfoc(
-        gwf,
-        budget_filerecord=f"{gwf_name}.bud",
-        head_filerecord=f"{gwf_name}.hds",
-        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )
-    return sim
-
-
 def build_gwt_sim(name, gwf_ws, gwt_ws, targets):
     ws = Path(gwt_ws)
     gwf_name = get_model_name(name, "gwf")
@@ -146,12 +59,13 @@ def build_gwt_sim(name, gwf_ws, gwt_ws, targets):
     grid = get_grid(ws / "grid", targets)
     vgrid = VertexGrid(**grid.get_gridprops_vertexgrid(), nlay=1)
     ibd = np.zeros(vgrid.ncpl, dtype=int)
-    gi = GridIntersect(vgrid)
+    # gi = GridIntersect(vgrid)
 
     # identify release cell
-    point = Point((500, 500))
-    cells2 = gi.intersect(point)["cellids"]
-    cells2 = np.array(list(cells2))
+    # point = Point((500, 500))
+    # release_cells = gi.intersect(point)["cellids"]
+    release_cells = [1294]
+    release_cells = np.array(list(release_cells))
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -182,7 +96,7 @@ def build_gwt_sim(name, gwf_ws, gwt_ws, targets):
     sourcerecarray = [()]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
     cnclist = [
-        [(0, cells2[0]), 1.0],
+        [(0, release_cells[0]), 1.0],
     ]
     cnc = flopy.mf6.ModflowGwtcnc(
         gwt, maxbound=len(cnclist), stress_period_data=cnclist, pname="CNC-1"
@@ -203,10 +117,10 @@ def build_gwt_sim(name, gwf_ws, gwt_ws, targets):
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
 
-    return sim
+    return sim, {"release": release_cells}
 
 
-def build_prt_sim(name, gwf_ws, prt_ws, targets):
+def build_prt_sim(name, gwf_ws, prt_ws, targets, cell_ids):
     prt_ws = Path(prt_ws)
     gwf_name = get_model_name(name, "gwf")
     prt_name = get_model_name(name, "prt")
@@ -216,24 +130,20 @@ def build_prt_sim(name, gwf_ws, prt_ws, targets):
     gridprops = grid.get_gridprops_vertexgrid()
     vgrid = VertexGrid(**gridprops, nlay=1)
     ibd = np.zeros(vgrid.ncpl, dtype=int)
-    gi = GridIntersect(vgrid)
 
     # identify cells on left edge
-    line = LineString([(xmin, ymin), (xmin, ymax)])
-    cells0 = gi.intersect(line)["cellids"]
-    cells0 = np.array(list(cells0))
-    ibd[cells0] = 1
+    left_cells = cell_ids["left"]
+    left_cells = np.array(list(left_cells))
+    ibd[left_cells] = 1
 
     # identify cells on right edge
-    line = LineString([(xmax, ymin), (xmax, ymax)])
-    cells1 = gi.intersect(line)["cellids"]
-    cells1 = np.array(list(cells1))
-    ibd[cells1] = 2
+    right_cells = cell_ids["right"]
+    right_cells = np.array(list(right_cells))
+    ibd[right_cells] = 2
 
     # identify release cell
-    point = Point((500, 500))
-    cells2 = gi.intersect(point)["cellids"]
-    cells2 = np.array(list(cells2))
+    release_cells = cell_ids["release"]
+    release_cells = np.array(list(release_cells))
 
     # create simulation
     sim = flopy.mf6.MFSimulation(
@@ -252,7 +162,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, targets):
         columncelldivisions=1, rowcelldivisions=1
     )
     data = flopy.modpath.NodeParticleData(
-        subdivisiondata=sddata, nodes=[cells2]
+        subdivisiondata=sddata, nodes=[release_cells]
     )
     prpdata = list(data.to_prp(prt.modelgrid))
     prp_track_file = f"{prt_name}.prp.trk"
@@ -296,12 +206,18 @@ def build_prt_sim(name, gwf_ws, prt_ws, targets):
 
 
 def build_models(idx, test):
-    gwf_sim = build_gwf_sim(test.name, test.workspace, test.targets)
-    gwt_sim = build_gwt_sim(
+    gwf_sim, gwf_cell_ids = build_gwf_sim(
+        test.name, test.workspace, test.targets
+    )
+    gwt_sim, gwt_cell_ids = build_gwt_sim(
         test.name, test.workspace, test.workspace / "gwt", test.targets
     )
     prt_sim = build_prt_sim(
-        test.name, test.workspace, test.workspace / "prt", test.targets
+        test.name,
+        test.workspace,
+        test.workspace / "prt",
+        test.targets,
+        {**gwf_cell_ids, **gwt_cell_ids},
     )
     return gwf_sim, gwt_sim, prt_sim
 
@@ -421,7 +337,6 @@ def check_output(idx, test):
         p.show()
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

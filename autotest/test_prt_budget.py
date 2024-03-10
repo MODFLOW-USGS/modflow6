@@ -14,9 +14,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
+from flopy.mf6.utils.postprocessing import get_structured_faceflows
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-from flopy.mf6.utils.postprocessing import get_structured_faceflows
+
+from framework import TestFramework
 from prt_test_utils import (
     HorizontalCase,
     all_equal,
@@ -26,8 +28,6 @@ from prt_test_utils import (
     get_partdata,
     has_default_boundnames,
 )
-
-from framework import TestFramework
 
 simname = "prtbud"
 cases = [simname]
