@@ -37,8 +37,6 @@ module IdmMf6FileModule
   !<
   type, extends(DynamicPkgLoadBaseType) :: Mf6FileDynamicPkgLoadType
     type(BlockParserType), pointer :: parser !< parser for MF6File period blocks
-    integer(I4B), pointer :: iper
-    integer(I4B), pointer :: ionper
     class(AsciiDynamicPkgLoadBaseType), pointer :: rp_loader
   contains
     procedure :: init => dynamic_init
@@ -71,7 +69,7 @@ contains
     allocate (parser)
     call parser%Initialize(inunit, iout)
     !
-    ! -- invoke the selected load routine
+    ! -- invoke the load routine
     call loader%load(parser, mf6_input, filename, iout)
     !
     ! -- clear parser file handles
@@ -152,7 +150,6 @@ contains
                           input_name, iperblock, iout)
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
-    use MemoryManagerModule, only: mem_allocate
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
     character(len=*), intent(in) :: component_name
@@ -167,14 +164,8 @@ contains
                                       component_input_name, input_name, &
                                       iperblock, iout)
     !
-    ! -- allocate scalars
-    call mem_allocate(this%iper, 'IPER', this%mf6_input%mempath)
-    call mem_allocate(this%ionper, 'IONPER', this%mf6_input%mempath)
-    !
-    ! -- initialize package
+    ! -- initialize rp_loader
     nullify (this%rp_loader)
-    this%iper = 0
-    this%ionper = 0
     !
     ! -- open input file
     inunit = open_mf6file(mf6_input%pkgtype, input_name, &
@@ -333,16 +324,11 @@ contains
   !> @brief dynamic loader destroy
   !<
   subroutine dynamic_destroy(this)
-    use MemoryManagerModule, only: mem_deallocate
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
     !
     ! -- deallocate loader
     call this%rp_loader%destroy()
     deallocate (this%rp_loader)
-    !
-    ! -- deallocate scalars
-    call mem_deallocate(this%iper)
-    call mem_deallocate(this%ionper)
     !
     ! -- deallocate parser
     call this%parser%clear()
@@ -374,7 +360,7 @@ contains
     !
     if (filename /= '') then
       !
-      ! -- get unit number, update object and open file
+      ! -- get unit number and open file
       inunit = getunit()
       call openfile(inunit, iout, trim(adjustl(filename)), filetype, &
                     'FORMATTED', 'SEQUENTIAL', 'OLD')

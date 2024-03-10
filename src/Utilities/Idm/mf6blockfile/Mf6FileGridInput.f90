@@ -20,7 +20,6 @@ module Mf6FileGridInputModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, &
                                           tasmanager_cr
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
-  use DynamicParamFilterModule, only: DynamicParamFilterType
 
   implicit none
   private
@@ -37,7 +36,6 @@ module Mf6FileGridInputModule
     type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
     type(TimeArraySeriesManagerType), pointer :: tasmanager !< TAS manager
     type(BoundInputContextType) :: bound_context
-    type(DynamicParamFilterType) :: filter
   contains
     procedure :: ainit => bndgrid_init
     procedure :: df => bndgrid_df
@@ -45,6 +43,7 @@ module Mf6FileGridInputModule
     procedure :: rp => bndgrid_rp
     procedure :: destroy => bndgrid_destroy
     procedure :: reset => bndgrid_reset
+    procedure :: init_charstr1d
     procedure :: params_alloc => bndgrid_params_alloc
     procedure :: param_load => bndgrid_param_load
     procedure :: tas_arrays_alloc => bndgrid_tas_arrays_alloc
@@ -109,7 +108,7 @@ contains
     end if
     !
     ! -- initialize input context memory
-    call this%bound_context%init(mf6_input, this%readasarrays)
+    call this%bound_context%create(mf6_input, this%readasarrays)
     !
     ! -- allocate dfn params
     call this%params_alloc()
@@ -255,10 +254,8 @@ contains
       call this%tasmanager%reset(this%mf6_input%subcomponent_name)
       !
       ! -- reinitialize tas name arrays
-      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
-                                         this%input_name)
-      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
-                                         this%input_name)
+      call this%init_charstr1d('AUXTASNAME', this%input_name)
+      call this%init_charstr1d('PARAMTASNAME', this%input_name)
     end if
     !
     do n = 1, this%nparam
@@ -277,6 +274,24 @@ contains
     return
   end subroutine bndgrid_reset
 
+  subroutine init_charstr1d(this, varname, input_name)
+    ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    ! -- dummy
+    class(BoundGridInputType) :: this
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: input_name
+    ! -- local
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: charstr1d
+    integer(I4B) :: n
+    !
+    call mem_setptr(charstr1d, varname, this%mf6_input%mempath)
+    do n = 1, size(charstr1d)
+      charstr1d(n) = ''
+    end do
+  end subroutine init_charstr1d
+
   subroutine bndgrid_params_alloc(this)
     ! -- modules
     ! -- dummy
@@ -286,15 +301,10 @@ contains
     integer(I4B) :: iparam
     !
     ! -- set in scope param names
-    call this%filter%init(this%mf6_input, this%readasarrays, &
-                          this%bound_context%naux, &
-                          this%bound_context%inamedbound, &
-                          this%iout)
-    call this%filter%get_flt_params(this%param_names, this%nparam)
+    call this%bound_context%bound_params(this%param_names, this%nparam, &
+                                         this%input_name)
     !
-    call this%bound_context%array_params_create(this%param_names, this%nparam, &
-                                                this%input_name)
-    call this%bound_context%enable()
+    call this%bound_context%allocate_arrays()
     !
     ! -- allocate and set param_reads pointer array
     allocate (this%param_reads(this%nparam))
@@ -390,10 +400,8 @@ contains
       call mem_allocate(this%param_tasnames, LENTIMESERIESNAME, this%nparam, &
                         'PARAMTASNAME', this%mf6_input%mempath)
       !
-      call this%bound_context%param_init('CHARSTR1D', 'AUXTASNAME', &
-                                         this%input_name)
-      call this%bound_context%param_init('CHARSTR1D', 'PARAMTASNAME', &
-                                         this%input_name)
+      call this%init_charstr1d('AUXTASNAME', this%input_name)
+      call this%init_charstr1d('PARAMTASNAME', this%input_name)
       !
     else
       !

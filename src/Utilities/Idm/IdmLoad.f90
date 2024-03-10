@@ -602,7 +602,7 @@ contains
       intvar = 0
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. Idm SIMNAM Load default value setting '&
+        'Idm SIMNAM Load default value setting '&
         &'is unhandled for this variable: ', &
         trim(idt%mf6varname)
       call store_error(errmsg)
@@ -649,7 +649,7 @@ contains
       end if
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. IdmLoad unhandled datatype: ', &
+        'IdmLoad allocate simnam param unhandled datatype: ', &
         trim(idt%datatype)
       call store_error(errmsg)
       call store_error_filename(simfile)

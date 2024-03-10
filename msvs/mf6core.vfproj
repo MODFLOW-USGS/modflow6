@@ -415,7 +415,7 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\DynamicParamFilter.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\DynamicPackageParams.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>

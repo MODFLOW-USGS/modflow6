@@ -1,71 +1,66 @@
-!> @brief This module contains the DynamicParamFilterModule
+!> @brief This module contains the DynamicPackageParamsModule
 !!
-!! This module contains a type definition for filtering
-!! out dynamic parameters that are not in scope for the run
 !!
 !<
-module DynamicParamFilterModule
+module DynamicPackageParamsModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, DZERO, IZERO
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
+  use MemoryManagerModule, only: mem_allocate
   use ModflowInputModule, only: ModflowInputType
   use InputDefinitionModule, only: InputParamDefinitionType
   use DefinitionSelectModule, only: get_param_definition_type, &
                                     get_aggregate_definition_type, &
                                     idt_parse_rectype
   use ArrayHandlersModule, only: expandarray
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
   private
-  public :: DynamicParamFilterType
+  public :: DynamicPackageParamsType
+  public :: allocate_param_charstr
+  public :: allocate_param_int1d, allocate_param_int2d
+  public :: allocate_param_dbl1d, allocate_param_dbl2d
 
   !> @brief dynamic parameter filter type
   !!
-  !! This type is used to filter out unneeded input parameters
-  !! for list and array based dynamic input. It also unpacks
-  !! composite dfn parameter types (RECORD, RECARRAY, and
-  !! KEYSTRING) and defines helper arrays for the processing
-  !! of input SETTINGS types.
   !!
   !<
-  type :: DynamicParamFilterType
+  type :: DynamicPackageParamsType
+    character(len=LINELENGTH), dimension(:), allocatable :: params !< in scope param tags
+    integer(I4B) :: naux !< number of aux variables in package
+    integer(I4B) :: inamedbound !< package inamedbound setting
+    integer(I4B) :: nparam !< number of in scope params
     type(ModflowInputType) :: mf6_input !< description of input
-    character(len=LINELENGTH), dimension(:), allocatable :: flt_params !< in scope param tags
-    integer(I4B) :: nfltparam !< number of in scope params
-    integer(I4B) :: naux
-    integer(I4B) :: inamedbound
-    integer(I4B) :: iout
   contains
     procedure :: init
     procedure :: destroy
     procedure :: set_filtered_list
     procedure :: set_filtered_grid
-    procedure :: get_flt_params
-  end type DynamicParamFilterType
+    procedure :: package_params
+  end type DynamicPackageParamsType
 
 contains
 
   !> @brief initialize dynamic param filter
   !!
   !<
-  subroutine init(this, mf6_input, readasarrays, naux, inamedbound, iout)
+  subroutine init(this, mf6_input, readasarrays, naux, inamedbound)
     ! -- modules
     ! -- dummy
-    class(DynamicParamFilterType) :: this
+    class(DynamicPackageParamsType) :: this
     type(ModflowInputType), intent(in) :: mf6_input
     logical(LGP), intent(in) :: readasarrays
     integer(I4B), intent(in) :: naux
     integer(I4B), intent(in) :: inamedbound
-    integer(I4B), intent(in) :: iout
     ! -- local
     !
     this%mf6_input = mf6_input
-    this%nfltparam = 0
+    this%nparam = 0
     this%naux = naux
     this%inamedbound = inamedbound
-    this%iout = iout
     !
     ! -- determine in scope input params
     if (readasarrays) then
@@ -78,16 +73,16 @@ contains
     return
   end subroutine init
 
-  !> @brief destroy dynamic param filter
+  !> @brief destroy
   !!
   !<
   subroutine destroy(this)
     ! -- modules
     ! -- dummy
-    class(DynamicParamFilterType) :: this
+    class(DynamicPackageParamsType) :: this
     !
     ! -- deallocate
-    if (allocated(this%flt_params)) deallocate (this%flt_params)
+    if (allocated(this%params)) deallocate (this%params)
     !
     ! --return
     return
@@ -99,7 +94,7 @@ contains
   subroutine set_filtered_grid(this)
     ! -- modules
     ! -- dummy
-    class(DynamicParamFilterType) :: this
+    class(DynamicPackageParamsType) :: this
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B), dimension(:), allocatable :: idt_idxs
@@ -134,16 +129,16 @@ contains
       end if
     end do
     !
-    ! -- update nfltparam
-    this%nfltparam = keepcnt
+    ! -- update nparam
+    this%nparam = keepcnt
     !
     ! -- allocate filtcols
-    allocate (this%flt_params(this%nfltparam))
+    allocate (this%params(this%nparam))
     !
     ! -- set filtcols
-    do iparam = 1, this%nfltparam
+    do iparam = 1, this%nparam
       idt => this%mf6_input%param_dfns(idt_idxs(iparam))
-      this%flt_params(iparam) = trim(idt%tagname)
+      this%params(iparam) = trim(idt%tagname)
     end do
     !
     ! -- cleanup
@@ -161,7 +156,7 @@ contains
   subroutine set_filtered_list(this)
     ! -- modules
     ! -- dummy
-    class(DynamicParamFilterType) :: this
+    class(DynamicPackageParamsType) :: this
     ! -- local
     type(InputParamDefinitionType), pointer :: ra_idt, idt
     character(len=LINELENGTH), dimension(:), allocatable :: ra_cols
@@ -209,13 +204,13 @@ contains
       !
       if (keep) then
         keepcnt = keepcnt + 1
-        call expandarray(this%flt_params)
-        this%flt_params(keepcnt) = trim(ra_cols(icol))
+        call expandarray(this%params)
+        this%params(keepcnt) = trim(ra_cols(icol))
       end if
     end do
     !
-    ! -- update nfltparam
-    this%nfltparam = keepcnt
+    ! -- update nparam
+    this%nparam = keepcnt
     !
     ! -- cleanup
     deallocate (ra_cols)
@@ -227,28 +222,111 @@ contains
   !> @brief allocate and set input array to filtered param set
   !!
   !<
-  subroutine get_flt_params(this, cols, ncol)
+  subroutine package_params(this, params, nparam)
     ! -- modules
     ! -- dummy
-    class(DynamicParamFilterType) :: this
+    class(DynamicPackageParamsType) :: this
     character(len=LINELENGTH), dimension(:), allocatable, &
-      intent(inout) :: cols
-    integer(I4B), intent(inout) :: ncol
+      intent(inout) :: params
+    integer(I4B), intent(inout) :: nparam
     integer(I4B) :: n
     !
-    if (allocated(cols)) deallocate (cols)
+    if (allocated(params)) deallocate (params)
     !
-    ncol = this%nfltparam
+    nparam = this%nparam
     !
-    allocate (cols(ncol))
+    allocate (params(nparam))
     !
-    do n = 1, ncol
-      cols(n) = this%flt_params(n)
+    do n = 1, nparam
+      params(n) = this%params(n)
     end do
     !
     ! -- return
     return
-  end subroutine get_flt_params
+  end subroutine package_params
+
+  !> @brief allocate character string type array
+  !<
+  subroutine allocate_param_charstr(strlen, nrow, varname, mempath)
+    integer(I4B), intent(in) :: strlen !< string number of characters
+    integer(I4B), intent(in) :: nrow !< integer array number of rows
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable mempath
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: charstr1d
+    integer(I4B) :: n
+    !
+    call mem_allocate(charstr1d, strlen, nrow, varname, mempath)
+    do n = 1, nrow
+      charstr1d(n) = ''
+    end do
+  end subroutine allocate_param_charstr
+
+  !> @brief allocate int1d
+  !<
+  subroutine allocate_param_int1d(nrow, varname, mempath)
+    integer(I4B), intent(in) :: nrow !< integer array number of rows
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable mempath
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
+    integer(I4B) :: n
+    !
+    call mem_allocate(int1d, nrow, varname, mempath)
+    do n = 1, nrow
+      int1d(n) = IZERO
+    end do
+  end subroutine allocate_param_int1d
+
+  !> @brief allocate int2d
+  !<
+  subroutine allocate_param_int2d(ncol, nrow, varname, mempath)
+    integer(I4B), intent(in) :: ncol !< integer array number of cols
+    integer(I4B), intent(in) :: nrow !< integer array number of rows
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable mempath
+    integer(I4B), dimension(:, :), pointer, contiguous :: int2d
+    integer(I4B) :: n, m
+    !
+    call mem_allocate(int2d, ncol, nrow, varname, mempath)
+    do m = 1, nrow
+      do n = 1, ncol
+        int2d(n, m) = IZERO
+      end do
+    end do
+  end subroutine allocate_param_int2d
+
+  !> @brief allocate dbl1d
+  !<
+  subroutine allocate_param_dbl1d(nrow, varname, mempath)
+    integer(I4B), intent(in) :: nrow !< integer array number of rows
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable mempath
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
+    integer(I4B) :: n
+    !
+    call mem_allocate(dbl1d, nrow, varname, mempath)
+    do n = 1, nrow
+      dbl1d(n) = DZERO
+    end do
+  end subroutine allocate_param_dbl1d
+
+  !> @brief allocate dbl2d
+  !<
+  subroutine allocate_param_dbl2d(ncol, nrow, varname, mempath)
+    integer(I4B), intent(in) :: ncol !< integer array number of cols
+    integer(I4B), intent(in) :: nrow !< integer array number of rows
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable mempath
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    integer(I4B) :: n, m
+    !
+    call mem_allocate(dbl2d, ncol, nrow, varname, mempath)
+    do m = 1, nrow
+      do n = 1, ncol
+        dbl2d(n, m) = DZERO
+      end do
+    end do
+  end subroutine allocate_param_dbl2d
 
   !> @brief determine if input param is in scope for a package
   !!
@@ -299,7 +377,7 @@ contains
         end if
         !
       case default
-        errmsg = 'IDM unimplemented. DynamicParamFilterType::pkg_param_in_scope &
+        errmsg = 'IDM unimplemented. DynamicPackageParamsType::pkg_param_in_scope &
                  &add case tagname='//trim(idt%tagname)
         call store_error(errmsg, .true.)
         !call store_error_filename(sourcename)
@@ -310,4 +388,4 @@ contains
     return
   end function pkg_param_in_scope
 
-end module DynamicParamFilterModule
+end module DynamicPackageParamsModule

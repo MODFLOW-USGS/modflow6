@@ -23,7 +23,6 @@ module Mf6FileListInputModule
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
   use BoundInputContextModule, only: BoundInputContextType
   use StructVectorModule, only: StructVectorType, TSStringLocType
-  use DynamicParamFilterModule, only: DynamicParamFilterType
 
   implicit none
   private
@@ -41,7 +40,6 @@ module Mf6FileListInputModule
     integer(I4B) :: oc_inunit
     type(TimeSeriesManagerType), pointer :: tsmanager => null()
     type(StructArrayType), pointer :: structarray => null()
-    type(DynamicParamFilterType) :: filter
   contains
     procedure :: base_init
     procedure :: base_destroy
@@ -98,7 +96,7 @@ contains
                         input_name, iperblock, parser, loader, iout)
     !
     ! -- initialize package input context
-    call this%bound_context%init(mf6_input, this%readasarrays)
+    call this%bound_context%create(mf6_input, this%readasarrays)
     !
     ! -- load blocks after OPTIONS and DIMENSIONS
     do iblk = 1, size(this%mf6_input%block_dfns)
@@ -127,20 +125,15 @@ contains
     !
     call loader%finalize()
     !
-    ! -- initialize input param filter
-    call this%filter%init(this%mf6_input, this%readasarrays, &
-                          this%bound_context%naux, &
-                          this%bound_context%inamedbound, &
-                          this%iout)
-    !
     ! -- store in scope SA cols for list input
-    call this%filter%get_flt_params(this%param_names, this%nparam)
+    call this%bound_context%bound_params(this%param_names, this%nparam, &
+                                         this%input_name, create=.false.)
     !
     ! -- construct and set up the struct array object
     call this%create_structarray()
     !
     ! -- finalize input context setup
-    call this%bound_context%enable()
+    call this%bound_context%allocate_arrays()
     !
     ! -- return
     return

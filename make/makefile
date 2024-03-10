@@ -307,6 +307,7 @@ $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/DefinitionSelect.o \
 $(OBJDIR)/DislGeom.o \
 $(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/MethodCellPool.o \
@@ -350,7 +351,7 @@ $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
-$(OBJDIR)/DefinitionSelect.o \
+$(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/swf-disl.o \
 $(OBJDIR)/swf-cxs.o \
@@ -370,7 +371,6 @@ $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/LoadMf6File.o \
-$(OBJDIR)/DynamicParamFilter.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/swf-zdg.o \

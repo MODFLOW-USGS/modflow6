@@ -7,13 +7,14 @@
 module BoundInputContextModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, IZERO, LENAUXNAME, &
+  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENAUXNAME, &
                              LENVARNAME, LENBOUNDNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType
   use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
+  use DynamicPackageParamsModule, only: DynamicPackageParamsType
 
   implicit none
   private
@@ -49,23 +50,25 @@ module BoundInputContextModule
       contiguous :: auxvar => null() !< auxiliary variable array
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< model shape
     logical(LGP) :: readasarrays !< grid or list based input
+    type(DynamicPackageParamsType) :: package_params
     type(ModflowInputType) :: mf6_input !< description of input
   contains
-    procedure :: init => bndctx_init
-    procedure :: create_context
-    procedure :: enable
+    procedure :: create
+    procedure :: allocate_scalars
+    procedure :: allocate_arrays
+    procedure :: list_params_create
     procedure :: array_params_create
-    procedure :: param_init
-    procedure :: destroy => bndctx_destroy
+    procedure :: destroy
     procedure :: rsv_alloc
+    procedure :: bound_params
   end type BoundInputContextType
 
 contains
 
-  !> @brief initialize boundary input context
+  !> @brief create boundary input context
   !!
   !<
-  subroutine bndctx_init(this, mf6_input, readasarrays)
+  subroutine create(this, mf6_input, readasarrays)
     ! -- modules
     ! -- dummy
     class(BoundInputContextType) :: this
@@ -76,26 +79,22 @@ contains
     this%readasarrays = readasarrays
     !
     ! -- create the dynamic package input context
-    call this%create_context()
+    call this%allocate_scalars()
     !
     ! --return
     return
-  end subroutine bndctx_init
+  end subroutine create
 
   !> @brief create boundary input context
   !!
   !<
-  subroutine create_context(this)
+  subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(BoundInputContextType) :: this
-    integer(I4B), dimension(:, :), pointer, contiguous :: cellid
     logical(LGP) :: found
-    !
-    ! -- initialize
-    nullify (cellid)
     !
     ! -- set pointers to defined scalars
     call mem_setptr(this%naux, 'NAUX', this%mf6_input%mempath)
@@ -122,16 +121,38 @@ contains
     call mem_set_value(this%maxbound, 'MAXBOUND', this%mf6_input%mempath, found)
     call mem_set_value(this%iprpak, 'IPRPAK', this%mf6_input%mempath, found)
     !
-    ! -- set pointers to defined arrays
+    ! -- set pointer to model shape
     call mem_setptr(this%mshape, 'MODEL_SHAPE', &
                     this%mf6_input%component_mempath)
     !
-    ! -- update ncpl as shape is known
+    ! -- update ncpl from model shape
     if (size(this%mshape) == 2) then
       this%ncpl = this%mshape(2)
     else if (size(this%mshape) == 3) then
       this%ncpl = this%mshape(2) * this%mshape(3)
     end if
+    !
+    ! -- initialize package params object
+    call this%package_params%init(this%mf6_input, this%readasarrays, &
+                                  this%naux, this%inamedbound)
+    !
+    ! -- return
+    return
+  end subroutine allocate_scalars
+
+  !> @brief allocate_arrays
+  !!
+  !! allocate bound input context arrays
+  !!
+  !<
+  subroutine allocate_arrays(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
+    use MemoryManagerExtModule, only: mem_set_value
+    ! -- dummy
+    class(BoundInputContextType) :: this
+    integer(I4B), dimension(:, :), pointer, contiguous :: cellid
+    ! -- local
     !
     ! -- set auxname_cst and iauxmultcol
     if (this%naux > 0) then
@@ -145,25 +166,6 @@ contains
     if (this%readasarrays) then
       call mem_allocate(cellid, 0, 0, 'CELLID', this%mf6_input%mempath)
     end if
-    !
-    ! -- return
-    return
-  end subroutine create_context
-
-  !> @brief enable bound input context
-  !!
-  !! This routine should be invoked after the loader allocates dynamic
-  !! input params. This routine will assign pointers to arrays if they
-  !! have been allocated and allocate the arrays if not.
-  !!
-  !<
-  subroutine enable(this)
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
-    use MemoryManagerExtModule, only: mem_set_value
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    ! -- local
     !
     ! -- allocate or set pointer to BOUNDNAME
     if (this%inamedbound == 0) then
@@ -184,7 +186,80 @@ contains
     !
     ! -- return
     return
-  end subroutine enable
+  end subroutine allocate_arrays
+
+  subroutine list_params_create(this, params, nparam, input_name)
+    ! -- modules
+    use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: get_param_definition_type
+    use DynamicPackageParamsModule, only: allocate_param_int1d, &
+                                          allocate_param_int2d, &
+                                          allocate_param_dbl1d, &
+                                          allocate_param_dbl2d, &
+                                          allocate_param_charstr
+    ! -- dummy
+    class(BoundInputContextType) :: this
+    character(len=*), dimension(:), allocatable, intent(in) :: params
+    integer(I4B), intent(in) :: nparam
+    character(len=*), intent(in) :: input_name
+    ! -- local
+    type(InputParamDefinitionType), pointer :: idt
+    integer(I4B) :: iparam
+    !
+    ! --
+    do iparam = 1, nparam
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', params(iparam), '')
+      !
+      ! allocate based on dfn datatype
+      select case (idt%datatype)
+      case ('INTEGER')
+        call allocate_param_int1d(this%maxbound, idt%mf6varname, &
+                                  this%mf6_input%mempath)
+        !
+      case ('DOUBLE')
+        call allocate_param_dbl1d(this%maxbound, idt%mf6varname, &
+                                  this%mf6_input%mempath)
+        !
+      case ('STRING')
+        call allocate_param_charstr(LENBOUNDNAME, this%maxbound, idt%mf6varname, &
+                                    this%mf6_input%mempath)
+        !
+      case ('INTEGER1D')
+        if (idt%shape == 'NCELLDIM') then
+          call allocate_param_int2d(size(this%mshape), this%maxbound, &
+                                    idt%mf6varname, this%mf6_input%mempath)
+        else
+          errmsg = 'IDM unimplemented. BoundInputContext::list_params_create &
+                   &shape='//trim(idt%shape)
+          call store_error(errmsg)
+          call store_error_filename(input_name)
+        end if
+        !
+      case ('DOUBLE1D')
+        if (idt%shape == 'NAUX') then
+          call allocate_param_dbl2d(this%naux, this%maxbound, &
+                                    idt%mf6varname, this%mf6_input%mempath)
+        else
+          errmsg = 'IDM unimplemented. BoundInputContext::list_params_create &
+                   &tagname='//trim(idt%tagname)
+          call store_error(errmsg)
+          call store_error_filename(input_name)
+        end if
+        !
+      case default
+        errmsg = 'IDM unimplemented. BoundInputContext::list_params_create &
+                 &datatype='//trim(idt%datatype)
+        call store_error(errmsg)
+        call store_error_filename(input_name)
+      end select
+    end do
+    !
+    ! -- return
+    return
+  end subroutine list_params_create
 
   !> @brief allocate dfn array input period block parameters
   !!
@@ -193,9 +268,10 @@ contains
   !<
   subroutine array_params_create(this, params, nparam, input_name)
     ! -- modules
-    use ConstantsModule, only: DZERO, IZERO
-    use MemoryManagerModule, only: mem_allocate
     use DefinitionSelectModule, only: get_param_definition_type
+    use DynamicPackageParamsModule, only: allocate_param_int1d, &
+                                          allocate_param_dbl1d, &
+                                          allocate_param_dbl2d
     ! -- dummy
     class(BoundInputContextType) :: this
     character(len=*), dimension(:), allocatable, intent(in) :: params
@@ -203,10 +279,7 @@ contains
     character(len=*), intent(in) :: input_name
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
-    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B) :: iparam, n, m
+    integer(I4B) :: iparam
     !
     ! -- allocate dfn input params
     do iparam = 1, nparam
@@ -220,27 +293,16 @@ contains
       if (idt%blockname == 'PERIOD') then
         select case (idt%datatype)
         case ('INTEGER1D')
-          call mem_allocate(int1d, this%ncpl, idt%mf6varname, &
-                            this%mf6_input%mempath)
-          do n = 1, this%ncpl
-            int1d(n) = IZERO
-          end do
+          call allocate_param_int1d(this%ncpl, idt%mf6varname, &
+                                    this%mf6_input%mempath)
           !
         case ('DOUBLE1D')
-          call mem_allocate(dbl1d, this%ncpl, idt%mf6varname, &
-                            this%mf6_input%mempath)
-          do n = 1, this%ncpl
-            dbl1d(n) = DZERO
-          end do
+          call allocate_param_dbl1d(this%ncpl, idt%mf6varname, &
+                                    this%mf6_input%mempath)
           !
         case ('DOUBLE2D')
-          call mem_allocate(dbl2d, this%naux, this%ncpl, idt%mf6varname, &
-                            this%mf6_input%mempath)
-          do m = 1, this%ncpl
-            do n = 1, this%naux
-              dbl2d(n, m) = DZERO
-            end do
-          end do
+          call allocate_param_dbl2d(this%naux, this%ncpl, idt%mf6varname, &
+                                    this%mf6_input%mempath)
           !
         case default
           errmsg = 'IDM unimplemented. BoundInputContext::array_params_create &
@@ -255,67 +317,16 @@ contains
     return
   end subroutine array_params_create
 
-  subroutine param_init(this, datatype, varname, input_name)
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
-    ! -- dummy
-    class(BoundInputContextType) :: this
-    character(len=*), intent(in) :: datatype
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: input_name
-    ! -- local
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
-    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: charstr1d
-    integer(I4B) :: n, m
-    !
-    select case (datatype)
-    case ('INTEGER1D')
-      call mem_setptr(int1d, varname, this%mf6_input%mempath)
-      do n = 1, this%ncpl
-        int1d(n) = IZERO
-      end do
-      !
-    case ('DOUBLE1D')
-      call mem_setptr(dbl1d, varname, this%mf6_input%mempath)
-      do n = 1, this%ncpl
-        dbl1d(n) = DZERO
-      end do
-      !
-    case ('DOUBLE2D')
-      call mem_setptr(dbl2d, varname, this%mf6_input%mempath)
-      do m = 1, this%ncpl
-        do n = 1, this%naux
-          dbl2d(n, m) = DZERO
-        end do
-      end do
-      !
-    case ('CHARSTR1D')
-      call mem_setptr(charstr1d, varname, this%mf6_input%mempath)
-      do n = 1, size(charstr1d)
-        charstr1d(n) = ''
-      end do
-      !
-    case default
-      errmsg = 'IDM unimplemented. BoundInputContext::param_init &
-               &datatype='//trim(datatype)
-      call store_error(errmsg)
-      call store_error_filename(input_name)
-    end select
-    !
-    ! -- return
-    return
-  end subroutine param_init
-
   !> @brief destroy boundary input context
   !!
   !<
-  subroutine bndctx_destroy(this)
+  subroutine destroy(this)
     ! -- modules
     ! -- dummy
     class(BoundInputContextType) :: this
+    !
+    ! -- destroy package params object
+    call this%package_params%destroy()
     !
     ! -- deallocate
     deallocate (this%maxbound)
@@ -336,7 +347,7 @@ contains
     !
     ! --return
     return
-  end subroutine bndctx_destroy
+  end subroutine destroy
 
   !> @brief allocate a read state variable
   !!
@@ -376,5 +387,52 @@ contains
     ! -- return
     return
   end function rsv_alloc
+
+  !> @brief allocate and set input array to filtered param set
+  !!
+  !<
+  subroutine bound_params(this, params, nparam, input_name, create)
+    ! -- modules
+    ! -- dummy
+    class(BoundInputContextType) :: this
+    character(len=LINELENGTH), dimension(:), allocatable, &
+      intent(inout) :: params
+    integer(I4B), intent(inout) :: nparam
+    character(len=*), intent(in) :: input_name
+    logical(LGP), optional, intent(in) :: create
+    logical(LGP) :: allocate_params
+    integer(I4B) :: n
+    !
+    ! -- initialize allocate_params
+    allocate_params = .true.
+    !
+    ! -- override default if provided
+    if (present(create)) then
+      allocate_params = create
+    end if
+    !
+    if (allocated(params)) deallocate (params)
+    !
+    nparam = this%package_params%nparam
+    !
+    allocate (params(nparam))
+    !
+    do n = 1, nparam
+      params(n) = this%package_params%params(n)
+    end do
+    !
+    if (allocate_params) then
+      if (this%readasarrays) then
+        !
+        call this%array_params_create(params, nparam, input_name)
+      else
+        !
+        call this%list_params_create(params, nparam, input_name)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine bound_params
 
 end module BoundInputContextModule
