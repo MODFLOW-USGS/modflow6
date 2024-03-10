@@ -194,7 +194,7 @@ def eval_hmax(fpth):
     bv[:] = b.get_data(totim=1.0)[obsname]
     sv = np.zeros(ctimes.shape, dtype=float)
     for i, t in enumerate(ctimes):
-        sv[i] = b.get_data(totim=t)[obsname]
+        sv[i] = b.get_data(totim=t)[obsname].item()
 
     msg = (
         "maximum heads in {} exceed tolerance ".format(fpth)
@@ -229,7 +229,7 @@ def check_output(idx, test):
     base_cmp[:] = base_obs.get_data(totim=1.0)[obsname]
     offset_cmp = np.zeros(cmp_times.shape, dtype=float)
     for i, t in enumerate(cmp_times):
-        offset_cmp[i] = base_obs.get_data(totim=t)[obsname]
+        offset_cmp[i] = base_obs.get_data(totim=t)[obsname].item()
 
     msg = (
         "maximum heads exceed tolerance when offset removed "

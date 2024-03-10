@@ -1,4 +1,4 @@
-"""
+r"""
  An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
  accompanying Techniques & Methods report.
  

@@ -71,7 +71,7 @@ def get_bud(fname, srchStr):
 def trenddetector(list_of_index, array_of_data, order=1):
     result = np.polyfit(list_of_index, list(array_of_data), order)
     slope = result[-2]
-    return float(slope)
+    return float(slope.item())
 
 
 cases = ["lke-conductn", "lke-conductm", "lke-conductr"]
