@@ -78,34 +78,48 @@ def build_gwf_sim(name, ws, targets):
     grid = get_grid(ws / "grid", targets)
     vgrid = VertexGrid(**grid.get_gridprops_vertexgrid(), nlay=1)
     ibd = np.zeros(vgrid.ncpl, dtype=int)
-    gi = GridIntersect(vgrid)
+    
+    # Intersecting points with the grid is slow, so below we
+    # hardcode the known cell IDs; if this test changes they
+    # will need to be recomputed.
+    # gi = GridIntersect(vgrid)
 
     # identify cells on left edge
-    line = LineString([(xmin, ymin), (xmin, ymax)])
-    cells_left = gi.intersect(line)["cellids"]
-    cells_left = np.array(list(cells_left))
-    ibd[cells_left] = 1
+    # line = LineString([(xmin, ymin), (xmin, ymax)])
+    # cells_left = gi.intersect(line)["cellids"]
+    left_cells = [   0,    3, 1197, 1268, 1442, 1443, 1459, 1461, 1474, 1499, 1515,
+       1520, 1529, 1545, 1552, 1563, 1581, 1584, 1586, 1590, 1596, 1608,
+       1609, 1614, 1616, 1625, 1643, 1649, 1652, 1655, 1659, 1662]
+    left_cells = np.array(list(left_cells))
+    ibd[left_cells] = 1
 
     # identify cells on right edge
-    line = LineString([(xmax, ymin), (xmax, ymax)])
-    cells_right = gi.intersect(line)["cellids"]
-    cells_right = np.array(list(cells_right))
-    ibd[cells_right] = 2
+    # line = LineString([(xmax, ymin), (xmax, ymax)])
+    # cells_right = gi.intersect(line)["cellids"]
+    right_cells = [  1,   2,   6,  12, 210, 399, 400, 406, 412, 421, 519, 559, 601,
+       605, 617, 623, 624, 674, 770, 783, 785, 786, 792, 793, 801, 809,
+       812, 813, 814, 920]
+    right_cells = np.array(list(right_cells))
+    ibd[right_cells] = 2
 
     # identify cells on bottom edge
-    line = LineString([(xmin, ymin), (xmax, ymin)])
-    cells_bottom = gi.intersect(line)["cellids"]
-    cells_bottom = np.array(list(cells_bottom))
-    ibd[cells_bottom] = 3
+    # line = LineString([(xmin, ymin), (xmax, ymin)])
+    # cells_bottom = gi.intersect(line)["cellids"]
+    bottom_cells = [   0,    1,    4,    8,  258,  274,  308,  328,  332,  333,  334,
+        342,  343,  345,  347,  353,  354,  355,  439,  445,  456,  460,
+        465,  475,  479,  485,  516,  527,  533,  541,  631,  752,  810,
+        819,  824,  830,  832,  834,  835,  927,  929,  932, 1091, 1096,
+       1207, 1212, 1215, 1217, 1242, 1247, 1249, 1257, 1262, 1269, 1276,
+       1389, 1393, 1447, 1455, 1462, 1677, 1685]
+    bottom_cells = np.array(list(bottom_cells))
+    ibd[bottom_cells] = 3
 
-    # identify release cell
-    point = Point((500, 500))
-    cells2 = gi.intersect(point)["cellids"]
-    cells2 = np.array(list(cells2))
+    # identify well cells
+    # points = [Point((1200, 500)), Point((700, 200)), Point((1600, 700))]
+    # well_cells = [vgrid.intersect(p.x, p.y) for p in points]
+    well_cells = [163, 1178, 67]
 
-    # identify well cell
-    points = [Point((1200, 500)), Point((700, 200)), Point((1600, 700))]
-    well_cells = [vgrid.intersect(p.x, p.y) for p in points]
+    # import pdb; pdb.set_trace()
 
     # create simulation
     sim = flopy.mf6.MFSimulation(
@@ -147,14 +161,14 @@ def build_gwf_sim(name, ws, targets):
 
     chdlist = []
     icpl_seen = []
-    for icpl in cells_left:
+    for icpl in left_cells:
         chdlist.append([(0, icpl), 1.0])
         icpl_seen.append(icpl)
-    for icpl in cells_right:
+    for icpl in right_cells:
         chdlist.append([(0, icpl), 0.0])
         icpl_seen.append(icpl)
     if "wel" in name:
-        for icpl in cells_bottom:
+        for icpl in bottom_cells:
             if icpl in icpl_seen:
                 continue
             chdlist.append([(0, icpl), 0.8])
@@ -166,10 +180,15 @@ def build_gwf_sim(name, ws, targets):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
-    return sim
+    return sim, {
+        "left": left_cells,
+        "right": right_cells,
+        "bottom": bottom_cells,
+        "well": well_cells
+    }
 
 
-def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
+def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
     prt_ws = Path(prt_ws)
     gwf_name = get_model_name(name, "gwf")
     prt_name = get_model_name(name, "prt")
@@ -179,23 +198,16 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
     gridprops = grid.get_gridprops_vertexgrid()
     vgrid = VertexGrid(**gridprops, nlay=1)
     ibd = np.zeros(vgrid.ncpl, dtype=int)
-    gi = GridIntersect(vgrid)
 
     # identify cells on left edge
-    line = LineString([(xmin, ymin), (xmin, ymax)])
-    cells0 = gi.intersect(line)["cellids"]
-    cells0 = np.array(list(cells0))
-    ibd[cells0] = 1
+    left_cells = cell_ids["left"]
+    left_cells = np.array(list(left_cells))
+    ibd[left_cells] = 1
 
     # identify cells on right edge
-    line = LineString([(xmax, ymin), (xmax, ymax)])
-    cells1 = gi.intersect(line)["cellids"]
-    cells1 = np.array(list(cells1))
-    ibd[cells1] = 2
-
-    # identify well cell
-    point = Point((800, 500))
-    cell_wel = vgrid.intersect(point.x, point.y)
+    right_cells = cell_ids["right"]
+    right_cells = np.array(list(right_cells))
+    ibd[right_cells] = 2
 
     # create simulation
     sim = flopy.mf6.MFSimulation(
@@ -259,9 +271,9 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
 
 
 def build_models(idx, test):
-    gwf_sim = build_gwf_sim(test.name, test.workspace, test.targets)
+    gwf_sim, cell_ids = build_gwf_sim(test.name, test.workspace, test.targets)
     prt_sim = build_prt_sim(
-        idx, test.name, test.workspace, test.workspace / "prt", test.targets
+        idx, test.name, test.workspace, test.workspace / "prt", test.targets, cell_ids
     )
     return gwf_sim, prt_sim
 
@@ -289,7 +301,6 @@ def check_output(idx, test):
     )
 
     if "l2r" in name:
-        # assert pls.shape == (212, 16)
         assert (pls.z == 0.5).all()  # no z change
         # path should be horizontal from left to right
         assert isclose(min(pls.x), 20, rel_tol=1e-4)
@@ -402,7 +413,6 @@ def check_output(idx, test):
         p.show()
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     if (

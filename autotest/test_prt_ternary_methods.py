@@ -14,7 +14,6 @@ The ZERO_METHOD option is used to select root-
 finding methods for total runtime comparison.
 """
 
-from math import isclose
 from pathlib import Path
 
 import flopy
