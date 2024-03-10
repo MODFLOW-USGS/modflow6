@@ -22,7 +22,7 @@ from prt_test_utils import all_equal, check_track_data, get_model_name
 
 from framework import TestFramework
 
-simname = "prtfmi09"
+simname = "prtdrape"
 cases = [simname, f"{simname}_drp"]
 nlay, nrow, ncol = 2, 1, 5
 chdheads = [25.0]
