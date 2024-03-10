@@ -1,7 +1,7 @@
 """
 This tests reuses the simulation data in test_gwe_split_analyt and runs it 
 in parallel on two cpus.  test_gwe_split_analyt runs 3 different conceptual
-models documented in Carslaw & Jaeger (1947).
+models documented in Carslaw and Jaeger (1947).
 """
 
 import pytest

@@ -56,7 +56,6 @@ import math
 import pytest
 import flopy
 import numpy as np
-import matplotlib.pyplot as plt
 
 from framework import TestFramework
 
@@ -156,30 +155,9 @@ def calc_ener_input(primer_val):
 
 
 # Define function to solve analytical solution
-def assemble_half_model(
-    idx, test, ener_input, side="right", sim=None, imsgwf=None, imsgwe=None
-):
-
-    name = cases[idx] + "-" + side[0]
-
-    # Build MODFLOW 6 files
-    ws = test.workspace
-    if sim is None:
-        sim = flopy.mf6.MFSimulation(
-            sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
-        )
-
-        # Create tdis package
-        tdis_rc = []
-        for i in range(len(perlen[idx])):
-            tdis_rc.append((perlen[idx][i], nstp[i], tsmult[idx][i]))
-
-        flopy.mf6.ModflowTdis(
-            sim, time_units="DAYS", nper=len(perlen[idx]), perioddata=tdis_rc
-        )
-
+def assemble_half_model(sim, gwfname, gwfpath, side="right"):
+    
     # Create GWF model
-    gwfname = "gwf-" + name
     gwf = flopy.mf6.MFModel(
         sim,
         model_type="gwf6",
@@ -187,25 +165,6 @@ def assemble_half_model(
         model_nam_file=f"{gwfname}.nam",
     )
     gwf.name_file.save_flows = True
-
-    # Create iterative model solution and register the gwf model with it
-    if imsgwf is None:
-        imsgwf = flopy.mf6.ModflowIms(
-            sim,
-            print_option="SUMMARY",
-            outer_dvclose=hclose,
-            outer_maximum=nouter,
-            under_relaxation="NONE",
-            inner_maximum=ninner,
-            inner_dvclose=hclose,
-            rcloserecord=rclose,
-            linear_acceleration="CG",
-            scaling_method="NONE",
-            reordering_method="NONE",
-            relaxation_factor=relax,
-            filename=f"{gwfname}.ims",
-        )
-    sim.register_ims_package(imsgwf, [gwf.name])
 
     xorigin = 0.0
     if side == "right":
@@ -223,14 +182,10 @@ def assemble_half_model(
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        pname="DIS-GWF-" + side[0],
-        filename=f"{gwfname}.dis",
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, pname="IC-" + side[0], filename=f"{gwfname}.ic"
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # Node property flow
     flopy.mf6.ModflowGwfnpf(
@@ -239,8 +194,6 @@ def assemble_half_model(
         icelltype=laytyp,
         k=hk,
         k33=hk,
-        pname="NPF-" + side[0],
-        filename=f"{gwfname}.npf",
     )
 
     # Instantiating MODFLOW 6 storage package
@@ -251,38 +204,24 @@ def assemble_half_model(
         iconvert=1,
         steady_state=False,
         transient=True,
-        pname="STO-" + side[0],
-        filename="{}.sto".format(gwfname),
     )
-
-    # Constant head files
-    chd = None
-    #    chd = flopy.mf6.ModflowGwfchd(
-    #        gwf,
-    #        maxbound=len(chd_perdat[0]),
-    #        stress_period_data=chd_perdat,
-    #        save_flows=False,
-    #        pname="CHD-" + side[0],
-    #        filename=f"{gwfname}.chd"
-    #    )
-
+    
     # Output control
     flopy.mf6.ModflowGwfoc(
         gwf,
-        pname="OC-" + side[0],
         budget_filerecord=f"{gwfname}.cbc",
         head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-        filename=f"{gwfname}.oc",
     )
+    
+    gwf.set_model_relative_path(gwfpath)
+    return gwf
 
-    # -----------------
-    # Create GWE model
-    # -----------------
 
-    gwename = "gwe-" + name
+def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
+    
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
@@ -291,24 +230,9 @@ def assemble_half_model(
     )
     gwe.name_file.save_flows = True
 
-    # Create iterative model solution and register the gwt model with it
-    if imsgwe is None:
-        imsgwe = flopy.mf6.ModflowIms(
-            sim,
-            print_option="SUMMARY",
-            outer_dvclose=hclose,
-            outer_maximum=nouter,
-            under_relaxation="NONE",
-            inner_maximum=ninner,
-            inner_dvclose=hclose,
-            rcloserecord=rclose,
-            linear_acceleration="BICGSTAB",
-            scaling_method="NONE",
-            reordering_method="NONE",
-            relaxation_factor=relax,
-            filename=f"{gwename}.ims",
-        )
-    sim.register_ims_package(imsgwe, [gwe.name])
+    xorigin = 0.0
+    if side == "right":
+        xorigin = ncol * delr
 
     flopy.mf6.ModflowGwedis(
         gwe,
@@ -326,14 +250,10 @@ def assemble_half_model(
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGweic(
-        gwe, strt=T_0, pname="IC-" + side[0], filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=T_0)
 
     # Advection
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV-" + side[0], filename=f"{gwename}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme)
 
     # Heat conduction
     flopy.mf6.ModflowGwecnd(
@@ -344,8 +264,6 @@ def assemble_half_model(
         atv=atv,
         ktw=Ktw,
         kts=Kts,
-        pname="CND-" + side[0],
-        filename="{}.cnd".format(gwename),
     )
 
     flopy.mf6.ModflowGweest(
@@ -354,8 +272,6 @@ def assemble_half_model(
         cps=Cps,
         rhos=rhos,
         packagedata=[Cpw, rhow, lhv],
-        pname="EST-" + side[0],
-        filename="{}.est".format(gwename),
     )
 
     # Constant temperature goes on the left side of the left model
@@ -371,7 +287,6 @@ def assemble_half_model(
                 stress_period_data=ctp,
                 save_flows=True,
                 pname="CTP-" + side[0],
-                filename=f"{gwename}.ctp",
             )
 
     if side == "right":
@@ -384,7 +299,6 @@ def assemble_half_model(
                 stress_period_data=ctp,
                 save_flows=True,
                 pname="CTP-" + side[0],
-                filename=f"{gwename}.ctp",
             )
 
     # Instantiate energy source loading (ESL) package
@@ -406,22 +320,11 @@ def assemble_half_model(
             stress_period_data=esrc,
             save_flows=False,
             pname="ESL-" + side[0],
-            filename=f"{gwename}.esl",
         )
-
-    # Sources
-    if chd is not None:
-        flopy.mf6.ModflowGwessm(
-            gwe,
-            sources=[[]],
-            pname="SSM-" + side[0],
-            filename=f"{gwename}.ssm",
-        )
-
+    
     # Output control
     flopy.mf6.ModflowGweoc(
         gwe,
-        pname="OC-" + side[0],
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
@@ -429,19 +332,10 @@ def assemble_half_model(
         ],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
-        filename=f"{gwename}.oc",
     )
 
-    # GWF-GWE exchange
-    flopy.mf6.ModflowGwfgwe(
-        sim,
-        exgtype="GWF6-GWE6",
-        exgmnamea=gwfname,
-        exgmnameb=gwename,
-        filename=f"{name}.gwfgwe",
-    )
-
-    return sim, imsgwf, imsgwe
+    gwe.set_model_relative_path(gwepath)
+    return gwe
 
 
 def get_ener_input(idx):
@@ -456,34 +350,28 @@ def get_ener_input(idx):
 def build_models(idx, test):
     ener_input = get_ener_input(idx)
 
+    name = cases[idx]
+
+    # Build MODFLOW 6 files
+    ws = test.workspace
+    sim = flopy.mf6.MFSimulation(
+        sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
+    )
+
+    # Create tdis package
+    tdis_rc = []
+    for i in range(len(perlen[idx])):
+        tdis_rc.append((perlen[idx][i], nstp[i], tsmult[idx][i]))
+
+    flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=len(perlen[idx]), perioddata=tdis_rc
+    )
+
     # left model
-    sim, imsgwf, imsgwe = assemble_half_model(
-        idx, test, ener_input, side="left"
-    )
+    gwf1 = assemble_half_model(sim, "flow1", "flow1", side="left")
+    
     # right model
-    sim, imsgwf, imsgwe = assemble_half_model(
-        idx,
-        test,
-        ener_input,
-        side="right",
-        sim=sim,
-        imsgwf=imsgwf,
-        imsgwe=imsgwe,
-    )
-
-    all_mod_names = sim.model_names
-
-    # link up gwf-gwf and gwe-gwe
-    gwf_mod_names = [nm for nm in all_mod_names if "gwf-" in nm]
-    gwe_mod_names = [nm for nm in all_mod_names if "gwe-" in nm]
-
-    # Assert that the "left" model is listed first
-    assert (
-        "-l" in gwf_mod_names[0]
-    ), "assumed gwf model order is not as expected"
-    assert (
-        "-l" in gwe_mod_names[0]
-    ), "assumed gwe model order is not as expected"
+    gwf2 = assemble_half_model(sim, "flow2", "flow2", side="right")
 
     # Add the exchange data
     exgdata = [
@@ -493,28 +381,88 @@ def build_models(idx, test):
         sim,
         exgtype="GWF6-GWF6",
         nexg=len(exgdata),
-        exgmnamea=gwf_mod_names[0],
-        exgmnameb=gwf_mod_names[1],
+        exgmnamea=gwf1.name,
+        exgmnameb=gwf2.name,
         exchangedata=exgdata,
         xt3d=xt3d[0],
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="{}.gwfgwf".format("exchng"),
+        dev_interfacemodel_on=True,
     )
 
+    # create iterative model solution and register the gwf model with it
+    imsgwf = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="CG",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="flow.ims",
+    )
+    sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
+
+    # Create gw3 model
+    gwe1 = get_gwe_model(idx, sim, "energy1", "energy1", ener_input, side="left")
+
+    # Create gwe model
+    gwe2 = get_gwe_model(idx, sim, "energy2", "energy2", ener_input, side="right")
+    
+    # Create GWE GWE exchange
     flopy.mf6.ModflowGwegwe(
         sim,
         exgtype="GWE6-GWE6",
-        gwfmodelname1=gwf_mod_names[0],
-        gwfmodelname2=gwf_mod_names[1],
+        gwfmodelname1=gwf1.name,
+        gwfmodelname2=gwf2.name,
         adv_scheme=scheme,
         nexg=len(exgdata),
-        exgmnamea=gwe_mod_names[0],
-        exgmnameb=gwe_mod_names[1],
+        exgmnamea=gwe1.name,
+        exgmnameb=gwe2.name,
         exchangedata=exgdata,
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="{}.gwegwe".format("exchng"),
     )
+    
+    # GWF-GWE exchange
+    flopy.mf6.ModflowGwfgwe(
+        sim,
+        exgtype="GWF6-GWE6",
+        exgmnamea="flow1",
+        exgmnameb="energy1",
+        filename="flow1_transport1.gwfgwe",
+    )
+    flopy.mf6.ModflowGwfgwe(
+        sim,
+        exgtype="GWF6-GWE6",
+        exgmnamea="flow2",
+        exgmnameb="energy2",
+        filename="flow2_transport2.gwfgwe",
+    )
+    
+    # create iterative model solution and register the gwt model with it
+    imsgwe = flopy.mf6.ModflowIms(
+        sim,
+        print_option="SUMMARY",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration="BICGSTAB",
+        scaling_method="NONE",
+        reordering_method="NONE",
+        relaxation_factor=relax,
+        filename="energy.ims",
+    )
+    sim.register_ims_package(imsgwe, [gwe1.name, gwe2.name])
 
     return sim, None
 
@@ -588,19 +536,26 @@ def eq7_26(x, t, el, D, T_0, ener_add_rate):
 def check_output(idx, test):
     ener_input = get_ener_input(idx)
 
-    name = test.name
-    gwename1 = "gwe-" + name + "-l"
-    gwename2 = "gwe-" + name + "-r"
-
-    # left side
-    fpth1 = os.path.join(test.workspace, f"{gwename1}.ucn")
-    tobj1 = flopy.utils.HeadFile(fpth1, precision="double", text="TEMPERATURE")
-    sim_temps_l = tobj1.get_alldata()
-
-    # right side
-    fpth2 = os.path.join(test.workspace, f"{gwename2}.ucn")
-    tobj2 = flopy.utils.HeadFile(fpth2, precision="double", text="TEMPERATURE")
-    sim_temps_r = tobj2.get_alldata()
+    gwename = "energy1"
+    fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
+    try:
+        tobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="TEMPERATURE"
+        )
+        sim_temps_l = tobj.get_alldata()
+    except:
+        assert False, f'could not load data from "{fpth}"'
+    
+    gwename = "energy2"
+    fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
+    try:
+        tobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="TEMPERATURE"
+        )
+        sim_temps_r = tobj.get_alldata()
+    except:
+        assert False, f'could not load data from "{fpth}"'
+    
 
     # stitch the left and right sides together
     sim_temps = np.concatenate(
@@ -638,7 +593,7 @@ def check_output(idx, test):
             # plt.axhline(0.0, color='black')
             # plt.legend()
             # plt.show()
-
+    
     elif idx == 2:
 
         t_accumulate = 0.0
@@ -663,8 +618,9 @@ def check_output(idx, test):
 
             assert np.allclose(
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
-            ), "simulated solution is whacked"
-
+            ), "simulated solution isn't matching the analytical solution"
+            
+            # import matplotlib.pyplot as plt
             # plt.plot(
             #     cell_centroids,
             #     analytical_temps,
@@ -681,6 +637,7 @@ def check_output(idx, test):
 
 # - No need to change any code below
 @pytest.mark.parametrize("idx, name", enumerate(cases))
+@pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
