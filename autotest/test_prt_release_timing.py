@@ -36,6 +36,8 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
+
+from framework import TestFramework
 from prt_test_utils import (
     FlopyReadmeCase,
     all_equal,
@@ -44,8 +46,6 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
 )
-
-from framework import TestFramework
 
 simname = "prtrelt"
 cases = [

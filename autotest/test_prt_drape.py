@@ -18,11 +18,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.utils.binaryfile import HeadFile
-from prt_test_utils import all_equal, check_track_data, get_model_name
 
 from framework import TestFramework
+from prt_test_utils import all_equal, check_track_data, get_model_name
 
-simname = "prtfmi09"
+simname = "prtdrape"
 cases = [simname, f"{simname}_drp"]
 nlay, nrow, ncol = 2, 1, 5
 chdheads = [25.0]

@@ -21,10 +21,10 @@ import pytest
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
-from prt_test_utils import get_model_name
 from shapely.geometry import LineString
 
 from framework import TestFramework
+from prt_test_utils import get_model_name
 
 simname = "prttri"
 cases = [f"{simname}r2l", f"{simname}diag"]

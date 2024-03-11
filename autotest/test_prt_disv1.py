@@ -20,6 +20,8 @@ import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils.gridutil import get_disv_kwargs
+
+from framework import TestFramework
 from prt_test_utils import (
     all_equal,
     check_budget_data,
@@ -28,8 +30,6 @@ from prt_test_utils import (
     has_default_boundnames,
     plot_nodes_and_vertices,
 )
-
-from framework import TestFramework
 
 simname = "prtdisv1"
 cases = [f"{simname}", f"{simname}bprp", f"{simname}trts", f"{simname}trtf"]

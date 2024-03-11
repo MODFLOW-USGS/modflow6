@@ -33,14 +33,14 @@ import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from matplotlib.collections import LineCollection
+
+from framework import TestFramework
 from prt_test_utils import (
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
     get_model_name,
 )
-
-from framework import TestFramework
 
 simname = "prtfmi03"
 cases = [f"{simname}_l1", f"{simname}_l2"]
