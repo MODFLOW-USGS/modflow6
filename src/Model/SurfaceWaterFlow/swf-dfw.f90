@@ -454,19 +454,17 @@ contains
     ! -- dummy
     class(SwfDfwType) :: this !< this instance
     ! -- local
-    !integer(I4B) :: idcxs
-    !integer(I4B) :: n
-    !
-    ! -- TODO: write cross section tables
+    ! integer(I4B) :: idcxs
+    ! integer(I4B) :: n
+    
+    !-- TODO: write cross section tables
     ! do n = 1, this%dis%nodes
     !   idcxs = this%idcxs(n)
     !   if (idcxs > 0) then
     !     call this%cxs%write_cxs_table(idcxs, this%width(n), this%slope(n), &
     !                                   this%manningsn(n), this%unitconv)
     !   end if
-
     ! end do
-    return
   end subroutine write_cxs_tables
 
   !> @brief allocate memory

@@ -46,6 +46,7 @@ module SwfCxsModule
     procedure :: cxs_da
     procedure :: get_cross_section_info
     procedure :: get_area
+    procedure :: get_wetted_perimeter => cxs_wetted_perimeter
     procedure :: get_roughness
     procedure :: get_conveyance => cxs_conveyance
     procedure :: get_hydraulic_radius
@@ -472,6 +473,7 @@ contains
     real(DP) :: d
     real(DP) :: a
     real(DP) :: rh
+    real(DP) :: wp
     real(DP) :: r
     real(DP) :: c
     real(DP) :: q
@@ -488,7 +490,7 @@ contains
     if (npts > 0) then
 
       write (this%iout, *) 'Processing information for cross section ', idcxs
-      write (this%iout, *) 'Depth Area HydRad Rough Q'
+      write (this%iout, *) 'Depth Area WettedP HydRad Rough Conveyance Q'
 
       allocate (depths(npts))
       allocate (indx(size(depths)))
@@ -500,6 +502,7 @@ contains
       do ipt = 1, size(depths_unique)
         d = depths_unique(ipt)
         a = this%get_area(idcxs, width, d)
+        wp = this%get_wetted_perimeter(idcxs, width, d)
         rh = this%get_hydraulic_radius(idcxs, width, d, a)
         r = this%get_roughness(idcxs, width, d, rough, slope)
         c = this%get_conveyance(idcxs, width, d, rough)
@@ -508,7 +511,7 @@ contains
         else
           q = DZERO
         end if
-        write (this%iout, *) d, a, rh, r, q
+        write (this%iout, *) d, a, wp, rh, r, c, q
       end do
 
       deallocate (depths)
@@ -616,6 +619,31 @@ contains
                                     width, depth)
     end if
   end function get_area
+
+  function cxs_wetted_perimeter(this, idcxs, width, depth) result(wp)
+    ! -- modules
+    use SwfCxsUtilsModule, only: get_wetted_perimeter
+    ! -- dummy
+    class(SwfCxsType) :: this
+    integer(I4B), intent(in) :: idcxs !< cross section id
+    real(DP), intent(in) :: width !< width in reach
+    real(DP), intent(in) :: depth !< stage in reach
+    ! -- local
+    real(DP) :: wp
+    integer(I4B) :: i0
+    integer(I4B) :: i1
+    integer(I4B) :: npts
+    integer(I4B) :: icalcmeth
+    call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
+    if (npts == 0) then
+      wp = width
+    else
+      wp = get_wetted_perimeter(npts, &
+                                this%xfraction(i0:i1), &
+                                this%height(i0:i1), &
+                                width, depth)
+    end if
+  end function cxs_wetted_perimeter
 
   function get_roughness(this, idcxs, width, depth, rough, &
                          slope) result(roughc)
