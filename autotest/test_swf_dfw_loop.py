@@ -36,7 +36,7 @@ def build_models(idx, test):
         version="mf6",
         exe_name="mf6",
         sim_ws=sim_ws,
-        memory_print_option="all",
+        memory_print_option="summary",
     )
 
     tdis = flopy.mf6.ModflowTdis(
