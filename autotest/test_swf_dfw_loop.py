@@ -54,6 +54,8 @@ def build_models(idx, test):
         backtracking_tolerance=1.0,
         backtracking_reduction_factor=0.3,
         backtracking_residual_limit=100.0,
+        under_relaxation="simple",
+        under_relaxation_gamma=0.7,
     )
     swf = flopy.mf6.ModflowSwf(
         sim,
