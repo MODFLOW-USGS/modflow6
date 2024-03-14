@@ -11,6 +11,7 @@ program tester
   use TestMathUtil, only: collect_mathutil
   use TestMessage, only: collect_message
   use TestSim, only: collect_sim
+  use TestSwfUtils, only: collect_swfutils
   use TestTimeSelect, only: collect_timeselect
   implicit none
   integer :: stat, is
@@ -29,6 +30,7 @@ program tester
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("Message", collect_message), &
                new_testsuite("Sim", collect_sim), &
+               new_testsuite("SwfUtils", collect_swfutils), &
                new_testsuite("TimeSelect", collect_timeselect) &
                ]
 

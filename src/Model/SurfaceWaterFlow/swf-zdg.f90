@@ -379,6 +379,7 @@ contains
     real(DP) :: roughc
     real(DP) :: a
     real(DP) :: r
+    real(DP) :: conveyance
     !
     idcxs = this%idcxs(i)
     width = this%width(i)
@@ -389,8 +390,9 @@ contains
     a = this%cxs%get_area(idcxs, width, depth)
     r = this%cxs%get_hydraulic_radius(idcxs, width, depth, area=a)
 
-    ! todo: unit convert?
-    c = a * r**DTWOTHIRDS / roughc / absdhdxsq
+    !conveyance = a * r**DTWOTHIRDS / roughc
+    conveyance = this%cxs%get_conveyance(idcxs, width, depth, rough)
+    c = conveyance / absdhdxsq
 
   end function get_cond
 

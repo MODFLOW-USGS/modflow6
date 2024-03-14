@@ -10,7 +10,7 @@
 !<
 module SwfCxsUtilsModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DHALF, DTWOTHIRDS, DONE, DTWO, &
                              DEM5, DP999, DTHREE
   use SmoothingModule, only: sChSmooth
@@ -27,6 +27,8 @@ module SwfCxsUtilsModule
   public :: get_hydraulic_radius_xf
   public :: get_mannings_section
   public :: calc_composite_roughness
+  public :: get_conveyance
+  public :: get_composite_conveyance
 
 contains
 
@@ -588,6 +590,158 @@ contains
     ! -- return
     return
   end function get_cross_section_area
+
+  !> @brief Calculate conveyance
+  !!
+  !! Return a calculated conveyance.  Calculation
+  !! depends on whether the channel is a rectangular channel
+  !< with vertical sides or something else.
+  function get_conveyance(npts, xfraction, heights, cxs_rf, &
+                          width, rough, d) result(c)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    real(DP), dimension(:), intent(in) :: cxs_rf ! mannings fractions for this cross section
+    real(DP), intent(in) :: width !< reach width
+    real(DP), intent(in) :: rough !< reach roughness
+    real(DP), intent(in) :: d !< depth to evaluate cross-section
+    ! result
+    real(DP) :: c
+    if (is_rectangular(xfraction)) then
+      c = get_rectangular_conveyance(npts, xfraction, heights, cxs_rf, &
+                                     width, rough, d)
+    else
+      c = get_composite_conveyance(npts, xfraction, heights, cxs_rf, &
+                                   width, rough, d)
+    end if
+  end function get_conveyance
+
+  !> @brief Calculate conveyance for rectangular channel
+  !<
+  function get_rectangular_conveyance(npts, xfraction, heights, cxs_rf, &
+                                      width, rough, d) result(c)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    real(DP), dimension(:), intent(in) :: cxs_rf ! mannings fractions for this cross section
+    real(DP), intent(in) :: width !< reach width
+    real(DP), intent(in) :: rough !< reach roughness
+    real(DP), intent(in) :: d !< depth to evaluate cross-section
+    ! -- local variables
+    real(DP) :: c
+    real(DP) :: a
+    real(DP) :: p
+    real(DP) :: ravg
+
+    ! find cross sectional area and wetted perimeter
+    a = get_cross_section_area(npts, xfraction, heights, width, d)
+    p = get_wetted_perimeter(npts, xfraction, heights, width, d)
+
+    ! calculate roughness or determine an average
+    if (has_uniform_resistance(cxs_rf)) then
+      ravg = rough * cxs_rf(1)
+    else
+      ravg = calc_composite_roughness(npts, d, width, rough, DZERO, &
+                                      xfraction, heights, cxs_rf, 0)
+    end if
+
+    ! make conveyance calculation
+    c = DZERO
+    if (p > DZERO) then
+      c = a / ravg * (a / p)**DTWOTHIRDS
+    end if
+  end function get_rectangular_conveyance
+
+  !> @brief Determine if cross section is rectangular
+  !<
+  function is_rectangular(xfraction)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: xfraction !< cross-section station distances (x-distance)
+    ! result
+    logical(LGP) :: is_rectangular
+    is_rectangular = .false.
+    if (size(xfraction) == 4) then
+      if (xfraction(1) == xfraction(2) .and. &
+          xfraction(3) == xfraction(4)) then
+        is_rectangular = .true.
+      end if
+    end if
+  end function is_rectangular
+
+  !> @brief Determine if roughness is uniform for the section
+  !<
+  function has_uniform_resistance(cxs_rf)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: cxs_rf !< cross-section station distances (x-distance)
+    ! result
+    logical(LGP) :: has_uniform_resistance
+    ! local
+    real(DP) :: rmin
+    real(DP) :: rmax
+    rmin = minval(cxs_rf(1:3))
+    rmax = maxval(cxs_rf(1:3))
+    has_uniform_resistance = (rmin == rmax)
+  end function has_uniform_resistance
+
+  !> @brief Calculate composite conveyance
+  !!
+  !! Function to calculate the composite conveyance.
+  !! This is based on the approach in HEC-RAS, where
+  !! a conveyance is calculated for each line segment
+  !! in the cross section, and then summed to produce
+  !! a total conveyance.
+  !!
+  !<
+  function get_composite_conveyance(npts, xfraction, heights, cxs_rf, &
+                                    width, rough, d) result(c)
+    ! -- dummy variables
+    integer(I4B), intent(in) :: npts !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    real(DP), dimension(:), intent(in) :: cxs_rf ! mannings fractions for this cross section
+    real(DP), intent(in) :: width !< reach width
+    real(DP), intent(in) :: rough !< reach roughness
+    real(DP), intent(in) :: d !< depth to evaluate cross-section
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: c
+    real(DP) :: p
+    real(DP) :: rc
+    real(DP) :: rh
+    real(DP) :: cn
+    real(DP), dimension(npts) :: stations
+    real(DP), dimension(npts - 1) :: areas
+    real(DP), dimension(npts - 1) :: perimeters
+    !
+    ! -- calculate station from xfractions and width
+    do n = 1, npts
+      stations(n) = xfraction(n) * width
+    end do
+    !
+    ! -- calculate the cross-sectional area for each line segment
+    call get_cross_section_areas(npts, stations, heights, d, areas)
+    !
+    ! -- calculate the wetted perimeter for each line segment
+    call get_wetted_perimeters(npts, stations, heights, d, perimeters)
+    !
+    ! -- calculate the composite conveyance
+    c = DZERO
+    do n = 1, npts - 1
+      rc = cxs_rf(n) * rough
+      p = perimeters(n)
+      cn = DZERO
+      if (p > DZERO) then
+        rh = areas(n) / p
+        cn = areas(n) / rc * rh**DTWOTHIRDS
+      end if
+      c = c + cn
+    end do
+    !
+    ! -- return
+    return
+  end function get_composite_conveyance
 
   !> @brief Calculate the hydraulic radius for a reach
   !!

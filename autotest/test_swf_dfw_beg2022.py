@@ -226,8 +226,8 @@ def make_plot(test, mfsim):
     )
     x = df_mfswr["TOTTIME"] - 86400.0
     x = x / 60.0 / 60.0
-    ax.plot(x, -df_mfswr["QCRFLOW"], "go", mfc="none", label="MODFLOW-SWR")
-    ax.plot(times / 60.0 / 60.0, qoutflow, "bo", mfc="none", label="MODFLOW 6")
+    ax.plot(x, -df_mfswr["QCRFLOW"], "go:", mfc="none", label="MODFLOW-SWR")
+    ax.plot(times / 60.0 / 60.0, qoutflow, "bo:", mfc="none", label="MODFLOW 6")
     ax.set_xlim(0, 24.0)
     ax.set_ylim(19, 26)
     plt.xlabel("time, in hours")
@@ -314,7 +314,7 @@ def check_output(idx, test):
     diff = np.abs(qoutflow_mf6 - qoutflow_mf2005)
     print(diff)
     print(f"max difference is: {diff.max()}")
-    assert np.allclose(qoutflow_mf6, qoutflow_mf2005, atol=0.15)
+    assert np.allclose(qoutflow_mf6, qoutflow_mf2005, atol=0.6)
 
     return
 
