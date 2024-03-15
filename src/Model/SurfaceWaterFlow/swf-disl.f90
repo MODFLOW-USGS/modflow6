@@ -34,6 +34,7 @@ module SwfDislModule
   contains
     procedure :: disl_load
     procedure :: dis_da => disl_da
+    procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- private
@@ -103,6 +104,13 @@ contains
     ! -- Return
     return
   end subroutine disl_cr
+
+  !> @brief Get the discretization type (DIS, DISV, DISU, DISL)
+  subroutine get_dis_type(this, dis_type)
+    class(SwfDislType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
+    dis_type = "DISL"
+  end subroutine get_dis_type
 
   !> @brief Allocate scalar variables
   !<
@@ -620,27 +628,24 @@ contains
   !> @brief Finalize grid construction
   !<
   subroutine grid_finalize(this)
-    ! -- modules
+    ! modules
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
-    ! -- dummy
+    ! dummy
     class(SwfDislType) :: this
-    ! -- locals
+    ! local
     integer(I4B) :: node, noder, k
-    ! -- formats
-    ! -- data
-    !
-    ! -- count active cells
+
+    ! count active cells
     this%nodes = 0
     do k = 1, this%nodesuser
       if (this%idomain(k) > 0) this%nodes = this%nodes + 1
     end do
     !
-    ! -- Check to make sure nodes is a valid number
+    ! Check to make sure nodes is a valid number
     if (this%nodes == 0) then
-      call store_error('MODEL DOES NOT HAVE ANY ACTIVE NODES.')
-      call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
-        &THAN ZERO.')
+      call store_error('Model does not have any active nodes.  Make sure &
+                       &IDOMAIN has some values greater than zero.')
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -649,14 +654,14 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- Array size is now known, so allocate
+
+    ! Array size is now known, so allocate
     call this%allocate_arrays()
-    !
-    ! -- Fill the nodereduced array with the reduced nodenumber, or
-    !    a negative number to indicate it is a pass-through cell, or
-    !    a zero to indicate that the cell is excluded from the
-    !    solution.
+
+    ! Fill the nodereduced array with the reduced nodenumber, or
+    ! a negative number to indicate it is a pass-through cell, or
+    ! a zero to indicate that the cell is excluded from the
+    ! solution.
     if (this%nodes < this%nodesuser) then
       node = 1
       noder = 1
@@ -672,8 +677,8 @@ contains
         node = node + 1
       end do
     end if
-    !
-    ! -- allocate and fill nodeuser if a reduced grid
+
+    ! allocate and fill nodeuser if a reduced grid
     if (this%nodes < this%nodesuser) then
       node = 1
       noder = 1
@@ -685,10 +690,15 @@ contains
         node = node + 1
       end do
     end if
-    !
-    ! -- Move reach_bottom into bot
+
+    ! Copy reach_bottom into bot
     do node = 1, this%nodesuser
       this%bot(node) = this%reach_bottom(node)
+    end do
+
+    ! Assign area in DisBaseType as reach_length
+    do node = 1, this%nodesuser
+      this%area(node) = this%reach_length(node)
     end do
 
     ! -- Return
@@ -739,14 +749,15 @@ contains
     ! -- Create connectivity
     if (this%toreachConnectivity) then
       ! -- build connectivity based on toreach
-      call this%con%dislconnections(this%name_model, this%toreach)
+      call this%con%dislconnections(this%name_model, this%toreach, this%reach_length)
     else
       ! -- build connectivity based on vertices
       call this%con%dislconnections_verts(this%name_model, this%nodes, &
                                           this%nodesuser, nrsize, this%nvert, &
                                           this%vertices, this%iavert, &
                                           this%javert, this%cellxyz, this%fdc, &
-                                          this%nodereduced, this%nodeuser)
+                                          this%nodereduced, this%nodeuser, &
+                                          this%reach_length)
     end if
 
     this%nja = this%con%nja

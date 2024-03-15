@@ -2,7 +2,7 @@ module ConnectionsModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LENMEMPATH
+  use ConstantsModule, only: LENMODELNAME, LENMEMPATH, DHALF
   use MessageModule, only: write_message
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
@@ -955,49 +955,56 @@ contains
 
   !> @brief procedure to fill the connections object for a disl package
   !!
-  !! todo: No handling yet of cl1, cl2, hwva, etc. for disl as they are not needed
-  !! and only unreduced disl grids are allowed at the moment
+  !! todo: Still need to handle hwva
+  !! todo: Only unreduced disl grids are allowed at the moment
   !!
   !<
-  subroutine dislconnections(this, name_model, toreach)
+  subroutine dislconnections(this, name_model, toreach, reach_length) !, &
+                             !reach_width)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate, mem_setptr
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(ConnectionsType) :: this
-    character(len=*), intent(in) :: name_model
-    integer(I4B), dimension(:), intent(in) :: toreach
+    class(ConnectionsType) :: this !< object
+    character(len=*), intent(in) :: name_model !< name of model
+    integer(I4B), dimension(:), intent(in) :: toreach !< dowstream reach number
+    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
+    !real(DP), dimension(:), intent(in) :: reach_width !< width of each reach
     ! -- local
     type(sparsematrix) :: sparse
     integer(I4B) :: ierror
-    !
-    ! -- Allocate scalars
+
+    ! Allocate scalars
     call this%allocate_scalars(name_model)
-    !
-    ! -- Set scalars
+
+    ! Set scalars
     this%nodes = size(toreach)
     this%ianglex = 0
-    !
-    ! -- create sparse matrix object using toreach
-    !    and fill ia and ja
+
+    ! Create sparse matrix object using toreach
+    ! and fill ia and ja
     call sparse_from_toreach(toreach, sparse)
     this%nja = sparse%nnz
     this%njas = (this%nja - this%nodes) / 2
-    !
-    ! -- Allocate index arrays of size nja and symmetric arrays
+
+    ! Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
-    !
-    ! -- Fill the IA and JA arrays from sparse, then destroy sparse
+
+    ! Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%sort()
     call sparse%filliaja(this%ia, this%ja, ierror)
     call sparse%destroy()
-    !
-    ! -- fill the isym and jas arrays
+
+    ! Fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
-    !
-    ! -- If reduced system, then need to build iausr and jausr, otherwise point
-    !    them to ia and ja.
+
+    ! Fill disl symmetric arrays
+    call fill_disl_symarrays(this%ia, this%ja, this%jas, reach_length, &
+                             this%ihc, this%cl1, this%cl2)
+
+    ! If reduced system, then need to build iausr and jausr, otherwise point
+    ! them to ia and ja.
     ! TODO: not handled yet for reduced system
     !this%iausr => this%ia
     !this%jausr => this%ja
@@ -1013,14 +1020,15 @@ contains
 
   !> @brief Fill the connections object for a disl package from vertices
   !!
-  !! todo: No handling yet of cl1, cl2, hwva, etc. for disl as they are not needed
-  !! and only unreduced disl grids are allowed at the moment
+  !! todo: Still need to handle hwva
+  !! todo: Only unreduced disl grids are allowed at the moment
   !!
   !<
   subroutine dislconnections_verts(this, name_model, nodes, nodesuser, &
                                    nrsize, nvert, &
                                    vertices, iavert, javert, &
-                                   cellxyz, cellfdc, nodereduced, nodeuser)
+                                   cellxyz, cellfdc, nodereduced, nodeuser, &
+                                   reach_length)
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
@@ -1041,6 +1049,7 @@ contains
     real(DP), dimension(nodesuser), intent(in) :: cellfdc
     integer(I4B), dimension(:), intent(in) :: nodereduced
     integer(I4B), dimension(:), intent(in) :: nodeuser
+    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
     ! -- local
     integer(I4B), dimension(:), allocatable :: itemp
     integer(I4B), dimension(:), allocatable :: iavertcells
@@ -1098,6 +1107,12 @@ contains
     ! -- fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
+
+    ! Fill disl symmetric arrays
+    ! todo: need to handle cell center shifted from center of reach
+    call fill_disl_symarrays(this%ia, this%ja, this%jas, reach_length, &
+                             this%ihc, this%cl1, this%cl2)
+
     !
     ! -- Fill symmetric discretization arrays (ihc,cl1,cl2,hwva,anglex)
     ! do n = 1, this%nodes
@@ -1151,6 +1166,36 @@ contains
 
     return
   end subroutine sparse_from_toreach
+
+  !> @brief Fill symmetric connection arrays for disl
+  !<
+  subroutine fill_disl_symarrays(ia, ja, jas, reach_length, ihc, cl1, cl2)
+    ! dummy
+    integer(I4B), dimension(:), intent(in) :: ia !< csr pointer array
+    integer(I4B), dimension(:), intent(in) :: ja !< csr array
+    integer(I4B), dimension(:), intent(in) :: jas !< csr symmetric array
+    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
+    integer(I4B), dimension(:), intent(out) :: ihc !< horizontal connection flag
+    real(DP), dimension(:), intent(out) :: cl1 !< distance from n to shared face with m
+    real(DP), dimension(:), intent(out) :: cl2 !< distance from m to shared face with n
+    ! local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: isympos
+
+    ! loop through and set array values
+    do n = 1, size(reach_length)
+      do ipos = ia(n) + 1, ia(n + 1) - 1
+        m = ja(ipos)
+        if(m < n) cycle
+        isympos = jas(ipos)
+        ihc(isympos) = 1
+        cl1(isympos) = DHALF * reach_length(n)
+        cl2(isympos) = DHALF * reach_length(m)
+      enddo
+    enddo
+  end subroutine fill_disl_symarrays
 
   !> @brief Fill iausr and jausr if reduced grid, otherwise point them to ia
   !! and ja.
