@@ -67,10 +67,10 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        backtracking_number=5,
-        backtracking_tolerance=1.0,
-        backtracking_reduction_factor=0.3,
-        backtracking_residual_limit=100.0,
+        # backtracking_number=5,
+        # backtracking_tolerance=1.0,
+        # backtracking_reduction_factor=0.3,
+        # backtracking_residual_limit=100.0,
         filename=f"{swfname}.ims",
     )
     sim.register_ims_package(imsswf, [swf.name])
