@@ -57,6 +57,7 @@ module SwfDfwModule
 
   contains
 
+    procedure :: dfw_df
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure :: dfw_load
@@ -93,7 +94,7 @@ contains
   !> @brief create package
   !<
   subroutine dfw_cr(dfwobj, name_model, input_mempath, inunit, iout, &
-                    dis, cxs)
+                    cxs)
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
@@ -102,7 +103,6 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
     ! -- locals
     logical(LGP) :: found_fname
@@ -130,7 +130,6 @@ contains
                        found_fname)
 
     ! -- Set a pointers to passed in objects
-    dfwobj%dis => dis
     dfwobj%cxs => cxs
 
     ! -- create obs package
@@ -142,17 +141,36 @@ contains
       ! -- Print a message identifying the package.
       write (iout, fmtheader) input_mempath
 
-      ! -- allocate arrays
-      call dfwobj%allocate_arrays()
-
-      ! -- load dfw
-      call dfwobj%dfw_load()
-
     end if
 
     ! -- Return
     return
   end subroutine dfw_cr
+
+  !> @brief load data from IDM to package
+  !<
+  subroutine dfw_df(this, dis)
+    ! -- dummy
+    class(SwfDfwType) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
+    ! -- locals
+
+    ! -- Set a pointers to passed in objects
+    this%dis => dis
+
+    ! -- check if dfw is enabled
+    ! this will need to become if (.not. present(dfw_options)) then
+    !if (inunit > 0) then
+
+      ! -- allocate arrays
+      call this%allocate_arrays()
+
+      ! -- load dfw
+      call this%dfw_load()
+
+    !end if
+
+  end subroutine dfw_df
 
   !> @ brief Allocate scalars
   !!

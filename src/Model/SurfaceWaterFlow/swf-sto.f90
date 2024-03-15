@@ -66,13 +66,12 @@ contains
   !!  Create a new storage (STO) object
   !!
   !<
-  subroutine sto_cr(stoobj, name_model, inunit, iout, dis, cxs)
+  subroutine sto_cr(stoobj, name_model, inunit, iout, cxs)
     ! -- dummy variables
     type(SwfStoType), pointer :: stoobj !< SwfStoType object
     character(len=*), intent(in) :: name_model !< name of model
     integer(I4B), intent(in) :: inunit !< package input file unit
     integer(I4B), intent(in) :: iout !< model listing file unit
-    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
     !
     ! -- Create the object
@@ -89,18 +88,11 @@ contains
     stoobj%iout = iout
 
     ! -- store pointers
-    stoobj%dis => dis
     stoobj%cxs => cxs
 
     ! -- Initialize block parser
     call stoobj%parser%Initialize(stoobj%inunit, stoobj%iout)
 
-    ! -- set pointers to data in dfw package
-    call stoobj%set_dfw_pointers()
-
-    !
-    ! -- return
-    return
   end subroutine sto_cr
 
   !> @ brief Allocate and read method for package
@@ -124,6 +116,10 @@ contains
     !
     ! --print a message identifying the storage package.
     write (this%iout, fmtsto) this%inunit
+
+    ! -- set pointers to data in dfw package
+    call this%set_dfw_pointers()
+
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis

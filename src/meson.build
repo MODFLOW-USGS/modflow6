@@ -76,6 +76,8 @@ modflow_sources = files(
     'Idm' / 'gwt-icidm.f90',
     'Idm' / 'gwt-namidm.f90',
     'Idm' / 'swf-dislidm.f90',
+    'Idm' / 'swf-disidm.f90',
+    'Idm' / 'swf-disvidm.f90',
     'Idm' / 'swf-namidm.f90',
     'Idm' / 'swf-cxsidm.f90',
     'Idm' / 'swf-dfwidm.f90',

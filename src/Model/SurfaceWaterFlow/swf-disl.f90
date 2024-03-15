@@ -34,6 +34,7 @@ module SwfDislModule
     logical(LGP) :: toreachConnectivity = .false. !< flag to indicate build connectivity from toreach instead of vertices
   contains
     procedure :: disl_load
+    procedure :: dis_df => disl_df
     procedure :: dis_da => disl_da
     procedure :: get_dis_type => get_dis_type
     procedure :: get_flow_width => get_flow_width
@@ -98,14 +99,30 @@ contains
         write (iout, fmtheader) dis%input_mempath
       end if
 
-      ! -- load disl
-      call disnew%disl_load()
-
     end if
     !
     ! -- Return
     return
   end subroutine disl_cr
+
+  !> @brief Define the discretization
+  !<
+  subroutine disl_df(this)
+    ! -- dummy
+    class(SwfDislType) :: this
+    !
+    ! -- Transfer the data from the memory manager into this package object
+    if (this%inunit /= 0) then
+      call this%disl_load()
+    end if
+
+    ! create connectivity using toreach or vertices and cell2d
+    call this%create_connections()
+
+    ! finalize the grid
+    call this%grid_finalize()
+
+  end subroutine disl_df
 
   !> @brief Get the discretization type (DIS, DISV, DISU, DISL)
   subroutine get_dis_type(this, dis_type)
@@ -159,14 +176,6 @@ contains
       call this%source_cell2d()
     end if
 
-    ! create connectivity using toreach or vertices and cell2d
-    call this%create_connections()
-
-    ! finalize the grid
-    call this%grid_finalize()
-    !
-    ! -- Return
-    return
   end subroutine disl_load
 
   !> @brief Copy options from IDM into package
