@@ -71,6 +71,15 @@ runs:
         path: petsc
         key: petsc-${{ runner.os }}-${{ steps.get-date.outputs.date }}
 
+    - name: Configure environment
+      shell: bash
+      run: |
+        PETSC_DIR=$GITHUB_WORKSPACE/petsc
+        PETSC_ARCH=arch-mswin-c-opt
+        echo "PETSC_DIR=$PETSC_DIR" >> $GITHUB_ENV
+        echo "PETSC_ARCH=$PETSC_ARCH" >> $GITHUB_ENV
+        echo "$PETSC_DIR/$PETSC_ARCH/lib" >> $GITHUB_PATH
+
     - name: Download PETSc
       if: steps.petsc-cache.outputs.cache-hit != 'true'
       shell: bash
@@ -91,15 +100,6 @@ runs:
       run: |
         mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
         which link
-
-    - name: Configure environment
-      shell: bash
-      run: |
-        PETSC_DIR=$GITHUB_WORKSPACE/petsc
-        PETSC_ARCH=arch-mswin-c-opt
-        echo "PETSC_DIR=$PETSC_DIR" >> $GITHUB_ENV
-        echo "PETSC_ARCH=$PETSC_ARCH" >> $GITHUB_ENV
-        echo "$PETSC_DIR/$PETSC_ARCH/lib" >> $GITHUB_PATH
 
     - name: Configure PETSc
       if: steps.petsc-cache.outputs.cache-hit != 'true'
