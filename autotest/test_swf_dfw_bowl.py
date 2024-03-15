@@ -116,7 +116,6 @@ def build_models(idx, test):
         swf,
         print_flows=True,
         save_flows=True,
-        width=1.0,
         manningsn=0.035,
         slope=1 / dx,
         idcxs=0,

@@ -248,7 +248,6 @@ def build_models(idx, test):
         central_in_space=True,
         print_flows=True,
         save_flows=True,
-        width=1.0,  # cross sections defined explicitly (not fractions)
         manningsn=0.03,
         slope=0.001,
         idcxs=idcxs,

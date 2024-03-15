@@ -96,7 +96,7 @@ reader readarray
 layered false
 optional
 longname reach width
-description real value that defines the reach width. REACH_WIDTH must be greater than zero.
+description real value that defines the reach width. REACH\_WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the REACH\_WIDTH value will be multiplied by the specified cross section x-fraction values.
 
 block griddata
 name reach_bottom

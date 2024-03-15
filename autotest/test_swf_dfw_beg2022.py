@@ -99,7 +99,6 @@ def build_models(idx, test):
         central_in_space=True,
         print_flows=True,
         save_flows=True,
-        width=40.0,
         manningsn=1.0 / 80.0,
         slope=slope,
         idcxs=0,

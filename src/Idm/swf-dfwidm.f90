@@ -20,7 +20,6 @@ module SwfDfwInputModule
     logical :: obs6 = .false.
     logical :: filein = .false.
     logical :: obs6_filename = .false.
-    logical :: width = .false.
     logical :: manningsn = .false.
     logical :: slope = .false.
     logical :: idcxs = .false.
@@ -182,23 +181,6 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdfw_width = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DFW', & ! subcomponent
-    'GRIDDATA', & ! block
-    'WIDTH', & ! tag name
-    'WIDTH', & ! fortran variable
-    'DOUBLE1D', & ! type
-    'NODES', & ! shape
-    .true., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
     swfdfw_manningsn = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -261,7 +243,6 @@ module SwfDfwInputModule
     swfdfw_obs6, &
     swfdfw_filein, &
     swfdfw_obs6_filename, &
-    swfdfw_width, &
     swfdfw_manningsn, &
     swfdfw_slope, &
     swfdfw_idcxs &

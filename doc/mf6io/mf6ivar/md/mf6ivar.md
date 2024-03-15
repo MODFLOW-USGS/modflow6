@@ -1525,7 +1525,7 @@
 | SWF | DISL | DIMENSIONS | NODES | INTEGER | is the number of linear cells. |
 | SWF | DISL | DIMENSIONS | NVERT | INTEGER | is the total number of (x, y, z) vertex pairs used to characterize the model grid. |
 | SWF | DISL | GRIDDATA | REACH_LENGTH | DOUBLE PRECISION (NODES) | length for each reach |
-| SWF | DISL | GRIDDATA | REACH_WIDTH | DOUBLE PRECISION (NODES) | real value that defines the reach width. REACH_WIDTH must be greater than zero. |
+| SWF | DISL | GRIDDATA | REACH_WIDTH | DOUBLE PRECISION (NODES) | real value that defines the reach width. REACH\_WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the REACH\_WIDTH value will be multiplied by the specified cross section x-fraction values. |
 | SWF | DISL | GRIDDATA | REACH_BOTTOM | DOUBLE PRECISION (NODES) | bottom elevation of surface water channel |
 | SWF | DISL | GRIDDATA | TOREACH | INTEGER (NODES) | index of the downstream reach.  Flow from this reach is passed into the dowstream reach.  For reaches that do not flow to another reach enter a 0 to toreach. |
 | SWF | DISL | GRIDDATA | IDOMAIN | INTEGER (NODES) | is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation. |
@@ -1545,7 +1545,6 @@
 | SWF | DFW | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | SWF | DFW | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | SWF | DFW | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the DFW package. See the ``Observation utility'' section for instructions for preparing observation input files. Tables \ref{table:gwf-obstypetable} and \ref{table:gwt-obstypetable} lists observation type(s) supported by the DFW package. |
-| SWF | DFW | GRIDDATA | WIDTH | DOUBLE PRECISION (NODES) | real value that defines the reach width. WIDTH must be greater than zero. |
 | SWF | DFW | GRIDDATA | MANNINGSN | DOUBLE PRECISION (NODES) | mannings roughness coefficient |
 | SWF | DFW | GRIDDATA | SLOPE | DOUBLE PRECISION (NODES) | bottom slope of the river bed |
 | SWF | DFW | GRIDDATA | IDCXS | INTEGER (NODES) | integer value indication the cross section identifier in the Cross Section Package that applies to the reach.  If not provided then reach will be treated as hydraulically wide. |

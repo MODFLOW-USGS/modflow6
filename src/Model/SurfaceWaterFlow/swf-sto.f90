@@ -33,7 +33,6 @@ module SwfStoModule
 
     ! -- pointers to information in dfw package
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< pointer to cross section id vector in dfw
-    real(DP), dimension(:), pointer, contiguous :: width => null() !< pointer to width vector in dfw
 
     ! -- pointer to packages needed for calculations
     type(SwfCxsType), pointer :: cxs
@@ -424,18 +423,21 @@ contains
     ! local
     real(DP) :: depth_new
     real(DP) :: depth_old
+    real(DP) :: width_n
+    real(DP) :: width_m
     real(DP) :: cxs_area_new
     real(DP) :: cxs_area_old
     real(DP) :: cxs_area_eps
     real(DP) :: eps = 1.d-8
 
+    call this%dis%get_flow_width(n, n, 0, width_n, width_m)
     depth_new = stage_new - this%dis%bot(n)
     depth_old = stage_old - this%dis%bot(n)
-    cxs_area_new = this%cxs%get_area(this%idcxs(n), this%width(n), depth_new)
-    cxs_area_old = this%cxs%get_area(this%idcxs(n), this%width(n), depth_old)
+    cxs_area_new = this%cxs%get_area(this%idcxs(n), width_n, depth_new)
+    cxs_area_old = this%cxs%get_area(this%idcxs(n), width_n, depth_old)
     qsto = (cxs_area_new - cxs_area_old) * dx / delt
     if (present(derv)) then
-      cxs_area_eps = this%cxs%get_area(this%idcxs(n), this%width(n), depth_new + eps)
+      cxs_area_eps = this%cxs%get_area(this%idcxs(n), width_n, depth_new + eps)
       derv = (cxs_area_eps - cxs_area_new) * dx / delt / eps
     end if
 
@@ -557,7 +559,6 @@ contains
     if (this%inunit > 0) then
       call mem_deallocate(this%qsto)
       nullify (this%idcxs)
-      nullify (this%width)
     end if
     !
     ! -- Deallocate scalars
@@ -736,7 +737,6 @@ contains
 
     dfw_mem_path = create_mem_path(this%name_model, 'DFW')
     call mem_setptr(this%idcxs, 'IDCXS', dfw_mem_path)
-    call mem_setptr(this%width, 'WIDTH', dfw_mem_path)
 
   end subroutine set_dfw_pointers
 

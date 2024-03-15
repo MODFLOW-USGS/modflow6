@@ -91,17 +91,6 @@ description REPLACE obs6_filename {'{#1}': 'DFW'}
 # --------------------- swf dfw griddata ---------------------
 
 block griddata
-name width
-type double precision
-shape (nodes)
-valid
-reader readarray
-layered false
-optional
-longname stream width
-description real value that defines the reach width. WIDTH must be greater than zero.
-
-block griddata
 name manningsn
 type double precision
 shape (nodes)

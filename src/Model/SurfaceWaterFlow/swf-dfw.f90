@@ -42,7 +42,6 @@ module SwfDfwModule
     real(DP), pointer :: unitconv !< conversion factor used in mannings equation; calculated from timeconv and lengthconv
     real(DP), pointer :: timeconv !< conversion factor from model length units to meters (1.0 if model uses meters for length)
     real(DP), pointer :: lengthconv !< conversion factor frommodel time units to seconds (1.0 if model uses seconds for time)
-    real(DP), dimension(:), pointer, contiguous :: width => null() !< reach width
     real(DP), dimension(:), pointer, contiguous :: manningsn => null() !< mannings roughness for each reach
     real(DP), dimension(:), pointer, contiguous :: slope => null() !< slope for each reach
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id for each reach
@@ -194,8 +193,6 @@ contains
     integer(I4B) :: n
     !
     ! -- user-provided input
-    call mem_allocate(this%width, this%dis%nodes, &
-                      'WIDTH', this%memoryPath)
     call mem_allocate(this%manningsn, this%dis%nodes, &
                       'MANNINGSN', this%memoryPath)
     call mem_allocate(this%slope, this%dis%nodes, &
@@ -206,7 +203,6 @@ contains
                       'ICELLTYPE', this%memoryPath)
 
     do n = 1, this%dis%nodes
-      this%width(n) = DZERO
       this%manningsn(n) = DZERO
       this%slope(n) = DZERO
       this%idcxs(n) = 0
@@ -370,17 +366,10 @@ contains
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%width, 'WIDTH', idmMemoryPath, map, found%width)
     call mem_set_value(this%manningsn, 'MANNINGSN', &
                        idmMemoryPath, map, found%manningsn)
     call mem_set_value(this%slope, 'SLOPE', idmMemoryPath, map, found%slope)
     call mem_set_value(this%idcxs, 'IDCXS', idmMemoryPath, map, found%idcxs)
-    !
-    ! -- ensure WIDTH was found
-    if (.not. found%width) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: WIDTH not found.'
-      call store_error(errmsg)
-    end if
     !
     ! -- ensure MANNINGSN was found
     if (.not. found%manningsn) then
@@ -415,10 +404,6 @@ contains
     type(SwfDfwParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting DFW Griddata'
-
-    if (found%width) then
-      write (this%iout, '(4x,a)') 'WIDTH set from input file'
-    end if
 
     if (found%manningsn) then
       write (this%iout, '(4x,a)') 'MANNINGSN set from input file'
@@ -933,7 +918,6 @@ contains
     call mem_deallocate(this%timeconv)
     !
     ! -- Deallocate arrays
-    call mem_deallocate(this%width)
     call mem_deallocate(this%manningsn)
     call mem_deallocate(this%slope)
     call mem_deallocate(this%idcxs)
