@@ -72,6 +72,7 @@ if fc_id == 'intel-cl'
                    '/Qdiag-disable:7416', # f2008 warning
                    '/Qdiag-disable:7025', # f2008 warning
                    '/Qdiag-disable:5268', # Line too long
+                   '/Qdiag-disable:10448',# ifort deprecation warning
                   ]
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
@@ -128,8 +129,11 @@ endif
 message('Extended build:', is_extended_build)
 
 # windows options for petsc
-petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
-petsc_arch = 'arch-ci-mswin-intel-modflow6'
+petsc_dir_rel = '..' /'petsc'
+petsc_dir_abs = meson.project_source_root() / '..' /'petsc'
+petsc_arch = 'arch-mswin-c-opt'
+petsc_compiled_rel = petsc_dir_rel / petsc_arch
+petsc_compiled_abs = petsc_dir_abs / petsc_arch
 
 # on windows only with intel
 if build_machine.system() == 'windows' and is_extended_build
@@ -149,8 +153,7 @@ if is_extended_build
     petsc = dependency('PETSc', required : true)
   else
     # directly look for petsc
-    petsc_compiled = petsc_dir / petsc_arch
-    petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : true)
+    petsc = fc.find_library('libpetsc', dirs: petsc_compiled_abs / 'lib', required : true)
   endif
   extra_cmp_args += [ '-D__WITH_PETSC__' ]
   dependencies += petsc
@@ -194,8 +197,8 @@ add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'for
 
 if is_extended_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
-  petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
-  petsc_src = petsc_dir / 'src'
+  petsc_incdir = include_directories([petsc_dir_rel / 'include', petsc_compiled_rel / 'include'])
+  petsc_src = petsc_dir_abs / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
                   petsc_src / 'dm/f90-mod/petscdmmod.F90',
                   petsc_src / 'dm/f90-mod/petscdmplexmod.F90',
@@ -235,11 +238,11 @@ testdir = meson.project_source_root() / '.mf6minsim'
 if with_mpi
   mpiexec = find_program('mpiexec', required : false)
   if mpiexec.found()
-    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
-    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
-    test('Serial simulation test', mf6exe, workdir : testdir)
-    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'])
-    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'])
+    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'], is_parallel : false)
+    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'], is_parallel : false)
+    test('Serial simulation test', mf6exe, workdir : testdir, is_parallel : false)
+    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'], is_parallel : false)
+    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'], is_parallel : false)
   endif
 else
   test('Version command line test', mf6exe, args : ['-v',])

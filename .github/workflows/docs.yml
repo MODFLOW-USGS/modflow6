@@ -3,6 +3,7 @@ on:
   push:
     paths-ignore:
       - '.github/workflows/release.yml'
+      - '.github/workflows/ci.yml'
       - '.hpc/**'
   pull_request:
     branches:
