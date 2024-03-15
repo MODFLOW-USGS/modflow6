@@ -761,6 +761,8 @@ if __name__ == "__main__":
         "gwe-fmi",
         "swf-nam",
         "swf-disl",
+        "swf-dis",
+        "swf-disv",
         "swf-dfw",
         "swf-cxs",
         "swf-ic",

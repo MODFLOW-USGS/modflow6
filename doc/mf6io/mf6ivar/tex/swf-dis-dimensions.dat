@@ -1,0 +1,5 @@
+BEGIN DIMENSIONS
+  NLAY <nlay>
+  NROW <nrow>
+  NCOL <ncol>
+END DIMENSIONS
