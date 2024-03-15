@@ -6,7 +6,7 @@ module SwfDislModule
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate
   use SimModule, only: count_errors, store_error, store_error_unit, &
-                       store_warning
+                       store_warning, store_error_filename
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
   use DislGeom, only: calcdist
@@ -22,6 +22,7 @@ module SwfDislModule
     real(DP), pointer :: convlength => null() !< conversion factor for length
     real(DP), pointer :: convtime => null() !< conversion factor for time
     real(DP), dimension(:), pointer, contiguous :: reach_length => null() !< length of each reach
+    real(DP), dimension(:), pointer, contiguous :: reach_width => null() !< reach width
     real(DP), dimension(:), pointer, contiguous :: reach_bottom => null() !< reach bottom elevation
     integer(I4B), dimension(:), pointer, contiguous :: toreach => null() !< downstream reach index (nodes)
     integer(I4B), dimension(:), pointer, contiguous :: idomain => null() !< idomain (nodes)
@@ -35,6 +36,7 @@ module SwfDislModule
     procedure :: disl_load
     procedure :: dis_da => disl_da
     procedure :: get_dis_type => get_dis_type
+    procedure :: get_flow_width => get_flow_width
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- private
@@ -299,6 +301,8 @@ contains
     ! -- Allocate non-reduced vectors for disl
     call mem_allocate(this%reach_length, this%nodesuser, &
                       'REACH_LENGTH', this%memoryPath)
+    call mem_allocate(this%reach_width, this%nodesuser, &
+                      'REACH_WIDTH', this%memoryPath)
     call mem_allocate(this%reach_bottom, this%nodesuser, &
                       'REACH_BOTTOM', this%memoryPath)
     call mem_allocate(this%toreach, this%nodesuser, &
@@ -319,6 +323,7 @@ contains
     ! -- initialize all cells to be active (idomain = 1)
     do n = 1, this%nodesuser
       this%reach_length(n) = DZERO
+      this%reach_width(n) = DZERO
       this%reach_bottom(n) = DZERO
       this%toreach(n) = 0
       this%idomain(n) = 1
@@ -367,6 +372,8 @@ contains
     ! -- update defaults with idm sourced values
     call mem_set_value(this%reach_length, 'REACH_LENGTH', idmMemoryPath, &
                        found%reach_length)
+    call mem_set_value(this%reach_width, 'REACH_WIDTH', idmMemoryPath, &
+                       found%reach_width)
     call mem_set_value(this%reach_bottom, 'REACH_BOTTOM', idmMemoryPath, &
                        found%reach_bottom)
     call mem_set_value(this%toreach, 'TOREACH', idmMemoryPath, &
@@ -375,7 +382,26 @@ contains
       this%toreachConnectivity = .true.
     end if
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
-    !
+
+    if (.not. found%reach_length) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_LENGTH not found.'
+      call store_error(errmsg)
+    end if
+
+    if (.not. found%reach_width) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_WIDTH not found.'
+      call store_error(errmsg)
+    end if
+
+    if (.not. found%reach_bottom) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_BOTTOM not found.'
+      call store_error(errmsg)
+    end if
+
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_fname)
+    end if
+
     ! -- log simulation values
     if (this%iout > 0) then
       call this%log_griddata(found)
@@ -396,6 +422,10 @@ contains
 
     if (found%reach_length) then
       write (this%iout, '(4x,a)') 'REACH_LENGTH set from input file'
+    end if
+
+    if (found%reach_width) then
+      write (this%iout, '(4x,a)') 'REACH_WIDTH set from input file'
     end if
 
     if (found%reach_bottom) then
@@ -1022,6 +1052,7 @@ contains
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     call mem_deallocate(this%reach_length)
+    call mem_deallocate(this%reach_width)
     call mem_deallocate(this%reach_bottom)
     call mem_deallocate(this%toreach)
     call mem_deallocate(this%idomain)
@@ -1174,5 +1205,26 @@ contains
     ! -- return
     return
   end subroutine record_srcdst_list_header
+
+  !> @ brief Calculate the flow width between two cells
+  !!
+  !! This should only be called for connections with IHC > 0.
+  !! Routine is needed, so it can be overridden by the linear
+  !! network discretization, which allows for a separate flow
+  !< width for each cell.
+  subroutine get_flow_width(this, n, m, idx_conn, width_n, width_m)
+    ! dummy
+    class(SwfDislType) :: this
+    integer(I4B), intent(in) :: n !< cell node number
+    integer(I4B), intent(in) :: m !< cell node number
+    integer(I4B), intent(in) :: idx_conn !< connection index
+    real(DP), intent(out) :: width_n !< flow width for cell n
+    real(DP), intent(out) :: width_m !< flow width for cell m
+
+    ! For disl case, width_n and width_m can be different
+    width_n = this%reach_width(n)
+    width_m = this%reach_width(m)
+
+  end subroutine get_flow_width
 
 end module SwfDislModule

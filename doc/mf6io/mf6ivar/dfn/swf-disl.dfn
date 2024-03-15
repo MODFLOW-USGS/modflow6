@@ -88,6 +88,17 @@ longname reach length
 description length for each reach
 
 block griddata
+name reach_width
+type double precision
+shape (nodes)
+valid
+reader readarray
+layered false
+optional
+longname reach width
+description real value that defines the reach width. REACH_WIDTH must be greater than zero.
+
+block griddata
 name reach_bottom
 type double precision
 shape (nodes)

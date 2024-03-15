@@ -69,6 +69,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         reach_length=dx,
+        reach_width=50.,
         reach_bottom=0.0,
         toreach=toreach,  # -1 gives 0 in one-based, which means outflow cell
         idomain=1,

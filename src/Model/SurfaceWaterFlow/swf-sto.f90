@@ -36,7 +36,6 @@ module SwfStoModule
     real(DP), dimension(:), pointer, contiguous :: width => null() !< pointer to width vector in dfw
 
     ! -- pointer to packages needed for calculations
-    type(SwfDislType), pointer :: disl
     type(SwfCxsType), pointer :: cxs
 
   contains
@@ -56,7 +55,6 @@ module SwfStoModule
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: set_dfw_pointers
-    procedure, private :: get_volume
     procedure, private :: reach_length_pointer
     procedure, private :: calc_storage_dis1d
     procedure, private :: calc_storage_dis2d
@@ -91,14 +89,8 @@ contains
     stoobj%inunit = inunit
     stoobj%iout = iout
 
-    ! -- store pointer to disl
-    !    Not normally good practice, but since SWF only works with DISL
-    !    may be okay
+    ! -- store pointers
     stoobj%dis => dis
-    select type (dis)
-    type is (SwfDislType)
-      stoobj%disl => dis
-    end select
     stoobj%cxs => cxs
 
     ! -- Initialize block parser
@@ -747,29 +739,6 @@ contains
     call mem_setptr(this%width, 'WIDTH', dfw_mem_path)
 
   end subroutine set_dfw_pointers
-
-  !> @brief Set pointers to channel properties in DFW Package
-  !<
-  function get_volume(this, stage, bot, idcxs, width, dx) result(volume)
-    ! -- modules
-    ! -- dummy
-    class(SwfStoType) :: this !< this instance
-    real(DP), intent(in) :: stage
-    real(DP), intent(in) :: bot
-    integer(I4B), intent(in) :: idcxs
-    real(DP), intent(in) :: width
-    real(DP), intent(in) :: dx
-    ! return
-    real(DP) :: volume
-    ! -- local
-    real(DP) :: depth
-    real(DP) :: cxs_area
-
-    depth = stage - bot
-    cxs_area = this%cxs%get_area(idcxs, width, depth)
-    volume = cxs_area * dx
-
-  end function get_volume
 
   function reach_length_pointer(this) result(ptr)
     ! dummy

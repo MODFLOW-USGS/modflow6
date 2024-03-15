@@ -393,7 +393,11 @@ contains
       write (errmsg, '(a)') 'Error in GRIDDATA block: SLOPE not found.'
       call store_error(errmsg)
     end if
-    !
+
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_fname)
+    end if
+
     ! -- log griddata
     if (this%iout > 0) then
       call this%log_griddata(found)
@@ -627,26 +631,29 @@ contains
       cl1 = this%dis%con%cl2(isympos)
       cl2 = this%dis%con%cl1(isympos)
     end if
-    cond = this%get_cond(n, m, stage_n, stage_m, cl1, cl2)
+    cond = this%get_cond(n, m, ipos, stage_n, stage_m, cl1, cl2)
     qnm = cond * (stage_m - stage_n)
     return
   end function qcalc
 
-  function get_cond(this, n, m, stage_n, stage_m, cl1, cl2) result(cond)
+  function get_cond(this, n, m, ipos, stage_n, stage_m, cln, clm) result(cond)
     ! -- modules
     use SmoothingModule, only: sQuadratic
     ! -- dummy
     class(SwfDfwType) :: this
     integer(I4B), intent(in) :: n !< number for cell n
     integer(I4B), intent(in) :: m !< number for cell m
+    integer(I4B), intent(in) :: ipos !< connection number
     real(DP), intent(in) :: stage_n !< stage in reach n
     real(DP), intent(in) :: stage_m !< stage in reach m
-    real(DP), intent(in) :: cl1 !< distance from cell n to shared face with m
-    real(DP), intent(in) :: cl2 !< distance from cell m to shared face with n
+    real(DP), intent(in) :: cln !< distance from cell n to shared face with m
+    real(DP), intent(in) :: clm !< distance from cell m to shared face with n
     ! -- local
     real(DP) :: absdhdxsqr
     real(DP) :: depth_n
     real(DP) :: depth_m
+    real(DP) :: width_n
+    real(DP) :: width_m
     real(DP) :: range = 1.d-2
     real(DP) :: dydx
     real(DP) :: smooth_factor
@@ -654,12 +661,11 @@ contains
     real(DP) :: cond
     real(DP) :: cn
     real(DP) :: cm
-    !
+
     ! we are using a harmonic conductance approach here; however
     ! the SWR Process for MODFLOW-2005/NWT uses length-weighted
     ! average areas and hydraulic radius instead.
-    !
-    denom = cl1 + cl2
+    denom = cln + clm
     cond = DZERO
     if (denom > DPREC) then
       absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
@@ -667,11 +673,11 @@ contains
         ! TODO: Set this differently somehow?
         absdhdxsqr = 1.e-7
       end if
-      !
+
       ! -- Calculate depth in each reach
       depth_n = stage_n - this%dis%bot(n)
       depth_m = stage_m - this%dis%bot(m)
-      !
+
       ! -- Assign upstream depth, if not central
       if (this%icentral == 0) then
         ! -- use upstream weighting
@@ -681,19 +687,22 @@ contains
           depth_n = depth_m
         end if
       end if
-      !
+
       ! -- Calculate a smoothed depth that goes to zero over
       !    the specified range
       call sQuadratic(depth_n, range, dydx, smooth_factor)
       depth_n = depth_n * smooth_factor
       call sQuadratic(depth_m, range, dydx, smooth_factor)
       depth_m = depth_m * smooth_factor
-      !
+
+      ! Get the flow widths for n and m from dis package
+      call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
+
       ! -- Calculate half-cell conductance for reach
       !    n and m
-      cn = this%get_cond_n(n, depth_n, absdhdxsqr, cl1)
-      cm = this%get_cond_n(m, depth_m, absdhdxsqr, cl2)
-      !
+      cn = this%get_cond_n(n, depth_n, absdhdxsqr, cln, width_n)
+      cm = this%get_cond_n(m, depth_m, absdhdxsqr, clm, width_m)
+
       ! -- Use harmonic mean to calculated weighted
       !    conductance bewteen the centers of reaches
       !    n and m
@@ -711,7 +720,7 @@ contains
   !!
   !! Calculate half reach conductance for reach n
   !< using conveyance and Manning's equation
-  function get_cond_n(this, n, depth, absdhdxsq, dx) result(c)
+  function get_cond_n(this, n, depth, absdhdxsq, dx, width) result(c)
     ! -- modules
     ! -- dummy
     class(SwfDfwType) :: this
@@ -719,15 +728,14 @@ contains
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
     real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
     real(DP), intent(in) :: dx !< half-cell distance
+    real(DP), intent(in) :: width !< width of the reach perpendicular to flow
     ! -- return
     real(DP) :: c
     ! -- local
-    real(DP) :: width
     real(DP) :: rough
     real(DP) :: conveyance
 
     ! Calculate conveyance, which a * r**DTWOTHIRDS / roughc
-    width = this%width(n)
     rough = this%manningsn(n)
     conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
 

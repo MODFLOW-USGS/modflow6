@@ -1,6 +1,8 @@
 BEGIN GRIDDATA
   REACH_LENGTH
     <reach_length(nodes)> -- READARRAY
+  REACH_WIDTH
+    <reach_width(nodes)> -- READARRAY
   REACH_BOTTOM
     <reach_bottom(nodes)> -- READARRAY
   [TOREACH

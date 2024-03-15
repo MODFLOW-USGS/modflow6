@@ -105,6 +105,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         reach_length=dx,
+        reach_width=1.,
         reach_bottom=reach_bottom,
         idomain=1,
         vertices=vertices,

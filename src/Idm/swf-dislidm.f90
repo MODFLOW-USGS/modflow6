@@ -21,6 +21,7 @@ module SwfDislInputModule
     logical :: nodes = .false.
     logical :: nvert = .false.
     logical :: reach_length = .false.
+    logical :: reach_width = .false.
     logical :: reach_bottom = .false.
     logical :: toreach = .false.
     logical :: idomain = .false.
@@ -197,6 +198,23 @@ module SwfDislInputModule
     'GRIDDATA', & ! block
     'REACH_LENGTH', & ! tag name
     'REACH_LENGTH', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .true., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfdisl_reach_width = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DISL', & ! subcomponent
+    'GRIDDATA', & ! block
+    'REACH_WIDTH', & ! tag name
+    'REACH_WIDTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
     .true., & ! required
@@ -406,6 +424,7 @@ module SwfDislInputModule
     swfdisl_nodes, &
     swfdisl_nvert, &
     swfdisl_reach_length, &
+    swfdisl_reach_width, &
     swfdisl_reach_bottom, &
     swfdisl_toreach, &
     swfdisl_idomain, &
