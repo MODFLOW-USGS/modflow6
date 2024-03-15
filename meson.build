@@ -238,11 +238,11 @@ testdir = meson.project_source_root() / '.mf6minsim'
 if with_mpi
   mpiexec = find_program('mpiexec', required : false)
   if mpiexec.found()
-    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
-    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
-    test('Serial simulation test', mf6exe, workdir : testdir)
-    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'])
-    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'])
+    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'], is_parallel : false)
+    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'], is_parallel : false)
+    test('Serial simulation test', mf6exe, workdir : testdir, is_parallel : false)
+    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'], is_parallel : false)
+    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'], is_parallel : false)
   endif
 else
   test('Version command line test', mf6exe, args : ['-v',])
