@@ -337,12 +337,6 @@ def check_output(idx, test):
     name = cases[idx]
     gwfname = "gwf-" + name
 
-    # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
-    gwf = sim1.get_model(gwfname)
-
     # get final lake stage
     lk_pth0 = os.path.join(test.workspace, f"{gwfname}.lak.obs.csv")
     lkstg = np.genfromtxt(lk_pth0, names=True, delimiter=",")
@@ -398,13 +392,17 @@ def check_output(idx, test):
         assert np.isclose(warea, checks_out[ii], atol=1e-5), msg
 
 
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        netcdf=True if source == "netcdf" else False,
     )
     test.run()
