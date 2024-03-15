@@ -172,11 +172,18 @@ contains
   !<
   subroutine load_model_pkgs(model_pkg_inputs, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceLoadModule, only: open_source_file
+    use SourceLoadModule, only: open_source_file, create_context
     use IdmDfnSelectorModule, only: idm_integrated
     type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
     integer(i4B), intent(in) :: iout
     integer(I4B) :: itype, ipkg
+    !
+    ! -- create model context object
+    call create_context(model_pkg_inputs%modeltype, &
+                        model_pkg_inputs%component_type, &
+                        model_pkg_inputs%modelname, &
+                        model_pkg_inputs%modelfname, &
+                        model_pkg_inputs%pkglist, iout)
     !
     ! -- load package instances by type
     do itype = 1, size(model_pkg_inputs%pkglist)

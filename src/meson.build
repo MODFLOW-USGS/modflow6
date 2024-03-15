@@ -274,6 +274,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'ModelPackageInputs.f90',
     'Utilities' / 'Idm' / 'ModflowInput.f90',
     'Utilities' / 'Idm' / 'SourceCommon.f90',
+    'Utilities' / 'Idm' / 'SourceContext.f90',
     'Utilities' / 'Idm' / 'SourceLoad.F90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'AsciiInputLoadType.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'IdmMf6File.f90',
@@ -282,6 +283,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'mf6blockfile' / 'Mf6FileListInput.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructArray.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructVector.f90',
+    'Utilities' / 'Idm' / 'netcdf' / 'NCModelInputs.f90',
     'Utilities' / 'Matrix' / 'MatrixBase.f90',
     'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
@@ -376,12 +378,25 @@ modflow_mpi_sources = files(
   'Solution' / 'ParallelSolution.f90'
 )
 
+modflow_netcdf_sources = files(
+  'Utilities' / 'Idm' / 'netcdf' / 'IdmNCFile.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'LoadNCFile.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCContextBuild.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCFileGridInput.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCFileListInput.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCInputLoadType.f90',
+)
+
 if with_petsc
   modflow_sources += modflow_petsc_sources  
 endif
 
 if with_mpi
   modflow_sources += modflow_mpi_sources
+endif
+
+if with_netcdf
+  modflow_sources += modflow_netcdf_sources
 endif
 
 mf6_external = static_library('mf6_external', external_libraries)

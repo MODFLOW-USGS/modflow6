@@ -44,6 +44,8 @@ contains
     ext = file_ext(sourcename)
     !
     select case (ext)
+    case ('nc')
+      sourcetype = 'NETCDF4'
     case default
       sourcetype = 'MF6FILE'
     end select
