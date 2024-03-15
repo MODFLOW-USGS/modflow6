@@ -5,42 +5,42 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Idm
-SOURCEDIR4=../src/Idm/selector
-SOURCEDIR5=../src/Timing
-SOURCEDIR6=../src/Model
-SOURCEDIR7=../src/Model/Connection
-SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Model/GroundWaterFlow
-SOURCEDIR11=../src/Model/Geometry
-SOURCEDIR12=../src/Model/TransportModel
-SOURCEDIR13=../src/Model/GroundWaterTransport
-SOURCEDIR14=../src/Model/SurfaceWaterFlow
-SOURCEDIR15=../src/Model/ParticleTracking
-SOURCEDIR16=../src/Model/GroundWaterEnergy
-SOURCEDIR17=../src/Solution
-SOURCEDIR18=../src/Solution/ParticleTracker
-SOURCEDIR19=../src/Solution/LinearMethods
-SOURCEDIR20=../src/Solution/PETSc
-SOURCEDIR21=../src/Distributed
-SOURCEDIR22=../src/Utilities
-SOURCEDIR23=../src/Utilities/TimeSeries
-SOURCEDIR24=../src/Utilities/Idm
-SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR26=../src/Utilities/ArrayRead
-SOURCEDIR27=../src/Utilities/Memory
-SOURCEDIR28=../src/Utilities/Matrix
-SOURCEDIR29=../src/Utilities/Vector
-SOURCEDIR30=../src/Utilities/Observation
-SOURCEDIR31=../src/Utilities/OutputControl
-SOURCEDIR32=../src/Utilities/Libraries
-SOURCEDIR33=../src/Utilities/Libraries/rcm
-SOURCEDIR34=../src/Utilities/Libraries/sparskit2
-SOURCEDIR35=../src/Utilities/Libraries/sparsekit
-SOURCEDIR36=../src/Utilities/Libraries/blas
-SOURCEDIR37=../src/Utilities/Libraries/daglib
+SOURCEDIR2=../src/Idm
+SOURCEDIR3=../src/Idm/selector
+SOURCEDIR4=../src/Exchange
+SOURCEDIR5=../src/Distributed
+SOURCEDIR6=../src/Solution
+SOURCEDIR7=../src/Solution/LinearMethods
+SOURCEDIR8=../src/Solution/ParticleTracker
+SOURCEDIR9=../src/Solution/PETSc
+SOURCEDIR10=../src/Timing
+SOURCEDIR11=../src/Utilities
+SOURCEDIR12=../src/Utilities/Idm
+SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR14=../src/Utilities/TimeSeries
+SOURCEDIR15=../src/Utilities/Memory
+SOURCEDIR16=../src/Utilities/OutputControl
+SOURCEDIR17=../src/Utilities/ArrayRead
+SOURCEDIR18=../src/Utilities/Libraries
+SOURCEDIR19=../src/Utilities/Libraries/rcm
+SOURCEDIR20=../src/Utilities/Libraries/blas
+SOURCEDIR21=../src/Utilities/Libraries/sparskit2
+SOURCEDIR22=../src/Utilities/Libraries/daglib
+SOURCEDIR23=../src/Utilities/Libraries/sparsekit
+SOURCEDIR24=../src/Utilities/Vector
+SOURCEDIR25=../src/Utilities/Matrix
+SOURCEDIR26=../src/Utilities/Observation
+SOURCEDIR27=../src/Model
+SOURCEDIR28=../src/Model/Connection
+SOURCEDIR29=../src/Model/ParticleTracking
+SOURCEDIR30=../src/Model/SurfaceWaterFlow
+SOURCEDIR31=../src/Model/GroundWaterTransport
+SOURCEDIR32=../src/Model/ModelUtilities
+SOURCEDIR33=../src/Model/GroundWaterFlow
+SOURCEDIR34=../src/Model/Discretization
+SOURCEDIR35=../src/Model/TransportModel
+SOURCEDIR36=../src/Model/Geometry
+SOURCEDIR37=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -107,7 +107,9 @@ $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
+$(OBJDIR)/swf-disvidm.o \
 $(OBJDIR)/swf-dislidm.o \
+$(OBJDIR)/swf-disidm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
 $(OBJDIR)/swf-chdidm.o \

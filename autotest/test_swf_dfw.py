@@ -69,6 +69,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         reach_length=dx,
+        reach_width=50.,
         reach_bottom=0.0,
         toreach=toreach,  # -1 gives 0 in one-based, which means outflow cell
         idomain=1,
@@ -80,7 +81,6 @@ def build_models(idx, test):
         swf,
         print_flows=True,
         save_flows=True,
-        width=50.0,
         manningsn=0.035,
         slope=0.001,
         idcxs=0,

@@ -6,7 +6,7 @@ module SwfDislModule
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate
   use SimModule, only: count_errors, store_error, store_error_unit, &
-                       store_warning
+                       store_warning, store_error_filename
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
   use DislGeom, only: calcdist
@@ -22,6 +22,7 @@ module SwfDislModule
     real(DP), pointer :: convlength => null() !< conversion factor for length
     real(DP), pointer :: convtime => null() !< conversion factor for time
     real(DP), dimension(:), pointer, contiguous :: reach_length => null() !< length of each reach
+    real(DP), dimension(:), pointer, contiguous :: reach_width => null() !< reach width
     real(DP), dimension(:), pointer, contiguous :: reach_bottom => null() !< reach bottom elevation
     integer(I4B), dimension(:), pointer, contiguous :: toreach => null() !< downstream reach index (nodes)
     integer(I4B), dimension(:), pointer, contiguous :: idomain => null() !< idomain (nodes)
@@ -33,7 +34,10 @@ module SwfDislModule
     logical(LGP) :: toreachConnectivity = .false. !< flag to indicate build connectivity from toreach instead of vertices
   contains
     procedure :: disl_load
+    procedure :: dis_df => disl_df
     procedure :: dis_da => disl_da
+    procedure :: get_dis_type => get_dis_type
+    procedure :: get_flow_width => get_flow_width
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- private
@@ -95,14 +99,37 @@ contains
         write (iout, fmtheader) dis%input_mempath
       end if
 
-      ! -- load disl
-      call disnew%disl_load()
-
     end if
     !
     ! -- Return
     return
   end subroutine disl_cr
+
+  !> @brief Define the discretization
+  !<
+  subroutine disl_df(this)
+    ! -- dummy
+    class(SwfDislType) :: this
+    !
+    ! -- Transfer the data from the memory manager into this package object
+    if (this%inunit /= 0) then
+      call this%disl_load()
+    end if
+
+    ! create connectivity using toreach or vertices and cell2d
+    call this%create_connections()
+
+    ! finalize the grid
+    call this%grid_finalize()
+
+  end subroutine disl_df
+
+  !> @brief Get the discretization type (DIS, DISV, DISU, DISL)
+  subroutine get_dis_type(this, dis_type)
+    class(SwfDislType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
+    dis_type = "DISL"
+  end subroutine get_dis_type
 
   !> @brief Allocate scalar variables
   !<
@@ -149,14 +176,6 @@ contains
       call this%source_cell2d()
     end if
 
-    ! create connectivity using toreach or vertices and cell2d
-    call this%create_connections()
-
-    ! finalize the grid
-    call this%grid_finalize()
-    !
-    ! -- Return
-    return
   end subroutine disl_load
 
   !> @brief Copy options from IDM into package
@@ -291,6 +310,8 @@ contains
     ! -- Allocate non-reduced vectors for disl
     call mem_allocate(this%reach_length, this%nodesuser, &
                       'REACH_LENGTH', this%memoryPath)
+    call mem_allocate(this%reach_width, this%nodesuser, &
+                      'REACH_WIDTH', this%memoryPath)
     call mem_allocate(this%reach_bottom, this%nodesuser, &
                       'REACH_BOTTOM', this%memoryPath)
     call mem_allocate(this%toreach, this%nodesuser, &
@@ -311,6 +332,7 @@ contains
     ! -- initialize all cells to be active (idomain = 1)
     do n = 1, this%nodesuser
       this%reach_length(n) = DZERO
+      this%reach_width(n) = DZERO
       this%reach_bottom(n) = DZERO
       this%toreach(n) = 0
       this%idomain(n) = 1
@@ -359,6 +381,8 @@ contains
     ! -- update defaults with idm sourced values
     call mem_set_value(this%reach_length, 'REACH_LENGTH', idmMemoryPath, &
                        found%reach_length)
+    call mem_set_value(this%reach_width, 'REACH_WIDTH', idmMemoryPath, &
+                       found%reach_width)
     call mem_set_value(this%reach_bottom, 'REACH_BOTTOM', idmMemoryPath, &
                        found%reach_bottom)
     call mem_set_value(this%toreach, 'TOREACH', idmMemoryPath, &
@@ -367,7 +391,26 @@ contains
       this%toreachConnectivity = .true.
     end if
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
-    !
+
+    if (.not. found%reach_length) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_LENGTH not found.'
+      call store_error(errmsg)
+    end if
+
+    if (.not. found%reach_width) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_WIDTH not found.'
+      call store_error(errmsg)
+    end if
+
+    if (.not. found%reach_bottom) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_BOTTOM not found.'
+      call store_error(errmsg)
+    end if
+
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_fname)
+    end if
+
     ! -- log simulation values
     if (this%iout > 0) then
       call this%log_griddata(found)
@@ -388,6 +431,10 @@ contains
 
     if (found%reach_length) then
       write (this%iout, '(4x,a)') 'REACH_LENGTH set from input file'
+    end if
+
+    if (found%reach_width) then
+      write (this%iout, '(4x,a)') 'REACH_WIDTH set from input file'
     end if
 
     if (found%reach_bottom) then
@@ -620,27 +667,24 @@ contains
   !> @brief Finalize grid construction
   !<
   subroutine grid_finalize(this)
-    ! -- modules
+    ! modules
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
-    ! -- dummy
+    ! dummy
     class(SwfDislType) :: this
-    ! -- locals
+    ! local
     integer(I4B) :: node, noder, k
-    ! -- formats
-    ! -- data
-    !
-    ! -- count active cells
+
+    ! count active cells
     this%nodes = 0
     do k = 1, this%nodesuser
       if (this%idomain(k) > 0) this%nodes = this%nodes + 1
     end do
     !
-    ! -- Check to make sure nodes is a valid number
+    ! Check to make sure nodes is a valid number
     if (this%nodes == 0) then
-      call store_error('MODEL DOES NOT HAVE ANY ACTIVE NODES.')
-      call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
-        &THAN ZERO.')
+      call store_error('Model does not have any active nodes.  Make sure &
+                       &IDOMAIN has some values greater than zero.')
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -649,14 +693,14 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- Array size is now known, so allocate
+
+    ! Array size is now known, so allocate
     call this%allocate_arrays()
-    !
-    ! -- Fill the nodereduced array with the reduced nodenumber, or
-    !    a negative number to indicate it is a pass-through cell, or
-    !    a zero to indicate that the cell is excluded from the
-    !    solution.
+
+    ! Fill the nodereduced array with the reduced nodenumber, or
+    ! a negative number to indicate it is a pass-through cell, or
+    ! a zero to indicate that the cell is excluded from the
+    ! solution.
     if (this%nodes < this%nodesuser) then
       node = 1
       noder = 1
@@ -672,8 +716,8 @@ contains
         node = node + 1
       end do
     end if
-    !
-    ! -- allocate and fill nodeuser if a reduced grid
+
+    ! allocate and fill nodeuser if a reduced grid
     if (this%nodes < this%nodesuser) then
       node = 1
       noder = 1
@@ -685,10 +729,15 @@ contains
         node = node + 1
       end do
     end if
-    !
-    ! -- Move reach_bottom into bot
+
+    ! Copy reach_bottom into bot
     do node = 1, this%nodesuser
       this%bot(node) = this%reach_bottom(node)
+    end do
+
+    ! Assign area in DisBaseType as reach_length
+    do node = 1, this%nodesuser
+      this%area(node) = this%reach_length(node)
     end do
 
     ! -- Return
@@ -739,14 +788,16 @@ contains
     ! -- Create connectivity
     if (this%toreachConnectivity) then
       ! -- build connectivity based on toreach
-      call this%con%dislconnections(this%name_model, this%toreach)
+      call this%con%dislconnections(this%name_model, this%toreach, &
+                                    this%reach_length)
     else
       ! -- build connectivity based on vertices
       call this%con%dislconnections_verts(this%name_model, this%nodes, &
                                           this%nodesuser, nrsize, this%nvert, &
                                           this%vertices, this%iavert, &
                                           this%javert, this%cellxyz, this%fdc, &
-                                          this%nodereduced, this%nodeuser)
+                                          this%nodereduced, this%nodeuser, &
+                                          this%reach_length)
     end if
 
     this%nja = this%con%nja
@@ -1011,6 +1062,7 @@ contains
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     call mem_deallocate(this%reach_length)
+    call mem_deallocate(this%reach_width)
     call mem_deallocate(this%reach_bottom)
     call mem_deallocate(this%toreach)
     call mem_deallocate(this%idomain)
@@ -1163,5 +1215,26 @@ contains
     ! -- return
     return
   end subroutine record_srcdst_list_header
+
+  !> @ brief Calculate the flow width between two cells
+  !!
+  !! This should only be called for connections with IHC > 0.
+  !! Routine is needed, so it can be overridden by the linear
+  !! network discretization, which allows for a separate flow
+  !< width for each cell.
+  subroutine get_flow_width(this, n, m, idx_conn, width_n, width_m)
+    ! dummy
+    class(SwfDislType) :: this
+    integer(I4B), intent(in) :: n !< cell node number
+    integer(I4B), intent(in) :: m !< cell node number
+    integer(I4B), intent(in) :: idx_conn !< connection index
+    real(DP), intent(out) :: width_n !< flow width for cell n
+    real(DP), intent(out) :: width_m !< flow width for cell m
+
+    ! For disl case, width_n and width_m can be different
+    width_n = this%reach_width(n)
+    width_m = this%reach_width(m)
+
+  end subroutine get_flow_width
 
 end module SwfDislModule

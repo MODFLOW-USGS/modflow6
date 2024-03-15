@@ -1,11 +1,7 @@
-! -- SWF Initial Conditions Module
-! replicated from GwfIcModule to use IDM
-
 module SwfIcModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH
-  use SimVariablesModule, only: errmsg
+  use ConstantsModule, only: LINELENGTH
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
@@ -15,21 +11,23 @@ module SwfIcModule
   public :: SwfIcType
   public :: ic_cr
 
-  ! -- Most of the SwfIcType functionality is replicated from GWF
   type, extends(NumericalPackageType) :: SwfIcType
-    real(DP), dimension(:), pointer, contiguous :: strt => null() ! starting stage
+
+    real(DP), dimension(:), pointer, contiguous :: strt => null() ! starting head
+
   contains
+
     procedure :: ic_ar
     procedure :: ic_da
-    procedure :: ic_load
-    procedure :: source_griddata
-    procedure :: log_griddata
+    procedure, private :: ic_load
     procedure, private :: allocate_arrays
+    procedure, private :: source_griddata
+
   end type SwfIcType
 
 contains
 
-  !> @brief create package
+  !> @brief Create a new initial conditions object
   !<
   subroutine ic_cr(ic, name_model, input_mempath, inunit, iout, dis)
     ! -- modules
@@ -41,75 +39,68 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     class(DisBaseType), pointer, intent(in) :: dis
-    ! -- local
-    logical(LGP) :: found_fname
     ! -- formats
-    character(len=*), parameter :: fmtheader = &
-      "(1x, /1x, 'IC --  INITIAL CONDITIONS (IC) PACKAGE, VERSION 1, 10/10/2023', &
-       &' INPUT READ FROM MEMPATH: ', A, /)"
+    character(len=*), parameter :: fmtic = &
+      "(1x, /1x, 'IC -- Initial Conditions Package, Version 8, 3/28/2015', &
+      &' input read from mempath: ', A, //)"
     !
-    ! -- Create the object
+    ! -- create IC object
     allocate (ic)
     !
     ! -- create name and memory path
-    call ic%set_names(1, name_model, 'IC', 'IC')
+    call ic%set_names(1, name_model, 'IC', 'IC', input_mempath)
     !
-    ! -- Allocate scalars
+    ! -- allocate scalars
     call ic%allocate_scalars()
     !
-    ! -- Set variables
-    ic%input_mempath = input_mempath
+    ! -- set variables
     ic%inunit = inunit
     ic%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(ic%input_fname, 'INPUT_FNAME', ic%input_mempath, &
-                       found_fname)
     !
     ! -- set pointers
     ic%dis => dis
     !
-    ! -- check if ic is enabled
+    ! -- check if pkg is enabled,
     if (inunit > 0) then
-
-      ! -- Print a message identifying the package.
-      write (iout, fmtheader) input_mempath
-
-      ! -- allocate arrays
-      call ic%allocate_arrays()
-
-      ! -- load ic
-      call ic%ic_load()
-
+      ! print message identifying pkg
+      write (ic%iout, fmtic) input_mempath
     end if
-    !
-    ! -- Return
-    return
   end subroutine ic_cr
 
-  !> @brief allocate and read
-  !!
-  !! Set model dependent variable to initial conditions
-  !!
+  !> @brief Load data from IDM into package
+  !<
+  subroutine ic_load(this)
+    ! -- modules
+    use BaseDisModule, only: DisBaseType
+    ! -- dummy
+    class(SwfIcType) :: this
+    !
+    call this%source_griddata()
+  end subroutine ic_load
+
+  !> @brief Allocate arrays, load from IDM, and assign head
   !<
   subroutine ic_ar(this, x)
-    ! -- modules
-    use SimModule, only: store_error
     ! -- dummy
     class(SwfIcType) :: this
     real(DP), dimension(:), intent(inout) :: x
-    ! -- locals
+    ! -- local
     integer(I4B) :: n
     !
-    ! -- Assign x equal to strt
+    ! -- allocate arrays
+    call this%allocate_arrays(this%dis%nodes)
+    !
+    ! -- load from IDM
+    call this%ic_load()
+    !
+    ! -- assign starting head
     do n = 1, this%dis%nodes
       x(n) = this%strt(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine ic_ar
 
+  !> @brief Deallocate
+  !<
   subroutine ic_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
@@ -118,107 +109,58 @@ contains
     ! -- dummy
     class(SwfIcType) :: this
     !
-    ! -- Deallocate input memory
+    ! -- deallocate IDM memory
     call memorylist_remove(this%name_model, 'IC', idm_context)
+    !
+    ! -- deallocate arrays
+    call mem_deallocate(this%strt)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Scalars
-    !
-    ! -- Arrays
-    call mem_deallocate(this%strt)
-    !
-    ! -- Return
-    return
   end subroutine ic_da
 
-  !> @brief load data from IDM to package
+  !> @brief Allocate arrays
   !<
-  subroutine ic_load(this)
-    ! -- dummy
-    class(SwfIcType) :: this
-    ! -- locals
-    !
-    ! -- source input data
-    call this%source_griddata()
-    !
-    ! -- Return
-    return
-  end subroutine ic_load
-
-  !> @brief copy griddata from IDM to package
-  !<
-  subroutine source_griddata(this)
-    ! -- modules
-    use SimModule, only: count_errors, store_error
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_reallocate
-    use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
-    use SwfIcInputModule, only: SwfIcParamFoundType
-    ! -- dummy
-    class(SwfIcType) :: this
-    ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
-    type(SwfIcParamFoundType) :: found
-    integer(I4B), dimension(:), pointer, contiguous :: map
-    ! -- formats
-    !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'IC', idm_context)
-    !
-    ! -- set map to convert user input data into reduced data
-    map => null()
-    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
-    !
-    ! -- update defaults with idm sourced values
-    call mem_set_value(this%strt, 'STRT', idmMemoryPath, map, found%strt)
-    !
-    ! -- ensure STRT was found
-    if (.not. found%strt) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: STRT not found.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- log griddata
-    if (this%iout > 0) then
-      call this%log_griddata(found)
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine source_griddata
-
-  !> @brief log griddata to list file
-  !<
-  subroutine log_griddata(this, found)
-    use SwfIcInputModule, only: SwfIcParamFoundType
-    class(SwfIcType) :: this
-    type(SwfIcParamFoundType), intent(in) :: found
-
-    write (this%iout, '(1x,a)') 'Setting IC Griddata'
-
-    if (found%strt) then
-      write (this%iout, '(4x,a)') 'STRT set from input file'
-    end if
-
-    write (this%iout, '(1x,a,/)') 'End Setting IC Griddata'
-
-  end subroutine log_griddata
-
-  subroutine allocate_arrays(this)
+  subroutine allocate_arrays(this, nodes)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(SwfIcType) :: this
-    ! -- local
+    integer(I4B), intent(in) :: nodes
     !
     ! -- Allocate
-    call mem_allocate(this%strt, this%dis%nodes, 'STRT', this%memoryPath)
-    !
-    ! -- Return
-    return
+    call mem_allocate(this%strt, nodes, 'STRT', this%memoryPath)
   end subroutine allocate_arrays
+
+  !> @brief Copy grid data from IDM into package
+  !<
+  subroutine source_griddata(this)
+    ! -- modules
+    use SimModule, only: store_error, store_error_filename
+    use MemoryManagerExtModule, only: mem_set_value
+    use SwfIcInputModule, only: SwfIcParamFoundType
+    ! -- dummy
+    class(SwfIcType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    type(SwfIcParamFoundType) :: found
+    integer(I4B), dimension(:), pointer, contiguous :: map
+    !
+    ! -- set map to convert user to reduced node data
+    map => null()
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
+    !
+    ! -- set values
+    call mem_set_value(this%strt, 'STRT', this%input_mempath, map, found%strt)
+    !
+    ! -- ensure STRT was found
+    if (.not. found%strt) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: STRT not found.'
+      call store_error(errmsg, terminate=.false.)
+      call store_error_filename(this%input_fname)
+    else if (this%iout > 0) then
+      write (this%iout, '(4x,a)') 'STRT set from input file'
+    end if
+  end subroutine source_griddata
 
 end module SwfIcModule

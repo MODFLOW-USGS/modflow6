@@ -332,7 +332,7 @@ contains
 
       ! -- calculate terms and add to hcof and rhs
       absdhdxsq = this%slope(i)**DHALF
-      depth = this%xnew(node) - this%disl%reach_bottom(node)
+      depth = this%xnew(node) - this%dis%bot(node)
 
       ! -- calculate unperturbed q
       cond = this%get_cond(i, depth, absdhdxsq, this%unitconv)

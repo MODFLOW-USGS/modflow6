@@ -1,7 +1,11 @@
 """
 
-Same as test_swf_dfw_swr2.py except this one uses
-the adaptive time stepping (ATS).  
+SWR Test Problem 2 simulates two-dimensional overland flow using
+a grid of rows and columns.  The SWR code was compared with results
+from SWIFT2D, a USGS 2D overland flow simulator.  This version of 
+the problem uses the DIS Package as a 2d grid.  The problem is set up
+so that once steady conditions are achieved, the depth in each reach
+should be 1.0 m.  
 
 """
 
@@ -14,7 +18,7 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-swr-t2b",
+    "swf-swr-t2-dis",
 ]
 
 
@@ -42,27 +46,11 @@ def build_models(idx, test):
         sim, time_units="SECONDS", nper=nper, perioddata=tdis_rc
     )
 
-    # set dt0, dtmin, dtmax, dtadj, dtfailadj
-    dt0 = 60 * 60.0 * 24.0  # 24 hours
-    dtmin = 1.0 * 60.0  # 1 minute
-    dtmax = 60 * 60.0 * 24.0  # 24 hours
-    dtadj = 2.0
-    dtfailadj = 5.0
-    ats_filerecord = name + ".ats"
-    atsperiod = [
-        (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
-    ]
-    tdis.ats.initialize(
-        maxats=len(atsperiod),
-        perioddata=atsperiod,
-        filename=ats_filerecord,
-    )
-
     # surface water model
     swfname = f"{name}_model"
     swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
 
-    nouter, ninner = 10, 50
+    nouter, ninner = 100, 50
     hclose, rclose, relax = 1e-8, 1e-8, 1.0
     imsswf = flopy.mf6.ModflowIms(
         sim,
@@ -87,27 +75,43 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsswf, [swf.name])
 
-    vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
-    cell2d = []
-    for j in range(nreach):
-        cell2d.append([j, 0.5, 2, j, j + 1])
-    nodes = len(cell2d)
-    nvert = len(vertices)
+    # vertices = []
+    # vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    # cell2d = []
+    # for j in range(nreach):
+    #     cell2d.append([j, 0.5, 2, j, j + 1])
+    # nodes = len(cell2d)
+    # nvert = len(vertices)
 
-    reach_bottom = np.linspace(1.05, 0.05, nreach)
+    nlay = 1
+    nrow = 11
+    ncol = 11
+    botm = np.empty((nlay, nrow, ncol), dtype=float)
+    for i in range(nrow):
+        botm[0, i, :] = np.linspace(1.05, 0.05, nrow)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    dis = flopy.mf6.ModflowSwfdis(
         swf,
-        nodes=nodes,
-        nvert=nvert,
-        reach_length=dx,
-        reach_width=dx,
-        reach_bottom=reach_bottom,
-        idomain=1,
-        vertices=vertices,
-        cell2d=cell2d,
+        nlay=1,
+        nrow=11,
+        ncol=11,
+        delr=dx,
+        delc=dx,
+        top=100.,
+        botm=botm,
     )
+
+    # disl = flopy.mf6.ModflowSwfdisl(
+    #     swf,
+    #     nodes=nodes,
+    #     nvert=nvert,
+    #     reach_length=dx,
+    #     reach_width=dx,
+    #     reach_bottom=reach_bottom,
+    #     idomain=1,
+    #     vertices=vertices,
+    #     cell2d=cell2d,
+    # )
 
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
@@ -144,38 +148,39 @@ def build_models(idx, test):
     )
 
     # flw
-    inflow_reach = 0
     qinflow = 23.570
+    spd = [(0, i, 0, qinflow) for i in range(nrow)]
     flw = flopy.mf6.ModflowSwfflw(
         swf,
-        maxbound=1,
+        maxbound=len(spd),
         print_input=True,
         print_flows=True,
-        stress_period_data=[(inflow_reach, qinflow)],
+        stress_period_data=spd,
     )
 
+    spd = [(0, i, ncol - 1, 1.05) for i in range(nrow)]
     chd = flopy.mf6.ModflowSwfchd(
         swf,
-        maxbound=1,
+        maxbound=len(spd),
         print_input=True,
         print_flows=True,
-        stress_period_data=[(nreach - 1, 1.05)],
+        stress_period_data=spd,
     )
 
-    obs_data = {
-        f"{swfname}.obs.csv": [
-            ("OBS1", "STAGE", (1,)),
-            ("OBS2", "STAGE", (5,)),
-            ("OBS3", "STAGE", (8,)),
-        ],
-    }
-    obs_package = flopy.mf6.ModflowUtlobs(
-        swf,
-        filename=f"{swfname}.obs",
-        digits=10,
-        print_input=True,
-        continuous=obs_data,
-    )
+    # obs_data = {
+    #     f"{swfname}.obs.csv": [
+    #         ("OBS1", "STAGE", (1,)),
+    #         ("OBS2", "STAGE", (5,)),
+    #         ("OBS3", "STAGE", (8,)),
+    #     ],
+    # }
+    # obs_package = flopy.mf6.ModflowUtlobs(
+    #     swf,
+    #     filename=f"{swfname}.obs",
+    #     digits=10,
+    #     print_input=True,
+    #     continuous=obs_data,
+    # )
 
     return sim, None
 
@@ -226,12 +231,10 @@ def check_output(idx, test):
     fpth = test.workspace / f"{swfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
-    # for kstp, stage in enumerate(stage_all):
-    #     print(kstp, stage.flatten())
 
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.disl.reach_bottom.array
+    depth = stage_all[-1] - swf.dis.botm.array
     np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"

@@ -44,6 +44,8 @@ gwe-dis.dfn
 # swf model
 swf-nam.dfn
 swf-disl.dfn
+swf-dis.dfn
+swf-disv.dfn
 swf-cxs.dfn
 swf-dfw.dfn
 swf-ic.dfn

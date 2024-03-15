@@ -33,10 +33,8 @@ module SwfStoModule
 
     ! -- pointers to information in dfw package
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< pointer to cross section id vector in dfw
-    real(DP), dimension(:), pointer, contiguous :: width => null() !< pointer to width vector in dfw
 
     ! -- pointer to packages needed for calculations
-    type(SwfDislType), pointer :: disl
     type(SwfCxsType), pointer :: cxs
 
   contains
@@ -44,6 +42,8 @@ module SwfStoModule
     procedure :: sto_rp
     procedure :: sto_ad
     procedure :: sto_fc
+    procedure :: sto_fc_dis1d
+    procedure :: sto_fc_dis2d
     !procedure :: sto_fn
     procedure :: sto_cq
     procedure :: sto_bd
@@ -54,6 +54,9 @@ module SwfStoModule
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: set_dfw_pointers
+    procedure, private :: reach_length_pointer
+    procedure, private :: calc_storage_dis1d
+    procedure, private :: calc_storage_dis2d
   end type
 
 contains
@@ -63,13 +66,12 @@ contains
   !!  Create a new storage (STO) object
   !!
   !<
-  subroutine sto_cr(stoobj, name_model, inunit, iout, dis, cxs)
+  subroutine sto_cr(stoobj, name_model, inunit, iout, cxs)
     ! -- dummy variables
     type(SwfStoType), pointer :: stoobj !< SwfStoType object
     character(len=*), intent(in) :: name_model !< name of model
     integer(I4B), intent(in) :: inunit !< package input file unit
     integer(I4B), intent(in) :: iout !< model listing file unit
-    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
     !
     ! -- Create the object
@@ -85,25 +87,12 @@ contains
     stoobj%inunit = inunit
     stoobj%iout = iout
 
-    ! -- store pointer to disl
-    !    Not normally good practice, but since SWF only works with DISL
-    !    may be okay
-    stoobj%dis => dis
-    select type (dis)
-    type is (SwfDislType)
-      stoobj%disl => dis
-    end select
+    ! -- store pointers
     stoobj%cxs => cxs
 
     ! -- Initialize block parser
     call stoobj%parser%Initialize(stoobj%inunit, stoobj%iout)
 
-    ! -- set pointers to data in dfw package
-    call stoobj%set_dfw_pointers()
-
-    !
-    ! -- return
-    return
   end subroutine sto_cr
 
   !> @ brief Allocate and read method for package
@@ -127,6 +116,10 @@ contains
     !
     ! --print a message identifying the storage package.
     write (this%iout, fmtsto) this%inunit
+
+    ! -- set pointers to data in dfw package
+    call this%set_dfw_pointers()
+
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
@@ -250,8 +243,6 @@ contains
   !<
   subroutine sto_fc(this, kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
     ! -- modules
-    use ConstantsModule, only: DONE
-    use SwfCxsUtilsModule, only: get_cross_section_area
     use TdisModule, only: delt
     ! -- dummy
     class(SwfStoType) :: this
@@ -262,18 +253,7 @@ contains
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
-    integer(I4B) :: n, idiag
-    real(DP) :: depth_old
-    real(DP) :: depth_new
-    real(DP) :: area_old
-    real(DP) :: area_new
-    real(DP) :: area_eps
-    real(DP) :: volume_old
-    real(DP) :: volume_new
-    real(DP) :: dx
-    real(DP) :: eps
-    real(DP) :: derv
-    real(DP) :: qsto
+    character(len=LINELENGTH) :: distype = ''
     ! -- formats
     character(len=*), parameter :: fmtsperror = &
       &"('Detected time step length of zero.  SWF Storage Package cannot be ', &
@@ -287,29 +267,50 @@ contains
       write (errmsg, fmtsperror)
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
+
+    call this%dis%get_dis_type(distype)
+    if (distype == 'DISL') then
+      call this%sto_fc_dis1d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
+    else
+      call this%sto_fc_dis2d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
+    end if
+
+  end subroutine sto_fc
+
+  !> @ brief Fill A and right-hand side for the package
+  !!
+  !!  Fill the coefficient matrix and right-hand side with the STO package terms.
+  !!
+  !<
+  subroutine sto_fc_dis1d(this, kiter, stage_old, stage_new, matrix_sln, &
+                          idxglo, rhs)
+    ! -- modules
+    ! -- dummy
+    class(SwfStoType) :: this
+    integer(I4B) :: kiter
+    real(DP), intent(inout), dimension(:) :: stage_old
+    real(DP), intent(inout), dimension(:) :: stage_new
+    class(MatrixBaseType), pointer :: matrix_sln
+    integer(I4B), intent(in), dimension(:) :: idxglo
+    real(DP), intent(inout), dimension(:) :: rhs
+    ! -- local
+    integer(I4B) :: n, idiag
+    real(DP) :: derv
+    real(DP) :: qsto
+    real(DP), dimension(:), pointer :: reach_length
+
+    ! Set pointer to reach_length for 1d
+    reach_length => this%reach_length_pointer()
+
     ! -- Calculate coefficients and put into amat
-    eps = 1.D-8
     do n = 1, this%dis%nodes
-      !
+
       ! -- skip if constant stage
       if (this%ibound(n) < 0) cycle
-      !
-      ! qsto = (v_new - v_old) / dt
-      ! v_new = a_new * dx
-      ! a_new = get_area(stage_new - bottom_elev)
-      dx = this%disl%reach_length(n)
-      depth_old = stage_old(n) - this%disl%reach_bottom(n)
-      area_old = this%cxs%get_area(this%idcxs(n), this%width(n), depth_old)
-      volume_old = area_old * dx
-      depth_new = stage_new(n) - this%disl%reach_bottom(n)
-      area_new = this%cxs%get_area(this%idcxs(n), this%width(n), depth_new)
-      volume_new = area_new * dx
-      qsto = (volume_new - volume_old) / delt
 
-      area_eps = this%cxs%get_area(this%idcxs(n), this%width(n), depth_new + eps)
-      derv = (area_eps - area_new) * dx / delt / eps
-      !
+      call this%calc_storage_dis1d(n, stage_new(n), stage_old(n), &
+                                   reach_length(n), qsto, derv)
+
       ! -- Fill amat and rhs
       idiag = this%dis%con%ia(n)
       call matrix_sln%add_value_pos(idxglo(idiag), -derv)
@@ -319,50 +320,84 @@ contains
     !
     ! -- Return
     return
-  end subroutine sto_fc
+  end subroutine sto_fc_dis1d
 
-  !> @ brief Calculate flows for package
+  !> @ brief Fill A and right-hand side for the package
   !!
-  !!  Flow calculation for the STO package components. Components include
-  !!  specific storage and specific yield storage.
+  !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
   !<
+  subroutine sto_fc_dis2d(this, kiter, stage_old, stage_new, matrix_sln, &
+                          idxglo, rhs)
+    ! -- modules
+    ! -- dummy
+    class(SwfStoType) :: this
+    integer(I4B) :: kiter
+    real(DP), intent(inout), dimension(:) :: stage_old
+    real(DP), intent(inout), dimension(:) :: stage_new
+    class(MatrixBaseType), pointer :: matrix_sln
+    integer(I4B), intent(in), dimension(:) :: idxglo
+    real(DP), intent(inout), dimension(:) :: rhs
+    ! -- local
+    integer(I4B) :: n, idiag
+    real(DP) :: derv
+    real(DP) :: qsto
+
+    ! -- Calculate coefficients and put into amat
+    do n = 1, this%dis%nodes
+      !
+      ! -- skip if constant stage
+      if (this%ibound(n) < 0) cycle
+
+      ! Calculate storage and derivative term
+      call this%calc_storage_dis2d(n, stage_new(n), stage_old(n), &
+                                   qsto, derv)
+
+      ! -- Fill amat and rhs
+      idiag = this%dis%con%ia(n)
+      call matrix_sln%add_value_pos(idxglo(idiag), -derv)
+      rhs(n) = rhs(n) + qsto - derv * stage_new(n)
+
+    end do
+
+  end subroutine sto_fc_dis2d
+
+  !> @ brief Calculate flows for package
+  !<
   subroutine sto_cq(this, flowja, stage_new, stage_old)
-    use TdisModule, only: delt
     ! -- dummy
     class(SwfStoType) :: this
     real(DP), intent(inout), dimension(:) :: flowja
     real(DP), intent(inout), dimension(:) :: stage_new
     real(DP), intent(inout), dimension(:) :: stage_old
     ! -- local
+    real(DP), dimension(:), pointer :: reach_length
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: dx
-    real(DP) :: depth_old
-    real(DP) :: area_old
-    real(DP) :: volume_old
-    real(DP) :: depth_new
-    real(DP) :: area_new
-    real(DP) :: volume_new
-    !
+    real(DP) :: q
+
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
-    !
+
+    ! Set pointer to reach_length for 1d
+    reach_length => this%reach_length_pointer()
+
     ! -- Calculate storage term
     do n = 1, this%dis%nodes
       !
       ! -- skip if constant stage
       if (this%ibound(n) < 0) cycle
-      !
-      dx = this%disl%reach_length(n)
-      depth_old = stage_old(n) - this%disl%reach_bottom(n)
-      area_old = this%cxs%get_area(this%idcxs(n), this%width(n), depth_old)
-      volume_old = area_old * dx
-      depth_new = stage_new(n) - this%disl%reach_bottom(n)
-      area_new = this%cxs%get_area(this%idcxs(n), this%width(n), depth_new)
-      volume_new = area_new * dx
-      this%qsto(n) = -(volume_new - volume_old) / delt
 
+      ! Calculate storage for either the DIS1D or DIS2D cases and
+      ! add to flowja
+      if (associated(reach_length)) then
+        dx = reach_length(n)
+        call this%calc_storage_dis1d(n, stage_new(n), stage_old(n), dx, q)
+      else
+        call this%calc_storage_dis2d(n, stage_new(n), stage_old(n), q)
+      end if
+      this%qsto(n) = -q
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + this%qsto(n)
 
@@ -371,6 +406,73 @@ contains
     ! -- Return
     return
   end subroutine sto_cq
+
+  subroutine calc_storage_dis1d(this, n, stage_new, stage_old, dx, qsto, derv)
+    ! module
+    use TdisModule, only: delt
+    ! dummy
+    class(SwfStoType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: stage_new
+    real(DP), intent(in) :: stage_old
+    real(DP), intent(in) :: dx
+    real(DP), intent(inout) :: qsto
+    real(DP), intent(inout), optional :: derv
+    ! local
+    real(DP) :: depth_new
+    real(DP) :: depth_old
+    real(DP) :: width_n
+    real(DP) :: width_m
+    real(DP) :: cxs_area_new
+    real(DP) :: cxs_area_old
+    real(DP) :: cxs_area_eps
+    real(DP) :: eps = 1.d-8
+
+    call this%dis%get_flow_width(n, n, 0, width_n, width_m)
+    depth_new = stage_new - this%dis%bot(n)
+    depth_old = stage_old - this%dis%bot(n)
+    cxs_area_new = this%cxs%get_area(this%idcxs(n), width_n, depth_new)
+    cxs_area_old = this%cxs%get_area(this%idcxs(n), width_n, depth_old)
+    qsto = (cxs_area_new - cxs_area_old) * dx / delt
+    if (present(derv)) then
+      cxs_area_eps = this%cxs%get_area(this%idcxs(n), width_n, depth_new + eps)
+      derv = (cxs_area_eps - cxs_area_new) * dx / delt / eps
+    end if
+
+  end subroutine calc_storage_dis1d
+
+  subroutine calc_storage_dis2d(this, n, stage_new, stage_old, qsto, derv)
+    ! module
+    use TdisModule, only: delt
+    ! dummy
+    class(SwfStoType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: stage_new
+    real(DP), intent(in) :: stage_old
+    real(DP), intent(inout) :: qsto
+    real(DP), intent(inout), optional :: derv
+    ! local
+    real(DP) :: area
+    real(DP) :: depth_new
+    real(DP) :: depth_old
+    real(DP) :: depth_eps
+    real(DP) :: volume_new
+    real(DP) :: volume_old
+    real(DP) :: eps = 1.d-8
+
+    area = this%dis%get_area(n)
+    depth_new = stage_new - this%dis%bot(n)
+    depth_old = stage_old - this%dis%bot(n)
+    volume_new = area * depth_new
+    volume_old = area * depth_old
+    qsto = (volume_new - volume_old) / delt
+
+    if (present(derv)) then
+      depth_eps = depth_new + eps
+      derv = (depth_eps - depth_new) * area / delt / eps
+    end if
+
+  end subroutine calc_storage_dis2d
 
   !> @ brief Model budget calculation for package
   !!
@@ -455,7 +557,6 @@ contains
     if (this%inunit > 0) then
       call mem_deallocate(this%qsto)
       nullify (this%idcxs)
-      nullify (this%width)
     end if
     !
     ! -- Deallocate scalars
@@ -634,8 +735,24 @@ contains
 
     dfw_mem_path = create_mem_path(this%name_model, 'DFW')
     call mem_setptr(this%idcxs, 'IDCXS', dfw_mem_path)
-    call mem_setptr(this%width, 'WIDTH', dfw_mem_path)
 
   end subroutine set_dfw_pointers
+
+  function reach_length_pointer(this) result(ptr)
+    ! dummy
+    class(SwfStoType) :: this !< this instance
+    ! return
+    real(DP), dimension(:), pointer :: ptr
+    ! local
+    class(DisBaseType), pointer :: dis
+
+    ptr => null()
+    dis => this%dis
+    select type (dis)
+    type is (SwfDislType)
+      ptr => dis%reach_length
+    end select
+
+  end function reach_length_pointer
 
 end module SwfStoModule

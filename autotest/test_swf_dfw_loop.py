@@ -232,6 +232,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         reach_length=reach_length,
+        reach_width=1.,
         reach_bottom=reach_bottom,
         # toreach=toreach,   # -1 gives 0 in one-based, which means outflow cell
         idomain=1,
@@ -247,7 +248,6 @@ def build_models(idx, test):
         central_in_space=True,
         print_flows=True,
         save_flows=True,
-        width=1.0,  # cross sections defined explicitly (not fractions)
         manningsn=0.03,
         slope=0.001,
         idcxs=idcxs,

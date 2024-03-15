@@ -6,13 +6,10 @@
 !<
 
 ! todo:
-!   Implement length convert and time convert for mannings
-!   Use cl1 and cl2 in DFW calculations
 !   Move Newton to FN routines
 !   Implement a proper perturbation epsilon
 !   Is slope input parameter needed?
 !   Parameterize the smoothing depth?
-!   test ATS
 !
 module SwfDfwModule
 
@@ -28,7 +25,6 @@ module SwfDfwModule
                        store_error_filename
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use SwfDislModule, only: SwfDislType
   use SwfCxsModule, only: SwfCxsType
   use ObsModule, only: ObsType, obs_cr
   use ObsModule, only: DefaultObsIdProcessor
@@ -46,15 +42,11 @@ module SwfDfwModule
     real(DP), pointer :: unitconv !< conversion factor used in mannings equation; calculated from timeconv and lengthconv
     real(DP), pointer :: timeconv !< conversion factor from model length units to meters (1.0 if model uses meters for length)
     real(DP), pointer :: lengthconv !< conversion factor frommodel time units to seconds (1.0 if model uses seconds for time)
-    real(DP), dimension(:), pointer, contiguous :: width => null() !< reach width
     real(DP), dimension(:), pointer, contiguous :: manningsn => null() !< mannings roughness for each reach
     real(DP), dimension(:), pointer, contiguous :: slope => null() !< slope for each reach
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id for each reach
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< set to 1 and is accessed by chd for checking
-
-    ! -- pointer to concrete disl subclass of DisBaseType
-    type(SwfDislType), pointer :: disl
 
     ! -- observation data
     integer(I4B), pointer :: inobspkg => null() !< unit number for obs package
@@ -65,6 +57,7 @@ module SwfDfwModule
 
   contains
 
+    procedure :: dfw_df
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure :: dfw_load
@@ -101,7 +94,7 @@ contains
   !> @brief create package
   !<
   subroutine dfw_cr(dfwobj, name_model, input_mempath, inunit, iout, &
-                    dis, cxs)
+                    cxs)
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
@@ -110,7 +103,6 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
     ! -- locals
     logical(LGP) :: found_fname
@@ -137,16 +129,7 @@ contains
     call mem_set_value(dfwobj%input_fname, 'INPUT_FNAME', dfwobj%input_mempath, &
                        found_fname)
 
-    ! -- store pointer to disl
-    !    Not normally good practice, but since SWF only works with DISL
-    !    may be okay
-    dfwobj%dis => dis
-    select type (dis)
-    type is (SwfDislType)
-      dfwobj%disl => dis
-    end select
-
-    ! -- Set a pointer to the cxs package
+    ! -- Set a pointers to passed in objects
     dfwobj%cxs => cxs
 
     ! -- create obs package
@@ -158,17 +141,36 @@ contains
       ! -- Print a message identifying the package.
       write (iout, fmtheader) input_mempath
 
-      ! -- allocate arrays
-      call dfwobj%allocate_arrays()
-
-      ! -- load dfw
-      call dfwobj%dfw_load()
-
     end if
 
     ! -- Return
     return
   end subroutine dfw_cr
+
+  !> @brief load data from IDM to package
+  !<
+  subroutine dfw_df(this, dis)
+    ! -- dummy
+    class(SwfDfwType) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
+    ! -- locals
+
+    ! -- Set a pointers to passed in objects
+    this%dis => dis
+
+    ! -- check if dfw is enabled
+    ! this will need to become if (.not. present(dfw_options)) then
+    !if (inunit > 0) then
+
+    ! -- allocate arrays
+    call this%allocate_arrays()
+
+    ! -- load dfw
+    call this%dfw_load()
+
+    !end if
+
+  end subroutine dfw_df
 
   !> @ brief Allocate scalars
   !!
@@ -209,8 +211,6 @@ contains
     integer(I4B) :: n
     !
     ! -- user-provided input
-    call mem_allocate(this%width, this%dis%nodes, &
-                      'WIDTH', this%memoryPath)
     call mem_allocate(this%manningsn, this%dis%nodes, &
                       'MANNINGSN', this%memoryPath)
     call mem_allocate(this%slope, this%dis%nodes, &
@@ -221,7 +221,6 @@ contains
                       'ICELLTYPE', this%memoryPath)
 
     do n = 1, this%dis%nodes
-      this%width(n) = DZERO
       this%manningsn(n) = DZERO
       this%slope(n) = DZERO
       this%idcxs(n) = 0
@@ -385,17 +384,10 @@ contains
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%width, 'WIDTH', idmMemoryPath, map, found%width)
     call mem_set_value(this%manningsn, 'MANNINGSN', &
                        idmMemoryPath, map, found%manningsn)
     call mem_set_value(this%slope, 'SLOPE', idmMemoryPath, map, found%slope)
     call mem_set_value(this%idcxs, 'IDCXS', idmMemoryPath, map, found%idcxs)
-    !
-    ! -- ensure WIDTH was found
-    if (.not. found%width) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: WIDTH not found.'
-      call store_error(errmsg)
-    end if
     !
     ! -- ensure MANNINGSN was found
     if (.not. found%manningsn) then
@@ -408,7 +400,11 @@ contains
       write (errmsg, '(a)') 'Error in GRIDDATA block: SLOPE not found.'
       call store_error(errmsg)
     end if
-    !
+
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_fname)
+    end if
+
     ! -- log griddata
     if (this%iout > 0) then
       call this%log_griddata(found)
@@ -426,10 +422,6 @@ contains
     type(SwfDfwParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting DFW Griddata'
-
-    if (found%width) then
-      write (this%iout, '(4x,a)') 'WIDTH set from input file'
-    end if
 
     if (found%manningsn) then
       write (this%iout, '(4x,a)') 'MANNINGSN set from input file'
@@ -579,17 +571,17 @@ contains
         m = this%dis%con%ja(ii)
         !
         ! -- Fill the qnm term on the right hand side
-        qnm = this%qcalc(n, m, stage(n), stage(m))
+        qnm = this%qcalc(n, m, stage(n), stage(m), ii)
         rhs(n) = rhs(n) - qnm
         !
         ! -- Derivative calculation and fill of n terms
-        qeps = this%qcalc(n, m, stage(n) + eps, stage(m))
+        qeps = this%qcalc(n, m, stage(n) + eps, stage(m), ii)
         derv = (qeps - qnm) / eps
         call matrix_sln%add_value_pos(idxglo(idiag), derv)
         rhs(n) = rhs(n) + derv * stage(n)
         !
         ! -- Derivative calculation and fill of m terms
-        qeps = this%qcalc(n, m, stage(n), stage(m) + eps)
+        qeps = this%qcalc(n, m, stage(n), stage(m) + eps, ii)
         derv = (qeps - qnm) / eps
         call matrix_sln%add_value_pos(idxglo(ii), derv)
         rhs(n) = rhs(n) + derv * stage(m)
@@ -619,35 +611,52 @@ contains
     return
   end subroutine dfw_fn
 
-  function qcalc(this, n, m, stage_n, stage_m) result(qnm)
+  function qcalc(this, n, m, stage_n, stage_m, ipos) result(qnm)
     ! -- dummy
     class(SwfDfwType) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: m
-    real(DP), intent(in) :: stage_n
-    real(DP), intent(in) :: stage_m
+    integer(I4B), intent(in) :: n !< number for cell n
+    integer(I4B), intent(in) :: m !< number for cell m
+    real(DP), intent(in) :: stage_n !< stage in reach n
+    real(DP), intent(in) :: stage_m !< stage in reach m
+    integer(I4B), intent(in) :: ipos !< connection number
     ! -- local
+    integer(I4B) :: isympos
     real(DP) :: qnm
     real(DP) :: cond
+    real(DP) :: cl1
+    real(DP) :: cl2
     !
-    cond = this%get_cond(n, m, stage_n, stage_m)
+    isympos = this%dis%con%jas(ipos)
+    if (n < m) then
+      cl1 = this%dis%con%cl1(isympos)
+      cl2 = this%dis%con%cl2(isympos)
+    else
+      cl1 = this%dis%con%cl2(isympos)
+      cl2 = this%dis%con%cl1(isympos)
+    end if
+    cond = this%get_cond(n, m, ipos, stage_n, stage_m, cl1, cl2)
     qnm = cond * (stage_m - stage_n)
     return
   end function qcalc
 
-  function get_cond(this, n, m, stage_n, stage_m) result(cond)
+  function get_cond(this, n, m, ipos, stage_n, stage_m, cln, clm) result(cond)
     ! -- modules
     use SmoothingModule, only: sQuadratic
     ! -- dummy
     class(SwfDfwType) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: m
-    real(DP), intent(in) :: stage_n
-    real(DP), intent(in) :: stage_m
+    integer(I4B), intent(in) :: n !< number for cell n
+    integer(I4B), intent(in) :: m !< number for cell m
+    integer(I4B), intent(in) :: ipos !< connection number
+    real(DP), intent(in) :: stage_n !< stage in reach n
+    real(DP), intent(in) :: stage_m !< stage in reach m
+    real(DP), intent(in) :: cln !< distance from cell n to shared face with m
+    real(DP), intent(in) :: clm !< distance from cell m to shared face with n
     ! -- local
     real(DP) :: absdhdxsqr
     real(DP) :: depth_n
     real(DP) :: depth_m
+    real(DP) :: width_n
+    real(DP) :: width_m
     real(DP) :: range = 1.d-2
     real(DP) :: dydx
     real(DP) :: smooth_factor
@@ -655,13 +664,11 @@ contains
     real(DP) :: cond
     real(DP) :: cn
     real(DP) :: cm
-    !
+
     ! we are using a harmonic conductance approach here; however
     ! the SWR Process for MODFLOW-2005/NWT uses length-weighted
     ! average areas and hydraulic radius instead.
-    !
-    denom = DHALF * this%disl%reach_length(n) + &
-            DHALF * this%disl%reach_length(m)
+    denom = cln + clm
     cond = DZERO
     if (denom > DPREC) then
       absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
@@ -669,11 +676,11 @@ contains
         ! TODO: Set this differently somehow?
         absdhdxsqr = 1.e-7
       end if
-      !
+
       ! -- Calculate depth in each reach
-      depth_n = stage_n - this%disl%reach_bottom(n)
-      depth_m = stage_m - this%disl%reach_bottom(m)
-      !
+      depth_n = stage_n - this%dis%bot(n)
+      depth_m = stage_m - this%dis%bot(m)
+
       ! -- Assign upstream depth, if not central
       if (this%icentral == 0) then
         ! -- use upstream weighting
@@ -683,19 +690,22 @@ contains
           depth_n = depth_m
         end if
       end if
-      !
+
       ! -- Calculate a smoothed depth that goes to zero over
       !    the specified range
       call sQuadratic(depth_n, range, dydx, smooth_factor)
       depth_n = depth_n * smooth_factor
       call sQuadratic(depth_m, range, dydx, smooth_factor)
       depth_m = depth_m * smooth_factor
-      !
+
+      ! Get the flow widths for n and m from dis package
+      call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
+
       ! -- Calculate half-cell conductance for reach
       !    n and m
-      cn = this%get_cond_n(n, depth_n, absdhdxsqr)
-      cm = this%get_cond_n(m, depth_m, absdhdxsqr)
-      !
+      cn = this%get_cond_n(n, depth_n, absdhdxsqr, cln, width_n)
+      cm = this%get_cond_n(m, depth_m, absdhdxsqr, clm, width_m)
+
       ! -- Use harmonic mean to calculated weighted
       !    conductance bewteen the centers of reaches
       !    n and m
@@ -712,44 +722,27 @@ contains
   !> @brief Calculate half reach conductance
   !!
   !! Calculate half reach conductance for reach n
-  !! using Manning's equation
-  !!
-  !<
-  function get_cond_n(this, n, depth, absdhdxsq) result(c)
+  !< using conveyance and Manning's equation
+  function get_cond_n(this, n, depth, absdhdxsq, dx, width) result(c)
     ! -- modules
     ! -- dummy
     class(SwfDfwType) :: this
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
     real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
+    real(DP), intent(in) :: dx !< half-cell distance
+    real(DP), intent(in) :: width !< width of the reach perpendicular to flow
     ! -- return
     real(DP) :: c
     ! -- local
-    real(DP) :: width
     real(DP) :: rough
-    real(DP) :: slope
-    real(DP) :: dx
-    real(DP) :: roughc
-    real(DP) :: a
-    real(DP) :: r
     real(DP) :: conveyance
-    !
-    width = this%width(n)
+
+    ! Calculate conveyance, which a * r**DTWOTHIRDS / roughc
     rough = this%manningsn(n)
-    slope = this%slope(n)
-
-    ! -- TODO: this should probably come from cl1/cl2 in case the cell
-    !    center does not correspond to the middle of the reach.
-    dx = DHALF * this%disl%reach_length(n)
-
-    roughc = this%cxs%get_roughness(this%idcxs(n), width, depth, rough, &
-                                    slope)
-    a = this%cxs%get_area(this%idcxs(n), width, depth)
-    r = this%cxs%get_hydraulic_radius(this%idcxs(n), width, depth, area=a)
-
-    ! -- conductance from manning's equation
-    !conveyance = a * r**DTWOTHIRDS / roughc
     conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
+
+    ! Multiply by unitconv and divide conveyance by sqrt of friction slope and dx
     c = this%unitconv * conveyance / absdhdxsq / dx
 
   end function get_cond_n
@@ -779,7 +772,7 @@ contains
     do n = 1, this%dis%nodes
       if (this%ibound(n) < 1) cycle
       if (this%icelltype(n) > 0) then
-        botm = this%disl%reach_bottom(n)
+        botm = this%dis%bot(n)
         ! -- only apply Newton-Raphson under-relaxation if
         !    solution head is below the bottom of the model
         if (x(n) < botm) then
@@ -815,7 +808,7 @@ contains
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (m < n) cycle
-        qnm = this%qcalc(n, m, stage(n), stage(m))
+        qnm = this%qcalc(n, m, stage(n), stage(m), ipos)
         flowja(ipos) = qnm
         flowja(this%dis%con%isym(ipos)) = -qnm
       end do
@@ -943,7 +936,6 @@ contains
     call mem_deallocate(this%timeconv)
     !
     ! -- Deallocate arrays
-    call mem_deallocate(this%width)
     call mem_deallocate(this%manningsn)
     call mem_deallocate(this%slope)
     call mem_deallocate(this%idcxs)
@@ -954,7 +946,6 @@ contains
     call this%obs%obs_da()
     deallocate (this%obs)
     nullify (this%obs)
-    nullify (this%disl)
     nullify (this%cxs)
 
     ! -- deallocate parent
@@ -1078,11 +1069,11 @@ contains
         !
         ! -- get node number 1
         nn1 = obsrv%NodeNumber
-        if (nn1 < 1 .or. nn1 > this%disl%nodes) then
+        if (nn1 < 1 .or. nn1 > this%dis%nodes) then
           write (errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)') &
             trim(adjustl(obsrv%ObsTypeId)), &
             'reach must be greater than 0 and less than or equal to', &
-            this%disl%nodes, '(specified value is ', nn1, ')'
+            this%dis%nodes, '(specified value is ', nn1, ')'
           call store_error(errmsg)
         else
           if (obsrv%indxbnds_count == 0) then
@@ -1096,11 +1087,11 @@ contains
         ! -- check that node number 1 is valid; call store_error if not
         do j = 1, obsrv%indxbnds_count
           nn1 = obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%disl%nodes) then
+          if (nn1 < 1 .or. nn1 > this%dis%nodes) then
             write (errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)') &
               trim(adjustl(obsrv%ObsTypeId)), &
               'reach must be greater than 0 and less than or equal to', &
-              this%disl%nodes, '(specified value is ', nn1, ')'
+              this%dis%nodes, '(specified value is ', nn1, ')'
             call store_error(errmsg)
           end if
         end do
