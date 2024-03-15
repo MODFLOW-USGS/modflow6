@@ -190,6 +190,7 @@ contains
 
   subroutine list_params_create(this, params, nparam, input_name)
     ! -- modules
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     use DynamicPackageParamsModule, only: allocate_param_int1d, &
@@ -205,6 +206,8 @@ contains
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam
+    integer(I4B), pointer :: nseg, nseg_1
+    integer(I4B) :: nseg1_isize
     !
     ! --
     do iparam = 1, nparam
@@ -241,6 +244,20 @@ contains
       case ('DOUBLE1D')
         if (idt%shape == 'NAUX') then
           call allocate_param_dbl2d(this%naux, this%maxbound, &
+                                    idt%mf6varname, this%mf6_input%mempath)
+        else if (idt%shape == 'NSEG-1') then
+          call mem_setptr(nseg, 'NSEG', this%mf6_input%mempath)
+          !
+          call get_isize('NSEG_1', this%mf6_input%mempath, nseg1_isize)
+          !
+          if (nseg1_isize < 0) then
+            call mem_allocate(nseg_1, 'NSEG_1', this%mf6_input%mempath)
+            nseg_1 = nseg - 1
+          else
+            call mem_setptr(nseg_1, 'NSEG_1', this%mf6_input%mempath)
+          end if
+          !
+          call allocate_param_dbl2d(nseg_1, this%maxbound, &
                                     idt%mf6varname, this%mf6_input%mempath)
         else
           errmsg = 'IDM unimplemented. BoundInputContext::list_params_create &

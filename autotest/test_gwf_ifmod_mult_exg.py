@@ -260,7 +260,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test):
+def check_output(idx, test, source):
     fpth = os.path.join(test.workspace, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
@@ -269,11 +269,12 @@ def check_output(idx, test):
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(test.workspace, f"{name_parent}.dis.grb")
+    ext = ".nc.grb" if source == "netcdf" else ".dis.grb"
+    fpth = os.path.join(test.workspace, f"{name_parent}" + ext)
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(test.workspace, f"{name_child}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{name_child}" + ext)
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -329,14 +330,18 @@ def check_output(idx, test):
     # assert maxdiff_child_south > maxdiff_child_north
 
 
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, source),
+        netcdf=True if source == "netcdf" else False,
     )
     test.run()

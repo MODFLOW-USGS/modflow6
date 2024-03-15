@@ -239,14 +239,15 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test):
+def check_output(idx, test, source):
     print("comparing heads  for child model to analytical result...")
 
     fpth = os.path.join(test.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
+    ext = ".nc.grb" if source == "netcdf" else ".dis.grb"
+    fpth = os.path.join(test.workspace, f"{child_name}" + ext)
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # (note that without XT3D on the exchange, the 'error'
@@ -262,7 +263,7 @@ def check_output(idx, test):
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(test.workspace, f"{mname}.dis.grb")
+        fpth = os.path.join(test.workspace, f"{mname}" + ext)
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
@@ -281,14 +282,18 @@ def check_output(idx, test):
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
 
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, source),
+        netcdf=True if source == "netcdf" else False,
     )
     test.run()

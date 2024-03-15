@@ -48,6 +48,7 @@ module ConstantsModule
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9 !< named bound flag
   integer(I4B), parameter :: LENPAKLOC = 34 !< maximum length of a package location
   integer(I4B), parameter :: IZERO = 0 !< integer constant zero
+  integer(I4B), parameter :: INODATA = -2147483647 !< integer no data constant
   integer(I4B), parameter :: IWETLAKE = 10000 !< integer constant for a dry lake
   integer(I4B), parameter :: MAXADPIT = 100 !< maximum advanced package Newton-Raphson iterations
   !
@@ -136,64 +137,57 @@ module ConstantsModule
      '     LAYER', '    CELL2D', '          ', &
      '     LAYER', '       ROW', '       COL'], [3, 3]) !< cellid labels for DIS, DISV, and DISU discretizations
 
-  !> @brief enumerator used with TimeSeriesType
-  !<
+  ! -- enumerator used with TimeSeriesType
   ENUM, BIND(C)
-    ENUMERATOR :: UNDEFINED = 0 !< undefined interpolation
-    ENUMERATOR :: STEPWISE = 1 !< stepwise interpolation
-    ENUMERATOR :: LINEAR = 2 !< linear interpolation
-    ENUMERATOR :: LINEAREND = 3 !< linear end interpolation
+    ENUMERATOR :: UNDEFINED = 0 !< 0
+    ENUMERATOR :: STEPWISE = 1 !< 1
+    ENUMERATOR :: LINEAR = 2 !< 2
+    ENUMERATOR :: LINEAREND = 3 !< 3
   END ENUM
 
-  !> @brief enumerator used with table objects
-  !<
+  ! -- enumerator used with table objects
   ENUM, BIND(C)
-    ENUMERATOR :: TABLEFT = 0 !< left justified table column
-    ENUMERATOR :: TABCENTER = 1 !< centered table column
-    ENUMERATOR :: TABRIGHT = 2 !< right justified table column
+    ENUMERATOR :: TABLEFT = 0 !< 0
+    ENUMERATOR :: TABCENTER = 1 !< 1
+    ENUMERATOR :: TABRIGHT = 2 !< 2
   END ENUM
 
-  !> @brief enumerator used to define table column data type
-  !<
+  ! -- enumerator used to define table column data type
   ENUM, BIND(C)
-    ENUMERATOR :: TABSTRING = 0 !< string table data
-    ENUMERATOR :: TABUCSTRING = 1 !< upper case string table data
-    ENUMERATOR :: TABINTEGER = 2 !< integer table data
-    ENUMERATOR :: TABREAL = 3 !< real table data
+    ENUMERATOR :: TABSTRING = 0 !< 0
+    ENUMERATOR :: TABUCSTRING = 1 !< 1
+    ENUMERATOR :: TABINTEGER = 2 !< 2
+    ENUMERATOR :: TABREAL = 3 !< 3
   END ENUM
 
-  !> @brief enumerator used to define output option
-  !<
+  ! -- enumerator used to define output option
   ENUM, BIND(C)
-    ENUMERATOR :: VSUMMARY = 0 !< write summary output
-    ENUMERATOR :: VALL = 1 !< write all simulation notes and warnings
-    ENUMERATOR :: VDEBUG = 2 !< write debug output
+    ENUMERATOR :: VSUMMARY = 0 !< 0
+    ENUMERATOR :: VALL = 1 !< 1
+    ENUMERATOR :: VDEBUG = 2 !< 2
   END ENUM
 
-  !> @brief enumerator that defines the operating system
-  !<
+  ! -- enumerator that defines the operating system
   ENUM, BIND(C)
-    ENUMERATOR :: OSUNDEF = 0 !< unknown operating system
-    ENUMERATOR :: OSLINUX = 1 !< Linux operating system
-    ENUMERATOR :: OSMAC = 2 !< MacOS operating system
-    ENUMERATOR :: OSWIN = 3 !< Windows operating system
+    ENUMERATOR :: OSUNDEF = 0 !< 0
+    ENUMERATOR :: OSLINUX = 1 !< 1
+    ENUMERATOR :: OSMAC = 2 !< 2
+    ENUMERATOR :: OSWIN = 3 !< 3
   END ENUM
 
-  !> @brief enumerator that defines the simulation mode
-  !<
+  ! -- enumerator that defines the simulation mode
   ENUM, BIND(C)
-    ENUMERATOR :: MVALIDATE = 0 !< validation mode - do not run time steps
-    ENUMERATOR :: MNORMAL = 1 !< normal output mode
-    ENUMERATOR :: MRUN = 2 !< run output mode
+    ENUMERATOR :: MVALIDATE = 0 !< 0
+    ENUMERATOR :: MNORMAL = 1 !< 1
+    ENUMERATOR :: MRUN = 2 !< 2
   END ENUM
 
-  !> @brief enumerator that defines the compiler
-  !<
+  ! -- enumerator that defines the compiler
   ENUM, BIND(C)
-    ENUMERATOR :: CUNKNOWN = 0 !< unknown compiler
-    ENUMERATOR :: CGFORTRAN = 1 !< gfortran compiler
-    ENUMERATOR :: CINTEL = 3 !< intel ifort compiler
-    ENUMERATOR :: CCRAYFTN = 3 !< cray fortran compiler
+    ENUMERATOR :: CUNKNOWN = 0 !< 0
+    ENUMERATOR :: CGFORTRAN = 1 !< 1
+    ENUMERATOR :: CINTEL = 3 !< 2
+    ENUMERATOR :: CCRAYFTN = 3 !< 3
   END ENUM
 
   !> @brief enumerator that defines the cell connection type

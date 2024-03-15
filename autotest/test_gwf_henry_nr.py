@@ -233,15 +233,19 @@ def build_models(idx, test):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     name = "gwf-henry-nr"
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        compare="mf6_regression",
+        netcdf=True if source == "netcdf" else False,
+        compare=None if source == "netcdf" else "mf6_regression",
         verbose=False,
     )
     test.run()

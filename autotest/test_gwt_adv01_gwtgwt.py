@@ -330,7 +330,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def check_output(idx, test):
+def check_output(idx, test, source):
     gwtname = "transport1"
 
     fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
@@ -699,7 +699,8 @@ def check_output(idx, test):
 
         # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
-        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}.dis.grb")
+        ext = ".nc.grb" if source == "netcdf" else ".dis.grb"
+        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}" + ext)
         grb = flopy.mf6.utils.MfGrdFile(fpth)
 
         # Check on residual, which is stored in diagonal position of
@@ -719,14 +720,18 @@ def check_output(idx, test):
             # assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
 
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, source),
+        netcdf=True if source == "netcdf" else False,
     )
     test.run()

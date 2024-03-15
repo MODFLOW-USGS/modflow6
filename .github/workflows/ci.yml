@@ -566,4 +566,134 @@ jobs:
         with:
           name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
           path: modflow6/autotest/.failed
-          
+
+  netcdf_test:
+    name: NetCDF testing
+    needs:
+      - lint
+      - build
+      - smoke_test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      FC: gfortran
+      FC_V: 12
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: gcc
+          version: ${{ env.FC_V }}
+
+      - name: Cache PETSc
+        id: cache-petsc
+        uses: actions/cache@v4
+        with:
+          path: petsc
+          key: ${{ runner.os }}-petsc
+
+      - name: Clone PETSc
+        if: runner.os != 'Windows' && steps.cache-petsc.outputs.cache-hit != 'true'
+        run: git clone -b release https://gitlab.com/petsc/petsc.git petsc
+
+      - name: Configure environment
+        if: runner.os == 'Linux'
+        run: |
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
+
+      - name: Configure environment
+        if: runner.os == 'macOS'
+        run: |
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
+
+      - name: Configure PETSc
+        if: runner.os == 'Linux'
+        working-directory: petsc
+        run: |
+          sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
+          sudo make all
+
+      - name: Configure PETSc
+        if: runner.os == 'macOS'
+        working-directory: petsc
+        run: |
+          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
+          sudo make all
+
+      - name: Install netcdf
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential \
+            libnetcdf-dev \
+            libnetcdff-dev \
+            netcdf-bin
+          nc-config --all
+          nf-config --all
+
+      - name: Install netcdf
+        if: runner.os == 'macOS'
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install netcdf-fortran
+          brew install gcc
+          nc-config --all
+          nf-config
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment-nctest.yml
+          create-args: >-
+            netcdf4
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Build modflow6
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false -Dextended=true --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          meson test --verbose --no-rebuild -C builddir
+
+      - name: Show Meson logs
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs (netcdf)
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          pytest -v -n auto -m netcdf --netcdf --parallel --durations 0 --keep-failed .failed
+
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed

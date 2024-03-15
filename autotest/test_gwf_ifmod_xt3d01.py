@@ -301,7 +301,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
     return qx, qy, qz
 
 
-def check_output(idx, test):
+def check_output(idx, test, source):
     print("comparing heads and spec. discharges to analytical result...")
 
     fpth = os.path.join(test.workspace, f"{parent_name}.hds")
@@ -320,11 +320,12 @@ def check_output(idx, test):
     nlay, nrow, ncol = heads_c.shape
     qxb_c, qyb_c, qzb_c = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"{parent_name}.dis.grb")
+    ext = ".nc.grb" if source == "netcdf" else ".dis.grb"
+    fpth = os.path.join(test.workspace, f"{parent_name}" + ext)
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{child_name}" + ext)
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -476,13 +477,17 @@ def check_output(idx, test):
     ), "boundname observations do not match expected results"
 
 
+@pytest.mark.parametrize(
+    "source", ["text", pytest.param("netcdf", marks=pytest.mark.netcdf)]
+)
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, source):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, source),
+        netcdf=True if source == "netcdf" else False,
     )
     test.run()

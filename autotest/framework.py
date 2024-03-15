@@ -118,7 +118,9 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
     return success, buff
 
 
-def write_input(*sims, overwrite: bool = True, verbose: bool = True):
+def write_input(
+    *sims, overwrite: bool = True, verbose: bool = True, netcdf: bool = False
+):
     """
     Write input files for `flopy.mf6.MFSimulation` or `flopy.mbase.BaseModel`.
 
@@ -149,7 +151,10 @@ def write_input(*sims, overwrite: bool = True, verbose: bool = True):
                 print(
                     f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}"
                 )
-            sim.write_simulation()
+            if netcdf:
+                sim.write_simulation(write_netcdf=True)
+            else:
+                sim.write_simulation()
         elif isinstance(sim, flopy.mbase.BaseModel):
             workspace = Path(sim.model_ws)
             if any(workspace.glob("*")) and not overwrite:
@@ -232,6 +237,7 @@ class TestFramework:
         check: Optional[Callable] = None,
         compare: Optional[str] = "auto",
         parallel=False,
+        netcdf=False,
         ncpus=1,
         htol=None,
         rclose=None,
@@ -251,6 +257,7 @@ class TestFramework:
         self.build = build
         self.check = check
         self.parallel = parallel
+        self.netcdf = netcdf
         self.ncpus = [ncpus] if isinstance(ncpus, int) else ncpus
         self.api_func = api_func
         self.compare = compare
@@ -704,7 +711,12 @@ class TestFramework:
             if len(self.ncpus) == 1 and nsims:
                 self.ncpus = list(repeat(self.ncpus[0], nsims))
 
-            write_input(*sims, overwrite=self.overwrite, verbose=self.verbose)
+            write_input(
+                *sims,
+                overwrite=self.overwrite,
+                verbose=self.verbose,
+                netcdf=self.netcdf,
+            )
         else:
             self.sims = [MFSimulation.load(sim_ws=self.workspace)]
             self.buffs = [None]
