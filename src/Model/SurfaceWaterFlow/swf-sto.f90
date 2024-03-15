@@ -282,7 +282,8 @@ contains
   !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
   !<
-  subroutine sto_fc_dis1d(this, kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
+  subroutine sto_fc_dis1d(this, kiter, stage_old, stage_new, matrix_sln, &
+                          idxglo, rhs)
     ! -- modules
     ! -- dummy
     class(SwfStoType) :: this
@@ -326,7 +327,8 @@ contains
   !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
   !<
-  subroutine sto_fc_dis2d(this, kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
+  subroutine sto_fc_dis2d(this, kiter, stage_old, stage_new, matrix_sln, &
+                          idxglo, rhs)
     ! -- modules
     ! -- dummy
     class(SwfStoType) :: this
@@ -461,15 +463,15 @@ contains
     area = this%dis%get_area(n)
     depth_new = stage_new - this%dis%bot(n)
     depth_old = stage_old - this%dis%bot(n)
-    volume_new = area * depth_new  
+    volume_new = area * depth_new
     volume_old = area * depth_old
     qsto = (volume_new - volume_old) / delt
-  
+
     if (present(derv)) then
       depth_eps = depth_new + eps
       derv = (depth_eps - depth_new) * area / delt / eps
     end if
-  
+
   end subroutine calc_storage_dis2d
 
   !> @ brief Model budget calculation for package
@@ -743,7 +745,7 @@ contains
     real(DP), dimension(:), pointer :: ptr
     ! local
     class(DisBaseType), pointer :: dis
-        
+
     ptr => null()
     dis => this%dis
     select type (dis)

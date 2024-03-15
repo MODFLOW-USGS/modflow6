@@ -959,8 +959,7 @@ contains
   !! todo: Only unreduced disl grids are allowed at the moment
   !!
   !<
-  subroutine dislconnections(this, name_model, toreach, reach_length) !, &
-                             !reach_width)
+  subroutine dislconnections(this, name_model, toreach, reach_length)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate, mem_setptr
     use SparseModule, only: sparsematrix
@@ -969,7 +968,6 @@ contains
     character(len=*), intent(in) :: name_model !< name of model
     integer(I4B), dimension(:), intent(in) :: toreach !< dowstream reach number
     real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
-    !real(DP), dimension(:), intent(in) :: reach_width !< width of each reach
     ! -- local
     type(sparsematrix) :: sparse
     integer(I4B) :: ierror
@@ -1188,13 +1186,13 @@ contains
     do n = 1, size(reach_length)
       do ipos = ia(n) + 1, ia(n + 1) - 1
         m = ja(ipos)
-        if(m < n) cycle
+        if (m < n) cycle
         isympos = jas(ipos)
         ihc(isympos) = 1
         cl1(isympos) = DHALF * reach_length(n)
         cl2(isympos) = DHALF * reach_length(m)
-      enddo
-    enddo
+      end do
+    end do
   end subroutine fill_disl_symarrays
 
   !> @brief Fill iausr and jausr if reduced grid, otherwise point them to ia

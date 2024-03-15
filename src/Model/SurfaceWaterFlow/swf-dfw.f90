@@ -162,11 +162,11 @@ contains
     ! this will need to become if (.not. present(dfw_options)) then
     !if (inunit > 0) then
 
-      ! -- allocate arrays
-      call this%allocate_arrays()
+    ! -- allocate arrays
+    call this%allocate_arrays()
 
-      ! -- load dfw
-      call this%dfw_load()
+    ! -- load dfw
+    call this%dfw_load()
 
     !end if
 

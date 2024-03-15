@@ -788,7 +788,8 @@ contains
     ! -- Create connectivity
     if (this%toreachConnectivity) then
       ! -- build connectivity based on toreach
-      call this%con%dislconnections(this%name_model, this%toreach, this%reach_length)
+      call this%con%dislconnections(this%name_model, this%toreach, &
+                                    this%reach_length)
     else
       ! -- build connectivity based on vertices
       call this%con%dislconnections_verts(this%name_model, this%nodes, &
