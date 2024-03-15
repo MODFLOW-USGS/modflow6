@@ -446,7 +446,7 @@
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Utilities\Idm\netcdf\NCModelInputs.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\DynamicPackageParams.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\DynamicPackageParams.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLoad.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
