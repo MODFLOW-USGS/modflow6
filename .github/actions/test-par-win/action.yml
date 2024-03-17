@@ -26,7 +26,6 @@ runs:
       run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
 
     - name: Set oneAPI install dir
-      id: oneapi-root
       shell: bash
       run: echo "ONEAPI_ROOT=C:\Program Files (x86)\Intel\oneAPI" >> "$GITHUB_ENV"
 
@@ -71,15 +70,6 @@ runs:
         path: petsc
         key: petsc-${{ runner.os }}-${{ steps.get-date.outputs.date }}
 
-    - name: Configure environment
-      shell: bash
-      run: |
-        PETSC_DIR=$GITHUB_WORKSPACE/petsc
-        PETSC_ARCH=arch-mswin-c-opt
-        echo "PETSC_DIR=$PETSC_DIR" >> $GITHUB_ENV
-        echo "PETSC_ARCH=$PETSC_ARCH" >> $GITHUB_ENV
-        echo "$PETSC_DIR/$PETSC_ARCH/lib" >> $GITHUB_PATH
-
     - name: Download PETSc
       if: steps.petsc-cache.outputs.cache-hit != 'true'
       shell: bash
@@ -97,21 +87,19 @@ runs:
     - name: Hide Cygwin linker
       if: steps.petsc-cache.outputs.cache-hit != 'true'
       shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
-      run: |
-        mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
-        which link
+      run: mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
 
     - name: Configure PETSc
       if: steps.petsc-cache.outputs.cache-hit != 'true'
       shell: cmd
       run: |
-        "${{ env.ONEAPI_ROOT }}\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\configure_petsc.sh"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\configure_petsc.sh"
 
     - name: Build PETSc
       if: steps.petsc-cache.outputs.cache-hit != 'true'
       shell: cmd
       run: |
-        "${{ env.ONEAPI_ROOT }}\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\compile_petsc.sh"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\compile_petsc.sh"
 
     - name: Save PETSc cache
       if: steps.petsc-cache.outputs.cache-hit != 'true'
@@ -120,10 +108,19 @@ runs:
         path: petsc
         key: petsc-${{ runner.os }}-${{ steps.get-date.outputs.date }}
 
+    - name: Setup PETSC environment
+      shell: cmd
+      run: |
+        set PETSC_DIR=%GITHUB_WORKSPACE%\petsc
+        set PETSC_ARCH=arch-mswin-c-opt
+        echo PETSC_DIR=%PETSC_DIR%>>%GITHUB_ENV%
+        echo PETSC_ARCH=%PETSC_ARCH%>>%GITHUB_ENV%
+        echo %PETSC_DIR%\%PETSC_ARCH%\lib>>%GITHUB_PATH%
+
     - name: Build modflow6
       shell: cmd
       run: |
-        "${{ env.ONEAPI_ROOT }}\setvars.bat" intel64 vs2022 && "%TEMP%\compile_modflow6.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\compile_modflow6.bat"
 
     - name: Show Meson logs
       if: failure()
@@ -149,4 +146,4 @@ runs:
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: |
-        "${{ env.ONEAPI_ROOT }}\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"
