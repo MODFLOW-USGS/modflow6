@@ -198,7 +198,7 @@ def check_budget_file(idx, test):
     print (f"Checking contents of {fpth.name}")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     times = bobj.get_times()
-    # bobj.list_unique_records()
+    print (bobj.list_unique_records())
 
     # check to make sure GWF is zero when lake is inactive
     # and non-zero otherwise
@@ -211,11 +211,23 @@ def check_budget_file(idx, test):
             else:
                 assert r["q"] != 0.
 
+    # check all the other terms to make sure they are zero for 
+    # the second period
+    lake_terms = [
+        "rainfall", "evaporation", "ext-inflow", "withdrawal", 
+        "ext-outflow", "storage", "constant"
+    ]
+    for lake_term in lake_terms:
+        print (f"  Checking lake term {lake_term} for period 2.")
+        record = bobj.get_data(text=lake_term, totim=times[1])[0]
+        q = record["q"][0]
+        msg = f"Lake term for stress period 2 is not zero ({lake_term}={q})"
+        assert np.allclose(q, 0.), msg
 
 def check_stage_file(idx, test):
-    # Check to make sure the stage is equal to dnodata
-    # for stress period 2 and not dnodata otherwise
-    dnodata = 1.e30
+    # Check to make sure the stage is equal to dhnoflo
+    # for stress period 2 and not dhnoflo otherwise
+    dhnoflo = 1.e30
     name = cases[idx]
     fpth = test.workspace / f"{name}.lak.stage"
     print (f"Checking contents of {fpth.name}")
@@ -224,16 +236,16 @@ def check_stage_file(idx, test):
     for kper in range(3):
         print (f"  Checking binary stage for stress period {kper + 1}")
         stage = bobj.get_data(totim=times[kper]).flatten()
+        print (stage)
         if kper == 1:
-            assert stage[0] == dnodata
+            assert stage[0] == dhnoflo
         else:
-            assert stage[0] != dnodata
+            assert stage[0] != dhnoflo
 
 
 def check_head_file(idx, test):
     # Check to make sure the simulated head for the first and 
     # last period is the same and different from the second period.
-    dnodata = 1.e30
     name = cases[idx]
     fpth = test.workspace / f"{name}.hds"
     print (f"Checking contents of {fpth.name}")
@@ -241,18 +253,33 @@ def check_head_file(idx, test):
     times = bobj.get_times()
 
     head0 = bobj.get_data(totim=times[0]).flatten()
-    head1 = bobj.get_data(totim=times[0]).flatten()
-    head2 = bobj.get_data(totim=times[0]).flatten()
+    head1 = bobj.get_data(totim=times[1]).flatten()
+    head2 = bobj.get_data(totim=times[2]).flatten()
 
     assert np.allclose(head0, head2), (
         "Simulated heads for period 1 and 3 should be the same"
     )
     assert np.all(np.less_equal(head1, 100.)), (
-        "Simulated heads for period 2 should be less than or equal to 100."
+        f"Simulated heads for period 2 should be less than or equal to 100. {head1}"
     )
 
 
+def check_lake_obs(idx, test):
+    # Check to make sure the simulated head for the first and 
+    # last period is the same and different from the second period.
+    dnodata = 3.e30
+    name = cases[idx]
+    fpth = test.workspace / f"{name}.lak.obs.csv"
+    print (f"Checking contents of {fpth.name}")
+    obs = np.genfromtxt(fpth, names=True, delimiter=",")
+    stage = obs["LAKESTAGE"].tolist()
+    print (stage)
+    assert stage[0] == stage[2], "Period 1 and period 3 stages should be equal."
+    assert stage[1] == dnodata, "Period 2 stage should equal dnodata"
+
+
 def check_output(idx, test):
+    check_lake_obs(idx, test)
     check_head_file(idx, test)
     check_stage_file(idx, test)
     check_budget_file(idx, test)

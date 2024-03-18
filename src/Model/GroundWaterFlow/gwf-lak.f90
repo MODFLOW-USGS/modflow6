@@ -238,7 +238,6 @@ module LakModule
     procedure, private :: lak_check_valid
     procedure, private :: lak_set_stressperiod
     procedure, private :: lak_set_attribute_error
-    procedure, private :: lak_cfupdate
     procedure, private :: lak_bound_update
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
@@ -3610,9 +3609,6 @@ contains
     integer(I4B) :: igwfnode
     real(DP) :: hlak, blak
     !
-    ! -- Calculate lak conductance and update package RHS and HCOF
-    !call this%lak_cfupdate()
-    !
     ! -- save groundwater seepage for lake solution
     do n = 1, this%nlakes
       this%seep0(n) = this%seep(n)
@@ -3711,6 +3707,7 @@ contains
     !
     ! -- add terms to the gwf matrix
     do n = 1, this%nlakes
+      if (this%iboundpak(n) == 0) cycle
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         igwfnode = this%cellid(j)
         if (this%ibound(igwfnode) < 1) cycle
@@ -4170,7 +4167,6 @@ contains
     !
     ! -- gwf flow and constant flow to lake
     do n = 1, this%nlakes
-      if (this%iboundpak(n) == 0) cycle
       rrate = DZERO
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         ! simvals is from aquifer perspective, and so it is positive
@@ -4178,7 +4174,9 @@ contains
         ! perspective.
         rrate = -this%simvals(j)
         this%qleak(j) = rrate
-        call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
+        if (this%iboundpak(n) /= 0) then
+          call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
+        end if
       end do
     end do
     !
@@ -4282,10 +4280,17 @@ contains
       !
       ! -- write data
       do n = 1, this%nlakes
-        stage = this%xnewpak(n)
-        call this%lak_calculate_sarea(n, stage, sa)
-        call this%lak_calculate_warea(n, stage, wa)
-        call this%lak_calculate_vol(n, stage, v)
+        if (this%iboundpak(n) == 0) then
+          stage = DHNOFLO
+          sa = DHNOFLO
+          wa = DHNOFLO
+          v = DHNOFLO
+        else
+          stage = this%xnewpak(n)
+          call this%lak_calculate_sarea(n, stage, sa)
+          call this%lak_calculate_warea(n, stage, wa)
+          call this%lak_calculate_vol(n, stage, v)
+        end if
         if (this%inamedbound == 1) then
           call this%stagetab%add_term(this%lakename(n))
         end if
@@ -5070,51 +5075,6 @@ contains
     return
   end subroutine lak_accumulate_chterm
 
-  !> @brief Update LAK satcond and package rhs and hcof
-  !<
-  subroutine lak_cfupdate(this)
-    ! -- dummy
-    class(LakType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: j, n, node
-    real(DP) :: hlak, head, clak, blak
-    !
-    ! -- Return if no lak lakes
-    if (this%nbound .eq. 0) return
-    !
-    ! -- Calculate hcof and rhs for each lak entry
-    do n = 1, this%nlakes
-      hlak = this%xnewpak(n)
-      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
-        node = this%cellid(j)
-        head = this%xnew(node)
-
-        this%hcof(j) = DZERO
-        this%rhs(j) = DZERO
-        !
-        ! -- set bound, hcof, and rhs components
-        call this%lak_calculate_conn_conductance(n, j, hlak, head, clak)
-        this%simcond(j) = clak
-
-        this%bound(2, j) = clak
-
-        blak = this%bound(3, j)
-
-        this%hcof(j) = -clak
-        !
-        ! -- fill rhs
-        if (hlak < blak) then
-          this%rhs(j) = -clak * blak
-        else
-          this%rhs(j) = -clak * hlak
-        end if
-      end do
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine lak_cfupdate
-
   !> @brief Store the lake head and connection conductance in the bound array
   !<
   subroutine lak_bound_update(this)
@@ -5281,9 +5241,13 @@ contains
         this%flwiter(n) = this%flwin(n)
         this%flwiter1(n) = this%flwin(n)
         if (this%gwfiss /= 0) then
-          this%flwiter(n) = DEP20 !1.D+10
-          this%flwiter1(n) = DEP20 !1.D+10
+          this%flwiter(n) = DEP20
+          this%flwiter1(n) = DEP20
         end if
+        do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+          this%hcof(j) = DZERO
+          this%rhs(j) = DZERO
+        end do
       end do
       !
       estseep: do i = 1, 2
@@ -5335,6 +5299,11 @@ contains
       end do estseep
       !
       laklevel: do n = 1, this%nlakes
+        ! -- skip inactive lakes
+        if (this%iboundpak(n) == 0) then
+          this%ncncvr(n) = 1
+          cycle laklevel
+        end if
         ibflg = 0
         hlak = this%xnewpak(n)
         if (iter < maxiter) then
