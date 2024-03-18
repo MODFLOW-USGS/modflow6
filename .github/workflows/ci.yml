@@ -230,6 +230,8 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          create-args: >-
+            python=3.9
           init-shell: >-
             bash
             powershell
@@ -438,6 +440,8 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          create-args: >-
+            python=3.9
           init-shell: >-
             bash
             powershell
