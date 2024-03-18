@@ -47,6 +47,11 @@ on:
         description: 'Version number to use for release.'
         required: true
         type: string
+      parallel:
+        description: 'Whether to include a parallel build.'
+        required: false
+        type: boolean
+        default: false
     outputs:
       version:
         description: 'Version number used for release'
@@ -110,6 +115,9 @@ jobs:
         run: |
           # distribution name format is 'mf<major.minor.patch[label]>'
           distname="mf${{ inputs.version }}"
+          if [[ "${{ inputs.parallel }}" == 'true' ]]; then
+            distname="$distname+par"
+          fi
 
           # set step outputs and environment variables
           echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
@@ -148,21 +156,37 @@ jobs:
           fi
 
       - name: Build binaries
-        if: runner.os != 'Windows'
+        if: inputs.parallel != 'true'
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
-      - name: Build binaries (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6
-        shell: pwsh
+      - name: Build and test binaries
+        if: runner.os != 'Windows' && inputs.parallel
+        uses: ./modflow6/.github/actions/test-par
+
+      - name: Check architecture (macOS)
+        working-directory: modflow6/bin
+        if: runner.os == 'macOS'
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+          otool -L mf6
+          lipo -info mf6 
+
+      - name: Build and test binaries (Windows)
+        if: runner.os == 'Windows' && inputs.parallel == 'true'
+        uses: ./modflow6/.github/actions/test-par-win
+
+      - name: Copy DLLs to bin dir
+        if: runner.os == 'Windows' && inputs.parallel == 'true'
+        working-directory: modflow6/bin
+        run: |
+          cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libifcoremd.dll .
+          cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libmmd.dll .
+          cp /c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll .
+          cp /c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll .
+          cp /d/a/modflow6/modflow6/petsc/arch-mswin-c-opt/lib/libpetsc.dll .
 
       - name: Get OS tag
         id: ostag
@@ -170,41 +194,33 @@ jobs:
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
-      - name: Check architecture (macOS)
-        working-directory: modflow6/bin
-        if: runner.os == 'macOS'
-        run: |
-          otool -L mf6
-          lipo -info mf6
-
       - name: Upload binaries
         uses: actions/upload-artifact@v3
         with:
           name: bin-${{ steps.ostag.outputs.ostag }}
           path: modflow6/bin
 
-      # only run steps below if inputs.run_tests is true
       - name: Checkout modflow6-testmodels
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
       - name: Checkout modflow6-examples
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
 
       - name: Update flopy
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -221,19 +237,6 @@ jobs:
             markers="$markers and not developmode"
           fi
           pytest -v -n auto --durations 0 -m "$markers"
-      
-      - name: Test modflow6 (Windows)
-        if: inputs.run_tests == true && runner.os == 'Windows'
-        working-directory: modflow6/autotest
-        shell: pwsh
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          $markers="not large"
-          if ("${{ inputs.developmode }}" -eq "false") {
-            $markers="$markers and not developmode"
-          }
-          pytest -v -n auto --durations 0 -m "$markers" --keep-failed .failed
       
       - name: Upload failed test output
         if: failure()
