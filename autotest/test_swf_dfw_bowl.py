@@ -253,7 +253,7 @@ def check_output(idx, test):
     # print out the answer in a form that can be 
     # dropped into this script, if necessary, as the answer
     for v in stage_all[-1].flatten():
-        print(f"{2*"    "}{v:.8f},")
+        print(f"{v:18.8f},")
 
     msg = (
         "Simulated stage does not match with the answer "
