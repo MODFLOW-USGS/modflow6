@@ -580,22 +580,25 @@ contains
         r = timeseries%GetValue(totimsav, totim, &
                                 tsManager%extendTsToEndOfSimulation)
         bndElem = r
-        ! Look to see if this array element already has a time series
-        ! linked to it.  If not, make a link to it.
-        nlinks = tsManager%CountLinks(auxOrBnd)
         found = .false.
-        searchlinks: do i = 1, nlinks
-          tslTemp => tsManager%GetLink(auxOrBnd, i)
-          if (tslTemp%PackageName == pkgName) then
-            ! -- Check ii, jj against iRow, jCol stored in link
-            if (tslTemp%IRow == ii .and. tslTemp%JCol == jj) then
-              ! -- This array element is already linked to a time series.
-              tsLink => tslTemp
-              found = .true.
-              exit searchlinks
+        if (auxOrBnd /= 'BND') then
+          ! Look to see if this array element already has a time series
+          ! linked to it.  If not, make a link to it.
+          ! Assuming check is not necessary for 'BND' type time series
+          nlinks = tsManager%CountLinks(auxOrBnd)
+          searchlinks: do i = 1, nlinks
+            tslTemp => tsManager%GetLink(auxOrBnd, i)
+            if (tslTemp%PackageName == pkgName) then
+              ! -- Check ii, jj against iRow, jCol stored in link
+              if (tslTemp%IRow == ii .and. tslTemp%JCol == jj) then
+                ! -- This array element is already linked to a time series.
+                tsLink => tslTemp
+                found = .true.
+                exit searchlinks
+              end if
             end if
-          end if
-        end do searchlinks
+          end do searchlinks
+        end if
         if (.not. found) then
           ! -- Link was not found. Make one and add it to the list.
           call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
