@@ -36,395 +36,395 @@ on:
       - 'doc/**.xlsx'
       - '.hpc/**'
 jobs:
-  # lint:
-  #   name: Check format
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       shell: bash -l {0}
-  #   steps:
+  lint:
+    name: Check format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
 
-  #     - name: Checkout modflow6
-  #       uses: actions/checkout@v4
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
 
-  #     - name: Setup Micromamba
-  #       uses: mamba-org/setup-micromamba@v1
-  #       with:
-  #         environment-file: environment.yml
-  #         cache-environment: true
-  #         cache-downloads: true
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+          cache-downloads: true
 
-  #     - name: Check Fortran source formatting
-  #       run: python .github/common/fortran_format_check.py
+      - name: Check Fortran source formatting
+        run: python .github/common/fortran_format_check.py
 
-  #     - name: Check MSVS project files
-  #       run: python .github/common/msvs_vfproj_check.py
-  #     
-  #     - name: Check CITATION.cff
-  #       uses: dieghernan/cff-validator@v3
+      - name: Check MSVS project files
+        run: python .github/common/msvs_vfproj_check.py
+      
+      - name: Check CITATION.cff
+        uses: dieghernan/cff-validator@v3
 
-  # build:
-  #   name: Build
-  #   runs-on: ubuntu-22.04
-  #   defaults:
-  #     run:
-  #       shell: bash -l {0}
-  #   env:
-  #     FC: gfortran
-  #     FC_V: 13
-  #   steps:
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      FC: gfortran
+      FC_V: 13
+    steps:
 
-  #     - name: Checkout modflow6
-  #       uses: actions/checkout@v4
-  #     
-  #     - name: Setup ${{ env.FC }} ${{ env.FC_V }}
-  #       uses: fortran-lang/setup-fortran@v1
-  #       with:
-  #         compiler: gcc
-  #         version: ${{ env.FC_V }}
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+      
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: gcc
+          version: ${{ env.FC_V }}
 
-  #     - name: Setup Micromamba
-  #       uses: mamba-org/setup-micromamba@v1
-  #       with:
-  #         environment-file: environment.yml
-  #         cache-environment: true
-  #         cache-downloads: true
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+          cache-downloads: true
 
-  #     - name: Meson setup
-  #       run: meson setup builddir -Ddebug=false -Dwerror=true
+      - name: Meson setup
+        run: meson setup builddir -Ddebug=false -Dwerror=true
 
-  #     - name: Meson compile
-  #       run: meson compile -C builddir
+      - name: Meson compile
+        run: meson compile -C builddir
 
-  #     - name: Show build log
-  #       if: failure()
-  #       run: cat builddir/meson-logs/meson-log.txt
+      - name: Show build log
+        if: failure()
+        run: cat builddir/meson-logs/meson-log.txt
 
-  #     - name: Meson test
-  #       run: meson test --verbose --no-rebuild -C builddir
+      - name: Meson test
+        run: meson test --verbose --no-rebuild -C builddir
 
-  # smoke_test:
-  #   name: Smoke test
-  #   runs-on: ubuntu-22.04
-  #   defaults:
-  #     run:
-  #       shell: bash -l {0}
-  #   env:
-  #     FC: gfortran
-  #     FC_V: 13
-  #   steps:
-  #     - name: Checkout modflow6
-  #       uses: actions/checkout@v4
-  #       with:
-  #         path: modflow6
-  #     
-  #     - name: Checkout test-drive
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: fortran-lang/test-drive
-  #         path: test-drive
+  smoke_test:
+    name: Smoke test
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      FC: gfortran
+      FC_V: 13
+    steps:
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+      
+      - name: Checkout test-drive
+        uses: actions/checkout@v4
+        with:
+          repository: fortran-lang/test-drive
+          path: test-drive
 
-  #     - name: Setup ${{ env.FC }} ${{ env.FC_V }}
-  #       uses: fortran-lang/setup-fortran@v1
-  #       with:
-  #         compiler: gcc
-  #         version: ${{ env.FC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: gcc
+          version: ${{ env.FC_V }}
 
-  #     - name: Setup Micromamba
-  #       uses: mamba-org/setup-micromamba@v1
-  #       with:
-  #         environment-file: modflow6/environment.yml
-  #         cache-environment: true
-  #         cache-downloads: true
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          cache-environment: true
+          cache-downloads: true
 
-  #     - name: Build test-drive
-  #       working-directory: test-drive
-  #       run: |
-  #         meson setup builddir --prefix=$(pwd) --libdir=lib
-  #         meson install -C builddir
-  #         echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+      - name: Build test-drive
+        working-directory: test-drive
+        run: |
+          meson setup builddir --prefix=$(pwd) --libdir=lib
+          meson install -C builddir
+          echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-  #     - name: Build modflow6
-  #       working-directory: modflow6
-  #       run: |
-  #         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-  #         meson install -C builddir
+      - name: Build modflow6
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
 
-  #     - name: Show build log
-  #       if: failure()
-  #       working-directory: modflow6
-  #       run: cat builddir/meson-logs/meson-log.txt
-  #   
-  #     - name: Unit test programs
-  #       working-directory: modflow6
-  #       run: meson test --verbose --no-rebuild -C builddir
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+    
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
-  #     - name: Update flopy
-  #       working-directory: modflow6/autotest
-  #       run: python update_flopy.py
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
 
-  #     - name: Get executables
-  #       working-directory: modflow6/autotest
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       run: pytest -v --durations 0 get_exes.py
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
 
-  #     - name: Test programs
-  #       working-directory: modflow6/autotest
-  #       run: |
-  #         if [ "${{ github.ref_name }}" == "master" ]; then
-  #           pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode" --keep-failed .failed
-  #         else
-  #           pytest -v -n auto --durations 0 -S --keep-failed .failed
-  #         fi
+      - name: Test programs
+        working-directory: modflow6/autotest
+        run: |
+          if [ "${{ github.ref_name }}" == "master" ]; then
+            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode" --keep-failed .failed
+          else
+            pytest -v -n auto --durations 0 -S --keep-failed .failed
+          fi
 
-  #     - name: Upload failed test output
-  #       if: failure()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: failed-smoke-${{ runner.os }}-${{ env.FC }}-${{ env.FC_V }}
-  #         path: modflow6/autotest/.failed
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-smoke-${{ runner.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
 
-  # test_gfortran:
-  #   name: Test gnu fortran
-  #   needs:
-  #     - lint
-  #     - build
-  #     - smoke_test
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ ubuntu-22.04, macos-12, windows-2022 ]
-  #   defaults:
-  #     run:
-  #       shell: bash -l {0}
-  #   env:
-  #     FC: gfortran
-  #     FC_V: 13
-  #   steps:
-  #     - name: Checkout modflow6
-  #       uses: actions/checkout@v4
-  #       with:
-  #         path: modflow6
-
-  #     - name: Checkout modflow6-testmodels
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: MODFLOW-USGS/modflow6-testmodels
-  #         path: modflow6-testmodels
-  #     
-  #     - name: Checkout modflow6-examples
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: MODFLOW-USGS/modflow6-examples
-  #         path: modflow6-examples
-  #     
-  #     - name: Setup ${{ env.FC }} ${{ env.FC_V }}
-  #       uses: fortran-lang/setup-fortran@v1
-  #       with:
-  #         compiler: gcc
-  #         version: ${{ env.FC_V }}
-
-  #     - name: Setup Micromamba
-  #       uses: mamba-org/setup-micromamba@v1
-  #       with:
-  #         environment-file: modflow6/environment.yml
-  #         create-args: >-
-  #           python=3.9
-  #         init-shell: >-
-  #           bash
-  #           powershell
-  #         cache-environment: true
-  #         cache-downloads: true
-
-  #     - name: Build modflow6
-  #       working-directory: modflow6
-  #       run: |
-  #         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-  #         meson install -C builddir
-
-  #     - name: Show build log
-  #       if: failure()
-  #       working-directory: modflow6
-  #       run: cat builddir/meson-logs/meson-log.txt
-  #     
-  #     - name: Unit test programs
-  #       working-directory: modflow6
-  #       run: meson test --verbose --no-rebuild -C builddir
-
-  #     - name: Update flopy
-  #       working-directory: modflow6/autotest
-  #       run: python update_flopy.py
-
-  #     - name: Get executables
-  #       working-directory: modflow6/autotest
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       run: pytest -v --durations 0 get_exes.py
-
-  #     - name: Test modflow6
-  #       working-directory: modflow6/autotest
-  #       env:
-  #         REPOS_PATH: ${{ github.workspace }}
-  #       run: |
-  #         if [ "${{ github.ref_name }}" == "master" ]; then
-  #           pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
-  #         else
-  #           pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
-  #         fi
-  #     
-  #     - name: Upload failed test output
-  #       if: failure()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
-  #         path: modflow6/autotest/.failed
-  #     
-  #     - name: Checkout usgslatex
-  #       if: runner.os == 'Linux'
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: MODFLOW-USGS/usgslatex
-  #         path: usgslatex
-
-  #     - name: Install TeX Live
-  #       if: runner.os == 'Linux'
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt install texlive-science \
-  #           texlive-latex-extra \
-  #           texlive-font-utils \
-  #           texlive-fonts-recommended \
-  #           texlive-fonts-extra
-
-  #     - name: Install USGS LaTeX style files and Univers font
-  #       if: runner.os == 'Linux'
-  #       working-directory: usgslatex/usgsLaTeX
-  #       run: sudo ./install.sh --all-users
-  #    
-  #     - name: Test distribution scripts
-  #       working-directory: modflow6/distribution
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       run: pytest -v --durations 0
-
-  # test_intel_fortran:
-  #   name: Test intel fortran
-  #   needs:
-  #     - lint
-  #     - build
-  #     - smoke_test
-  #   runs-on: ${{ matrix.os }}
-  #   env:
-  #     FC: intel-classic
-  #     FC_V: "2021.7"
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-22.04, macos-12, windows-2022]
-  #   defaults:
-  #     run:
-  #       shell: bash -l {0}
-  #   steps:
-
-  #     - name: Checkout modflow6
-  #       uses: actions/checkout@v4
-  #       with:
-  #         path: modflow6
-
-  #     - name: Checkout modflow6-testmodels
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: MODFLOW-USGS/modflow6-testmodels
-  #         path: modflow6-testmodels
-  #     
-  #     - name: Checkout modflow6-examples
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: MODFLOW-USGS/modflow6-examples
-  #         path: modflow6-examples
-
-  #     - name: Setup Micromamba
-  #       uses: mamba-org/setup-micromamba@v1
-  #       with:
-  #         environment-file: modflow6/environment.yml
-  #         init-shell: >-
-  #           bash
-  #           powershell
-  #         cache-environment: true
-  #         cache-downloads: true
-
-  #     - name: Setup ${{ env.FC }} ${{ env.FC_V }}
-  #       uses: fortran-lang/setup-fortran@v1
-  #       with:
-  #         compiler: ${{ env.FC }}
-  #         version: ${{ env.FC_V }}
-
-  #     - name: Update version files
-  #       working-directory: modflow6/distribution
-  #       run: python update_version.py
-
-  #     - name: Build modflow6
-  #       working-directory: modflow6
-  #       run: |
-  #         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-  #         meson install -C builddir
-
-  #     - name: Show build log
-  #       if: failure()
-  #       working-directory: modflow6
-  #       run: cat builddir/meson-logs/meson-log.txt
-
-  #     - name: Unit test programs
-  #       working-directory: modflow6
-  #       run: meson test --verbose --no-rebuild -C builddir
-
-  #     - name: Update flopy
-  #       working-directory: modflow6/autotest
-  #       run: python update_flopy.py
-
-  #     - name: Get executables
-  #       working-directory: modflow6/autotest
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       run: pytest -v --durations 0 get_exes.py
-
-  #     - name: Test programs
-  #       working-directory: modflow6/autotest
-  #       env:
-  #         REPOS_PATH: ${{ github.workspace }}
-  #       run: |
-  #         if [ "${{ github.ref_name }}" == "master" ]; then
-  #           pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
-  #         else
-  #           pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
-  #         fi
-  #     
-  #     - name: Upload failed test output
-  #       if: failure()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
-  #         path: modflow6/autotest/.failed
-
-  #     - name: Test scripts
-  #       working-directory: modflow6/distribution
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       run: pytest -v --durations 0
-        
-  parallel_test:
-    name: Parallel testing
-    # needs:
-    #   - lint
-    #   - build
-    #   - smoke_test
+  test_gfortran:
+    name: Test gnu fortran
+    needs:
+      - lint
+      - build
+      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest ] # ubuntu-22.04, macos-12, windows-2022 ]
+        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      FC: gfortran
+      FC_V: 13
+    steps:
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+
+      - name: Checkout modflow6-testmodels
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-testmodels
+          path: modflow6-testmodels
+      
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+      
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: gcc
+          version: ${{ env.FC_V }}
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          create-args: >-
+            python=3.9
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Build modflow6
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+      
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test modflow6
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          if [ "${{ github.ref_name }}" == "master" ]; then
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
+          else
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
+          fi
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
+      
+      - name: Checkout usgslatex
+        if: runner.os == 'Linux'
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/usgslatex
+          path: usgslatex
+
+      - name: Install TeX Live
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
+
+      - name: Install USGS LaTeX style files and Univers font
+        if: runner.os == 'Linux'
+        working-directory: usgslatex/usgsLaTeX
+        run: sudo ./install.sh --all-users
+     
+      - name: Test distribution scripts
+        working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0
+
+  test_intel_fortran:
+    name: Test intel fortran
+    needs:
+      - lint
+      - build
+      - smoke_test
+    runs-on: ${{ matrix.os }}
+    env:
+      FC: intel-classic
+      FC_V: "2021.7"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-12, windows-2022]
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+
+      - name: Checkout modflow6-testmodels
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-testmodels
+          path: modflow6-testmodels
+      
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ env.FC }}
+          version: ${{ env.FC_V }}
+
+      - name: Update version files
+        working-directory: modflow6/distribution
+        run: python update_version.py
+
+      - name: Build modflow6
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          if [ "${{ github.ref_name }}" == "master" ]; then
+            pytest -v -n auto --durations 0 -m "not large and not developmode" --keep-failed .failed
+          else
+            pytest -v -n auto --durations 0 -m "not large" --keep-failed .failed
+          fi
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
+
+      - name: Test scripts
+        working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0
+        
+  parallel_test:
+    name: Parallel testing
+    needs:
+      - lint
+      - build
+      - smoke_test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-22.04, macos-12, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}

@@ -25,4 +25,4 @@ runs:
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"

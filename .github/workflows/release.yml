@@ -47,11 +47,6 @@ on:
         description: 'Version number to use for release.'
         required: true
         type: string
-      parallel:
-        description: 'Whether to include a parallel build.'
-        required: false
-        type: boolean
-        default: false
     outputs:
       version:
         description: 'Version number used for release'
@@ -70,15 +65,23 @@ jobs:
           - os: ${{ inputs.linux_version }}
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            parallel: false
           - os: macos-13
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            parallel: false
           - os: macos-14
             compiler: gcc
             version: 13
+            parallel: false
           - os: windows-2022
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            parallel: false
+          - os: windows-2022
+            compiler: intel-classic
+            version: "2021.7"
+            parallel: true
     defaults:
       run:
         shell: bash -l {0}
@@ -104,6 +107,7 @@ jobs:
             powershell
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+        if: (!(runner.os == 'Windows' && matrix.parallel))
         id: setup-fortran
         uses: fortran-lang/setup-fortran@v1
         with:
@@ -115,9 +119,6 @@ jobs:
         run: |
           # distribution name format is 'mf<major.minor.patch[label]>'
           distname="mf${{ inputs.version }}"
-          if [[ "${{ inputs.parallel }}" == 'true' ]]; then
-            distname="$distname+par"
-          fi
 
           # set step outputs and environment variables
           echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
@@ -156,16 +157,12 @@ jobs:
           fi
 
       - name: Build binaries
-        if: inputs.parallel != 'true'
+        if: (!(runner.os == 'Windows' && matrix.parallel))
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
-
-      - name: Build and test binaries
-        if: runner.os != 'Windows' && inputs.parallel
-        uses: ./modflow6/.github/actions/test-par
 
       - name: Check architecture (macOS)
         working-directory: modflow6/bin
@@ -174,24 +171,37 @@ jobs:
           otool -L mf6
           lipo -info mf6 
 
+      - name: Build binaries (Windows)
+        if: runner.os == 'Windows' && matrix.parallel && !inputs.run_tests
+        uses: ./modflow6/.github/actions/build-par-win
+
       - name: Build and test binaries (Windows)
-        if: runner.os == 'Windows' && inputs.parallel == 'true'
+        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests
         uses: ./modflow6/.github/actions/test-par-win
 
-      - name: Copy DLLs to bin dir
-        if: runner.os == 'Windows' && inputs.parallel == 'true'
+      - name: Copy deps to bin dir
+        if: runner.os == 'Windows' && matrix.parallel
         working-directory: modflow6/bin
         run: |
+          cp /c/Windows/System32/msvcrt.dll .
+          cp /c/Windows/System32/msvcp_win.dll .
+          cp /c/Windows/SYSTEM32/MSVCP140.dll .
+          cp /c/Windows/SYSTEM32/VCRUNTIME140.dll .
+          cp /c/Windows/SYSTEM32/VCRUNTIME140_1.dll .
           cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libifcoremd.dll .
           cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libmmd.dll .
           cp /c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll .
           cp /c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll .
+          cp /c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/mpiexec.exe .
           cp /d/a/modflow6/modflow6/petsc/arch-mswin-c-opt/lib/libpetsc.dll .
 
       - name: Get OS tag
         id: ostag
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          if [[ "${{ matrix.parallel }}" == "true" ]]; then
+            ostag="$ostagpar"
+          fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Upload binaries

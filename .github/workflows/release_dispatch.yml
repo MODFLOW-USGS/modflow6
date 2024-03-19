@@ -34,6 +34,11 @@ on:
         required: false
         type: string
         default: '2021.7'
+      developmode:
+        description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
+        required: false
+        type: boolean
+        default: true
       run_tests:
         description: 'Run tests after building binaries.'
         required: false
@@ -43,11 +48,6 @@ on:
         description: 'Version number to use for release.'
         required: true
         type: string
-      parallel:
-        description: 'Whether to include a parallel build.'
-        required: false
-        type: boolean
-        default: false
 jobs:
   set_options:
     name: Set release options
@@ -133,11 +133,10 @@ jobs:
       compiler_toolchain: ${{ needs.set_options.outputs.compiler_toolchain }}
       compiler_version: ${{ needs.set_options.outputs.compiler_version }}
       branch: ${{ needs.set_options.outputs.branch }}
-      developmode: false
+      developmode: ${{ inputs.developmode }}
       full: true
       run_tests: ${{ inputs.run_tests }}
       version: ${{ needs.set_options.outputs.version }}
-      parallel: ${{ inputs.parallel }}
   pr:
     name: Draft release PR
     if: ${{ github.ref_name != 'master' && ((github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc'))) }}
@@ -244,8 +243,4 @@ jobs:
       
           Visit the USGS "MODFLOW and Related Programs" site for information on MODFLOW 6 and related software: https://doi.org/10.5066/F76Q1VQV
           '
-          if [[ "${{ inputs.parallel }}" == 'true' ]]; then
-            gh release upload $version" ../mf*/mf*.zip
-          else
-            gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
-          fi
+          gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
