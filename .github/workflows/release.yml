@@ -460,6 +460,9 @@ jobs:
           - os: macos-13
           - os: macos-14
           - os: windows-2022
+            parallel: false
+          - os: windows-2022
+            parallel: true
     defaults:
       run:
         shell: bash -l {0}
@@ -511,6 +514,9 @@ jobs:
         id: ostag
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          if [[ "${{ matrix.parallel }}" == "true" ]]; then
+            ostag="$ostagpar"
+          fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
