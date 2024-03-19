@@ -56,7 +56,7 @@ on:
         value: ${{ jobs.build.outputs.distname }}
 jobs:
   build:
-    name: Build binaries (${{ matrix.os }})
+    name: Build binaries (${{ matrix.os }}, parallel=${{ matrix.parallel }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -188,11 +188,11 @@ jobs:
           cp /c/Windows/SYSTEM32/MSVCP140.dll .
           cp /c/Windows/SYSTEM32/VCRUNTIME140.dll .
           cp /c/Windows/SYSTEM32/VCRUNTIME140_1.dll .
-          cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libifcoremd.dll .
-          cp /c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libmmd.dll .
-          cp /c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll .
-          cp /c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll .
-          cp /c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/mpiexec.exe .
+          cp "/c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libifcoremd.dll" .
+          cp "/c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libmmd.dll" .
+          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll" .
+          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll" .
+          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/mpiexec.exe" .
           cp /d/a/modflow6/modflow6/petsc/arch-mswin-c-opt/lib/libpetsc.dll .
 
       - name: Get OS tag
