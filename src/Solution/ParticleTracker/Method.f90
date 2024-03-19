@@ -173,21 +173,27 @@ contains
         particle%istatus = 6
         call this%trackfilectl%save(particle, kper=kper, &
                                     kstp=kstp, reason=3) ! reason=3: termination
+        return
       end if
-    else if (cell_defn%inoexitface .ne. 0) then
+    end if
+    if (cell_defn%inoexitface .ne. 0) then
       particle%advancing = .false.
       particle%istatus = 5
       call this%trackfilectl%save(particle, kper=kper, &
                                   kstp=kstp, reason=3) ! reason=3: termination
-    else if (cell_defn%iweaksink .ne. 0) then
+      return
+    end if
+    if (cell_defn%iweaksink .ne. 0) then
       if (particle%istopweaksink .ne. 0) then
         particle%advancing = .false.
         particle%istatus = 3
         call this%trackfilectl%save(particle, kper=kper, &
                                     kstp=kstp, reason=3) ! reason=3: termination
+        return
       else
         call this%trackfilectl%save(particle, kper=kper, &
                                     kstp=kstp, reason=4) ! reason=4: exited weak sink
+        return
       end if
     end if
   end subroutine update

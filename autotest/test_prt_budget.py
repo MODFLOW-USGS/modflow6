@@ -87,7 +87,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         perioddata={0: ["FIRST"]},
         track_filerecord=[prp_track_file],
         trackcsv_filerecord=[prp_track_csv_file],
-        stop_at_weak_sink="saws" in prt_name,
+        stop_at_weak_sink=False,
         boundnames=True,
     )
 
