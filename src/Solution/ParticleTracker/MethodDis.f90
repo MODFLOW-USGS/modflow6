@@ -383,9 +383,7 @@ contains
     ! -- allocate faceflow array
     call ExpandArray(defn%faceflow, npolyverts + 3)
 
-    ! -- Load face flows. Note that the faceflow array
-    ! -- does not get reallocated if it is already allocated
-    ! -- to a size greater than or equal to npolyverts+3.
+    ! -- Load face flows.
     defn%faceflow = 0d0 ! kluge note: eventually use DZERO for 0d0 throughout
     ! -- As with polygon nbrs, polygon face flows wrap around for
     ! -- convenience at position npolyverts+1, and bot and top flows
@@ -394,8 +392,8 @@ contains
       n = defn%facenbr(m)
       if (n > 0) &
         defn%faceflow(m) = this%fmi%gwfflowja(this%fmi%dis%con%ia(ic) + n)
-      ! if (cellDefn%faceflow(m) < 0d0) defn%inoexitface = 0
     end do
+
     ! -- Add BoundaryFlows to face flows
     call this%load_boundary_flows_to_defn(defn)
     ! -- Set inoexitface flag
@@ -414,6 +412,7 @@ contains
     else
       defn%iweaksink = 0
     end if
+
   end subroutine load_flows_to_defn
 
   !> @brief Add boundary flows to the cell definition faceflow array.
@@ -423,9 +422,11 @@ contains
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
     ! -- local
+    integer(I4B) :: ic
     integer(I4B) :: ioffset
 
-    ioffset = (defn%icell - 1) * 10
+    ic = defn%icell
+    ioffset = (ic - 1) * 10
     defn%faceflow(1) = defn%faceflow(1) + &
                        this%fmi%BoundaryFlows(ioffset + 1) ! kluge note: should these be additive (seems so)???
     defn%faceflow(2) = defn%faceflow(2) + &
