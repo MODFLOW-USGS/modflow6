@@ -124,7 +124,7 @@ jobs:
           echo "version=$ver" >> $GITHUB_OUTPUT
   make_dist:
     name: Make distribution
-    uses: wpbonelli/modflow6/.github/workflows/release.yml@par-dist
+    uses: MODFLOW-USGS/modflow6/.github/workflows/release.yml@develop
     needs: set_options
     with:
       # If the workflow is manually triggered, the maintainer must manually set approve=true to approve a release.
