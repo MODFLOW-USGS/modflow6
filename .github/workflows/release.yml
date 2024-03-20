@@ -200,7 +200,7 @@ jobs:
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
-            ostag="$ostagpar"
+            ostag="${ostag}par"
           fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
@@ -515,7 +515,7 @@ jobs:
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
-            ostag="$ostagpar"
+            ostag="${ostag}par"
           fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
