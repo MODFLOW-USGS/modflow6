@@ -140,6 +140,15 @@ jobs:
           fi
           eval "$cmd"
 
+      - name: Get OS tag
+        id: ostag
+        run: |
+          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          if [[ "${{ matrix.parallel }}" == "true" ]]; then
+            ostag="${ostag}par"
+          fi
+          echo "ostag=$ostag" >> $GITHUB_OUTPUT
+
       # for statically linked gfortran ARM mac build
       - name: Hide dylibs (macOS)
         if: matrix.os == 'macos-14'
@@ -214,15 +223,6 @@ jobs:
           # remove rebuilt and downloaded dirs
           rm -rf rebuilt
           rm -rf downloaded
-
-      - name: Get OS tag
-        id: ostag
-        run: |
-          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
-          if [[ "${{ matrix.parallel }}" == "true" ]]; then
-            ostag="${ostag}par"
-          fi
-          echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Upload binaries
         uses: actions/upload-artifact@v3
