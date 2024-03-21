@@ -204,6 +204,7 @@ jobs:
           cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll" .
           cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_core.2.dll" .
           cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_avx512.2.dll" .
+          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_mc3.2.dll" .
           cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll" .
           cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/opt/mpi/libfabric/bin/libfabric.dll" .
           cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/mpiexec.exe" .
