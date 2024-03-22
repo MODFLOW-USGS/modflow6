@@ -191,31 +191,32 @@ jobs:
       - name: Copy deps to bin dir
         if: runner.os == 'Windows' && matrix.parallel
         working-directory: modflow6/bin
+        shell: cmd
         run: |
-          # copy dependencies
-          cp /c/Windows/System32/ucrtbase.dll .
-          cp /c/Windows/System32/msvcrt.dll .
-          cp /c/Windows/System32/msvcp_win.dll .
-          cp /c/Windows/SYSTEM32/MSVCP140.dll .
-          cp /c/Windows/SYSTEM32/VCRUNTIME140.dll .
-          cp /c/Windows/SYSTEM32/VCRUNTIME140_1.dll .
-          cp "/c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libifcoremd.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libmmd.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_sequential.2.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_core.2.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_avx512.2.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mkl/latest/bin/mkl_mc3.2.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/impi.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/opt/mpi/libfabric/bin/libfabric.dll" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/mpiexec.exe" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/hydra_bstrap_proxy.exe" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/hydra_pmi_proxy.exe" .
-          cp "/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/hydra_service.exe" .
-          cp /d/a/modflow6/modflow6/petsc/arch-mswin-c-opt/lib/libpetsc.dll .
+          :: copy dependencies
+          copy "C:\Windows\System32\ucrtbase.dll" .
+          copy "C:\Windows\System32\msvcrt.dll" .
+          copy "C:\Windows\System32\msvcp_win.dll" .
+          copy "C:\Windows\SYSTEM32\MSVCP140.dll" .
+          copy "C:\Windows\SYSTEM32\VCRUNTIME140.dll" .
+          copy "C:\Windows\SYSTEM32\VCRUNTIME140_1.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\compiler\latest\bin\libifcoremd.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\compiler\latest\bin\libmmd.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_sequential.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_core.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_avx512.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_mc3.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\impi.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\opt\mpi\libfabric\bin\libfabric.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\mpiexec.exe" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_bstrap_proxy.exe" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_pmi_proxy.exe" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_service.exe" .
+          copy "D:\a\modflow6\modflow6\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
 
-          # remove rebuilt and downloaded dirs
-          rm -rf rebuilt
-          rm -rf downloaded
+          :: remove rebuilt and downloaded dirs
+          rd /s /q rebuilt
+          rd /s /q downloaded
 
       - name: Upload binaries
         uses: actions/upload-artifact@v3
