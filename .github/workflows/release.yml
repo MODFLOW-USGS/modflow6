@@ -204,6 +204,8 @@ jobs:
           copy "C:\Program Files (x86)\Intel\oneAPI\compiler\latest\bin\libmmd.dll" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_sequential.2.dll" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_core.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_def.2.dll" .
+          copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_avx2.2.dll" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_avx512.2.dll" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mkl\latest\bin\mkl_mc3.2.dll" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\impi.dll" .
