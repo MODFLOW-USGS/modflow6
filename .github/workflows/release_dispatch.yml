@@ -34,6 +34,11 @@ on:
         required: false
         type: string
         default: '2021.7'
+      developmode:
+        description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
+        required: false
+        type: boolean
+        default: true
       run_tests:
         description: 'Run tests after building binaries.'
         required: false
@@ -128,7 +133,7 @@ jobs:
       compiler_toolchain: ${{ needs.set_options.outputs.compiler_toolchain }}
       compiler_version: ${{ needs.set_options.outputs.compiler_version }}
       branch: ${{ needs.set_options.outputs.branch }}
-      developmode: false
+      developmode: ${{ inputs.developmode }}
       full: true
       run_tests: ${{ inputs.run_tests }}
       version: ${{ needs.set_options.outputs.version }}
