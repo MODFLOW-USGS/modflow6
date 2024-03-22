@@ -215,8 +215,8 @@ jobs:
           copy "D:\a\modflow6\modflow6\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
 
           :: remove rebuilt and downloaded dirs
-          rd /s /q rebuilt
-          rd /s /q downloaded
+          rd /s /q rebuilt 2>nul
+          rd /s /q downloaded 2>nul
 
       - name: Upload binaries
         uses: actions/upload-artifact@v3
