@@ -214,7 +214,7 @@ jobs:
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_bstrap_proxy.exe" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_pmi_proxy.exe" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_service.exe" .
-          copy "D:\a\modflow6\modflow6\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
+          copy "%GITHUB_WORKSPACE%\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
 
           :: remove rebuilt and downloaded dirs
           if exist rebuilt rd /s /q rebuilt
