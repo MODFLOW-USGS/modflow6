@@ -50,7 +50,7 @@ def build_models(idx, test):
     swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
 
     nouter, ninner = 100, 50
-    hclose, rclose, relax = 1e-8, 1e-8, 1.0
+    hclose, rclose, relax = 1e-6, 1e-8, 1.0
     imsswf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
