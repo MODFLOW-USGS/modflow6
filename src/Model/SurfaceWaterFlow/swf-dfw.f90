@@ -657,7 +657,7 @@ contains
     real(DP) :: depth_m
     real(DP) :: width_n
     real(DP) :: width_m
-    real(DP) :: range = 1.d-10
+    real(DP) :: range = 1.d-6
     real(DP) :: dydx
     real(DP) :: smooth_factor
     real(DP) :: length_nm

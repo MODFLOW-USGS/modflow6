@@ -244,7 +244,7 @@ def check_output(idx, test):
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
-    makeplot = True
+    makeplot = False
     if makeplot:
         make_plot(test, mfsim)
 
@@ -261,7 +261,7 @@ def check_output(idx, test):
     idx = np.where(obsvals["time"] == 5400.0)
     outflow_sim = -obsvals["OUTFLOW"][idx]
     msg = (f"Simulated outflow at end of period should be {outflow_answer} "
-           "but found {outflow_sim}")
+           f"but found {outflow_sim}")
     assert np.allclose(outflow_answer, outflow_sim, atol=0.001), msg
 
 
