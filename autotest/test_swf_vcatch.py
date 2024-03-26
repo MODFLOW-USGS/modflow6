@@ -141,7 +141,6 @@ def build_models(idx, test):
         print_flows=False,
         save_flows=True,
         manningsn=rough,
-        slope=-3e30,  # todo: this is reason to get rid of slope as input
         idcxs=None,
     )
 

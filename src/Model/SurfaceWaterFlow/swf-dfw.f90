@@ -8,7 +8,6 @@
 ! todo:
 !   Move Newton to FN routines
 !   Implement a proper perturbation epsilon
-!   Is slope input parameter needed?
 !   Parameterize the smoothing depth?
 !
 module SwfDfwModule
@@ -41,9 +40,8 @@ module SwfDfwModule
     integer(I4B), pointer :: icentral => null() !< flag to use central in space weighting (default is upstream weighting)
     real(DP), pointer :: unitconv !< conversion factor used in mannings equation; calculated from timeconv and lengthconv
     real(DP), pointer :: timeconv !< conversion factor from model length units to meters (1.0 if model uses meters for length)
-    real(DP), pointer :: lengthconv !< conversion factor frommodel time units to seconds (1.0 if model uses seconds for time)
+    real(DP), pointer :: lengthconv !< conversion factor from model time units to seconds (1.0 if model uses seconds for time)
     real(DP), dimension(:), pointer, contiguous :: manningsn => null() !< mannings roughness for each reach
-    real(DP), dimension(:), pointer, contiguous :: slope => null() !< slope for each reach
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id for each reach
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< set to 1 and is accessed by chd for checking
@@ -213,8 +211,6 @@ contains
     ! -- user-provided input
     call mem_allocate(this%manningsn, this%dis%nodes, &
                       'MANNINGSN', this%memoryPath)
-    call mem_allocate(this%slope, this%dis%nodes, &
-                      'SLOPE', this%memoryPath)
     call mem_allocate(this%idcxs, this%dis%nodes, &
                       'IDCXS', this%memoryPath)
     call mem_allocate(this%icelltype, this%dis%nodes, &
@@ -222,7 +218,6 @@ contains
 
     do n = 1, this%dis%nodes
       this%manningsn(n) = DZERO
-      this%slope(n) = DZERO
       this%idcxs(n) = 0
       this%icelltype(n) = 1
     end do
@@ -386,18 +381,11 @@ contains
     ! -- update defaults with idm sourced values
     call mem_set_value(this%manningsn, 'MANNINGSN', &
                        idmMemoryPath, map, found%manningsn)
-    call mem_set_value(this%slope, 'SLOPE', idmMemoryPath, map, found%slope)
     call mem_set_value(this%idcxs, 'IDCXS', idmMemoryPath, map, found%idcxs)
     !
     ! -- ensure MANNINGSN was found
     if (.not. found%manningsn) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: MANNINGSN not found.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- ensure SLOPE was found
-    if (.not. found%slope) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: SLOPE not found.'
       call store_error(errmsg)
     end if
 
@@ -425,10 +413,6 @@ contains
 
     if (found%manningsn) then
       write (this%iout, '(4x,a)') 'MANNINGSN set from input file'
-    end if
-
-    if (found%slope) then
-      write (this%iout, '(4x,a)') 'SLOPE set from input file'
     end if
 
     if (found%idcxs) then
@@ -1028,7 +1012,6 @@ contains
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%manningsn)
-    call mem_deallocate(this%slope)
     call mem_deallocate(this%idcxs)
     call mem_deallocate(this%icelltype)
 

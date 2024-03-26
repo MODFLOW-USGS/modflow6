@@ -114,7 +114,6 @@ def add_swf_model(sim):
         length_conversion=1.0,
         time_conversion=86400.0,
         manningsn=0.035,
-        slope=0.001,
         idcxs=0,
     )
 

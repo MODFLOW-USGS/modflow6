@@ -102,17 +102,6 @@ longname mannings roughness coefficient
 description mannings roughness coefficient
 
 block griddata
-name slope
-type double precision
-shape (nodes)
-valid
-reader readarray
-layered false
-optional
-longname bottom slope
-description bottom slope of the river bed
-
-block griddata
 name idcxs
 type integer
 shape (nodes)

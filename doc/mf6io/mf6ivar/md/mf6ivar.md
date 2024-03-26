@@ -1578,7 +1578,6 @@
 | SWF | DFW | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | SWF | DFW | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the DFW package. See the ``Observation utility'' section for instructions for preparing observation input files. Tables \ref{table:gwf-obstypetable} and \ref{table:gwt-obstypetable} lists observation type(s) supported by the DFW package. |
 | SWF | DFW | GRIDDATA | MANNINGSN | DOUBLE PRECISION (NODES) | mannings roughness coefficient |
-| SWF | DFW | GRIDDATA | SLOPE | DOUBLE PRECISION (NODES) | bottom slope of the river bed |
 | SWF | DFW | GRIDDATA | IDCXS | INTEGER (NODES) | integer value indication the cross section identifier in the Cross Section Package that applies to the reach.  If not provided then reach will be treated as hydraulically wide. |
 | SWF | CXS | OPTIONS | PRINT_INPUT | KEYWORD | keyword to indicate that the list of stream reach information will be written to the listing file immediately after it is read. |
 | SWF | CXS | DIMENSIONS | NSECTIONS | INTEGER | integer value specifying the number of cross sections that will be defined.  There must be NSECTIONS entries in the PACKAGEDATA block. |
