@@ -24,7 +24,6 @@ cases = [
 
 def build_models(idx, test):
     dx = 500.0
-    nreach = 11
     nper = 1
     perlen = [5040 * 2 * 60.0]  # 7 days (in seconds)
     nstp = [50]  # In SWR report nstp = [5040] and tsmult is 1.
@@ -51,7 +50,7 @@ def build_models(idx, test):
     swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
 
     nouter, ninner = 100, 50
-    hclose, rclose, relax = 1e-8, 1e-8, 1.0
+    hclose, rclose, relax = 1e-6, 1e-8, 1.0
     imsswf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -235,7 +234,7 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
     depth = stage_all[-1] - swf.dis.botm.array
-    np.allclose(
+    assert np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"
 

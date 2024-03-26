@@ -83,7 +83,7 @@ module SwfDfwModule
     procedure :: dfw_bd_obs
     procedure :: qcalc
     procedure :: get_cond
-    !procedure :: get_cond_swr
+    procedure :: get_cond_swr
     procedure :: get_cond_n
     procedure :: write_cxs_tables
 
@@ -657,10 +657,10 @@ contains
     real(DP) :: depth_m
     real(DP) :: width_n
     real(DP) :: width_m
-    real(DP) :: range = 1.d-2
+    real(DP) :: range = 1.d-6
     real(DP) :: dydx
     real(DP) :: smooth_factor
-    real(DP) :: denom
+    real(DP) :: length_nm
     real(DP) :: cond
     real(DP) :: cn
     real(DP) :: cm
@@ -668,10 +668,10 @@ contains
     ! we are using a harmonic conductance approach here; however
     ! the SWR Process for MODFLOW-2005/NWT uses length-weighted
     ! average areas and hydraulic radius instead.
-    denom = cln + clm
+    length_nm = cln + clm
     cond = DZERO
-    if (denom > DPREC) then
-      absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
+    if (length_nm > DPREC) then
+      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
       if (absdhdxsqr < DPREC) then
         ! TODO: Set this differently somehow?
         absdhdxsqr = 1.e-7
@@ -718,6 +718,97 @@ contains
     end if
 
   end function get_cond
+
+  function get_cond_swr(this, n, m, ipos, stage_n, stage_m, cln, clm) result(cond)
+    ! -- modules
+    use SmoothingModule, only: sQuadratic
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: n !< number for cell n
+    integer(I4B), intent(in) :: m !< number for cell m
+    integer(I4B), intent(in) :: ipos !< connection number
+    real(DP), intent(in) :: stage_n !< stage in reach n
+    real(DP), intent(in) :: stage_m !< stage in reach m
+    real(DP), intent(in) :: cln !< distance from cell n to shared face with m
+    real(DP), intent(in) :: clm !< distance from cell m to shared face with n
+    ! -- local
+    real(DP) :: absdhdxsqr
+    real(DP) :: depth_n
+    real(DP) :: depth_m
+    real(DP) :: width_n
+    real(DP) :: width_m
+    real(DP) :: range = 1.d-10
+    real(DP) :: dydx
+    real(DP) :: smooth_factor
+    real(DP) :: length_nm
+    real(DP) :: cond
+    real(DP) :: rinvn, rinvm, rinv_avg
+    real(DP) :: area_n, area_m, area_avg
+    real(DP) :: rhn, rhm, rhavg
+    real(DP) :: weight_n
+    real(DP) :: weight_m
+
+    ! Use harmonic weighting for 1/manningsn, but using length-weighted
+    ! averaging for other terms
+    length_nm = cln + clm
+    cond = DZERO
+    if (length_nm > DPREC) then
+      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
+      if (absdhdxsqr < DPREC) then
+        ! TODO: Set this differently somehow?
+        absdhdxsqr = 1.e-7
+      end if
+
+      ! -- Calculate depth in each reach
+      depth_n = stage_n - this%dis%bot(n)
+      depth_m = stage_m - this%dis%bot(m)
+
+      ! -- Assign upstream depth, if not central
+      if (this%icentral == 0) then
+        ! -- use upstream weighting
+        if (stage_n > stage_m) then
+          depth_m = depth_n
+        else
+          depth_n = depth_m
+        end if
+      end if
+
+      ! -- Calculate a smoothed depth that goes to zero over
+      !    the specified range
+      call sQuadratic(depth_n, range, dydx, smooth_factor)
+      depth_n = depth_n * smooth_factor
+      call sQuadratic(depth_m, range, dydx, smooth_factor)
+      depth_m = depth_m * smooth_factor
+
+      ! Get the flow widths for n and m from dis package
+      call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
+
+      ! harmonic average for inverse mannings value
+      rinvn = DONE / this%manningsn(n)
+      rinvm = DONE / this%manningsn(m)
+      rinv_avg = DTWO * rinvn * rinvm * (length_nm) / &
+                 (rinvn * clm + rinvm * cln)
+
+      ! linear weight toward node closer to shared face
+      weight_n = clm / length_nm
+      weight_m = DONE - weight_n
+
+      ! average cross sectional flow area
+      area_n = this%cxs%get_area(this%idcxs(n), width_n, depth_n)
+      area_m = this%cxs%get_area(this%idcxs(m), width_m, depth_m)
+      area_avg = weight_n * area_n + weight_m * area_m
+
+      ! average hydraulic radius
+      rhn = depth_n
+      rhm = depth_m
+      rhavg = weight_n * rhn + weight_m * rhm
+      rhavg = rhavg**DTWOTHIRDS
+
+      cond = rinv_avg * area_avg * rhavg / absdhdxsqr / length_nm
+
+    end if
+
+  end function get_cond_swr
 
   !> @brief Calculate half reach conductance
   !!
