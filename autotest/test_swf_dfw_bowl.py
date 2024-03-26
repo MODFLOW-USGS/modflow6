@@ -117,7 +117,6 @@ def build_models(idx, test):
         print_flows=True,
         save_flows=True,
         manningsn=0.035,
-        slope=1 / dx,
         idcxs=0,
     )
 
