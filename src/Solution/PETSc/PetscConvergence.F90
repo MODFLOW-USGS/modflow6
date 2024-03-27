@@ -204,7 +204,7 @@ contains
     real(DP) :: epfact
     real(DP) :: rcnvg
 
-     ! Set to 'not converged'
+    ! Set to 'not converged'
     flag = KSP_CONVERGED_ITERATING
     ctx%icnvg_ims = 0
 
