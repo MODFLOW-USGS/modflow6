@@ -17,6 +17,8 @@ jobs:
         include:
           # ifx
           - {os: windows-2022, compiler: intel, version: 2022.2}
+          # use this combo to install and cache oneapi components for mf6 parallel (compilers + mkl/mpi)
+          - {os: windows-2022, compiler: intel, version: 2024.0}
           # ifort
           - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
           - {os: windows-2022, compiler: intel-classic, version: 2021.9}
@@ -25,10 +27,21 @@ jobs:
           - {os: windows-2022, compiler: intel-classic, version: 2021.6}
     steps:
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+        if: (!(matrix.compiler == 'intel' && matrix.version == '2024.0'))
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
+
+      - name: Checkout modflow6
+        if: matrix.compiler == 'intel' && matrix.version == '2024.0'
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+
+      - name: Setup oneAPI
+        if: matrix.compiler == 'intel' && matrix.version == '2024.0'
+        uses: ./modflow6/.github/actions/setup-par-oneapi
   test:
     name: Test
     runs-on: ubuntu-22.04
