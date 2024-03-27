@@ -29,39 +29,8 @@ runs:
       shell: bash
       run: echo "ONEAPI_ROOT=C:\Program Files (x86)\Intel\oneAPI" >> "$GITHUB_ENV"
 
-    - name: Restore oneAPI cache
-      id: oneapi-cache
-      uses: actions/cache/restore@v3
-      with:
-        path: ${{ env.ONEAPI_ROOT }}
-        key: oneapi-${{ runner.os }}-${{ steps.get-date.outputs.date }}
-
-    - name: Install oneAPI BaseKit
-      shell: bash
-      if: steps.oneapi-cache.outputs.cache-hit != 'true'
-      run: |
-        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/5cb30fb9-21e9-47e8-82da-a91e00191670/w_BaseKit_p_2024.0.1.45_offline.exe"
-        cmp="intel.oneapi.win.mkl.devel"
-        "modflow6/.github/common/install_intel_windows.bat" $url $cmp
-        rm -rf $TEMP/webimage.exe
-        rm -rf $TEMP/webimage_extracted
-
-    - name: Install oneAPI HPCKit
-      shell: bash
-      if: steps.oneapi-cache.outputs.cache-hit != 'true'
-      run: |
-        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7a6db8a1-a8b9-4043-8e8e-ca54b56c34e4/w_HPCKit_p_2024.0.1.35_offline.exe"
-        cmp="intel.oneapi.win.cpp-dpcpp-common:intel.oneapi.win.ifort-compiler:intel.oneapi.win.mpi.devel"
-        "modflow6/.github/common/install_intel_windows.bat" $url $cmp
-        rm -rf $TEMP/webimage.exe
-        rm -rf $TEMP/webimage_extracted
-
-    - name: Save oneAPI cache
-      if: steps.oneapi-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v3
-      with:
-        path: ${{ env.ONEAPI_ROOT }}
-        key: oneapi-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+    - name: Setup oneAPI
+      uses: ./modflow6/.github/actions/setup-par-oneapi
 
     - name: Restore PETSc cache
       id: petsc-cache
