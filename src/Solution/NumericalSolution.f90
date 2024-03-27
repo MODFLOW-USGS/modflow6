@@ -2043,16 +2043,16 @@ contains
             locdv = this%cnvg_summary%convlocdv(j, k)
             dv = this%cnvg_summary%convdvmax(j, k)
           end if
-          if (ABS(this%cnvg_summary%convdrmax(j, k)) > ABS(dr)) then
-            locdr = this%cnvg_summary%convlocdr(j, k)
-            dr = this%cnvg_summary%convdrmax(j, k)
+          if (ABS(this%cnvg_summary%convrmax(j, k)) > ABS(dr)) then
+            locdr = this%cnvg_summary%convlocr(j, k)
+            dr = this%cnvg_summary%convrmax(j, k)
           end if
         end do
       else
         locdv = this%cnvg_summary%convlocdv(im, k)
-        locdr = this%cnvg_summary%convlocdr(im, k)
+        locdr = this%cnvg_summary%convlocr(im, k)
         dv = this%cnvg_summary%convdvmax(im, k)
-        dr = this%cnvg_summary%convdrmax(im, k)
+        dr = this%cnvg_summary%convrmax(im, k)
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
@@ -2123,9 +2123,9 @@ contains
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
         end if
-        if (ABS(this%cnvg_summary%convdrmax(j, kpos)) > ABS(dr)) then
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+        if (ABS(this%cnvg_summary%convrmax(j, kpos)) > ABS(dr)) then
+          locdr = this%cnvg_summary%convlocr(j, kpos)
+          dr = this%cnvg_summary%convrmax(j, kpos)
         end if
       end do
       !
@@ -2148,8 +2148,8 @@ contains
         do j = 1, this%cnvg_summary%convnmod
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+          locdr = this%cnvg_summary%convlocr(j, kpos)
+          dr = this%cnvg_summary%convrmax(j, kpos)
           !
           ! -- get model number and user node number for dv
           call this%sln_get_nodeu(locdv, im, nodeu)

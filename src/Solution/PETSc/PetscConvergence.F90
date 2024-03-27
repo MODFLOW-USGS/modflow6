@@ -15,8 +15,12 @@ module PetscConvergenceModule
     Vec :: res_old
     Vec :: delta_x
     Vec :: delta_res
-    real(DP) :: dvclose
-    integer(I4B) :: max_its
+    integer(I4B) :: icnvg_ims !< IMS convergence number: 1 => converged, -1 => forces next Picard iter
+    integer(I4B) :: icnvgopt !< convergence option from IMS settings
+    real(DP) :: dvclose !< dep. variable closure criterion
+    real(DP) :: rclose !< residual closure criterion
+    integer(I4B) :: max_its !< maximum number of inner iterations
+    real(DP) :: rnorm_L2_init !< the initial L2 norm for (b - Ax)
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null()
   contains
     procedure :: destroy
@@ -64,10 +68,11 @@ contains
     class(PetscContextType), pointer :: context !< context
     PetscErrorCode :: ierr !< error
     ! local
-    PetscScalar, parameter :: min_one = -1.0
-    PetscScalar, dimension(:), pointer :: local_dx, local_dr
-    PetscScalar :: norm, dvmax_model, drmax_model
-    PetscInt :: idx_dv, idx_dr
+    PetscReal, parameter :: min_one = -1.0
+    PetscReal, dimension(:), pointer :: local_dx, local_res
+    PetscReal :: xnorm_inf, rnorm_inf
+    PetscReal :: dvmax_model, rmax_model
+    PetscInt :: idx_dv, idx_r
     Vec :: x, res
     type(ConvergenceSummaryType), pointer :: summary
     PetscInt :: iter_cnt
@@ -84,6 +89,7 @@ contains
 
     ! n == 0 is before the iteration starts
     if (n == 0) then
+      context%rnorm_L2_init = rnorm
       if (rnorm == 0.0) then
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
@@ -109,18 +115,23 @@ contains
       do i = 1, summary%convnmod
         summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
         summary%convlocdv(i, iter_cnt) = -1
-        summary%convdrmax(i, iter_cnt) = -huge(drmax_model)
-        summary%convlocdr(i, iter_cnt) = -1
+        summary%convrmax(i, iter_cnt) = -huge(rmax_model)
+        summary%convlocr(i, iter_cnt) = -1
       end do
+    end if
+
+    rnorm_inf = 0.0
+    if (context%icnvgopt == 2 .OR. &
+        context%icnvgopt == 3 .OR. &
+        context%icnvgopt == 4) then
+      call VecNorm(res, NORM_INFINITY, rnorm_inf, ierr)
+      CHKERRQ(ierr)
     end if
 
     call VecWAXPY(context%delta_x, min_one, context%x_old, x, ierr)
     CHKERRQ(ierr)
 
-    call VecWAXPY(context%delta_res, min_one, context%res_old, res, ierr)
-    CHKERRQ(ierr)
-
-    call VecNorm(context%delta_x, NORM_INFINITY, norm, ierr)
+    call VecNorm(context%delta_x, NORM_INFINITY, xnorm_inf, ierr)
     CHKERRQ(ierr)
 
     call VecCopy(x, context%x_old, ierr)
@@ -129,20 +140,17 @@ contains
     call VecCopy(res, context%res_old, ierr)
     CHKERRQ(ierr)
 
-    call VecDestroy(res, ierr)
-    CHKERRQ(ierr)
-
     ! get dv and dr per local model (readonly!)
     call VecGetArrayReadF90(context%delta_x, local_dx, ierr)
     CHKERRQ(ierr)
-    call VecGetArrayReadF90(context%delta_res, local_dr, ierr)
+    call VecGetArrayReadF90(res, local_res, ierr)
     CHKERRQ(ierr)
     do i = 1, summary%convnmod
       ! reset
       dvmax_model = 0.0
       idx_dv = -1
-      drmax_model = 0.0
-      idx_dr = -1
+      rmax_model = 0.0
+      idx_r = -1
       ! get first and last model index
       istart = summary%model_bounds(i)
       iend = summary%model_bounds(i + 1) - 1
@@ -151,35 +159,74 @@ contains
           dvmax_model = local_dx(j)
           idx_dv = j
         end if
-        if (abs(local_dr(j)) > abs(drmax_model)) then
-          drmax_model = local_dr(j)
-          idx_dr = j
+        if (abs(local_res(j)) > abs(rmax_model)) then
+          rmax_model = local_res(j)
+          idx_r = j
         end if
       end do
       if (summary%nitermax > 1) then
         summary%convdvmax(i, iter_cnt) = dvmax_model
         summary%convlocdv(i, iter_cnt) = idx_dv
-        summary%convdrmax(i, iter_cnt) = drmax_model
-        summary%convlocdr(i, iter_cnt) = idx_dr
+        summary%convrmax(i, iter_cnt) = rmax_model
+        summary%convlocr(i, iter_cnt) = idx_r
       end if
     end do
     call VecRestoreArrayF90(context%delta_x, local_dx, ierr)
     CHKERRQ(ierr)
-    call VecRestoreArrayF90(context%delta_res, local_dr, ierr)
+    call VecRestoreArrayF90(res, local_res, ierr)
     CHKERRQ(ierr)
 
-    if (norm < context%dvclose) then
-      flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
-    else
-      flag = KSP_CONVERGED_ITERATING ! Not yet converged
+    call VecDestroy(res, ierr)
+    CHKERRQ(ierr)
+
+    flag = apply_check(context, n, xnorm_inf, rnorm_inf, rnorm)
+    if (flag == KSP_CONVERGED_ITERATING) then
+      ! not yet converged, max. iters reached? Then stop.
       if (n == context%max_its) then
-        ! ran out of iterations before convergence
-        ! has been reached
         flag = KSP_DIVERGED_ITS
       end if
     end if
 
   end subroutine petsc_check_convergence
+
+  !> @brief Apply the IMS convergence check
+  !<
+  function apply_check(ctx, nit, dvmax, rnorm_inf, rnorm_L2) result(flag)
+    use TdisModule, only: kstp
+    use IMSLinearBaseModule, only: ims_base_testcnvg, ims_base_epfact
+    class(PetscContextType) :: ctx
+    integer(I4B) :: nit !< iteration number
+    real(DP) :: dvmax !< infinity norm of dep. var. change
+    real(DP) :: rnorm_inf !< infinity norm of residual change
+    real(DP) :: rnorm_L2 !< L2-norm of residual change
+    KSPConvergedReason :: flag !< the convergence status
+    ! local
+    real(DP) :: epfact
+    real(DP) :: rcnvg
+
+     ! Set to 'not converged'
+    flag = KSP_CONVERGED_ITERATING
+    ctx%icnvg_ims = 0
+
+    epfact = ims_base_epfact(ctx%icnvgopt, kstp)
+
+    if (ctx%icnvgopt == 2 .OR. &
+        ctx%icnvgopt == 3 .OR. &
+        ctx%icnvgopt == 4) then
+      rcnvg = rnorm_L2
+    else
+      rcnvg = rnorm_inf
+    end if
+    call ims_base_testcnvg(ctx%icnvgopt, ctx%icnvg_ims, nit, &
+                           dvmax, rcnvg, ctx%rnorm_L2_init, &
+                           epfact, ctx%dvclose, ctx%rclose)
+
+    if (ctx%icnvg_ims /= 0) then
+      ! Set to 'converged'
+      flag = KSP_CONVERGED_HAPPY_BREAKDOWN
+    end if
+
+  end function apply_check
 
   subroutine destroy(this)
     class(PetscContextType) :: this
