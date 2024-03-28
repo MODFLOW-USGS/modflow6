@@ -49,6 +49,7 @@ swf-disv.dfn
 swf-cxs.dfn
 swf-dfw.dfn
 swf-ic.dfn
+swf-cdb.dfn
 swf-chd.dfn
 swf-flw.dfn
 swf-zdg.dfn

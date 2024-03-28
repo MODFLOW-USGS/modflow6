@@ -127,7 +127,7 @@ module SwfModule
   !<
   integer(I4B), parameter :: SWF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(SWF_NMULTIPKG) :: SWF_MULTIPKG
-  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'ZDG6 ', '     ', '     ', & !  5
+  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', '     ', & !  5
                    &45*'     '/ ! 50
 
   ! -- size of supported model package arrays
@@ -976,6 +976,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use SwfFlwModule, only: flw_create
     use ChdModule, only: chd_create
+    use SwfCdbModule, only: cdb_create
     use SwfZdgModule, only: zdg_create
     ! -- dummy
     class(SwfModelType) :: this
@@ -1001,6 +1002,10 @@ contains
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
       packobj%ictMemPath = create_mem_path(this%name, 'DFW')
+    case ('CDB6')
+      call cdb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath, this%dis, this%cxs, &
+                      this%dfw%lengthconv, this%dfw%timeconv)
     case ('ZDG6')
       call zdg_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath, this%dis, this%cxs, this%dfw%unitconv)
@@ -1201,7 +1206,7 @@ contains
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      case ('CHD6', 'FLW6', 'ZDG6')
+      case ('CHD6', 'FLW6', 'CDB6', 'ZDG6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default
