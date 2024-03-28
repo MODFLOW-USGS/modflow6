@@ -121,9 +121,7 @@ contains
     end if
 
     rnorm_inf = 0.0
-    if (context%icnvgopt == 2 .OR. &
-        context%icnvgopt == 3 .OR. &
-        context%icnvgopt == 4) then
+    if (context%icnvgopt == 0 .OR. context%icnvgopt == 1) then
       call VecNorm(res, NORM_INFINITY, rnorm_inf, ierr)
       CHKERRQ(ierr)
     end if
