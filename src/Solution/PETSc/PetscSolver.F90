@@ -26,10 +26,8 @@ module PetscSolverModule
     Mat, pointer :: mat_petsc => null()
     Vec, pointer :: vec_residual => null()
 
+    type(ImsLinearSettingsType), pointer :: linear_settings => null()
     logical(LGP) :: use_ims_pc !< when true, use custom IMS-style preconditioning
-    real(DP) :: dvclose
-    integer(I4B) :: pc_levels
-    real(DP) :: drop_tolerance
     KSPType :: ksp_type
     PCType :: pc_type
     PCType :: sub_pc_type
@@ -82,6 +80,8 @@ contains
     PetscErrorCode :: ierr
     character(len=LINELENGTH) :: errmsg
 
+    this%linear_settings => linear_settings
+
     this%use_ims_pc = .false.
     allocate (this%pc_context)
 
@@ -97,10 +97,6 @@ contains
     allocate (this%vec_residual)
     call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
-
-    ! configure from IMS settings
-    this%dvclose = linear_settings%dvclose
-    this%nitermax = linear_settings%iter1
 
     if (linear_settings%ilinmeth == 1) then
       this%ksp_type = KSPCG
@@ -118,8 +114,6 @@ contains
       this%pc_type = PCILU
       this%sub_pc_type = PCNONE
     end if
-    this%pc_levels = linear_settings%level
-    this%drop_tolerance = linear_settings%droptol
 
     ! get MODFLOW options from PETSc database file
     call this%get_options_mf6()
@@ -163,14 +157,6 @@ contains
     ! local
     PetscErrorCode :: ierr
     logical(LGP) :: found
-
-    call PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
-                             '-dvclose', this%dvclose, found, ierr)
-    CHKERRQ(ierr)
-
-    call PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
-                            '-nitermax', this%nitermax, found, ierr)
-    CHKERRQ(ierr)
 
     call PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-ims_pc', this%use_ims_pc, found, ierr)
@@ -239,10 +225,10 @@ contains
       CHKERRQ(ierr)
       call PCSetType(sub_pc, this%sub_pc_type, ierr)
       CHKERRQ(ierr)
-      call PCFactorSetLevels(sub_pc, this%pc_levels, ierr)
+      call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
       CHKERRQ(ierr)
     else
-      call PCFactorSetLevels(pc, this%pc_levels, ierr)
+      call PCFactorSetLevels(pc, this%linear_settings%level, ierr)
       CHKERRQ(ierr)
     end if
 
@@ -303,13 +289,17 @@ contains
   !> @brief Create and assign a custom convergence
   !< check for this solver
   subroutine create_convergence_check(this, convergence_summary)
+    use IMSLinearBaseModule, only: ims_base_epfact
     class(PetscSolverType) :: this !< This solver instance
     type(ConvergenceSummaryType), pointer :: convergence_summary
     ! local
     PetscErrorCode :: ierr
 
-    this%petsc_ctx%dvclose = this%dvclose
-    this%petsc_ctx%max_its = this%nitermax
+    this%petsc_ctx%icnvg_ims = 0
+    this%petsc_ctx%icnvgopt = this%linear_settings%icnvgopt
+    this%petsc_ctx%dvclose = this%linear_settings%dvclose
+    this%petsc_ctx%rclose = this%linear_settings%rclose
+    this%petsc_ctx%max_its = this%linear_settings%iter1
     this%petsc_ctx%cnvg_summary => convergence_summary
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
@@ -339,7 +329,7 @@ contains
     ! local
     PetscErrorCode :: ierr
     class(PetscVectorType), pointer :: rhs_petsc, x_petsc
-    KSPConvergedReason :: icnvg
+    KSPConvergedReason :: cnvg_reason
     integer :: it_number
 
     rhs_petsc => null()
@@ -367,8 +357,16 @@ contains
 
     call KSPGetIterationNumber(this%ksp_petsc, it_number, ierr)
     this%iteration_number = it_number
-    call KSPGetConvergedReason(this%ksp_petsc, icnvg, ierr)
-    if (icnvg > 0) this%is_converged = 1
+    call KSPGetConvergedReason(this%ksp_petsc, cnvg_reason, ierr)
+    if (cnvg_reason > 0) then
+      if (this%petsc_ctx%icnvg_ims == -1) then
+        ! move to next Picard iteration (e.g. with 'STRICT' option)
+        this%is_converged = 0
+      else
+        ! linear convergence reached
+        this%is_converged = 1
+      end if
+    end if
 
   end subroutine petsc_solve
 
@@ -389,7 +387,7 @@ contains
     CHKERRQ(ierr)
     call PCGetType(pc, pc_type, ierr)
     CHKERRQ(ierr)
-    write (dvclose_str, '(e15.5)') this%dvclose
+    write (dvclose_str, '(e15.5)') this%linear_settings%dvclose
 
     write (iout, '(/,7x,a)') "PETSc linear solver settings: "
     write (iout, '(1x,a)') repeat('-', 66)
@@ -399,7 +397,8 @@ contains
       write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", &
         trim(this%sub_pc_type)
     end if
-    write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", this%nitermax
+    write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", &
+      this%linear_settings%iter1
     write (iout, '(1x,a,a,/)') &
       "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
 

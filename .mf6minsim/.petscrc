@@ -1,6 +1,0 @@
--ksp_type cg
--pc_type bjacobi
--sub_pc_type ilu
--sub_pc_factor_levels 2
--dvclose 1.0e-6
--options_left no

@@ -9,7 +9,7 @@ MODULE IMSLinearModule
   use IMSLinearBaseModule, only: ims_base_cg, ims_base_bcgs, &
                                  ims_base_pccrs, ims_base_calc_order, &
                                  ims_base_scale, ims_base_pcu, &
-                                 ims_base_residual
+                                 ims_base_residual, ims_base_epfact
   use BlockParserModule, only: BlockParserType
   use MatrixBaseModule
   use ConvergenceSummaryModule
@@ -685,17 +685,7 @@ CONTAINS
     real(DP) :: dnrm2
     !
     ! -- set epfact based on timestep
-    IF (this%ICNVGOPT == 2) THEN
-      IF (KSTP == 1) THEN
-        this%EPFACT = 0.01
-      ELSE
-        this%EPFACT = 0.10
-      END IF
-    ELSE IF (this%ICNVGOPT == 4) THEN
-      this%EPFACT = DEM4
-    ELSE
-      this%EPFACT = DONE
-    END IF
+    this%EPFACT = ims_base_epfact(this%ICNVGOPT, KSTP)
     !
     ! -- SCALE PROBLEM
     IF (this%ISCL .NE. 0) THEN

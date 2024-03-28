@@ -19,12 +19,12 @@ module ConvergenceSummaryModule
     integer(I4B), dimension(:), pointer, contiguous :: itinner => null() !< inner iteration number within each picard iteration
     integer(I4B), dimension(:), pointer, contiguous :: locdv => null() !< location of the maximum dependent-variable change in the solution
     real(DP), dimension(:), pointer, contiguous :: dvmax => null() !< maximum dependent-variable change in the solution
-    integer(I4B), dimension(:), pointer, contiguous :: locdr => null() !< location of the maximum flow change in the solution
-    real(DP), dimension(:), pointer, contiguous :: drmax => null() !< maximum flow change in the solution
+    integer(I4B), dimension(:), pointer, contiguous :: locr => null() !< location of the maximum flow change in the solution
+    real(DP), dimension(:), pointer, contiguous :: rmax => null() !< maximum flow change in the solution
     integer(I4B), pointer, dimension(:, :), contiguous :: convlocdv => null() !< location of the maximum dependent-variable change in each model in the solution
     real(DP), pointer, dimension(:, :), contiguous :: convdvmax => null() !< maximum dependent-variable change for each model in the solution
-    integer(I4B), pointer, dimension(:, :), contiguous :: convlocdr => null() !< location of the maximum flow change in each model in the solution
-    real(DP), pointer, dimension(:, :), contiguous :: convdrmax => null() !< maximum flow change in each model in the solution
+    integer(I4B), pointer, dimension(:, :), contiguous :: convlocr => null() !< location of the maximum flow change in each model in the solution
+    real(DP), pointer, dimension(:, :), contiguous :: convrmax => null() !< maximum flow change in each model in the solution
   contains
     procedure :: init
     procedure :: reinit
@@ -54,15 +54,15 @@ contains
     call mem_allocate(this%itinner, 0, 'ITINNER', this%memory_path)
     call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memory_path)
     call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memory_path)
-    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memory_path)
-    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memory_path)
+    call mem_allocate(this%locr, this%convnmod, 'LOCDR', this%memory_path)
+    call mem_allocate(this%rmax, this%convnmod, 'DRMAX', this%memory_path)
     call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', &
                       this%memory_path)
     call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', &
                       this%memory_path)
-    call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', &
+    call mem_allocate(this%convrmax, this%convnmod, 0, 'CONVDRMAX', &
                       this%memory_path)
-    call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', &
+    call mem_allocate(this%convlocr, this%convnmod, 0, 'CONVLOCDR', &
                       this%memory_path)
 
     call this%set_defaults()
@@ -79,9 +79,9 @@ contains
                         this%memory_path)
     call mem_reallocate(this%convlocdv, this%convnmod, niter_max, 'CONVLOCDV', &
                         this%memory_path)
-    call mem_reallocate(this%convdrmax, this%convnmod, niter_max, 'CONVDRMAX', &
+    call mem_reallocate(this%convrmax, this%convnmod, niter_max, 'CONVDRMAX', &
                         this%memory_path)
-    call mem_reallocate(this%convlocdr, this%convnmod, niter_max, 'CONVLOCDR', &
+    call mem_reallocate(this%convlocr, this%convnmod, niter_max, 'CONVLOCDR', &
                         this%memory_path)
 
     call this%set_defaults()
@@ -94,10 +94,10 @@ contains
     integer(I4B) :: i, j
 
     do i = 1, this%convnmod
-      this%locdr(i) = 0
+      this%locr(i) = 0
       this%dvmax(i) = DZERO
       this%locdv(i) = 0
-      this%drmax(i) = DZERO
+      this%rmax(i) = DZERO
     end do
 
     do i = 1, this%nitermax
@@ -105,8 +105,8 @@ contains
       do j = 1, this%convnmod
         this%convdvmax(j, i) = DZERO
         this%convlocdv(j, i) = 0
-        this%convdrmax(j, i) = DZERO
-        this%convlocdr(j, i) = 0
+        this%convrmax(j, i) = DZERO
+        this%convlocr(j, i) = 0
       end do
     end do
 
@@ -121,8 +121,8 @@ contains
     call mem_deallocate(this%convnmod)
     call mem_deallocate(this%nitermax)
 
-    call mem_deallocate(this%locdr)
-    call mem_deallocate(this%drmax)
+    call mem_deallocate(this%locr)
+    call mem_deallocate(this%rmax)
     call mem_deallocate(this%locdv)
     call mem_deallocate(this%dvmax)
 
@@ -130,8 +130,8 @@ contains
     call mem_deallocate(this%itinner)
     call mem_deallocate(this%convdvmax)
     call mem_deallocate(this%convlocdv)
-    call mem_deallocate(this%convdrmax)
-    call mem_deallocate(this%convlocdr)
+    call mem_deallocate(this%convrmax)
+    call mem_deallocate(this%convlocr)
 
   end subroutine destroy
 

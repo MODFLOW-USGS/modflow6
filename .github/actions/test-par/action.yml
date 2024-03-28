@@ -28,15 +28,15 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
-        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/bin" >> $GITHUB_PATH
 
     - name: Configure PETSc
       if: runner.os == 'Linux'
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
+        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi --with-debugging=0
         sudo make all
 
     - name: Configure PETSc
@@ -44,7 +44,7 @@ runs:
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
+        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
         sudo make all
 
     - name: Build modflow6
