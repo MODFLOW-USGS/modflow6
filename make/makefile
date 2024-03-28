@@ -104,6 +104,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/swf-zdgidm.o \
+$(OBJDIR)/swf-cdbidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
@@ -113,6 +114,7 @@ $(OBJDIR)/swf-disidm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
 $(OBJDIR)/swf-chdidm.o \
+$(OBJDIR)/swf-cdbidm.o \
 $(OBJDIR)/sim-tdisidm.o \
 $(OBJDIR)/sim-namidm.o \
 $(OBJDIR)/prt-namidm.o \
@@ -376,11 +378,13 @@ $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/swf-zdg.o \
+$(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/swf-sto.o \
 $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
 $(OBJDIR)/swf-dfw.o \
+$(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-obs.o \

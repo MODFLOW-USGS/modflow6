@@ -1,14 +1,14 @@
-!> @brief This module contains the ZDG package methods
+!> @brief This module contains the CDB package methods
 !!
 !! This module can be used to represent outflow from streams using
-!! a zero-depth-gradient boundary.
+!! a critical depth boundary.
 !!
 !<
-module SwfZdgModule
+module SwfCdbModule
   ! -- modules
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DNODATA, &
-                             LINELENGTH, DHALF, DTWOTHIRDS
+  use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, &
+                             DPREC, DHALF, DTWO, DGRAVITY
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
@@ -29,78 +29,77 @@ module SwfZdgModule
   implicit none
   !
   private
-  public :: zdg_create
+  public :: cdb_create
   !
-  character(len=LENFTYPE) :: ftype = 'ZDG' !< package ftype
-  character(len=16) :: text = '             ZDG' !< package flow text string
+  character(len=LENFTYPE) :: ftype = 'CDB' !< package ftype
+  character(len=16) :: text = '             CDB' !< package flow text string
   !
-  type, extends(BndExtType) :: SwfZdgType
+  type, extends(BndExtType) :: SwfCdbType
 
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id
     real(DP), dimension(:), pointer, contiguous :: width => null() !< channel width
-    real(DP), dimension(:), pointer, contiguous :: slope => null() !< channel slope
-    real(DP), dimension(:), pointer, contiguous :: rough => null() !< channel roughness
-    real(DP), pointer :: unitconv => null() !< conversion factor for roughness to length and time units of meters and seconds
+    real(DP), pointer :: gravconv => null() !< conversion factor gravity in m/s^2 to model units
 
     ! -- pointers other objects
     type(SwfDislType), pointer :: disl
     type(SwfCxsType), pointer :: cxs
 
   contains
-    procedure :: allocate_scalars => zdg_allocate_scalars
-    procedure :: allocate_arrays => zdg_allocate_arrays
-    procedure :: source_options => zdg_options
-    procedure :: log_zdg_options
-    procedure :: bnd_rp => zdg_rp
-    procedure :: bnd_cf => zdg_cf
-    procedure :: bnd_fc => zdg_fc
-    procedure :: bnd_da => zdg_da
+    procedure :: allocate_scalars => cdb_allocate_scalars
+    procedure :: allocate_arrays => cdb_allocate_arrays
+    procedure :: source_options => cdb_options
+    procedure :: log_cdb_options
+    procedure :: bnd_rp => cdb_rp
+    procedure :: bnd_cf => cdb_cf
+    procedure :: bnd_fc => cdb_fc
+    procedure :: bnd_da => cdb_da
     procedure :: define_listlabel
-    procedure :: bound_value => zdg_bound_value
+    procedure :: bound_value => cdb_bound_value
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => zdg_obs_supported
-    procedure, public :: bnd_df_obs => zdg_df_obs
-    procedure, public :: bnd_bd_obs => zdg_bd_obs
+    procedure, public :: bnd_obs_supported => cdb_obs_supported
+    procedure, public :: bnd_df_obs => cdb_df_obs
+    procedure, public :: bnd_bd_obs => cdb_bd_obs
     ! -- methods for time series
-    procedure, public :: bnd_rp_ts => zdg_rp_ts
+    procedure, public :: bnd_rp_ts => cdb_rp_ts
     ! -- private
-    procedure, private :: get_cond
-  end type SwfZdgType
+    procedure, private :: qcalc
+  end type SwfCdbType
 
 contains
 
   !> @ brief Create a new package object
   !!
-  !!  Create a new ZDG Package object
+  !!  Create a new CDB Package object
   !!
   !<
-  subroutine zdg_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        mempath, dis, cxs, unitconv)
+  subroutine cdb_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        mempath, dis, cxs, lengthconv, timeconv)
     ! -- dummy variables
     class(BndType), pointer :: packobj !< pointer to default package type
     integer(I4B), intent(in) :: id !< package id
     integer(I4B), intent(in) :: ibcnum !< boundary condition number
-    integer(I4B), intent(in) :: inunit !< unit number of ZDG package input file
+    integer(I4B), intent(in) :: inunit !< unit number of CDB package input file
     integer(I4B), intent(in) :: iout !< unit number of model listing file
     character(len=*), intent(in) :: namemodel !< model name
     character(len=*), intent(in) :: pakname !< package name
     character(len=*), intent(in) :: mempath !< input mempath
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
-    real(DP), intent(in) :: unitconv !< unit conversion for roughness
+    real(DP), intent(in) :: lengthconv !< conversion factor from model length to meters
+    real(DP), intent(in) :: timeconv !< conversion factor from model time units to seconds
     ! -- local variables
-    type(SwfZdgType), pointer :: zdgobj
+    type(SwfCdbType), pointer :: cdbobj
     !
     ! -- allocate the object and assign values to object variables
-    allocate (zdgobj)
-    packobj => zdgobj
+    allocate (cdbobj)
+    packobj => cdbobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
-    call zdgobj%allocate_scalars()
+    call cdbobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -116,54 +115,54 @@ contains
     ! -- store pointer to disl
     select type (dis)
     type is (SwfDislType)
-      zdgobj%disl => dis
+      cdbobj%disl => dis
     end select
     !
     ! -- store pointer to cxs
-    zdgobj%cxs => cxs
+    cdbobj%cxs => cxs
     !
     ! -- store unit conversion
-    zdgobj%unitconv = unitconv
+    cdbobj%gravconv = DGRAVITY * lengthconv * timeconv ** 2
     !
     ! -- return
     return
-  end subroutine zdg_create
+  end subroutine cdb_create
 
   !> @ brief Allocate scalars
   !!
-  !! Allocate and initialize scalars for the ZDG package. The base model
+  !! Allocate and initialize scalars for the CDB package. The base model
   !! allocate scalars method is also called.
   !!
   !<
-  subroutine zdg_allocate_scalars(this)
+  subroutine cdb_allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType object
+    class(SwfCdbType) :: this !< SwfcdbType object
     !
     ! -- call base type allocate scalars
     call this%BndExtType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%unitconv, 'UNITCONV', this%memoryPath)
+    call mem_allocate(this%gravconv, 'GRAVCONV', this%memoryPath)
     !
     ! -- Set values
-    this%unitconv = DZERO
+    this%gravconv = DZERO
     !
     ! -- return
     return
-  end subroutine zdg_allocate_scalars
+  end subroutine cdb_allocate_scalars
 
   !> @ brief Allocate arrays
     !!
     !! Allocate and initialize arrays for the SWF package
     !!
   !<
-  subroutine zdg_allocate_arrays(this, nodelist, auxvar)
+  subroutine cdb_allocate_arrays(this, nodelist, auxvar)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
-    class(SwfZdgType) :: this
+    class(SwfCdbType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
@@ -174,33 +173,27 @@ contains
     ! -- set array input context pointer
     call mem_setptr(this%idcxs, 'IDCXS', this%input_mempath)
     call mem_setptr(this%width, 'WIDTH', this%input_mempath)
-    call mem_setptr(this%slope, 'SLOPE', this%input_mempath)
-    call mem_setptr(this%rough, 'ROUGH', this%input_mempath)
     !
     ! -- checkin array input context pointer
     call mem_checkin(this%idcxs, 'IDCXS', this%memoryPath, &
                      'IDCXS', this%input_mempath)
     call mem_checkin(this%width, 'WIDTH', this%memoryPath, &
                      'WIDTH', this%input_mempath)
-    call mem_checkin(this%slope, 'SLOPE', this%memoryPath, &
-                     'SLOPE', this%input_mempath)
-    call mem_checkin(this%rough, 'ROUGH', this%memoryPath, &
-                     'ROUGH', this%input_mempath)
     !
     ! -- return
     return
-  end subroutine zdg_allocate_arrays
+  end subroutine cdb_allocate_arrays
 
   !> @ brief Deallocate package memory
   !!
   !!  Deallocate SWF package scalars and arrays.
   !!
   !<
-  subroutine zdg_da(this)
+  subroutine cdb_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType object
+    class(SwfCdbType) :: this !< SwfcdbType object
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -208,30 +201,28 @@ contains
     ! -- arrays
     call mem_deallocate(this%idcxs, 'IDCXS', this%memoryPath)
     call mem_deallocate(this%width, 'WIDTH', this%memoryPath)
-    call mem_deallocate(this%slope, 'SLOPE', this%memoryPath)
-    call mem_deallocate(this%rough, 'ROUGH', this%memoryPath)
     !
     ! -- scalars
-    call mem_deallocate(this%unitconv)
+    call mem_deallocate(this%gravconv)
     !
     ! -- return
     return
-  end subroutine zdg_da
+  end subroutine cdb_da
 
   !> @ brief Source additional options for package
   !!
   !!  Source additional options for SWF package.
   !!
   !<
-  subroutine zdg_options(this)
+  subroutine cdb_options(this)
     ! -- modules
     use InputOutputModule, only: urword
     use MemoryManagerExtModule, only: mem_set_value
-    use SwfZdgInputModule, only: SwfZdgParamFoundType
+    use SwfCdbInputModule, only: SwfCdbParamFoundType
     ! -- dummy variables
-    class(SwfZdgType), intent(inout) :: this !< SwfZdgType object
+    class(SwfCdbType), intent(inout) :: this !< SwfCdbType object
     ! -- local variables
-    type(SwfZdgParamFoundType) :: found
+    type(SwfCdbParamFoundType) :: found
     ! -- formats
     !
     ! -- source base BndExtType options
@@ -241,20 +232,20 @@ contains
     ! none
     !
     ! -- log SWF specific options
-    call this%log_zdg_options(found)
+    call this%log_cdb_options(found)
     !
     ! -- return
     return
-  end subroutine zdg_options
+  end subroutine cdb_options
 
   !> @ brief Log SWF specific package options
   !<
-  subroutine log_zdg_options(this, found)
+  subroutine log_cdb_options(this, found)
     ! -- modules
-    use SwfZdgInputModule, only: SwfZdgParamFoundType
+    use SwfCdbInputModule, only: SwfCdbParamFoundType
     ! -- dummy variables
-    class(SwfZdgType), intent(inout) :: this !< BndExtType object
-    type(SwfZdgParamFoundType), intent(in) :: found
+    class(SwfCdbType), intent(inout) :: this !< BndExtType object
+    type(SwfCdbParamFoundType), intent(in) :: found
     ! -- local variables
     ! -- format
     !
@@ -272,15 +263,15 @@ contains
     !
     ! -- return
     return
-  end subroutine log_zdg_options
+  end subroutine log_cdb_options
 
   !> @ brief SWF read and prepare
     !!
   !<
-  subroutine zdg_rp(this)
+  subroutine cdb_rp(this)
     use TdisModule, only: kper
     ! -- dummy
-    class(SwfZdgType), intent(inout) :: this
+    class(SwfCdbType), intent(inout) :: this
     ! -- local
     !
     if (this%iper /= kper) return
@@ -295,31 +286,29 @@ contains
     !
     ! -- return
     return
-  end subroutine zdg_rp
+  end subroutine cdb_rp
 
   !> @ brief Formulate the package hcof and rhs terms.
   !!
-  !!  Formulate the hcof and rhs terms for the ZDG package that will be
+  !!  Formulate the hcof and rhs terms for the CDB package that will be
   !!  added to the coefficient matrix and right-hand side vector.
   !!
   !<
-  subroutine zdg_cf(this)
+  subroutine cdb_cf(this)
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType  object
+    class(SwfCdbType) :: this !< SwfCdbType  object
     ! -- local variables
     integer(I4B) :: i, node
     real(DP) :: q
     real(DP) :: qeps
-    real(DP) :: absdhdxsq
     real(DP) :: depth
-    real(DP) :: cond
     real(DP) :: derv
     real(DP) :: eps
     !
     ! -- Return if no inflows
     if (this%nbound == 0) return
     !
-    ! -- Calculate hcof and rhs for each zdg entry
+    ! -- Calculate hcof and rhs for each cdb entry
     eps = 1.D-8
     do i = 1, this%nbound
 
@@ -331,17 +320,13 @@ contains
       end if
 
       ! -- calculate terms and add to hcof and rhs
-      absdhdxsq = this%slope(i)**DHALF
       depth = this%xnew(node) - this%dis%bot(node)
 
       ! -- calculate unperturbed q
-      ! TODO: UNITCONV?!
-      cond = this%get_cond(i, depth, absdhdxsq, this%unitconv)
-      q = -cond * this%slope(i)
+      q = this%qcalc(i, depth)
 
       ! -- calculate perturbed q
-      cond = this%get_cond(i, depth + eps, absdhdxsq, this%unitconv)
-      qeps = -cond * this%slope(i)
+      qeps = this%qcalc(i, depth + eps)
 
       ! -- calculate derivative
       derv = (qeps - q) / eps
@@ -353,59 +338,48 @@ contains
     end do
     !
     return
-  end subroutine zdg_cf
+  end subroutine cdb_cf
 
-  !> @brief Calculate conductance-like term
-  !!
-  !! Conductance normally has a dx term in the denominator
-  !! but that is not included here, as the flow is calculated
-  !! using Q = C * slope.  The returned c value from this
-  !! function has dimensions of L3/T.
-  !!
+  !> @brief Calculate critical depth boundary flow
   !<
-  function get_cond(this, i, depth, absdhdxsq, unitconv) result(c)
-    ! -- modules
-    ! -- dummy
-    class(SwfZdgType) :: this
+  function qcalc(this, i, depth) result(q)
+    ! modules
+    ! dummy
+    class(SwfCdbType) :: this
     integer(I4B), intent(in) :: i !< boundary number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
-    real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
-    real(DP), intent(in) :: unitconv !< conversion factor for roughness to length and time units of meters and seconds
-    ! -- local
+    ! return
+    real(DP) :: q
+    ! local
     integer(I4B) :: idcxs
-    real(DP) :: c
     real(DP) :: width
-    real(DP) :: rough
-    real(DP) :: slope
-    real(DP) :: roughc
     real(DP) :: a
     real(DP) :: r
-    real(DP) :: conveyance
-    !
+
     idcxs = this%idcxs(i)
     width = this%width(i)
-    rough = this%rough(i)
-    slope = this%slope(i)
-    roughc = this%cxs%get_roughness(idcxs, width, depth, rough, &
-                                    slope)
     a = this%cxs%get_area(idcxs, width, depth)
     r = this%cxs%get_hydraulic_radius(idcxs, width, depth, area=a)
 
-    !conveyance = a * r**DTWOTHIRDS / roughc
-    conveyance = this%cxs%get_conveyance(idcxs, width, depth, rough)
-    c = conveyance / absdhdxsq
+    q = this%gravconv * a ** DTWO * r
+    if (q > DPREC) then
+      q = q ** DHALF
+    else
+      q = DZERO
+    end if
+    q = -q
 
-  end function get_cond
+  end function qcalc
 
   !> @ brief Copy hcof and rhs terms into solution.
   !!
-  !!  Add the hcof and rhs terms for the ZDG package to the
+  !!  Add the hcof and rhs terms for the CDB package to the
   !!  coefficient matrix and right-hand side vector.
   !!
   !<
-  subroutine zdg_fc(this, rhs, ia, idxglo, matrix_sln)
+  subroutine cdb_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType  object
+    class(SwfCdbType) :: this !< SwfCdbType  object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
@@ -427,7 +401,7 @@ contains
       ipos = ia(n)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
-      ! -- If mover is active and this zdg item is discharging,
+      ! -- If mover is active and this cdb item is discharging,
       !    store available water (as positive value).
       if (this%imover == 1 .and. this%rhs(i) > DZERO) then
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
@@ -436,17 +410,17 @@ contains
     !
     ! -- return
     return
-  end subroutine zdg_fc
+  end subroutine cdb_fc
 
   !> @ brief Define the list label for the package
   !!
-  !!  Method defined the list label for the ZDG package. The list label is
+  !!  Method defined the list label for the CDB package. The list label is
   !!  the heading that is written to iout when PRINT_INPUT option is used.
   !!
   !<
   subroutine define_listlabel(this)
     ! -- dummy variables
-    class(SwfZdgType), intent(inout) :: this !< SwfZdgType  object
+    class(SwfCdbType), intent(inout) :: this !< SwfCdbType  object
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -473,36 +447,36 @@ contains
 
   !> @brief Determine if observations are supported.
   !!
-  !! Function to determine if observations are supported by the ZDG package.
-  !! Observations are supported by the ZDG package.
+  !! Function to determine if observations are supported by the CDB package.
+  !! Observations are supported by the CDB package.
   !!
-  !! @return  zdg_obs_supported       boolean indicating if observations are supported
+  !! @return  cdb_obs_supported       boolean indicating if observations are supported
   !!
   !<
-  logical function zdg_obs_supported(this)
+  logical function cdb_obs_supported(this)
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType  object
+    class(SwfCdbType) :: this !< SwfCdbType  object
     !
     ! -- set boolean
-    zdg_obs_supported = .true.
+    cdb_obs_supported = .true.
     !
     ! -- return
     return
-  end function zdg_obs_supported
+  end function cdb_obs_supported
 
   !> @brief Define the observation types available in the package
   !!
-  !! Method to define the observation types available in the ZDG package.
+  !! Method to define the observation types available in the CDB package.
   !!
   !<
-  subroutine zdg_df_obs(this)
+  subroutine cdb_df_obs(this)
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType  object
+    class(SwfCdbType) :: this !< SwfCdbType  object
     ! -- local variables
     integer(I4B) :: indx
     !
     ! -- initialize observations
-    call this%obs%StoreObsType('zdg', .true., indx)
+    call this%obs%StoreObsType('cdb', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
     ! -- Store obs type and assign procedure pointer
@@ -512,16 +486,16 @@ contains
     !
     ! -- return
     return
-  end subroutine zdg_df_obs
+  end subroutine cdb_df_obs
 
   !> @brief Save observations for the package
   !!
-  !! Method to save simulated values for the ZDG package.
+  !! Method to save simulated values for the CDB package.
   !!
   !<
-  subroutine zdg_bd_obs(this)
+  subroutine cdb_bd_obs(this)
     ! -- dummy variables
-    class(SwfZdgType) :: this !< SwfZdgType  object
+    class(SwfCdbType) :: this !< SwfCdbType  object
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -547,7 +521,7 @@ contains
                 v = -v
               end if
             end if
-          case ('ZDG')
+          case ('CDB')
             v = this%simvals(jj)
           case default
             errmsg = 'Unrecognized observation type: '//trim(obsrv%ObsTypeId)
@@ -562,19 +536,19 @@ contains
     !
     ! -- return
     return
-  end subroutine zdg_bd_obs
+  end subroutine cdb_bd_obs
 
   ! -- Procedure related to time series
 
   !> @brief Assign time series links for the package
   !!
-  !! Assign the time series links for the ZDG package. Only
+  !! Assign the time series links for the CDB package. Only
   !! the Q variable can be defined with time series.
   !!
   !<
-  subroutine zdg_rp_ts(this)
+  subroutine cdb_rp_ts(this)
     ! -- dummy variables
-    class(SwfZdgType), intent(inout) :: this !< SwfZdgType  object
+    class(SwfCdbType), intent(inout) :: this !< SwfCdbType  object
     ! -- local variables
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
@@ -592,7 +566,7 @@ contains
     !
     ! -- return
     return
-  end subroutine zdg_rp_ts
+  end subroutine cdb_rp_ts
 
   !> @ brief Return a bound value
   !!
@@ -600,11 +574,11 @@ contains
   !!  and row.
   !!
   !<
-  function zdg_bound_value(this, col, row) result(bndval)
+  function cdb_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy variables
-    class(SwfZdgType), intent(inout) :: this !< BndExtType object
+    class(SwfCdbType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
     ! -- result
@@ -615,12 +589,8 @@ contains
       bndval = this%idcxs(row)
     case (2)
       bndval = this%width(row)
-    case (3)
-      bndval = this%slope(row)
-    case (4)
-      bndval = this%rough(row)
     case default
-      errmsg = 'Programming error. ZDG bound value requested column '&
+      errmsg = 'Programming error. CDB bound value requested column '&
                &'outside range of ncolbnd (1).'
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
@@ -628,6 +598,6 @@ contains
     !
     ! -- return
     return
-  end function zdg_bound_value
+  end function cdb_bound_value
 
-end module SwfZdgModule
+end module SwfCdbModule
