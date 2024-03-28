@@ -12,6 +12,7 @@ module IdmSwfDfnSelectorModule
   use SwfCxsInputModule
   use SwfDfwInputModule
   use SwfIcInputModule
+  use SwfCdbInputModule
   use SwfChdInputModule
   use SwfFlwInputModule
   use SwfZdgInputModule
@@ -57,6 +58,8 @@ contains
       call set_param_pointer(input_definition, swf_dfw_param_definitions)
     case ('IC')
       call set_param_pointer(input_definition, swf_ic_param_definitions)
+    case ('CDB')
+      call set_param_pointer(input_definition, swf_cdb_param_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, swf_chd_param_definitions)
     case ('FLW')
@@ -87,6 +90,8 @@ contains
       call set_param_pointer(input_definition, swf_dfw_aggregate_definitions)
     case ('IC')
       call set_param_pointer(input_definition, swf_ic_aggregate_definitions)
+    case ('CDB')
+      call set_param_pointer(input_definition, swf_cdb_aggregate_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, swf_chd_aggregate_definitions)
     case ('FLW')
@@ -117,6 +122,8 @@ contains
       call set_block_pointer(input_definition, swf_dfw_block_definitions)
     case ('IC')
       call set_block_pointer(input_definition, swf_ic_block_definitions)
+    case ('CDB')
+      call set_block_pointer(input_definition, swf_cdb_block_definitions)
     case ('CHD')
       call set_block_pointer(input_definition, swf_chd_block_definitions)
     case ('FLW')
@@ -146,6 +153,8 @@ contains
       multi_package = swf_dfw_multi_package
     case ('IC')
       multi_package = swf_ic_multi_package
+    case ('CDB')
+      multi_package = swf_cdb_multi_package
     case ('CHD')
       multi_package = swf_chd_multi_package
     case ('FLW')
@@ -178,6 +187,8 @@ contains
     case ('DFW')
       integrated = .true.
     case ('IC')
+      integrated = .true.
+    case ('CDB')
       integrated = .true.
     case ('CHD')
       integrated = .true.

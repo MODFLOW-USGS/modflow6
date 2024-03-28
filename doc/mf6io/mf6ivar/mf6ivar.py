@@ -769,6 +769,7 @@ if __name__ == "__main__":
         "swf-sto",
         "swf-oc",
         "swf-chd",
+        "swf-cdb",
         "swf-flw",
         "swf-zdg",
         'prt-nam',

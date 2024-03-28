@@ -104,6 +104,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/swf-zdgidm.o \
+$(OBJDIR)/swf-cdbidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
@@ -376,6 +377,7 @@ $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/swf-zdg.o \
+$(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/swf-sto.o \
 $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
