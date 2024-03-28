@@ -114,7 +114,6 @@ $(OBJDIR)/swf-disidm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
 $(OBJDIR)/swf-chdidm.o \
-$(OBJDIR)/swf-cdbidm.o \
 $(OBJDIR)/sim-tdisidm.o \
 $(OBJDIR)/sim-namidm.o \
 $(OBJDIR)/prt-namidm.o \
@@ -384,7 +383,6 @@ $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
 $(OBJDIR)/swf-dfw.o \
-$(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-obs.o \
