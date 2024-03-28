@@ -122,7 +122,7 @@ contains
     cdbobj%cxs => cxs
     !
     ! -- store unit conversion
-    cdbobj%gravconv = DGRAVITY * lengthconv * timeconv ** 2
+    cdbobj%gravconv = DGRAVITY * lengthconv * timeconv**2
     !
     ! -- return
     return
@@ -361,9 +361,9 @@ contains
     a = this%cxs%get_area(idcxs, width, depth)
     r = this%cxs%get_hydraulic_radius(idcxs, width, depth, area=a)
 
-    q = this%gravconv * a ** DTWO * r
+    q = this%gravconv * a**DTWO * r
     if (q > DPREC) then
-      q = q ** DHALF
+      q = q**DHALF
     else
       q = DZERO
     end if
