@@ -208,8 +208,8 @@ contains
 
     epfact = ims_base_epfact(ctx%icnvgopt, kstp)
 
-    if (ctx%icnvgopt == 2 .OR. &
-        ctx%icnvgopt == 3 .OR. &
+    if (ctx%icnvgopt == 2 .or. &
+        ctx%icnvgopt == 3 .or. &
         ctx%icnvgopt == 4) then
       rcnvg = rnorm_L2
     else
