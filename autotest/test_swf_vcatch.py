@@ -120,15 +120,13 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsswf, [swf.name])
 
-    botm = land_surface.reshape((nlay, nrow, ncol))
-    dis = flopy.mf6.ModflowSwfdis(
+    botm = land_surface.reshape((nrow, ncol))
+    dis = flopy.mf6.ModflowSwfdis2D(
         swf,
-        nlay=nlay,
         nrow=nrow,
         ncol=ncol,
         delr=dx,
         delc=dx,
-        top=100.0,
         botm=botm,
         xorigin=-810,
     )
@@ -172,7 +170,7 @@ def build_models(idx, test):
 
     # flw
     qinflow = rainfall * dx * dx
-    spd = [(0, i, j, qinflow) for j in range(ncol) for i in range(nrow)]
+    spd = [(i, j, qinflow) for j in range(ncol) for i in range(nrow)]
     flw = flopy.mf6.ModflowSwfflw(
         swf,
         maxbound=len(spd),
@@ -185,7 +183,7 @@ def build_models(idx, test):
     fname = f"{swfname}.zdg.obs.csv"
     zdg_obs = {
         fname: [
-            ("OUTFLOW", "ZDG", (0, nrow - 1, int(ncol / 2))),
+            ("OUTFLOW", "ZDG", (nrow - 1, int(ncol / 2))),
         ],
         "digits": 10,
     }
@@ -193,7 +191,7 @@ def build_models(idx, test):
     idcxs = -1  # use cross section 0
     width = dx
     spd = [
-        ((0, nrow - 1, int(ncol / 2)), idcxs, width, slope_y, rough_channel)
+        ((nrow - 1, int(ncol / 2)), idcxs, width, slope_y, rough_channel)
     ]
     zdg = flopy.mf6.ModflowSwfzdg(
         swf,

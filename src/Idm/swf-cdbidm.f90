@@ -16,6 +16,7 @@ module SwfCdbInputModule
     logical :: iprpak = .false.
     logical :: iprflow = .false.
     logical :: ipakcb = .false.
+    logical :: filein = .false.
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
@@ -109,6 +110,23 @@ module SwfCdbInputModule
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfcdb_filein = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'CDB', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -275,6 +293,7 @@ module SwfCdbInputModule
     swfcdb_iprpak, &
     swfcdb_iprflow, &
     swfcdb_ipakcb, &
+    swfcdb_filein, &
     swfcdb_obs_filerecord, &
     swfcdb_obs6, &
     swfcdb_obs6_filename, &

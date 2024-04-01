@@ -1,0 +1,10 @@
+BEGIN GRIDDATA
+  DELR
+    <delr(ncol)> -- READARRAY
+  DELC
+    <delc(nrow)> -- READARRAY
+  BOTM
+    <botm(ncol, nrow)> -- READARRAY
+  [IDOMAIN
+    <idomain(ncol, nrow)> -- READARRAY]
+END GRIDDATA

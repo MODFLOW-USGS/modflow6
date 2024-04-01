@@ -288,6 +288,9 @@ contains
           case ('DIS6')
             ncelldim = 3
             exit
+          case ('DIS2D6')
+            ncelldim = 2
+            exit
           case ('DISV6')
             ncelldim = 2
             exit

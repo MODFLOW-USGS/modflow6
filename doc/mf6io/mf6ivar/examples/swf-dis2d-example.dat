@@ -1,0 +1,20 @@
+BEGIN options
+END options
+
+BEGIN dimensions
+  NROW  3
+  NCOL  3
+END dimensions
+
+BEGIN griddata
+  delr
+    CONSTANT     500.0
+  delc
+    CONSTANT     500.0
+  botm
+    INTERNAL  FACTOR  1.0
+         1.05 0.95 0.85
+         1.05 0.95 0.85
+         1.05 0.95 0.85
+END griddata
+
