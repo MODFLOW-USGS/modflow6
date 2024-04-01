@@ -1,7 +1,7 @@
 module CellPolyModule
 
   use CellModule, only: CellType
-  use CellDefnModule, only: CellDefnType
+  use CellDefnModule, only: CellDefnType, create_defn
   implicit none
 
   private
@@ -19,7 +19,7 @@ contains
   subroutine create_cell_poly(cell)
     type(CellPolyType), pointer :: cell
     allocate (cell)
-    allocate (cell%defn)
+    call create_defn(cell%defn)
     allocate (cell%type)
     cell%type = 'poly'
   end subroutine create_cell_poly

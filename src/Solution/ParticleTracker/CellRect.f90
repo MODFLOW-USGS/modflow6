@@ -1,7 +1,7 @@
 module CellRectModule
 
   use CellModule, only: CellType
-  use CellDefnModule, only: CellDefnType
+  use CellDefnModule, only: CellDefnType, create_defn
   implicit none
 
   private
@@ -39,7 +39,7 @@ contains
   subroutine create_cell_rect(cell)
     type(CellRectType), pointer :: cell
     allocate (cell)
-    allocate (cell%defn)
+    call create_defn(cell%defn)
     allocate (cell%type)
     cell%type = 'rect'
   end subroutine create_cell_rect

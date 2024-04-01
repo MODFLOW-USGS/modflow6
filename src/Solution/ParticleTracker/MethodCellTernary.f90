@@ -9,7 +9,6 @@ module MethodCellTernaryModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
   use TrackModule, only: TrackFileControlType
-  use ArrayHandlersModule, only: ExpandArray
   implicit none
 
   private

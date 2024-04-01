@@ -41,6 +41,11 @@ contains
   subroutine create_defn(cellDefn)
     type(CellDefnType), pointer :: cellDefn
     allocate (cellDefn)
+    ! Initially, allocate arrays to size for structured grid tracking method.
+    ! They can be (lazily) expanded as necessary for the unstructured method.
+    allocate (cellDefn%ispv180(5))
+    allocate (cellDefn%facenbr(7))
+    allocate (cellDefn%faceflow(7))
   end subroutine create_defn
 
   !> @brief Return the number of polygon vertices

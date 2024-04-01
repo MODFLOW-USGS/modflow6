@@ -1,7 +1,7 @@
 module CellRectQuadModule
 
   use CellModule, only: CellType
-  use CellDefnModule, only: CellDefnType
+  use CellDefnModule, only: CellDefnType, create_defn
   implicit none
 
   private
@@ -43,7 +43,7 @@ contains
   subroutine create_cell_rect_quad(cell)
     type(CellRectQuadType), pointer :: cell
     allocate (cell)
-    allocate (cell%defn)
+    call create_defn(cell%defn)
     allocate (cell%irectvert(5))
     allocate (cell%ipv4irv(2, 4))
     allocate (cell%rectflow(2, 4))
