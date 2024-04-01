@@ -16,6 +16,7 @@ module GwfDisvInputModule
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
+    logical :: export_ascii = .false.
     logical :: nlay = .false.
     logical :: ncpl = .false.
     logical :: nvert = .false.
@@ -111,6 +112,23 @@ module GwfDisvInputModule
     'ANGROT', & ! tag name
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfdisv_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -365,6 +383,7 @@ module GwfDisvInputModule
     gwfdisv_xorigin, &
     gwfdisv_yorigin, &
     gwfdisv_angrot, &
+    gwfdisv_export_ascii, &
     gwfdisv_nlay, &
     gwfdisv_ncpl, &
     gwfdisv_nvert, &

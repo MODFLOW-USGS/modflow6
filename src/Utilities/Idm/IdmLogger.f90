@@ -16,7 +16,7 @@ module IdmLoggerModule
   public :: idm_log_close
   public :: idm_log_period_header
   public :: idm_log_period_close
-  public :: idm_echo
+  public :: idm_export
   public :: idm_log_var
 
   interface idm_log_var
@@ -28,11 +28,11 @@ module IdmLoggerModule
       idm_log_var_ts
   end interface idm_log_var
 
-  interface idm_echo
-    module procedure idm_echo_int1d, idm_echo_int2d, &
-      idm_echo_int3d, idm_echo_dbl1d, &
-      idm_echo_dbl2d, idm_echo_dbl3d
-  end interface idm_echo
+  interface idm_export
+    module procedure idm_export_int1d, idm_export_int2d, &
+      idm_export_int3d, idm_export_dbl1d, &
+      idm_export_dbl2d, idm_export_dbl3d
+  end interface idm_export
 
 contains
 
@@ -331,26 +331,64 @@ contains
     end if
   end subroutine idm_log_var_str
 
-  !> @brief Create echo file int1d
+  !> @brief Create export file int1d
   !<
-  subroutine idm_echo_int1d(p_mem, varname, mempath, iout)
-    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+  subroutine idm_export_int1d(p_mem, varname, mempath, iout)
+    use SimVariablesModule, only: idm_context
+    use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
+    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 1d integer array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
+    integer(I4B), dimension(:, :), pointer, contiguous :: int2d
+    integer(I4B), dimension(3) :: dis_shape
+    integer(I4B), dimension(2) :: disv_shape
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, k, inunit
     !
-    inunit = create_echofile(varname, mempath, 0, iout)
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
-    write (inunit, '(*(i0, " "))') p_mem
-    !
-    close (inunit)
-  end subroutine idm_echo_int1d
+    if (size(model_shape) == 3) then
+      dis_shape(1) = model_shape(3)
+      dis_shape(2) = model_shape(2)
+      dis_shape(3) = model_shape(1)
+      allocate (int3d(dis_shape(1), dis_shape(2), dis_shape(3)))
+      int3d = reshape(p_mem, dis_shape)
+      do k = 1, dis_shape(3)
+        inunit = create_export_file(varname, mempath, k, iout)
+        do i = 1, model_shape(2)
+          write (inunit, '(*(i0, " "))') (int3d(j, i, k), j=1, &
+                                          dis_shape(1))
+        end do
+        close (inunit)
+      end do
+      deallocate (int3d)
+    else if (size(model_shape) == 2) then
+      disv_shape(1) = model_shape(2)
+      disv_shape(2) = model_shape(1)
+      allocate (int2d(disv_shape(1), disv_shape(2)))
+      int2d = reshape(p_mem, disv_shape)
+      do i = 1, disv_shape(2)
+        inunit = create_export_file(varname, mempath, i, iout)
+        write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, disv_shape(1))
+        close (inunit)
+      end do
+    else if (size(model_shape) == 1) then
+      write (inunit, '(*(i0, " "))') p_mem
+    end if
+  end subroutine idm_export_int1d
 
-  !> @brief Create echo file int2d
+  !> @brief Create export file int2d
   !<
-  subroutine idm_echo_int2d(p_mem, varname, mempath, iout)
+  subroutine idm_export_int2d(p_mem, varname, mempath, iout)
     integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
@@ -358,18 +396,16 @@ contains
     ! -- dummy
     integer(I4B) :: i, j, inunit
     !
-    inunit = create_echofile(varname, mempath, 0, iout)
-    !
     do i = 1, size(p_mem, dim=2)
+      inunit = create_export_file(varname, mempath, i, iout)
       write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+      close (inunit)
     end do
-    !
-    close (inunit)
-  end subroutine idm_echo_int2d
+  end subroutine idm_export_int2d
 
-  !> @brief Create echo file int3d
+  !> @brief Create export file int3d
   !<
-  subroutine idm_echo_int3d(p_mem, varname, mempath, iout)
+  subroutine idm_export_int3d(p_mem, varname, mempath, iout)
     integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
@@ -378,34 +414,72 @@ contains
     integer(I4B) :: i, j, k, inunit
     !
     do k = 1, size(p_mem, dim=3)
-      inunit = create_echofile(varname, mempath, k, iout)
+      inunit = create_export_file(varname, mempath, k, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
       end do
       close (inunit)
     end do
-  end subroutine idm_echo_int3d
+  end subroutine idm_export_int3d
 
-  !> @brief Create echo file dbl1d
+  !> @brief Create export file dbl1d
   !<
-  subroutine idm_echo_dbl1d(p_mem, varname, mempath, iout)
-    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 2d dbl array
+  subroutine idm_export_dbl1d(p_mem, varname, mempath, iout)
+    use SimVariablesModule, only: idm_context
+    use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
+    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 1d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    integer(I4B), dimension(3) :: dis_shape
+    integer(I4B), dimension(2) :: disv_shape
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, k, inunit
     !
-    inunit = create_echofile(varname, mempath, 0, iout)
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
-    write (inunit, '(*(G0.10, " "))') p_mem
-    !
-    close (inunit)
-  end subroutine idm_echo_dbl1d
+    if (size(model_shape) == 3) then
+      dis_shape(1) = model_shape(3)
+      dis_shape(2) = model_shape(2)
+      dis_shape(3) = model_shape(1)
+      allocate (dbl3d(dis_shape(1), dis_shape(2), dis_shape(3)))
+      dbl3d = reshape(p_mem, dis_shape)
+      do k = 1, dis_shape(3)
+        inunit = create_export_file(varname, mempath, k, iout)
+        do i = 1, model_shape(2)
+          write (inunit, '(*(G0.10, " "))') (dbl3d(j, i, k), j=1, &
+                                             dis_shape(1))
+        end do
+        close (inunit)
+      end do
+      deallocate (dbl3d)
+    else if (size(model_shape) == 2) then
+      disv_shape(1) = model_shape(2)
+      disv_shape(2) = model_shape(1)
+      allocate (dbl2d(disv_shape(1), disv_shape(2)))
+      dbl2d = reshape(p_mem, disv_shape)
+      do i = 1, disv_shape(2)
+        inunit = create_export_file(varname, mempath, i, iout)
+        write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, disv_shape(1))
+        close (inunit)
+      end do
+    else if (size(model_shape) == 1) then
+      write (inunit, '(*(G0.10, " "))') p_mem
+    end if
+  end subroutine idm_export_dbl1d
 
-  !> @brief Create echo file dbl2d
+  !> @brief Create export file dbl2d
   !<
-  subroutine idm_echo_dbl2d(p_mem, varname, mempath, iout)
+  subroutine idm_export_dbl2d(p_mem, varname, mempath, iout)
     real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
@@ -413,18 +487,16 @@ contains
     ! -- dummy
     integer(I4B) :: i, j, inunit
     !
-    inunit = create_echofile(varname, mempath, 0, iout)
-    !
     do i = 1, size(p_mem, dim=2)
+      inunit = create_export_file(varname, mempath, i, iout)
       write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+      close (inunit)
     end do
-    !
-    close (inunit)
-  end subroutine idm_echo_dbl2d
+  end subroutine idm_export_dbl2d
 
-  !> @brief Create echo file dbl3d
+  !> @brief Create export file dbl3d
   !<
-  subroutine idm_echo_dbl3d(p_mem, varname, mempath, iout)
+  subroutine idm_export_dbl3d(p_mem, varname, mempath, iout)
     real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
@@ -433,21 +505,21 @@ contains
     integer(I4B) :: i, j, k, inunit
     !
     do k = 1, size(p_mem, dim=3)
-      inunit = create_echofile(varname, mempath, k, iout)
+      inunit = create_export_file(varname, mempath, k, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
                                            size(p_mem, dim=1))
       end do
       close (inunit)
     end do
-  end subroutine idm_echo_dbl3d
+  end subroutine idm_export_dbl3d
 
-  !> @brief Create echo file
+  !> @brief Create export file
   !!
   !! Name format: <comp>-<subcomp>.varname.[layer].txt
   !!
   !<
-  function create_echofile(varname, mempath, layer, iout) result(inunit)
+  function create_export_file(varname, mempath, layer, iout) result(inunit)
     use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME
     use InputOutputModule, only: openfile, getunit
     use InputOutputModule, only: upcase, lowcase
@@ -463,6 +535,8 @@ contains
     !
     ! -- split the mempath
     call split_mem_path(mempath, comp, subcomp)
+    call lowcase(comp)
+    call lowcase(subcomp)
     !
     ! -- build suffix
     suffix = varname
@@ -477,7 +551,7 @@ contains
     !
     ! -- create the array file
     inunit = getunit()
-    call openfile(inunit, iout, filename, 'ECHO', filstat_opt='REPLACE')
-  end function create_echofile
+    call openfile(inunit, iout, filename, 'EXPORT', filstat_opt='REPLACE')
+  end function create_export_file
 
 end module IdmLoggerModule

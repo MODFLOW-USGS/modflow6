@@ -31,7 +31,7 @@ module LoadMf6FileModule
   use MemoryHelperModule, only: create_mem_path
   use StructArrayModule, only: StructArrayType
   use IdmLoggerModule, only: idm_log_var, idm_log_header, idm_log_close, &
-                             idm_echo
+                             idm_export
 
   implicit none
   private
@@ -50,6 +50,7 @@ module LoadMf6FileModule
     type(ModflowInputType) :: mf6_input !< description of input
     character(len=LINELENGTH) :: filename !< name of ascii input file
     logical(LGP) :: ts_active !< is timeseries active
+    logical(LGP) :: export !< is array export active
     integer(I4B) :: iout !< inunit for list log
   contains
     procedure :: load
@@ -127,6 +128,7 @@ contains
     this%mf6_input = mf6_input
     this%filename = filename
     this%ts_active = .false.
+    this%export = .false.
     this%iout = iout
     !
     call get_isize('MODEL_SHAPE', mf6_input%component_mempath, isize)
@@ -213,7 +215,7 @@ contains
     integer(I4B), intent(in) :: iblk
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
-    integer(I4B) :: iparam, ts6_size
+    integer(I4B) :: iparam, ts6_size, export_size
     !
     select case (this%mf6_input%block_dfns(iblk)%blockname)
     case ('OPTIONS')
@@ -233,6 +235,13 @@ contains
       !
       if (ts6_size > 0) then
         this%ts_active = .true.
+      end if
+      !
+      ! -- determine if EXPORT options were provided
+      call get_isize('EXPORT_ASCII', this%mf6_input%mempath, export_size)
+      !
+      if (export_size > 0) then
+        this%export = .true.
       end if
       !
     case ('DIMENSIONS')
@@ -463,24 +472,24 @@ contains
       call load_integer_type(this%parser, idt, this%mf6_input%mempath, this%iout)
     case ('INTEGER1D')
       call load_integer1d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%iout)
+                               this%mshape, this%export, this%iout)
     case ('INTEGER2D')
       call load_integer2d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%iout)
+                               this%mshape, this%export, this%iout)
     case ('INTEGER3D')
       call load_integer3d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%iout)
+                               this%mshape, this%export, this%iout)
     case ('DOUBLE')
       call load_double_type(this%parser, idt, this%mf6_input%mempath, this%iout)
     case ('DOUBLE1D')
       call load_double1d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%iout)
+                              this%mshape, this%export, this%iout)
     case ('DOUBLE2D')
       call load_double2d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%iout)
+                              this%mshape, this%export, this%iout)
     case ('DOUBLE3D')
       call load_double3d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%iout)
+                              this%mshape, this%export, this%iout)
     case default
       write (errmsg, '(a,a)') 'Failure reading data for tag: ', trim(tag)
       call store_error(errmsg)
@@ -752,12 +761,13 @@ contains
 
   !> @brief load type 1d integer
   !<
-  subroutine load_integer1d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_integer1d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     !integer(I4B), pointer :: nsize1
@@ -766,7 +776,6 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, echo
 
     ! Check if it is a full grid sized array (NODES), otherwise use
     ! idt%shape to construct shape from variables in memoryPath
@@ -782,19 +791,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int1d_layered(parser, int1d, idt%mf6varname, nlay, layer_shape)
     else
@@ -804,8 +806,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(int1d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(int1d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -813,12 +815,13 @@ contains
 
   !> @brief load type 2d integer
   !<
-  subroutine load_integer2d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_integer2d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d
     integer(I4B) :: nlay
@@ -826,7 +829,6 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -839,19 +841,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int2d_layered(parser, int2d, idt%mf6varname, nlay, layer_shape)
     else
@@ -861,8 +856,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int2d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(int2d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(int2d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -870,12 +865,13 @@ contains
 
   !> @brief load type 3d integer
   !<
-  subroutine load_integer3d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_integer3d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
     integer(I4B) :: nlay
@@ -884,7 +880,6 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
     integer(I4B), dimension(:), pointer, contiguous :: int1d_ptr
-    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -899,19 +894,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int3d_layered(parser, int3d, idt%mf6varname, nlay, &
                               layer_shape)
@@ -923,8 +911,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(int3d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(int3d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -946,12 +934,13 @@ contains
 
   !> @brief load type 1d double
   !<
-  subroutine load_double1d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_double1d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     !integer(I4B), pointer :: nsize1
@@ -960,7 +949,6 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, echo
 
     ! Check if it is a full grid sized array (NODES)
     if (idt%shape == 'NODES') then
@@ -975,19 +963,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl1d_layered(parser, dbl1d, idt%mf6varname, nlay, layer_shape)
     else
@@ -997,8 +978,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(dbl1d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(dbl1d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -1006,12 +987,13 @@ contains
 
   !> @brief load type 2d double
   !<
-  subroutine load_double2d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_double2d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: nlay
@@ -1019,7 +1001,6 @@ contains
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
-    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -1032,19 +1013,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl2d_layered(parser, dbl2d, idt%mf6varname, nlay, layer_shape)
     else
@@ -1054,8 +1028,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(dbl2d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(dbl2d, idt%tagname, memoryPath, iout)
     end if
 
     return
@@ -1063,12 +1037,13 @@ contains
 
   !> @brief load type 3d double
   !<
-  subroutine load_double3d_type(parser, idt, memoryPath, mshape, iout)
+  subroutine load_double3d_type(parser, idt, memoryPath, mshape, export, iout)
     use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    logical(LGP), intent(in) :: export !< export to ascii layer files
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
     integer(I4B) :: nlay
@@ -1077,7 +1052,6 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
     real(DP), dimension(:), pointer, contiguous :: dbl1d_ptr
-    logical(LGP) :: is_layered, echo
 
     ! determine the array shape from the input data defintion (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
@@ -1092,19 +1066,12 @@ contains
 
     ! check to see if the user specified "LAYERED" input
     keyword = ''
-    is_layered = .false.
-    echo = .false.
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED') then
-      is_layered = .true.
-      keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
     end if
 
-    if (keyword == 'ECHO') echo = .true.
-
     ! read the array from the input file
-    if (is_layered .and. idt%layered) then
+    if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl3d_layered(parser, dbl3d, idt%mf6varname, nlay, &
                               layer_shape)
@@ -1116,8 +1083,8 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
-    if (echo .and. idt%layered) then
-      call idm_echo(dbl3d, idt%tagname, memoryPath, iout)
+    if (export .and. idt%layered) then
+      call idm_export(dbl3d, idt%tagname, memoryPath, iout)
     end if
 
     return

@@ -16,6 +16,7 @@ module SwfDisInputModule
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
+    logical :: export_ascii = .false.
     logical :: nlay = .false.
     logical :: nrow = .false.
     logical :: ncol = .false.
@@ -105,6 +106,23 @@ module SwfDisInputModule
     'ANGROT', & ! tag name
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfdis_export_ascii = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -257,6 +275,7 @@ module SwfDisInputModule
     swfdis_xorigin, &
     swfdis_yorigin, &
     swfdis_angrot, &
+    swfdis_export_ascii, &
     swfdis_nlay, &
     swfdis_nrow, &
     swfdis_ncol, &
