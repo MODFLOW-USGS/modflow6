@@ -23,6 +23,15 @@ fortran-format-check = "python .github/common/fortran_format_check.py"
 msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
 update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
 
+# CI
+setup-strict = "meson setup builddir_strict -Ddebug=false -Dwerror=true"
+compile-strict = "pixi run meson compile -C builddir_strict"
+test-strict = "meson test --verbose --no-rebuild -C builddir_strict"
+
+setup-smoke = "meson setup builddir_smoke -Ddebug=false --prefix=$(pwd) --libdir=bin"
+install-smoke = "meson install -C builddir_smoke"
+
+
 [dependencies]
 appdirs = "*"
 filelock = "*"

@@ -35,6 +35,9 @@ on:
       - 'doc/**.sh'
       - 'doc/**.xlsx'
       - '.hpc/**'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     name: Check format
@@ -79,17 +82,17 @@ jobs:
           pixi-version: "latest"
 
       - name: Meson setup
-        run: pixi run meson setup builddir -Ddebug=false -Dwerror=true
+        run: pixi run setup-strict
 
       - name: Meson compile
-        run: pixi run meson compile -C builddir
+        run: pixi run compile-strict
 
       - name: Show build log
         if: failure()
         run: cat builddir/meson-logs/meson-log.txt
 
       - name: Meson test
-        run: pixi run meson test --verbose --no-rebuild -C builddir
+        run: pixi run test-strict
 
   smoke_test:
     name: Smoke test
