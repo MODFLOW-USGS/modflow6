@@ -49,7 +49,7 @@ jobs:
           pixi-version: "latest"
 
       - name: Check Fortran source formatting
-        run: pixi run fortan-format-check
+        run: pixi run fortran-format-check
 
       - name: Check MSVS project files
         run: pixi run msvs-vfproj-check 
