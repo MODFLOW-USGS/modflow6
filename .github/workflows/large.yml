@@ -17,7 +17,7 @@ jobs:
         include:
           # ifx
           - {os: windows-2022, compiler: intel, version: 2022.2}
-          # use this combo to install and cache oneapi components for mf6 parallel (compilers + mkl/mpi)
+          # use this combo to install and cache oneapi components (compilers + mkl/mpi) and petsc for mf6 parallel 
           - {os: windows-2022, compiler: intel, version: 2024.0}
           # ifort
           - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
@@ -33,15 +33,15 @@ jobs:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
 
+      # cache oneapi and petsc for mf6 parallel
       - name: Checkout modflow6
         if: matrix.compiler == 'intel' && matrix.version == '2024.0'
         uses: actions/checkout@v4
         with:
           path: modflow6
-
-      - name: Setup oneAPI
+      - name: Cache oneAPI and PETSc
         if: matrix.compiler == 'intel' && matrix.version == '2024.0'
-        uses: ./modflow6/.github/actions/setup-par-oneapi
+        uses: ./modflow6/.github/actions/build-petsc-win
   test:
     name: Test
     runs-on: ubuntu-22.04
