@@ -18,9 +18,10 @@ install = { depends_on = [
     "install-modflow-devtools",
 ] }
 
-# Check format
+# Utils
 fortran-format-check = "python .github/common/fortran_format_check.py"
 msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
+update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
 
 [dependencies]
 appdirs = "*"
