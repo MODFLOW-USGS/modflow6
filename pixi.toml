@@ -1,0 +1,46 @@
+[project]
+name = "modflow6"
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64", "osx-64"]
+
+[tasks]
+# Install
+install-flopy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/flopy.git"
+install-pymake = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/pymake.git"
+install-xmipy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/Deltares/xmipy.git"
+install-modflowapi = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflowapi.git"
+install-modflow-devtools = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflow-devtools.git"
+install = { depends_on = [
+    "install-flopy",
+    "install-pymake",
+    "install-xmipy",
+    "install-modflowapi",
+    "install-modflow-devtools",
+] }
+
+# Check format
+fortan-format-check = "python .github/common/fortran_format_check.py"
+msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
+
+[dependencies]
+appdirs = "*"
+filelock = "*"
+flaky = "*"
+fortran-language-server = "*"
+fprettify = "*"
+jupytext = "*"
+matplotlib = "*"
+hatchling = "*"
+meson = "1.3.0"
+ninja = "*"
+numpy = "*"
+pip = "*"
+pyshp = "*"
+pytest = "!=8.1.0"
+pytest-benchmark = "*"
+pytest-dotenv = "*"
+pytest-order = "*"
+pytest-xdist = "*"
+python = "3.9.*"
+scipy = "*"
+shapely = "*"
