@@ -26,7 +26,7 @@ runs:
       run: |
         url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/5cb30fb9-21e9-47e8-82da-a91e00191670/w_BaseKit_p_2024.0.1.45_offline.exe"
         cmp="intel.oneapi.win.mkl.devel"
-        "modflow6/.github/common/install_intel_windows.bat" $url $cmp
+        "$GITHUB_WORKSPACE/modflow6/.github/common/install_intel_windows.bat" $url $cmp
         rm -rf $TEMP/webimage.exe
         rm -rf $TEMP/webimage_extracted
 
@@ -36,7 +36,7 @@ runs:
       run: |
         url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7a6db8a1-a8b9-4043-8e8e-ca54b56c34e4/w_HPCKit_p_2024.0.1.35_offline.exe"
         cmp="intel.oneapi.win.cpp-dpcpp-common:intel.oneapi.win.ifort-compiler:intel.oneapi.win.mpi.devel"
-        "modflow6/.github/common/install_intel_windows.bat" $url $cmp
+        "$GITHUB_WORKSPACE/modflow6/.github/common/install_intel_windows.bat" $url $cmp
         rm -rf $TEMP/webimage.exe
         rm -rf $TEMP/webimage_extracted
 

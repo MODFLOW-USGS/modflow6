@@ -7,8 +7,8 @@ runs:
     - name: Convert line endings
       shell: cmd
       run: |
-        unix2dos -n "modflow6\.github\common\configure_petsc.sh" "%TEMP%\configure_petsc.sh"
-        unix2dos -n "modflow6\.github\common\compile_petsc.sh" "%TEMP%\compile_petsc.sh"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\configure_petsc.sh" "%TEMP%\configure_petsc.sh"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\compile_petsc.sh" "%TEMP%\compile_petsc.sh"
 
     - name: Hide Strawberry programs
       shell: bash
@@ -24,7 +24,7 @@ runs:
       run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
 
     - name: Setup oneAPI
-      uses: ./modflow6/.github/actions/setup-par-oneapi
+      uses: ${{ github.workspace }}/modflow6/.github/actions/setup-par-oneapi
 
     - name: Restore PETSc cache
       id: petsc-cache

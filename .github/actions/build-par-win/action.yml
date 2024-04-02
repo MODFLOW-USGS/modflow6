@@ -5,12 +5,12 @@ runs:
   steps:
 
     - name: Setup PETSc
-      uses: ./modflow6/.github/actions/build-petsc-win
+      uses: ${{ github.workspace }}/modflow6/.github/actions/build-petsc-win
 
     - name: Build modflow6
       shell: cmd
       run: |
-        unix2dos -n "modflow6\.github\common\compile_modflow6.bat" "%TEMP%\compile_modflow6.bat"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\compile_modflow6.bat" "%TEMP%\compile_modflow6.bat"
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\compile_modflow6.bat"
 
     - name: Show Meson logs
