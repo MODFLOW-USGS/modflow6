@@ -806,6 +806,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(int1d, idt%tagname, memoryPath, iout)
     end if
@@ -856,6 +857,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int2d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(int2d, idt%tagname, memoryPath, iout)
     end if
@@ -911,6 +913,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(int3d, idt%tagname, memoryPath, iout)
     end if
@@ -978,6 +981,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(dbl1d, idt%tagname, memoryPath, iout)
     end if
@@ -1028,6 +1032,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(dbl2d, idt%tagname, memoryPath, iout)
     end if
@@ -1083,6 +1088,7 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
+    ! create export file for layered parameters if optioned
     if (export .and. idt%layered) then
       call idm_export(dbl3d, idt%tagname, memoryPath, iout)
     end if

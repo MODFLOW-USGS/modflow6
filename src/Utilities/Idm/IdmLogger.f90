@@ -332,6 +332,9 @@ contains
   end subroutine idm_log_var_str
 
   !> @brief Create export file int1d
+  !!
+  !! export layered int1d parameters with NODES shape
+  !!
   !<
   subroutine idm_export_int1d(p_mem, varname, mempath, iout)
     use SimVariablesModule, only: idm_context
@@ -382,7 +385,9 @@ contains
         close (inunit)
       end do
     else if (size(model_shape) == 1) then
+      inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(i0, " "))') p_mem
+      close (inunit)
     end if
   end subroutine idm_export_int1d
 
@@ -423,6 +428,9 @@ contains
   end subroutine idm_export_int3d
 
   !> @brief Create export file dbl1d
+  !!
+  !! export layered dbl1d parameters with NODES shape
+  !!
   !<
   subroutine idm_export_dbl1d(p_mem, varname, mempath, iout)
     use SimVariablesModule, only: idm_context
@@ -473,7 +481,9 @@ contains
         close (inunit)
       end do
     else if (size(model_shape) == 1) then
+      inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(G0.10, " "))') p_mem
+      close (inunit)
     end if
   end subroutine idm_export_dbl1d
 
@@ -549,9 +559,9 @@ contains
     ! -- set filename
     filename = trim(comp)//'-'//trim(subcomp)//'.'//trim(suffix)
     !
-    ! -- create the array file
+    ! -- silently create the array file
     inunit = getunit()
-    call openfile(inunit, iout, filename, 'EXPORT', filstat_opt='REPLACE')
+    call openfile(inunit, 0, filename, 'EXPORT', filstat_opt='REPLACE')
   end function create_export_file
 
 end module IdmLoggerModule
