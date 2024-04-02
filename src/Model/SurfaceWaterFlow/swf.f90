@@ -6,7 +6,7 @@
 !! Status and remaining tasks
 !!   ONGOING -- Implement SWF infrastructure
 !!   DONE -- Implement Explicit Model Solution (EMS6) to handle explicit models
-!!   DONE -- Implement DISL Package
+!!   DONE -- Implement DISV1D Package
 !!   DONE -- Implement FLW Package to handle lateral and point inflows
 !!   DONE -- Transfer results into the flowja vector
 !!   DONE -- Implement strategy for storing outflow terms and getting them into budget
@@ -27,7 +27,7 @@
 !!   We may need subcells and subtiming to improve accuracy
 !!   Add support for nonlinear Muskingum Cunge
 !!   Deal with the timestep and subtiming issues
-!!   Flopy support for DISL and DISL binary grid file
+!!   Flopy support for DISV1D and DISV1D binary grid file
 !!   Flopy support for .output() method for SWF
 !!   Mover support?
 !!   SWF-SWF Exchange
@@ -116,7 +116,7 @@ module SwfModule
   !<
   integer(I4B), parameter :: SWF_NBASEPKG = 9
   character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: &
-    SWF_BASEPKG = ['DISL6  ', 'DIS2D6 ', 'DISV6  ', &
+    SWF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV6  ', &
                    'DFW6   ', 'CXS6   ', 'OC6    ', &
                    'IC6    ', 'OBS6   ', 'STO6   ']
 
@@ -1042,7 +1042,7 @@ contains
     ! -- Check for required packages. Stop if not present.
     if (indis == 0) then
       write (errmsg, '(a)') &
-        'Discretization Package (DISL6 or DIS2D6) not specified.'
+        'Discretization Package (DISV1D6 or DIS2D6) not specified.'
       call store_error(errmsg)
     end if
     if (this%inic == 0 .and. this%indfw /= 0) then
@@ -1133,7 +1133,7 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use SwfDislModule, only: disl_cr
+    use Disv1dModule, only: disv1d_cr
     use Dis2dModule, only: dis2d_cr
     use DisvModule, only: disv_cr
     use SwfDfWModule, only: dfw_cr
@@ -1183,9 +1183,9 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('DISL6')
+      case ('DISV1D6')
         indis = 1
-        call disl_cr(this%dis, this%name, mempath, indis, this%iout)
+        call disv1d_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('DIS2D6')
         indis = 1
         call dis2d_cr(this%dis, this%name, mempath, indis, this%iout)

@@ -43,7 +43,7 @@ gwe-dis.dfn
 
 # swf model
 swf-nam.dfn
-swf-disl.dfn
+swf-disv1d.dfn
 swf-dis2d.dfn
 swf-disv.dfn
 swf-cxs.dfn

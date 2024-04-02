@@ -108,7 +108,7 @@ $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
 $(OBJDIR)/swf-disvidm.o \
-$(OBJDIR)/swf-dislidm.o \
+$(OBJDIR)/swf-disv1didm.o \
 $(OBJDIR)/swf-dis2didm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
@@ -311,8 +311,8 @@ $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
 $(OBJDIR)/DefinitionSelect.o \
-$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/SwfCxsUtils.o \
+$(OBJDIR)/Disv1dGeom.o \
 $(OBJDIR)/MethodCellPool.o \
 $(OBJDIR)/CellUtil.o \
 $(OBJDIR)/VirtualExchange.o \
@@ -356,8 +356,8 @@ $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
-$(OBJDIR)/swf-disl.o \
 $(OBJDIR)/swf-cxs.o \
+$(OBJDIR)/Disv1d.o \
 $(OBJDIR)/swf-ic.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \

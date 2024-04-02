@@ -5,10 +5,6 @@
 \begin{description}
 \item \texttt{length\_units}---is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
 
-\item \texttt{length\_convert}---conversion factor that is used in converting constants used by MODFLOW into model length units.  All constants are by default in units of ``meters''. Constants that use length\_conversion include GRAVITY and STORAGE COEFFICIENT values.
-
-\item \texttt{time\_convert}---conversion factor that is used in converting constants used by MODFLOW into model time units.  All constants are by default in units of ``seconds''. TIME\_CONVERSION is used to convert the GRAVITY constant from seconds to the model's units.
-
 \item \texttt{NOGRB}---keyword to deactivate writing of the binary grid file.
 
 \item \texttt{xorigin}---x-position of the origin used for model grid vertices.  This value should be provided in a real-world coordinate system.  A default value of zero is assigned if not specified.  The value for XORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
@@ -29,13 +25,11 @@
 \item \textbf{Block: GRIDDATA}
 
 \begin{description}
-\item \texttt{reach\_length}---length for each reach
+\item \texttt{length}---length for each one-dimensional cell
 
-\item \texttt{reach\_width}---real value that defines the reach width. REACH\_WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the REACH\_WIDTH value will be multiplied by the specified cross section x-fraction values.
+\item \texttt{width}---real value that defines the width for each one-dimensional cell. WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the WIDTH value will be multiplied by the specified cross section x-fraction values.
 
-\item \texttt{reach\_bottom}---bottom elevation of surface water channel
-
-\item \texttt{toreach}---index of the downstream reach.  Flow from this reach is passed into the dowstream reach.  For reaches that do not flow to another reach enter a 0 to toreach.
+\item \texttt{bottom}---bottom elevation for the one-dimensional cell.
 
 \item \texttt{idomain}---is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.
 
@@ -48,8 +42,6 @@
 \item \texttt{xv}---is the x-coordinate for the vertex.
 
 \item \texttt{yv}---is the y-coordinate for the vertex.
-
-\item \texttt{zv}---is the z-coordinate for the vertex.
 
 \end{description}
 \item \textbf{Block: CELL2D}

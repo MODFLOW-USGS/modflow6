@@ -23,7 +23,7 @@ module SwfZdgModule
   use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use BaseDisModule, only: DisBaseType
-  use SwfDislModule, only: SwfDislType
+  use Disv1dModule, only: Disv1dType
   use SwfCxsModule, only: SwfCxsType
   !
   implicit none
@@ -43,7 +43,7 @@ module SwfZdgModule
     real(DP), pointer :: unitconv => null() !< conversion factor for roughness to length and time units of meters and seconds
 
     ! -- pointers other objects
-    type(SwfDislType), pointer :: disl
+    type(Disv1dType), pointer :: disv1d
     type(SwfCxsType), pointer :: cxs
 
   contains
@@ -113,10 +113,10 @@ contains
     packobj%iscloc = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'DFW')
     !
-    ! -- store pointer to disl
+    ! -- store pointer to disv1d
     select type (dis)
-    type is (SwfDislType)
-      zdgobj%disl => dis
+    type is (Disv1dType)
+      zdgobj%disv1d => dis
     end select
     !
     ! -- store pointer to cxs

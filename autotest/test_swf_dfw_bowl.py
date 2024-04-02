@@ -93,20 +93,20 @@ def build_models(idx, test):
     sim.register_ims_package(imsswf, [swf.name])
 
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=1.,
-        reach_bottom=reach_bottom,
+        length=dx,
+        width=1.,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,

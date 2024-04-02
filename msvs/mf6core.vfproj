@@ -180,7 +180,7 @@
 		<File RelativePath="..\src\Idm\swf-dfwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
-		<File RelativePath="..\src\Idm\swf-dislidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-disv1didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disvidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
@@ -202,6 +202,12 @@
 		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
+		<Filter Name="Discretization">
+		<File RelativePath="..\src\Model\Discretization\Dis.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Dis2d.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disv.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disv1d.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
@@ -259,7 +265,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackageExt.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\DislGeom.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\Disv1dGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\FlowModelInterface.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GweCndOptions.f90"/>
@@ -284,11 +290,6 @@
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
-		<Filter Name="Discretization">
-		<File RelativePath="..\src\Model\Discretization\Dis.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Dis2d.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Disv.f90"/></Filter>
 		<Filter Name="ParticleTracking">
 		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
@@ -300,7 +301,6 @@
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-cdb.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-cxs.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-dfw.f90"/>
-		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-disl.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-flw.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-ic.f90"/>
 		<File RelativePath="..\src\Model\SurfaceWaterFlow\swf-obs.f90"/>

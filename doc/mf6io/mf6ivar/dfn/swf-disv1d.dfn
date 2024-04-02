@@ -1,4 +1,4 @@
-# --------------------- swf disl options ---------------------
+# --------------------- swf disv1d options ---------------------
 
 block options
 name length_units
@@ -7,22 +7,6 @@ reader urword
 optional true
 longname model length units
 description is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
-
-block options
-name length_convert
-type double precision
-reader urword
-optional true
-longname length conversion factor
-description conversion factor that is used in converting constants used by MODFLOW into model length units.  All constants are by default in units of ``meters''. Constants that use length\_conversion include GRAVITY and STORAGE COEFFICIENT values.
-
-block options
-name time_convert
-type double precision
-reader urword
-optional true
-longname time conversion factor
-description conversion factor that is used in converting constants used by MODFLOW into model time units.  All constants are by default in units of ``seconds''. TIME\_CONVERSION is used to convert the GRAVITY constant from seconds to the model's units.
 
 block options
 name nogrb
@@ -56,7 +40,7 @@ optional true
 longname rotation angle
 description counter-clockwise rotation angle (in degrees) of the model grid coordinate system relative to a real-world coordinate system.  If not specified, then a default value of 0.0 is assigned.  The value for ANGROT does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
 
-# --------------------- swf disl dimensions ---------------------
+# --------------------- swf disv1d dimensions ---------------------
 
 block dimensions
 name nodes
@@ -74,52 +58,40 @@ optional true
 longname number of columns
 description is the total number of (x, y, z) vertex pairs used to characterize the model grid.
 
-# --------------------- swf disl griddata ---------------------
+# --------------------- swf disv1d griddata ---------------------
 
 block griddata
-name reach_length
+name length
 type double precision
 shape (nodes)
 valid
 reader readarray
 layered false
 optional
-longname reach length
-description length for each reach
+longname length
+description length for each one-dimensional cell
 
 block griddata
-name reach_width
+name width
 type double precision
 shape (nodes)
 valid
 reader readarray
 layered false
 optional
-longname reach width
-description real value that defines the reach width. REACH\_WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the REACH\_WIDTH value will be multiplied by the specified cross section x-fraction values.
+longname width
+description real value that defines the width for each one-dimensional cell. WIDTH must be greater than zero.  If the Cross Section (CXS) Package is used, then the WIDTH value will be multiplied by the specified cross section x-fraction values.
 
 block griddata
-name reach_bottom
+name bottom
 type double precision
 shape (nodes)
 valid
 reader readarray
 layered false
 optional
-longname reach bottom
-description bottom elevation of surface water channel
-
-block griddata
-name toreach
-type integer
-shape (nodes)
-valid
-reader readarray
-layered false
-optional true
-longname index of the downstream reach
-description index of the downstream reach.  Flow from this reach is passed into the dowstream reach.  For reaches that do not flow to another reach enter a 0 to toreach.
-numeric_index true
+longname bottom elevation for the one-dimensional cell
+description bottom elevation for the one-dimensional cell.
 
 block griddata
 name idomain
@@ -132,11 +104,11 @@ longname idomain existence array
 description is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.
 
 
-# --------------------- swf disl vertices ---------------------
+# --------------------- swf disv1d vertices ---------------------
 
 block vertices
 name vertices
-type recarray iv xv yv zv
+type recarray iv xv yv
 shape (nvert)
 reader urword
 optional false
@@ -174,18 +146,7 @@ optional false
 longname y-coordinate for vertex
 description is the y-coordinate for the vertex.
 
-block vertices
-name zv
-type double precision
-in_record true
-tagged false
-reader urword
-optional false
-longname z-coordinate for vertex
-description is the z-coordinate for the vertex.
-
-
-# --------------------- swf disl cell2d ---------------------
+# --------------------- swf disv1d cell2d ---------------------
 
 block cell2d
 name cell2d

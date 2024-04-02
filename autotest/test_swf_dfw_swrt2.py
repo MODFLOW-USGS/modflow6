@@ -3,7 +3,7 @@
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
 from SWIFT2D, a USGS 2D overland flow simulator.  Because the DFW
-Package in MF6 presently works only with the DISL Package, it cannot
+Package in MF6 presently works only with the DISV1D Package, it cannot
 represent flow on a grid, so it is used here to simulate a one-
 dimensional version of this same problem.  The problem is set up
 so that once steady conditions are achieved, the depth in each reach
@@ -78,7 +78,7 @@ def build_models(idx, test):
     sim.register_ims_package(imsswf, [swf.name])
 
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
@@ -87,13 +87,13 @@ def build_models(idx, test):
 
     reach_bottom = np.linspace(1.05, 0.05, nreach)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=dx,
-        reach_bottom=reach_bottom,
+        length=dx,
+        width=dx,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -218,7 +218,7 @@ def check_output(idx, test):
 
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.disl.reach_bottom.array
+    depth = stage_all[-1] - swf.disv1d.bottom.array
     np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"

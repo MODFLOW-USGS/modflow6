@@ -1,47 +1,43 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module SwfDislInputModule
+module SwfDisv1DInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public swf_disl_param_definitions
-  public swf_disl_aggregate_definitions
-  public swf_disl_block_definitions
-  public SwfDislParamFoundType
-  public swf_disl_multi_package
+  public swf_disv1d_param_definitions
+  public swf_disv1d_aggregate_definitions
+  public swf_disv1d_block_definitions
+  public SwfDisv1dParamFoundType
+  public swf_disv1d_multi_package
 
-  type SwfDislParamFoundType
+  type SwfDisv1dParamFoundType
     logical :: length_units = .false.
-    logical :: length_convert = .false.
-    logical :: time_convert = .false.
     logical :: nogrb = .false.
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
     logical :: nodes = .false.
     logical :: nvert = .false.
-    logical :: reach_length = .false.
-    logical :: reach_width = .false.
-    logical :: reach_bottom = .false.
-    logical :: toreach = .false.
+    logical :: length = .false.
+    logical :: width = .false.
+    logical :: bottom = .false.
     logical :: idomain = .false.
     logical :: iv = .false.
     logical :: xv = .false.
     logical :: yv = .false.
-    logical :: zv = .false.
     logical :: icell2d = .false.
     logical :: fdc = .false.
     logical :: ncvert = .false.
     logical :: icvert = .false.
-  end type SwfDislParamFoundType
+  end type SwfDisv1dParamFoundType
 
-  logical :: swf_disl_multi_package = .false.
+  logical :: swf_disv1d_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_length_units = InputParamDefinitionType &
+    swfdisv1d_length_units = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'OPTIONS', & ! block
     'LENGTH_UNITS', & ! tag name
     'LENGTH_UNITS', & ! fortran variable
@@ -55,44 +51,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_length_convert = InputParamDefinitionType &
+    swfdisv1d_nogrb = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
-    'OPTIONS', & ! block
-    'LENGTH_CONVERT', & ! tag name
-    'LENGTH_CONVERT', & ! fortran variable
-    'DOUBLE', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    swfdisl_time_convert = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DISL', & ! subcomponent
-    'OPTIONS', & ! block
-    'TIME_CONVERT', & ! tag name
-    'TIME_CONVERT', & ! fortran variable
-    'DOUBLE', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    swfdisl_nogrb = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'OPTIONS', & ! block
     'NOGRB', & ! tag name
     'NOGRB', & ! fortran variable
@@ -106,10 +68,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_xorigin = InputParamDefinitionType &
+    swfdisv1d_xorigin = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'OPTIONS', & ! block
     'XORIGIN', & ! tag name
     'XORIGIN', & ! fortran variable
@@ -123,10 +85,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_yorigin = InputParamDefinitionType &
+    swfdisv1d_yorigin = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'OPTIONS', & ! block
     'YORIGIN', & ! tag name
     'YORIGIN', & ! fortran variable
@@ -140,10 +102,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_angrot = InputParamDefinitionType &
+    swfdisv1d_angrot = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'OPTIONS', & ! block
     'ANGROT', & ! tag name
     'ANGROT', & ! fortran variable
@@ -157,10 +119,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_nodes = InputParamDefinitionType &
+    swfdisv1d_nodes = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'DIMENSIONS', & ! block
     'NODES', & ! tag name
     'NODES', & ! fortran variable
@@ -174,10 +136,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_nvert = InputParamDefinitionType &
+    swfdisv1d_nvert = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'DIMENSIONS', & ! block
     'NVERT', & ! tag name
     'NVERT', & ! fortran variable
@@ -191,13 +153,13 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_reach_length = InputParamDefinitionType &
+    swfdisv1d_length = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'GRIDDATA', & ! block
-    'REACH_LENGTH', & ! tag name
-    'REACH_LENGTH', & ! fortran variable
+    'LENGTH', & ! tag name
+    'LENGTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
     .true., & ! required
@@ -208,13 +170,13 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_reach_width = InputParamDefinitionType &
+    swfdisv1d_width = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'GRIDDATA', & ! block
-    'REACH_WIDTH', & ! tag name
-    'REACH_WIDTH', & ! fortran variable
+    'WIDTH', & ! tag name
+    'WIDTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
     .true., & ! required
@@ -225,13 +187,13 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_reach_bottom = InputParamDefinitionType &
+    swfdisv1d_bottom = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'GRIDDATA', & ! block
-    'REACH_BOTTOM', & ! tag name
-    'REACH_BOTTOM', & ! fortran variable
+    'BOTTOM', & ! tag name
+    'BOTTOM', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
     .true., & ! required
@@ -242,27 +204,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_toreach = InputParamDefinitionType &
+    swfdisv1d_idomain = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
-    'GRIDDATA', & ! block
-    'TOREACH', & ! tag name
-    'TOREACH', & ! fortran variable
-    'INTEGER1D', & ! type
-    'NODES', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    swfdisl_idomain = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'GRIDDATA', & ! block
     'IDOMAIN', & ! tag name
     'IDOMAIN', & ! fortran variable
@@ -276,10 +221,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_iv = InputParamDefinitionType &
+    swfdisv1d_iv = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'VERTICES', & ! block
     'IV', & ! tag name
     'IV', & ! fortran variable
@@ -293,10 +238,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_xv = InputParamDefinitionType &
+    swfdisv1d_xv = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'VERTICES', & ! block
     'XV', & ! tag name
     'XV', & ! fortran variable
@@ -310,10 +255,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_yv = InputParamDefinitionType &
+    swfdisv1d_yv = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'VERTICES', & ! block
     'YV', & ! tag name
     'YV', & ! fortran variable
@@ -327,27 +272,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_zv = InputParamDefinitionType &
+    swfdisv1d_icell2d = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
-    'VERTICES', & ! block
-    'ZV', & ! tag name
-    'ZV', & ! fortran variable
-    'DOUBLE', & ! type
-    '', & ! shape
-    .true., & ! required
-    .true., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    swfdisl_icell2d = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'CELL2D', & ! block
     'ICELL2D', & ! tag name
     'ICELL2D', & ! fortran variable
@@ -361,10 +289,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_fdc = InputParamDefinitionType &
+    swfdisv1d_fdc = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'CELL2D', & ! block
     'FDC', & ! tag name
     'FDC', & ! fortran variable
@@ -378,10 +306,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_ncvert = InputParamDefinitionType &
+    swfdisv1d_ncvert = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'CELL2D', & ! block
     'NCVERT', & ! tag name
     'NCVERT', & ! fortran variable
@@ -395,10 +323,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_icvert = InputParamDefinitionType &
+    swfdisv1d_icvert = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'CELL2D', & ! block
     'ICVERT', & ! tag name
     'ICVERT', & ! fortran variable
@@ -412,41 +340,37 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swf_disl_param_definitions(*) = &
+    swf_disv1d_param_definitions(*) = &
     [ &
-    swfdisl_length_units, &
-    swfdisl_length_convert, &
-    swfdisl_time_convert, &
-    swfdisl_nogrb, &
-    swfdisl_xorigin, &
-    swfdisl_yorigin, &
-    swfdisl_angrot, &
-    swfdisl_nodes, &
-    swfdisl_nvert, &
-    swfdisl_reach_length, &
-    swfdisl_reach_width, &
-    swfdisl_reach_bottom, &
-    swfdisl_toreach, &
-    swfdisl_idomain, &
-    swfdisl_iv, &
-    swfdisl_xv, &
-    swfdisl_yv, &
-    swfdisl_zv, &
-    swfdisl_icell2d, &
-    swfdisl_fdc, &
-    swfdisl_ncvert, &
-    swfdisl_icvert &
+    swfdisv1d_length_units, &
+    swfdisv1d_nogrb, &
+    swfdisv1d_xorigin, &
+    swfdisv1d_yorigin, &
+    swfdisv1d_angrot, &
+    swfdisv1d_nodes, &
+    swfdisv1d_nvert, &
+    swfdisv1d_length, &
+    swfdisv1d_width, &
+    swfdisv1d_bottom, &
+    swfdisv1d_idomain, &
+    swfdisv1d_iv, &
+    swfdisv1d_xv, &
+    swfdisv1d_yv, &
+    swfdisv1d_icell2d, &
+    swfdisv1d_fdc, &
+    swfdisv1d_ncvert, &
+    swfdisv1d_icvert &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_vertices = InputParamDefinitionType &
+    swfdisv1d_vertices = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'VERTICES', & ! block
     'VERTICES', & ! tag name
     'VERTICES', & ! fortran variable
-    'RECARRAY IV XV YV ZV', & ! type
+    'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
     .true., & ! required
     .false., & ! multi-record
@@ -456,10 +380,10 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisl_cell2d = InputParamDefinitionType &
+    swfdisv1d_cell2d = InputParamDefinitionType &
     ( &
     'SWF', & ! component
-    'DISL', & ! subcomponent
+    'DISV1D', & ! subcomponent
     'CELL2D', & ! block
     'CELL2D', & ! tag name
     'CELL2D', & ! fortran variable
@@ -473,14 +397,14 @@ module SwfDislInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swf_disl_aggregate_definitions(*) = &
+    swf_disv1d_aggregate_definitions(*) = &
     [ &
-    swfdisl_vertices, &
-    swfdisl_cell2d &
+    swfdisv1d_vertices, &
+    swfdisv1d_cell2d &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    swf_disl_block_definitions(*) = &
+    swf_disv1d_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -514,4 +438,4 @@ module SwfDislInputModule
     ) &
     ]
 
-end module SwfDislInputModule
+end module SwfDisv1DInputModule
