@@ -178,6 +178,7 @@
 		<File RelativePath="..\src\Idm\swf-chdidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-cxsidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dfwidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dislidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disvidm.f90"/>
@@ -216,9 +217,6 @@
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe-uze.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
-		<File RelativePath="..\src\Model\Discretization\Dis.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Disv.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-api.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-buy.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-chd.f90"/>
@@ -286,6 +284,11 @@
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
+		<Filter Name="Discretization">
+		<File RelativePath="..\src\Model\Discretization\Dis.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Dis2d.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disv.f90"/></Filter>
 		<Filter Name="ParticleTracking">
 		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
