@@ -8,7 +8,6 @@ module PrtOcModule
   use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
-  use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: urword, openfile
   use TimeSelectModule, only: TimeSelectType
