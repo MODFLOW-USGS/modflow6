@@ -5,7 +5,7 @@ runs:
   steps:
 
     - name: Build MF6 parallel
-      uses: ${{ github.workspace }}/modflow6/.github/actions/build-par-win
+      uses: ./modflow6/.github/actions/build-par-win
 
     - name: Update flopy
       working-directory: modflow6/autotest

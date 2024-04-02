@@ -5,7 +5,7 @@ runs:
   steps:
 
     - name: Setup PETSc
-      uses: ${{ github.workspace }}/modflow6/.github/actions/build-petsc-win
+      uses: ./modflow6/.github/actions/build-petsc-win
 
     - name: Build modflow6
       shell: cmd

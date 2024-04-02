@@ -24,7 +24,7 @@ runs:
       run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
 
     - name: Setup oneAPI
-      uses: ${{ github.workspace }}/modflow6/.github/actions/setup-par-oneapi
+      uses: ./modflow6/.github/actions/setup-par-oneapi
 
     - name: Restore PETSc cache
       id: petsc-cache
