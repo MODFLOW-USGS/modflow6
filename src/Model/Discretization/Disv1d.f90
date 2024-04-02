@@ -613,7 +613,7 @@ contains
       length = DZERO
       do j = iavert(n), iavert(n + 1) - 2
         length = length + &
-                       calcdist(vertices, javert(j), javert(j + 1))
+                 calcdist(vertices, javert(j), javert(j + 1))
       end do
 
       ! find vertices that span midpoint
@@ -638,7 +638,7 @@ contains
       ! find x, y position of point on line
       do ixy = 1, 3
         cellxy(ixy, n) = (DONE - fd) * vertices(ixy, iv0) + &
-                           fd * vertices(ixy, iv1)
+                         fd * vertices(ixy, iv1)
       end do
 
     end do

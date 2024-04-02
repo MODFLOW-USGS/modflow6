@@ -959,10 +959,10 @@ contains
   !!
   !<
   subroutine disv1dconnections_verts(this, name_model, nodes, nodesuser, &
-                                   nrsize, nvert, &
-                                   vertices, iavert, javert, &
-                                   cellxyz, cellfdc, nodereduced, nodeuser, &
-                                   reach_length)
+                                     nrsize, nvert, &
+                                     vertices, iavert, javert, &
+                                     cellxyz, cellfdc, nodereduced, nodeuser, &
+                                     reach_length)
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
@@ -1045,7 +1045,7 @@ contains
     ! Fill disv1d symmetric arrays
     ! todo: need to handle cell center shifted from center of reach
     call fill_disv1d_symarrays(this%ia, this%ja, this%jas, reach_length, &
-                             this%ihc, this%cl1, this%cl2)
+                               this%ihc, this%cl1, this%cl2)
 
     !
     ! -- Fill symmetric discretization arrays (ihc,cl1,cl2,hwva,anglex)
