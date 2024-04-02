@@ -48,8 +48,7 @@ module ConnectionsModule
     procedure :: disconnections
     procedure :: disvconnections
     procedure :: disuconnections
-    procedure :: dislconnections
-    procedure :: dislconnections_verts
+    procedure :: disv1dconnections_verts
     procedure :: iajausr
     procedure :: getjaindex
     procedure :: set_mask
@@ -953,76 +952,13 @@ contains
     return
   end subroutine disuconnections
 
-  !> @brief procedure to fill the connections object for a disl package
+  !> @brief Fill the connections object for a disv1d package from vertices
   !!
   !! todo: Still need to handle hwva
-  !! todo: Only unreduced disl grids are allowed at the moment
+  !! todo: Only unreduced disv1d grids are allowed at the moment
   !!
   !<
-  subroutine dislconnections(this, name_model, toreach, reach_length)
-    ! -- modules
-    use MemoryManagerModule, only: mem_deallocate, mem_setptr
-    use SparseModule, only: sparsematrix
-    ! -- dummy
-    class(ConnectionsType) :: this !< object
-    character(len=*), intent(in) :: name_model !< name of model
-    integer(I4B), dimension(:), intent(in) :: toreach !< dowstream reach number
-    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
-    ! -- local
-    type(sparsematrix) :: sparse
-    integer(I4B) :: ierror
-
-    ! Allocate scalars
-    call this%allocate_scalars(name_model)
-
-    ! Set scalars
-    this%nodes = size(toreach)
-    this%ianglex = 0
-
-    ! Create sparse matrix object using toreach
-    ! and fill ia and ja
-    call sparse_from_toreach(toreach, sparse)
-    this%nja = sparse%nnz
-    this%njas = (this%nja - this%nodes) / 2
-
-    ! Allocate index arrays of size nja and symmetric arrays
-    call this%allocate_arrays()
-
-    ! Fill the IA and JA arrays from sparse, then destroy sparse
-    call sparse%sort()
-    call sparse%filliaja(this%ia, this%ja, ierror)
-    call sparse%destroy()
-
-    ! Fill the isym and jas arrays
-    call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
-    call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
-
-    ! Fill disl symmetric arrays
-    call fill_disl_symarrays(this%ia, this%ja, this%jas, reach_length, &
-                             this%ihc, this%cl1, this%cl2)
-
-    ! If reduced system, then need to build iausr and jausr, otherwise point
-    ! them to ia and ja.
-    ! TODO: not handled yet for reduced system
-    !this%iausr => this%ia
-    !this%jausr => this%ja
-    !call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
-    ! -- iausr and jausr will be pointers
-    call mem_deallocate(this%iausr)
-    call mem_deallocate(this%jausr)
-    call mem_setptr(this%iausr, 'IA', this%memoryPath)
-    call mem_setptr(this%jausr, 'JA', this%memoryPath)
-
-    return
-  end subroutine dislconnections
-
-  !> @brief Fill the connections object for a disl package from vertices
-  !!
-  !! todo: Still need to handle hwva
-  !! todo: Only unreduced disl grids are allowed at the moment
-  !!
-  !<
-  subroutine dislconnections_verts(this, name_model, nodes, nodesuser, &
+  subroutine disv1dconnections_verts(this, name_model, nodes, nodesuser, &
                                    nrsize, nvert, &
                                    vertices, iavert, javert, &
                                    cellxyz, cellfdc, nodereduced, nodeuser, &
@@ -1106,9 +1042,9 @@ contains
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
 
-    ! Fill disl symmetric arrays
+    ! Fill disv1d symmetric arrays
     ! todo: need to handle cell center shifted from center of reach
-    call fill_disl_symarrays(this%ia, this%ja, this%jas, reach_length, &
+    call fill_disv1d_symarrays(this%ia, this%ja, this%jas, reach_length, &
                              this%ihc, this%cl1, this%cl2)
 
     !
@@ -1129,45 +1065,11 @@ contains
     !
     ! -- Return
     return
-  end subroutine dislconnections_verts
+  end subroutine disv1dconnections_verts
 
-  !> @brief Using toreach, fill the sparse object
+  !> @brief Fill symmetric connection arrays for disv1d
   !<
-  subroutine sparse_from_toreach(toreach, spm)
-    ! -- modules
-    use SparseModule, only: sparsematrix
-    ! -- dummy
-    integer(I4B), dimension(:), contiguous :: toreach
-    type(sparsematrix), intent(inout) :: spm
-    ! -- local
-    integer(I4B) :: nodes
-    integer(I4B) :: n
-    integer(I4B) :: j
-
-    nodes = size(toreach)
-    call spm%init(nodes, nodes, 3)
-    !
-    ! -- insert diagonal so it stays in front
-    do n = 1, size(toreach)
-      call spm%addconnection(n, n, 1)
-    end do
-    !
-    ! -- add toreach connections for non-zero
-    !    reaches (0 indicates no downstream reach)
-    do n = 1, size(toreach)
-      j = toreach(n)
-      if (j > 0) then
-        call spm%addconnection(n, j, 1)
-        call spm%addconnection(j, n, 1)
-      end if
-    end do
-
-    return
-  end subroutine sparse_from_toreach
-
-  !> @brief Fill symmetric connection arrays for disl
-  !<
-  subroutine fill_disl_symarrays(ia, ja, jas, reach_length, ihc, cl1, cl2)
+  subroutine fill_disv1d_symarrays(ia, ja, jas, reach_length, ihc, cl1, cl2)
     ! dummy
     integer(I4B), dimension(:), intent(in) :: ia !< csr pointer array
     integer(I4B), dimension(:), intent(in) :: ja !< csr array
@@ -1193,7 +1095,7 @@ contains
         cl2(isympos) = DHALF * reach_length(m)
       end do
     end do
-  end subroutine fill_disl_symarrays
+  end subroutine fill_disv1d_symarrays
 
   !> @brief Fill iausr and jausr if reduced grid, otherwise point them to ia
   !! and ja.

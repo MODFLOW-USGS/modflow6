@@ -1,4 +1,4 @@
-module DislGeom
+module Disv1dGeom
 
   use KindModule, only: DP, I4B
   implicit none
@@ -9,19 +9,18 @@ contains
 
   !> @brief Calculate distance bewteen two vertices
   !<
-  function calcdist(vertices, vert1, vert2) result(dist)
+  function calcdist(vertices, ivert1, ivert2) result(dist)
     ! -- dummy
     real(DP), dimension(:, :), intent(in) :: vertices
-    integer(I4B), intent(in) :: vert1
-    integer(I4B), intent(in) :: vert2
-    real(DP) :: dist, xdist, ydist, zdist
+    integer(I4B), intent(in) :: ivert1
+    integer(I4B), intent(in) :: ivert2
+    real(DP) :: dist, xdist, ydist
     ! -- local
     !
     ! -- calc distance
-    xdist = abs(vertices(1, vert1) - vertices(1, vert2))
-    ydist = abs(vertices(2, vert1) - vertices(2, vert2))
-    zdist = abs(vertices(3, vert1) - vertices(3, vert2))
-    dist = sqrt(xdist * xdist + ydist * ydist + zdist * zdist)
+    xdist = abs(vertices(1, ivert1) - vertices(1, ivert2))
+    ydist = abs(vertices(2, ivert1) - vertices(2, ivert2))
+    dist = sqrt(xdist * xdist + ydist * ydist)
 
     ! -- return
     return
@@ -34,27 +33,22 @@ contains
   !! return the magnitude of the original vector, vmag.
   !!
   !<
-  subroutine line_unit_vector(x0, y0, z0, x1, y1, z1, &
-                              xcomp, ycomp, zcomp, vmag)
+  subroutine line_unit_vector(x0, y0, x1, y1, &
+                              xcomp, ycomp, vmag)
     real(DP), intent(in) :: x0
     real(DP), intent(in) :: y0
-    real(DP), intent(in) :: z0
     real(DP), intent(in) :: x1
     real(DP), intent(in) :: y1
-    real(DP), intent(in) :: z1
     real(DP), intent(out) :: xcomp
     real(DP), intent(out) :: ycomp
-    real(DP), intent(out) :: zcomp
-    real(DP) :: dx, dy, dz, vmag
+    real(DP) :: dx, dy, vmag
     !
     dx = x1 - x0
     dy = y1 - y0
-    dz = z1 - z0
-    vmag = sqrt(dx**2 + dy**2 + dz**2)
+    vmag = sqrt(dx**2 + dy**2)
     xcomp = dx / vmag
     ycomp = dy / vmag
-    zcomp = dz / vmag
     return
   end subroutine line_unit_vector
 
-end module DislGeom
+end module Disv1dGeom

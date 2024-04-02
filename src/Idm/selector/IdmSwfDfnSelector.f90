@@ -6,7 +6,7 @@ module IdmSwfDfnSelectorModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   use SwfNamInputModule
-  use SwfDislInputModule
+  use SwfDisv1DInputModule
   use SwfDis2DInputModule
   use SwfDisvInputModule
   use SwfCxsInputModule
@@ -46,8 +46,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, swf_nam_param_definitions)
-    case ('DISL')
-      call set_param_pointer(input_definition, swf_disl_param_definitions)
+    case ('DISV1D')
+      call set_param_pointer(input_definition, swf_disv1d_param_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, swf_dis2d_param_definitions)
     case ('DISV')
@@ -78,8 +78,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, swf_nam_aggregate_definitions)
-    case ('DISL')
-      call set_param_pointer(input_definition, swf_disl_aggregate_definitions)
+    case ('DISV1D')
+      call set_param_pointer(input_definition, swf_disv1d_aggregate_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, swf_dis2d_aggregate_definitions)
     case ('DISV')
@@ -110,8 +110,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_block_pointer(input_definition, swf_nam_block_definitions)
-    case ('DISL')
-      call set_block_pointer(input_definition, swf_disl_block_definitions)
+    case ('DISV1D')
+      call set_block_pointer(input_definition, swf_disv1d_block_definitions)
     case ('DIS2D')
       call set_block_pointer(input_definition, swf_dis2d_block_definitions)
     case ('DISV')
@@ -141,8 +141,8 @@ contains
     select case (subcomponent)
     case ('NAM')
       multi_package = swf_nam_multi_package
-    case ('DISL')
-      multi_package = swf_disl_multi_package
+    case ('DISV1D')
+      multi_package = swf_disv1d_multi_package
     case ('DIS2D')
       multi_package = swf_dis2d_multi_package
     case ('DISV')
@@ -176,7 +176,7 @@ contains
     select case (subcomponent)
     case ('NAM')
       integrated = .true.
-    case ('DISL')
+    case ('DISV1D')
       integrated = .true.
     case ('DIS2D')
       integrated = .true.

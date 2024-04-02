@@ -69,11 +69,10 @@ def build_models(idx, test):
     dx = 1000.0
     nreach = int(total_length / dx)
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
-    toreach = [j + 1 for j in range(nreach - 1)] + [-1]
     nodes = len(cell2d)
     nvert = len(vertices)
 
@@ -81,14 +80,13 @@ def build_models(idx, test):
     x = np.linspace(dx / 2, total_length - dx / 2, nreach)
     z = (total_length - x) * slope
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=40.,
-        reach_bottom=z,
-        # toreach=toreach,   # -1 gives 0 in one-based, which means outflow cell
+        length=dx,
+        width=40.,
+        bottom=z,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -275,7 +273,7 @@ def check_output(idx, test):
     name = "swfmodel"
 
     # read the binary grid file
-    fpth = test.workspace / f"{name}.disl.grb"
+    fpth = test.workspace / f"{name}.disv1d.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
     ja = grb.ja

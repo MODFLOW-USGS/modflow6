@@ -42,6 +42,10 @@ Release/
 *.lot
 *.synctex.gz
 *.toc
+*.fdb_latexmk
+*.fls
+*.ilg
+*.ind
 *_genmod.f90
 
 .idea/

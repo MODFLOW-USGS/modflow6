@@ -86,22 +86,20 @@ def add_swf_model(sim):
     nreach = 3
     total_length = dx * nreach
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
-    toreach = [j + 1 for j in range(nreach - 1)] + [-1]
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=50.,
-        reach_bottom=0.0,
-        toreach=toreach,  # -1 gives 0 in one-based, which means outflow cell
+        length=dx,
+        width=50.,
+        bottom=0.0,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -235,7 +233,7 @@ def check_output(idx, test):
     name = "swfmodel"
 
     # read the binary grid file
-    fpth = test.workspace / f"{name}.disl.grb"
+    fpth = test.workspace / f"{name}.disv1d.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
     ja = grb.ja
