@@ -35,6 +35,7 @@ module GwfNpfInputModule
     logical :: tvk6 = .false.
     logical :: filein = .false.
     logical :: tvk6_filename = .false.
+    logical :: export_ascii = .false.
     logical :: inewton = .false.
     logical :: satomega = .false.
     logical :: icelltype = .false.
@@ -458,6 +459,23 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfnpf_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NPF', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfnpf_inewton = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -654,6 +672,7 @@ module GwfNpfInputModule
     gwfnpf_tvk6, &
     gwfnpf_filein, &
     gwfnpf_tvk6_filename, &
+    gwfnpf_export_ascii, &
     gwfnpf_inewton, &
     gwfnpf_satomega, &
     gwfnpf_icelltype, &

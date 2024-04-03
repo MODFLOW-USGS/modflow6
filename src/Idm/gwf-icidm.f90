@@ -11,10 +11,28 @@ module GwfIcInputModule
   public gwf_ic_multi_package
 
   type GwfIcParamFoundType
+    logical :: export_ascii = .false.
     logical :: strt = .false.
   end type GwfIcParamFoundType
 
   logical :: gwf_ic_multi_package = .false.
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfic_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'IC', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
 
   type(InputParamDefinitionType), parameter :: &
     gwfic_strt = InputParamDefinitionType &
@@ -36,6 +54,7 @@ module GwfIcInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_ic_param_definitions(*) = &
     [ &
+    gwfic_export_ascii, &
     gwfic_strt &
     ]
 

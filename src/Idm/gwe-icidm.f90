@@ -11,10 +11,28 @@ module GweIcInputModule
   public gwe_ic_multi_package
 
   type GweIcParamFoundType
+    logical :: export_ascii = .false.
     logical :: strt = .false.
   end type GweIcParamFoundType
 
   logical :: gwe_ic_multi_package = .false.
+
+  type(InputParamDefinitionType), parameter :: &
+    gweic_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'IC', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
 
   type(InputParamDefinitionType), parameter :: &
     gweic_strt = InputParamDefinitionType &
@@ -36,6 +54,7 @@ module GweIcInputModule
   type(InputParamDefinitionType), parameter :: &
     gwe_ic_param_definitions(*) = &
     [ &
+    gweic_export_ascii, &
     gweic_strt &
     ]
 

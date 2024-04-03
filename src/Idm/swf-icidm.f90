@@ -11,10 +11,28 @@ module SwfIcInputModule
   public swf_ic_multi_package
 
   type SwfIcParamFoundType
+    logical :: export_ascii = .false.
     logical :: strt = .false.
   end type SwfIcParamFoundType
 
   logical :: swf_ic_multi_package = .false.
+
+  type(InputParamDefinitionType), parameter :: &
+    swfic_export_ascii = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'IC', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
 
   type(InputParamDefinitionType), parameter :: &
     swfic_strt = InputParamDefinitionType &
@@ -36,6 +54,7 @@ module SwfIcInputModule
   type(InputParamDefinitionType), parameter :: &
     swf_ic_param_definitions(*) = &
     [ &
+    swfic_export_ascii, &
     swfic_strt &
     ]
 
