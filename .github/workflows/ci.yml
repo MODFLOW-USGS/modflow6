@@ -1,8 +1,6 @@
 name: MODFLOW 6 continuous integration
 on:
   push:
-    branches: [master, develop, update/pixi-lock]
-    tags: ["*"]
     paths-ignore:
       - '**.md'
       - '**.pdf'
@@ -40,6 +38,8 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   lint:
     name: Check format
@@ -84,17 +84,17 @@ jobs:
           pixi-version: "latest"
 
       - name: Meson setup
-        run: pixi run setup-strict builddir
+        run: pixi run setup -Dwerror=true builddir
 
       - name: Meson compile
-        run: pixi run compile-build builddir
+        run: pixi run build builddir
 
       - name: Show build log
         if: failure()
         run: cat builddir/meson-logs/meson-log.txt
 
       - name: Meson test
-        run: pixi run test-build builddir
+        run: pixi run test builddir
 
   smoke_test:
     name: Smoke test
@@ -123,14 +123,11 @@ jobs:
           compiler: gcc
           version: ${{ env.FC_V }}
 
-      - uses: prefix-dev/setup-pixi@v0.5.1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-      
-      - name: Setup pixi
-        working-directory: modflow6
-        run: pixi run install
 
       - name: Build test-drive
         working-directory: test-drive
@@ -142,8 +139,8 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup-release builddir
-          pixi run install-build builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -152,7 +149,7 @@ jobs:
     
       - name: Unit test programs
         working-directory: modflow6
-        run: pixi run test-build builddir
+        run: pixi run test builddir
 
       - name: Update flopy
         working-directory: modflow6
@@ -168,7 +165,7 @@ jobs:
         working-directory: modflow6
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pixi run autotest-marker "not slow and not regression and not developmode"
+            pixi run autotest -m "not slow and not regression and not developmode"
           else
             pixi run autotest
           fi
@@ -221,20 +218,17 @@ jobs:
           compiler: gcc
           version: ${{ env.FC_V }}
 
-      - uses: prefix-dev/setup-pixi@v0.5.1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
 
-      - name: Setup pixi
-        working-directory: modflow6
-        run: pixi run install
-
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup-release builddir
-          pixi run install-build builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -243,7 +237,7 @@ jobs:
       
       - name: Unit test programs
         working-directory: modflow6
-        run: pixi run test-build builddir
+        run: pixi run test builddir
 
       - name: Update flopy
         working-directory: modflow6
@@ -261,9 +255,9 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pixi run autotest-marker "not large and not developmode"
+            pixi run autotest -m "not large and not developmode"
           else
-            pixi run autotest-marker "not large"
+            pixi run autotest -m "not large"
           fi
       
       - name: Upload failed test output
@@ -299,7 +293,7 @@ jobs:
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pixi run test-distribution
+        run: pixi run test-dist-scripts
 
   test_intel_fortran:
     name: Test intel fortran
@@ -337,14 +331,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
 
-      - uses: prefix-dev/setup-pixi@v0.5.1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-      
-      - name: Setup pixi
-        working-directory: modflow6
-        run: pixi run install
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
@@ -359,8 +350,8 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup-release builddir
-          pixi run install-build builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -369,7 +360,7 @@ jobs:
 
       - name: Unit test programs
         working-directory: modflow6
-        run: pixi run test-build builddir
+        run: pixi run test builddir
 
       - name: Update flopy
         working-directory: modflow6
@@ -387,9 +378,9 @@ jobs:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pixi run autotest-marker "not large and not developmode"
+            pixi run autotest -m "not large and not developmode"
           else
-            pixi run autotest-marker "not large"
+            pixi run autotest -m "not large"
           fi
       
       - name: Upload failed test output
@@ -403,7 +394,7 @@ jobs:
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pixi run test-distribution
+        run: pixi run test-dist-scripts
         
   parallel_test:
     name: Parallel testing
@@ -427,14 +418,11 @@ jobs:
         with:
           path: modflow6
 
-      - uses: prefix-dev/setup-pixi@v0.5.1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-      
-      - name: Setup pixi
-        working-directory: modflow6
-        run: pixi run install
 
       - name: Test parallel MF6
         if: runner.os != 'Windows'
