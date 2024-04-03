@@ -133,8 +133,8 @@ jobs:
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
 
       - name: Run sphinx
-        working-directory: modflow6/.build_rtd_docs
-        run: make html
+        working-directory: modflow6
+        run: pixi run sphinx
       
       - name: Upload results
         uses: actions/upload-artifact@v3

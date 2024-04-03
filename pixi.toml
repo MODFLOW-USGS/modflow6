@@ -41,6 +41,7 @@ autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd 
 autotest-marker = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed -m", cwd = "autotest" }
 autotest-parallel = { cmd = "pytest -v -n auto --parallel --durations 0 -k \"test_par\" --keep-failed .failed", cwd = "autotest" }
 autotest-large = { cmd = "pytest -v -n auto --durations 0 test_largetestmodels.py --keep-failed .failed", cwd = "autotest" }
+sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
 
 [dependencies]
 appdirs = "*"
