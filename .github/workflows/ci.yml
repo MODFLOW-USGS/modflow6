@@ -1,5 +1,23 @@
 name: MODFLOW 6 continuous integration
 on:
+  push:
+    branches: [master, develop, update/pixi-lock]
+    tags: ["*"]
+    paths-ignore:
+      - '**.md'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
+      - '.hpc/**'
   pull_request:
     branches:
       - master
