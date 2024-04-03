@@ -130,6 +130,7 @@ modflow6.code-workspace
 
 # unittests
 unittests/
+autotest/.failed
 
 **/__pycache__
 **/.benchmarks
@@ -138,3 +139,5 @@ unittests/
 .github/compat/*.md
 
 **.DS_Store
+# pixi environments
+.pixi

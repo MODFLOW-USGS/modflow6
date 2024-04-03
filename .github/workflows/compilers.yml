@@ -132,7 +132,7 @@ jobs:
           - {os: windows-2022, compiler: intel-classic, version: 2021.6}
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -157,21 +157,20 @@ jobs:
           compiler: ${{ matrix.compiler}}
           version: ${{ matrix.version }}
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.5.1
         with:
-          environment-file: modflow6/environment.yml
-          init-shell: >-
-              bash
-              powershell
-          cache-environment: true
-          cache-downloads: true
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
+      
+      - name: Setup pixi
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
+          pixi run setup-release builddir
+          pixi run install-build builddir
 
       - name: Show build log
         if: failure()
@@ -188,7 +187,7 @@ jobs:
       - name: Unit test programs
         if: success()
         working-directory: modflow6
-        run: meson test --verbose --no-rebuild -C builddir
+        run: pixi run test-build builddir
 
       - name: Create compile report
         if: success() || failure()
@@ -207,21 +206,21 @@ jobs:
       - name: Update flopy
         if: success()
         working-directory: modflow6/autotest
-        run: python update_flopy.py
+        run: pixi run update-flopy
 
       - name: Get executables
         if: success()
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Test modflow6
         if: success()
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           REPOS_PATH: ${{ github.workspace }}
-        run: pytest -v -n auto --durations 0
+        run: pixi run autotest
     
       - name: Create test report
         if: success() || failure()
