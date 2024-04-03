@@ -58,7 +58,7 @@ Both nightly builds and official distributions are created automatically with Gi
 
 ## Requirements
 
-This document assumes a MODFLOW 6 development environment has been configured as per the [developer documentation](../DEVELOPER.md), including a Fortran compiler (either `ifort` or `gfortran`) as well as a Conda environment as specified in `environment.yml`. Official distributions are currently prepared with Intel Fortran (`ifort`).
+This document assumes a MODFLOW 6 development environment has been configured as per the [developer documentation](../DEVELOPER.md), including a Fortran compiler (either `ifort` or `gfortran`) as well as a Pixi environment as specified in `pixi.toml`. Official distributions are currently prepared with Intel Fortran (`ifort`).
 
 ## Steps
 

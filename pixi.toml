@@ -1,0 +1,72 @@
+[project]
+name = "modflow6"
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64", "osx-64"]
+
+[tasks]
+# Install
+install-flopy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/flopy.git"
+install-pymake = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/pymake.git"
+install-modflowapi = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflowapi.git"
+install-modflow-devtools = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflow-devtools.git"
+install = { depends_on = [
+    "install-flopy",
+    "install-pymake",
+    "install-modflowapi",
+    "install-modflow-devtools",
+] }
+
+# Utils
+fortran-format-check = "python .github/common/fortran_format_check.py"
+msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
+update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
+update-version = { cmd = "python update_version.py", cwd = "distribution" }
+update-doxyfile-version = { cmd = "python update_doxyfile_version.py", cwd = ".build_rtd_docs" }
+get-exes = { cmd = "pytest -v --durations 0 get_exes.py", cwd = "autotest" }
+build-makefiles = "python build_makefiles.py"
+deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
+benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
+mk-folder-struct = { cmd = "python mk_folder_struct.py", cwd = "doc/ReleaseNotes" }
+
+# CI
+setup-strict = "meson setup -Ddebug=false -Dwerror=true"
+setup-debug = "meson setup -Doptimization=0 --prefix=$(pwd) --libdir=bin"
+setup-release = "meson setup -Ddebug=false --prefix=$(pwd) --libdir=bin"
+setup-release-parallel = "meson setup -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin"
+compile-build = "meson compile -C"
+install-build = "meson install -C"
+test-build = "meson test --verbose --no-rebuild -C"
+test-distribution = { cmd = "pytest -v --durations 0", cwd = "distribution" }
+autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd = "autotest" }
+autotest-marker = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed -m", cwd = "autotest" }
+autotest-parallel = { cmd = "pytest -v -n auto --parallel --durations 0 -k \"test_par\" --keep-failed .failed", cwd = "autotest" }
+autotest-large = { cmd = "pytest -v -n auto --durations 0 test_largetestmodels.py --keep-failed .failed", cwd = "autotest" }
+sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
+
+[dependencies]
+appdirs = "*"
+filelock = "*"
+flaky = "*"
+fortran-language-server = "*"
+fprettify = "*"
+hatchling = "*"
+jupytext = "*"
+matplotlib = "*"
+meson = "1.3.0"
+networkx = "*"
+ninja = "*"
+numpy = "*"
+pandas = "*"
+pip = "*"
+pydotplus = "*"
+pyshp = "*"
+pytest = "!=8.1.0"
+pytest-benchmark = "*"
+pytest-dotenv = "*"
+pytest-order = "*"
+pytest-xdist = "*"
+python = "3.9.*"
+requests = "*"
+scipy = "*"
+shapely = "*"
+xmipy = "*"

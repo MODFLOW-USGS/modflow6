@@ -21,22 +21,8 @@ if os.getenv("BUILD_PARALLEL_MF6") is not None:
 if args.action == "rebuild" and os.path.isdir(builddir):
     shutil.rmtree(builddir)
 
-if args.buildtype == "release":
-    setup_flag = ["-Doptimization=2"]
-elif args.buildtype == "debug":
-    setup_flag = ["-Ddebug=true", "-Doptimization=0"]
-
 if not os.path.isdir(builddir):
-    command = [
-        "meson",
-        "setup",
-        builddir,
-        "--prefix",
-        os.getcwd(),
-        "--libdir",
-        "bin",
-        arg_parallel,
-    ] + setup_flag
+    command = ["pixi", "run", f"setup-{args.buildtype}", builddir, arg_parallel]
     print("Run:", shlex.join(command))
     subprocess.run(
         command,
@@ -51,6 +37,6 @@ if os.path.isdir(bin_dir):
         if os.path.isfile(path):
             os.remove(path)
 
-command = ["meson", "install", "-C", builddir]
+command = ["pixi", "run", "install-build", builddir]
 print("Run:", shlex.join(command))
 subprocess.run(command, check=True)

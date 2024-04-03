@@ -96,15 +96,14 @@ jobs:
           path: modflow6
           ref: ${{ inputs.branch }}
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.5.1
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-          init-shell: >-
-            bash
-            powershell
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
+      
+      - name: Setup pixi
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         if: (!(runner.os == 'Windows' && matrix.parallel))
@@ -129,6 +128,7 @@ jobs:
       - name: Update version
         id: update_version
         working-directory: modflow6/distribution
+        shell: pixi run bash -e {0}
         run: |
           ver="${{ steps.set_version.outputs.version }}"
           cmd="python update_version.py -v $ver"
@@ -142,6 +142,7 @@ jobs:
 
       - name: Get OS tag
         id: ostag
+        shell: pixi run bash -e {0}
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
@@ -169,9 +170,9 @@ jobs:
         if: (!(runner.os == 'Windows' && matrix.parallel))
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+          pixi run setup-release builddir
+          pixi run install-build builddir
+          pixi run test-build builddir
 
       - name: Check architecture (macOS)
         working-directory: modflow6/bin
@@ -242,19 +243,19 @@ jobs:
 
       - name: Update flopy
         if: inputs.run_tests == true && runner.os != 'Windows'
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Get executables
         if: inputs.run_tests == true && runner.os != 'Windows'
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Test modflow6
         if: inputs.run_tests == true && runner.os != 'Windows'
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
@@ -262,7 +263,7 @@ jobs:
           if [[ "${{ inputs.developmode }}" == "false" ]]; then
             markers="$markers and not developmode"
           fi
-          pytest -v -n auto --durations 0 -m "$markers"
+          pixi run autotest-markers "$markers"
       
       - name: Upload failed test output
         if: failure()
@@ -300,7 +301,7 @@ jobs:
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
+        run: pixi run test-distribution
 
   docs:
     name: Build docs
@@ -343,12 +344,14 @@ jobs:
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.5.1
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
+      
+      - name: Setup pixi
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
         uses: fortran-lang/setup-fortran@v1
@@ -359,6 +362,7 @@ jobs:
       - name: Update version
         id: update_version
         working-directory: modflow6/distribution
+        shell: pixi run bash -e {0}
         run: |
           ver="${{ needs.build.outputs.version }}"
           cmd="python update_version.py -v $ver"
@@ -371,8 +375,8 @@ jobs:
           eval "$cmd"
 
       - name: Update FloPy classes
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Get OS tag
         id: ostag
@@ -396,18 +400,23 @@ jobs:
     
       - name: Install dependencies for building models
         if: inputs.full == true
-        working-directory: modflow6-examples/etc
+        shell: pixi run bash -e {0}
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          cd ../modflow6-examples/etc
           pip install -r requirements.pip.txt
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
           get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
 
       - name: Build example models
         if: inputs.full == true
-        working-directory: modflow6-examples/autotest
-        run: pytest -v -n auto test_scripts.py --init
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
+        run: |
+          cd ../modflow6-examples/autotest
+          pytest -v -n auto test_scripts.py --init
       
       - name: Create folder structure
         if: inputs.full == true
@@ -426,13 +435,12 @@ jobs:
           cp -r modflow6/utils/zonebudget "$distname/utils/zonebudget"
           
           # create LaTeX file describing the folder structure
-          cd modflow6/doc/ReleaseNotes
-          python mk_folder_struct.py -dp "${{ github.workspace }}/$distname"
+          pixi run mk-folder-struct -dp "${{ github.workspace }}/$distname"
 
       - name: Collect deprecations
         working-directory: modflow6/doc/mf6io/mf6ivar
         run: |
-          python deprecations.py
+          pixi run deprecations
           cat md/deprecations.md
 
       - name: Upload deprecations
@@ -442,12 +450,15 @@ jobs:
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
 
       - name: Build documentation
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         env:
           # this step is lazy about building the mf6 examples PDF document, first
           # trying to download a prebuilt PDF from MODFLOW-USGS/modflow6-examples,
           # so it needs a GITHUB_TOKEN.
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          cd ..
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
           cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
           if [[ "${{ inputs.full }}" == "true" ]]; then
@@ -496,15 +507,14 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.5.1
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-          init-shell: >-
-            bash
-            powershell
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
+      
+      - name: Setup pixi
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
         uses: fortran-lang/setup-fortran@v1
@@ -514,8 +524,10 @@ jobs:
       
       - name: Update version
         id: update_version
-        working-directory: modflow6/distribution
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         run: |
+          cd distribution
           ver="${{ needs.build.outputs.version }}"
           cmd="python update_version.py -v $ver"
           if [[ "${{ inputs.approve }}" == "true" ]]; then
@@ -528,7 +540,10 @@ jobs:
  
       - name: Get OS tag
         id: ostag
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         run: |
+          cd ..
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
             ostag="${ostag}par"
@@ -559,7 +574,10 @@ jobs:
       - name: Install dependencies for example models
         env:
           GITHUB_TOKEN: ${{ github.token }}
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         run: |
+          cd ..
           pip install -r modflow6-examples/etc/requirements.pip.txt
           distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
           echo "$distname/bin" >> $GITHUB_PATH
@@ -576,14 +594,19 @@ jobs:
 
       - name: Update Flopy
         working-directory: modflow6/autotest
-        run: python update_flopy.py
+        run: pixi run update-flopy
   
       - name: Build example models
         if: inputs.full == true
-        working-directory: modflow6-examples/autotest
-        run: pytest -v -n auto test_scripts.py --init
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
+        run: |
+          cd ../modflow6-examples/autotest
+          pytest -v -n auto test_scripts.py --init
 
       - name: Build distribution
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
