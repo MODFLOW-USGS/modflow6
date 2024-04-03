@@ -41,10 +41,10 @@ In general, to determine the path of an installed tool in your environment run:
 - cmd: `where <toolname>`, e.g. `where python`
 - PowerShell: `Get-Command <toolname>` e.g. `Get-Command fprettify`
 
-1. Activate the pixi environment:
+1. Activate the conda environment:
 
 ```bash
-pixi shell
+conda activate modflow6
 ```
 
 2. Determine the path of `fortls` and `fprettify`
