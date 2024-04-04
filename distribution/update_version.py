@@ -316,6 +316,28 @@ def update_codejson(version: Version, timestamp: datetime, approved: bool = Fals
     log_update(path, version)
 
 
+def update_doxyfile(version: Version):
+    path = project_root_path / ".build_rtd_docs" / "Doxyfile"
+    lines = open(path, "r").readlines()
+    tag = "PROJECT_NUMBER"
+    with open(path, "w") as fp:
+        for line in lines:
+            if tag in line:
+                line = f'{tag}         = "version {version}"\n'
+            fp.write(line)
+
+
+def update_pixi(version: Version):
+    path = project_root_path / "pixi.toml"
+    lines = open(path, "r").readlines()
+    tag = "version ="
+    with open(path, "w") as fp:
+        for line in lines:
+            if tag in line:
+                line = f'{tag} "{version}"\n'
+            fp.write(line)
+
+
 def update_version(
     version: Version = None,
     timestamp: datetime = datetime.now(),
@@ -345,6 +367,8 @@ def update_version(
             update_readme_and_disclaimer(version, approved)
             update_citation_cff(version, timestamp)
             update_codejson(version, timestamp, approved)
+            update_doxyfile(version)
+            update_pixi(version)
     finally:
         lock_path.unlink(missing_ok=True)
 

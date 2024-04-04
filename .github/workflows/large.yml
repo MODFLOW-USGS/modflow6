@@ -6,6 +6,8 @@ on:
   # workflow_dispatch trigger to run tests via GitHub UI or CLI,
   # see https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
   workflow_dispatch:
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   # caching only necessary on Windows
   cache_ifort:
@@ -64,14 +66,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-largetestmodels
           path: modflow6-largetestmodels
 
-      - uses: prefix-dev/setup-pixi@v0.5.1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-      
-      - name: Setup pixi
-        working-directory: modflow6
-        run: pixi run install
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         uses: fortran-lang/setup-fortran@v1
@@ -82,8 +81,8 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup-release builddir
-          pixi run install-build builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Get executables
         working-directory: modflow6
@@ -97,7 +96,7 @@ jobs:
 
       - name: Run tests
         working-directory: modflow6
-        run: pixi run autotest-large
+        run: pixi run autotest -m "large"
       
       - name: Upload failed test output
         if: failure()

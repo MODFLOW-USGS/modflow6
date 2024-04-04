@@ -1,5 +1,5 @@
 set FC=ifort
 cd "%GITHUB_WORKSPACE%\modflow6"
-pixi run setup-release-parallel builddir
-pixi run install-build builddir
-pixi run test-build builddir
+pixi run setup -Dparallel=true builddir
+pixi run build builddir
+pixi run test builddir

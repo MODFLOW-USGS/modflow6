@@ -51,9 +51,9 @@ runs:
       shell: bash
       working-directory: modflow6
       run: |
-        pixi run setup-release-parallel builddir
-        pixi run install-build builddir
-        pixi run test-build builddir
+        pixi run setup -Dparallel=true builddir
+        pixi run build builddir
+        pixi run test builddir
 
     - name: Show Meson logs
       if: failure()
@@ -78,4 +78,4 @@ runs:
       working-directory: modflow6
       env:
         REPOS_PATH: ${{ github.workspace }}
-      run: pixi run autotest-parallel
+      run: pixi run autotest --parallel -k "test_par"
