@@ -141,9 +141,9 @@ jobs:
 
       - name: Get OS tag
         id: ostag
-        shell: pixi run bash -e {0}
+        working-directory: modflow6
         run: |
-          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          ostag=$(pixi run python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
             ostag="${ostag}par"
           fi
@@ -376,8 +376,9 @@ jobs:
 
       - name: Get OS tag
         id: ostag
+        working-directory: modflow6
         run: |
-          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          ostag=$(pixi run python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Download pre-built binaries
@@ -534,10 +535,8 @@ jobs:
       - name: Get OS tag
         id: ostag
         working-directory: modflow6
-        shell: pixi run bash -e {0}
         run: |
-          cd ..
-          ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
+          ostag=$(pixi run python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
           if [[ "${{ matrix.parallel }}" == "true" ]]; then
             ostag="${ostag}par"
           fi
