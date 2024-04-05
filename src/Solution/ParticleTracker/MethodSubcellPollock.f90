@@ -186,6 +186,7 @@ contains
     !    within the current period and time step only.
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
+
     if (all(tslice > 0)) then
       do i = tslice(1), tslice(2)
         t = this%tracktimes%times(i)

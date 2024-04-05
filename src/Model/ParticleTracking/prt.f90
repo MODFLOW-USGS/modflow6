@@ -928,7 +928,7 @@ contains
   !> @brief Solve the model
   subroutine prt_solve(this)
     ! -- modules
-    use TdisModule, only: kper, kstp, totimc, totim, nper, nstp
+    use TdisModule, only: kper, kstp, totimc, nper, nstp, delt
     use PrtPrpModule, only: PrtPrpType
     ! -- dummy variables
     class(PrtModelType) :: this
@@ -984,11 +984,12 @@ contains
             call this%trackfilectl%save(particle, kper=kper, &
                                         kstp=kstp, reason=0) ! reason=0: release
 
-          ! -- Unless in last stress period and it has only one time step,
-          ! -- limit max time to no later than end of time step
-          tmax = particle%tstop
-          if (kper == nper .and. nstp(kper) /= 1 .and. totim < particle%tstop) &
-            tmax = totim
+          ! -- Maximum time is end of time step unless this is the last
+          !    time step in the simulation, which case it's the particle
+          !    stop time.
+          tmax = totimc + delt
+          if (nper == kper .and. nstp(kper) == kstp) &
+            tmax = particle%tstop
 
           ! -- Get and apply the tracking method
           call this%method%apply(particle, tmax)
