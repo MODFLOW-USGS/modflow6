@@ -15,72 +15,50 @@ jobs:
         # combinations from https://github.com/fortran-lang/setup-fortran#runner-compatibility
         include:
           # gfortran
-          - {os: ubuntu-20.04, compiler: gcc, version: 7}
-          - {os: ubuntu-20.04, compiler: gcc, version: 8}
-          - {os: ubuntu-20.04, compiler: gcc, version: 9}
-          - {os: ubuntu-20.04, compiler: gcc, version: 10}
           - {os: ubuntu-20.04, compiler: gcc, version: 11}
-          - {os: ubuntu-22.04, compiler: gcc, version: 9}
-          - {os: ubuntu-22.04, compiler: gcc, version: 10}
           - {os: ubuntu-22.04, compiler: gcc, version: 11}
           - {os: ubuntu-22.04, compiler: gcc, version: 12}
           - {os: ubuntu-22.04, compiler: gcc, version: 13}
-          - {os: macos-11, compiler: gcc, version: 7}
-          - {os: macos-11, compiler: gcc, version: 8}
-          - {os: macos-11, compiler: gcc, version: 9}
-          - {os: macos-11, compiler: gcc, version: 10}
           - {os: macos-11, compiler: gcc, version: 11}
           - {os: macos-11, compiler: gcc, version: 12}
           - {os: macos-11, compiler: gcc, version: 13}
-          - {os: macos-12, compiler: gcc, version: 7}
-          - {os: macos-12, compiler: gcc, version: 8}
-          - {os: macos-12, compiler: gcc, version: 9}
-          - {os: macos-12, compiler: gcc, version: 10}
           - {os: macos-12, compiler: gcc, version: 11}
           - {os: macos-12, compiler: gcc, version: 12}
           - {os: macos-12, compiler: gcc, version: 13}
-          - {os: windows-2019, compiler: gcc, version: 9}
-          - {os: windows-2019, compiler: gcc, version: 10}
           - {os: windows-2019, compiler: gcc, version: 11}
           - {os: windows-2019, compiler: gcc, version: 12}
           - {os: windows-2019, compiler: gcc, version: 13}
-          - {os: windows-2022, compiler: gcc, version: 9}
-          - {os: windows-2022, compiler: gcc, version: 10}
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
           - {os: windows-2022, compiler: gcc, version: 13}
           # ifx
+          - {os: ubuntu-20.04, compiler: intel, version: 2024.1}
+          - {os: ubuntu-20.04, compiler: intel, version: "2024.0"}
           - {os: ubuntu-20.04, compiler: intel, version: 2023.2}
           - {os: ubuntu-20.04, compiler: intel, version: 2023.1}
           - {os: ubuntu-20.04, compiler: intel, version: "2023.0"}
           - {os: ubuntu-20.04, compiler: intel, version: 2022.2.1}
           - {os: ubuntu-20.04, compiler: intel, version: 2022.2}
-          - {os: ubuntu-20.04, compiler: intel, version: 2022.1}
-          - {os: ubuntu-20.04, compiler: intel, version: "2022.0"}
-          - {os: ubuntu-20.04, compiler: intel, version: 2021.4}
-          - {os: ubuntu-20.04, compiler: intel, version: 2021.2}
-          - {os: ubuntu-20.04, compiler: intel, version: 2021.1}
+          - {os: ubuntu-22.04, compiler: intel, version: 2024.1}
+          - {os: ubuntu-22.04, compiler: intel, version: "2024.0"}
           - {os: ubuntu-22.04, compiler: intel, version: 2023.2}
           - {os: ubuntu-22.04, compiler: intel, version: 2023.1}
           - {os: ubuntu-22.04, compiler: intel, version: "2023.0"}
           - {os: ubuntu-22.04, compiler: intel, version: 2022.2.1}
           - {os: ubuntu-22.04, compiler: intel, version: 2022.2}
-          - {os: ubuntu-22.04, compiler: intel, version: 2022.1}
-          - {os: ubuntu-22.04, compiler: intel, version: "2022.0"}
-          - {os: ubuntu-22.04, compiler: intel, version: 2021.4}
-          - {os: ubuntu-22.04, compiler: intel, version: 2021.2}
-          - {os: ubuntu-22.04, compiler: intel, version: 2021.1}
           # no ifx on mac
+          - {os: windows-2019, compiler: intel, version: 2024.1}
+          - {os: windows-2019, compiler: intel, version: "2024.0"}
           - {os: windows-2019, compiler: intel, version: 2023.2}
           - {os: windows-2019, compiler: intel, version: 2023.1}
           - {os: windows-2019, compiler: intel, version: "2023.0"}
           - {os: windows-2019, compiler: intel, version: 2022.2}
-          - {os: windows-2019, compiler: intel, version: 2022.1}
+          - {os: windows-2022, compiler: intel, version: 2024.1}
+          - {os: windows-2022, compiler: intel, version: "2024.0"}
           - {os: windows-2022, compiler: intel, version: 2023.2}
           - {os: windows-2022, compiler: intel, version: 2023.1}
           - {os: windows-2022, compiler: intel, version: "2023.0"}
           - {os: windows-2022, compiler: intel, version: 2022.2}
-          - {os: windows-2022, compiler: intel, version: 2022.1}
           # ifort
           - {os: ubuntu-20.04, compiler: intel-classic, version: "2021.10"}
           - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.9}
