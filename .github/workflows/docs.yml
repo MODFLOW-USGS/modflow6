@@ -94,11 +94,20 @@ jobs:
         working-directory: modflow6/autotest
         run: pixi run update-flopy
 
+      # the example models also need mf2005, triangle and gridgen
+      - name: Install extra executables
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        uses: modflowpy/install-modflow-action@v1
+        with:
+          subset: mf2005,triangle,gridgen
+
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/autotest
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         run: |
-          pixi run pytest -v -n auto test_scripts.py --init
+          cd ../modflow6-examples/autotest
+          pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
 
       - name: Run benchmarks
