@@ -15,13 +15,11 @@ tracking to termination or particle stop times
 during the simulation's final time step.
 
 Several cases are provided:
-    - default: no user-specified tracking times, MP7 in pathline mode
-    - bprp: mismatching cell IDs in PRP input, expect PRT to catch and reject these
-    - trts: user-specified tracking times, some falling exactly on boundaries between
-            time steps. TODO: make sure PRT and MP7 agree on which time step a point
-            on a boundary belongs to, currently PRT assigns to subsequent time step
-            while MP7 assigns to previous.
-    - trtf: same as trts, except tracking times are provided to PRT in a separate file,
+    - default: No user-specified tracking times, MP7 in pathline mode.
+    - bprp: Mismatching cell IDs in PRP input, expect PRT to catch and reject these.
+    - trts: User-specified tracking times, some falling exactly on boundaries between
+            time steps. PRT and MP7 should both assign the datum to the prior time step.
+    - trtf: Same as trts, except tracking times are provided to PRT in a separate file,
             rather than inline in the OC input file.
 """
 
@@ -478,18 +476,12 @@ def check_output(idx, test):
     del mf6_pls["yloc"]
     del mf6_pls["zloc"]
     del mf6_pls["node"]  # node numbers reversed in y direction in mp7
-    # del mf6_pls[
-    #     "timestep"
-    # ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
     del mp7_pls["sequencenumber"]
     del mp7_pls["particleidloc"]
     del mp7_pls["xloc"]
     del mp7_pls["yloc"]
     del mp7_pls["zloc"]
     del mp7_pls["node"]
-    # del mp7_pls[
-    #     "timestep"
-    # ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
 
     # compare mf6 / mp7 pathline data
     if "bprp" in name:
