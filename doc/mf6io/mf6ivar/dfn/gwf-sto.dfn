@@ -1,4 +1,5 @@
 # --------------------- gwf sto options ---------------------
+# mf6 subpackage utl-tvs
 
 block options
 name save_flows
@@ -7,6 +8,7 @@ reader urword
 optional true
 longname keyword to save NPF flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
+mf6internal ipakcb
 
 block options
 name storagecoefficient
@@ -15,6 +17,7 @@ reader urword
 optional true
 longname keyword to indicate SS is read as storage coefficient
 description keyword to indicate that the SS array is read as storage coefficient rather than specific storage.
+mf6internal istor_coef
 
 block options
 name ss_confined_only
@@ -26,7 +29,7 @@ description keyword to indicate that compressible storage is only calculated for
 
 block options
 name tvs_filerecord
-type record tvs6 filein tvs_filename
+type record tvs6 filein tvs6_filename
 shape
 reader urword
 tagged true
@@ -57,7 +60,7 @@ longname file keyword
 description keyword to specify that an input filename is expected next.
 
 block options
-name tvs_filename
+name tvs6_filename
 type string
 preserve_case true
 in_record true
@@ -66,6 +69,25 @@ optional false
 tagged false
 longname file name of TVS information
 description defines a time-varying storage (TVS) input file.  Records in the TVS file can be used to change specific storage and specific yield properties at specified times or stress periods.
+
+# dev options
+block options
+name dev_original_specific_storage
+type keyword
+reader urword
+optional true
+longname
+description
+mf6internal iorig_ss
+
+block options
+name dev_oldstorageformulation
+type keyword
+reader urword
+optional true
+longname
+description
+mf6internal iconf_ss
 
 # --------------------- gwf sto griddata ---------------------
 
@@ -130,6 +152,7 @@ reader urword
 optional true
 longname steady state indicator
 description keyword to indicate that stress period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. If the CSUB Package is included in the GWF model, only the first and last stress period can be steady-state.
+mf6internal steady_state
 
 block period
 name transient

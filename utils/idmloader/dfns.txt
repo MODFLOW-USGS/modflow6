@@ -21,6 +21,7 @@ gwf-npf.dfn
 gwf-rch.dfn
 gwf-rcha.dfn
 gwf-riv.dfn
+gwf-sto.dfn
 gwf-wel.dfn
 
 # gwt model

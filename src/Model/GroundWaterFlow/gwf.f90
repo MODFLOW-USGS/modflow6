@@ -48,12 +48,12 @@ module GwfModule
     type(GwfMvrType), pointer :: mvr => null() ! water mover package
     type(GwfObsType), pointer :: obs => null() ! observation package
     type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
+    integer(I4B), pointer :: inic => null() ! IC enabled flag
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: innpf => null() ! NPF enabled flag
     integer(I4B), pointer :: inbuy => null() ! unit number BUY
     integer(I4B), pointer :: invsc => null() ! unit number VSC
-    integer(I4B), pointer :: insto => null() ! unit number STO
+    integer(I4B), pointer :: insto => null() ! STO enabled flag
     integer(I4B), pointer :: incsub => null() ! unit number CSUB
     integer(I4B), pointer :: inmvr => null() ! unit number MVR
     integer(I4B), pointer :: inhfb => null() ! unit number HFB
@@ -1502,6 +1502,7 @@ contains
     integer(I4B) :: indis = 0 ! DIS enabled flag
     character(len=LENMEMPATH) :: mempathnpf = ''
     character(len=LENMEMPATH) :: mempathic = ''
+    character(len=LENMEMPATH) :: mempathsto = ''
     !
     ! -- set input model memory path
     model_mempath = create_mem_path(component=this%name, context=idm_context)
@@ -1543,7 +1544,8 @@ contains
       case ('HFB6')
         this%inhfb = inunit
       case ('STO6')
-        this%insto = inunit
+        this%insto = 1
+        mempathsto = mempath
       case ('CSUB6')
         this%incsub = inunit
       case ('IC6')
@@ -1572,7 +1574,7 @@ contains
     call vsc_cr(this%vsc, this%name, this%invsc, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
-    call sto_cr(this%sto, this%name, this%insto, this%iout)
+    call sto_cr(this%sto, this%name, mempathsto, this%insto, this%iout)
     call csub_cr(this%csub, this%name, this%insto, this%sto%packName, &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, mempathic, this%inic, this%iout, this%dis)
