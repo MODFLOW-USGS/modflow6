@@ -154,7 +154,7 @@ contains
 
   !> @brief Save a particle's current state.
   subroutine save(this, particle, reason)
-    use TdisModule, only: kper, kstp, nper, nstp, totimc, delt
+    use TdisModule, only: kper, kstp, totimc
     ! dummy
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
