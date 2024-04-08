@@ -42,6 +42,7 @@ contains
     method%delegates = .true.
     call create_subcell_rect(subcell)
     method%subcell => subcell
+    print *, "-=-==-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
   end subroutine create_method_cell_quad
 
   !> @brief Destroy the tracking method

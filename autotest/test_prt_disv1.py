@@ -1,11 +1,28 @@
 """
 Tests particle tracking on a vertex (DISV) grid
-that reduces to a regular grid.
+that reduces to a regular grid. This exercises
+PRT's ability to detect when a vertex grid can
+be solved via Pollock's method applied to quad-
+refined cells, instead of the new ternary method
+which applies more generally to polygonal cells.
 
-Two cases are provided, one with valid release
-position and cell correspondences, and another
-with mismatching cell IDs; expect PRT to catch
-these and reject them.
+The simulation includes a single stress period
+with multiple time steps. This serves to test
+whether PRT properly solves trajectories over
+"internal" time steps, i.e. within the step's
+slice of simulation time, as well as extending
+tracking to termination or particle stop times
+during the simulation's final time step.
+
+Several cases are provided:
+    - default: no user-specified tracking times, MP7 in pathline mode
+    - bprp: mismatching cell IDs in PRP input, expect PRT to catch and reject these
+    - trts: user-specified tracking times, some falling exactly on boundaries between
+            time steps. TODO: make sure PRT and MP7 agree on which time step a point
+            on a boundary belongs to, currently PRT assigns to subsequent time step
+            while MP7 assigns to previous.
+    - trtf: same as trts, except tracking times are provided to PRT in a separate file,
+            rather than inline in the OC input file.
 """
 
 from pathlib import Path
@@ -52,7 +69,7 @@ strt = 20
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 porosity = 0.1
-tracktimes = list(np.linspace(0, 11, 10))
+tracktimes = list(np.linspace(0, 19, 20))
 
 
 def tracktimes_file(path) -> Path:
@@ -225,6 +242,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
             trackcsv_filerecord=[prt_track_csv_file],
             track_release=True,
             track_terminate=True,
+            track_transit=True,
             track_usertime=True,
             track_timesrecord=tracktimes if "trts" in name else None,
             track_timesfilerecord=(
@@ -266,6 +284,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
 
 
 def build_mp7_sim(idx, ws, mp7, gwf):
+    name = cases[idx]
     partdata = get_partdata(gwf.modelgrid, releasepts_mp7)
     mp7_name = f"{cases[idx]}_mp7"
     pg = flopy.modpath.ParticleGroup(
@@ -287,10 +306,13 @@ def build_mp7_sim(idx, ws, mp7, gwf):
     )
     mpsim = flopy.modpath.Modpath7Sim(
         mp,
-        simulationtype="pathline",
+        simulationtype="combined"
+        if ("trts" in name or "trtf" in name)
+        else "pathline",
         trackingdirection="forward",
         budgetoutputoption="summary",
-        stoptimeoption="total",
+        stoptimeoption="extend",
+        timepointdata=[20, tracktimes],
         particlegroups=[pg],
     )
 
@@ -360,8 +382,6 @@ def check_output(idx, test):
 
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-    if "trts" in name or "trtf" in name:
-        assert len(mf6_pls) == 100
 
     # make sure pathline df has "name" (boundname) column and default values
     assert "name" in mf6_pls
@@ -458,15 +478,21 @@ def check_output(idx, test):
     del mf6_pls["yloc"]
     del mf6_pls["zloc"]
     del mf6_pls["node"]  # node numbers reversed in y direction in mp7
+    del mf6_pls[
+        "timestep"
+    ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
     del mp7_pls["sequencenumber"]
     del mp7_pls["particleidloc"]
     del mp7_pls["xloc"]
     del mp7_pls["yloc"]
     del mp7_pls["zloc"]
     del mp7_pls["node"]
+    del mp7_pls[
+        "timestep"
+    ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
 
     # compare mf6 / mp7 pathline data
-    if "trts" in name or "trtf" in name:
+    if "bprp" in name:
         pass
     else:
         assert mf6_pls.shape == mp7_pls.shape
