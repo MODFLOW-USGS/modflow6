@@ -2,7 +2,7 @@ module PrtModule
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use InputOutputModule, only: ParseLine, upcase, lowcase
-  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, DSAME, &
+  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
                              LENPAKLOC, LENPACKAGETYPE, LENBUDTXT, MNORMAL, &
                              LINELENGTH
   use VersionModule, only: write_listfile_header
