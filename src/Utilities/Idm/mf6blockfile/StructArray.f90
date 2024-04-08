@@ -45,6 +45,7 @@ module StructArrayModule
     type(StructVectorType), dimension(:), allocatable :: struct_vectors
     integer(I4B), dimension(:), allocatable :: startidx
     integer(I4B), dimension(:), allocatable :: numcols
+    character(len=LINELENGTH), dimension(:), allocatable :: tagnames
     type(ModflowInputType) :: mf6_input
   contains
     procedure :: mem_create_vector
@@ -57,6 +58,7 @@ module StructArrayModule
     procedure :: allocate_dbl1d_type
     procedure :: write_struct_vector
     procedure :: read_from_parser
+    procedure :: read_setting
     procedure :: read_from_binary
     procedure :: memload_vectors
     procedure :: load_deferred_vector
@@ -126,16 +128,21 @@ contains
   !> @brief create new vector in StructArrayType
   !<
   subroutine mem_create_vector(this, icol, idt)
+    use DefinitionSelectModule, only: idt_datatype
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol !< column to create
     type(InputParamDefinitionType), pointer :: idt
     type(StructVectorType) :: sv
-    integer(I4B) :: numcol
+    integer(I4B) :: numcol !< number of col in vector
     !
+    ! -- initialize numcol
     numcol = 1
     !
     sv%idt => idt
     sv%icol = icol
+    !
+    call expandarray(this%tagnames)
+    this%tagnames(icol) = idt%tagname
     !
     ! -- set size
     if (this%deferred_shape) then
@@ -172,9 +179,13 @@ contains
       numcol = sv%intshape
       !
     case default
-      errmsg = 'IDM unimplemented. StructArray::mem_create_vector &
-               &type='//trim(idt%datatype)
-      call store_error(errmsg, .true.)
+      if (idt_datatype(idt) == 'KEYSTRING') then
+        call this%allocate_charstr_type(sv)
+      else
+        errmsg = 'IDM unimplemented. StructArray::mem_create_vector &
+                 &type='//trim(idt%datatype)
+        call store_error(errmsg, .true.)
+      end if
     end select
     !
     ! -- set the object in the Struct Array
@@ -927,6 +938,12 @@ contains
         !
         ! -- check and update memory allocation
         call this%check_reallocate()
+        !
+      else if (irow == this%nrow) then
+        errmsg = 'Input period block readlines exceeds expected number of '// &
+                 'records. Component='//trim(this%mf6_input%component_name)// &
+                 ', Subcomponent='//trim(this%mf6_input%subcomponent_name)//'.'
+        call store_error(errmsg, terminate=.TRUE.)
       end if
       !
       ! -- update irow index
@@ -1071,5 +1088,134 @@ contains
     ! -- return
     return
   end function read_from_binary
+
+  !> @brief read from the block parser to fill the StructArrayType
+  !<
+  function read_setting(this, parser, timeseries, iout) &
+    result(irow)
+    use DefinitionSelectModule, only: get_aggregate_definition_type, &
+                                      get_param_definition_type, &
+                                      idt_parse_rectype
+    use ArrayHandlersModule, only: ifind
+    class(StructArrayType) :: this !< StructArrayType
+    type(BlockParserType) :: parser !< block parser to read from
+    logical(LGP), intent(in) :: timeseries
+    integer(I4B), intent(in) :: iout !< unit number for output
+    integer(I4B) :: irow
+    type(InputParamDefinitionType), pointer :: ra_idt
+    type(InputParamDefinitionType), pointer :: idt
+    character(len=LINELENGTH), dimension(:), allocatable :: ra_cols
+    integer(I4B), dimension(:), allocatable :: iparams
+    integer(I4B) :: icol, iparam, ra_ncol !, iparam_setval
+    logical(LGP) :: endOfBlock
+    !
+    ! -- reset sv arrays if shape deferred
+    if (this%deferred_shape) then
+      errmsg = 'IDM unimplemented. StructArray::read_setting &
+               &deferred shapes not currently supported.'
+      call store_error(errmsg, .true.)
+      !this%nrow = 0
+      !do icol = 1, this%ncol
+      !  call this%reset_deferred_vector(icol)
+      !end do
+    end if
+    !
+    ! -- get aggregate param definition for period block
+    ra_idt => &
+      get_aggregate_definition_type(this%mf6_input%aggregate_dfns, &
+                                    this%mf6_input%component_type, &
+                                    this%mf6_input%subcomponent_type, &
+                                    'PERIOD')
+    !
+    ! -- split recarray definition
+    call idt_parse_rectype(ra_idt, ra_cols, ra_ncol)
+    !
+    ! -- allocate iparams
+    allocate (iparams(ra_ncol))
+    !
+    ! -- store tag indexes for columns
+    do icol = 1, ra_ncol
+      !
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', ra_cols(icol), '')
+      !
+      iparam = ifind(this%tagnames, idt%tagname)
+      iparams(icol) = iparam
+      !
+    end do
+    !
+    ! -- set the SETTING_VALUE col index
+    !iparam_setval = ifind(this%tagnames, 'SETTING_VALUE')
+    !
+    ! -- initialize index irow
+    irow = 0
+    !
+    ! -- read entire block
+    do
+      !
+      ! -- read next line
+      call parser%GetNextLine(endOfBlock)
+      !
+      if (endOfBlock) then
+        ! -- no more lines
+        exit
+        !
+      else if (this%deferred_shape) then
+        !
+        ! -- shape unknown, track lines read
+        this%nrow = this%nrow + 1
+        !
+        ! -- check and update memory allocation
+        call this%check_reallocate()
+        !
+      else if (irow == this%nrow) then
+        errmsg = 'Input period block readlines exceeds expected number of '// &
+                 'records. Component='//trim(this%mf6_input%component_name)// &
+                 ', Subcomponent='//trim(this%mf6_input%subcomponent_name)//'.'
+        call store_error(errmsg, terminate=.TRUE.)
+      end if
+      !
+      ! -- update irow index
+      irow = irow + 1
+      !
+      ! -- read and load columns
+      do icol = 1, ra_ncol
+        !
+        idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                         this%mf6_input%component_type, &
+                                         this%mf6_input%subcomponent_type, &
+                                         'PERIOD', ra_cols(icol), '')
+        !
+        call this%write_struct_vector(parser, iparams(icol), irow, &
+                                      timeseries, iout)
+        !
+      end do
+      !
+      ! -- read and store the setting value when expected to exist
+      !if (iparam_setval > 0) then
+      !  call this%write_struct_vector(parser, iparam_setval, irow, &
+      !                                timeseries, iout)
+      !end if
+      !
+      !
+    end do
+    !
+    ! -- if deferred shape vectors were read, load to input path
+    call this%memload_vectors()
+    !
+    ! -- log loaded variables
+    if (iout > 0) then
+      call this%log_structarray_vars(iout)
+    end if
+    !
+    ! -- cleanup
+    if (allocated(ra_cols)) deallocate (ra_cols)
+    if (allocated(iparams)) deallocate (iparams)
+    !
+    ! -- return
+    return
+  end function read_setting
 
 end module StructArrayModule

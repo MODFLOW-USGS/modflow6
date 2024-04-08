@@ -293,16 +293,27 @@ contains
   !<
   subroutine dynamic_create_loader(this)
     use Mf6FileGridInputModule, only: BoundGridInputType
-    use Mf6FileListInputModule, only: BoundListInputType
+    use Mf6FileListInputModule, only: BoundListInputType, ListInputType
     ! -- dummy
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
     class(BoundListInputType), pointer :: bndlist_loader
     class(BoundGridInputType), pointer :: bndgrid_loader
+    class(ListInputType), pointer :: list_loader
     !
     ! -- allocate and set loader
     if (this%readasarrays) then
       allocate (bndgrid_loader)
       this%rp_loader => bndgrid_loader
+    else if (this%settings) then
+      !allocate (list_loader)
+      !this%rp_loader => list_loader
+      errmsg = 'IDM unimplemented. Dynamic KEYSTRING based input not currently &
+                &supported.'
+      call store_error(errmsg)
+      call store_error_filename(this%input_name)
+    else if (.not. this%aggregate) then
+      allocate (list_loader)
+      this%rp_loader => list_loader
     else
       allocate (bndlist_loader)
       this%rp_loader => bndlist_loader

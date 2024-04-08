@@ -18,6 +18,8 @@ module DefinitionSelectModule
   public :: get_param_definition_type
   public :: get_aggregate_definition_type
   public :: split_record_definition
+  public :: idt_datatype
+  public :: idt_copy
   public :: idt_parse_rectype
 
 contains
@@ -92,6 +94,35 @@ contains
     ! -- return
     return
   end function idt_datatype
+
+  !> @brief return allocated copy of an input definition type
+  !<
+  function idt_copy(idt) result(copy)
+    ! -- modules
+    ! -- dummy
+    type(InputParamDefinitionType), pointer, intent(in) :: idt
+    ! -- result
+    type(InputParamDefinitionType), pointer :: copy
+    !
+    allocate (copy)
+    !
+    ! -- copy from input dfn
+    copy%component_type = trim(idt%component_type)
+    copy%subcomponent_type = trim(idt%subcomponent_type)
+    copy%blockname = trim(idt%blockname)
+    copy%tagname = trim(idt%tagname)
+    copy%mf6varname = trim(idt%mf6varname)
+    copy%datatype = trim(idt%datatype)
+    copy%shape = trim(idt%shape)
+    copy%required = idt%required
+    copy%in_record = idt%in_record
+    copy%preserve_case = idt%preserve_case
+    copy%layered = idt%layered
+    copy%timeseries = idt%timeseries
+    !
+    ! -- return
+    return
+  end function idt_copy
 
   !> @brief Return parameter definition
   !<

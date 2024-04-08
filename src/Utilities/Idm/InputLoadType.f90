@@ -62,6 +62,8 @@ module InputLoadTypeModule
     integer(I4B), pointer :: iper => null() !< memory managed variable, loader iper
     integer(I4B), pointer :: ionper => null() !< memory managed variable, next load period
     logical(LGP) :: readasarrays !< is this array based input
+    logical(LGP) :: settings !< does this package have a SETTINGS dfn type
+    logical(LGP) :: aggregate !< is this recarray style period input block
     integer(I4B) :: iperblock !< index of period block on block definition list
     integer(I4B) :: iout !< inunit number for logging
     integer(I4B) :: nparam !< number of in scope params
@@ -168,6 +170,7 @@ contains
     use SimVariablesModule, only: errmsg
     use MemoryManagerModule, only: mem_allocate
     use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: idt_datatype
     ! -- dummy
     class(DynamicPkgLoadType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
@@ -177,11 +180,13 @@ contains
     integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
     type(InputParamDefinitionType), pointer :: idt
+    integer(I4B) :: iparam
     !
     this%mf6_input = mf6_input
     this%component_name = component_name
     this%component_input_name = component_input_name
     this%input_name = input_name
+    this%settings = .false.
     this%iperblock = iperblock
     this%nparam = 0
     this%iout = iout
@@ -205,8 +210,32 @@ contains
       call store_error_filename(this%input_name)
     end if
     !
-    ! -- set readasarrays
-    this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
+    ! -- determine if package has SETTINGS type dfn
+    do iparam = 1, size(mf6_input%param_dfns)
+      !
+      ! -- assign param definition pointer
+      idt => this%mf6_input%param_dfns(iparam)
+      !
+      if (idt%blockname == 'PERIOD') then
+        if (idt_datatype(idt) == 'KEYSTRING') then
+          this%settings = .true.
+          exit
+        end if
+      end if
+    end do
+    !
+    ! -- set readasarrays and aggregate
+    if (mf6_input%block_dfns(iperblock)%aggregate) then
+      this%aggregate = .true.
+      this%readasarrays = .false.
+    else
+      this%aggregate = .false.
+      if (mf6_input%subcomponent_type == 'STO') then
+        this%readasarrays = .false.
+      else
+        this%readasarrays = .true.
+      end if
+    end if
     !
     ! -- return
     return

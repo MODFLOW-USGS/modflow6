@@ -134,7 +134,8 @@ contains
     !
     ! -- initialize package params object
     call this%package_params%init(this%mf6_input, this%readasarrays, &
-                                  this%naux, this%inamedbound)
+                                  (.not. this%readasarrays), this%naux, &
+                                  this%inamedbound)
     !
     ! -- return
     return
