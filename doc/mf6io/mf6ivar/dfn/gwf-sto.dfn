@@ -56,7 +56,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname file keyword
+longname filein keyword
 description keyword to specify that an input filename is expected next.
 
 block options
@@ -76,8 +76,8 @@ name dev_original_specific_storage
 type keyword
 reader urword
 optional true
-longname
-description
+longname development option for original specific storage
+description flag indicating the original storage specific storage formulation should be used
 mf6internal iorig_ss
 
 block options
@@ -85,8 +85,8 @@ name dev_oldstorageformulation
 type keyword
 reader urword
 optional true
-longname
-description
+longname development option flag for old storage formulation
+description development option flag for old storage formulation
 mf6internal iconf_ss
 
 # --------------------- gwf sto griddata ---------------------
