@@ -127,7 +127,6 @@ contains
   subroutine pass_disv(this, particle)
     ! -- modules
     use DisvModule, only: DisvType
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -158,8 +157,7 @@ contains
           ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
           particle%istatus = 2 ! kluge note, todo: use -2 to check for transfer to another model???
           particle%advancing = .false.
-          call this%trackfilectl%save(particle, kper=kper, &
-                                      kstp=kstp, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3) ! reason=3: termination
           ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
