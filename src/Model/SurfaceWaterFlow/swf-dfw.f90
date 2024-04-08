@@ -16,8 +16,9 @@ module SwfDfwModule
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, LINELENGTH, &
                              DZERO, DHALF, DONE, DTWO, DTHREE, &
                              DNODATA, DEM5, DTWOTHIRDS, DP9, DONETHIRD, &
-                             DPREC
+                             DPREC, DEM10
   use MemoryHelperModule, only: create_mem_path
+  use MemoryManagerModule, only: mem_reallocate
   use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: count_errors, store_error, store_error_unit, &
@@ -37,14 +38,29 @@ module SwfDfwModule
   type, extends(NumericalPackageType) :: SwfDfwType
 
     ! -- user-provided input
+    integer(I4B), pointer :: is2d => null() !< flag to indicate this model is 2D overland flow and not 1d channel flow
     integer(I4B), pointer :: icentral => null() !< flag to use central in space weighting (default is upstream weighting)
+    integer(I4B), pointer :: iswrcond => null() !< flag to activate the dev SWR conductance formulation
     real(DP), pointer :: unitconv !< conversion factor used in mannings equation; calculated from timeconv and lengthconv
     real(DP), pointer :: timeconv !< conversion factor from model length units to meters (1.0 if model uses meters for length)
     real(DP), pointer :: lengthconv !< conversion factor from model time units to seconds (1.0 if model uses seconds for time)
+    real(DP), dimension(:), pointer, contiguous :: hnew => null() !< pointer to model xnew
     real(DP), dimension(:), pointer, contiguous :: manningsn => null() !< mannings roughness for each reach
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id for each reach
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< set to 1 and is accessed by chd for checking
+
+    ! velocity
+    integer(I4B), pointer :: icalcvelocity => null() !< flag to indicate velocity will be calculated (always on)
+    integer(I4B), pointer :: isavvelocity => null() !< flag to indicate velocity will be saved
+    real(DP), dimension(:, :), pointer, contiguous :: vcomp => null() !< velocity components: vx, vy, vz (nodes, 3)
+    real(DP), dimension(:), pointer, contiguous :: vmag => null() !< velocity magnitude (of size nodes)
+    integer(I4B), pointer :: nedges => null() !< number of cell edges
+    integer(I4B), pointer :: lastedge => null() !< last edge number
+    integer(I4B), dimension(:), pointer, contiguous :: nodedge => null() !< array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous :: ihcedge => null() !< edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
+    real(DP), dimension(:), pointer, contiguous :: grad_dhds_mag => null() !< magnitude of the gradient (of size nodes)
 
     ! -- observation data
     integer(I4B), pointer :: inobspkg => null() !< unit number for obs package
@@ -83,6 +99,11 @@ module SwfDfwModule
     procedure :: get_cond
     procedure :: get_cond_swr
     procedure :: get_cond_n
+    procedure :: calc_velocity
+    procedure :: sav_velocity
+    procedure, public :: increase_edge_count
+    procedure, public :: set_edge_properties
+    procedure :: calc_dhds
     procedure :: write_cxs_tables
 
   end type SwfDfwType
@@ -152,9 +173,16 @@ contains
     class(SwfDfwType) :: this
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     ! -- locals
+    character(len=10) :: distype = ''
 
     ! -- Set a pointers to passed in objects
     this%dis => dis
+
+    ! Set the distype (either DISV1D or DIS2D)
+    call this%dis%get_dis_type(distype)
+    if (distype == "DIS2D") then
+      this%is2d = 1
+    end if
 
     ! -- check if dfw is enabled
     ! this will need to become if (.not. present(dfw_options)) then
@@ -185,17 +213,29 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate scalars
+    call mem_allocate(this%is2d, 'IS2D', this%memoryPath)
     call mem_allocate(this%icentral, 'ICENTRAL', this%memoryPath)
+    call mem_allocate(this%iswrcond, 'ISWRCOND', this%memoryPath)
     call mem_allocate(this%unitconv, 'UNITCONV', this%memoryPath)
     call mem_allocate(this%lengthconv, 'LENGTHCONV', this%memoryPath)
     call mem_allocate(this%timeconv, 'TIMECONV', this%memoryPath)
     call mem_allocate(this%inobspkg, 'INOBSPKG', this%memoryPath)
+    call mem_allocate(this%icalcvelocity, 'ICALCVELOCITY', this%memoryPath)
+    call mem_allocate(this%isavvelocity, 'ISAVVELOCITY', this%memoryPath)
+    call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
+    call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
 
+    this%is2d = 0
     this%icentral = 0
+    this%iswrcond = 0
     this%unitconv = DONE
     this%lengthconv = DONE
     this%timeconv = DONE
     this%inobspkg = 0
+    this%icalcvelocity = 0
+    this%isavvelocity = 0
+    this%nedges = 0
+    this%lastedge = 0
 
     return
   end subroutine allocate_scalars
@@ -203,12 +243,12 @@ contains
   !> @brief allocate memory for arrays
   !<
   subroutine allocate_arrays(this)
-    ! -- dummy
+    ! dummy
     class(SwfDfwType) :: this
-    ! -- locals
+    ! locals
     integer(I4B) :: n
     !
-    ! -- user-provided input
+    ! user-provided input
     call mem_allocate(this%manningsn, this%dis%nodes, &
                       'MANNINGSN', this%memoryPath)
     call mem_allocate(this%idcxs, this%dis%nodes, &
@@ -216,12 +256,30 @@ contains
     call mem_allocate(this%icelltype, this%dis%nodes, &
                       'ICELLTYPE', this%memoryPath)
 
+    ! optional arrays
+    call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
+    call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
+    call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
+                                        
+    ! Specific discharge is (re-)allocated when nedges is known
+    call mem_allocate(this%vcomp, 3, 0, 'VCOMP', this%memoryPath)
+    call mem_allocate(this%vmag, 0, 'VMAG', this%memoryPath)
+    
     do n = 1, this%dis%nodes
       this%manningsn(n) = DZERO
       this%idcxs(n) = 0
       this%icelltype(n) = 1
     end do
 
+    ! for 2d models, need to calculate and store dhds magnitude
+    if (this%is2d == 1) then
+      call mem_allocate(this%grad_dhds_mag, this%dis%nodes, &
+                        'GRAD_DHDS_MAG', this%memoryPath)
+      do n = 1, this%dis%nodes
+        this%grad_dhds_mag(n) = DZERO
+      end do
+    end if
+  
     ! -- Return
     return
   end subroutine allocate_arrays
@@ -261,6 +319,8 @@ contains
     ! -- update defaults with idm sourced values
     call mem_set_value(this%icentral, 'ICENTRAL', &
                        this%input_mempath, found%icentral)
+    call mem_set_value(this%iswrcond, 'ISWRCOND', &
+                       this%input_mempath, found%iswrcond)
     call mem_set_value(this%lengthconv, 'LENGTHCONV', &
                        this%input_mempath, found%lengthconv)
     call mem_set_value(this%timeconv, 'TIMECONV', &
@@ -269,16 +329,21 @@ contains
                        this%input_mempath, found%iprflow)
     call mem_set_value(this%ipakcb, 'IPAKCB', &
                        this%input_mempath, found%ipakcb)
-    !
-    ! -- save flows option active
+    call mem_set_value(this%isavvelocity, 'ISAVVELOCITY', &
+                       this%input_mempath, found%isavvelocity)
+    
+    ! save flows option active
     if (found%icentral) this%icentral = 1
     if (found%ipakcb) this%ipakcb = -1
-    !
-    ! -- calculate unit conversion
+     
+    ! calculate unit conversion
     this%unitconv = this%lengthconv**DONETHIRD
     this%unitconv = this%unitconv * this%timeconv
-    !
-    ! -- check for obs6_filename
+
+    ! save velocity active
+    if (found%isavvelocity) this%icalcvelocity = this%isavvelocity
+
+    ! check for obs6_filename
     call get_isize('OBS6_FILENAME', this%input_mempath, isize)
     if (isize > 0) then
       !
@@ -349,6 +414,16 @@ contains
       write (this%iout, '(4x,a)') 'Observation package is active.'
     end if
 
+    if (found%isavvelocity) &
+      write (this%iout, '(4x,a)') 'Velocity will be calculated at cell &
+                                  &centers and written to DATA-VCOMP in budget &
+                                  &file when requested.'
+
+    if (found%iswrcond) then
+      write (this%iout, '(4x,a, G0)') 'Conductance will be calculated using &
+                                       &the SWR development option.' 
+    end if
+
     write (this%iout, '(1x,a,/)') 'End Setting DFW Options'
 
   end subroutine log_options
@@ -359,7 +434,6 @@ contains
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_reallocate
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use SwfDfwInputModule, only: SwfDfwParamFoundType
@@ -445,16 +519,33 @@ contains
 
   !> @brief allocate memory
   !<
-  subroutine dfw_ar(this, ibound)
+  subroutine dfw_ar(this, ibound, hnew)
     ! -- modules
     ! -- dummy
     class(SwfDfwType) :: this !< this instance
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< model ibound array
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
+    ! local
+    integer(I4B) :: n
 
-    ! -- store pointer to ibound
+    ! store pointer to ibound
     this%ibound => ibound
+    this%hnew => hnew
 
-    ! - observation data
+    if (this%icalcvelocity == 1) then
+      call mem_reallocate(this%vcomp, 3, this%dis%nodes, 'VCOMP', this%memoryPath)
+      call mem_reallocate(this%vmag, this%dis%nodes, 'VMAG', this%memoryPath)
+      call mem_reallocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
+      call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
+      call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
+                          this%memoryPath)
+      do n = 1, this%dis%nodes
+        this%vcomp(:, n) = DZERO
+        this%vmag(n) = DZERO
+      end do
+    end if
+
+    ! observation data
     call this%obs%obs_ar()
 
     return
@@ -506,6 +597,11 @@ contains
     real(DP), intent(inout), dimension(:) :: stage_old
     ! -- local
     !
+    ! calculate dhds at cell center for 2d case
+    if (this%is2d == 1) then
+      call this%calc_dhds()
+    end if
+
     ! -- add qnm contributions to matrix equations
     call this%dfw_qnm_fc_nr(kiter, matrix_sln, idxglo, rhs, stage, stage_old)
     !
@@ -609,7 +705,8 @@ contains
     real(DP) :: cond
     real(DP) :: cl1
     real(DP) :: cl2
-    !
+
+    ! Set connection lengths
     isympos = this%dis%con%jas(ipos)
     if (n < m) then
       cl1 = this%dis%con%cl1(isympos)
@@ -618,8 +715,17 @@ contains
       cl1 = this%dis%con%cl2(isympos)
       cl2 = this%dis%con%cl1(isympos)
     end if
-    cond = this%get_cond(n, m, ipos, stage_n, stage_m, cl1, cl2)
+
+    ! Calculate conductance
+    if (this%iswrcond == 0) then
+      cond = this%get_cond(n, m, ipos, stage_n, stage_m, cl1, cl2)
+    else if (this%iswrcond == 1) then
+      cond = this%get_cond_swr(n, m, ipos, stage_n, stage_m, cl1, cl2)
+    end if
+
+    ! calculate flow between n and m
     qnm = cond * (stage_m - stage_n)
+
     return
   end function qcalc
 
@@ -636,9 +742,10 @@ contains
     real(DP), intent(in) :: cln !< distance from cell n to shared face with m
     real(DP), intent(in) :: clm !< distance from cell m to shared face with n
     ! -- local
-    real(DP) :: absdhdxsqr
     real(DP) :: depth_n
     real(DP) :: depth_m
+    real(DP) :: dhds_n
+    real(DP) :: dhds_m
     real(DP) :: width_n
     real(DP) :: width_m
     real(DP) :: range = 1.d-6
@@ -655,15 +762,19 @@ contains
     length_nm = cln + clm
     cond = DZERO
     if (length_nm > DPREC) then
-      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
-      if (absdhdxsqr < DPREC) then
-        ! TODO: Set this differently somehow?
-        absdhdxsqr = 1.e-7
-      end if
-
+      
       ! -- Calculate depth in each reach
       depth_n = stage_n - this%dis%bot(n)
       depth_m = stage_m - this%dis%bot(m)
+
+      ! assign gradients
+      if (this%is2d == 0) then
+        dhds_n = abs(stage_m - stage_n) / (cln + clm)
+        dhds_m = dhds_n
+      else
+        dhds_n = this%grad_dhds_mag(n)
+        dhds_m = this%grad_dhds_mag(m)
+      end if
 
       ! -- Assign upstream depth, if not central
       if (this%icentral == 0) then
@@ -687,8 +798,8 @@ contains
 
       ! -- Calculate half-cell conductance for reach
       !    n and m
-      cn = this%get_cond_n(n, depth_n, absdhdxsqr, cln, width_n)
-      cm = this%get_cond_n(m, depth_m, absdhdxsqr, clm, width_m)
+      cn = this%get_cond_n(n, depth_n, cln, width_n, dhds_n)
+      cm = this%get_cond_n(m, depth_m, clm, width_m, dhds_m)
 
       ! -- Use harmonic mean to calculated weighted
       !    conductance bewteen the centers of reaches
@@ -703,6 +814,39 @@ contains
 
   end function get_cond
 
+  !> @brief Calculate half reach conductance
+  !!
+  !! Calculate half reach conductance for reach n
+  !< using conveyance and Manning's equation
+  function get_cond_n(this, n, depth, dx, width, dhds) result(c)
+    ! -- modules
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
+    real(DP), intent(in) :: dx !< half-cell distance
+    real(DP), intent(in) :: width !< width of the reach perpendicular to flow
+    real(DP), intent(in) :: dhds !< gradient
+    ! -- return
+    real(DP) :: c
+    ! -- local
+    real(DP) :: rough
+    real(DP) :: dhds_sqr
+    real(DP) :: conveyance
+
+    ! Calculate conveyance, which is a * r**DTWOTHIRDS / roughc
+    rough = this%manningsn(n)
+    conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
+    dhds_sqr = dhds ** DHALF
+    if (dhds_sqr < DEM10) then
+      dhds_sqr = DEM10
+    end if
+
+    ! Multiply by unitconv and divide conveyance by sqrt of friction slope and dx
+    c = this%unitconv * conveyance / dx / dhds_sqr
+
+  end function get_cond_n
+
   function get_cond_swr(this, n, m, ipos, stage_n, stage_m, cln, clm) result(cond)
     ! -- modules
     use SmoothingModule, only: sQuadratic
@@ -716,9 +860,12 @@ contains
     real(DP), intent(in) :: cln !< distance from cell n to shared face with m
     real(DP), intent(in) :: clm !< distance from cell m to shared face with n
     ! -- local
-    real(DP) :: absdhdxsqr
     real(DP) :: depth_n
     real(DP) :: depth_m
+    real(DP) :: dhds_n
+    real(DP) :: dhds_m
+    real(DP) :: dhds_nm
+    real(DP) :: dhds_sqr
     real(DP) :: width_n
     real(DP) :: width_m
     real(DP) :: range = 1.d-10
@@ -737,11 +884,6 @@ contains
     length_nm = cln + clm
     cond = DZERO
     if (length_nm > DPREC) then
-      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
-      if (absdhdxsqr < DPREC) then
-        ! TODO: Set this differently somehow?
-        absdhdxsqr = 1.e-7
-      end if
 
       ! -- Calculate depth in each reach
       depth_n = stage_n - this%dis%bot(n)
@@ -783,44 +925,79 @@ contains
       area_avg = weight_n * area_n + weight_m * area_m
 
       ! average hydraulic radius
-      rhn = depth_n
-      rhm = depth_m
-      rhavg = weight_n * rhn + weight_m * rhm
+      if (this%is2d == 0) then
+        rhn = this%cxs%get_hydraulic_radius(this%idcxs(n), width_n, &
+                                            depth_n, area_n)
+        rhm = this%cxs%get_hydraulic_radius(this%idcxs(m), width_m, &
+                                            depth_m, area_m)
+        rhavg = weight_n * rhn + weight_m * rhm
+      else
+        rhavg =  area_avg / width_n
+      end if
       rhavg = rhavg**DTWOTHIRDS
 
-      cond = rinv_avg * area_avg * rhavg / absdhdxsqr / length_nm
+      ! average gradient
+      if (this%is2d == 0) then
+        dhds_nm = abs(stage_m - stage_n) / (length_nm)
+      else
+        dhds_n = this%grad_dhds_mag(n)
+        dhds_m = this%grad_dhds_mag(m)
+        dhds_nm = weight_n * dhds_n + weight_m * dhds_m
+      end if
+      dhds_sqr = dhds_nm ** DHALF
+      if (dhds_sqr < DEM10) then
+        dhds_sqr = DEM10
+      end if
+
+      cond = this%unitconv * rinv_avg * area_avg * rhavg / dhds_sqr / length_nm
 
     end if
 
   end function get_cond_swr
 
-  !> @brief Calculate half reach conductance
-  !!
-  !! Calculate half reach conductance for reach n
-  !< using conveyance and Manning's equation
-  function get_cond_n(this, n, depth, absdhdxsq, dx, width) result(c)
-    ! -- modules
-    ! -- dummy
+  subroutine calc_dhds(this)
+    ! modules
+    use VectorInterpolationModule, only: vector_interpolation_2d
+    ! dummy
     class(SwfDfwType) :: this
-    integer(I4B), intent(in) :: n !< reach number
-    real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
-    real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
-    real(DP), intent(in) :: dx !< half-cell distance
-    real(DP), intent(in) :: width !< width of the reach perpendicular to flow
-    ! -- return
-    real(DP) :: c
-    ! -- local
-    real(DP) :: rough
-    real(DP) :: conveyance
+    ! local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: isympos
+    real(DP) :: cl1
+    real(DP) :: cl2
+    real(DP), dimension(:), allocatable :: dhdsja
 
-    ! Calculate conveyance, which a * r**DTWOTHIRDS / roughc
-    rough = this%manningsn(n)
-    conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
+    ! first calculate dhdsja, the gradient, for every connection
+    allocate(dhdsja(this%dis%nja))
 
-    ! Multiply by unitconv and divide conveyance by sqrt of friction slope and dx
-    c = this%unitconv * conveyance / absdhdxsq / dx
+    do n = 1, this%dis%nodes
+      this%grad_dhds_mag(n) = DZERO
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ipos)
+        isympos = this%dis%con%jas(ipos)
+        if (n < m) then
+          cl1 = this%dis%con%cl1(isympos)
+          cl2 = this%dis%con%cl2(isympos)
+        else
+          cl1 = this%dis%con%cl2(isympos)
+          cl2 = this%dis%con%cl1(isympos)
+        end if
+        if (cl1 + cl2 > DPREC) then
+          dhdsja(ipos) = (this%hnew(m) - this%hnew(n)) / (cl1 + cl2)
+        else
+          dhdsja(ipos) = DZERO
+        end if
+      end do
+    end do
 
-  end function get_cond_n
+    ! pass dhdsja into the vector interpolation to get the components
+    ! of the gradient at the cell center
+    call vector_interpolation_2d(this%dis, dhdsja, vmag=this%grad_dhds_mag)
+    deallocate(dhdsja)
+
+  end subroutine calc_dhds
 
   !> @ brief Newton under relaxation
   !!
@@ -943,7 +1120,11 @@ contains
       !
       ! -- flowja
       call this%dis%record_connection_array(flowja, ibinun, this%iout)
-
+    end if
+    !
+    ! -- Calculate velocities at cell centers and write, if requested
+    if (this%isavvelocity /= 0) then
+      if (ibinun /= 0) call this%sav_velocity(ibinun)
     end if
     !
     ! -- Return
@@ -1001,19 +1182,33 @@ contains
     ! -- dummy
     class(SwfDfwType) :: this
     !
-    ! -- Deallocate input memory
+    ! Deallocate input memory
     call memorylist_remove(this%name_model, 'DFW', idm_context)
-    !
-    ! -- Scalars
-    call mem_deallocate(this%icentral)
-    call mem_deallocate(this%unitconv)
-    call mem_deallocate(this%lengthconv)
-    call mem_deallocate(this%timeconv)
-    !
-    ! -- Deallocate arrays
+
+    ! Deallocate arrays
     call mem_deallocate(this%manningsn)
     call mem_deallocate(this%idcxs)
     call mem_deallocate(this%icelltype)
+    call mem_deallocate(this%nodedge)
+    call mem_deallocate(this%ihcedge)
+    call mem_deallocate(this%propsedge)
+    call mem_deallocate(this%vcomp)
+    call mem_deallocate(this%vmag)
+    if (this%is2d == 1) then
+      call mem_deallocate(this%grad_dhds_mag)
+    end if
+
+    ! Scalars
+    call mem_deallocate(this%is2d)
+    call mem_deallocate(this%icentral)
+    call mem_deallocate(this%iswrcond)
+    call mem_deallocate(this%unitconv)
+    call mem_deallocate(this%lengthconv)
+    call mem_deallocate(this%timeconv)
+    call mem_deallocate(this%isavvelocity)
+    call mem_deallocate(this%icalcvelocity)
+    call mem_deallocate(this%nedges)
+    call mem_deallocate(this%lastedge)
 
     ! -- obs package
     call mem_deallocate(this%inobspkg)
@@ -1024,10 +1219,368 @@ contains
 
     ! -- deallocate parent
     call this%NumericalPackageType%da()
+
+    ! pointers
+    this%hnew => null()
+
+  end subroutine dfw_da
+
+  !> @brief Calculate the 3 components of velocity at the cell center
+  !<
+  subroutine calc_velocity(this, flowja)
+    ! -- modules
+    use SimModule, only: store_error
+    ! -- dummy
+    class(SwfDfwType) :: this
+    real(DP), intent(in), dimension(:) :: flowja
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: isympos
+    integer(I4B) :: ihc
+    integer(I4B) :: ic
+    integer(I4B) :: iz
+    integer(I4B) :: nc
+    integer(I4B) :: ncz
+    real(DP) :: vx
+    real(DP) :: vy
+    real(DP) :: vz
+    real(DP) :: xn
+    real(DP) :: yn
+    real(DP) :: zn
+    real(DP) :: xc
+    real(DP) :: yc
+    real(DP) :: zc
+    real(DP) :: cl1
+    real(DP) :: cl2
+    real(DP) :: dltot
+    real(DP) :: ooclsum
+    real(DP) :: dsumx
+    real(DP) :: dsumy
+    real(DP) :: dsumz
+    real(DP) :: denom
+    real(DP) :: area
+    real(DP) :: dz
+    real(DP) :: axy
+    real(DP) :: ayx
+    real(DP), allocatable, dimension(:) :: vi
+    real(DP), allocatable, dimension(:) :: di
+    real(DP), allocatable, dimension(:) :: viz
+    real(DP), allocatable, dimension(:) :: diz
+    real(DP), allocatable, dimension(:) :: nix
+    real(DP), allocatable, dimension(:) :: niy
+    real(DP), allocatable, dimension(:) :: wix
+    real(DP), allocatable, dimension(:) :: wiy
+    real(DP), allocatable, dimension(:) :: wiz
+    real(DP), allocatable, dimension(:) :: bix
+    real(DP), allocatable, dimension(:) :: biy
+    logical :: nozee = .true.
+    !
+    ! -- Ensure dis has necessary information
+    ! todo: do we need this?
+    if (this%icalcvelocity /= 0 .and. this%dis%con%ianglex == 0) then
+      call store_error('Error.  ANGLDEGX not provided in '// &
+                       'discretization file.  ANGLDEGX required for '// &
+                       'calculation of velocity.', terminate=.TRUE.)
+    end if
+    !
+    ! -- Find max number of connections and allocate weight arrays
+    nc = 0
+    do n = 1, this%dis%nodes
+      !
+      ! -- Count internal model connections
+      ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
+      !
+      ! -- Count edge connections
+      do m = 1, this%nedges
+        if (this%nodedge(m) == n) then
+          ic = ic + 1
+        end if
+      end do
+      !
+      ! -- Set max number of connections for any cell
+      if (ic > nc) nc = ic
+    end do
+    !
+    ! -- Allocate storage arrays needed for cell-centered calculation
+    allocate (vi(nc))
+    allocate (di(nc))
+    allocate (viz(nc))
+    allocate (diz(nc))
+    allocate (nix(nc))
+    allocate (niy(nc))
+    allocate (wix(nc))
+    allocate (wiy(nc))
+    allocate (wiz(nc))
+    allocate (bix(nc))
+    allocate (biy(nc))
+    !
+    ! -- Go through each cell and calculate specific discharge
+    do n = 1, this%dis%nodes
+      !
+      ! -- first calculate geometric properties for x and y directions and
+      !    the specific discharge at a face (vi)
+      ic = 0
+      iz = 0
+      vi(:) = DZERO
+      di(:) = DZERO
+      viz(:) = DZERO
+      diz(:) = DZERO
+      nix(:) = DZERO
+      niy(:) = DZERO
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ipos)
+        isympos = this%dis%con%jas(ipos)
+        ihc = this%dis%con%ihc(isympos)
+        area = this%dis%con%hwva(isympos)
+
+
+        ! -- horizontal connection
+        ic = ic + 1
+        if (this%hnew(n) > this%hnew(m)) then
+          dz = this%hnew(n) - this%dis%bot(n)
+        else
+          dz = this%hnew(m) - this%dis%bot(m)
+        end if
+        area = area * dz
+        call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
+        call this%dis%connection_vector(n, m, nozee, DONE, DONE, &
+                                        ihc, xc, yc, zc, dltot)
+        cl1 = this%dis%con%cl1(isympos)
+        cl2 = this%dis%con%cl2(isympos)
+        if (m < n) then
+          cl1 = this%dis%con%cl2(isympos)
+          cl2 = this%dis%con%cl1(isympos)
+        end if
+        ooclsum = DONE / (cl1 + cl2)
+        nix(ic) = -xn
+        niy(ic) = -yn
+        di(ic) = dltot * cl1 * ooclsum
+        if (area > DZERO) then
+          vi(ic) = flowja(ipos) / area
+        else
+          vi(ic) = DZERO
+        end if
+
+
+      end do
+      !
+      ! -- Look through edge flows that may have been provided by an exchange
+      !    and incorporate them into the averaging arrays
+      do m = 1, this%nedges
+        if (this%nodedge(m) == n) then
+          !
+          ! -- propsedge: (Q, area, nx, ny, distance)
+          ihc = this%ihcedge(m)
+          area = this%propsedge(2, m)
+
+          ic = ic + 1
+          nix(ic) = -this%propsedge(3, m)
+          niy(ic) = -this%propsedge(4, m)
+          di(ic) = this%propsedge(5, m)
+          if (area > DZERO) then
+            vi(ic) = this%propsedge(1, m) / area
+          else
+            vi(ic) = DZERO
+          end if
+
+        end if
+      end do
+      !
+      ! -- Assign number of vertical and horizontal connections
+      ncz = iz
+      nc = ic
+      !
+      ! -- calculate z weight (wiz) and z velocity
+      if (ncz == 1) then
+        wiz(1) = DONE
+      else
+        dsumz = DZERO
+        do iz = 1, ncz
+          dsumz = dsumz + diz(iz)
+        end do
+        denom = (ncz - DONE)
+        if (denom < DZERO) denom = DZERO
+        dsumz = dsumz + DEM10 * dsumz
+        do iz = 1, ncz
+          if (dsumz > DZERO) wiz(iz) = DONE - diz(iz) / dsumz
+          if (denom > 0) then
+            wiz(iz) = wiz(iz) / denom
+          else
+            wiz(iz) = DZERO
+          end if
+        end do
+      end if
+      vz = DZERO
+      do iz = 1, ncz
+        vz = vz + wiz(iz) * viz(iz)
+      end do
+      !
+      ! -- distance-based weighting
+      nc = ic
+      dsumx = DZERO
+      dsumy = DZERO
+      dsumz = DZERO
+      do ic = 1, nc
+        wix(ic) = di(ic) * abs(nix(ic))
+        wiy(ic) = di(ic) * abs(niy(ic))
+        dsumx = dsumx + wix(ic)
+        dsumy = dsumy + wiy(ic)
+      end do
+      !
+      ! -- Finish computing omega weights.  Add a tiny bit
+      !    to dsum so that the normalized omega weight later
+      !    evaluates to (essentially) 1 in the case of a single
+      !    relevant connection, avoiding 0/0.
+      dsumx = dsumx + DEM10 * dsumx
+      dsumy = dsumy + DEM10 * dsumy
+      do ic = 1, nc
+        wix(ic) = (dsumx - wix(ic)) * abs(nix(ic))
+        wiy(ic) = (dsumy - wiy(ic)) * abs(niy(ic))
+      end do
+      !
+      ! -- compute B weights
+      dsumx = DZERO
+      dsumy = DZERO
+      do ic = 1, nc
+        bix(ic) = wix(ic) * sign(DONE, nix(ic))
+        biy(ic) = wiy(ic) * sign(DONE, niy(ic))
+        dsumx = dsumx + wix(ic) * abs(nix(ic))
+        dsumy = dsumy + wiy(ic) * abs(niy(ic))
+      end do
+      if (dsumx > DZERO) dsumx = DONE / dsumx
+      if (dsumy > DZERO) dsumy = DONE / dsumy
+      axy = DZERO
+      ayx = DZERO
+      do ic = 1, nc
+        bix(ic) = bix(ic) * dsumx
+        biy(ic) = biy(ic) * dsumy
+        axy = axy + bix(ic) * niy(ic)
+        ayx = ayx + biy(ic) * nix(ic)
+      end do
+      !
+      ! -- Calculate specific discharge.  The divide by zero checking below
+      !    is problematic for cells with only one flow, such as can happen
+      !    with triangular cells in corners.  In this case, the resulting
+      !    cell velocity will be calculated as zero.  The method should be
+      !    improved so that edge flows of zero are included in these
+      !    calculations.  But this needs to be done with consideration for LGR
+      !    cases in which flows are submitted from an exchange.
+      vx = DZERO
+      vy = DZERO
+      do ic = 1, nc
+        vx = vx + (bix(ic) - axy * biy(ic)) * vi(ic)
+        vy = vy + (biy(ic) - ayx * bix(ic)) * vi(ic)
+      end do
+      denom = DONE - axy * ayx
+      if (denom /= DZERO) then
+        vx = vx / denom
+        vy = vy / denom
+      end if
+      !
+      this%vcomp(1, n) = vx
+      this%vcomp(2, n) = vy
+      this%vcomp(3, n) = vz
+      this%vmag(n) = sqrt(vx ** 2 + vy ** 2 + vz ** 2)
+      !
+    end do
+    !
+    ! -- cleanup
+    deallocate (vi)
+    deallocate (di)
+    deallocate (nix)
+    deallocate (niy)
+    deallocate (wix)
+    deallocate (wiy)
+    deallocate (wiz)
+    deallocate (bix)
+    deallocate (biy)
     !
     ! -- Return
     return
-  end subroutine dfw_da
+  end subroutine calc_velocity
+
+  !> @brief Reserve space for nedges cells that have an edge on them.
+  !!
+  !! This must be called before the npf%allocate_arrays routine, which is
+  !! called from npf%ar.
+  !<
+  subroutine increase_edge_count(this, nedges)
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: nedges
+    !
+    this%nedges = this%nedges + nedges
+    !
+    ! -- Return
+    return
+  end subroutine increase_edge_count
+
+  !> @brief Provide the npf package with edge properties
+  !<
+  subroutine set_edge_properties(this, nodedge, ihcedge, q, area, nx, ny, &
+                                 distance)
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: nodedge
+    integer(I4B), intent(in) :: ihcedge
+    real(DP), intent(in) :: q
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: nx
+    real(DP), intent(in) :: ny
+    real(DP), intent(in) :: distance
+    ! -- local
+    integer(I4B) :: lastedge
+    !
+    this%lastedge = this%lastedge + 1
+    lastedge = this%lastedge
+    this%nodedge(lastedge) = nodedge
+    this%ihcedge(lastedge) = ihcedge
+    this%propsedge(1, lastedge) = q
+    this%propsedge(2, lastedge) = area
+    this%propsedge(3, lastedge) = nx
+    this%propsedge(4, lastedge) = ny
+    this%propsedge(5, lastedge) = distance
+    !
+    ! -- If this is the last edge, then the next call must be starting a new
+    !    edge properties assignment loop, so need to reset lastedge to 0
+    if (this%lastedge == this%nedges) this%lastedge = 0
+    !
+    ! -- Return
+    return
+  end subroutine set_edge_properties
+
+  !> @brief Save specific discharge in binary format to ibinun
+  !<
+  subroutine sav_velocity(this, ibinun)
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: ibinun
+    ! -- local
+    character(len=16) :: text
+    character(len=16), dimension(3) :: auxtxt
+    integer(I4B) :: n
+    integer(I4B) :: naux
+    !
+    ! -- Write the header
+    text = '      DATA-VCOMP'
+    naux = 3
+    auxtxt(:) = ['              vx', '              vy', '              vz']
+    call this%dis%record_srcdst_list_header(text, this%name_model, &
+                                            this%packName, this%name_model, &
+                                            this%packName, naux, auxtxt, ibinun, &
+                                            this%dis%nodes, this%iout)
+    !
+    ! -- Write a zero for Q, and then write qx, qy, qz as aux variables
+    do n = 1, this%dis%nodes
+      call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux, &
+                                          this%vcomp(:, n))
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine sav_velocity
 
   !> @brief Define the observation types available in the package
   !!

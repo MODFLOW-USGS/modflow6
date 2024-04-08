@@ -1000,78 +1000,54 @@ contains
 
   !> @brief Get unit vector components between the cell and a given neighbor
   !!
-  !! Saturation must be provided to compute cell center vertical coordinates.
-  !! Also return the straight-line connection length.
-  !<
+  !< For dis2d there is no z component
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
-    ! -- modules
+    ! modules
     use DisvGeom, only: line_unit_vector
-    ! -- dummy
+    ! dummy
     class(Dis2dType) :: this
     integer(I4B), intent(in) :: noden !< cell (reduced nn)
     integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
-    logical, intent(in) :: nozee
-    real(DP), intent(in) :: satn
-    real(DP), intent(in) :: satm
-    integer(I4B), intent(in) :: ihc !< horizontal connection flag
-    real(DP), intent(inout) :: xcomp
-    real(DP), intent(inout) :: ycomp
-    real(DP), intent(inout) :: zcomp
-    real(DP), intent(inout) :: conlen
-    ! -- local
+    logical, intent(in) :: nozee !< not used for dis2d
+    real(DP), intent(in) :: satn !< not used for dis2d
+    real(DP), intent(in) :: satm !< not used for dis2d
+    integer(I4B), intent(in) :: ihc !< not used for dis2d (always horizontal)
+    real(DP), intent(inout) :: xcomp !< x component of the connection vector
+    real(DP), intent(inout) :: ycomp !< y componenet of the connection vector
+    real(DP), intent(inout) :: zcomp !< z component, which is always zero
+    real(DP), intent(inout) :: conlen !< calculated connection length
+    ! local
     real(DP) :: z1, z2
     real(DP) :: x1, y1, x2, y2
     real(DP) :: ds
     integer(I4B) :: i1, i2, j1, j2, k1, k2
     integer(I4B) :: nodeu1, nodeu2, ipos
-    !
-    ! -- Set vector components based on ihc
-    if (ihc == 0) then
-      !
-      ! -- vertical connection; set zcomp positive upward
-      xcomp = DZERO
-      ycomp = DZERO
-      if (nodem < noden) then
-        zcomp = DONE
-      else
-        zcomp = -DONE
-      end if
-      z1 = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
-      z2 = this%bot(nodem) + DHALF * (this%top(nodem) - this%bot(nodem))
-      conlen = abs(z2 - z1)
-    else
-      !
-      if (nozee) then
-        z1 = DZERO
-        z2 = DZERO
-      else
-        z1 = this%bot(noden) + DHALF * satn * (this%top(noden) - this%bot(noden))
-        z2 = this%bot(nodem) + DHALF * satm * (this%top(nodem) - this%bot(nodem))
-      end if
-      ipos = this%con%getjaindex(noden, nodem)
-      ds = this%con%cl1(this%con%jas(ipos)) + this%con%cl2(this%con%jas(ipos))
-      nodeu1 = this%get_nodeuser(noden)
-      nodeu2 = this%get_nodeuser(nodem)
-      call get_ijk(nodeu1, this%nrow, this%ncol, 1, i1, j1, k1)
-      call get_ijk(nodeu2, this%nrow, this%ncol, 1, i2, j2, k2)
-      x1 = DZERO
-      x2 = DZERO
-      y1 = DZERO
-      y2 = DZERO
-      if (i2 < i1) then ! back
-        y2 = ds
-      elseif (j2 < j1) then ! left
-        x2 = -ds
-      elseif (j2 > j1) then ! right
-        x2 = ds
-      else ! front
-        y2 = -ds
-      end if
-      call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, conlen)
+
+    ! Calculate vector components
+    z1 = DZERO
+    z2 = DZERO
+    ipos = this%con%getjaindex(noden, nodem)
+    ds = this%con%cl1(this%con%jas(ipos)) + this%con%cl2(this%con%jas(ipos))
+    nodeu1 = this%get_nodeuser(noden)
+    nodeu2 = this%get_nodeuser(nodem)
+    call get_ijk(nodeu1, this%nrow, this%ncol, 1, i1, j1, k1)
+    call get_ijk(nodeu2, this%nrow, this%ncol, 1, i2, j2, k2)
+    x1 = DZERO
+    x2 = DZERO
+    y1 = DZERO
+    y2 = DZERO
+    if (i2 < i1) then ! back
+      y2 = ds
+    elseif (j2 < j1) then ! left
+      x2 = -ds
+    elseif (j2 > j1) then ! right
+      x2 = ds
+    else ! front
+      y2 = -ds
     end if
-    !
-  end subroutine
+    call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, conlen)
+  end subroutine connection_vector
 
   !> @brief Get the discretization type
   !<

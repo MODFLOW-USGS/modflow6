@@ -10,6 +10,7 @@ module Disv1dModule
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
   use Disv1dGeom, only: calcdist
+  use DisvGeom, only: line_unit_vector
 
   implicit none
 
@@ -55,6 +56,8 @@ module Disv1dModule
     procedure :: get_nodenumber_idx1
     procedure :: nodeu_to_string
     procedure :: nodeu_from_string
+    procedure :: connection_normal
+    procedure :: connection_vector
 
   end type Disv1dType
 
@@ -142,7 +145,79 @@ contains
 
   end subroutine disv1d_df
 
-  !> @brief Get the discretization type (DIS, DIS2D, DISV, DISV2D, DISU)
+  !> @brief Get normal vector components between the cell and a given neighbor
+  !!
+  !! The normal points outward from the shared face between noden and nodem.
+  !<
+  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
+                               ipos)
+    ! -- dummy
+    class(Disv1dType) :: this
+    integer(I4B), intent(in) :: noden !< cell (reduced nn)
+    integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
+    integer(I4B), intent(in) :: ihc !< horizontal connection flag (not used)
+    real(DP), intent(inout) :: xcomp !< x component of outward normal vector
+    real(DP), intent(inout) :: ycomp !< y component of outward normal vector
+    real(DP), intent(inout) :: zcomp !< z component of outward normal vector
+    integer(I4B), intent(in) :: ipos !< connection position
+    ! -- local
+    real(DP) :: angle, dmult
+
+    ! find from anglex, since anglex is symmetric, need to flip vector
+    ! for lower triangle (nodem < noden)
+    angle = this%con%anglex(this%con%jas(ipos))
+    dmult = DONE
+    if (nodem < noden) dmult = -DONE
+    xcomp = cos(angle) * dmult
+    ycomp = sin(angle) * dmult
+    zcomp = DZERO
+    !
+  end subroutine connection_normal
+
+  !> @brief Get unit vector components between the cell and a given neighbor
+  !!
+  !! Saturation must be provided to compute cell center vertical coordinates.
+  !! Also return the straight-line connection length.
+  !<
+  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
+                               xcomp, ycomp, zcomp, conlen)
+    ! -- dummy
+    class(Disv1dType) :: this
+    integer(I4B), intent(in) :: noden !< cell (reduced nn)
+    integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
+    logical, intent(in) :: nozee !< do not use z in calculations
+    real(DP), intent(in) :: satn !< not used for disv1d
+    real(DP), intent(in) :: satm !< not used for disv1d
+    integer(I4B), intent(in) :: ihc !< horizontal connection flag
+    real(DP), intent(inout) :: xcomp !< x component of connection vector
+    real(DP), intent(inout) :: ycomp !< y component of connection vector
+    real(DP), intent(inout) :: zcomp !< z component of connection vector
+    real(DP), intent(inout) :: conlen !< calculated straight-line distance between cell centers
+    ! -- local
+    integer(I4B) :: nodeun, nodeum
+    real(DP) :: xn, xm, yn, ym, zn, zm
+
+    ! horizontal connection, with possible z component due to cell offsets
+    ! and/or water table conditions
+    if (nozee) then
+      zn = DZERO
+      zm = DZERO
+    else
+      zn = this%bot(noden)
+      zm = this%bot(nodem)
+    end if
+    nodeun = this%get_nodeuser(noden)
+    nodeum = this%get_nodeuser(nodem)
+    xn = this%cellxy(1, nodeun)
+    yn = this%cellxy(2, nodeun)
+    xm = this%cellxy(1, nodeum)
+    ym = this%cellxy(2, nodeum)
+    call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
+                          conlen)
+
+  end subroutine connection_vector
+
+  !> @brief Get the discretization type (DIS, DIS2D, DISV, DISV1D, DISU)
   subroutine get_dis_type(this, dis_type)
     class(Disv1dType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
