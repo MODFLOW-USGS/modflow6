@@ -38,7 +38,6 @@ module PetscSolverModule
   contains
     procedure :: initialize => petsc_initialize
     procedure :: solve => petsc_solve
-    procedure :: get_result => petsc_get_result
     procedure :: print_summary => petsc_print_summary
     procedure :: destroy => petsc_destroy
     procedure :: create_matrix => petsc_create_matrix
@@ -82,9 +81,6 @@ contains
 
     this%linear_settings => linear_settings
 
-    this%use_ims_pc = .false.
-    allocate (this%pc_context)
-
     call this%print_petsc_version()
 
     this%mat_petsc => null()
@@ -93,6 +89,10 @@ contains
       this%matrix => pm
       this%mat_petsc => pm%mat
     end select
+
+    this%use_ims_pc = .true. ! default is true, override with .petscrc
+    allocate (this%pc_context)
+    call this%pc_context%create(this%matrix, linear_settings%relax)
 
     allocate (this%vec_residual)
     call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
@@ -263,8 +263,6 @@ contains
       CHKERRQ(ierr)
       call PCShellSetSetUp(sub_pc, pcshell_setup, ierr)
       CHKERRQ(ierr)
-      call PCShellSetDestroy(sub_pc, pcshell_destroy, ierr)
-      CHKERRQ(ierr)
       call PCShellSetContext(sub_pc, this%pc_context, ierr)
       CHKERRQ(ierr)
     else
@@ -277,8 +275,6 @@ contains
       call PCShellSetApply(pc, pcshell_apply, ierr)
       CHKERRQ(ierr)
       call PCShellSetSetUp(pc, pcshell_setup, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetDestroy(pc, pcshell_destroy, ierr)
       CHKERRQ(ierr)
       call PCShellSetContext(pc, this%pc_context, ierr)
       CHKERRQ(ierr)
@@ -307,12 +303,6 @@ contains
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
-    call MatCreateVecs( &
-      this%mat_petsc, this%petsc_ctx%res_old, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
-    call MatCreateVecs( &
-      this%mat_petsc, this%petsc_ctx%delta_res, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
                                this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
@@ -331,6 +321,7 @@ contains
     class(PetscVectorType), pointer :: rhs_petsc, x_petsc
     KSPConvergedReason :: cnvg_reason
     integer :: it_number
+    character(len=LINELENGTH) :: errmsg
 
     rhs_petsc => null()
     select type (rhs)
@@ -348,6 +339,10 @@ contains
     this%is_converged = 0
     if (kiter == 1) then
       this%petsc_ctx%cnvg_summary%iter_cnt = 0
+      this%petsc_ctx%cnvg_summary%convlocdv = 0
+      this%petsc_ctx%cnvg_summary%convdvmax = 0.0
+      this%petsc_ctx%cnvg_summary%convlocr = 0
+      this%petsc_ctx%cnvg_summary%convrmax = 0.0
     end if
 
     ! update matrix coefficients
@@ -356,8 +351,11 @@ contains
     CHKERRQ(ierr)
 
     call KSPGetIterationNumber(this%ksp_petsc, it_number, ierr)
+    CHKERRQ(ierr)
     this%iteration_number = it_number
+
     call KSPGetConvergedReason(this%ksp_petsc, cnvg_reason, ierr)
+    CHKERRQ(ierr)
     if (cnvg_reason > 0) then
       if (this%petsc_ctx%icnvg_ims == -1) then
         ! move to next Picard iteration (e.g. with 'STRICT' option)
@@ -368,39 +366,58 @@ contains
       end if
     end if
 
-  end subroutine petsc_solve
+    if (cnvg_reason < 0 .and. cnvg_reason /= KSP_DIVERGED_ITS) then
+      write (errmsg, '(1x,a,i0)') "PETSc convergence failure in linear solve: ", &
+        cnvg_reason
+      call store_error(errmsg, terminate=.true.)
+    end if
 
-  subroutine petsc_get_result(this)
-    class(PetscSolverType) :: this
-  end subroutine petsc_get_result
+  end subroutine petsc_solve
 
   subroutine petsc_print_summary(this)
     class(PetscSolverType) :: this
     ! local
-    character(len=128) :: ksp_type, pc_type, dvclose_str
+    character(len=128) :: ksp_str, pc_str, subpc_str, &
+                          dvclose_str, rclose_str, relax_str
     integer :: ierr
     PC :: pc
 
-    call KSPGetType(this%ksp_petsc, ksp_type, ierr)
+    call KSPGetType(this%ksp_petsc, ksp_str, ierr)
     CHKERRQ(ierr)
     call KSPGetPC(this%ksp_petsc, pc, ierr)
     CHKERRQ(ierr)
-    call PCGetType(pc, pc_type, ierr)
+    call PCGetType(pc, pc_str, ierr)
     CHKERRQ(ierr)
+    if (this%use_ims_pc) then
+      subpc_str = 'IMS ILU'
+    else
+      subpc_str = this%sub_pc_type
+    end if
+
     write (dvclose_str, '(e15.5)') this%linear_settings%dvclose
+    write (rclose_str, '(e15.5)') this%linear_settings%rclose
+    write (relax_str, '(e15.5)') this%linear_settings%relax
 
     write (iout, '(/,7x,a)') "PETSc linear solver settings: "
     write (iout, '(1x,a)') repeat('-', 66)
-    write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(this%ksp_type)
-    write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(this%pc_type)
+    write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(ksp_str)
+    write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(pc_str)
     if (simulation_mode == "PARALLEL") then
       write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", &
-        trim(this%sub_pc_type)
+        trim(subpc_str)
     end if
     write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", &
       this%linear_settings%iter1
-    write (iout, '(1x,a,a,/)') &
+    write (iout, '(1x,a,a)') &
       "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
+    write (iout, '(1x,a,a)') &
+      "Residual closure criterion:   ", trim(adjustl(rclose_str))
+    write (iout, '(1x,a,i0)') &
+      "Residual convergence option:  ", this%linear_settings%icnvgopt
+    write (iout, '(1x,a,a)') &
+      "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
+    write (iout, '(1x,a,i0,/)') &
+      "Fill level in factorization:  ", this%linear_settings%level
 
   end subroutine petsc_print_summary
 
@@ -421,6 +438,7 @@ contains
     call this%petsc_ctx%destroy()
     deallocate (this%petsc_ctx)
 
+    call this%pc_context%destroy()
     deallocate (this%pc_context)
 
   end subroutine petsc_destroy

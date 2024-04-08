@@ -17,7 +17,6 @@ module ImsLinearSolverModule
     procedure :: initialize => ims_initialize
     procedure :: print_summary => ims_print_summary
     procedure :: solve => ims_solve
-    procedure :: get_result => ims_get_result
     procedure :: destroy => ims_destroy
 
     procedure :: create_matrix => ims_create_matrix
@@ -53,10 +52,6 @@ contains
     class(VectorBaseType), pointer :: x
     type(ConvergenceSummaryType) :: cnvg_summary
   end subroutine ims_solve
-
-  subroutine ims_get_result(this)
-    class(ImsLinearSolverType) :: this
-  end subroutine ims_get_result
 
   subroutine ims_destroy(this)
     class(ImsLinearSolverType) :: this

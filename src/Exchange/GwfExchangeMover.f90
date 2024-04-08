@@ -197,10 +197,7 @@ contains
     integer(I4B) :: i
 
     do i = 1, this%nmvr
-      ! TODO_MJR: this should only be around the update call,
-      ! such that every mover has a valid qpactual ??!!
       if (this%mvr(i)%is_receiver_active) then
-
         ! copy from synchronization arrays back into movers:
         if (this%prov_is_m1(i)) then
           this%mvr(i)%qpactual = this%qpactual_m1(i)
@@ -209,7 +206,6 @@ contains
           this%mvr(i)%qpactual = this%qpactual_m2(i)
           this%mvr(i)%qavailable = this%qavailable_m2(i)
         end if
-
         call this%mvr(i)%update_receiver()
       end if
     end do

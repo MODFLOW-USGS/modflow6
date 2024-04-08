@@ -444,7 +444,7 @@ contains
   subroutine initial_message()
     ! -- modules
     use VersionModule, only: write_listfile_header
-    use SimVariablesModule, only: simulation_mode
+    use SimVariablesModule, only: simulation_mode, nr_procs
     !
     ! -- initialize message lists
     call sim_errors%init()
@@ -456,9 +456,11 @@ contains
     call write_listfile_header(istdout, write_kind_info=.false., &
                                write_sys_command=.false.)
     !
-    if (simulation_mode == 'PARALLEL') then
-      call write_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
-                         skipafter=1)
+    call write_message(' MODFLOW runs in '//trim(simulation_mode)//' mode', &
+                       skipafter=1)
+    !
+    if (simulation_mode == 'PARALLEL' .and. nr_procs == 1) then
+      call store_warning('WARNING. Running parallel MODFLOW on only 1 process')
     end if
     !
   end subroutine initial_message

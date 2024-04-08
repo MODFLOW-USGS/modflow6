@@ -12,9 +12,7 @@ module PetscConvergenceModule
 
   type, public :: PetscContextType
     Vec :: x_old
-    Vec :: res_old
     Vec :: delta_x
-    Vec :: delta_res
     integer(I4B) :: icnvg_ims !< IMS convergence number: 1 => converged, -1 => forces next Picard iter
     integer(I4B) :: icnvgopt !< convergence option from IMS settings
     real(DP) :: dvclose !< dep. variable closure criterion
@@ -96,8 +94,6 @@ contains
       else
         call VecCopy(x, context%x_old, ierr)
         CHKERRQ(ierr)
-        call VecCopy(res, context%res_old, ierr)
-        CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
 
@@ -120,22 +116,19 @@ contains
       end do
     end if
 
-    rnorm_inf = 0.0
-    if (context%icnvgopt == 0 .OR. context%icnvgopt == 1) then
-      call VecNorm(res, NORM_INFINITY, rnorm_inf, ierr)
-      CHKERRQ(ierr)
-    end if
-
     call VecWAXPY(context%delta_x, min_one, context%x_old, x, ierr)
     CHKERRQ(ierr)
 
     call VecNorm(context%delta_x, NORM_INFINITY, xnorm_inf, ierr)
     CHKERRQ(ierr)
 
-    call VecCopy(x, context%x_old, ierr)
-    CHKERRQ(ierr)
+    rnorm_inf = 0.0
+    if (context%icnvgopt == 0 .OR. context%icnvgopt == 1) then
+      call VecNorm(res, NORM_INFINITY, rnorm_inf, ierr)
+      CHKERRQ(ierr)
+    end if
 
-    call VecCopy(res, context%res_old, ierr)
+    call VecCopy(x, context%x_old, ierr)
     CHKERRQ(ierr)
 
     ! get dv and dr per local model (readonly!)
@@ -177,7 +170,7 @@ contains
     call VecDestroy(res, ierr)
     CHKERRQ(ierr)
 
-    flag = apply_check(context, n, xnorm_inf, rnorm_inf, rnorm)
+    flag = apply_check(context, n, xnorm_inf, rnorm, rnorm) ! TODO_MJR: toggle rnorm to inf
     if (flag == KSP_CONVERGED_ITERATING) then
       ! not yet converged, max. iters reached? Then stop.
       if (n == context%max_its) then
@@ -233,11 +226,7 @@ contains
 
     call VecDestroy(this%x_old, ierr)
     CHKERRQ(ierr)
-    call VecDestroy(this%res_old, ierr)
-    CHKERRQ(ierr)
     call VecDestroy(this%delta_x, ierr)
-    CHKERRQ(ierr)
-    call VecDestroy(this%delta_res, ierr)
     CHKERRQ(ierr)
 
   end subroutine destroy

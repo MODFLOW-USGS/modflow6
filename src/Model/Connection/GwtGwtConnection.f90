@@ -155,7 +155,7 @@ contains
     ! has been read at this point)
     this%iIfaceAdvScheme = this%gwtExchange%iAdvScheme
     !
-    ! determine xt3d setting on interface- (TODO_MJR: default is on?)
+    ! determine xt3d setting on interface
     this%iIfaceXt3d = this%gwtExchange%ixt3d
 
     ! turn off when off in the owning model

@@ -696,7 +696,6 @@ contains
   end subroutine apt_ad
 
   !> @brief Override bnd reset for custom mover logic
-  !< TODO_MJR: check this
   subroutine apt_reset(this)
     class(TspAptType) :: this !< GwtAptType object
     ! local

@@ -18,6 +18,7 @@ module SparseMatrixModule
     real(DP), dimension(:), pointer, contiguous :: amat
   contains
     procedure :: init => spm_init
+    procedure :: spm_init_empty
     procedure :: destroy => spm_destroy
     procedure :: create_vec_mm => spm_create_vec_mm
     procedure :: create_vec => spm_create_vec
@@ -49,6 +50,8 @@ module SparseMatrixModule
 
 contains
 
+  !> @brief Initialize sparse matrix from passed
+  !< sparsity structure
   subroutine spm_init(this, sparse, mem_path)
     class(SparseMatrixType) :: this
     type(sparsematrix) :: sparse
@@ -70,6 +73,36 @@ contains
     call this%zero_entries()
 
   end subroutine spm_init
+
+  !> @brief Initialize empty sparse matrix
+  !<
+  subroutine spm_init_empty(this, neq, nja, mem_path)
+    class(SparseMatrixType) :: this
+    integer(I4B) :: neq
+    integer(I4B) :: nja
+    character(len=*) :: mem_path
+    ! local
+    integer(I4B) :: i
+
+    this%memory_path = mem_path
+
+    call this%allocate_scalars()
+
+    this%nrow = neq
+    this%ncol = neq
+    this%nja = nja
+
+    call this%allocate_arrays()
+
+    do i = 1, this%nrow + 1
+      this%ia(i) = 0
+    end do
+    do i = 1, this%nja
+      this%ja(i) = 0
+    end do
+    call this%zero_entries()
+
+  end subroutine spm_init_empty
 
   subroutine spm_destroy(this)
     class(SparseMatrixType) :: this

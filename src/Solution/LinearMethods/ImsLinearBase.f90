@@ -139,7 +139,9 @@ contains
       rmax = DZERO
       l2norm = DZERO
       DO im = 1, CONVNMOD
+        summary%locdv(im) = 0
         summary%dvmax(im) = DZERO
+        summary%locr(im) = 0
         summary%rmax(im) = DZERO
       END DO
       im = 1

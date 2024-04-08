@@ -35,8 +35,6 @@ contains
   end function create_mpi_run_control
 
   subroutine mpi_ctrl_start(this)
-    use SimModule, only: ustop, store_error
-
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
@@ -91,10 +89,6 @@ contains
 
     ! possibly wait to attach debugger here
     if (wait_dbg) call this%wait_for_debugger()
-
-    if (is_parallel_mode .and. nr_procs == 1) then
-      write (*, '(a,/)') '(WARNING. Running parallel mode on only 1 process)'
-    end if
 
     ! start everything else by calling parent
     call this%RunControlType%start()
