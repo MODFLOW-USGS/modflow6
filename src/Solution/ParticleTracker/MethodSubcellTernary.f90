@@ -64,8 +64,6 @@ contains
 
   !> @brief Track a particle across a triangular subcell using the ternary method
   subroutine track_subcell(this, subcell, particle, tmax)
-    ! modules
-    use TdisModule, only: kper, kstp
     ! dummy
     class(MethodSubcellTernaryType), intent(inout) :: this
     class(SubcellTriType), intent(in) :: subcell
@@ -283,8 +281,7 @@ contains
         particle%z = z
         particle%ttrack = t
         particle%istatus = 1
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=5)
+        call this%save(particle, reason=5)
       end do
     end if
 
@@ -349,8 +346,7 @@ contains
 
     ! -- Save particle track record
     if (reason > -1) &
-      call this%trackfilectl%save(particle, kper=kper, &
-                                  kstp=kstp, reason=reason) ! reason=2: timestep
+      call this%save(particle, reason=reason) ! reason=2: timestep
   end subroutine track_subcell
 
   !> @brief Do calculations related to analytical z solution

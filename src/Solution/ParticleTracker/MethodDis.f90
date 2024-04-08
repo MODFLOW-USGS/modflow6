@@ -135,8 +135,6 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_dis(this, particle)
-    ! -- modules
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -174,8 +172,7 @@ contains
           ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
           particle%istatus = 2 ! kluge note: use -2 to allow check for transfer to another model???
           particle%advancing = .false.
-          call this%trackfilectl%save(particle, kper=kper, &
-                                      kstp=kstp, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3) ! reason=3: termination
           ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)

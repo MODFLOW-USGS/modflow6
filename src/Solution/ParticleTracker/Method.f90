@@ -45,8 +45,9 @@ module MethodModule
     ! Overridden in subtypes that delegate
     procedure :: pass
     procedure :: load
-    ! Implemented in this class
+    ! Implemented here
     procedure :: init
+    procedure :: save
     procedure :: track
     procedure :: try_pass
     procedure :: update
@@ -151,6 +152,38 @@ contains
     call pstop(1, "pass must be overridden")
   end subroutine pass
 
+  !> @brief Save a particle's current state.
+  subroutine save(this, particle, reason)
+    use TdisModule, only: kper, kstp, nper, nstp, totimc, delt
+    ! dummy
+    class(MethodType), intent(inout) :: this
+    type(ParticleType), pointer, intent(inout) :: particle
+    integer(I4B), intent(in) :: reason
+    ! local
+    integer(I4B) :: per, stp
+
+    per = kper
+    stp = kstp
+
+    ! If tracking time falls exactly on a boundary between time steps,
+    ! report the previous time step for this datum. This is to follow
+    ! MP7's behavior, and because the particle will have been tracked
+    ! up to this instant under the previous time step's conditions, so
+    ! the time step we're about to start shouldn't get "credit" for it.
+    if (particle%ttrack == totimc .and. (per > 1 .or. stp > 1)) then
+      if (stp > 1) then
+        stp = stp - 1
+      else if (per > 1) then
+        per = per - 1
+        stp = 1
+      end if
+    end if
+
+    ! Save the particle's state to any registered tracking output files
+    call this%trackfilectl%save(particle, kper=per, &
+                                kstp=stp, reason=reason)
+  end subroutine save
+
   !> @brief Update particle state and check termination conditions
   !!
   !! Update the particle's properties (e.g. advancing flag, zone number,
@@ -159,8 +192,6 @@ contains
   !! conditions apply, save particle state with the proper reason code.
   !<
   subroutine update(this, particle, cell_defn)
-    ! -- modules
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -171,28 +202,24 @@ contains
       if (particle%istopzone .eq. cell_defn%izone) then
         particle%advancing = .false.
         particle%istatus = 6
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=3) ! reason=3: termination
+        call this%save(particle, reason=3) ! reason=3: termination
         return
       end if
     end if
     if (cell_defn%inoexitface .ne. 0) then
       particle%advancing = .false.
       particle%istatus = 5
-      call this%trackfilectl%save(particle, kper=kper, &
-                                  kstp=kstp, reason=3) ! reason=3: termination
+      call this%save(particle, reason=3) ! reason=3: termination
       return
     end if
     if (cell_defn%iweaksink .ne. 0) then
       if (particle%istopweaksink .ne. 0) then
         particle%advancing = .false.
         particle%istatus = 3
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=3) ! reason=3: termination
+        call this%save(particle, reason=3) ! reason=3: termination
         return
       else
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=4) ! reason=4: exited weak sink
+        call this%save(particle, reason=4) ! reason=4: exited weak sink
         return
       end if
     end if

@@ -478,18 +478,18 @@ def check_output(idx, test):
     del mf6_pls["yloc"]
     del mf6_pls["zloc"]
     del mf6_pls["node"]  # node numbers reversed in y direction in mp7
-    del mf6_pls[
-        "timestep"
-    ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
+    # del mf6_pls[
+    #     "timestep"
+    # ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
     del mp7_pls["sequencenumber"]
     del mp7_pls["particleidloc"]
     del mp7_pls["xloc"]
     del mp7_pls["yloc"]
     del mp7_pls["zloc"]
     del mp7_pls["node"]
-    del mp7_pls[
-        "timestep"
-    ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
+    # del mp7_pls[
+    #     "timestep"
+    # ]  # todo: reinstate if PRT and MP7 agree on times falling on temporal boundaries
 
     # compare mf6 / mp7 pathline data
     if "bprp" in name:

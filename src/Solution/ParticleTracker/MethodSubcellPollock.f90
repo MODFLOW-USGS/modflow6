@@ -86,7 +86,6 @@ contains
   subroutine track_subcell(this, subcell, particle, tmax)
     ! modules
     use ParticleModule, only: get_particle_id
-    use TdisModule, only: kper, kstp
     ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     class(SubcellRectType), intent(in) :: subcell
@@ -186,6 +185,7 @@ contains
     !    within the current period and time step only.
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
+
     if (all(tslice > 0)) then
       do i = tslice(1), tslice(2)
         t = this%tracktimes%times(i)
@@ -202,8 +202,7 @@ contains
         particle%z = z * subcell%dz
         particle%ttrack = t
         particle%istatus = 1
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=5)
+        call this%save(particle, reason=5)
       end do
     end if
 
@@ -266,9 +265,7 @@ contains
     particle%iboundary(3) = exitFace
 
     ! -- Save particle track record
-    if (reason > -1) &
-      call this%trackfilectl%save(particle, kper=kper, &
-                                  kstp=kstp, reason=reason)
+    if (reason >= 0) call this%save(particle, reason=reason)
 
   end subroutine track_subcell
 

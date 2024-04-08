@@ -2,7 +2,7 @@ module PrtModule
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use InputOutputModule, only: ParseLine, upcase, lowcase
-  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
+  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, DSAME, &
                              LENPAKLOC, LENPACKAGETYPE, LENBUDTXT, MNORMAL, &
                              LINELENGTH
   use VersionModule, only: write_listfile_header
@@ -972,8 +972,7 @@ contains
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
-            call this%trackfilectl%save(particle, kper=kper, &
-                                        kstp=kstp, reason=3) ! reason=3: termination
+            call this%method%save(particle, reason=3) ! reason=3: termination
 
           ! -- If particle is inactive or not yet to be released, cycle
           if (particle%istatus > 1) cycle
@@ -981,8 +980,7 @@ contains
           ! -- If particle released this time step, record its initial state
           particle%istatus = 1
           if (particle%trelease >= totimc) &
-            call this%trackfilectl%save(particle, kper=kper, &
-                                        kstp=kstp, reason=0) ! reason=0: release
+            call this%method%save(particle, reason=0) ! reason=0: release
 
           ! -- Maximum time is end of time step unless this is the last
           !    time step in the simulation, which case it's the particle
