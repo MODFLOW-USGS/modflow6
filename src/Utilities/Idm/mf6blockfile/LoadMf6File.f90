@@ -639,7 +639,7 @@ contains
     !
     ! -- read the structured array
     nrowsread = this%structarray%read_from_parser(this%parser, this%ts_active, &
-                                                  this%iout)
+                                                  this%filename, this%iout)
     !
     ! -- return
     return

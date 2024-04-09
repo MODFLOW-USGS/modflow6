@@ -186,6 +186,7 @@
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-stoidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">

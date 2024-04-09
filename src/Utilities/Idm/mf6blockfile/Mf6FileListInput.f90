@@ -186,7 +186,8 @@ contains
     if (this%ibinary == 1) then
       !
       this%bound_context%nbound = &
-        this%structarray%read_from_binary(this%oc_inunit, this%iout)
+        this%structarray%read_from_binary(this%oc_inunit, this%input_name, &
+                                          this%iout)
       !
       call parser%terminateblock()
       !
@@ -199,7 +200,8 @@ contains
       ts_active = (this%ts_active /= 0)
       !
       this%bound_context%nbound = &
-        this%structarray%read_from_parser(parser, ts_active, this%iout)
+        this%structarray%read_from_parser(parser, ts_active, &
+                                          this%input_name, this%iout)
     end if
     !
     ! update ts links
@@ -502,12 +504,9 @@ contains
     call idm_log_header(this%mf6_input%component_name, &
                         this%mf6_input%subcomponent_name, this%iout)
     !
-    !
-    if (this%settings) then
-      readcnt = this%structarray%read_setting(parser, ts_active, this%iout)
-    else
-      readcnt = this%structarray%read_from_parser(parser, ts_active, 0)
-    end if
+    ! -- read the period block
+    readcnt = this%structarray%read_from_parser(parser, ts_active, &
+                                                this%input_name, 0)
     !
     ! update ts links
     if (this%ts_active /= 0) then

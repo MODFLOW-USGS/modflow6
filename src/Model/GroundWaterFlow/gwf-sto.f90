@@ -80,7 +80,7 @@ contains
     ! -- dummy variables
     type(GwfStoType), pointer :: stoobj !< GwfStoType object
     character(len=*), intent(in) :: name_model !< name of model
-    character(len=*), intent(in) :: mempath
+    character(len=*), intent(in) :: mempath !< input context mem path
     integer(I4B), intent(in) :: inunit !< package input file unit
     integer(I4B), intent(in) :: iout !< model listing file unit
     !
@@ -198,7 +198,7 @@ contains
     else if (storage_state == '') then
       ! -- no-op, last period setting applies
     else
-      write (errmsg, '(a,a)') 'Unknown STORAGE period input setting: ', &
+      write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
         trim(storage_state)
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
@@ -711,6 +711,10 @@ contains
       if (associated(this%oldsy)) then
         call mem_deallocate(this%oldsy)
       end if
+      !
+      ! -- nullify input context pointers
+      nullify (this%iper)
+      nullify (this%storage_setting)
     end if
     !
     ! -- Deallocate scalars
@@ -762,9 +766,6 @@ contains
     this%satomega = DZERO
     this%integratechanges = 0
     this%intvs = 0
-    !
-    ! -- initialize input context iper
-    nullify (this%iper)
     !
     ! -- return
     return

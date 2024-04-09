@@ -1,0 +1,117 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
+module SwfStoInputModule
+  use ConstantsModule, only: LENVARNAME
+  use InputDefinitionModule, only: InputParamDefinitionType, &
+                                   InputBlockDefinitionType
+  private
+  public swf_sto_param_definitions
+  public swf_sto_aggregate_definitions
+  public swf_sto_block_definitions
+  public SwfStoParamFoundType
+  public swf_sto_multi_package
+
+  type SwfStoParamFoundType
+    logical :: ipakcb = .false.
+    logical :: steady_state = .false.
+    logical :: transient = .false.
+  end type SwfStoParamFoundType
+
+  logical :: swf_sto_multi_package = .false.
+
+  type(InputParamDefinitionType), parameter :: &
+    swfsto_ipakcb = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'STO', & ! subcomponent
+    'OPTIONS', & ! block
+    'SAVE_FLOWS', & ! tag name
+    'IPAKCB', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfsto_steady_state = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'STO', & ! subcomponent
+    'PERIOD', & ! block
+    'STEADY-STATE', & ! tag name
+    'STEADY_STATE', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfsto_transient = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'STO', & ! subcomponent
+    'PERIOD', & ! block
+    'TRANSIENT', & ! tag name
+    'TRANSIENT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swf_sto_param_definitions(*) = &
+    [ &
+    swfsto_ipakcb, &
+    swfsto_steady_state, &
+    swfsto_transient &
+    ]
+
+  type(InputParamDefinitionType), parameter :: &
+    swf_sto_aggregate_definitions(*) = &
+    [ &
+    InputParamDefinitionType &
+    ( &
+    '', & ! component
+    '', & ! subcomponent
+    '', & ! block
+    '', & ! tag name
+    '', & ! fortran variable
+    '', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    ) &
+    ]
+
+  type(InputBlockDefinitionType), parameter :: &
+    swf_sto_block_definitions(*) = &
+    [ &
+    InputBlockDefinitionType( &
+    'OPTIONS', & ! blockname
+    .false., & ! required
+    .false., & ! aggregate
+    .false. & ! block_variable
+    ), &
+    InputBlockDefinitionType( &
+    'PERIOD', & ! blockname
+    .false., & ! required
+    .false., & ! aggregate
+    .true. & ! block_variable
+    ) &
+    ]
+
+end module SwfStoInputModule

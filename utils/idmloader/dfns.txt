@@ -53,6 +53,7 @@ swf-ic.dfn
 swf-cdb.dfn
 swf-chd.dfn
 swf-flw.dfn
+swf-sto.dfn
 swf-zdg.dfn
 
 # prt model
