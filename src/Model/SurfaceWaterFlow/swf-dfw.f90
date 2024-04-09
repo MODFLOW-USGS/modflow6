@@ -261,11 +261,11 @@ contains
     call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
     call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
     call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
-                                        
+
     ! Specific discharge is (re-)allocated when nedges is known
     call mem_allocate(this%vcomp, 3, 0, 'VCOMP', this%memoryPath)
     call mem_allocate(this%vmag, 0, 'VMAG', this%memoryPath)
-    
+
     do n = 1, this%dis%nodes
       this%manningsn(n) = DZERO
       this%idcxs(n) = 0
@@ -285,7 +285,7 @@ contains
         this%dhdsja(n) = DZERO
       end do
     end if
-  
+
     ! -- Return
     return
   end subroutine allocate_arrays
@@ -337,11 +337,11 @@ contains
                        this%input_mempath, found%ipakcb)
     call mem_set_value(this%isavvelocity, 'ISAVVELOCITY', &
                        this%input_mempath, found%isavvelocity)
-    
+
     ! save flows option active
     if (found%icentral) this%icentral = 1
     if (found%ipakcb) this%ipakcb = -1
-     
+
     ! calculate unit conversion
     this%unitconv = this%lengthconv**DONETHIRD
     this%unitconv = this%unitconv * this%timeconv
@@ -427,7 +427,7 @@ contains
 
     if (found%iswrcond) then
       write (this%iout, '(4x,a, G0)') 'Conductance will be calculated using &
-                                       &the SWR development option.' 
+                                       &the SWR development option.'
     end if
 
     write (this%iout, '(1x,a,/)') 'End Setting DFW Options'
@@ -768,7 +768,7 @@ contains
     length_nm = cln + clm
     cond = DZERO
     if (length_nm > DPREC) then
-      
+
       ! -- Calculate depth in each reach
       depth_n = stage_n - this%dis%bot(n)
       depth_m = stage_m - this%dis%bot(m)
@@ -843,7 +843,7 @@ contains
     ! Calculate conveyance, which is a * r**DTWOTHIRDS / roughc
     rough = this%manningsn(n)
     conveyance = this%cxs%get_conveyance(this%idcxs(n), width, depth, rough)
-    dhds_sqr = dhds ** DHALF
+    dhds_sqr = dhds**DHALF
     if (dhds_sqr < DEM10) then
       dhds_sqr = DEM10
     end if
@@ -940,7 +940,7 @@ contains
                                             depth_m, area_m)
         rhavg = weight_n * rhn + weight_m * rhm
       else
-        rhavg =  area_avg / width_n
+        rhavg = area_avg / width_n
       end if
       rhavg = rhavg**DTWOTHIRDS
 
@@ -952,7 +952,7 @@ contains
         dhds_m = this%grad_dhds_mag(m)
         dhds_nm = weight_n * dhds_n + weight_m * dhds_m
       end if
-      dhds_sqr = dhds_nm ** DHALF
+      dhds_sqr = dhds_nm**DHALF
       if (dhds_sqr < DEM10) then
         dhds_sqr = DEM10
       end if
@@ -1345,7 +1345,6 @@ contains
         ihc = this%dis%con%ihc(isympos)
         area = this%dis%con%hwva(isympos)
 
-
         ! -- horizontal connection
         ic = ic + 1
         if (this%hnew(n) > this%hnew(m)) then
@@ -1372,7 +1371,6 @@ contains
         else
           vi(ic) = DZERO
         end if
-
 
       end do
       !
@@ -1492,7 +1490,7 @@ contains
       this%vcomp(1, n) = vx
       this%vcomp(2, n) = vy
       this%vcomp(3, n) = vz
-      this%vmag(n) = sqrt(vx ** 2 + vy ** 2 + vz ** 2)
+      this%vmag(n) = sqrt(vx**2 + vy**2 + vz**2)
       !
     end do
     !

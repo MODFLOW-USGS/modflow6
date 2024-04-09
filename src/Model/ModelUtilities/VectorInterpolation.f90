@@ -8,7 +8,7 @@ module VectorInterpolationModule
 
   public :: vector_interpolation_2d
 
-  contains
+contains
 
   !> @brief Interpolate 2D vector components at cell center
   !!
@@ -181,7 +181,7 @@ module VectorInterpolationModule
       ! -- Look through edge flows that may have been provided by an exchange
       !    and incorporate them into the averaging arrays
       if (present(nedges)) then
-        do m = 1, nedges        
+        do m = 1, nedges
           if (nodedge(m) == n) then
             ic = ic + 1
             nix(ic) = -propsedge(3, m)
@@ -274,7 +274,7 @@ module VectorInterpolationModule
 
       ! Store velocity magnitude
       if (present(vmag)) then
-        vmag(n) = sqrt(vx ** 2 + vy ** 2 + vz ** 2)
+        vmag(n) = sqrt(vx**2 + vy**2 + vz**2)
       end if
 
     end do
