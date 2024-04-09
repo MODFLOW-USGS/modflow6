@@ -27,7 +27,7 @@ module VectorInterpolationModule
     ! modules
     ! dummy
     class(DisBaseType), intent(in) :: dis !< discretization package object
-    real(DP), intent(in), dimension(:) :: flowja !< flow across each face in model grid
+    real(DP), intent(in), dimension(:) :: flowja !< flow across each face in model grid (size njas)
     integer(I4B), intent(in), optional :: nedges !< number of external edges for which a flow is provided
     integer(I4B), dimension(:), intent(in), optional :: nodedge !< array of node numbers that have edges
     real(DP), dimension(:, :), intent(in), optional :: propsedge !< edge properties (Q, area, nx, ny, distance)
@@ -56,6 +56,7 @@ module VectorInterpolationModule
     real(DP) :: cl2
     real(DP) :: dltot
     real(DP) :: ooclsum
+    real(DP) :: q
     real(DP) :: dsumx
     real(DP) :: dsumy
     real(DP) :: dsumz
@@ -160,7 +161,12 @@ module VectorInterpolationModule
         di(ic) = dltot * cl1 * ooclsum
 
         ! Set vi to flow area and divide by area if present
-        vi(ic) = flowja(ipos)
+        q = flowja(isympos)
+        if (n < m) then
+          vi(ic) = q
+        else
+          vi(ic) = -q
+        end if
         if (present(flowareaja)) then
           area = flowareaja(isympos)
           if (area > DZERO) then

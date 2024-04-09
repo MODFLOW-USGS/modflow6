@@ -61,6 +61,7 @@ module SwfDfwModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge => null() !< edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
     real(DP), dimension(:), pointer, contiguous :: grad_dhds_mag => null() !< magnitude of the gradient (of size nodes)
+    real(DP), dimension(:), pointer, contiguous :: dhdsja => null() !< gradient for each connection (of size njas)
 
     ! -- observation data
     integer(I4B), pointer :: inobspkg => null() !< unit number for obs package
@@ -275,8 +276,13 @@ contains
     if (this%is2d == 1) then
       call mem_allocate(this%grad_dhds_mag, this%dis%nodes, &
                         'GRAD_DHDS_MAG', this%memoryPath)
+      call mem_allocate(this%dhdsja, this%dis%njas, &
+                        'DHDSJA', this%memoryPath)
       do n = 1, this%dis%nodes
         this%grad_dhds_mag(n) = DZERO
+      end do
+      do n = 1, this%dis%njas
+        this%dhdsja(n) = DZERO
       end do
     end if
   
@@ -868,12 +874,13 @@ contains
     real(DP) :: dhds_sqr
     real(DP) :: width_n
     real(DP) :: width_m
-    real(DP) :: range = 1.d-10
+    real(DP) :: range = 1.d-6
     real(DP) :: dydx
     real(DP) :: smooth_factor
     real(DP) :: length_nm
     real(DP) :: cond
-    real(DP) :: rinvn, rinvm, rinv_avg
+    real(DP) :: ravg
+    real(DP) :: rinv_avg
     real(DP) :: area_n, area_m, area_avg
     real(DP) :: rhn, rhm, rhavg
     real(DP) :: weight_n
@@ -910,10 +917,11 @@ contains
       call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
 
       ! harmonic average for inverse mannings value
-      rinvn = DONE / this%manningsn(n)
-      rinvm = DONE / this%manningsn(m)
-      rinv_avg = DTWO * rinvn * rinvm * (length_nm) / &
-                 (rinvn * clm + rinvm * cln)
+      weight_n = cln / length_nm
+      weight_m = DONE - weight_n
+      ravg = (weight_n + weight_m) / &
+             (weight_n * this%manningsn(n) + weight_m * this%manningsn(m))
+      rinv_avg = DONE / ravg
 
       ! linear weight toward node closer to shared face
       weight_n = clm / length_nm
@@ -967,16 +975,14 @@ contains
     integer(I4B) :: isympos
     real(DP) :: cl1
     real(DP) :: cl2
-    real(DP), dimension(:), allocatable :: dhdsja
-
-    ! first calculate dhdsja, the gradient, for every connection
-    allocate(dhdsja(this%dis%nja))
 
     do n = 1, this%dis%nodes
       this%grad_dhds_mag(n) = DZERO
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         isympos = this%dis%con%jas(ipos)
+
+        ! determine cl1 and cl2
         if (n < m) then
           cl1 = this%dis%con%cl1(isympos)
           cl2 = this%dis%con%cl2(isympos)
@@ -984,18 +990,21 @@ contains
           cl1 = this%dis%con%cl2(isympos)
           cl2 = this%dis%con%cl1(isympos)
         end if
-        if (cl1 + cl2 > DPREC) then
-          dhdsja(ipos) = (this%hnew(m) - this%hnew(n)) / (cl1 + cl2)
-        else
-          dhdsja(ipos) = DZERO
+
+        ! store for n < m in upper right triangular part of symmetric dhdsja array
+        if (n < m) then
+          if (cl1 + cl2 > DPREC) then
+            this%dhdsja(isympos) = (this%hnew(m) - this%hnew(n)) / (cl1 + cl2)
+          else
+            this%dhdsja(isympos) = DZERO
+          end if
         end if
       end do
     end do
 
     ! pass dhdsja into the vector interpolation to get the components
     ! of the gradient at the cell center
-    call vector_interpolation_2d(this%dis, dhdsja, vmag=this%grad_dhds_mag)
-    deallocate(dhdsja)
+    call vector_interpolation_2d(this%dis, this%dhdsja, vmag=this%grad_dhds_mag)
 
   end subroutine calc_dhds
 
@@ -1196,6 +1205,7 @@ contains
     call mem_deallocate(this%vmag)
     if (this%is2d == 1) then
       call mem_deallocate(this%grad_dhds_mag)
+      call mem_deallocate(this%dhdsja)
     end if
 
     ! Scalars
