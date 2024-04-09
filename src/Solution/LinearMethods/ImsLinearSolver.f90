@@ -1,5 +1,6 @@
 module ImsLinearSolverModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: LENSOLUTIONNAME
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -24,13 +25,15 @@ module ImsLinearSolverModule
 
 contains
 
-  function create_ims_solver() result(solver)
+  function create_ims_solver(sln_name) result(solver)
     class(LinearSolverBaseType), pointer :: solver
+    character(len=LENSOLUTIONNAME) :: sln_name
     ! local
     class(ImsLinearSolverType), pointer :: ims_solver
 
     allocate (ims_solver)
     solver => ims_solver
+    solver%name = sln_name
 
   end function create_ims_solver
 

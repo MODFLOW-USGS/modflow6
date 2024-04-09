@@ -1,5 +1,6 @@
 module LinearSolverBaseModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: LENSOLUTIONNAME
   use MatrixBaseModule
   use VectorBaseModule
   use ImsLinearSettingsModule
@@ -14,6 +15,7 @@ module LinearSolverBaseModule
   !! sequential, parallel, petsc, block solver, ...
   !<
   type, public, abstract :: LinearSolverBaseType
+    character(len=LENSOLUTIONNAME) :: name
     integer(I4B) :: nitermax
     integer(I4B) :: iteration_number
     integer(I4B) :: is_converged

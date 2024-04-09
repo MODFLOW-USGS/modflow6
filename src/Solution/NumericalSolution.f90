@@ -452,7 +452,7 @@ contains
     allocate (this%linear_settings)
     !
     ! -- create linear system matrix and compatible vectors
-    this%linear_solver => create_linear_solver(this%solver_mode)
+    this%linear_solver => create_linear_solver(this%solver_mode, this%name)
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', &
                                                    this%memory_path)

@@ -460,7 +460,7 @@ contains
                        skipafter=1)
     !
     if (simulation_mode == 'PARALLEL' .and. nr_procs == 1) then
-      call store_warning('WARNING. Running parallel MODFLOW on only 1 process')
+      call store_warning('Running parallel MODFLOW on only 1 process')
     end if
     !
   end subroutine initial_message

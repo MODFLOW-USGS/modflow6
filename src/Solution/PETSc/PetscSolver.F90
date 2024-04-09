@@ -2,7 +2,7 @@ module PetscSolverModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -13,7 +13,7 @@ module PetscSolverModule
   use ConvergenceSummaryModule
   use ImsLinearSettingsModule
   use SimVariablesModule, only: iout, simulation_mode
-  use SimModule, only: store_error
+  use SimModule, only: store_error, store_warning
 
   implicit none
   private
@@ -43,6 +43,7 @@ module PetscSolverModule
     procedure :: create_matrix => petsc_create_matrix
 
     ! private
+    procedure, private :: petsc_check_settings
     procedure, private :: get_options_mf6
     procedure, private :: create_ksp
     procedure, private :: create_convergence_check
@@ -56,15 +57,24 @@ contains
 
   !> @brief Create a PETSc solver object
   !<
-  function create_petsc_solver() result(solver)
+  function create_petsc_solver(sln_name) result(solver)
     class(LinearSolverBaseType), pointer :: solver !< Uninitialized instance of the PETSc solver
+    character(len=LENSOLUTIONNAME) :: sln_name !< the solution name
     ! local
     class(PetscSolverType), pointer :: petsc_solver
+    character(len=LINELENGTH) :: errmsg
 
     allocate (petsc_solver)
     allocate (petsc_solver%petsc_ctx)
 
     solver => petsc_solver
+    solver%name = sln_name
+
+    if (simulation_mode /= 'PARALLEL') then
+      write (errmsg, '(a,a)') 'PETSc solver not supported for run mode: ', &
+        trim(simulation_mode)
+      call store_error(errmsg, terminate=.true.)
+    end if
 
   end function create_petsc_solver
 
@@ -77,7 +87,6 @@ contains
     type(ConvergenceSummaryType), pointer :: convergence_summary !< a convergence record for diagnostics
     ! local
     PetscErrorCode :: ierr
-    character(len=LINELENGTH) :: errmsg
 
     this%linear_settings => linear_settings
 
@@ -98,22 +107,16 @@ contains
     call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
 
-    if (linear_settings%ilinmeth == 1) then
+    call this%petsc_check_settings(linear_settings)
+
+    if (linear_settings%ilinmeth == CG_METHOD) then
       this%ksp_type = KSPCG
-    else if (linear_settings%ilinmeth == 2) then
-      this%ksp_type = KSPBCGS
     else
-      write (errmsg, '(a)') 'PETSc: unknown linear solver method.'
-      call store_error(errmsg)
+      this%ksp_type = KSPBCGS
     end if
 
-    if (simulation_mode == "PARALLEL") then
-      this%pc_type = PCBJACOBI
-      this%sub_pc_type = PCILU
-    else
-      this%pc_type = PCILU
-      this%sub_pc_type = PCNONE
-    end if
+    this%pc_type = PCBJACOBI
+    this%sub_pc_type = PCILU
 
     ! get MODFLOW options from PETSc database file
     call this%get_options_mf6()
@@ -125,6 +128,44 @@ contains
     call this%create_convergence_check(convergence_summary)
 
   end subroutine petsc_initialize
+
+  subroutine petsc_check_settings(this, linear_settings)
+    class(PetscSolverType) :: this
+    type(ImsLinearSettingsType), pointer :: linear_settings
+    ! local
+    character(len=LINELENGTH) :: warnmsg, errmsg
+
+    ! errors
+    if (linear_settings%ilinmeth /= CG_METHOD .and. &
+        linear_settings%ilinmeth /= BCGS_METHOD) then
+      write (errmsg, '(a,a)') 'PETSc: unknown linear solver method in ', &
+        this%name
+      call store_error(errmsg, terminate=.true.)
+    end if
+
+    ! warnings
+    if (linear_settings%level > 0) then
+      linear_settings%level = 0
+      write (warnmsg, '(a)') 'PETSc: IMS fill level not supported'
+      call store_warning(warnmsg)
+    end if
+    if (linear_settings%iord > 0) then
+      linear_settings%iord = 0
+      write (warnmsg, '(a)') 'PETSc: IMS reordering not supported'
+      call store_warning(warnmsg)
+    end if
+    if (linear_settings%iscl > 0) then
+      linear_settings%iscl = 0
+      write (warnmsg, '(a)') 'PETSc: IMS matrix scaling not supported'
+      call store_warning(warnmsg)
+    end if
+    if (linear_settings%north > 0) then
+      linear_settings%north = 0
+      write (warnmsg, '(a)') 'PETSc: IMS orthogonalization not supported'
+      call store_warning(warnmsg)
+    end if
+
+  end subroutine petsc_check_settings
 
   !> @brief Print PETSc version string from shared lib
   !<
@@ -145,8 +186,8 @@ contains
     end if
     write (petsc_version, '(i0,a,i0,a,i0,a,a)') &
       major, ".", minor, ".", subminor, " ", trim(release_str)
-    write (iout, '(/,1x,2a,/)') &
-      "PETSc Linear Solver will be used: version ", petsc_version
+    write (iout, '(/,1x,4a,/)') "PETSc Linear Solver will be used for ", &
+      trim(this%name), ": version ", petsc_version
 
   end subroutine print_petsc_version
 
@@ -189,6 +230,9 @@ contains
       call this%set_petsc_pc()
     end if
 
+    call KSPSetErrorIfNotConverged(this%ksp_petsc, .false., ierr)
+    CHKERRQ(ierr)
+
     ! finally override these options from the
     ! optional .petscrc file
     call KSPSetFromOptions(this%ksp_petsc, ierr)
@@ -208,29 +252,20 @@ contains
 
     call KSPGetPC(this%ksp_petsc, pc, ierr)
     CHKERRQ(ierr)
-
     call PCSetType(pc, this%pc_type, ierr)
     CHKERRQ(ierr)
-
     call PCSetFromOptions(pc, ierr)
     CHKERRQ(ierr)
-
     call PCSetUp(pc, ierr)
     CHKERRQ(ierr)
-
-    if (simulation_mode == "PARALLEL") then
-      call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
-      CHKERRQ(ierr)
-      call KSPGetPC(sub_ksp(1), sub_pc, ierr)
-      CHKERRQ(ierr)
-      call PCSetType(sub_pc, this%sub_pc_type, ierr)
-      CHKERRQ(ierr)
-      call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
-      CHKERRQ(ierr)
-    else
-      call PCFactorSetLevels(pc, this%linear_settings%level, ierr)
-      CHKERRQ(ierr)
-    end if
+    call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
+    CHKERRQ(ierr)
+    call KSPGetPC(sub_ksp(1), sub_pc, ierr)
+    CHKERRQ(ierr)
+    call PCSetType(sub_pc, this%sub_pc_type, ierr)
+    CHKERRQ(ierr)
+    call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
+    CHKERRQ(ierr)
 
   end subroutine set_petsc_pc
 
@@ -244,41 +279,26 @@ contains
     PetscInt :: n_local, n_first
     PetscErrorCode :: ierr
 
-    if (simulation_mode == "PARALLEL") then
-      this%sub_pc_type = PCSHELL
+    this%sub_pc_type = PCSHELL
 
-      call KSPGetPC(this%ksp_petsc, pc, ierr)
-      CHKERRQ(ierr)
-      call PCSetType(pc, this%pc_type, ierr)
-      CHKERRQ(ierr)
-      call PCSetUp(pc, ierr)
-      CHKERRQ(ierr)
-      call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
-      CHKERRQ(ierr)
-      call KSPGetPC(sub_ksp(1), sub_pc, ierr)
-      CHKERRQ(ierr)
-      call PCSetType(sub_pc, this%sub_pc_type, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetApply(sub_pc, pcshell_apply, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetSetUp(sub_pc, pcshell_setup, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetContext(sub_pc, this%pc_context, ierr)
-      CHKERRQ(ierr)
-    else
-      this%pc_type = PCSHELL
-
-      call KSPGetPC(this%ksp_petsc, pc, ierr)
-      CHKERRQ(ierr)
-      call PCSetType(pc, PCSHELL, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetApply(pc, pcshell_apply, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetSetUp(pc, pcshell_setup, ierr)
-      CHKERRQ(ierr)
-      call PCShellSetContext(pc, this%pc_context, ierr)
-      CHKERRQ(ierr)
-    end if
+    call KSPGetPC(this%ksp_petsc, pc, ierr)
+    CHKERRQ(ierr)
+    call PCSetType(pc, this%pc_type, ierr)
+    CHKERRQ(ierr)
+    call PCSetUp(pc, ierr)
+    CHKERRQ(ierr)
+    call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
+    CHKERRQ(ierr)
+    call KSPGetPC(sub_ksp(1), sub_pc, ierr)
+    CHKERRQ(ierr)
+    call PCSetType(sub_pc, this%sub_pc_type, ierr)
+    CHKERRQ(ierr)
+    call PCShellSetApply(sub_pc, pcshell_apply, ierr)
+    CHKERRQ(ierr)
+    call PCShellSetSetUp(sub_pc, pcshell_setup, ierr)
+    CHKERRQ(ierr)
+    call PCShellSetContext(sub_pc, this%pc_context, ierr)
+    CHKERRQ(ierr)
 
   end subroutine set_ims_pc
 
@@ -367,8 +387,8 @@ contains
     end if
 
     if (cnvg_reason < 0 .and. cnvg_reason /= KSP_DIVERGED_ITS) then
-      write (errmsg, '(1x,a,i0)') "PETSc convergence failure in linear solve: ", &
-        cnvg_reason
+      write (errmsg, '(1x,3a,i0)') "PETSc convergence failure in ", &
+        trim(this%name), ": ", cnvg_reason
       call store_error(errmsg, terminate=.true.)
     end if
 
@@ -402,10 +422,7 @@ contains
     write (iout, '(1x,a)') repeat('-', 66)
     write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(ksp_str)
     write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(pc_str)
-    if (simulation_mode == "PARALLEL") then
-      write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", &
-        trim(subpc_str)
-    end if
+    write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", trim(subpc_str)
     write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", &
       this%linear_settings%iter1
     write (iout, '(1x,a,a)') &
