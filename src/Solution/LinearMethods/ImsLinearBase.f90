@@ -1175,6 +1175,57 @@ contains
     RETURN
   END SUBROUTINE ims_base_testcnvg
 
+  subroutine ims_calc_pcdims(neq, nja, ia, level, ipc, &
+                             niapc, njapc, njlu, njw, nwlu)
+    integer(I4B), intent(in) :: neq !< nr. of rows A
+    integer(I4B), intent(in) :: nja !< nr. of nonzeros A
+    integer(I4B), dimension(:), intent(in) :: ia !< CSR row pointers A
+    integer(I4B), intent(in) :: level !< fill level ILU
+    integer(I4B), intent(in) :: ipc !< IMS preconditioner type
+    integer(I4B), intent(inout) :: niapc !< work array size
+    integer(I4B), intent(inout) :: njapc !< work array size
+    integer(I4B), intent(inout) :: njlu !< work array size
+    integer(I4B), intent(inout) :: njw !< work array size
+    integer(I4B), intent(inout) :: nwlu !< work array size
+    ! local
+    integer(I4B) :: n, i
+    integer(I4B) :: ijlu, ijw, iwlu, iwk
+
+    ijlu = 1
+    ijw = 1
+    iwlu = 1
+
+    ! ILU0 and MILU0
+    niapc = neq
+    njapc = nja
+
+    ! ILUT and MILUT
+    if (ipc == 3 .or. ipc == 4) then
+      niapc = neq
+      if (level > 0) then
+        iwk = neq * (level * 2 + 1)
+      else
+        iwk = 0
+        do n = 1, neq
+          i = ia(n + 1) - ia(n)
+          if (i > iwk) then
+            iwk = i
+          end if
+        end do
+        iwk = neq * iwk
+      end if
+      njapc = iwk
+      ijlu = iwk
+      ijw = 2 * neq
+      iwlu = neq + 1
+    end if
+
+    njlu = ijlu
+    njw = ijw
+    nwlu = iwlu
+
+  end subroutine ims_calc_pcdims
+
   !> @ brief Generate CRS pointers for the preconditioner
   !!
   !!  Generate the CRS row and column pointers for the preconditioner.

@@ -2,6 +2,7 @@ module PetscConvergenceModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DPREC
   use ListModule
   use ConvergenceSummaryModule
   implicit none
@@ -88,7 +89,7 @@ contains
     ! n == 0 is before the iteration starts
     if (n == 0) then
       context%rnorm_L2_init = rnorm
-      if (rnorm == 0.0) then
+      if (rnorm < DPREC) then
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
       else
@@ -176,6 +177,10 @@ contains
       if (n == context%max_its) then
         flag = KSP_DIVERGED_ITS
       end if
+    end if
+    if (rnorm < DPREC) then
+      ! exact solution, set to 'converged'
+      flag = KSP_CONVERGED_HAPPY_BREAKDOWN
     end if
 
   end subroutine petsc_check_convergence

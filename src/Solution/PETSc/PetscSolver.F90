@@ -99,15 +99,15 @@ contains
       this%mat_petsc => pm%mat
     end select
 
+    call this%petsc_check_settings(linear_settings)
+
     this%use_ims_pc = .true. ! default is true, override with .petscrc
     allocate (this%pc_context)
-    call this%pc_context%create(this%matrix, linear_settings%relax)
+    call this%pc_context%create(this%matrix, linear_settings)
 
     allocate (this%vec_residual)
     call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
-
-    call this%petsc_check_settings(linear_settings)
 
     if (linear_settings%ilinmeth == CG_METHOD) then
       this%ksp_type = KSPCG
@@ -144,11 +144,6 @@ contains
     end if
 
     ! warnings
-    if (linear_settings%level > 0) then
-      linear_settings%level = 0
-      write (warnmsg, '(a)') 'PETSc: IMS fill level not supported'
-      call store_warning(warnmsg)
-    end if
     if (linear_settings%iord > 0) then
       linear_settings%iord = 0
       write (warnmsg, '(a)') 'PETSc: IMS reordering not supported'
@@ -398,7 +393,7 @@ contains
     class(PetscSolverType) :: this
     ! local
     character(len=128) :: ksp_str, pc_str, subpc_str, &
-                          dvclose_str, rclose_str, relax_str
+                          dvclose_str, rclose_str, relax_str, dtol_str
     integer :: ierr
     PC :: pc
 
@@ -409,7 +404,7 @@ contains
     call PCGetType(pc, pc_str, ierr)
     CHKERRQ(ierr)
     if (this%use_ims_pc) then
-      subpc_str = 'IMS ILU'
+      subpc_str = this%pc_context%ims_pc_type
     else
       subpc_str = this%sub_pc_type
     end if
@@ -417,6 +412,7 @@ contains
     write (dvclose_str, '(e15.5)') this%linear_settings%dvclose
     write (rclose_str, '(e15.5)') this%linear_settings%rclose
     write (relax_str, '(e15.5)') this%linear_settings%relax
+    write (dtol_str, '(e15.5)') this%linear_settings%droptol
 
     write (iout, '(/,7x,a)') "PETSc linear solver settings: "
     write (iout, '(1x,a)') repeat('-', 66)
@@ -433,8 +429,10 @@ contains
       "Residual convergence option:  ", this%linear_settings%icnvgopt
     write (iout, '(1x,a,a)') &
       "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
-    write (iout, '(1x,a,i0,/)') &
+    write (iout, '(1x,a,i0)') &
       "Fill level in factorization:  ", this%linear_settings%level
+    write (iout, '(1x,a,a,/)') &
+      "Drop tolerance level fill:    ", trim(adjustl(dtol_str))
 
   end subroutine petsc_print_summary
 
