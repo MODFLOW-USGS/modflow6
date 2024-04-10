@@ -142,6 +142,7 @@ jobs:
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
+          frozen: true
 
       - name: Build modflow6
         working-directory: modflow6
