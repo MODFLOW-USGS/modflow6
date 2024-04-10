@@ -17,7 +17,7 @@ module SwfStoModule
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
-  use SwfDislModule, only: SwfDislType
+  use Disv1dModule, only: Disv1dType
   use SwfCxsModule, only: SwfCxsType
 
   implicit none
@@ -269,7 +269,7 @@ contains
     end if
 
     call this%dis%get_dis_type(distype)
-    if (distype == 'DISL') then
+    if (distype == 'DISV1D') then
       call this%sto_fc_dis1d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
     else
       call this%sto_fc_dis2d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
@@ -749,8 +749,8 @@ contains
     ptr => null()
     dis => this%dis
     select type (dis)
-    type is (SwfDislType)
-      ptr => dis%reach_length
+    type is (Disv1dType)
+      ptr => dis%length
     end select
 
   end function reach_length_pointer

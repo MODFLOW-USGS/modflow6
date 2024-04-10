@@ -23,10 +23,8 @@ module TrackModule
 
   !> @brief Manages particle track (i.e. pathline) files.
   !!
-  !! Optionally filters events ("ireason" codes), e.g. release
-  !! or cell-to-cell transitions. Events ("ireason" codes) are:
+  !! Optionally filters events ("ireason" codes, selectable in the PRT-OC pkg):
   !!
-  !!   -1: ALL
   !!    0: RELEASE: particle is released
   !!    1: TRANSIT: particle moves from cell to cell
   !!    2: TIMESTEP: timestep ends
@@ -34,7 +32,7 @@ module TrackModule
   !!    4: WEAKSINK: particle exits a weak sink
   !!    5: USERTIME: user-specified tracking time
   !!
-  !! An arbitrary number of files can be managed. internal arrays
+  !! An arbitrary number of files can be managed. Internal arrays
   !! are resized as needed.
   !<
   type :: TrackFileControlType

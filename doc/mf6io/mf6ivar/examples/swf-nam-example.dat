@@ -3,7 +3,7 @@ BEGIN options
 END options
 
 BEGIN packages
-  DISL6  swfmodel.disl
+  DISV1D6  swfmodel.disv1d
   DFW6  swfmodel.dfw
   STO6  swfmodel.sto
   IC6  swfmodel.ic

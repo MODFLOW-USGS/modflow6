@@ -117,7 +117,6 @@ contains
 
   !> @brief Apply Pollock's method to a rectangular cell
   subroutine apply_mcp(this, particle, tmax)
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodCellPollockType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -144,8 +143,7 @@ contains
       ! -- the particle state to output file(s).
       if (particle%z > cell%defn%top) then
         particle%z = cell%defn%top
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=1) ! reason=1: cell transition
+        call this%save(particle, reason=1) ! reason=1: cell transition
       end if
 
       !  Transform particle location into local cell coordinates

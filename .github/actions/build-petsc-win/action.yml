@@ -1,0 +1,81 @@
+name: Build PETSc (Windows)
+description: Build PETSc on Windows with Cygwin
+runs:
+  using: "composite"
+  steps:
+
+    - name: Convert line endings
+      shell: cmd
+      run: |
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\configure_petsc.sh" "%TEMP%\configure_petsc.sh"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\compile_petsc.sh" "%TEMP%\compile_petsc.sh"
+
+    - name: Hide Strawberry programs
+      shell: bash
+      run: |
+        mkdir "$RUNNER_TEMP/strawberry"
+        mv /c/Strawberry/c/bin/gmake "$RUNNER_TEMP/strawberry/gmake"
+        mv /c/Strawberry/perl/bin/pkg-config "$RUNNER_TEMP/strawberry/pkg-config"
+        mv /c/Strawberry/perl/bin/pkg-config.bat "$RUNNER_TEMP/strawberry/pkg-config.bat"
+
+    - name: Get date
+      id: get-date
+      shell: bash
+      run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
+
+    - name: Setup oneAPI
+      uses: ./modflow6/.github/actions/setup-par-oneapi
+
+    - name: Restore PETSc cache
+      id: petsc-cache
+      uses: actions/cache/restore@v3
+      with:
+        path: petsc
+        key: petsc-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+
+    - name: Download PETSc
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        curl https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-3.20.5.tar.gz -O -J
+        mkdir petsc
+        tar -xzf petsc-3.20.5.tar.gz -C petsc --strip-components=1
+
+    - name: Setup Cygwin
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      uses: egor-tensin/setup-cygwin@v4
+      with:
+        packages: python3 make gcc-core gcc-g++ pkg-config
+
+    - name: Hide Cygwin linker
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+      run: mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
+
+    - name: Configure PETSc
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      shell: cmd
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\configure_petsc.sh"
+
+    - name: Build PETSc
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      shell: cmd
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "C:\tools\cygwin\bin\bash.exe" --login --norc -eo pipefail -o igncr "%TEMP%\compile_petsc.sh"
+
+    - name: Save PETSc cache
+      if: steps.petsc-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: petsc
+        key: petsc-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+
+    - name: Setup PETSC environment
+      shell: cmd
+      run: |
+        set PETSC_DIR=%GITHUB_WORKSPACE%\petsc
+        set PETSC_ARCH=arch-mswin-c-opt
+        echo PETSC_DIR=%PETSC_DIR%>>%GITHUB_ENV%
+        echo PETSC_ARCH=%PETSC_ARCH%>>%GITHUB_ENV%
+        echo %PETSC_DIR%\%PETSC_ARCH%\lib>>%GITHUB_PATH%

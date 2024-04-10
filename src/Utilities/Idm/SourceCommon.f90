@@ -282,6 +282,32 @@ contains
         call store_error_filename(fname)
       end if
       !
+    case ('DIS2D6')
+      !
+      call get_isize('NROW', dis_mempath, dim1_size)
+      call get_isize('NCOL', dis_mempath, dim2_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NROW" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim2_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NCOL" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1 .and. dim2_size >= 1) then
+        call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NROW', dis_mempath)
+        call mem_setptr(ndim2, 'NCOL', dis_mempath)
+        model_shape = [ndim1, ndim2]
+      else
+        call store_error_filename(fname)
+      end if
+      !
     case ('DISV6')
       !
       call get_isize('NLAY', dis_mempath, dim1_size)
@@ -307,7 +333,7 @@ contains
       else
         call store_error_filename(fname)
       end if
-    case ('DISU6', 'DISL6')
+    case ('DISU6', 'DISV1D6')
       !
       call get_isize('NODES', dis_mempath, dim1_size)
       !
@@ -321,6 +347,11 @@ contains
       call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
       call mem_setptr(ndim1, 'NODES', dis_mempath)
       model_shape = [ndim1]
+    case default
+      errmsg = 'Unknown discretization type.  IDM cannot set shape for "' &
+               //trim(ftype)//"'"
+      call store_error(errmsg)
+      call store_error_filename(fname)
     end select
     !
     ! -- allocate and set ncelldim in model input context

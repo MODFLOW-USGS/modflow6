@@ -88,7 +88,7 @@ def build_models(idx, test):
     sim.register_ims_package(imsswf, [swf.name])
 
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
@@ -97,13 +97,13 @@ def build_models(idx, test):
 
     reach_bottom = np.linspace(1.05, 0.05, nreach)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=dx,
-        reach_bottom=reach_bottom,
+        length=dx,
+        width=dx,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -114,7 +114,6 @@ def build_models(idx, test):
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
-        slope=0.05 / 500.0,
         idcxs=None,
     )
 
@@ -231,7 +230,7 @@ def check_output(idx, test):
 
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.disl.reach_bottom.array
+    depth = stage_all[-1] - swf.disv1d.bottom.array
     np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"

@@ -11,7 +11,6 @@ module MethodDisModule
   use DisModule, only: DisType
   use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: get_ijk, get_jk
-  use ArrayHandlersModule, only: ExpandArray
   implicit none
 
   private
@@ -136,8 +135,6 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_dis(this, particle)
-    ! -- modules
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -175,8 +172,7 @@ contains
           ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
           particle%istatus = 2 ! kluge note: use -2 to allow check for transfer to another model???
           particle%advancing = .false.
-          call this%trackfilectl%save(particle, kper=kper, &
-                                      kstp=kstp, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3) ! reason=3: termination
           ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
@@ -285,7 +281,6 @@ contains
       call this%load_nbrs_to_defn(defn)
 
       ! -- Load 180 degree face indicators
-      call ExpandArray(defn%ispv180, defn%npolyverts + 1)
       defn%ispv180(1:defn%npolyverts + 1) = .false.
 
       ! -- Load flows (assumes face neighbors already loaded)
@@ -314,9 +309,6 @@ contains
     integer(I4B) :: klay1
     integer(I4B) :: klay2
     integer(I4B) :: iedgeface
-
-    ! -- Allocate facenbr array
-    call ExpandArray(defn%facenbr, defn%npolyverts + 3)
 
     select type (dis => this%fmi%dis)
     type is (DisType)
@@ -379,9 +371,6 @@ contains
 
     ic = defn%icell
     npolyverts = defn%npolyverts
-
-    ! -- allocate faceflow array
-    call ExpandArray(defn%faceflow, npolyverts + 3)
 
     ! -- Load face flows.
     defn%faceflow = 0d0 ! kluge note: eventually use DZERO for 0d0 throughout

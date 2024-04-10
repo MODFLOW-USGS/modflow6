@@ -54,6 +54,8 @@ on:
       distname:
         description: 'Distribution name used for release'
         value: ${{ jobs.build.outputs.distname }}
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   build:
     name: Build binaries (${{ matrix.os }}, parallel=${{ matrix.parallel }})
@@ -95,6 +97,12 @@ jobs:
           repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
           ref: ${{ inputs.branch }}
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
+        with:
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1

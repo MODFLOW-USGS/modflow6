@@ -1,4 +1,4 @@
-module SwfDislModule
+module Disv1dModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME, DZERO, DONE, LINELENGTH
@@ -9,33 +9,29 @@ module SwfDislModule
                        store_warning, store_error_filename
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
-  use DislGeom, only: calcdist
+  use Disv1dGeom, only: calcdist
 
   implicit none
 
   private
-  public :: disl_cr
-  public :: SwfDislType
+  public :: disv1d_cr
+  public :: Disv1dType
 
-  type, extends(DisBaseType) :: SwfDislType
+  type, extends(DisBaseType) :: Disv1dType
     integer(I4B), pointer :: nvert => null() !< number of x,y vertices
-    real(DP), pointer :: convlength => null() !< conversion factor for length
-    real(DP), pointer :: convtime => null() !< conversion factor for time
-    real(DP), dimension(:), pointer, contiguous :: reach_length => null() !< length of each reach
-    real(DP), dimension(:), pointer, contiguous :: reach_width => null() !< reach width
-    real(DP), dimension(:), pointer, contiguous :: reach_bottom => null() !< reach bottom elevation
-    integer(I4B), dimension(:), pointer, contiguous :: toreach => null() !< downstream reach index (nodes)
+    real(DP), dimension(:), pointer, contiguous :: length => null() !< length of each reach
+    real(DP), dimension(:), pointer, contiguous :: width => null() !< reach width
+    real(DP), dimension(:), pointer, contiguous :: bottom => null() !< reach bottom elevation
     integer(I4B), dimension(:), pointer, contiguous :: idomain => null() !< idomain (nodes)
-    real(DP), dimension(:, :), pointer, contiguous :: vertices => null() !< cell vertices stored as 2d array with columns of x, y, and z
-    real(DP), dimension(:, :), pointer, contiguous :: cellxyz => null() !< reach midpoints stored as 2d array with columns of x, y, and z
+    real(DP), dimension(:, :), pointer, contiguous :: vertices => null() !< cell vertices stored as 2d array with columns of x, y
+    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() !< reach midpoints stored as 2d array with columns of x, y
     real(DP), dimension(:), pointer, contiguous :: fdc => null() !< fdc stored as array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null() !< cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null() !< cell vertex pointer ja array
-    logical(LGP) :: toreachConnectivity = .false. !< flag to indicate build connectivity from toreach instead of vertices
   contains
-    procedure :: disl_load
-    procedure :: dis_df => disl_df
-    procedure :: dis_da => disl_da
+    procedure :: disv1d_load => disv1d_load
+    procedure :: dis_df => disv1d_df
+    procedure :: dis_da => disv1d_da
     procedure :: get_dis_type => get_dis_type
     procedure :: get_flow_width => get_flow_width
     procedure, public :: record_array
@@ -60,11 +56,33 @@ module SwfDislModule
     procedure :: nodeu_to_string
     procedure :: nodeu_from_string
 
-  end type SwfDislType
+  end type Disv1dType
+
+  !> @brief Simplifies tracking parameters sourced from the input context.
+  type DisFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nodes = .false.
+    logical :: nvert = .false.
+    logical :: length = .false.
+    logical :: width = .false.
+    logical :: bottom = .false.
+    logical :: idomain = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: fdc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+  end type DisFoundType
 
 contains
 
-  subroutine disl_cr(dis, name_model, input_mempath, inunit, iout)
+  subroutine disv1d_cr(dis, name_model, input_mempath, inunit, iout)
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -75,11 +93,11 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- locals
-    type(SwfDislType), pointer :: disnew
+    type(Disv1dType), pointer :: disnew
     logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
-      "(1X, /1X, 'DISL -- LINE NETWORK DISCRETIZATION PACKAGE,', &
-      &' VERSION 1 : 3/30/2023 - INPUT READ FROM MEMPATH: ', A, /)"
+      "(1X, /1X, 'DISV1D -- DISCRETIZATION BY VERTICES IN 1D PACKAGE,', &
+      &' VERSION 1 : 4/2/2024 - INPUT READ FROM MEMPATH: ', A, /)"
     allocate (disnew)
     dis => disnew
     call disnew%allocate_scalars(name_model, input_mempath)
@@ -103,32 +121,32 @@ contains
     !
     ! -- Return
     return
-  end subroutine disl_cr
+  end subroutine disv1d_cr
 
   !> @brief Define the discretization
   !<
-  subroutine disl_df(this)
+  subroutine disv1d_df(this)
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     !
     ! -- Transfer the data from the memory manager into this package object
     if (this%inunit /= 0) then
-      call this%disl_load()
+      call this%disv1d_load()
     end if
 
-    ! create connectivity using toreach or vertices and cell2d
+    ! create connectivity using vertices and cell2d
     call this%create_connections()
 
     ! finalize the grid
     call this%grid_finalize()
 
-  end subroutine disl_df
+  end subroutine disv1d_df
 
-  !> @brief Get the discretization type (DIS, DISV, DISU, DISL)
+  !> @brief Get the discretization type (DIS, DIS2D, DISV, DISV2D, DISU)
   subroutine get_dis_type(this, dis_type)
-    class(SwfDislType), intent(in) :: this
+    class(Disv1dType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
-    dis_type = "DISL"
+    dis_type = "DISV1D"
   end subroutine get_dis_type
 
   !> @brief Allocate scalar variables
@@ -138,7 +156,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DONE
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     character(len=*), intent(in) :: name_model
     character(len=*), intent(in) :: input_mempath
     !
@@ -147,22 +165,18 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%nvert, 'NVERT', this%memoryPath)
-    call mem_allocate(this%convlength, 'CONVLENGTH', this%memoryPath)
-    call mem_allocate(this%convtime, 'CONVTIME', this%memoryPath)
     !
     ! -- Initialize
     this%nvert = 0
     this%ndim = 1
-    this%convlength = DONE
-    this%convtime = DONE
     !
     ! -- Return
     return
   end subroutine allocate_scalars
 
-  subroutine disl_load(this)
+  subroutine disv1d_load(this)
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- locals
     !
     ! -- source input data
@@ -176,7 +190,7 @@ contains
       call this%source_cell2d()
     end if
 
-  end subroutine disl_load
+  end subroutine disv1d_load
 
   !> @brief Copy options from IDM into package
   !<
@@ -185,25 +199,20 @@ contains
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
-    use SwfDislInputModule, only: SwfDislParamFoundType
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
-    type(SwfDislParamFoundType) :: found
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(DisFoundType) :: found
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', &
                        idmMemoryPath, lenunits, found%length_units)
-    call mem_set_value(this%convlength, 'CONVLENGTH', &
-                       idmMemoryPath, found%length_convert)
-    call mem_set_value(this%convtime, 'CONVTIME', &
-                       idmMemoryPath, found%time_convert)
     call mem_set_value(this%nogrb, 'NOGRB', &
                        idmMemoryPath, found%nogrb)
     call mem_set_value(this%xorigin, 'XORIGIN', &
@@ -225,9 +234,8 @@ contains
   !> @brief Write user options to list file
   !<
   subroutine log_options(this, found)
-    use SwfDislInputModule, only: SwfDislParamFoundType
-    class(SwfDislType) :: this
-    type(SwfDislParamFoundType), intent(in) :: found
+    class(Disv1dType) :: this
+    type(DisFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
@@ -253,14 +261,6 @@ contains
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
 
-    if (found%length_convert) then
-      write (this%iout, '(4x,a,G0)') 'LENGTH_CONVERSION = ', this%convlength
-    end if
-
-    if (found%time_convert) then
-      write (this%iout, '(4x,a,G0)') 'TIME_CONVERSION = ', this%convtime
-    end if
-
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
 
   end subroutine log_options
@@ -271,16 +271,15 @@ contains
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
-    use SwfDislInputModule, only: SwfDislParamFoundType
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: n
-    type(SwfDislParamFoundType) :: found
+    type(DisFoundType) :: found
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%nodes, 'NODES', idmMemoryPath, found%nodes)
@@ -303,19 +302,17 @@ contains
     if (this%nvert < 1) then
       call store_warning( &
         'NVERT was not specified or was specified as zero.  The &
-        &VERTICES and CELL2D blocks will not be read for the DISL6 &
+        &VERTICES and CELL2D blocks will not be read for the DISV1D6 &
         &Package in model '//trim(this%memoryPath)//'.')
     end if
     !
-    ! -- Allocate non-reduced vectors for disl
-    call mem_allocate(this%reach_length, this%nodesuser, &
-                      'REACH_LENGTH', this%memoryPath)
-    call mem_allocate(this%reach_width, this%nodesuser, &
-                      'REACH_WIDTH', this%memoryPath)
-    call mem_allocate(this%reach_bottom, this%nodesuser, &
-                      'REACH_BOTTOM', this%memoryPath)
-    call mem_allocate(this%toreach, this%nodesuser, &
-                      'TOREACH', this%memoryPath)
+    ! -- Allocate non-reduced vectors for disv1d
+    call mem_allocate(this%length, this%nodesuser, &
+                      'LENGTH', this%memoryPath)
+    call mem_allocate(this%width, this%nodesuser, &
+                      'WIDTH', this%memoryPath)
+    call mem_allocate(this%bottom, this%nodesuser, &
+                      'BOTTOM', this%memoryPath)
     call mem_allocate(this%idomain, this%nodesuser, &
                       'IDOMAIN', this%memoryPath)
     !
@@ -325,16 +322,15 @@ contains
                         'VERTICES', this%memoryPath)
       call mem_allocate(this%fdc, this%nodesuser, &
                         'FDC', this%memoryPath)
-      call mem_allocate(this%cellxyz, 3, this%nodesuser, &
+      call mem_allocate(this%cellxy, 3, this%nodesuser, &
                         'CELLXYZ', this%memoryPath)
     end if
     !
     ! -- initialize all cells to be active (idomain = 1)
     do n = 1, this%nodesuser
-      this%reach_length(n) = DZERO
-      this%reach_width(n) = DZERO
-      this%reach_bottom(n) = DZERO
-      this%toreach(n) = 0
+      this%length(n) = DZERO
+      this%width(n) = DZERO
+      this%bottom(n) = DZERO
       this%idomain(n) = 1
     end do
     !
@@ -345,9 +341,8 @@ contains
   !> @brief Write dimensions to list file
   !<
   subroutine log_dimensions(this, found)
-    use SwfDislInputModule, only: SwfDislParamFoundType
-    class(SwfDislType) :: this
-    type(SwfDislParamFoundType), intent(in) :: found
+    class(Disv1dType) :: this
+    type(DisFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
 
@@ -367,43 +362,37 @@ contains
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
-    use SwfDislInputModule, only: SwfDislParamFoundType
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    type(SwfDislParamFoundType) :: found
+    type(DisFoundType) :: found
     ! -- formats
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%reach_length, 'REACH_LENGTH', idmMemoryPath, &
-                       found%reach_length)
-    call mem_set_value(this%reach_width, 'REACH_WIDTH', idmMemoryPath, &
-                       found%reach_width)
-    call mem_set_value(this%reach_bottom, 'REACH_BOTTOM', idmMemoryPath, &
-                       found%reach_bottom)
-    call mem_set_value(this%toreach, 'TOREACH', idmMemoryPath, &
-                       found%toreach)
-    if (found%toreach) then
-      this%toreachConnectivity = .true.
-    end if
+    call mem_set_value(this%length, 'LENGTH', idmMemoryPath, &
+                       found%length)
+    call mem_set_value(this%width, 'WIDTH', idmMemoryPath, &
+                       found%width)
+    call mem_set_value(this%bottom, 'BOTTOM', idmMemoryPath, &
+                       found%bottom)
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
 
-    if (.not. found%reach_length) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_LENGTH not found.'
+    if (.not. found%length) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: LENGTH not found.'
       call store_error(errmsg)
     end if
 
-    if (.not. found%reach_width) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_WIDTH not found.'
+    if (.not. found%width) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: WIDTH not found.'
       call store_error(errmsg)
     end if
 
-    if (.not. found%reach_bottom) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: REACH_BOTTOM not found.'
+    if (.not. found%bottom) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: BOTTOM not found.'
       call store_error(errmsg)
     end if
 
@@ -423,26 +412,21 @@ contains
   !> @brief Write griddata found to list file
   !<
   subroutine log_griddata(this, found)
-    use SwfDislInputModule, only: SwfDislParamFoundType
-    class(SwfDislType) :: this
-    type(SwfDislParamFoundType), intent(in) :: found
+    class(Disv1dType) :: this
+    type(DisFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
 
-    if (found%reach_length) then
-      write (this%iout, '(4x,a)') 'REACH_LENGTH set from input file'
+    if (found%length) then
+      write (this%iout, '(4x,a)') 'LENGTH set from input file'
     end if
 
-    if (found%reach_width) then
-      write (this%iout, '(4x,a)') 'REACH_WIDTH set from input file'
+    if (found%width) then
+      write (this%iout, '(4x,a)') 'WIDTH set from input file'
     end if
 
-    if (found%reach_bottom) then
-      write (this%iout, '(4x,a)') 'REACH_BOTTOM set from input file'
-    end if
-
-    if (found%toreach) then
-      write (this%iout, '(4x,a)') 'TOREACH set from input file'
+    if (found%bottom) then
+      write (this%iout, '(4x,a)') 'BOTTOM set from input file'
     end if
 
     if (found%idomain) then
@@ -462,30 +446,26 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- local
     integer(I4B) :: i
     character(len=LENMEMPATH) :: idmMemoryPath
     real(DP), dimension(:), contiguous, pointer :: vert_x => null()
     real(DP), dimension(:), contiguous, pointer :: vert_y => null()
-    real(DP), dimension(:), contiguous, pointer :: vert_z => null()
     ! -- formats
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- set pointers to memory manager input arrays
     call mem_setptr(vert_x, 'XV', idmMemoryPath)
     call mem_setptr(vert_y, 'YV', idmMemoryPath)
-    call mem_setptr(vert_z, 'ZV', idmMemoryPath)
     !
     ! -- set vertices 3d array
-    if (associated(vert_x) .and. associated(vert_y) .and. &
-        associated(vert_z)) then
+    if (associated(vert_x) .and. associated(vert_y)) then
       do i = 1, this%nvert
         this%vertices(1, i) = vert_x(i)
         this%vertices(2, i) = vert_y(i)
-        this%vertices(3, i) = vert_z(i)
       end do
     else
       call store_error('Required Vertex arrays not found.')
@@ -511,7 +491,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
@@ -522,7 +502,7 @@ contains
     ! -- formats
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISL', idm_context)
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- set pointers to input path ncvert and icvert
     call mem_setptr(icell2d, 'ICELL2D', idmMemoryPath)
@@ -545,8 +525,8 @@ contains
       do i = 1, this%nodesuser
         this%fdc(i) = fdc(i)
       end do
-      call calculate_cellxyz(this%vertices, this%fdc, this%iavert, &
-                             this%javert, this%cellxyz)
+      call calculate_cellxy(this%vertices, this%fdc, this%iavert, &
+                            this%javert, this%cellxy)
     else
       call store_error('Required fdc array not found.')
     end if
@@ -569,7 +549,7 @@ contains
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icell2d
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: ncvert
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icvert
@@ -604,23 +584,23 @@ contains
     return
   end subroutine define_cellverts
 
-  !> @brief Calculate x, y, z coordinates of reach midpoint
+  !> @brief Calculate x, y, coordinates of reach midpoint
   !<
-  subroutine calculate_cellxyz(vertices, fdc, iavert, javert, cellxyz)
+  subroutine calculate_cellxy(vertices, fdc, iavert, javert, cellxy)
     ! -- dummy
-    real(DP), dimension(:, :), intent(in) :: vertices !< 2d array of vertices with x, y, and z as columns
+    real(DP), dimension(:, :), intent(in) :: vertices !< 2d array of vertices with x, y as columns
     real(DP), dimension(:), intent(in) :: fdc !< fractional distance to reach midpoint (normally 0.5)
     integer(I4B), dimension(:), intent(in) :: iavert !< csr mapping of vertices to cell reaches
     integer(I4B), dimension(:), intent(in) :: javert !< csr mapping of vertices to cell reaches
-    real(DP), dimension(:, :), intent(inout) :: cellxyz !< 2d array of reach midpoint with x, y, and z as columns
+    real(DP), dimension(:, :), intent(inout) :: cellxy !< 2d array of reach midpoint with x, y as columns
     ! -- local
     integer(I4B) :: nodes !< number of nodes
     integer(I4B) :: n !< node index
     integer(I4B) :: j !< vertex index
     integer(I4B) :: iv0 !< index for line reach start
     integer(I4B) :: iv1 !< index for linen reach end
-    integer(I4B) :: ixyz !< x, y, z column index
-    real(DP) :: reach_length !< reach length = sum of individual line reaches
+    integer(I4B) :: ixy !< x, y column index
+    real(DP) :: length !< reach length = sum of individual line reaches
     real(DP) :: fd0 !< fractional distance to start of this line reach
     real(DP) :: fd1 !< fractional distance to end fo this line reach
     real(DP) :: fd !< fractional distance where midpoint (defined by fdc) is located
@@ -630,10 +610,10 @@ contains
     do n = 1, nodes
 
       ! calculate length of this reach
-      reach_length = DZERO
+      length = DZERO
       do j = iavert(n), iavert(n + 1) - 2
-        reach_length = reach_length + &
-                       calcdist(vertices, javert(j), javert(j + 1))
+        length = length + &
+                 calcdist(vertices, javert(j), javert(j + 1))
       end do
 
       ! find vertices that span midpoint
@@ -642,7 +622,7 @@ contains
       fd0 = DZERO
       do j = iavert(n), iavert(n + 1) - 2
         d = calcdist(vertices, javert(j), javert(j + 1))
-        fd1 = fd0 + d / reach_length
+        fd1 = fd0 + d / length
 
         ! if true, then we know the midpoint is some fractional distance (fd)
         ! from vertex j to vertex j + 1
@@ -655,14 +635,14 @@ contains
         fd0 = fd1
       end do
 
-      ! find x, y, z position of point on line
-      do ixyz = 1, 3
-        cellxyz(ixyz, n) = (DONE - fd) * vertices(ixyz, iv0) + &
-                           fd * vertices(ixyz, iv1)
+      ! find x, y position of point on line
+      do ixy = 1, 3
+        cellxy(ixy, n) = (DONE - fd) * vertices(ixy, iv0) + &
+                         fd * vertices(ixy, iv1)
       end do
 
     end do
-  end subroutine calculate_cellxyz
+  end subroutine calculate_cellxy
 
   !> @brief Finalize grid construction
   !<
@@ -671,7 +651,7 @@ contains
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
     ! dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! local
     integer(I4B) :: node, noder, k
 
@@ -730,14 +710,14 @@ contains
       end do
     end if
 
-    ! Copy reach_bottom into bot
+    ! Copy bottom into bot
     do node = 1, this%nodesuser
-      this%bot(node) = this%reach_bottom(node)
+      this%bot(node) = this%bottom(node)
     end do
 
-    ! Assign area in DisBaseType as reach_length
+    ! Assign area in DisBaseType as length
     do node = 1, this%nodesuser
-      this%area(node) = this%reach_length(node)
+      this%area(node) = this%length(node)
     end do
 
     ! -- Return
@@ -748,7 +728,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
     ! todo: disbasetype will have memory allocated for unneeded arrays
@@ -774,7 +754,7 @@ contains
   subroutine create_connections(this)
     ! -- modules
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- local
     integer(I4B) :: nrsize
     !
@@ -785,28 +765,17 @@ contains
     ! -- Allocate connections object
     allocate (this%con)
     !
-    ! -- Create connectivity
-    if (this%toreachConnectivity) then
-      ! -- build connectivity based on toreach
-      call this%con%dislconnections(this%name_model, this%toreach, &
-                                    this%reach_length)
-    else
-      ! -- build connectivity based on vertices
-      call this%con%dislconnections_verts(this%name_model, this%nodes, &
+    ! Build connectivity based on vertices
+    call this%con%disv1dconnections_verts(this%name_model, this%nodes, &
                                           this%nodesuser, nrsize, this%nvert, &
                                           this%vertices, this%iavert, &
-                                          this%javert, this%cellxyz, this%fdc, &
+                                          this%javert, this%cellxy, this%fdc, &
                                           this%nodereduced, this%nodeuser, &
-                                          this%reach_length)
-    end if
+                                          this%length)
 
     this%nja = this%con%nja
     this%njas = this%con%njas
 
-    !
-    !
-    ! -- return
-    return
   end subroutine create_connections
 
   !> @brief Write binary grid file
@@ -816,7 +785,7 @@ contains
     use InputOutputModule, only: getunit, openfile
     use OpenSpecModule, only: access, form
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
     ! -- local
     integer(I4B) :: i, iunit, ntxt
@@ -830,7 +799,7 @@ contains
     !
     ! -- Initialize
     ntxt = 9
-    if (this%nvert > 0) ntxt = ntxt + 6
+    if (this%nvert > 0) ntxt = ntxt + 5
     !
     ! -- Open the file
     fname = trim(this%input_fname)//'.grb'
@@ -840,7 +809,7 @@ contains
                   form, access, 'REPLACE')
     !
     ! -- write header information
-    write (txthdr, '(a)') 'GRID DISL'
+    write (txthdr, '(a)') 'GRID DISV1D'
     txthdr(50:50) = new_line('a')
     write (iunit) txthdr
     write (txthdr, '(a)') 'VERSION 1'
@@ -884,16 +853,13 @@ contains
     !
     ! -- if vertices have been read then write additional header information
     if (this%nvert > 0) then
-      write (txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 3 ', this%nvert
+      write (txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 2 ', this%nvert
       txt(lentxt:lentxt) = new_line('a')
       write (iunit) txt
       write (txt, '(3a, i0)') 'CELLX ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
       write (iunit) txt
       write (txt, '(3a, i0)') 'CELLY ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
-      txt(lentxt:lentxt) = new_line('a')
-      write (iunit) txt
-      write (txt, '(3a, i0)') 'CELLZ ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
       write (iunit) txt
       write (txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
@@ -918,9 +884,8 @@ contains
     ! -- if vertices have been read then write additional data
     if (this%nvert > 0) then
       write (iunit) this%vertices ! vertices
-      write (iunit) (this%cellxyz(1, i), i=1, this%nodesuser) ! cellx
-      write (iunit) (this%cellxyz(2, i), i=1, this%nodesuser) ! celly
-      write (iunit) (this%cellxyz(3, i), i=1, this%nodesuser) ! cellz
+      write (iunit) (this%cellxy(1, i), i=1, this%nodesuser) ! cellx
+      write (iunit) (this%cellxy(2, i), i=1, this%nodesuser) ! celly
       write (iunit) this%iavert ! iavert
       write (iunit) this%javert ! javert
     end if
@@ -938,7 +903,7 @@ contains
   !! child classes to perform mapping to a model node number
   !<
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
-    class(SwfDislType), intent(in) :: this
+    class(Disv1dType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     integer(I4B) :: nodenumber
@@ -964,7 +929,7 @@ contains
 
   subroutine nodeu_to_string(this, nodeu, str)
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
@@ -987,7 +952,7 @@ contains
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     integer(I4B), intent(inout) :: lloc
     integer(I4B), intent(inout) :: istart
     integer(I4B), intent(inout) :: istop
@@ -1039,39 +1004,36 @@ contains
 
   end function nodeu_from_string
 
-  subroutine disl_da(this)
+  subroutine disv1d_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     ! -- local
     logical(LGP) :: deallocate_vertices
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name_model, 'DISL', idm_context)
+    call memorylist_remove(this%name_model, 'DISV1D', idm_context)
     !
     ! -- scalars
     deallocate_vertices = (this%nvert > 0)
     call mem_deallocate(this%nvert)
-    call mem_deallocate(this%convlength)
-    call mem_deallocate(this%convtime)
     !
     ! -- arrays
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
-    call mem_deallocate(this%reach_length)
-    call mem_deallocate(this%reach_width)
-    call mem_deallocate(this%reach_bottom)
-    call mem_deallocate(this%toreach)
+    call mem_deallocate(this%length)
+    call mem_deallocate(this%width)
+    call mem_deallocate(this%bottom)
     call mem_deallocate(this%idomain)
     !
     ! -- cdl hack for arrays for vertices and cell2d blocks
     if (deallocate_vertices) then
       call mem_deallocate(this%vertices)
       call mem_deallocate(this%fdc)
-      call mem_deallocate(this%cellxyz)
+      call mem_deallocate(this%cellxy)
       call mem_deallocate(this%iavert)
       call mem_deallocate(this%javert)
     end if
@@ -1081,7 +1043,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine disl_da
+  end subroutine disv1d_da
 
   !> @brief Record a double precision array
   !!
@@ -1095,7 +1057,7 @@ contains
     use TdisModule, only: kstp, kper, pertim, totim, delt
     use InputOutputModule, only: ulasav, ulaprufw, ubdsv1
     ! -- dummy
-    class(SwfDislType), intent(inout) :: this
+    class(Disv1dType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray !< double precision array to record
     integer(I4B), intent(in) :: iout !< unit number for ascii output
     integer(I4B), intent(in) :: iprint !< flag indicating whether or not to print the array
@@ -1189,7 +1151,7 @@ contains
     use TdisModule, only: kstp, kper, pertim, totim, delt
     use InputOutputModule, only: ubdsv06
     ! -- dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     character(len=16), intent(in) :: text
     character(len=16), intent(in) :: textmodel
     character(len=16), intent(in) :: textpackage
@@ -1224,17 +1186,17 @@ contains
   !< width for each cell.
   subroutine get_flow_width(this, n, m, idx_conn, width_n, width_m)
     ! dummy
-    class(SwfDislType) :: this
+    class(Disv1dType) :: this
     integer(I4B), intent(in) :: n !< cell node number
     integer(I4B), intent(in) :: m !< cell node number
     integer(I4B), intent(in) :: idx_conn !< connection index
     real(DP), intent(out) :: width_n !< flow width for cell n
     real(DP), intent(out) :: width_m !< flow width for cell m
 
-    ! For disl case, width_n and width_m can be different
-    width_n = this%reach_width(n)
-    width_m = this%reach_width(m)
+    ! For disv1d case, width_n and width_m can be different
+    width_n = this%width(n)
+    width_m = this%width(m)
 
   end subroutine get_flow_width
 
-end module SwfDislModule
+end module Disv1dModule

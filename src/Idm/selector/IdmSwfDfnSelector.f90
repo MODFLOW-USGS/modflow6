@@ -6,12 +6,13 @@ module IdmSwfDfnSelectorModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   use SwfNamInputModule
-  use SwfDislInputModule
-  use SwfDisInputModule
+  use SwfDisv1DInputModule
+  use SwfDis2DInputModule
   use SwfDisvInputModule
   use SwfCxsInputModule
   use SwfDfwInputModule
   use SwfIcInputModule
+  use SwfCdbInputModule
   use SwfChdInputModule
   use SwfFlwInputModule
   use SwfZdgInputModule
@@ -45,10 +46,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, swf_nam_param_definitions)
-    case ('DISL')
-      call set_param_pointer(input_definition, swf_disl_param_definitions)
-    case ('DIS')
-      call set_param_pointer(input_definition, swf_dis_param_definitions)
+    case ('DISV1D')
+      call set_param_pointer(input_definition, swf_disv1d_param_definitions)
+    case ('DIS2D')
+      call set_param_pointer(input_definition, swf_dis2d_param_definitions)
     case ('DISV')
       call set_param_pointer(input_definition, swf_disv_param_definitions)
     case ('CXS')
@@ -57,6 +58,8 @@ contains
       call set_param_pointer(input_definition, swf_dfw_param_definitions)
     case ('IC')
       call set_param_pointer(input_definition, swf_ic_param_definitions)
+    case ('CDB')
+      call set_param_pointer(input_definition, swf_cdb_param_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, swf_chd_param_definitions)
     case ('FLW')
@@ -75,10 +78,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, swf_nam_aggregate_definitions)
-    case ('DISL')
-      call set_param_pointer(input_definition, swf_disl_aggregate_definitions)
-    case ('DIS')
-      call set_param_pointer(input_definition, swf_dis_aggregate_definitions)
+    case ('DISV1D')
+      call set_param_pointer(input_definition, swf_disv1d_aggregate_definitions)
+    case ('DIS2D')
+      call set_param_pointer(input_definition, swf_dis2d_aggregate_definitions)
     case ('DISV')
       call set_param_pointer(input_definition, swf_disv_aggregate_definitions)
     case ('CXS')
@@ -87,6 +90,8 @@ contains
       call set_param_pointer(input_definition, swf_dfw_aggregate_definitions)
     case ('IC')
       call set_param_pointer(input_definition, swf_ic_aggregate_definitions)
+    case ('CDB')
+      call set_param_pointer(input_definition, swf_cdb_aggregate_definitions)
     case ('CHD')
       call set_param_pointer(input_definition, swf_chd_aggregate_definitions)
     case ('FLW')
@@ -105,10 +110,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_block_pointer(input_definition, swf_nam_block_definitions)
-    case ('DISL')
-      call set_block_pointer(input_definition, swf_disl_block_definitions)
-    case ('DIS')
-      call set_block_pointer(input_definition, swf_dis_block_definitions)
+    case ('DISV1D')
+      call set_block_pointer(input_definition, swf_disv1d_block_definitions)
+    case ('DIS2D')
+      call set_block_pointer(input_definition, swf_dis2d_block_definitions)
     case ('DISV')
       call set_block_pointer(input_definition, swf_disv_block_definitions)
     case ('CXS')
@@ -117,6 +122,8 @@ contains
       call set_block_pointer(input_definition, swf_dfw_block_definitions)
     case ('IC')
       call set_block_pointer(input_definition, swf_ic_block_definitions)
+    case ('CDB')
+      call set_block_pointer(input_definition, swf_cdb_block_definitions)
     case ('CHD')
       call set_block_pointer(input_definition, swf_chd_block_definitions)
     case ('FLW')
@@ -134,10 +141,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       multi_package = swf_nam_multi_package
-    case ('DISL')
-      multi_package = swf_disl_multi_package
-    case ('DIS')
-      multi_package = swf_dis_multi_package
+    case ('DISV1D')
+      multi_package = swf_disv1d_multi_package
+    case ('DIS2D')
+      multi_package = swf_dis2d_multi_package
     case ('DISV')
       multi_package = swf_disv_multi_package
     case ('CXS')
@@ -146,6 +153,8 @@ contains
       multi_package = swf_dfw_multi_package
     case ('IC')
       multi_package = swf_ic_multi_package
+    case ('CDB')
+      multi_package = swf_cdb_multi_package
     case ('CHD')
       multi_package = swf_chd_multi_package
     case ('FLW')
@@ -167,9 +176,9 @@ contains
     select case (subcomponent)
     case ('NAM')
       integrated = .true.
-    case ('DISL')
+    case ('DISV1D')
       integrated = .true.
-    case ('DIS')
+    case ('DIS2D')
       integrated = .true.
     case ('DISV')
       integrated = .true.
@@ -178,6 +187,8 @@ contains
     case ('DFW')
       integrated = .true.
     case ('IC')
+      integrated = .true.
+    case ('CDB')
       integrated = .true.
     case ('CHD')
       integrated = .true.

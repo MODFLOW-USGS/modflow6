@@ -678,6 +678,11 @@ contains
     end if
   end function get_roughness
 
+  !> @brief Calculate and return conveyance
+  !!
+  !! Conveyance = area * hydraulic_radius ** (2/3) / mannings_roughness
+  !! If idcxs = 0 (no cross section specified) then reach is
+  !< hydraulically wide and hydraulic radius is equal to depth.
   function cxs_conveyance(this, idcxs, width, depth, &
                           rough) result(conveyance)
     ! -- modules
@@ -700,7 +705,7 @@ contains
     call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
     if (npts == 0) then
       a = depth * width
-      rh = a / width
+      rh = depth
       conveyance = a * rh**DTWOTHIRDS / rough
     else
       conveyance = get_conveyance(npts, &

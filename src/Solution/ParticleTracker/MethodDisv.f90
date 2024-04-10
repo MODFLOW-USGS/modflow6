@@ -127,7 +127,6 @@ contains
   subroutine pass_disv(this, particle)
     ! -- modules
     use DisvModule, only: DisvType
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -158,8 +157,7 @@ contains
           ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
           particle%istatus = 2 ! kluge note, todo: use -2 to check for transfer to another model???
           particle%advancing = .false.
-          call this%trackfilectl%save(particle, kper=kper, &
-                                      kstp=kstp, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3) ! reason=3: termination
           ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
@@ -378,8 +376,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! -- allocate facenbr array
-    call ExpandArray(defn%facenbr, npolyverts + 3)
+    ! -- expand facenbr array if needed
+    if (size(defn%facenbr) < npolyverts + 3) &
+      call ExpandArray(defn%facenbr, npolyverts + 3)
 
     select type (dis => this%fmi%dis)
     type is (DisvType)
@@ -403,6 +402,7 @@ contains
                              dis%javert(istart2:istop2), &
                              iedgeface)
         if (iedgeface /= 0) then
+
           ! -- Edge (polygon) face neighbor
           defn%facenbr(iedgeface) = int(iloc, 1)
         else
@@ -476,8 +476,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! -- allocate faceflow array
-    call ExpandArray(defn%faceflow, npolyverts + 3)
+    ! -- expand faceflow array if needed
+    if (size(defn%faceflow) < npolyverts + 3) &
+      call ExpandArray(defn%faceflow, npolyverts + 3)
 
     ! -- Load face flows. Note that the faceflow array
     ! -- does not get reallocated if it is already allocated
@@ -687,8 +688,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! -- allocate ispv180 array
-    call ExpandArray(defn%ispv180, npolyverts + 1)
+    ! -- expand ispv180 array if needed
+    if (size(defn%ispv180) < npolyverts + 3) &
+      call ExpandArray(defn%ispv180, npolyverts + 1)
 
     ! -- Load 180-degree indicator.
     ! -- Also, set flags that indicate how cell can be represented.

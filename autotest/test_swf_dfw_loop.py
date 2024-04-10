@@ -64,26 +64,26 @@ def build_models(idx, test):
     )
 
     vertices = [
-        [0, 500.0, 6000.0, 0.0],
-        [1, 500.0, 5000.0, 0.0],
-        [2, 500.0, 4500.0, 0.0],
-        [3, 1000.0, 4500.0, 0.0],
-        [4, 2000.0, 4500.0, 0.0],
-        [5, 3000.0, 4500.0, 0.0],
-        [6, 3500.0, 4500.0, 0.0],
-        [7, 3500.0, 4000.0, 0.0],
-        [8, 3500.0, 3000.0, 0.0],
-        [9, 3500.0, 2500.0, 0.0],
-        [10, 3500.0, 2000.0, 0.0],
-        [11, 3500.0, 1000.0, 0.0],
-        [12, 3500.0, 500.0, 0.0],
-        [13, 4000.0, 500.0, 0.0],
-        [14, 5000.0, 500.0, 0.0],
-        [15, 6000.0, 500.0, 0.0],
-        [16, 500.0, 4000.0, 0.0],
-        [17, 1000.0, 3000.0, 0.0],
-        [18, 2000.0, 2500.0, 0.0],
-        [19, 3000.0, 2500.0, 0.0],
+        [0, 500.0, 6000.0],
+        [1, 500.0, 5000.0],
+        [2, 500.0, 4500.0],
+        [3, 1000.0, 4500.0],
+        [4, 2000.0, 4500.0],
+        [5, 3000.0, 4500.0],
+        [6, 3500.0, 4500.0],
+        [7, 3500.0, 4000.0],
+        [8, 3500.0, 3000.0],
+        [9, 3500.0, 2500.0],
+        [10, 3500.0, 2000.0],
+        [11, 3500.0, 1000.0],
+        [12, 3500.0, 500.0],
+        [13, 4000.0, 500.0],
+        [14, 5000.0, 500.0],
+        [15, 6000.0, 500.0],
+        [16, 500.0, 4000.0],
+        [17, 1000.0, 3000.0],
+        [18, 2000.0, 2500.0],
+        [19, 3000.0, 2500.0],
     ]
 
     cell2d = [
@@ -106,8 +106,6 @@ def build_models(idx, test):
         [16, 0.5, 2, 13, 14],
         [17, 0.5, 2, 14, 15],
     ]
-
-    toreach = [1, 2, 3, 4, 5, 6, 7, 13, 9, 10, 11, 12, 13, 14, 15, 16, 17, -1]
 
     reach_length = [
         1000.0,
@@ -227,14 +225,13 @@ def build_models(idx, test):
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=reach_length,
-        reach_width=1.,
-        reach_bottom=reach_bottom,
-        # toreach=toreach,   # -1 gives 0 in one-based, which means outflow cell
+        length=reach_length,
+        width=1.,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -249,7 +246,6 @@ def build_models(idx, test):
         print_flows=True,
         save_flows=True,
         manningsn=0.03,
-        slope=0.001,
         idcxs=idcxs,
     )
 
@@ -443,7 +439,7 @@ def check_output(idx, test):
     ), f"Max diff with swr is {diff.min(), diff.max()}"
 
     # read the binary grid file
-    fpth = test.workspace / f"{name}.disl.grb"
+    fpth = test.workspace / f"{name}.disv1d.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
     assert ia.shape[0] == grb.nodes + 1, "ia in grb file is not correct size"

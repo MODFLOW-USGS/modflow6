@@ -16,6 +16,7 @@ module PrtDisvInputModule
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
+    logical :: export_ascii = .false.
     logical :: nlay = .false.
     logical :: ncpl = .false.
     logical :: nvert = .false.
@@ -111,6 +112,23 @@ module PrtDisvInputModule
     'ANGROT', & ! tag name
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdisv_export_ascii = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -365,6 +383,7 @@ module PrtDisvInputModule
     prtdisv_xorigin, &
     prtdisv_yorigin, &
     prtdisv_angrot, &
+    prtdisv_export_ascii, &
     prtdisv_nlay, &
     prtdisv_ncpl, &
     prtdisv_nvert, &

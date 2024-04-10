@@ -8,7 +8,6 @@
 ! todo:
 !   Move Newton to FN routines
 !   Implement a proper perturbation epsilon
-!   Is slope input parameter needed?
 !   Parameterize the smoothing depth?
 !
 module SwfDfwModule
@@ -41,9 +40,8 @@ module SwfDfwModule
     integer(I4B), pointer :: icentral => null() !< flag to use central in space weighting (default is upstream weighting)
     real(DP), pointer :: unitconv !< conversion factor used in mannings equation; calculated from timeconv and lengthconv
     real(DP), pointer :: timeconv !< conversion factor from model length units to meters (1.0 if model uses meters for length)
-    real(DP), pointer :: lengthconv !< conversion factor frommodel time units to seconds (1.0 if model uses seconds for time)
+    real(DP), pointer :: lengthconv !< conversion factor from model time units to seconds (1.0 if model uses seconds for time)
     real(DP), dimension(:), pointer, contiguous :: manningsn => null() !< mannings roughness for each reach
-    real(DP), dimension(:), pointer, contiguous :: slope => null() !< slope for each reach
     integer(I4B), dimension(:), pointer, contiguous :: idcxs => null() !< cross section id for each reach
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< set to 1 and is accessed by chd for checking
@@ -83,7 +81,7 @@ module SwfDfwModule
     procedure :: dfw_bd_obs
     procedure :: qcalc
     procedure :: get_cond
-    !procedure :: get_cond_swr
+    procedure :: get_cond_swr
     procedure :: get_cond_n
     procedure :: write_cxs_tables
 
@@ -213,8 +211,6 @@ contains
     ! -- user-provided input
     call mem_allocate(this%manningsn, this%dis%nodes, &
                       'MANNINGSN', this%memoryPath)
-    call mem_allocate(this%slope, this%dis%nodes, &
-                      'SLOPE', this%memoryPath)
     call mem_allocate(this%idcxs, this%dis%nodes, &
                       'IDCXS', this%memoryPath)
     call mem_allocate(this%icelltype, this%dis%nodes, &
@@ -222,7 +218,6 @@ contains
 
     do n = 1, this%dis%nodes
       this%manningsn(n) = DZERO
-      this%slope(n) = DZERO
       this%idcxs(n) = 0
       this%icelltype(n) = 1
     end do
@@ -386,18 +381,11 @@ contains
     ! -- update defaults with idm sourced values
     call mem_set_value(this%manningsn, 'MANNINGSN', &
                        idmMemoryPath, map, found%manningsn)
-    call mem_set_value(this%slope, 'SLOPE', idmMemoryPath, map, found%slope)
     call mem_set_value(this%idcxs, 'IDCXS', idmMemoryPath, map, found%idcxs)
     !
     ! -- ensure MANNINGSN was found
     if (.not. found%manningsn) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: MANNINGSN not found.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- ensure SLOPE was found
-    if (.not. found%slope) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: SLOPE not found.'
       call store_error(errmsg)
     end if
 
@@ -425,10 +413,6 @@ contains
 
     if (found%manningsn) then
       write (this%iout, '(4x,a)') 'MANNINGSN set from input file'
-    end if
-
-    if (found%slope) then
-      write (this%iout, '(4x,a)') 'SLOPE set from input file'
     end if
 
     if (found%idcxs) then
@@ -657,10 +641,10 @@ contains
     real(DP) :: depth_m
     real(DP) :: width_n
     real(DP) :: width_m
-    real(DP) :: range = 1.d-2
+    real(DP) :: range = 1.d-6
     real(DP) :: dydx
     real(DP) :: smooth_factor
-    real(DP) :: denom
+    real(DP) :: length_nm
     real(DP) :: cond
     real(DP) :: cn
     real(DP) :: cm
@@ -668,10 +652,10 @@ contains
     ! we are using a harmonic conductance approach here; however
     ! the SWR Process for MODFLOW-2005/NWT uses length-weighted
     ! average areas and hydraulic radius instead.
-    denom = cln + clm
+    length_nm = cln + clm
     cond = DZERO
-    if (denom > DPREC) then
-      absdhdxsqr = abs((stage_n - stage_m) / denom)**DHALF
+    if (length_nm > DPREC) then
+      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
       if (absdhdxsqr < DPREC) then
         ! TODO: Set this differently somehow?
         absdhdxsqr = 1.e-7
@@ -718,6 +702,97 @@ contains
     end if
 
   end function get_cond
+
+  function get_cond_swr(this, n, m, ipos, stage_n, stage_m, cln, clm) result(cond)
+    ! -- modules
+    use SmoothingModule, only: sQuadratic
+    ! -- dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: n !< number for cell n
+    integer(I4B), intent(in) :: m !< number for cell m
+    integer(I4B), intent(in) :: ipos !< connection number
+    real(DP), intent(in) :: stage_n !< stage in reach n
+    real(DP), intent(in) :: stage_m !< stage in reach m
+    real(DP), intent(in) :: cln !< distance from cell n to shared face with m
+    real(DP), intent(in) :: clm !< distance from cell m to shared face with n
+    ! -- local
+    real(DP) :: absdhdxsqr
+    real(DP) :: depth_n
+    real(DP) :: depth_m
+    real(DP) :: width_n
+    real(DP) :: width_m
+    real(DP) :: range = 1.d-10
+    real(DP) :: dydx
+    real(DP) :: smooth_factor
+    real(DP) :: length_nm
+    real(DP) :: cond
+    real(DP) :: rinvn, rinvm, rinv_avg
+    real(DP) :: area_n, area_m, area_avg
+    real(DP) :: rhn, rhm, rhavg
+    real(DP) :: weight_n
+    real(DP) :: weight_m
+
+    ! Use harmonic weighting for 1/manningsn, but using length-weighted
+    ! averaging for other terms
+    length_nm = cln + clm
+    cond = DZERO
+    if (length_nm > DPREC) then
+      absdhdxsqr = abs((stage_n - stage_m) / length_nm)**DHALF
+      if (absdhdxsqr < DPREC) then
+        ! TODO: Set this differently somehow?
+        absdhdxsqr = 1.e-7
+      end if
+
+      ! -- Calculate depth in each reach
+      depth_n = stage_n - this%dis%bot(n)
+      depth_m = stage_m - this%dis%bot(m)
+
+      ! -- Assign upstream depth, if not central
+      if (this%icentral == 0) then
+        ! -- use upstream weighting
+        if (stage_n > stage_m) then
+          depth_m = depth_n
+        else
+          depth_n = depth_m
+        end if
+      end if
+
+      ! -- Calculate a smoothed depth that goes to zero over
+      !    the specified range
+      call sQuadratic(depth_n, range, dydx, smooth_factor)
+      depth_n = depth_n * smooth_factor
+      call sQuadratic(depth_m, range, dydx, smooth_factor)
+      depth_m = depth_m * smooth_factor
+
+      ! Get the flow widths for n and m from dis package
+      call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
+
+      ! harmonic average for inverse mannings value
+      rinvn = DONE / this%manningsn(n)
+      rinvm = DONE / this%manningsn(m)
+      rinv_avg = DTWO * rinvn * rinvm * (length_nm) / &
+                 (rinvn * clm + rinvm * cln)
+
+      ! linear weight toward node closer to shared face
+      weight_n = clm / length_nm
+      weight_m = DONE - weight_n
+
+      ! average cross sectional flow area
+      area_n = this%cxs%get_area(this%idcxs(n), width_n, depth_n)
+      area_m = this%cxs%get_area(this%idcxs(m), width_m, depth_m)
+      area_avg = weight_n * area_n + weight_m * area_m
+
+      ! average hydraulic radius
+      rhn = depth_n
+      rhm = depth_m
+      rhavg = weight_n * rhn + weight_m * rhm
+      rhavg = rhavg**DTWOTHIRDS
+
+      cond = rinv_avg * area_avg * rhavg / absdhdxsqr / length_nm
+
+    end if
+
+  end function get_cond_swr
 
   !> @brief Calculate half reach conductance
   !!
@@ -937,7 +1012,6 @@ contains
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%manningsn)
-    call mem_deallocate(this%slope)
     call mem_deallocate(this%idcxs)
     call mem_deallocate(this%icelltype)
 

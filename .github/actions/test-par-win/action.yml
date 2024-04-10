@@ -8,21 +8,21 @@ runs:
       uses: ./modflow6/.github/actions/build-par-win
 
     - name: Update flopy
-      working-directory: modflow6/autotest
+      working-directory: modflow6
       shell: cmd
-      run: micromamba run -r "C:\Users\runneradmin\micromamba" -n modflow6 python update_flopy.py
+      run: pixi run update-flopy
 
     - name: Get executables
       working-directory: modflow6/autotest
       shell: cmd
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: micromamba run -r "C:\Users\runneradmin\micromamba" -n modflow6 pytest -v --durations 0 get_exes.py
+      run: pixi run get-exes
 
     - name: Test programs
-      working-directory: modflow6/autotest
       shell: cmd 
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: |
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6.bat" "%TEMP%\test_modflow6.bat"
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"

@@ -24,7 +24,6 @@ cases = [
 
 def build_models(idx, test):
     dx = 500.0
-    nreach = 11
     nper = 1
     perlen = [5040 * 2 * 60.0]  # 7 days (in seconds)
     nstp = [50]  # In SWR report nstp = [5040] and tsmult is 1.
@@ -51,7 +50,7 @@ def build_models(idx, test):
     swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
 
     nouter, ninner = 100, 50
-    hclose, rclose, relax = 1e-8, 1e-8, 1.0
+    hclose, rclose, relax = 1e-6, 1e-8, 1.0
     imsswf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -75,50 +74,26 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsswf, [swf.name])
 
-    # vertices = []
-    # vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
-    # cell2d = []
-    # for j in range(nreach):
-    #     cell2d.append([j, 0.5, 2, j, j + 1])
-    # nodes = len(cell2d)
-    # nvert = len(vertices)
-
-    nlay = 1
     nrow = 11
     ncol = 11
-    botm = np.empty((nlay, nrow, ncol), dtype=float)
+    botm = np.empty((nrow, ncol), dtype=float)
     for i in range(nrow):
-        botm[0, i, :] = np.linspace(1.05, 0.05, nrow)
+        botm[i, :] = np.linspace(1.05, 0.05, nrow)
 
-    dis = flopy.mf6.ModflowSwfdis(
+    dis = flopy.mf6.ModflowSwfdis2D(
         swf,
-        nlay=1,
-        nrow=11,
-        ncol=11,
+        nrow=nrow,
+        ncol=ncol,
         delr=dx,
         delc=dx,
-        top=100.,
         botm=botm,
     )
-
-    # disl = flopy.mf6.ModflowSwfdisl(
-    #     swf,
-    #     nodes=nodes,
-    #     nvert=nvert,
-    #     reach_length=dx,
-    #     reach_width=dx,
-    #     reach_bottom=reach_bottom,
-    #     idomain=1,
-    #     vertices=vertices,
-    #     cell2d=cell2d,
-    # )
 
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
-        slope=0.05 / 500.0,
         idcxs=None,
     )
 
@@ -149,7 +124,7 @@ def build_models(idx, test):
 
     # flw
     qinflow = 23.570
-    spd = [(0, i, 0, qinflow) for i in range(nrow)]
+    spd = [(i, 0, qinflow) for i in range(nrow)]
     flw = flopy.mf6.ModflowSwfflw(
         swf,
         maxbound=len(spd),
@@ -158,7 +133,7 @@ def build_models(idx, test):
         stress_period_data=spd,
     )
 
-    spd = [(0, i, ncol - 1, 1.05) for i in range(nrow)]
+    spd = [(i, ncol - 1, 1.05) for i in range(nrow)]
     chd = flopy.mf6.ModflowSwfchd(
         swf,
         maxbound=len(spd),
@@ -235,7 +210,7 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
     depth = stage_all[-1] - swf.dis.botm.array
-    np.allclose(
+    assert np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"
 

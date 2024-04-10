@@ -6,7 +6,7 @@
 !! Status and remaining tasks
 !!   ONGOING -- Implement SWF infrastructure
 !!   DONE -- Implement Explicit Model Solution (EMS6) to handle explicit models
-!!   DONE -- Implement DISL Package
+!!   DONE -- Implement DISV1D Package
 !!   DONE -- Implement FLW Package to handle lateral and point inflows
 !!   DONE -- Transfer results into the flowja vector
 !!   DONE -- Implement strategy for storing outflow terms and getting them into budget
@@ -27,7 +27,7 @@
 !!   We may need subcells and subtiming to improve accuracy
 !!   Add support for nonlinear Muskingum Cunge
 !!   Deal with the timestep and subtiming issues
-!!   Flopy support for DISL and DISL binary grid file
+!!   Flopy support for DISV1D and DISV1D binary grid file
 !!   Flopy support for .output() method for SWF
 !!   Mover support?
 !!   SWF-SWF Exchange
@@ -114,11 +114,11 @@ module SwfModule
   !! SWF model base package types.  Only listed packages are candidates
   !! for input and these will be loaded in the order specified.
   !<
-  integer(I4B), parameter :: SWF_NBASEPKG = 50
-  character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: SWF_BASEPKG
-  data SWF_BASEPKG/'DISL6', 'DIS6 ', 'DISV6', 'DFW6 ', 'CXS6 ', & !  5
-                  &'OC6  ', 'IC6  ', 'OBS6 ', 'STO6 ', '     ', & ! 10
-                  &40*'     '/ ! 50
+  integer(I4B), parameter :: SWF_NBASEPKG = 9
+  character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: &
+    SWF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV6  ', &
+                   'DFW6   ', 'CXS6   ', 'OC6    ', &
+                   'IC6    ', 'OBS6   ', 'STO6   ']
 
   !> @brief SWF multi package array descriptors
   !!
@@ -127,7 +127,7 @@ module SwfModule
   !<
   integer(I4B), parameter :: SWF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(SWF_NMULTIPKG) :: SWF_MULTIPKG
-  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'ZDG6 ', '     ', '     ', & !  5
+  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', '     ', & !  5
                    &45*'     '/ ! 50
 
   ! -- size of supported model package arrays
@@ -976,6 +976,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use SwfFlwModule, only: flw_create
     use ChdModule, only: chd_create
+    use SwfCdbModule, only: cdb_create
     use SwfZdgModule, only: zdg_create
     ! -- dummy
     class(SwfModelType) :: this
@@ -1001,6 +1002,10 @@ contains
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
       packobj%ictMemPath = create_mem_path(this%name, 'DFW')
+    case ('CDB6')
+      call cdb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath, this%dis, this%cxs, &
+                      this%dfw%lengthconv, this%dfw%timeconv)
     case ('ZDG6')
       call zdg_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath, this%dis, this%cxs, this%dfw%unitconv)
@@ -1036,8 +1041,8 @@ contains
     !
     ! -- Check for required packages. Stop if not present.
     if (indis == 0) then
-      write (errmsg, '(1x,a)') &
-        'Discretization (DISL6) Package not specified.'
+      write (errmsg, '(a)') &
+        'Discretization Package (DISV1D6 or DIS2D6) not specified.'
       call store_error(errmsg)
     end if
     if (this%inic == 0 .and. this%indfw /= 0) then
@@ -1052,8 +1057,9 @@ contains
       call store_error(errmsg)
     end if
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'One or more required package(s) not specified.'
+      write (errmsg, '(a)') 'One or more required package(s) not specified.'
       call store_error(errmsg)
+      call store_error_filename(this%filename)
     end if
     !
     ! -- return
@@ -1127,8 +1133,8 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use SwfDislModule, only: disl_cr
-    use DisModule, only: dis_cr
+    use Disv1dModule, only: disv1d_cr
+    use Dis2dModule, only: dis2d_cr
     use DisvModule, only: disv_cr
     use SwfDfWModule, only: dfw_cr
     use SwfCxsModule, only: cxs_cr
@@ -1147,7 +1153,7 @@ contains
     integer(I4B), dimension(:), contiguous, &
       pointer :: inunits => null()
     character(len=LENMEMPATH) :: model_mempath
-    character(len=LENFTYPE) :: pkgtype
+    character(len=LENPACKAGETYPE) :: pkgtype
     character(len=LENPACKAGENAME) :: pkgname
     character(len=LENMEMPATH) :: mempath
     integer(I4B), pointer :: inunit
@@ -1177,12 +1183,12 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('DISL6')
+      case ('DISV1D6')
         indis = 1
-        call disl_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DIS6')
+        call disv1d_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('DIS2D6')
         indis = 1
-        call dis_cr(this%dis, this%name, mempath, indis, this%iout)
+        call dis2d_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('DISV6')
         indis = 1
         call disv_cr(this%dis, this%name, mempath, indis, this%iout)
@@ -1201,7 +1207,7 @@ contains
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      case ('CHD6', 'FLW6', 'ZDG6')
+      case ('CHD6', 'FLW6', 'CDB6', 'ZDG6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default

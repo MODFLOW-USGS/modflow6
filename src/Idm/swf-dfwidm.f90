@@ -21,7 +21,6 @@ module SwfDfwInputModule
     logical :: filein = .false.
     logical :: obs6_filename = .false.
     logical :: manningsn = .false.
-    logical :: slope = .false.
     logical :: idcxs = .false.
   end type SwfDfwParamFoundType
 
@@ -198,23 +197,6 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdfw_slope = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DFW', & ! subcomponent
-    'GRIDDATA', & ! block
-    'SLOPE', & ! tag name
-    'SLOPE', & ! fortran variable
-    'DOUBLE1D', & ! type
-    'NODES', & ! shape
-    .true., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
     swfdfw_idcxs = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -244,7 +226,6 @@ module SwfDfwInputModule
     swfdfw_filein, &
     swfdfw_obs6_filename, &
     swfdfw_manningsn, &
-    swfdfw_slope, &
     swfdfw_idcxs &
     ]
 

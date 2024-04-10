@@ -535,7 +535,7 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
     if (
         "weli" in name
         and system() == "Darwin"
@@ -552,4 +552,4 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         targets=targets,
         compare=None,
     )
-    test.run()
+    benchmark(test.run)

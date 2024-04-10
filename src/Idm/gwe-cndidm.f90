@@ -13,6 +13,7 @@ module GweCndInputModule
   type GweCndParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
+    logical :: export_ascii = .false.
     logical :: alh = .false.
     logical :: alv = .false.
     logical :: ath1 = .false.
@@ -49,6 +50,23 @@ module GweCndInputModule
     'OPTIONS', & ! block
     'XT3D_RHS', & ! tag name
     'XT3D_RHS', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwecnd_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'CND', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -182,6 +200,7 @@ module GweCndInputModule
     [ &
     gwecnd_xt3d_off, &
     gwecnd_xt3d_rhs, &
+    gwecnd_export_ascii, &
     gwecnd_alh, &
     gwecnd_alv, &
     gwecnd_ath1, &

@@ -6,7 +6,7 @@
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 		\item A new Groundwater Energy (GWE) transport model is introduced to the code base for simulating heat transport in the subsurface.  Additional information for activating the GWE model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  New example problems have been developed for testing and demonstrating GWE capabilities (in addition to other internal tests that help verify the accuracy of GWE); however, additional changes to the code and input may be necessary in response to user needs and further testing.
-	%	\item xxx
+	    \item A new capability has been introduced to create parameter layer export files of user input data for packages including DIS, DISV, IC, NPF, DSP(GWT), MIP(PRT), and CND(GWE).  The number of supported packages is expected to increase in the future.  The capability can be turned on with the package EXPORT\_ARRAY\_ASCII option.  The package parameter export set is pre-defined and currently focuses on griddata.  The number of parameters per package may also increase in the future.
 	%	\item xxx
 	\end{itemize}
 

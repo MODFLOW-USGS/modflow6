@@ -12,6 +12,8 @@ on:
     paths-ignore:
       - '.github/workflows/release.yml'
       - '.hpc/**'
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   rtd_build:
     name: Build ReadTheDocs
@@ -40,19 +42,19 @@ jobs:
           repository: MODFLOW-USGS/usgslatex
           path: usgslatex
 
-      - name: Install Conda environment from environment.yml
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
-          environment-file: modflow6/environment.yml
-          cache-environment: true
-          cache-downloads: true
-
+          pixi-version: "latest"
+          manifest-path: "modflow6/pixi.toml"
+  
       - name: Install additional packages for Sphinx using pip
         working-directory: modflow6/.build_rtd_docs
-        run: pip install -r requirements.rtd.txt
+        run: pixi run pip install -r requirements.rtd.txt
 
       - name: Print python package versions
-        run: pip list
+        working-directory: modflow6
+        run: pixi run pip list
 
       - name: Install TeX Live
         run: |
@@ -65,7 +67,7 @@ jobs:
 
       - name: Test building files from dfn's for LaTeX
         working-directory: modflow6/autotest
-        run: pytest -v build_mfio_tex.py
+        run: pixi run pytest -v build_mfio_tex.py
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
@@ -82,26 +84,35 @@ jobs:
 
       - name: Install extra Python packages
         if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
+        working-directory: modflow6
         run: |
-          pip install -r requirements.pip.txt
-          pip install -r requirements.usgs.txt
+          pixi run pip install -r ../modflow6-examples/etc/requirements.pip.txt
+          pixi run pip install -r ../modflow6-examples/etc/requirements.usgs.txt
 
       - name: Update FloPy
         if: steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6/autotest
-        run: python update_flopy.py
+        run: pixi run update-flopy
+
+      # the example models also need mf2005, triangle and gridgen
+      - name: Install extra executables
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        uses: modflowpy/install-modflow-action@v1
+        with:
+          subset: mf2005,triangle,gridgen
 
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/autotest
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
         run: |
+          cd ../modflow6-examples/autotest
           pytest -v -n auto test_scripts.py --init
           ls -lh ../examples/
 
       - name: Run benchmarks
-        working-directory: modflow6/distribution
-        run: python benchmark.py
+        working-directory: modflow6
+        run: pixi run benchmark
         env:
           GITHUB_TOKEN: ${{ github.token }}
       
@@ -116,8 +127,8 @@ jobs:
           path: modflow6/distribution/run-time-comparison.md
 
       - name: Collect deprecations
-        working-directory: modflow6/doc/mf6io/mf6ivar
-        run: python deprecations.py
+        working-directory: modflow6
+        run: pixi run deprecations
 
       - name: Show deprecations
         working-directory: modflow6/doc/mf6io/mf6ivar/md
@@ -130,8 +141,8 @@ jobs:
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
 
       - name: Run sphinx
-        working-directory: modflow6/.build_rtd_docs
-        run: make html
+        working-directory: modflow6
+        run: pixi run sphinx
       
       - name: Upload results
         uses: actions/upload-artifact@v3
@@ -165,12 +176,11 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       working-directory: .build_rtd_docs
-      distribution-directory: distribution
       common-directory: .github/common
       branch-name: ${GITHUB_REF##*/}
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -183,38 +193,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install doxygen graphviz
 
-      - name: Install Conda environment from environment.yml
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.5.1
         with:
-            environment-file: environment.yml
-            cache-environment: true
-            cache-downloads: true
+          pixi-version: "latest"
 
       - name: Print python package versions
-        run: pip list
+        run: pixi run pip list
 
       - name: update MODFLOW 6 version
-        run: python update_version.py
-        working-directory: ${{env.distribution-directory}}
-
-      - name: update MODFLOW 6 version in Doxyfile
-        run: |
-          import sys
-          import os
-          sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
-          from version import __version__
-          print("Update the Doxyfile with the latest version number")
-          with open("Doxyfile", "r") as fp:
-              lines = fp.readlines()
-
-          tag = "PROJECT_NUMBER"
-          with open("Doxyfile", "w") as fp:
-              for line in lines:
-                  if tag in line:
-                      line = '{}         = "version {}"\n'.format(tag, __version__)
-                  fp.write(line)
-        shell: python
-        working-directory: ${{env.working-directory}}
+        run: pixi run update-version
 
       - name: run doxygen
         run: doxygen

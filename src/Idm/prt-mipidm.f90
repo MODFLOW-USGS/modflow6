@@ -12,6 +12,7 @@ module PrtMipInputModule
 
   type PrtMipParamFoundType
     logical :: zero_method = .false.
+    logical :: export_ascii = .false.
     logical :: porosity = .false.
     logical :: retfactor = .false.
     logical :: izone = .false.
@@ -28,6 +29,23 @@ module PrtMipInputModule
     'ZERO_METHOD', & ! tag name
     'ZERO_METHOD', & ! fortran variable
     'INTEGER', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtmip_export_ascii = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'MIP', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -91,6 +109,7 @@ module PrtMipInputModule
     prt_mip_param_definitions(*) = &
     [ &
     prtmip_zero_method, &
+    prtmip_export_ascii, &
     prtmip_porosity, &
     prtmip_retfactor, &
     prtmip_izone &
