@@ -59,10 +59,10 @@ contains
 
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
-  subroutine petsc_check_convergence(ksp, n, rnorm, flag, context, ierr)
+  subroutine petsc_check_convergence(ksp, n, rnorm_L2, flag, context, ierr)
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
-    PetscReal :: rnorm !< 2-norm (preconditioned) residual value
+    PetscReal :: rnorm_L2 !< 2-norm (preconditioned) residual value
     KSPConvergedReason :: flag !< Converged reason
     class(PetscContextType), pointer :: context !< context
     PetscErrorCode :: ierr !< error
@@ -83,13 +83,11 @@ contains
     ! to avoid a memory leak, KSPBuildSolution doesn't...
     call KSPBuildSolution(ksp, PETSC_NULL_VEC, x, ierr)
     CHKERRQ(ierr)
-    call KSPBuildResidual(ksp, PETSC_NULL_VEC, PETSC_NULL_VEC, res, ierr)
-    CHKERRQ(ierr)
 
     ! n == 0 is before the iteration starts
     if (n == 0) then
-      context%rnorm_L2_init = rnorm
-      if (rnorm < DPREC) then
+      context%rnorm_L2_init = rnorm_L2
+      if (rnorm_L2 < DPREC) then
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
       else
@@ -97,11 +95,12 @@ contains
         CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
-
-      call VecDestroy(res, ierr)
       CHKERRQ(ierr)
       return
     end if
+
+    call KSPBuildResidual(ksp, PETSC_NULL_VEC, PETSC_NULL_VEC, res, ierr)
+    CHKERRQ(ierr)
 
     ! increment iteration counter
     summary%iter_cnt = summary%iter_cnt + 1
@@ -124,7 +123,7 @@ contains
     CHKERRQ(ierr)
 
     rnorm_inf = 0.0
-    if (context%icnvgopt == 0 .OR. context%icnvgopt == 1) then
+    if (context%icnvgopt == 0 .or. context%icnvgopt == 1) then
       call VecNorm(res, NORM_INFINITY, rnorm_inf, ierr)
       CHKERRQ(ierr)
     end if
@@ -171,14 +170,14 @@ contains
     call VecDestroy(res, ierr)
     CHKERRQ(ierr)
 
-    flag = apply_check(context, n, xnorm_inf, rnorm, rnorm) ! TODO_MJR: toggle rnorm to inf
+    flag = apply_check(context, n, xnorm_inf, rnorm_inf, rnorm_L2)
     if (flag == KSP_CONVERGED_ITERATING) then
       ! not yet converged, max. iters reached? Then stop.
       if (n == context%max_its) then
         flag = KSP_DIVERGED_ITS
       end if
     end if
-    if (rnorm < DPREC) then
+    if (rnorm_L2 < DPREC) then
       ! exact solution, set to 'converged'
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN
     end if
