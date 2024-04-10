@@ -47,7 +47,6 @@ jobs:
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-          frozen: true
   
       - name: Install additional packages for Sphinx using pip
         working-directory: modflow6/.build_rtd_docs
@@ -198,7 +197,6 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.5.1
         with:
           pixi-version: "latest"
-          frozen: true
 
       - name: Print python package versions
         run: pixi run pip list

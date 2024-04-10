@@ -16,7 +16,6 @@ jobs:
         with:
           pixi-version: "latest"
           cache: false
-          frozen: true
 
       - name: Update pixi lock file
         run: |

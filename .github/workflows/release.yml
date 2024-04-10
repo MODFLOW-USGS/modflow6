@@ -103,7 +103,6 @@ jobs:
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-          frozen: true
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1

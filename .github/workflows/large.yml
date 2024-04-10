@@ -71,7 +71,6 @@ jobs:
         with:
           pixi-version: "latest"
           manifest-path: "modflow6/pixi.toml"
-          frozen: true
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         uses: fortran-lang/setup-fortran@v1
