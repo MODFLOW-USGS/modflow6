@@ -55,6 +55,7 @@ if fc_id == 'gcc'
   system = build_machine.system()
   if system == 'linux'
     compile_args += '-D__linux__'
+    compile_args += '-D_REENTRANT'
   elif system == 'darwin'
     compile_args += '-D__APPLE__'
   elif system == 'windows'
