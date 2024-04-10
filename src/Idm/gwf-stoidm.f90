@@ -18,9 +18,9 @@ module GwfStoInputModule
     logical :: tvs6 = .false.
     logical :: filein = .false.
     logical :: tvs6_filename = .false.
+    logical :: export_ascii = .false.
     logical :: iorig_ss = .false.
     logical :: iconf_ss = .false.
-    logical :: export_ascii = .false.
     logical :: iconvert = .false.
     logical :: ss = .false.
     logical :: sy = .false.
@@ -150,6 +150,23 @@ module GwfStoInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfsto_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'STO', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfsto_iorig_ss = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -174,23 +191,6 @@ module GwfStoInputModule
     'OPTIONS', & ! block
     'DEV_OLDSTORAGEFORMULATION', & ! tag name
     'ICONF_SS', & ! fortran variable
-    'KEYWORD', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    gwfsto_export_ascii = InputParamDefinitionType &
-    ( &
-    'GWF', & ! component
-    'STO', & ! subcomponent
-    'OPTIONS', & ! block
-    'EXPORT_ARRAY_ASCII', & ! tag name
-    'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -295,9 +295,9 @@ module GwfStoInputModule
     gwfsto_tvs6, &
     gwfsto_filein, &
     gwfsto_tvs6_filename, &
+    gwfsto_export_ascii, &
     gwfsto_iorig_ss, &
     gwfsto_iconf_ss, &
-    gwfsto_export_ascii, &
     gwfsto_iconvert, &
     gwfsto_ss, &
     gwfsto_sy, &
