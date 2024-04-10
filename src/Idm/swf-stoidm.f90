@@ -12,6 +12,7 @@ module SwfStoInputModule
 
   type SwfStoParamFoundType
     logical :: ipakcb = .false.
+    logical :: export_ascii = .false.
     logical :: steady_state = .false.
     logical :: transient = .false.
   end type SwfStoParamFoundType
@@ -26,6 +27,23 @@ module SwfStoInputModule
     'OPTIONS', & ! block
     'SAVE_FLOWS', & ! tag name
     'IPAKCB', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfsto_export_ascii = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'STO', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -73,6 +91,7 @@ module SwfStoInputModule
     swf_sto_param_definitions(*) = &
     [ &
     swfsto_ipakcb, &
+    swfsto_export_ascii, &
     swfsto_steady_state, &
     swfsto_transient &
     ]
