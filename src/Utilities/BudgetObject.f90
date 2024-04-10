@@ -459,7 +459,7 @@ contains
 
   !> @brief Write the budget table
   !<
-  subroutine write_budtable(this, kstp, kper, iout, ibudfl, totim)
+  subroutine write_budtable(this, kstp, kper, iout, ibudfl, totim, delt)
     ! -- dummy
     class(BudgetObjectType) :: this
     integer(I4B), intent(in) :: kstp
@@ -467,8 +467,10 @@ contains
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ibudfl
     real(DP), intent(in) :: totim
+    real(DP), intent(in) :: delt
     !
     ! -- Write the table
+    call this%budtable%finalize_step(delt)
     if (ibudfl /= 0) then
       call this%budtable%budget_ot(kstp, kper, iout)
     end if

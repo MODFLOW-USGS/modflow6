@@ -634,6 +634,7 @@ contains
     call this%budget%addentry(this%budterm, delt, budtxt, isuppress_output)
     !
     ! -- Write budget to list file
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       call this%budget%budget_ot(kstp, kper, iout)
     end if

@@ -484,7 +484,6 @@ contains
     ! -- locals
     integer(I4B) :: i, j, n
     real(DP), allocatable, dimension(:) :: ratin, ratout
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate and initialize ratin/ratout
     allocate (ratin(this%maxpackages), ratout(this%maxpackages))
@@ -525,6 +524,7 @@ contains
     end do
     !
     ! -- Write the budget
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       call this%budget%budget_ot(kstp, kper, this%iout)
     end if
