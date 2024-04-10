@@ -53,6 +53,7 @@ def build_models(idx, test):
     flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
+        no_ptcrecord="NO_PTC ALL",
         linear_acceleration=linear_acceleration,
         outer_maximum=nouter,
         outer_dvclose=hclose_outer,
