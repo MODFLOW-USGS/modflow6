@@ -16,10 +16,12 @@ module SwfDfwInputModule
     logical :: timeconv = .false.
     logical :: ipakcb = .false.
     logical :: iprflow = .false.
+    logical :: isavvelocity = .false.
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: filein = .false.
     logical :: obs6_filename = .false.
+    logical :: iswrcond = .false.
     logical :: manningsn = .false.
     logical :: idcxs = .false.
   end type SwfDfwParamFoundType
@@ -112,6 +114,23 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    swfdfw_isavvelocity = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DFW', & ! subcomponent
+    'OPTIONS', & ! block
+    'SAVE_VELOCITY', & ! tag name
+    'ISAVVELOCITY', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     swfdfw_obs_filerecord = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -180,6 +199,23 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    swfdfw_iswrcond = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DFW', & ! subcomponent
+    'OPTIONS', & ! block
+    'DEV_SWR_CONDUCTANCE', & ! tag name
+    'ISWRCOND', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     swfdfw_manningsn = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -221,10 +257,12 @@ module SwfDfwInputModule
     swfdfw_timeconv, &
     swfdfw_ipakcb, &
     swfdfw_iprflow, &
+    swfdfw_isavvelocity, &
     swfdfw_obs_filerecord, &
     swfdfw_obs6, &
     swfdfw_filein, &
     swfdfw_obs6_filename, &
+    swfdfw_iswrcond, &
     swfdfw_manningsn, &
     swfdfw_idcxs &
     ]

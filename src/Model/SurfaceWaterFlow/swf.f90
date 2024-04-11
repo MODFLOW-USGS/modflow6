@@ -391,7 +391,7 @@ contains
     !
     ! -- Call dis_ar to write binary grid file
     call this%dis%dis_ar(itemp)
-    if (this%indfw > 0) call this%dfw%dfw_ar(this%ibound)
+    if (this%indfw > 0) call this%dfw%dfw_ar(this%ibound, this%x)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%inobs > 0) call this%obs%swf_obs_ar(this%ic, this%x, this%flowja)
     deallocate (itemp)
@@ -703,6 +703,14 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
+    !
+    ! -- dfw velocities have to be calculated here, after swf-swf exchanges
+    !    have passed in their contributions from exg_cq()
+    if (this%indfw > 0) then
+      if (this%dfw%icalcvelocity /= 0) then
+        call this%dfw%calc_velocity(this%flowja)
+      end if
+    end if
     !
     ! -- Return
     return

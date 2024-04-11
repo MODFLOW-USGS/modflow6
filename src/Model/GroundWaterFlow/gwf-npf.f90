@@ -1055,9 +1055,10 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
+
+    ! pointers
+    this%hnew => null()
+
   end subroutine npf_da
 
   !> @ brief Allocate scalars
@@ -2425,7 +2426,7 @@ contains
     return
   end function hy_eff
 
-  !> @brief Calculate the 3 conmponents of specific discharge at the cell center
+  !> @brief Calculate the 3 components of specific discharge at the cell center
   !<
   subroutine calc_spdis(this, flowja)
     ! -- modules
