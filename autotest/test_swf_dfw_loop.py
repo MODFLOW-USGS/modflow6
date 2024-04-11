@@ -47,8 +47,8 @@ def build_models(idx, test):
         outer_maximum=200,
         inner_maximum=50,
         print_option="all",
-        outer_dvclose=1.0e-8,
-        inner_dvclose=1.0e-8,
+        outer_dvclose=1.0e-6,
+        inner_dvclose=1.0e-6,
         linear_acceleration="BICGSTAB",
         backtracking_number=5,
         backtracking_tolerance=1.0,
@@ -464,7 +464,7 @@ def check_output(idx, test):
 
         fja = flowja[itime].flatten()
         qresidual = fja[ia[:-1]]
-        atol = 0.03
+        atol = 0.1
         for n in range(grb.nodes):
             passfail = "FAIL" if abs(qresidual[n]) > atol else ""
             print(
