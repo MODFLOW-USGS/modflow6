@@ -294,12 +294,9 @@ def get_kij_from_node(node, nrow, ncol):
 def budcsv_to_cumulative(fpth):
     budcsv = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
     nrow = budcsv.shape[0]
-    budcsv_cumulative = budcsv.copy()
-    budcsv_cumulative.resize(nrow + 1)
-    budcsv_cumulative["time"][0] = 0.
+    budcsv_cumulative = np.zeros((nrow + 1), dtype=budcsv.dtype)
     budcsv_cumulative["time"][1:] = budcsv["time"][:]
     for name in budcsv.dtype.names[1:]:
-        budcsv_cumulative[name][0] = 0.
         for i in range(nrow):
             dt = budcsv_cumulative["time"][i + 1] - budcsv_cumulative["time"][i]
             budcsv_cumulative[name][i + 1] = budcsv_cumulative[name][i] + budcsv[name][i] * dt
