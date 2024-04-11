@@ -18,12 +18,12 @@
 	%\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
-	%\underline{BASIC FUNCTIONALITY}
-	%\begin{itemize}
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item When the Adaptive Time Step (ATS) Package was activated, and failed time steps were rerun successfully using a shorter time step, the cumulative budgets reported in the listing files were incorrect.  Cumulative budgets included contributions from the failed time steps.  The program was fixed so that cumulative budgets are not tallied until the time step is finalized.
+		\item For multi-model groundwater flow simulations that use the Buoyancy (BUY) Package, variable-density terms were not included, in all cases, along the interface between two GWF models.  The program was corrected so that flows between two GWF models include the variable-density terms when the BUY Package is active.
 	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	%\underline{INTERNAL FLOW PACKAGES}
 	%\begin{itemize}
