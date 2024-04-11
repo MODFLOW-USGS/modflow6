@@ -157,7 +157,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openjpeg-2.5.2-h488ebb8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.2.1-hd590300_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.1-py39hddac248_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.2-py39hddac248_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.50.14-ha41ecd1_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-0.12.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pcre2-10.43-hcad00b1_0.conda
@@ -205,7 +205,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.1-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4-py39hd1e30aa_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.3.25-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.11.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h0c530f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/unicodedata2-15.1.0-py39hd1e30aa_0.conda
@@ -235,10 +235,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.17.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.2.13-hd590300_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.5-hfc55251_0.conda
-      - pypi: https://files.pythonhosted.org/packages/31/a2/2f12e3a6e45935ff694654b710961b03310b0e1ec997ee9f416d3c873f87/contourpy-1.2.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/modflowpy/flopy.git@9e87acddcf0740aac491826ef86fd45ae2304dac
-      - pypi: https://files.pythonhosted.org/packages/8b/c6/636f008104908a93b80419f756be755bb91df4b8a0c88d5158bb52c82c3a/fonttools-4.51.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/5e/2c/513395a63a9e1124a5648addbf73be23cc603f955af026b04416da98dc96/matplotlib-3.8.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/MODFLOW-USGS/modflow-devtools.git@08eff72b73da66541f7a08ddf398298210ce3758
       - pypi: git+https://github.com/MODFLOW-USGS/modflowapi.git@0c632e511fb54068d14dcdff44c572ccb6e8831f
       osx-64:
@@ -355,7 +352,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/openjpeg-2.5.2-h7310d3a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/openssl-3.2.1-hd75f5a5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-64/pandas-2.2.1-py39haf03413_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/pandas-2.2.2-py39haf03413_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/pango-1.50.14-h19c1c8a_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-0.12.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/pcre2-10.43-h0ad2156_0.conda
@@ -397,7 +394,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.1-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tornado-6.4-py39ha09f3b3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.3.25-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.11.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h0c530f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/unicodedata2-15.1.0-py39hdc70f33_0.conda
@@ -411,10 +408,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.17.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-1.2.13-h8a1eda9_5.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.5-h829000d_0.conda
-      - pypi: https://files.pythonhosted.org/packages/e9/1e/09f0fdf21d3a71e298cfbc1944eb1f74c1f025ca6193f6c75caa35e27b10/contourpy-1.2.1-cp39-cp39-macosx_10_9_x86_64.whl
       - pypi: git+https://github.com/modflowpy/flopy.git@9e87acddcf0740aac491826ef86fd45ae2304dac
-      - pypi: https://files.pythonhosted.org/packages/bb/4c/16629110b4fccedd985a9fd953490a99e2449a120f065a093dea2898dad8/fonttools-4.51.0-cp39-cp39-macosx_10_9_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/84/5f/a0c7a4ce9cc96d3e592c44d1c0f2ebdf5f101e25ced2c14902ae7faa4ff4/matplotlib-3.8.4-cp39-cp39-macosx_10_12_x86_64.whl
       - pypi: git+https://github.com/MODFLOW-USGS/modflow-devtools.git@08eff72b73da66541f7a08ddf398298210ce3758
       - pypi: git+https://github.com/MODFLOW-USGS/modflowapi.git@0c632e511fb54068d14dcdff44c572ccb6e8831f
       osx-arm64:
@@ -531,7 +525,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/openjpeg-2.5.2-h9f1df11_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/openssl-3.2.1-h0d3ecfb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-2.2.1-py39h47e51b9_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-2.2.2-py39h47e51b9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pango-1.50.14-hcf40dda_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-0.12.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pcre2-10.43-h26f9a81_0.conda
@@ -573,7 +567,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.1-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4-py39h17cfd9d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.3.25-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.11.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h0c530f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/unicodedata2-15.1.0-py39h0f82c59_0.conda
@@ -587,10 +581,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.17.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.2.13-h53f4e23_5.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.5-h4f39d0f_0.conda
-      - pypi: https://files.pythonhosted.org/packages/1e/f5/8a0e688c3a6098a358fa359da6a09a7b9afd8f3f6c9b83e9898c29e87b95/contourpy-1.2.1-cp39-cp39-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/modflowpy/flopy.git@9e87acddcf0740aac491826ef86fd45ae2304dac
-      - pypi: https://files.pythonhosted.org/packages/3e/d8/db820b6243325f29e93de36273fdd48f3c1dce7fa859be5ed3708e174eba/fonttools-4.51.0-cp39-cp39-macosx_10_9_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/d5/88/83aee628339486de57fcc8c1387e28de816182edcfc42928cff02c364664/matplotlib-3.8.4-cp39-cp39-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/MODFLOW-USGS/modflow-devtools.git@08eff72b73da66541f7a08ddf398298210ce3758
       - pypi: git+https://github.com/MODFLOW-USGS/modflowapi.git@0c632e511fb54068d14dcdff44c572ccb6e8831f
       win-64:
@@ -713,7 +704,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/openjpeg-2.5.2-h3d672ee_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.2.1-hcfcfb64_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/win-64/pandas-2.2.1-py39h32e6231_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/pandas-2.2.2-py39h32e6231_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pango-1.50.14-h07c897b_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-0.12.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pcre2-10.43-h17e33f8_0.conda
@@ -762,7 +753,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.1-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/win-64/tornado-6.4-py39ha55989b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.3.25-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.11.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h0c530f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.22621.0-h57928b3_0.tar.bz2
@@ -790,10 +781,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.17.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zlib-1.2.13-hcfcfb64_5.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.5-h12be248_0.conda
-      - pypi: https://files.pythonhosted.org/packages/62/5c/08e3a7a35762c8decb6be01c7ec1f4b5f85ef2e2fbb44af87e9caf25a879/contourpy-1.2.1-cp39-cp39-win_amd64.whl
       - pypi: git+https://github.com/modflowpy/flopy.git@9e87acddcf0740aac491826ef86fd45ae2304dac
-      - pypi: https://files.pythonhosted.org/packages/5e/62/ec6247534b077c9627e745d8046027ae363ed6d6407f8010650439ecbda1/fonttools-4.51.0-cp39-cp39-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/54/af/17195cf1f43cd3be79b15aecc5b7e44ea08456bd0048ad8dcd3a5fd45c45/matplotlib-3.8.4-cp39-cp39-win_amd64.whl
       - pypi: git+https://github.com/MODFLOW-USGS/modflow-devtools.git@08eff72b73da66541f7a08ddf398298210ce3758
       - pypi: git+https://github.com/MODFLOW-USGS/modflowapi.git@0c632e511fb54068d14dcdff44c572ccb6e8831f
 packages:
@@ -1596,102 +1584,6 @@ packages:
   - pkg:pypi/configargparse@1.7
   size: 39491
   timestamp: 1690138171226
-- kind: pypi
-  name: contourpy
-  version: 1.2.1
-  url: https://files.pythonhosted.org/packages/e9/1e/09f0fdf21d3a71e298cfbc1944eb1f74c1f025ca6193f6c75caa35e27b10/contourpy-1.2.1-cp39-cp39-macosx_10_9_x86_64.whl
-  sha256: bb6834cbd983b19f06908b45bfc2dad6ac9479ae04abe923a275b5f48f1a186b
-  requires_dist:
-  - numpy >=1.20
-  - furo ; extra == 'docs'
-  - sphinx >=7.2 ; extra == 'docs'
-  - sphinx-copybutton ; extra == 'docs'
-  - bokeh ; extra == 'bokeh'
-  - selenium ; extra == 'bokeh'
-  - contourpy[bokeh,docs] ; extra == 'mypy'
-  - docutils-stubs ; extra == 'mypy'
-  - mypy ==1.8.0 ; extra == 'mypy'
-  - types-pillow ; extra == 'mypy'
-  - contourpy[test-no-images] ; extra == 'test'
-  - matplotlib ; extra == 'test'
-  - pillow ; extra == 'test'
-  - pytest ; extra == 'test-no-images'
-  - pytest-cov ; extra == 'test-no-images'
-  - pytest-xdist ; extra == 'test-no-images'
-  - wurlitzer ; extra == 'test-no-images'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: contourpy
-  version: 1.2.1
-  url: https://files.pythonhosted.org/packages/31/a2/2f12e3a6e45935ff694654b710961b03310b0e1ec997ee9f416d3c873f87/contourpy-1.2.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  sha256: e1d59258c3c67c865435d8fbeb35f8c59b8bef3d6f46c1f29f6123556af28445
-  requires_dist:
-  - numpy >=1.20
-  - furo ; extra == 'docs'
-  - sphinx >=7.2 ; extra == 'docs'
-  - sphinx-copybutton ; extra == 'docs'
-  - bokeh ; extra == 'bokeh'
-  - selenium ; extra == 'bokeh'
-  - contourpy[bokeh,docs] ; extra == 'mypy'
-  - docutils-stubs ; extra == 'mypy'
-  - mypy ==1.8.0 ; extra == 'mypy'
-  - types-pillow ; extra == 'mypy'
-  - contourpy[test-no-images] ; extra == 'test'
-  - matplotlib ; extra == 'test'
-  - pillow ; extra == 'test'
-  - pytest ; extra == 'test-no-images'
-  - pytest-cov ; extra == 'test-no-images'
-  - pytest-xdist ; extra == 'test-no-images'
-  - wurlitzer ; extra == 'test-no-images'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: contourpy
-  version: 1.2.1
-  url: https://files.pythonhosted.org/packages/62/5c/08e3a7a35762c8decb6be01c7ec1f4b5f85ef2e2fbb44af87e9caf25a879/contourpy-1.2.1-cp39-cp39-win_amd64.whl
-  sha256: 10a37ae557aabf2509c79715cd20b62e4c7c28b8cd62dd7d99e5ed3ce28c3fd9
-  requires_dist:
-  - numpy >=1.20
-  - furo ; extra == 'docs'
-  - sphinx >=7.2 ; extra == 'docs'
-  - sphinx-copybutton ; extra == 'docs'
-  - bokeh ; extra == 'bokeh'
-  - selenium ; extra == 'bokeh'
-  - contourpy[bokeh,docs] ; extra == 'mypy'
-  - docutils-stubs ; extra == 'mypy'
-  - mypy ==1.8.0 ; extra == 'mypy'
-  - types-pillow ; extra == 'mypy'
-  - contourpy[test-no-images] ; extra == 'test'
-  - matplotlib ; extra == 'test'
-  - pillow ; extra == 'test'
-  - pytest ; extra == 'test-no-images'
-  - pytest-cov ; extra == 'test-no-images'
-  - pytest-xdist ; extra == 'test-no-images'
-  - wurlitzer ; extra == 'test-no-images'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: contourpy
-  version: 1.2.1
-  url: https://files.pythonhosted.org/packages/1e/f5/8a0e688c3a6098a358fa359da6a09a7b9afd8f3f6c9b83e9898c29e87b95/contourpy-1.2.1-cp39-cp39-macosx_11_0_arm64.whl
-  sha256: 1d59e739ab0e3520e62a26c60707cc3ab0365d2f8fecea74bfe4de72dc56388f
-  requires_dist:
-  - numpy >=1.20
-  - furo ; extra == 'docs'
-  - sphinx >=7.2 ; extra == 'docs'
-  - sphinx-copybutton ; extra == 'docs'
-  - bokeh ; extra == 'bokeh'
-  - selenium ; extra == 'bokeh'
-  - contourpy[bokeh,docs] ; extra == 'mypy'
-  - docutils-stubs ; extra == 'mypy'
-  - mypy ==1.8.0 ; extra == 'mypy'
-  - types-pillow ; extra == 'mypy'
-  - contourpy[test-no-images] ; extra == 'test'
-  - matplotlib ; extra == 'test'
-  - pillow ; extra == 'test'
-  - pytest ; extra == 'test-no-images'
-  - pytest-cov ; extra == 'test-no-images'
-  - pytest-xdist ; extra == 'test-no-images'
-  - wurlitzer ; extra == 'test-no-images'
-  requires_python: '>=3.9'
 - kind: conda
   name: contourpy
   version: 1.2.1
@@ -1707,6 +1599,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/contourpy@1.2.1
   size: 232611
   timestamp: 1712430213507
 - kind: conda
@@ -1726,6 +1620,8 @@ packages:
   - vc14_runtime >=14.29.30139
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/contourpy@1.2.1
   size: 186813
   timestamp: 1712430556544
 - kind: conda
@@ -1744,6 +1640,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/contourpy@1.2.1
   size: 225466
   timestamp: 1712430376578
 - kind: conda
@@ -1762,6 +1660,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/contourpy@1.2.1
   size: 241771
   timestamp: 1712430062056
 - kind: conda
@@ -1845,6 +1745,8 @@ packages:
   - python >=3.8
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/execnet@2.1.1
   size: 38883
   timestamp: 1712591929944
 - kind: conda
@@ -1916,6 +1818,8 @@ packages:
   depends:
   - python >=3.7
   license: Unlicense
+  purls:
+  - pkg:pypi/filelock@3.13.4
   size: 15707
   timestamp: 1712686250786
 - kind: conda
@@ -2144,154 +2048,6 @@ packages:
   license_family: BSD
   size: 4102
   timestamp: 1566932280397
-- kind: pypi
-  name: fonttools
-  version: 4.51.0
-  url: https://files.pythonhosted.org/packages/bb/4c/16629110b4fccedd985a9fd953490a99e2449a120f065a093dea2898dad8/fonttools-4.51.0-cp39-cp39-macosx_10_9_x86_64.whl
-  sha256: f7e89853d8bea103c8e3514b9f9dc86b5b4120afb4583b57eb10dfa5afbe0936
-  requires_dist:
-  - fs <3, >=2.2.0 ; extra == 'all'
-  - lxml >=4.0 ; extra == 'all'
-  - zopfli >=0.1.4 ; extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'all'
-  - pycairo ; extra == 'all'
-  - matplotlib ; extra == 'all'
-  - sympy ; extra == 'all'
-  - skia-pathops >=0.5.0 ; extra == 'all'
-  - uharfbuzz >=0.23.0 ; extra == 'all'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'all'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'all'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'all'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'all'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'all'
-  - xattr ; sys_platform == 'darwin' and extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'graphite'
-  - pycairo ; extra == 'interpolatable'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'interpolatable'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'interpolatable'
-  - lxml >=4.0 ; extra == 'lxml'
-  - skia-pathops >=0.5.0 ; extra == 'pathops'
-  - matplotlib ; extra == 'plot'
-  - uharfbuzz >=0.23.0 ; extra == 'repacker'
-  - sympy ; extra == 'symfont'
-  - xattr ; sys_platform == 'darwin' and extra == 'type1'
-  - fs <3, >=2.2.0 ; extra == 'ufo'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'unicode'
-  - zopfli >=0.1.4 ; extra == 'woff'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'woff'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'woff'
-  requires_python: '>=3.8'
-- kind: pypi
-  name: fonttools
-  version: 4.51.0
-  url: https://files.pythonhosted.org/packages/8b/c6/636f008104908a93b80419f756be755bb91df4b8a0c88d5158bb52c82c3a/fonttools-4.51.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  sha256: 0d145976194a5242fdd22df18a1b451481a88071feadf251221af110ca8f00ce
-  requires_dist:
-  - fs <3, >=2.2.0 ; extra == 'all'
-  - lxml >=4.0 ; extra == 'all'
-  - zopfli >=0.1.4 ; extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'all'
-  - pycairo ; extra == 'all'
-  - matplotlib ; extra == 'all'
-  - sympy ; extra == 'all'
-  - skia-pathops >=0.5.0 ; extra == 'all'
-  - uharfbuzz >=0.23.0 ; extra == 'all'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'all'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'all'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'all'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'all'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'all'
-  - xattr ; sys_platform == 'darwin' and extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'graphite'
-  - pycairo ; extra == 'interpolatable'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'interpolatable'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'interpolatable'
-  - lxml >=4.0 ; extra == 'lxml'
-  - skia-pathops >=0.5.0 ; extra == 'pathops'
-  - matplotlib ; extra == 'plot'
-  - uharfbuzz >=0.23.0 ; extra == 'repacker'
-  - sympy ; extra == 'symfont'
-  - xattr ; sys_platform == 'darwin' and extra == 'type1'
-  - fs <3, >=2.2.0 ; extra == 'ufo'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'unicode'
-  - zopfli >=0.1.4 ; extra == 'woff'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'woff'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'woff'
-  requires_python: '>=3.8'
-- kind: pypi
-  name: fonttools
-  version: 4.51.0
-  url: https://files.pythonhosted.org/packages/5e/62/ec6247534b077c9627e745d8046027ae363ed6d6407f8010650439ecbda1/fonttools-4.51.0-cp39-cp39-win_amd64.whl
-  sha256: 599bdb75e220241cedc6faebfafedd7670335d2e29620d207dd0378a4e9ccc5a
-  requires_dist:
-  - fs <3, >=2.2.0 ; extra == 'all'
-  - lxml >=4.0 ; extra == 'all'
-  - zopfli >=0.1.4 ; extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'all'
-  - pycairo ; extra == 'all'
-  - matplotlib ; extra == 'all'
-  - sympy ; extra == 'all'
-  - skia-pathops >=0.5.0 ; extra == 'all'
-  - uharfbuzz >=0.23.0 ; extra == 'all'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'all'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'all'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'all'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'all'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'all'
-  - xattr ; sys_platform == 'darwin' and extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'graphite'
-  - pycairo ; extra == 'interpolatable'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'interpolatable'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'interpolatable'
-  - lxml >=4.0 ; extra == 'lxml'
-  - skia-pathops >=0.5.0 ; extra == 'pathops'
-  - matplotlib ; extra == 'plot'
-  - uharfbuzz >=0.23.0 ; extra == 'repacker'
-  - sympy ; extra == 'symfont'
-  - xattr ; sys_platform == 'darwin' and extra == 'type1'
-  - fs <3, >=2.2.0 ; extra == 'ufo'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'unicode'
-  - zopfli >=0.1.4 ; extra == 'woff'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'woff'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'woff'
-  requires_python: '>=3.8'
-- kind: pypi
-  name: fonttools
-  version: 4.51.0
-  url: https://files.pythonhosted.org/packages/3e/d8/db820b6243325f29e93de36273fdd48f3c1dce7fa859be5ed3708e174eba/fonttools-4.51.0-cp39-cp39-macosx_10_9_universal2.whl
-  sha256: 60a3409c9112aec02d5fb546f557bca6efa773dcb32ac147c6baf5f742e6258b
-  requires_dist:
-  - fs <3, >=2.2.0 ; extra == 'all'
-  - lxml >=4.0 ; extra == 'all'
-  - zopfli >=0.1.4 ; extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'all'
-  - pycairo ; extra == 'all'
-  - matplotlib ; extra == 'all'
-  - sympy ; extra == 'all'
-  - skia-pathops >=0.5.0 ; extra == 'all'
-  - uharfbuzz >=0.23.0 ; extra == 'all'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'all'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'all'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'all'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'all'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'all'
-  - xattr ; sys_platform == 'darwin' and extra == 'all'
-  - lz4 >=1.7.4.2 ; extra == 'graphite'
-  - pycairo ; extra == 'interpolatable'
-  - scipy ; platform_python_implementation != 'PyPy' and extra == 'interpolatable'
-  - munkres ; platform_python_implementation == 'PyPy' and extra == 'interpolatable'
-  - lxml >=4.0 ; extra == 'lxml'
-  - skia-pathops >=0.5.0 ; extra == 'pathops'
-  - matplotlib ; extra == 'plot'
-  - uharfbuzz >=0.23.0 ; extra == 'repacker'
-  - sympy ; extra == 'symfont'
-  - xattr ; sys_platform == 'darwin' and extra == 'type1'
-  - fs <3, >=2.2.0 ; extra == 'ufo'
-  - unicodedata2 >=15.1.0 ; python_version <= '3.12' and extra == 'unicode'
-  - zopfli >=0.1.4 ; extra == 'woff'
-  - brotlicffi >=0.8.0 ; platform_python_implementation != 'CPython' and extra == 'woff'
-  - brotli >=1.0.1 ; platform_python_implementation == 'CPython' and extra == 'woff'
-  requires_python: '>=3.8'
 - kind: conda
   name: fonttools
   version: 4.51.0
@@ -2309,6 +2065,8 @@ packages:
   - unicodedata2 >=14.0.0
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/fonttools@4.51.0
   size: 2182509
   timestamp: 1712345020380
 - kind: conda
@@ -2327,6 +2085,8 @@ packages:
   - unicodedata2 >=14.0.0
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/fonttools@4.51.0
   size: 2200498
   timestamp: 1712344949132
 - kind: conda
@@ -2348,6 +2108,8 @@ packages:
   - vc14_runtime >=14.29.30139
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/fonttools@4.51.0
   size: 1888597
   timestamp: 1712345179196
 - kind: conda
@@ -2367,6 +2129,8 @@ packages:
   - unicodedata2 >=14.0.0
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/fonttools@4.51.0
   size: 2291843
   timestamp: 1712344796788
 - kind: conda
@@ -3414,6 +3178,8 @@ packages:
   - trove-classifiers
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/hatchling@1.22.5
   size: 62871
   timestamp: 1712264371126
 - kind: conda
@@ -6748,74 +6514,6 @@ packages:
   - pkg:pypi/markupsafe@2.1.5
   size: 24314
   timestamp: 1706900151453
-- kind: pypi
-  name: matplotlib
-  version: 3.8.4
-  url: https://files.pythonhosted.org/packages/84/5f/a0c7a4ce9cc96d3e592c44d1c0f2ebdf5f101e25ced2c14902ae7faa4ff4/matplotlib-3.8.4-cp39-cp39-macosx_10_12_x86_64.whl
-  sha256: 843cbde2f0946dadd8c5c11c6d91847abd18ec76859dc319362a0964493f0ba6
-  requires_dist:
-  - contourpy >=1.0.1
-  - cycler >=0.10
-  - fonttools >=4.22.0
-  - kiwisolver >=1.3.1
-  - numpy >=1.21
-  - packaging >=20.0
-  - pillow >=8
-  - pyparsing >=2.3.1
-  - python-dateutil >=2.7
-  - importlib-resources >=3.2.0 ; python_version < '3.10'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: matplotlib
-  version: 3.8.4
-  url: https://files.pythonhosted.org/packages/5e/2c/513395a63a9e1124a5648addbf73be23cc603f955af026b04416da98dc96/matplotlib-3.8.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  sha256: 606e3b90897554c989b1e38a258c626d46c873523de432b1462f295db13de6f9
-  requires_dist:
-  - contourpy >=1.0.1
-  - cycler >=0.10
-  - fonttools >=4.22.0
-  - kiwisolver >=1.3.1
-  - numpy >=1.21
-  - packaging >=20.0
-  - pillow >=8
-  - pyparsing >=2.3.1
-  - python-dateutil >=2.7
-  - importlib-resources >=3.2.0 ; python_version < '3.10'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: matplotlib
-  version: 3.8.4
-  url: https://files.pythonhosted.org/packages/54/af/17195cf1f43cd3be79b15aecc5b7e44ea08456bd0048ad8dcd3a5fd45c45/matplotlib-3.8.4-cp39-cp39-win_amd64.whl
-  sha256: 6209e5c9aaccc056e63b547a8152661324404dd92340a6e479b3a7f24b42a5d0
-  requires_dist:
-  - contourpy >=1.0.1
-  - cycler >=0.10
-  - fonttools >=4.22.0
-  - kiwisolver >=1.3.1
-  - numpy >=1.21
-  - packaging >=20.0
-  - pillow >=8
-  - pyparsing >=2.3.1
-  - python-dateutil >=2.7
-  - importlib-resources >=3.2.0 ; python_version < '3.10'
-  requires_python: '>=3.9'
-- kind: pypi
-  name: matplotlib
-  version: 3.8.4
-  url: https://files.pythonhosted.org/packages/d5/88/83aee628339486de57fcc8c1387e28de816182edcfc42928cff02c364664/matplotlib-3.8.4-cp39-cp39-macosx_11_0_arm64.whl
-  sha256: 1c13f041a7178f9780fb61cc3a2b10423d5e125480e4be51beaf62b172413b67
-  requires_dist:
-  - contourpy >=1.0.1
-  - cycler >=0.10
-  - fonttools >=4.22.0
-  - kiwisolver >=1.3.1
-  - numpy >=1.21
-  - packaging >=20.0
-  - pillow >=8
-  - pyparsing >=2.3.1
-  - python-dateutil >=2.7
-  - importlib-resources >=3.2.0 ; python_version < '3.10'
-  requires_python: '>=3.9'
 - kind: conda
   name: matplotlib
   version: 3.8.4
@@ -6914,6 +6612,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: PSF-2.0
   license_family: PSF
+  purls:
+  - pkg:pypi/matplotlib@3.8.4
   size: 6946151
   timestamp: 1712606316061
 - kind: conda
@@ -6944,6 +6644,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: PSF-2.0
   license_family: PSF
+  purls:
+  - pkg:pypi/matplotlib@3.8.4
   size: 6942468
   timestamp: 1712606780360
 - kind: conda
@@ -6975,6 +6677,8 @@ packages:
   - tk >=8.6.13,<8.7.0a0
   license: PSF-2.0
   license_family: PSF
+  purls:
+  - pkg:pypi/matplotlib@3.8.4
   size: 6722721
   timestamp: 1712606079317
 - kind: conda
@@ -7006,6 +6710,8 @@ packages:
   - vc14_runtime >=14.29.30139
   license: PSF-2.0
   license_family: PSF
+  purls:
+  - pkg:pypi/matplotlib@3.8.4
   size: 6849548
   timestamp: 1712606786181
 - kind: conda
@@ -7664,12 +7370,12 @@ packages:
   timestamp: 1710076089469
 - kind: conda
   name: pandas
-  version: 2.2.1
+  version: 2.2.2
   build: py39h32e6231_0
   subdir: win-64
-  url: https://conda.anaconda.org/conda-forge/win-64/pandas-2.2.1-py39h32e6231_0.conda
-  sha256: d247dd5fcd58608a66b1cfed74a962e77818e5acd654dededc95cda0d1526a31
-  md5: 7ca03abc7f2f9c91a9fdc02780bfa572
+  url: https://conda.anaconda.org/conda-forge/win-64/pandas-2.2.2-py39h32e6231_0.conda
+  sha256: 5bc2bc63c9921aaae3290fe0ed662ba57a75058d1777acd93d4fd978e9dc3aed
+  md5: 0df69e098aa54373d4edb3eaaa2338ba
   depends:
   - numpy >=1.22.4,<2.0a0
   - python >=3.9,<3.10.0a0
@@ -7681,19 +7387,18 @@ packages:
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
   license: BSD-3-Clause
-  license_family: BSD
   purls:
-  - pkg:pypi/pandas@2.2.1
-  size: 11830380
-  timestamp: 1708710136935
+  - pkg:pypi/pandas@2.2.2
+  size: 11789934
+  timestamp: 1712783141414
 - kind: conda
   name: pandas
-  version: 2.2.1
+  version: 2.2.2
   build: py39h47e51b9_0
   subdir: osx-arm64
-  url: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-2.2.1-py39h47e51b9_0.conda
-  sha256: 08970c57a208e75ab99312ef27401ad76399669f2cc4bb3b5850ea21560393cb
-  md5: be545eb72baf10c37f3ca5c974586abe
+  url: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-2.2.2-py39h47e51b9_0.conda
+  sha256: 283f3d212548adead03bf32d18b350954e853c990e0571e35a7d740e553709f1
+  md5: 5c4d68b2806d00c0a3607d77c7fb6a0d
   depends:
   - libcxx >=16
   - numpy >=1.22.4,<2.0a0
@@ -7704,19 +7409,18 @@ packages:
   - python_abi 3.9.* *_cp39
   - pytz >=2020.1
   license: BSD-3-Clause
-  license_family: BSD
   purls:
-  - pkg:pypi/pandas@2.2.1
-  size: 11987027
-  timestamp: 1708709608466
+  - pkg:pypi/pandas@2.2.2
+  size: 12044460
+  timestamp: 1712783178045
 - kind: conda
   name: pandas
-  version: 2.2.1
+  version: 2.2.2
   build: py39haf03413_0
   subdir: osx-64
-  url: https://conda.anaconda.org/conda-forge/osx-64/pandas-2.2.1-py39haf03413_0.conda
-  sha256: f6651dbf55da899a4e2590c910bee764b6f3ead78eb5e35e104ccaeb884f9fc7
-  md5: d29dc35b665029951dae988810f84508
+  url: https://conda.anaconda.org/conda-forge/osx-64/pandas-2.2.2-py39haf03413_0.conda
+  sha256: 3bd1746a24132f641b8a72a849c5f4629decb405ba28045645646ca5f3c8afe3
+  md5: 11225cf1f769af217ffc01f0a21d40fa
   depends:
   - libcxx >=16
   - numpy >=1.22.4,<2.0a0
@@ -7726,19 +7430,18 @@ packages:
   - python_abi 3.9.* *_cp39
   - pytz >=2020.1
   license: BSD-3-Clause
-  license_family: BSD
   purls:
-  - pkg:pypi/pandas@2.2.1
-  size: 12136682
-  timestamp: 1708709770431
+  - pkg:pypi/pandas@2.2.2
+  size: 12117482
+  timestamp: 1712783081291
 - kind: conda
   name: pandas
-  version: 2.2.1
+  version: 2.2.2
   build: py39hddac248_0
   subdir: linux-64
-  url: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.1-py39hddac248_0.conda
-  sha256: 91a2f8062d905f65548a5f3e9cf91e4acd70ac151d9e9fcbb32af9980643c1d7
-  md5: 85293a042c24a08e71b7608ee66b6134
+  url: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.2-py39hddac248_0.conda
+  sha256: 14510984ff19843471468d2ef250e51200bd603fbf909e7bc6f1f57d02a43bea
+  md5: 259c4e76e6bda8888aefc098ae1ba749
   depends:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
@@ -7749,11 +7452,10 @@ packages:
   - python_abi 3.9.* *_cp39
   - pytz >=2020.1
   license: BSD-3-Clause
-  license_family: BSD
   purls:
-  - pkg:pypi/pandas@2.2.1
-  size: 12832936
-  timestamp: 1708709133691
+  - pkg:pypi/pandas@2.2.2
+  size: 12972826
+  timestamp: 1712782503380
 - kind: conda
   name: pango
   version: 1.50.14
@@ -8168,6 +7870,8 @@ packages:
   - python >=2.6
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/ply@3.11
   size: 49196
   timestamp: 1712243121626
 - kind: conda
@@ -9191,6 +8895,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/scipy@1.13.0
   size: 15767508
   timestamp: 1712257544134
 - kind: conda
@@ -9215,6 +8921,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/scipy@1.13.0
   size: 16360934
   timestamp: 1712256688151
 - kind: conda
@@ -9240,6 +8948,8 @@ packages:
   - python_abi 3.9.* *_cp39
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/scipy@1.13.0
   size: 14629900
   timestamp: 1712257309832
 - kind: conda
@@ -9263,6 +8973,8 @@ packages:
   - vc14_runtime >=14.29.30139
   license: BSD-3-Clause
   license_family: BSD
+  purls:
+  - pkg:pypi/scipy@1.13.0
   size: 14849543
   timestamp: 1712257711116
 - kind: conda
@@ -9632,21 +9344,19 @@ packages:
   timestamp: 1710254564088
 - kind: conda
   name: trove-classifiers
-  version: 2024.3.25
+  version: 2024.4.10
   build: pyhd8ed1ab_0
   subdir: noarch
   noarch: python
-  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.3.25-pyhd8ed1ab_0.conda
-  sha256: 909b4288bd2be8566f6d0a311d75a7e0e1cf81c42c19c97b1fc7d043c3db3301
-  md5: e565e537d9760fc5d6d02ae4521a144b
+  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
+  sha256: cbc8e5c5f82b1eeff7aa21aaff77757336c1e6d64a4255b071c783acd60f4618
+  md5: 9622d541e2314c0207bebdc0359fa478
   depends:
   - python >=3.7
   license: Apache-2.0
   license_family: Apache
-  purls:
-  - pkg:pypi/trove-classifiers@2024.3.25
-  size: 18393
-  timestamp: 1711440195159
+  size: 18444
+  timestamp: 1712814840654
 - kind: conda
   name: typing_extensions
   version: 4.11.0
@@ -9660,6 +9370,8 @@ packages:
   - python >=3.8
   license: PSF-2.0
   license_family: PSF
+  purls:
+  - pkg:pypi/typing-extensions@4.11.0
   size: 37583
   timestamp: 1712330089194
 - kind: conda
