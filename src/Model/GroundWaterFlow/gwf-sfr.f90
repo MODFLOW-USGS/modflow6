@@ -4113,10 +4113,8 @@ contains
 
     sfr_gwf_conn = 0
     node = this%igwfnode(n)
-    if (node > 0) then
-      if (this%hk(n) > DZERO) then
-        sfr_gwf_conn = 1
-      end if
+    if (node > 0 .and. this%hk(n) > DZERO) then
+      sfr_gwf_conn = 1
     end if
   end function sfr_gwf_conn
 
@@ -4145,6 +4143,7 @@ contains
     vscratio = DONE
     !
     ! -- calculate conductance if GWF cell is active
+    !    rch-gwf flow will not occur if reach connected to an constant head cell
     node = this%igwfnode(n)
     if (node > 0) then
       if (this%ibound(node) > 0) then
