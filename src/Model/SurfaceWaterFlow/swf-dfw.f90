@@ -885,6 +885,8 @@ contains
     real(DP) :: rhn, rhm, rhavg
     real(DP) :: weight_n
     real(DP) :: weight_m
+    real(DP) :: rough_n
+    real(DP) :: rough_m
 
     ! Use harmonic weighting for 1/manningsn, but using length-weighted
     ! averaging for other terms
@@ -915,13 +917,6 @@ contains
 
       ! Get the flow widths for n and m from dis package
       call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
-
-      ! harmonic average for inverse mannings value
-      weight_n = cln / length_nm
-      weight_m = DONE - weight_n
-      ravg = (weight_n + weight_m) / &
-             (weight_n * this%manningsn(n) + weight_m * this%manningsn(m))
-      rinv_avg = DONE / ravg
 
       ! linear weight toward node closer to shared face
       weight_n = clm / length_nm
@@ -957,6 +952,18 @@ contains
         dhds_sqr = DEM10
       end if
 
+      ! weighted harmonic mean for inverse mannings value
+      weight_n = cln / length_nm
+      weight_m = DONE - weight_n
+      rough_n = this%cxs%get_roughness(this%idcxs(n), width_n, depth_n, &
+                                       this%manningsn(n), dhds_nm)
+      rough_m = this%cxs%get_roughness(this%idcxs(m), width_m, depth_m, &
+                                       this%manningsn(m), dhds_nm)
+      ravg = (weight_n + weight_m) / &
+             (weight_n / rough_n + weight_m / rough_m)
+      rinv_avg = DONE / ravg
+
+      ! calculate conductance using averaged values
       cond = this%unitconv * rinv_avg * area_avg * rhavg / dhds_sqr / length_nm
 
     end if

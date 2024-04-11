@@ -44,11 +44,11 @@ def build_models(idx, test):
     )
     ims = flopy.mf6.ModflowIms(
         sim,
-        outer_maximum=100,
+        outer_maximum=200,
         inner_maximum=50,
         print_option="all",
-        outer_dvclose=1.0e-6,
-        inner_dvclose=1.0e-6,
+        outer_dvclose=1.0e-8,
+        inner_dvclose=1.0e-8,
         linear_acceleration="BICGSTAB",
         backtracking_number=5,
         backtracking_tolerance=1.0,
@@ -243,6 +243,7 @@ def build_models(idx, test):
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
         central_in_space=True,
+        #dev_swr_conductance=True,
         print_flows=True,
         save_flows=True,
         manningsn=0.03,
