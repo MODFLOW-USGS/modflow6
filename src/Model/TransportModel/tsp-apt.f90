@@ -182,7 +182,7 @@ module TspAptModule
     procedure, public :: apt_fjf_term ! Made public for uze
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
-    procedure, public :: get_mvtconc
+    procedure, public :: get_mvr_depvar
 
   end type TspAptType
 
@@ -336,7 +336,7 @@ contains
     !    SSM would handle the flows into GWT from this pack.  Then point the
     !    fmi data for an advanced package to xnewpak and qmfrommvr
     this%fmi%iatp(this%igwfaptpak) = 1
-    this%fmi%datp(this%igwfaptpak)%concpack => this%get_mvtconc()
+    this%fmi%datp(this%igwfaptpak)%concpack => this%get_mvr_depvar()
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- If there is an associated flow package and the user wishes to put
@@ -639,14 +639,14 @@ contains
   !!
   !! Set the concentration (or temperature) to be used by either MVT or MVE
   !<
-  function get_mvtconc(this)
+  function get_mvr_depvar(this)
     ! -- dummy
     class(TspAptType) :: this
     ! -- return
-    real(dp), dimension(:), contiguous, pointer :: get_mvtconc
+    real(dp), dimension(:), contiguous, pointer :: get_mvr_depvar
     !
-    get_mvtconc => this%xnewpak
-  end function get_mvtconc
+    get_mvr_depvar => this%xnewpak
+  end function get_mvr_depvar
 
   !> @brief Advanced package transport routine
   !!
