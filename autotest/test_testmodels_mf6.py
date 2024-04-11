@@ -28,6 +28,9 @@ excluded_models = [
     "test016_Keating_disu_dev",
     "test053_npf-a-nwt_dev",
     "test053_npf-b-nwt_dev",
+    # todo reinstate when flopy fixed: https://github.com/modflowpy/flopy/issues/2145
+    "test001h_evt_array4",
+    "test001h_rch_array4",
 ]
 
 

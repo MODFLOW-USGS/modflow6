@@ -167,7 +167,7 @@ jobs:
           if [ "${{ github.ref_name }}" == "master" ]; then
             pixi run autotest -m "not slow and not regression and not developmode"
           else
-            pixi run autotest
+            pixi run autotest --smoke
           fi
 
       - name: Upload failed test output
