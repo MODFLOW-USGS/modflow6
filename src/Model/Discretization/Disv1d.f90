@@ -34,6 +34,7 @@ module Disv1dModule
     procedure :: dis_df => disv1d_df
     procedure :: dis_da => disv1d_da
     procedure :: get_dis_type => get_dis_type
+    procedure :: get_dis_enum => get_dis_enum
     procedure :: get_flow_width => get_flow_width
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
@@ -223,6 +224,14 @@ contains
     character(len=*), intent(out) :: dis_type
     dis_type = "DISV1D"
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DISV1D
+    class(Disv1dType), intent(in) :: this
+    integer(I4B) :: dis_enum
+    dis_enum = DISV1D
+  end function get_dis_enum
 
   !> @brief Allocate scalar variables
   !<
