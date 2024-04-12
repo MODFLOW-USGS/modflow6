@@ -333,6 +333,23 @@ contains
       else
         call store_error_filename(fname)
       end if
+    case ('DISV2D6')
+      !
+      call get_isize('NODES', dis_mempath, dim1_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NODES" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1) then
+        call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NODES', dis_mempath)
+        model_shape = [ndim1]
+      else
+        call store_error_filename(fname)
+      end if
     case ('DISU6', 'DISV1D6')
       !
       call get_isize('NODES', dis_mempath, dim1_size)
