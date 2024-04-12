@@ -145,6 +145,24 @@ module ConstantsModule
     ENUMERATOR :: LINEAREND = 3 !< linear end interpolation
   END ENUM
 
+  !> @brief enumerator associated with Discretization types
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: DISUNDEF = 0 !< undefined discretization
+    ! -- 3D (base) discretizations
+    ENUMERATOR :: DIS = 1 !< DIS6 discretization
+    ENUMERATOR :: DISV = 2 !< DISU6 discretization
+    ENUMERATOR :: DISU = 3 !< DISV6 discretization
+    ! -- 1D discretizations
+    ENUMERATOR :: DIS1D = 101 !< DIS1D6 discretization
+    ENUMERATOR :: DISV1D = 102 !< DISV1D6 discretization
+    ENUMERATOR :: DISU1D = 103 !< DISU1D6 discretization
+    ! -- 2D discretizations
+    ENUMERATOR :: DIS2D = 201 !< DIS2D6 discretization
+    ENUMERATOR :: DISV2D = 202 !< DISV2D6 discretization
+    ENUMERATOR :: DISU2D = 203 !< DISU2D6 discretization
+  END ENUM
+
   !> @brief enumerator used with table objects
   !<
   ENUM, BIND(C)
