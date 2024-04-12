@@ -25,7 +25,7 @@ reader urword
 optional true
 mf6internal export_ascii
 longname export array variables to layered ascii files.
-description keyword that specifies input grid arrays, which already support the layered keyword, should be written to layered ascii output files.
+description keyword that specifies input griddata arrays should be written to layered ascii output files.
 
 # --------------------- gwt dsp griddata ---------------------
 
