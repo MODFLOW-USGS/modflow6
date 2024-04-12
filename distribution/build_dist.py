@@ -11,7 +11,7 @@ from shutil import copy, copyfile, copytree, ignore_patterns
 import pytest
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
-from modflow_devtools.markers import requires_exe
+from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import get_model_paths
 
 from build_docs import build_documentation
@@ -84,6 +84,7 @@ def copy_sources(output_path: PathLike):
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
 
+@no_parallel
 def test_copy_sources(tmp_path):
     copy_sources(tmp_path)
 
@@ -202,6 +203,7 @@ def build_programs_meson(
         print(f"Execute permission set for {target}")
 
 
+@no_parallel
 def test_build_programs_meson(tmp_path):
     build_programs_meson(tmp_path / "builddir", tmp_path / "bin")
 
@@ -245,6 +247,7 @@ def build_makefiles(output_path: PathLike):
     )
 
 
+@no_parallel
 def test_build_makefiles(tmp_path):
     build_makefiles(tmp_path)
 
@@ -307,6 +310,7 @@ def build_distribution(
     )
 
 
+@no_parallel
 @requires_exe("pdflatex")
 @pytest.mark.skip(reason="manual testing")
 @pytest.mark.parametrize("full", [True, False])

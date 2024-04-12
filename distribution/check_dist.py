@@ -6,6 +6,8 @@ from pprint import pprint
 
 import pytest
 
+from modflow_devtools.markers import no_parallel
+
 
 # OS-specific extensions
 _system = platform.system()
@@ -66,11 +68,13 @@ def dist_dir_path(request):
     return path
 
 
+@no_parallel
 def test_directories(dist_dir_path, full):
     for dir_path in _included_dir_paths["full" if full else "minimal"]:
         assert (dist_dir_path / dir_path).is_dir()
 
 
+@no_parallel
 def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
@@ -102,6 +106,7 @@ def test_sources(dist_dir_path, releasemode, full):
     assert not (dist_dir_path / "utils" / "idmloader").is_dir()
 
 
+@no_parallel
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
 def test_makefiles(dist_dir_path, full):
     if not full:
@@ -129,6 +134,7 @@ def test_makefiles(dist_dir_path, full):
         )
 
 
+@no_parallel
 def test_msvs(dist_dir_path, full):
     if not full:
         pytest.skip(reason="MSVS files not included in minimal distribution")
@@ -140,6 +146,7 @@ def test_msvs(dist_dir_path, full):
     assert (dist_dir_path / "msvs" / "mf6core.vfproj").is_file()
 
 
+@no_parallel
 def test_docs(dist_dir_path, full):
     # mf6io should always be included
     assert (dist_dir_path / "doc" / "mf6io.pdf").is_file()
@@ -163,6 +170,7 @@ def test_docs(dist_dir_path, full):
             assert (dist_dir_path / "doc" / f"{pub}.pdf").is_file()
 
 
+@no_parallel
 def test_examples(dist_dir_path, full):
     if not full:
         pytest.skip(reason="examples not included in minimal distribution")
@@ -183,6 +191,7 @@ def test_examples(dist_dir_path, full):
         break
 
 
+@no_parallel
 def test_binaries(dist_dir_path, approved):
     bin_path = dist_dir_path / "bin"
     assert (bin_path / f"mf6{_eext}").is_file()

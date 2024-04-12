@@ -22,7 +22,7 @@ from modflow_devtools.download import (
     get_release,
     list_artifacts,
 )
-from modflow_devtools.markers import requires_exe, requires_github
+from modflow_devtools.markers import no_parallel, requires_exe, requires_github
 from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
 from benchmark import run_benchmarks
@@ -141,6 +141,7 @@ def github_user() -> Optional[str]:
 
 
 @flaky
+@no_parallel
 @requires_github
 def test_download_benchmarks(tmp_path, github_user):
     path = download_benchmarks(
@@ -189,6 +190,7 @@ def build_benchmark_tex(
 
 
 @flaky
+@no_parallel
 @requires_github
 def test_build_benchmark_tex(tmp_path):
     benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
@@ -266,6 +268,7 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
             assert files_match(tex_pth, dfn_pth, ignored)
 
 
+@no_parallel
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_build_mf6io_tex_from_dfn(overwrite):
     mf6ivar_path = _project_root_path / "doc" / "mf6io" / "mf6ivar"
@@ -311,6 +314,7 @@ def build_tex_folder_structure(overwrite: bool = False):
     assert path.is_file(), f"Failed to create {path}"
 
 
+@no_parallel
 def test_build_tex_folder_structure():
     path = _project_root_path / "doc" / "ReleaseNotes" / "folder_struct.tex"
     try:
@@ -384,6 +388,7 @@ def build_mf6io_tex_example(
             f.write("}\n")
 
 
+@no_parallel
 @pytest.mark.skip(reason="todo")
 def test_build_mf6io_tex_example():
     pass
@@ -439,6 +444,7 @@ def build_pdfs_from_tex(
         built_paths.add(tgt_path)
 
 
+@no_parallel
 @requires_exe("pdflatex")
 def test_build_pdfs_from_tex(tmp_path):
     tex_paths = [
@@ -540,6 +546,7 @@ def build_documentation(
         assert (output_path / "mf6examples.pdf").is_file()
 
 
+@no_parallel
 @requires_exe("pdflatex")
 # skip if in CI so we don't have to build/process example models,
 # example model docs can be tested in the modflow6-examples repo

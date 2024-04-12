@@ -44,6 +44,9 @@ import yaml
 
 from utils import get_modified_time
 
+from modflow_devtools.markers import no_parallel
+
+
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
 version_file_path = project_root_path / "version.txt"
@@ -377,6 +380,7 @@ _initial_version = Version("0.0.1")
 _current_version = Version(version_file_path.read_text().strip())
 
 
+@no_parallel
 @pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
 @pytest.mark.parametrize(
     "version",
