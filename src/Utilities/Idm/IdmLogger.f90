@@ -370,11 +370,14 @@ contains
     ! -- create export file(s)
     select case (export_dim)
     case (3)
+      ! -- set reshape array
       dis3d_shape(1) = model_shape(3)
       dis3d_shape(2) = model_shape(2)
       dis3d_shape(3) = model_shape(1)
+      ! -- allocate and reshape
       allocate (int3d(dis3d_shape(1), dis3d_shape(2), dis3d_shape(3)))
       int3d = reshape(p_mem, dis3d_shape)
+      ! -- write export files 3D array
       do k = 1, dis3d_shape(3)
         inunit = create_export_file(varname, mempath, k, 0, 0, iout)
         do i = 1, model_shape(2)
@@ -383,27 +386,34 @@ contains
         end do
         close (inunit)
       end do
+      ! -- cleanup
       deallocate (int3d)
     case (2)
+      ! -- set reshape array
       dis2d_shape(1) = model_shape(2)
       dis2d_shape(2) = model_shape(1)
+      ! -- allocate and reshape
       allocate (int2d(dis2d_shape(1), dis2d_shape(2)))
       int2d = reshape(p_mem, dis2d_shape)
       if (distype == DIS2D) then
+        ! -- write export files 2D array DIS2D
         inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
         do i = 1, dis2d_shape(2)
           write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
         end do
         close (inunit)
-      else
+      else if (distype == DISV) then
+        ! -- write export files 2D array DISV
         do i = 1, dis2d_shape(2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
       end if
+      ! -- cleanup
       deallocate (int2d)
     case (1)
+      ! -- write export files 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       write (inunit, '(*(i0, " "))') p_mem
       close (inunit)
@@ -442,6 +452,7 @@ contains
     !
     select case (export_dim)
     case (1)
+      ! -- write export files 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
@@ -449,12 +460,14 @@ contains
       close (inunit)
     case (2)
       if (distype == DIS2D) then
+        ! -- write export files 2D array DIS2D
         inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
         end do
         close (inunit)
-      else
+      else if (distype == DISV) then
+        ! -- write export files 2D array DISV
         do i = 1, size(p_mem, dim=2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
@@ -496,6 +509,7 @@ contains
     !
     select case (export_dim)
     case (3)
+      ! -- write export files 3D array
       do k = 1, size(p_mem, dim=3)
         inunit = create_export_file(varname, mempath, k, 0, 0, iout)
         do i = 1, size(p_mem, dim=2)
@@ -546,12 +560,15 @@ contains
     ! -- create export file(s)
     select case (export_dim)
     case (3)
+      ! -- set reshape array
       dis3d_shape(1) = model_shape(3)
       dis3d_shape(2) = model_shape(2)
+      ! -- allocate and reshape
       dis3d_shape(3) = model_shape(1)
       allocate (dbl3d(dis3d_shape(1), dis3d_shape(2), dis3d_shape(3)))
       dbl3d = reshape(p_mem, dis3d_shape)
       do k = 1, dis3d_shape(3)
+        ! -- write export files 3D array
         inunit = create_export_file(varname, mempath, k, 0, 0, iout)
         do i = 1, model_shape(2)
           write (inunit, '(*(G0.10, " "))') (dbl3d(j, i, k), j=1, &
@@ -559,27 +576,34 @@ contains
         end do
         close (inunit)
       end do
+      ! -- cleanup
       deallocate (dbl3d)
     case (2)
+      ! -- set reshape array
       dis2d_shape(1) = model_shape(2)
       dis2d_shape(2) = model_shape(1)
+      ! -- allocate and reshape
       allocate (dbl2d(dis2d_shape(1), dis2d_shape(2)))
       dbl2d = reshape(p_mem, dis2d_shape)
       if (distype == DIS2D) then
+        ! -- write export files 2D array DIS2D
         inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
         do i = 1, dis2d_shape(2)
           write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
         end do
         close (inunit)
-      else
+      else if (distype == DISV) then
+        ! -- write export files 2D array DISV
         do i = 1, dis2d_shape(2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
       end if
+      ! -- cleanup
       deallocate (dbl2d)
     case (1)
+      ! -- write export files 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       write (inunit, '(*(G0.10, " "))') p_mem
       close (inunit)
@@ -618,6 +642,7 @@ contains
     !
     select case (export_dim)
     case (1)
+      ! -- write export files 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
@@ -625,12 +650,14 @@ contains
       close (inunit)
     case (2)
       if (distype == DIS2D) then
+        ! -- write export files 2D array DIS2D
         inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
         end do
         close (inunit)
-      else
+      else if (distype == DISV) then
+        ! -- write export files 2D array DISV
         do i = 1, size(p_mem, dim=2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
@@ -672,6 +699,7 @@ contains
     !
     select case (export_dim)
     case (3)
+      ! -- write export files 3D array
       do k = 1, size(p_mem, dim=3)
         inunit = create_export_file(varname, mempath, k, 0, 0, iout)
         do i = 1, size(p_mem, dim=2)

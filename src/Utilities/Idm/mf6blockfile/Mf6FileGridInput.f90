@@ -347,7 +347,7 @@ contains
     integer(I4B), intent(in) :: iaux
     ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d, dbl1d_tmp
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: iparam, n
     !
@@ -373,17 +373,17 @@ contains
     case ('DOUBLE2D')
       !
       call mem_setptr(dbl2d, varname, mempath)
-      allocate (dbl1d_tmp(this%bound_context%ncpl))
-      call read_dbl1d(parser, dbl1d_tmp, varname)
+      allocate (dbl1d(this%bound_context%ncpl))
+      call read_dbl1d(parser, dbl1d, varname)
       do n = 1, this%bound_context%ncpl
-        dbl2d(iaux, n) = dbl1d_tmp(n)
+        dbl2d(iaux, n) = dbl1d(n)
       end do
-      call idm_log_var(dbl1d_tmp, tagname, mempath, this%iout)
+      call idm_log_var(dbl1d, tagname, mempath, this%iout)
       if (this%export) then
-        call idm_export(dbl1d_tmp, tagname, mempath, 'NCPL', kper, iaux, &
+        call idm_export(dbl1d, tagname, mempath, 'NCPL', kper, iaux, &
                         this%iout)
       end if
-      deallocate (dbl1d_tmp)
+      deallocate (dbl1d)
       !
     case default
       !
