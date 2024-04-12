@@ -25,6 +25,7 @@ module GwfRchaInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
+    logical :: export_ascii = .false.
     logical :: irch = .false.
     logical :: recharge = .false.
     logical :: auxvar = .false.
@@ -271,6 +272,23 @@ module GwfRchaInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfrcha_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'RCHA', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfrcha_irch = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -338,6 +356,7 @@ module GwfRchaInputModule
     gwfrcha_obs_filerecord, &
     gwfrcha_obs6, &
     gwfrcha_obs6_filename, &
+    gwfrcha_export_ascii, &
     gwfrcha_irch, &
     gwfrcha_recharge, &
     gwfrcha_auxvar &

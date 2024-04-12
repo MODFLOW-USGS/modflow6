@@ -25,6 +25,7 @@ module GwfEvtaInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
+    logical :: export_ascii = .false.
     logical :: ievt = .false.
     logical :: surface = .false.
     logical :: rate = .false.
@@ -273,6 +274,23 @@ module GwfEvtaInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfevta_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVTA', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfevta_ievt = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -374,6 +392,7 @@ module GwfEvtaInputModule
     gwfevta_obs_filerecord, &
     gwfevta_obs6, &
     gwfevta_obs6_filename, &
+    gwfevta_export_ascii, &
     gwfevta_ievt, &
     gwfevta_surface, &
     gwfevta_rate, &
