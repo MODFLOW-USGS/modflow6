@@ -72,6 +72,7 @@ module GwtUztModule
     procedure :: pak_rp_obs => uzt_rp_obs
     procedure :: pak_bd_obs => uzt_bd_obs
     procedure :: pak_set_stressperiod => uzt_set_stressperiod
+    procedure :: get_mvr_depvar
 
   end type GwtUztType
 
@@ -390,6 +391,20 @@ contains
     ! -- Return
     return
   end function uzt_get_nbudterms
+
+  !> @brief Override similarly named function in APT
+  !!
+  !! Set the concentration to be used by MVT as the user-specified
+  !! concentration applied to the infiltration
+  !<
+  function get_mvr_depvar(this)
+    ! -- dummy
+    class(GwtUztType) :: this
+    ! -- return
+    real(dp), dimension(:), contiguous, pointer :: get_mvr_depvar
+    !
+    get_mvr_depvar => this%concinfl
+  end function get_mvr_depvar
 
   !> @brief Set up the budget object that stores all the unsaturated-zone flows
   !<
