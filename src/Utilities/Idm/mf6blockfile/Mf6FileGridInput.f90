@@ -36,6 +36,7 @@ module Mf6FileGridInputModule
     type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
     type(TimeArraySeriesManagerType), pointer :: tasmanager !< TAS manager
     type(BoundInputContextType) :: bound_context
+    logical(LGP) :: export
   contains
     procedure :: ainit => bndgrid_init
     procedure :: df => bndgrid_df
@@ -82,8 +83,9 @@ contains
     this%tas_active = 0
     this%iout = iout
     !
-    ! -- load static input
+    ! -- load static input and set export
     call loader%load(parser, mf6_input, this%input_name, iout)
+    this%export = loader%export
     !
     ! -- create tasmanager
     allocate (this%tasmanager)
@@ -216,7 +218,7 @@ contains
       !
       ! -- read and load the parameter
       call this%param_load(parser, idt%datatype, idt%mf6varname, idt%tagname, &
-                           this%mf6_input%mempath, iaux)
+                           idt%shape, this%mf6_input%mempath, iaux)
       !
     end do
     !
@@ -323,8 +325,9 @@ contains
   end subroutine bndgrid_params_alloc
 
   subroutine bndgrid_param_load(this, parser, datatype, varname, &
-                                tagname, mempath, iaux)
+                                tagname, shapestr, mempath, iaux)
     ! -- modules
+    use TdisModule, only: kper
     use MemoryManagerModule, only: mem_setptr
     use ArrayHandlersModule, only: ifind
     use InputDefinitionModule, only: InputParamDefinitionType
@@ -332,20 +335,21 @@ contains
     use Double1dReaderModule, only: read_dbl1d
     use Double2dReaderModule, only: read_dbl2d
     use Integer1dReaderModule, only: read_int1d
-    use IdmLoggerModule, only: idm_log_var
+    use IdmLoggerModule, only: idm_log_var, idm_export
     ! -- dummy
     class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     type(BlockParserType), intent(in) :: parser
     character(len=*), intent(in) :: datatype
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: tagname
+    character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: iaux
     ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
+    real(DP), dimension(:), pointer, contiguous :: dbl1d, dbl1d_tmp
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B) :: iparam
+    integer(I4B) :: iparam, n
     !
     select case (datatype)
     case ('INTEGER1D')
@@ -353,18 +357,33 @@ contains
       call mem_setptr(int1d, varname, mempath)
       call read_int1d(parser, int1d, varname)
       call idm_log_var(int1d, tagname, mempath, this%iout)
+      if (this%export) then
+        call idm_export(int1d, tagname, mempath, shapestr, kper, this%iout)
+      end if
       !
     case ('DOUBLE1D')
       !
       call mem_setptr(dbl1d, varname, mempath)
       call read_dbl1d(parser, dbl1d, varname)
       call idm_log_var(dbl1d, tagname, mempath, this%iout)
+      if (this%export) then
+        call idm_export(dbl1d, tagname, mempath, shapestr, kper, 0, this%iout)
+      end if
       !
     case ('DOUBLE2D')
       !
       call mem_setptr(dbl2d, varname, mempath)
-      call read_dbl1d(parser, dbl2d(iaux, :), varname)
-      call idm_log_var(dbl2d, tagname, mempath, this%iout)
+      allocate (dbl1d_tmp(this%bound_context%ncpl))
+      call read_dbl1d(parser, dbl1d_tmp, varname)
+      do n = 1, this%bound_context%ncpl
+        dbl2d(iaux, n) = dbl1d_tmp(n)
+      end do
+      call idm_log_var(dbl1d_tmp, tagname, mempath, this%iout)
+      if (this%export) then
+        call idm_export(dbl1d_tmp, tagname, mempath, 'NCPL', kper, iaux, &
+                        this%iout)
+      end if
+      deallocate (dbl1d_tmp)
       !
     case default
       !

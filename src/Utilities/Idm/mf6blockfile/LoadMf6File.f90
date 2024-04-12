@@ -807,9 +807,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(int1d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(int1d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return
@@ -858,9 +860,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int2d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(int2d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(int2d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return
@@ -914,9 +918,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(int3d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(int3d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return
@@ -982,9 +988,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(dbl1d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(dbl1d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return
@@ -1033,9 +1041,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(dbl2d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(dbl2d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return
@@ -1089,9 +1099,11 @@ contains
     ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
-    ! create export file for layered parameters if optioned
-    if (export .and. idt%layered) then
-      call idm_export(dbl3d, idt%tagname, memoryPath, iout)
+    ! create export file for griddata parameters if optioned
+    if (export) then
+      if (idt%blockname == 'GRIDDATA') then
+        call idm_export(dbl3d, idt%tagname, memoryPath, idt%shape, iout)
+      end if
     end if
 
     return

@@ -234,6 +234,7 @@ contains
   !<
   subroutine set_model_shape(ftype, fname, model_mempath, dis_mempath, &
                              model_shape)
+    use ConstantsModule, only: DISUNDEF, DIS, DISV, DISU, DIS2D, DISV1D
     use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     character(len=*), intent(in) :: ftype
     character(len=*), intent(in) :: fname
@@ -244,11 +245,18 @@ contains
     integer(I4B), pointer :: ndim2
     integer(I4B), pointer :: ndim3
     integer(I4B), pointer :: ncelldim
-    integer(I4B) :: dim1_size, dim2_size, dim3_size
+    integer(I4B), pointer :: distype
+    integer(I4B) :: dim1_size, dim2_size, dim3_size, dis_type
+    !
+    ! -- initialize dis_type
+    dis_type = DISUNDEF
     !
     ! -- allocate and set model shape in model input context
     select case (ftype)
     case ('DIS6')
+      !
+      ! -- set dis_type
+      dis_type = DIS
       !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NROW', dis_mempath, dim2_size)
@@ -284,6 +292,9 @@ contains
       !
     case ('DIS2D6')
       !
+      ! -- set dis_type
+      dis_type = DIS2D
+      !
       call get_isize('NROW', dis_mempath, dim1_size)
       call get_isize('NCOL', dis_mempath, dim2_size)
       !
@@ -309,6 +320,9 @@ contains
       end if
       !
     case ('DISV6')
+      !
+      ! -- set dis_type
+      dis_type = DISV
       !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NCPL', dis_mempath, dim2_size)
@@ -352,6 +366,13 @@ contains
       end if
     case ('DISU6', 'DISV1D6')
       !
+      ! -- set dis_type
+      if (ftype == 'DISU6') then
+        dis_type = DISU
+      else if (ftype == 'DISV1D6') then
+        dis_type = DISV1D
+      end if
+      !
       call get_isize('NODES', dis_mempath, dim1_size)
       !
       if (dim1_size <= 0) then
@@ -374,6 +395,11 @@ contains
     ! -- allocate and set ncelldim in model input context
     call mem_allocate(ncelldim, 'NCELLDIM', model_mempath)
     ncelldim = size(model_shape)
+    !
+    ! -- allocate and set distype in model input context
+    ! TODO make sure this doesn't clash name GRIDTYPE, e.g.
+    call mem_allocate(distype, 'DISENUM', model_mempath)
+    distype = dis_type
     !
     ! -- return
     return
