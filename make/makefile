@@ -359,6 +359,7 @@ $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/swf-cxs.o \
 $(OBJDIR)/Disv1d.o \
 $(OBJDIR)/swf-ic.o \
+$(OBJDIR)/VectorInterpolation.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
 $(OBJDIR)/GridConnection.o \

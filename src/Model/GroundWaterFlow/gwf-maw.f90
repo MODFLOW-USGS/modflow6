@@ -2792,7 +2792,7 @@ contains
   !<
   subroutine maw_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
-    use TdisModule, only: totim
+    use TdisModule, only: totim, delt
     ! -- dummy
     class(MawType) :: this !< MawType object
     integer(I4B), intent(in) :: kstp !< time step number
@@ -2800,7 +2800,7 @@ contains
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
-    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
     !
     ! -- Return
     return

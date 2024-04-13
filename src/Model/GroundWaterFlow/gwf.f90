@@ -1032,7 +1032,7 @@ contains
   end subroutine gwf_ot_dv
 
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper, totim
+    use TdisModule, only: kstp, kper, totim, delt
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -1052,6 +1052,7 @@ contains
     end if
 
     ! -- model budget summary
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       ipflag = 1
       call this%budget%budget_ot(kstp, kper, this%iout)

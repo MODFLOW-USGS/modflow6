@@ -46,6 +46,15 @@ description keyword to indicate that calculated flows between cells will be prin
 mf6internal iprflow
 
 block options
+name save_velocity
+type keyword
+reader urword
+optional true
+longname keyword to save velocity
+description keyword to indicate that x, y, and z components of velocity will be calculated at cell centers and written to the budget file, which is specified with ``BUDGET SAVE FILE'' in Output Control.  If this option is activated, then additional information may be required in the discretization packages and the GWF Exchange package (if GWF models are coupled).  Specifically, ANGLDEGX must be specified in the CONNECTIONDATA block of the DISU Package; ANGLDEGX must also be specified for the GWF Exchange as an auxiliary variable.
+mf6internal isavvelocity
+
+block options
 name obs_filerecord
 type record obs6 filein obs6_filename
 shape
@@ -87,6 +96,18 @@ reader urword
 optional false
 longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'DFW'}
+
+# dev options
+
+block options
+name dev_swr_conductance
+type keyword
+reader urword
+optional true
+longname use SWR conductance formulation
+description use the conductance formulation in the Surface Water Routing (SWR) Process for MODFLOW-2005.
+mf6internal iswrcond
+
 
 # --------------------- swf dfw griddata ---------------------
 

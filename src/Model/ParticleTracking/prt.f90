@@ -689,7 +689,7 @@ contains
   !> @brief Print budget summary
   subroutine prt_ot_bdsummary(this, ibudfl, ipflag)
     ! -- modules
-    use TdisModule, only: kstp, kper, totim
+    use TdisModule, only: kstp, kper, totim, delt
     ! -- dummy
     class(PrtModelType) :: this
     integer(I4B), intent(in) :: ibudfl
@@ -705,6 +705,7 @@ contains
     end do
 
     ! -- model budget summary
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       ipflag = 1
       ! -- model budget summary

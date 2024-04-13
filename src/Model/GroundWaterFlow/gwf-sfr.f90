@@ -184,6 +184,7 @@ module SfrModule
     procedure, private :: sfr_solve
     procedure, private :: sfr_update_flows
     procedure, private :: sfr_calc_qgwf
+    procedure, private :: sfr_gwf_conn
     procedure, private :: sfr_calc_cond
     procedure, private :: sfr_calc_qman
     procedure, private :: sfr_calc_qd
@@ -2591,7 +2592,7 @@ contains
   !<
   subroutine sfr_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
-    use TdisModule, only: totim
+    use TdisModule, only: totim, delt
     ! -- dummy
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: kstp !< time step number
@@ -2599,7 +2600,7 @@ contains
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
-    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
     !
     ! -- return
     return
@@ -3372,7 +3373,6 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
-    real(DP) :: cstr
     real(DP) :: qd
     real(DP) :: en1
     real(DP) :: en2
@@ -3499,15 +3499,11 @@ contains
     qd = MAX(qsrc, DZERO)
     qgwf = DZERO
     !
-    ! -- calculate reach conductance for a unit depth of water
-    !    if equal to zero will skip iterations
-    call this%sfr_calc_cond(n, d1, cstr, hsfr, hgwf)
-    !
     ! -- set flag to skip iterations
     isolve = 1
     if (hsfr <= tp .and. hgwf <= tp) isolve = 0
     if (hgwf <= tp .and. qc < DEM30) isolve = 0
-    if (cstr < DEM30) isolve = 0
+    if (this%sfr_gwf_conn(n) == 0) isolve = 0
     if (this%iboundpak(n) < 0) isolve = 0
     !
     ! -- iterate to achieve solution
@@ -4100,6 +4096,28 @@ contains
     return
   end subroutine sfr_calc_qgwf
 
+  !> @brief Determine if a reach is connected to a gwf cell
+    !!
+    !! Function to determine if a reach is connected to a gwf cell. If connected,
+    !! the return value is 1. Otherwise, the return value is 0.
+    !!
+  !<
+  function sfr_gwf_conn(this, n)
+    ! -- return variable
+    integer(I4B) :: sfr_gwf_conn !< flag indicating if reach is connected to a gwf cell
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    ! -- local variables
+    integer(I4B) :: node
+
+    sfr_gwf_conn = 0
+    node = this%igwfnode(n)
+    if (node > 0 .and. this%hk(n) > DZERO) then
+      sfr_gwf_conn = 1
+    end if
+  end function sfr_gwf_conn
+
   !> @brief Calculate reach-aquifer conductance
     !!
     !! Method to calculate the reach-aquifer conductance for a SFR package reach.
@@ -4125,6 +4143,7 @@ contains
     vscratio = DONE
     !
     ! -- calculate conductance if GWF cell is active
+    !    rch-gwf flow will not occur if reach connected to an constant head cell
     node = this%igwfnode(n)
     if (node > 0) then
       if (this%ibound(node) > 0) then

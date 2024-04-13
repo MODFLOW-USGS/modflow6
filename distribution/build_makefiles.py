@@ -6,7 +6,7 @@ from pathlib import Path
 import pymake
 import pytest
 from flaky import flaky
-from modflow_devtools.markers import requires_exe
+from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import set_dir
 
 from utils import get_modified_time, get_project_root_path
@@ -104,6 +104,7 @@ def build_mf5to6_makefile():
 
 
 @flaky
+@no_parallel
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_mf6_makefile():
     makefile_paths = [
@@ -124,6 +125,7 @@ def test_build_mf6_makefile():
 
 
 @flaky
+@no_parallel
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_zbud6_makefile():
     util_path = _project_root_path / "utils" / "zonebudget"
@@ -145,6 +147,7 @@ def test_build_zbud6_makefile():
 
 
 @flaky
+@no_parallel
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_mf5to6_makefile():
     util_path = _project_root_path / "utils" / "mf5to6"
@@ -166,6 +169,7 @@ def test_build_mf5to6_makefile():
 
 
 @flaky
+@no_parallel
 @requires_exe("make")
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_mf6_with_make():
@@ -185,6 +189,7 @@ def test_build_mf6_with_make():
 
 
 @flaky
+@no_parallel
 @requires_exe("make")
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_zbud6_with_make():
@@ -204,6 +209,7 @@ def test_build_zbud6_with_make():
 
 
 @flaky
+@no_parallel
 @requires_exe("make")
 @pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
 def test_build_mf5to6_with_make():

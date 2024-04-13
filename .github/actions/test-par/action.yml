@@ -36,7 +36,8 @@ runs:
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi --with-debugging=0
+        sudo wget -P $GITHUB_WORKSPACE/petsc https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.2.tar.gz
+        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz
         sudo make all
 
     - name: Configure PETSc

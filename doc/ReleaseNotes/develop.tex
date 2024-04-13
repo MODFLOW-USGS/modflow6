@@ -18,12 +18,12 @@
 	%\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
-	%\underline{BASIC FUNCTIONALITY}
-	%\begin{itemize}
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item When the Adaptive Time Step (ATS) Package was activated, and failed time steps were rerun successfully using a shorter time step, the cumulative budgets reported in the listing files were incorrect.  Cumulative budgets included contributions from the failed time steps.  The program was fixed so that cumulative budgets are not tallied until the time step is finalized.
+		\item For multi-model groundwater flow simulations that use the Buoyancy (BUY) Package, variable-density terms were not included, in all cases, along the interface between two GWF models.  The program was corrected so that flows between two GWF models include the variable-density terms when the BUY Package is active.
 	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	%\underline{INTERNAL FLOW PACKAGES}
 	%\begin{itemize}
@@ -42,7 +42,8 @@
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 		\item A divide by zero error would occur in the Streamflow Routing package when reaches were deactivated during a simulation. This bug was fixed by checking if the downstream reach is inactive before calculating the flow to the downstream reach.
-	%	\item xxx
+		\item When using the mover transport (MVT) package with UZF and UZT, rejected infiltration was paired with the calculated concentration of the UZF object rather than the user-specified concentration assigned to the infiltration.  This bug was fixed by instead pairing the rejected infiltration transferred by the MVR and MVT packages with the user-specified concentration assigned in UZTSETTING with the keyword ``INFILTRATION.''  With this change, MODFLOW 6 simulations that use UZF with the ``SIMULATE\_GWSEEP'' option will not transfer this particular source of water with the correct concentration.  Instead, the DRN package should be used to simulate groundwater discharge to land surface.  By simulating groundwater discharge to land surface with the DRN package and rejected infiltration with the UZF package, the correct concentrations will be assigned to the water transferred by the MVR package.
+		\item The Streamflow Routing package would not calculate groundwater discharge to a reach in cases where the groundwater head is above the top of the reach and the inflow to the reach from upstream reaches, specified inflows, rainfall, and runoff is zero. This bug has been fixed by eliminating the requirement that the conductance calculated based on the initial calculated stage is greater than zero in order to solve for groundwater . Instead, .As a result, differences in groundwater and surface-water exchange and groundwater heads in existing models may occur.  
 	%	\item xxx
 	\end{itemize}
 
