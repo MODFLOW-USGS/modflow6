@@ -72,7 +72,8 @@ contains
     PetscReal :: xnorm_inf, rnorm_inf
     PetscReal :: dvmax_model, rmax_model
     PetscInt :: idx_dv, idx_r
-    Vec :: x, res
+    Vec :: x, rhs, res
+    Mat :: Amat
     type(ConvergenceSummaryType), pointer :: summary
     PetscInt :: iter_cnt
     PetscInt :: i, j, istart, iend
@@ -82,6 +83,25 @@ contains
     ! NB: KSPBuildResidual needs to have its vector destroyed
     ! to avoid a memory leak, KSPBuildSolution doesn't...
     call KSPBuildSolution(ksp, PETSC_NULL_VEC, x, ierr)
+    CHKERRQ(ierr)
+
+    call KSPGetRhs(ksp, rhs, ierr)
+    CHKERRQ(ierr)
+
+    call KSPGetOperators(ksp, Amat, PETSC_NULL_MAT, ierr)
+    CHKERRQ(ierr)
+
+    call VecDuplicate(x, res, ierr) ! TODO_MJR: optimize
+    CHKERRQ(ierr)
+
+    call MatMult(Amat, x, res, ierr)
+    CHKERRQ(ierr)
+
+    ! y = x + beta y (i.e. r = b - A*x)
+    call VecAYPX(res, -1.0_DP, rhs, ierr)
+    CHKERRQ(ierr)
+
+    call VecNorm(res, NORM_2, rnorm_L2, ierr)
     CHKERRQ(ierr)
 
     ! n == 0 is before the iteration starts
@@ -96,11 +116,14 @@ contains
         flag = KSP_CONVERGED_ITERATING
       end if
       CHKERRQ(ierr)
+
+      call VecDestroy(res, ierr)
+      CHKERRQ(ierr)
       return
     end if
 
-    call KSPBuildResidual(ksp, PETSC_NULL_VEC, PETSC_NULL_VEC, res, ierr)
-    CHKERRQ(ierr)
+    ! call KSPBuildResidual(ksp, PETSC_NULL_VEC, PETSC_NULL_VEC, res, ierr)
+    ! CHKERRQ(ierr)
 
     ! increment iteration counter
     summary%iter_cnt = summary%iter_cnt + 1
