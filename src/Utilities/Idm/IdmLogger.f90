@@ -357,6 +357,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM and MODEL_SHAPE
     call split_mem_path(mempath, comp, subcomp)
@@ -365,7 +366,7 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     ! -- create export file(s)
     select case (export_dim)
@@ -395,25 +396,25 @@ contains
       ! -- allocate and reshape
       allocate (int2d(dis2d_shape(1), dis2d_shape(2)))
       int2d = reshape(p_mem, dis2d_shape)
-      if (distype == DIS2D) then
-        ! -- write export files 2D array DIS2D
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
-        do i = 1, dis2d_shape(2)
-          write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
-        end do
-        close (inunit)
-      else if (distype == DISV) then
-        ! -- write export files 2D array DISV
+      if (is_layered) then
+        ! -- write layered export files 2D array
         do i = 1, dis2d_shape(2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        do i = 1, dis2d_shape(2)
+          write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
+        end do
+        close (inunit)
       end if
       ! -- cleanup
       deallocate (int2d)
     case (1)
-      ! -- write export files 1D array
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       write (inunit, '(*(i0, " "))') p_mem
       close (inunit)
@@ -440,6 +441,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM
     call split_mem_path(mempath, comp, subcomp)
@@ -448,31 +450,31 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     select case (export_dim)
     case (1)
-      ! -- write export files 1D array
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
       end do
       close (inunit)
     case (2)
-      if (distype == DIS2D) then
-        ! -- write export files 2D array DIS2D
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
-        do i = 1, size(p_mem, dim=2)
-          write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
-        end do
-        close (inunit)
-      else if (distype == DISV) then
-        ! -- write export files 2D array DISV
+      if (is_layered) then
+        ! -- write layered export files 2D array
         do i = 1, size(p_mem, dim=2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
           close (inunit)
         end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+        end do
+        close (inunit)
       end if
     case default
       write (errmsg, '(a,i0)') 'EXPORT unsupported int2d export_dim=', &
@@ -497,6 +499,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM
     call split_mem_path(mempath, comp, subcomp)
@@ -505,7 +508,7 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     select case (export_dim)
     case (3)
@@ -547,6 +550,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM and MODEL_SHAPE
     call split_mem_path(mempath, comp, subcomp)
@@ -555,7 +559,7 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     ! -- create export file(s)
     select case (export_dim)
@@ -585,25 +589,25 @@ contains
       ! -- allocate and reshape
       allocate (dbl2d(dis2d_shape(1), dis2d_shape(2)))
       dbl2d = reshape(p_mem, dis2d_shape)
-      if (distype == DIS2D) then
-        ! -- write export files 2D array DIS2D
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
-        do i = 1, dis2d_shape(2)
-          write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
-        end do
-        close (inunit)
-      else if (distype == DISV) then
-        ! -- write export files 2D array DISV
+      if (is_layered) then
+        ! -- write layered export files 2D array
         do i = 1, dis2d_shape(2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        do i = 1, dis2d_shape(2)
+          write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
+        end do
+        close (inunit)
       end if
       ! -- cleanup
       deallocate (dbl2d)
     case (1)
-      ! -- write export files 1D array
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       write (inunit, '(*(G0.10, " "))') p_mem
       close (inunit)
@@ -630,6 +634,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM
     call split_mem_path(mempath, comp, subcomp)
@@ -638,31 +643,31 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     select case (export_dim)
     case (1)
-      ! -- write export files 1D array
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
       end do
       close (inunit)
     case (2)
-      if (distype == DIS2D) then
-        ! -- write export files 2D array DIS2D
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
-        do i = 1, size(p_mem, dim=2)
-          write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
-        end do
-        close (inunit)
-      else if (distype == DISV) then
-        ! -- write export files 2D array DISV
+      if (is_layered) then
+        ! -- write layered export files 2D array
         do i = 1, size(p_mem, dim=2)
           inunit = create_export_file(varname, mempath, i, 0, 0, iout)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
           close (inunit)
         end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+        end do
+        close (inunit)
       end if
     case default
       write (errmsg, '(a,i0)') 'EXPORT unsupported dbl2d export_dim=', &
@@ -687,6 +692,7 @@ contains
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
     integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
     ! -- set pointer to DISENUM
     call split_mem_path(mempath, comp, subcomp)
@@ -695,7 +701,7 @@ contains
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
     ! -- set export_dim
-    export_dim = distype_export_dim(distype, model_shape, shapestr)
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
     !
     select case (export_dim)
     case (3)
@@ -774,26 +780,34 @@ contains
   !!
   !! Set the dimension of the export
   !<
-  function distype_export_dim(distype, model_shape, shapestr) &
+  function distype_export_dim(distype, shapestr, is_layered) &
     result(export_dim)
     integer(I4B), pointer, intent(in) :: distype
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: model_shape
     character(len=*), intent(in) :: shapestr !< dfn shape string
+    logical(LGP), intent(inout) :: is_layered !< does this data represent layers
     integer(I4B) :: export_dim
+    !
+    ! -- initialize is_layered to false
+    is_layered = .false.
+    !
     select case (distype)
     case (DIS)
       if (shapestr == 'NODES') then
         export_dim = 3
+        is_layered = .true.
       else if (shapestr == 'NCOL NROW NLAY') then
         export_dim = 3
+        is_layered = .true.
       else
         export_dim = 1
       end if
     case (DISV)
       if (shapestr == 'NODES') then
         export_dim = 2
+        is_layered = .true.
       else if (shapestr == 'NCPL NLAY') then
         export_dim = 2
+        is_layered = .true.
       else
         export_dim = 1
       end if
