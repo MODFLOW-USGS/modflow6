@@ -116,7 +116,7 @@ module SwfModule
   !<
   integer(I4B), parameter :: SWF_NBASEPKG = 9
   character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: &
-    SWF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV6  ', &
+    SWF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV2D6', &
                    'DFW6   ', 'CXS6   ', 'OC6    ', &
                    'IC6    ', 'OBS6   ', 'STO6   ']
 
@@ -1144,7 +1144,7 @@ contains
     use SimVariablesModule, only: idm_context
     use Disv1dModule, only: disv1d_cr
     use Dis2dModule, only: dis2d_cr
-    use DisvModule, only: disv_cr
+    use Disv2dModule, only: disv2d_cr
     use SwfDfWModule, only: dfw_cr
     use SwfCxsModule, only: cxs_cr
     use SwfStoModule, only: sto_cr
@@ -1198,9 +1198,9 @@ contains
       case ('DIS2D6')
         indis = 1
         call dis2d_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DISV6')
+      case ('DISV2D6')
         indis = 1
-        call disv_cr(this%dis, this%name, mempath, indis, this%iout)
+        call disv2d_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('DFW6')
         this%indfw = 1
         mempathdfw = mempath

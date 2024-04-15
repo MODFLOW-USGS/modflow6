@@ -8,7 +8,7 @@ module IdmSwfDfnSelectorModule
   use SwfNamInputModule
   use SwfDisv1DInputModule
   use SwfDis2DInputModule
-  use SwfDisvInputModule
+  use SwfDisv2DInputModule
   use SwfCxsInputModule
   use SwfDfwInputModule
   use SwfIcInputModule
@@ -50,8 +50,8 @@ contains
       call set_param_pointer(input_definition, swf_disv1d_param_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, swf_dis2d_param_definitions)
-    case ('DISV')
-      call set_param_pointer(input_definition, swf_disv_param_definitions)
+    case ('DISV2D')
+      call set_param_pointer(input_definition, swf_disv2d_param_definitions)
     case ('CXS')
       call set_param_pointer(input_definition, swf_cxs_param_definitions)
     case ('DFW')
@@ -82,8 +82,8 @@ contains
       call set_param_pointer(input_definition, swf_disv1d_aggregate_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, swf_dis2d_aggregate_definitions)
-    case ('DISV')
-      call set_param_pointer(input_definition, swf_disv_aggregate_definitions)
+    case ('DISV2D')
+      call set_param_pointer(input_definition, swf_disv2d_aggregate_definitions)
     case ('CXS')
       call set_param_pointer(input_definition, swf_cxs_aggregate_definitions)
     case ('DFW')
@@ -114,8 +114,8 @@ contains
       call set_block_pointer(input_definition, swf_disv1d_block_definitions)
     case ('DIS2D')
       call set_block_pointer(input_definition, swf_dis2d_block_definitions)
-    case ('DISV')
-      call set_block_pointer(input_definition, swf_disv_block_definitions)
+    case ('DISV2D')
+      call set_block_pointer(input_definition, swf_disv2d_block_definitions)
     case ('CXS')
       call set_block_pointer(input_definition, swf_cxs_block_definitions)
     case ('DFW')
@@ -145,8 +145,8 @@ contains
       multi_package = swf_disv1d_multi_package
     case ('DIS2D')
       multi_package = swf_dis2d_multi_package
-    case ('DISV')
-      multi_package = swf_disv_multi_package
+    case ('DISV2D')
+      multi_package = swf_disv2d_multi_package
     case ('CXS')
       multi_package = swf_cxs_multi_package
     case ('DFW')
@@ -180,7 +180,7 @@ contains
       integrated = .true.
     case ('DIS2D')
       integrated = .true.
-    case ('DISV')
+    case ('DISV2D')
       integrated = .true.
     case ('CXS')
       integrated = .true.

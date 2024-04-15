@@ -1,5 +1,4 @@
 BEGIN DIMENSIONS
-  NLAY <nlay>
-  NCPL <ncpl>
+  NODES <nodes>
   NVERT <nvert>
 END DIMENSIONS

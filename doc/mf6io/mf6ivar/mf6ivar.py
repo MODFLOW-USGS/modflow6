@@ -762,7 +762,7 @@ if __name__ == "__main__":
         "swf-nam",
         "swf-disv1d",
         "swf-dis2d",
-        "swf-disv",
+        "swf-disv2d",
         "swf-dfw",
         "swf-cxs",
         "swf-ic",
