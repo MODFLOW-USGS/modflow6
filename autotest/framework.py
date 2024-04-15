@@ -93,9 +93,7 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
 
     # parallel commands
     if get_ostag() in ["win64"]:
-        mpiexec_cmd = (
-        ["mpiexec", "-np", str(ncpus), target, "-p"]
-        )
+        mpiexec_cmd = ["mpiexec", "-np", str(ncpus), target, "-p"]
     else:
         mpiexec_cmd = (
             ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
@@ -630,6 +628,7 @@ class TestFramework:
                             workspace / "mfsim.nam",
                             model_ws=workspace,
                             report=True,
+                            cargs="-p",
                         )
                     except Exception:
                         warn(
