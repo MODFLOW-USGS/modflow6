@@ -13,7 +13,7 @@ module PrtPrpModule
   use BlockParserModule, only: BlockParserType
   use PrtFmiModule, only: PrtFmiType
   use ParticleModule, only: ParticleType, ParticleStoreType, &
-                            create_particle, create_particle_store
+                            create_particle, allocate_particle_store
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
@@ -63,6 +63,7 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: rptmass(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
     type(TimeSelectType), pointer :: releasetimes
+    integer(I4B), pointer :: ifrctrn => NULL()
 
   contains
     procedure :: prp_allocate_arrays
@@ -155,6 +156,7 @@ contains
     call mem_deallocate(this%itrkhdr)
     call mem_deallocate(this%itrkcsv)
     call mem_deallocate(this%irlstls)
+    call mem_deallocate(this%ifrctrn)
 
     ! -- deallocate arrays
     call mem_deallocate(this%rptx)
@@ -167,11 +169,11 @@ contains
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
     ! -- deallocate particle store
-    call this%particles%destroy(this%memoryPath)
+    call this%particles%deallocate(this%memoryPath)
     deallocate (this%particles)
 
     ! -- deallocate release time selection
-    call this%releasetimes%destroy()
+    call this%releasetimes%deallocate()
     deallocate (this%releasetimes)
   end subroutine prp_da
 
@@ -199,7 +201,10 @@ contains
 
     ! -- Allocate particle store, starting with the number
     !    of release points (arrays resized if/when needed)
-    call create_particle_store(this%particles, this%nreleasepts, this%memoryPath)
+    call allocate_particle_store( &
+      this%particles, &
+      this%nreleasepts, &
+      this%memoryPath)
 
     ! -- Allocate arrays
     call mem_allocate(this%rptx, this%nreleasepts, 'RPTX', this%memoryPath)
@@ -248,6 +253,7 @@ contains
     call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
     call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
+    call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
 
     ! -- Set values
     this%rlsall = .false.
@@ -266,6 +272,7 @@ contains
     this%itrkhdr = 0
     this%itrkcsv = 0
     this%irlstls = 0
+    this%ifrctrn = 0
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -448,6 +455,8 @@ contains
         particle%iboundary(2) = 0
         particle%idomain(3) = 0
         particle%iboundary(3) = 0
+        particle%ifrctrn = this%ifrctrn
+
         call this%particles%load_from_particle(particle, np)
 
         ! -- Accumulate mass release from this point
@@ -479,7 +488,7 @@ contains
                       "('Looking for BEGIN PERIOD iper.  &
                       &Found ', a, ' instead.')"
     character(len=*), parameter :: fmt_steps = &
-                                   "(6x,'TIME STEP(S) ',50(I0,' '))" ! kluge 50 (similar to STEPS in OC)?
+                                   "(6x,'TIME STEP(S) ',50(I0,' '))" ! 50 limit is similar to STEPS in OC
     character(len=*), parameter :: fmt_freq = &
                                    "(6x,'EVERY ',I0,' TIME STEP(S)')"
     character(len=*), parameter :: fmt_fracs = &
@@ -614,7 +623,7 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(PrtPrpType) :: this
-    real(DP), dimension(:), intent(in) :: hnew !< todo: mass concentration?
+    real(DP), dimension(:), intent(in) :: hnew
     real(DP), dimension(:), intent(inout) :: flowja !< flow between package and model
     integer(I4B), intent(in) :: imover !< flag indicating if the mover package is active
     ! -- local variables
@@ -631,11 +640,9 @@ contains
       node = this%nodelist(i)
       rrate = DZERO
       ! -- If cell is no-flow or constant-head, then ignore it.
-      ! todo: think about condition(s) under which to ignore cell
       if (node > 0) then
-        idiag = this%dis%con%ia(node)
-        ! todo: think about condition(s) under which to ignore cell
         ! -- Calculate the flow rate into the cell.
+        idiag = this%dis%con%ia(node)
         rrate = this%rptmass(i) * (DONE / delt) ! reciprocal of tstp length
         flowja(idiag) = flowja(idiag) + rrate
       end if
@@ -645,26 +652,9 @@ contains
     end do
   end subroutine prp_cq_simrate
 
-  !> @ brief Define list heading written with PRINT_INPUT option
-  subroutine define_listlabel(this) ! kluge note: update for PRT?
+  subroutine define_listlabel(this)
     class(PrtPrpType), intent(inout) :: this
-
-    ! -- create the header list label
-    this%listlabel = trim(this%filtyp)//' NO.'
-    if (this%dis%ndim == 3) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif (this%dis%ndim == 2) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
-    else
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if (this%inamedbound == 1) then
-      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    end if
+    ! not implemented, not used
   end subroutine define_listlabel
 
   !> @brief Indicates whether observations are supported.
@@ -808,6 +798,12 @@ contains
       found = .true.
     case ('LOCAL_Z')
       this%localz = .true.
+      found = .true.
+    case ('DEV_FORCETERNARY')
+      call this%parser%DevOpt()
+      this%ifrctrn = 1
+      write (this%iout, '(4x,a)') &
+        'TRACKING WILL BE DONE USING THE TERNARY METHOD REGARDLESS OF CELL TYPE'
       found = .true.
     case default
       found = .false.

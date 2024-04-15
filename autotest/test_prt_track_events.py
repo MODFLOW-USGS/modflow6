@@ -33,7 +33,6 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-
 from framework import TestFramework
 from prt_test_utils import (
     FlopyReadmeCase,
@@ -363,7 +362,7 @@ def check_output(idx, test):
     if "wksk" in name:
         pass
     if "trts" in name:
-        expected_len += 5324  # hardcoded... todo: or 5315?? debug
+        expected_len += 5324
     if "mult" in name:
         expected_len += 2 * (
             len(releasepts_prt["a"]) + len(releasepts_prt["b"])

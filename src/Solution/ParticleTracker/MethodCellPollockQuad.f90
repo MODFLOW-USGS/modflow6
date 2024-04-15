@@ -2,7 +2,7 @@ module MethodCellPollockQuadModule
 
   use KindModule, only: DP, I4B
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DONE
+  use ConstantsModule, only: DONE, DZERO
   use MethodModule, only: MethodType
   use MethodSubcellPoolModule, only: method_subcell_plck
   use CellRectQuadModule, only: CellRectQuadType, create_cell_rect_quad
@@ -75,7 +75,7 @@ contains
     class(MethodCellPollockQuadType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     ! -- local
-    integer :: isc, exitFace, npolyverts, inface, infaceoff
+    integer(I4B) :: isc, exitFace, npolyverts, inface, infaceoff
 
     select type (cell => this%cell)
     type is (CellRectQuadType)
@@ -83,7 +83,8 @@ contains
       isc = particle%idomain(3)
       npolyverts = cell%defn%npolyverts
 
-      select case (exitFace) ! kluge note: exitFace uses Dave's iface convention
+      ! exitFace uses MODPATH 7 iface convention here
+      select case (exitFace)
       case (0)
         ! -- Subcell interior (cell interior)
         inface = -1
@@ -93,41 +94,41 @@ contains
           ! -- W face, subcell 1 --> E face, subcell 4  (cell interior)
           particle%idomain(3) = 4
           particle%iboundary(3) = 2
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (2)
           ! -- W face, subcell 2 --> E face, subcell 3 (cell interior)
           particle%idomain(3) = 3
           particle%iboundary(3) = 2
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (3)
           ! -- W face, subcell 3 (cell face)
-          inface = 1 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 1 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = 0
         case (4)
           ! -- W face, subcell 4 (cell face)
-          inface = 2 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 2 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = -1
         end select
       case (2)
         select case (isc)
         case (1)
           ! -- E face, subcell 1 (cell face)
-          inface = 3 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 3 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = 0
         case (2)
           ! -- E face, subcell 2 (cell face)
-          inface = 4 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 4 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = -1
         case (3)
           ! -- E face, subcell 3 --> W face, subcell 2 (cell interior)
           particle%idomain(3) = 2
           particle%iboundary(3) = 1
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (4)
           ! -- E face, subcell 4 --> W face subcell 1 (cell interior)
           particle%idomain(3) = 1
           particle%iboundary(3) = 1
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         end select
       case (3)
         select case (isc)
@@ -135,49 +136,50 @@ contains
           ! -- S face, subcell 1 --> N face, subcell 2 (cell interior)
           particle%idomain(3) = 2
           particle%iboundary(3) = 4
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (2)
           ! -- S face, subcell 2 (cell face)
-          inface = 4 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 4 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = 0
         case (3)
           ! -- S face, subcell 3 (cell face)
-          inface = 1 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 1 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = -1
         case (4)
           ! -- S face, subcell 4 --> N face, subcell 3 (cell interior)
           particle%idomain(3) = 3
           particle%iboundary(3) = 4
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         end select
       case (4)
         select case (isc)
         case (1)
           ! -- N face, subcell 1 (cell face)
-          inface = 3 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 3 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = -1
         case (2)
           ! -- N face, subcell 2 --> S face, subcell 1 (cell interior)
           particle%idomain(3) = 1
           particle%iboundary(3) = 3
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (3)
           ! -- N face, subcell 3 --> S face, subcell 4 (cell interior)
           particle%idomain(3) = 4
           particle%iboundary(3) = 3
-          inface = 0 ! kluge note: want Domain(2) unchanged; Boundary(2) = 0
+          inface = 0 ! want Domain(2) unchanged; Boundary(2) = 0
         case (4)
           ! -- N face, subcell 4 (cell face)
-          inface = 2 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+          inface = 2 ! want Domain(2) = -Domain(2); Boundary(2) = inface
           infaceoff = 0
         end select
       case (5)
         ! -- Subcell bottom (cell bottom)
-        inface = npolyverts + 2 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+        inface = npolyverts + 2 ! want Domain(2) = -Domain(2); Boundary(2) = inface
       case (6)
         ! -- Subcell top (cell top)
-        inface = npolyverts + 3 ! kluge note: want Domain(2) = -Domain(2); Boundary(2) = inface
+        inface = npolyverts + 3 ! want Domain(2) = -Domain(2); Boundary(2) = inface
       end select
+
       if (inface .eq. -1) then
         particle%iboundary(2) = 0
       else if (inface .eq. 0) then
@@ -230,7 +232,7 @@ contains
       cosrot = cell%cosrot
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot)
-      call this%track(particle, 2, tmax) ! kluge, hardwired to level 2
+      call this%track(particle, 2, tmax)
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot, invert=.true.)
       call particle%transform(reset=.true.)
@@ -244,11 +246,11 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     class(SubcellRectType), intent(inout) :: subcell
     ! -- local
-    double precision :: dx, dy, dz, areax, areay, areaz
-    double precision :: dxprel, dyprel
-    integer :: isc, npolyverts, m1, m2
-    double precision :: qextl1, qextl2, qintl1, qintl2
-    double precision :: factor, term
+    real(DP) :: dx, dy, dz, areax, areay, areaz
+    real(DP) :: dxprel, dyprel
+    integer(I4B) :: isc, npolyverts, m1, m2
+    real(DP) :: qextl1, qextl2, qintl1, qintl2
+    real(DP) :: factor, term
 
     select type (cell => this%cell)
     type is (CellRectQuadType)
@@ -266,38 +268,28 @@ contains
       if (isc .le. 0) then
         dxprel = particle%x / dx
         dyprel = particle%y / dy
-        if (dxprel .lt. 5d-1) then
-          if (dyprel .lt. 5d-1) then
-            isc = 3
-          else if (dyprel .gt. 5d-1) then
+
+        if (dyprel .ge. 5d-1) then
+          if (dxprel .le. 5d-1) then
             isc = 4
           else
-            ! kluge note: need to resolve this ambiguity based on flow direction
-            call pstop(1, "particle initially on shared subcell edge")
-          end if
-        else if (dxprel .gt. 5d-1) then
-          if (dyprel .lt. 5d-1) then
-            isc = 2
-          else if (dyprel .gt. 5d-1) then
             isc = 1
-          else
-            ! kluge note: need to resolve this ambiguity based on flow direction
-            call pstop(1, "particle initially on shared subcell edge")
           end if
         else
-          ! kluge note: need to resolve this ambiguity based on flow direction
-          call pstop(1, "particle initially on shared subcell edge")
+          if (dxprel .le. 5d-1) then
+            isc = 3
+          else
+            isc = 2
+          end if
         end if
+
         subcell%isubcell = isc
-        ! kluge note: as a matter of form, do we want to allow
-        ! this subroutine to modify the particle???
         particle%idomain(3) = isc
-        ! kluge note: initial insubface is not currently being determined
       end if
       dx = 5d-1 * dx
       dy = 5d-1 * dy
       dz = cell%defn%top - &
-           cell%defn%bot ! kluge note: need to account for partial saturation
+           cell%defn%bot
       areax = dy * dz
       areay = dx * dz
       areaz = dx * dy
@@ -310,9 +302,9 @@ contains
       subcell%dx = dx
       subcell%dy = dy
       subcell%dz = dz
-      subcell%sinrot = 0d0
-      subcell%cosrot = 1d0
-      subcell%zOrigin = 0d0
+      subcell%sinrot = DZERO
+      subcell%cosrot = DONE
+      subcell%zOrigin = DZERO
       select case (isc)
       case (1)
         subcell%xOrigin = dx
@@ -325,7 +317,7 @@ contains
         subcell%vy2 = -qextl1 * term
       case (2)
         subcell%xOrigin = dx
-        subcell%yOrigin = 0d0
+        subcell%yOrigin = DZERO
         term = factor / areax
         subcell%vx1 = -qintl2 * term
         subcell%vx2 = -qextl1 * term
@@ -333,8 +325,8 @@ contains
         subcell%vy1 = qextl2 * term
         subcell%vy2 = -qintl1 * term
       case (3)
-        subcell%xOrigin = 0d0
-        subcell%yOrigin = 0d0
+        subcell%xOrigin = DZERO
+        subcell%yOrigin = DZERO
         term = factor / areax
         subcell%vx1 = qextl2 * term
         subcell%vx2 = -qintl1 * term
@@ -342,7 +334,7 @@ contains
         subcell%vy1 = qextl1 * term
         subcell%vy2 = qintl2 * term
       case (4)
-        subcell%xOrigin = 0d0
+        subcell%xOrigin = DZERO
         subcell%yOrigin = dy
         term = factor / areax
         subcell%vx1 = qextl1 * term
