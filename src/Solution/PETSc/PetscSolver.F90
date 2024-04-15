@@ -318,6 +318,9 @@ contains
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
+    call MatCreateVecs( &
+      this%mat_petsc, this%petsc_ctx%residual, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
                                this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
