@@ -4,5 +4,6 @@ BEGIN OPTIONS
   [TIME_CONVERSION <time_conversion>]
   [SAVE_FLOWS]
   [PRINT_FLOWS]
+  [SAVE_VELOCITY]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS

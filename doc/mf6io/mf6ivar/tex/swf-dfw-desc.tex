@@ -13,6 +13,8 @@
 
 \item \texttt{PRINT\_FLOWS}---keyword to indicate that calculated flows between cells will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control. If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period.  This option can produce extremely large list files because all cell-by-cell flows are printed.  It should only be used with the DFW Package for models that have a small number of cells.
 
+\item \texttt{SAVE\_VELOCITY}---keyword to indicate that x, y, and z components of velocity will be calculated at cell centers and written to the budget file, which is specified with ``BUDGET SAVE FILE'' in Output Control.  If this option is activated, then additional information may be required in the discretization packages and the GWF Exchange package (if GWF models are coupled).  Specifically, ANGLDEGX must be specified in the CONNECTIONDATA block of the DISU Package; ANGLDEGX must also be specified for the GWF Exchange as an auxiliary variable.
+
 \item \texttt{OBS6}---keyword to specify that record corresponds to an observations file.
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
