@@ -107,7 +107,7 @@ $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
-$(OBJDIR)/swf-disvidm.o \
+$(OBJDIR)/swf-disv2didm.o \
 $(OBJDIR)/swf-disv1didm.o \
 $(OBJDIR)/swf-dis2didm.o \
 $(OBJDIR)/swf-dfwidm.o \
@@ -384,6 +384,7 @@ $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
 $(OBJDIR)/swf-dfw.o \
 $(OBJDIR)/swf-cdb.o \
+$(OBJDIR)/Disv2d.o \
 $(OBJDIR)/Dis2d.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
