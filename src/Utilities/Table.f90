@@ -817,7 +817,7 @@ contains
       if (j == this%ntableterm) then
         line_end = .TRUE.
       end if
-        !
+      !
       ! -- add data to line
       if (this%write_csv) then
         if (j == 1) then

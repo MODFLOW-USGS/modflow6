@@ -5387,7 +5387,7 @@ contains
       n2 = this%igwfnode(n)
       if (n2 > 0) then
         if (this%iboundpak(n) /= 0) then
-            ! -- calc_perimeter_wet() does not enforce depth dependence
+          ! -- calc_perimeter_wet() does not enforce depth dependence
           if (this%depth(n) > DZERO) then
             wp = this%calc_perimeter_wet(n, this%depth(n))
           else
