@@ -236,7 +236,7 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup builddir
+          pixi run setup builddir -Doptimization=0 -Ddebug=true
           pixi run build builddir
 
       - name: Show build log
