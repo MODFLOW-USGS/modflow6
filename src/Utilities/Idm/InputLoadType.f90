@@ -59,8 +59,6 @@ module InputLoadTypeModule
     character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
     character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
     character(len=LINELENGTH), dimension(:), allocatable :: param_names !< dynamic param tagnames
-    integer(I4B), pointer :: iper => null() !< memory managed variable, loader iper
-    integer(I4B), pointer :: ionper => null() !< memory managed variable, next load period
     logical(LGP) :: readasarrays !< is this array based input
     integer(I4B) :: iperblock !< index of period block on block definition list
     integer(I4B) :: iout !< inunit number for logging
@@ -166,7 +164,6 @@ contains
   subroutine dynamic_init(this, mf6_input, component_name, component_input_name, &
                           input_name, iperblock, iout)
     use SimVariablesModule, only: errmsg
-    use MemoryManagerModule, only: mem_allocate
     use InputDefinitionModule, only: InputParamDefinitionType
     ! -- dummy
     class(DynamicPkgLoadType), intent(inout) :: this
@@ -186,14 +183,6 @@ contains
     this%nparam = 0
     this%iout = iout
     nullify (idt)
-    !
-    ! -- allocate scalars
-    call mem_allocate(this%iper, 'IPER', mf6_input%mempath)
-    call mem_allocate(this%ionper, 'IONPER', mf6_input%mempath)
-    !
-    ! -- initialize
-    this%iper = 0
-    this%ionper = 0
     !
     ! -- throw error and exit if not found
     if (this%iperblock == 0) then
@@ -242,10 +231,6 @@ contains
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     class(DynamicPkgLoadType), intent(inout) :: this
-    !
-    ! -- deallocate scalars
-    call mem_deallocate(this%iper)
-    call mem_deallocate(this%ionper)
     !
     ! -- deallocate package static and dynamic input context
     call memorylist_remove(this%mf6_input%component_name, &
