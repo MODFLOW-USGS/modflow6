@@ -660,16 +660,6 @@ class TestFramework:
                 else:
                     success = True
 
-            lst_file_path = Path(workspace) / "mfsim.lst"
-            if (
-                "mf6" in target.name
-                and not success
-                and lst_file_path.is_file()
-            ):
-                warn(
-                    "MODFLOW 6 listing file ended with: \n"
-                    + get_mfsim_lst_tail(lst_file_path)
-                )
         except Exception:
             success = False
             warn(
