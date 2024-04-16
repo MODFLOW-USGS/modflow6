@@ -70,37 +70,36 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwfghb(gwf, stress_period_data=[((0, 0, 0), 1.0, 1e6)])
 
     # sfr data
-    nreaches = 2
+    nreaches = 4
     
     # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
-    package_data = []
-    for idx in range(nreaches):
-        if idx == 0:
-            ustrf = 0.0
-        else:
-            ustrf = 1.0
-        package_data.append(
-            (idx, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, ustrf, 0)
-        )
+    package_data = [
+            (0, (-1, -1, -1), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 0.0, 0),
+            (1, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 1.0, 0),
+            (2, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 0.0, 0),
+            (3, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 1.0, 0),
+    ]
     connection_data = [
         (0, -1),
-        (1, 0)
+        (1, 0),
+        (2, -3),
+        (3, 2),
         ]
     
     sfr_spd = {
         0:
             [
-                (0, "inflow", 1.0),
-                (0, "rainfall", 1.0),
-                (0, "evaporation", 1.0),
-                (0, "runoff", 1.0),
-                (1, "rainfall", 1.0),
-                (1, "evaporation", 1.0),
-                (1, "runoff", 1.0),
+                (2, "inflow", 1.0),
+                (2, "rainfall", 1.0),
+                (2, "evaporation", 1.0),
+                (2, "runoff", 1.0),
+                (3, "rainfall", 1.0),
+                (3, "evaporation", 1.0),
+                (3, "runoff", 1.0),
             ],
         1:
             [
-                (1, "status", "inactive"),
+                (3, "status", "inactive"),
             ],
         }
         
@@ -123,17 +122,34 @@ def build_models(idx, test):
         budget_filerecord=f"{name}.sfr.cbc",
         length_conversion=1.0,
         time_conversion=1.0,
+        mover=True,
         nreaches=nreaches,
         packagedata=package_data,
         connectiondata=connection_data,
         perioddata=sfr_spd,
         observations=sfr_obs,
+        pname="SFR-1"
+    )
+    
+    flopy.mf6.ModflowGwfmvr(
+        gwf,
+        print_input=True,
+        print_flows=True,
+        maxmvr=1,
+        maxpackages=1,
+        packages=["SFR-1"],
+        perioddata={
+            1: [
+                ("SFR-1", 2, "SFR-1", 0, "FACTOR", 1.0),
+                ],
+            }
     )
     
     flopy.mf6.ModflowGwfoc(
         gwf,
+        head_filerecord=f"{name}.hds",
         budget_filerecord=f"{name}.cbc",
-        saverecord=[("budget", "all")],
+        saverecord=[("head", "all"), ("budget", "all")],
     )
 
     return sim, None

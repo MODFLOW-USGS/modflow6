@@ -2456,7 +2456,7 @@ contains
                                   pertim, totim, this%iout)
     end if
     !
-    ! -- Print lake flows table
+    ! -- Print sfr flows table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       !
       ! -- If there are any 'none' gwf connections then need to calculate
@@ -2566,7 +2566,11 @@ contains
           w = DHNOFLO
           cond = DHNOFLO
         end if
-        call this%stagetab%add_term(stage)
+        if (depth == DZERO) then
+          call this%stagetab%add_term(DHDRY)
+        else
+          call this%stagetab%add_term(stage)
+        end if
         call this%stagetab%add_term(depth)
         call this%stagetab%add_term(w)
         if (node > 0) then
@@ -5352,9 +5356,9 @@ contains
     call this%budobj%budterm(idx)%reset(this%nconn)
     do n = 1, this%maxbound
       n1 = n
+      q = DZERO
+      ca = DZERO
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
-        q = DZERO
-        ca = DZERO
         if (this%iboundpak(n) /= 0) then
           n2 = this%ja(i)
           ! flow to downstream reaches
@@ -5374,6 +5378,9 @@ contains
           ! calculate flow area
           call this%sfr_calc_reach_depth(n, qt, d)
           ca = this%calc_area_wet(n, d)
+        else
+          q = DZERO
+          ca = DZERO
         end if
         this%qauxcbc(1) = ca
         call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)

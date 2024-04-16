@@ -7,7 +7,7 @@ module TableModule
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                              TABCENTER, &
-                             DHNOFLO
+                             DHNOFLO, DHDRY
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error
@@ -796,7 +796,11 @@ contains
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
 !
-    if (rval /= DHNOFLO) then
+    if (rval == DHNOFLO) then
+      call this%add_string("INACTIVE")
+    else if (rval == DHDRY) then
+      call this%add_string("DRY")
+    else
       !
       ! -- write header
       if (this%icount == 0 .and. this%ientry == 0) then
@@ -844,8 +848,6 @@ contains
       if (this%allow_finalization) then
         call this%finalize()
       end if
-    else
-      call this%add_string("INACTIVE")
     end if
     !
     ! -- Return
