@@ -5,6 +5,7 @@ module PetscConvergenceModule
   use ConstantsModule, only: DPREC
   use ListModule
   use ConvergenceSummaryModule
+  use ImsLinearSettingsModule
   implicit none
   private
 
@@ -22,7 +23,9 @@ module PetscConvergenceModule
     integer(I4B) :: max_its !< maximum number of inner iterations
     real(DP) :: rnorm_L2_init !< the initial L2 norm for (b - Ax)
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null() !< detailed convergence information
+    real(DP) :: t_convergence_check !< the time spent convergence checking
   contains
+    procedure :: create
     procedure :: destroy
   end type PetscContextType
 
@@ -58,9 +61,33 @@ module PetscConvergenceModule
 
 contains
 
+  subroutine create(this, mat, settings, summary)
+    class(PetscContextType) :: this
+    Mat, pointer :: mat
+    type(ImsLinearSettingsType), pointer :: settings
+    type(ConvergenceSummaryType), pointer :: summary
+    ! local
+    PetscErrorCode :: ierr
+
+    this%icnvg_ims = 0
+    this%icnvgopt = settings%icnvgopt
+    this%dvclose = settings%dvclose
+    this%rclose = settings%rclose
+    this%max_its = settings%iter1
+    this%cnvg_summary => summary
+    call MatCreateVecs(mat, this%x_old, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+    call MatCreateVecs(mat, this%delta_x, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+    call MatCreateVecs(mat, this%residual, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+
+  end subroutine create
+
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
   subroutine petsc_check_convergence(ksp, n, rnorm_L2, flag, context, ierr)
+    use TimerModule
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm_L2 !< 2-norm (preconditioned) residual value
@@ -78,6 +105,9 @@ contains
     type(ConvergenceSummaryType), pointer :: summary
     PetscInt :: iter_cnt
     PetscInt :: i, j, istart, iend
+    real(DP) :: start_time
+
+    call code_timer(0, start_time, context%t_convergence_check)
 
     summary => context%cnvg_summary
 
@@ -114,6 +144,7 @@ contains
         flag = KSP_CONVERGED_ITERATING
       end if
 
+      call code_timer(1, start_time, context%t_convergence_check)
       return
     end if
 
@@ -197,6 +228,8 @@ contains
       end if
     end if
 
+    call code_timer(1, start_time, context%t_convergence_check)
+
   end subroutine petsc_check_convergence
 
   !> @brief Apply the IMS convergence check
@@ -239,13 +272,18 @@ contains
   end function apply_check
 
   subroutine destroy(this)
+    use SimVariablesModule, only: iout
     class(PetscContextType) :: this
     ! local
     integer(I4B) :: ierr
 
+    ! write(iout,*) "convergence check: ", this%t_convergence_check
+
     call VecDestroy(this%x_old, ierr)
     CHKERRQ(ierr)
     call VecDestroy(this%delta_x, ierr)
+    CHKERRQ(ierr)
+    call VecDestroy(this%residual, ierr)
     CHKERRQ(ierr)
 
   end subroutine destroy

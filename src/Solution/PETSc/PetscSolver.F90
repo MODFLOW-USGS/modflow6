@@ -249,8 +249,6 @@ contains
     CHKERRQ(ierr)
     call PCSetType(pc, this%pc_type, ierr)
     CHKERRQ(ierr)
-    call PCSetFromOptions(pc, ierr)
-    CHKERRQ(ierr)
     call PCSetUp(pc, ierr)
     CHKERRQ(ierr)
     call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
@@ -258,6 +256,8 @@ contains
     call KSPGetPC(sub_ksp(1), sub_pc, ierr)
     CHKERRQ(ierr)
     call PCSetType(sub_pc, this%sub_pc_type, ierr)
+    CHKERRQ(ierr)
+    call PCSetFromOptions(sub_pc, ierr)
     CHKERRQ(ierr)
     call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
     CHKERRQ(ierr)
@@ -306,21 +306,8 @@ contains
     ! local
     PetscErrorCode :: ierr
 
-    this%petsc_ctx%icnvg_ims = 0
-    this%petsc_ctx%icnvgopt = this%linear_settings%icnvgopt
-    this%petsc_ctx%dvclose = this%linear_settings%dvclose
-    this%petsc_ctx%rclose = this%linear_settings%rclose
-    this%petsc_ctx%max_its = this%linear_settings%iter1
-    this%petsc_ctx%cnvg_summary => convergence_summary
-    call MatCreateVecs( &
-      this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
-    call MatCreateVecs( &
-      this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
-    call MatCreateVecs( &
-      this%mat_petsc, this%petsc_ctx%residual, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
+    call this%petsc_ctx%create(this%mat_petsc, this%linear_settings, &
+                               convergence_summary)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
                                this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
