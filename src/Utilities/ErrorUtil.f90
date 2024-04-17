@@ -7,7 +7,7 @@ module ErrorUtilModule
   interface
     subroutine pstop_iface(status)
       import I4B
-      integer(I4B), optional :: status
+      integer(I4B) :: status
     end subroutine
   end interface
 
