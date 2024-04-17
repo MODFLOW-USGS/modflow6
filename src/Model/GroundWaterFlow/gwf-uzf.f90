@@ -84,7 +84,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: rejinf0 => null()
     real(DP), dimension(:), pointer, contiguous :: rejinftomvr => null()
     real(DP), dimension(:), pointer, contiguous :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous :: gwet => null()
+    real(DP), dimension(:), pointer, contiguous :: gwet_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: uzet => null()
     real(DP), dimension(:), pointer, contiguous :: gwd => null()
     real(DP), dimension(:), pointer, contiguous :: gwd0 => null()
@@ -95,11 +95,11 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: wcnew => null() !< water content for this time step
     real(DP), dimension(:), pointer, contiguous :: wcold => null() !< water content for previous time step
     !
-    ! -- timeseries aware package variables; these variables have
-    !    uzfobj counterparts
+    ! -- timeseries aware package variables; these variables with 
+    !    _pvar have uzfobj counterparts
     real(DP), dimension(:), pointer, contiguous :: sinf_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: pet_pvar => null()
-    real(DP), dimension(:), pointer, contiguous :: extdp_pvar => null()
+    real(DP), dimension(:), pointer, contiguous :: extdp => null()
     real(DP), dimension(:), pointer, contiguous :: extwc_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: ha_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: hroot_pvar => null()
@@ -281,7 +281,7 @@ contains
                       this%memoryPath)
     call mem_allocate(this%infiltration, this%nodes, 'INFILTRATION', &
                       this%memoryPath)
-    call mem_allocate(this%gwet, this%nodes, 'GWET', this%memoryPath)
+    call mem_allocate(this%gwet_pvar, this%nodes, 'GWET_PVAR', this%memoryPath)
     call mem_allocate(this%uzet, this%nodes, 'UZET', this%memoryPath)
     call mem_allocate(this%gwd, this%nodes, 'GWD', this%memoryPath)
     call mem_allocate(this%gwd0, this%nodes, 'GWD0', this%memoryPath)
@@ -298,7 +298,7 @@ contains
     ! -- allocate timeseries aware variables
     call mem_allocate(this%sinf_pvar, this%nodes, 'SINF_PVAR', this%memoryPath)
     call mem_allocate(this%pet_pvar, this%nodes, 'PET_PVAR', this%memoryPath)
-    call mem_allocate(this%extdp_pvar, this%nodes, 'EXDP_PVAR', this%memoryPath)
+    call mem_allocate(this%extdp, this%nodes, 'EXDP_PVAR', this%memoryPath)
     call mem_allocate(this%extwc_pvar, this%nodes, 'EXTWC_PVAR', this%memoryPath)
     call mem_allocate(this%ha_pvar, this%nodes, 'HA_PVAR', this%memoryPath)
     call mem_allocate(this%hroot_pvar, this%nodes, 'HROOT_PVAR', this%memoryPath)
@@ -313,7 +313,7 @@ contains
       this%rejinf(i) = DZERO
       this%rejinf0(i) = DZERO
       this%rejinftomvr(i) = DZERO
-      this%gwet(i) = DZERO
+      this%gwet_pvar(i) = DZERO
       this%uzet(i) = DZERO
       this%gwd(i) = DZERO
       this%gwd0(i) = DZERO
@@ -327,7 +327,7 @@ contains
       ! -- timeseries aware variables
       this%sinf_pvar(i) = DZERO
       this%pet_pvar(i) = DZERO
-      this%extdp_pvar(i) = DZERO
+      this%extdp(i) = DZERO
       this%extwc_pvar(i) = DZERO
       this%ha_pvar(i) = DZERO
       this%hroot_pvar(i) = DZERO
@@ -807,7 +807,7 @@ contains
         ! -- EXTD
         call this%parser%GetStringCaps(text)
         jj = 1 ! For EXTDP
-        bndElem => this%extdp_pvar(i)
+        bndElem => this%extdp(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'EXTDP')
@@ -870,7 +870,7 @@ contains
           call this%inputtab%add_term(this%sinf_pvar(i))
           if (this%ietflag /= 0) then
             call this%inputtab%add_term(this%pet_pvar(i))
-            call this%inputtab%add_term(this%extdp_pvar(i))
+            call this%inputtab%add_term(this%extdp(i))
             call this%inputtab%add_term(this%extwc_pvar(i))
             if (this%ietflag == 2) then
               call this%inputtab%add_term(this%ha_pvar(i))
@@ -992,7 +992,7 @@ contains
       !
       ! -- PET, EXTDP
       rval1 = this%pet_pvar(i)
-      rval2 = this%extdp_pvar(i)
+      rval2 = this%extdp(i)
       call this%uzfobj%setdataet(i, ivertflag, rval1, rval2)
       !
       ! -- ETWC
@@ -1431,7 +1431,7 @@ contains
       this%gwd(i) = q
       !
       ! -- calculate and store remaining budget terms
-      this%gwet(i) = this%uzfobj%gwet(i)
+      this%gwet_pvar(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       !
       ! -- End of UZF cell loop
@@ -1514,7 +1514,7 @@ contains
     !
     ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
     if (this%igwetflag /= 0) then
-      call rate_accumulator(-this%gwet, ratin, ratout)
+      call rate_accumulator(-this%gwet_pvar, ratin, ratout)
       call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4), &
                                  isuppress_output, this%packName)
     end if
@@ -1589,7 +1589,7 @@ contains
               trim(this%packName)//') FLOW RATES'
       call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
                                   this%outputtab, this%nbound, this%nodelist, &
-                                  -this%gwet, this%ibound, title, &
+                                  -this%gwet_pvar, this%ibound, title, &
                                   this%bdtxt(itxt), this%ipakcb, this%dis, &
                                   this%naux, this%name_model, this%name_model, &
                                   this%name_model, this%packName, this%auxname, &
@@ -2385,7 +2385,7 @@ contains
             end if
           case ('UZF-GWET')
             if (this%igwetflag > 0) then
-              v = this%gwet(n)
+              v = this%gwet_pvar(n)
               if (v > DZERO) then
                 v = -v
               end if
@@ -2750,7 +2750,7 @@ contains
     call mem_deallocate(this%rejinf0)
     call mem_deallocate(this%rejinftomvr)
     call mem_deallocate(this%infiltration)
-    call mem_deallocate(this%gwet)
+    call mem_deallocate(this%gwet_pvar)
     call mem_deallocate(this%uzet)
     call mem_deallocate(this%gwd)
     call mem_deallocate(this%gwd0)
@@ -2770,7 +2770,7 @@ contains
     ! -- deallocate timeseries aware variables
     call mem_deallocate(this%sinf_pvar)
     call mem_deallocate(this%pet_pvar)
-    call mem_deallocate(this%extdp_pvar)
+    call mem_deallocate(this%extdp)
     call mem_deallocate(this%extwc_pvar)
     call mem_deallocate(this%ha_pvar)
     call mem_deallocate(this%hroot_pvar)
