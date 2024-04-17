@@ -95,7 +95,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: wcnew => null() !< water content for this time step
     real(DP), dimension(:), pointer, contiguous :: wcold => null() !< water content for previous time step
     !
-    ! -- timeseries aware package variables; these variables with 
+    ! -- timeseries aware package variables; these variables with
     !    _pvar have uzfobj counterparts
     real(DP), dimension(:), pointer, contiguous :: sinf_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: pet_pvar => null()
