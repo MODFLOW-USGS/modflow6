@@ -413,9 +413,15 @@ contains
               exit colterm
             end if
           else
-            if (id1 /= icv) cycle colterm
+            if (id1 /= icv) then
+              cycle colterm
+            end if
           end if
-          v = this%budterm(idx)%get_flow(i)
+          if (id1 /= icv) then
+            v = DZERO
+          else
+            v = this%budterm(idx)%get_flow(i)
+          end if
           if (trim(adjustl(flowtype)) == 'FLOW-JA-FACE') then
             if (v < DZERO) then
               qoutflow = qoutflow + v

@@ -5359,8 +5359,8 @@ contains
       q = DZERO
       ca = DZERO
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
+        n2 = this%ja(i)
         if (this%iboundpak(n) /= 0) then
-          n2 = this%ja(i)
           ! flow to downstream reaches
           if (this%idir(i) < 0) then
             qt = this%dsflow(n)
