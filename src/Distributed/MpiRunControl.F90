@@ -36,6 +36,7 @@ contains
 
   subroutine mpi_ctrl_start(this)
     use SimModule, only: ustop, store_error
+    use ErrorUtilModule, only: pstop_alternative
 
     class(MpiRunControlType) :: this
     ! local
@@ -43,6 +44,9 @@ contains
     character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
     type(MpiWorldType), pointer :: mpi_world
+
+    ! set mpi abort function
+    pstop_alternative => mpi_stop
 
     wait_dbg = .false.
     mpi_world => get_mpi_world()
@@ -119,6 +123,7 @@ contains
   end subroutine wait_for_debugger
 
   subroutine mpi_ctrl_finish(this)
+    use ErrorUtilModule, only: pstop_alternative
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
@@ -133,6 +138,8 @@ contains
     call MPI_Finalize(ierr)
     call CHECK_MPI(ierr)
 #endif
+
+    pstop_alternative => null()
 
     ! finish everything else by calling parent
     call this%RunControlType%finish()

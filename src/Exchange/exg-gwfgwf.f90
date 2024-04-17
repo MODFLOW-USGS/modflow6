@@ -250,8 +250,10 @@ contains
     !
     ! -- Create and read ghost node information
     if (this%ingnc > 0) then
-      call gnc_cr(this%gnc, this%name, this%ingnc, iout)
-      call this%read_gnc()
+      if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+        call gnc_cr(this%gnc, this%name, this%ingnc, iout)
+        call this%read_gnc()
+      end if
     end if
     !
     ! -- Read mover information
