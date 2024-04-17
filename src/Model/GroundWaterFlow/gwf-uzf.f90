@@ -22,7 +22,8 @@ module UzfModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
   use SimVariablesModule, only: errmsg, warnmsg
-  use SimModule, only: count_errors, store_error, store_error_unit, deprecation_warning
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       deprecation_warning
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
