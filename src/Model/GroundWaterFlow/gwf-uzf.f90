@@ -2035,7 +2035,8 @@ contains
           n = this%igwfnode(i)
           call this%uzfobj%setdata(i, this%gwfarea(n), this%gwftop(n), &
                                    this%gwfbot(n), surfdep, vks, thtr, thts, &
-                                   thti, eps, this%ntrail_pvar, landflag, ivertcon)
+                                   thti, eps, this%ntrail_pvar, landflag, &
+                                   ivertcon)
           if (ivertcon > 0) then
             this%iuzf2uzf = 1
           end if
