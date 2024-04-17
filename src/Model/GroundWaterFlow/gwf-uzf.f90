@@ -61,9 +61,6 @@ module UzfModule
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer :: gwfiss => null()
-    real(DP), dimension(:), pointer, contiguous :: gwftop => null()
-    real(DP), dimension(:), pointer, contiguous :: gwfbot => null()
-    real(DP), dimension(:), pointer, contiguous :: gwfarea => null()
     real(DP), dimension(:), pointer, contiguous :: gwfhcond => null()
     !
     ! -- uzf data
@@ -615,11 +612,6 @@ contains
     allocate (this%uzfobj)
     call this%uzfobj%init(this%nodes, this%nwav_pvar, this%memoryPath)
     call this%uzfobjwork%init(1, this%nwav_pvar)
-    !
-    ! -- Set pointers to GWF model arrays
-    call mem_setptr(this%gwftop, 'TOP', create_mem_path(this%name_model, 'DIS'))
-    call mem_setptr(this%gwfbot, 'BOT', create_mem_path(this%name_model, 'DIS'))
-    call mem_setptr(this%gwfarea, 'AREA', create_mem_path(this%name_model, 'DIS'))
     !
     !--Read uzf cell properties and set values
     call this%read_cell_properties()
@@ -1972,7 +1964,7 @@ contains
             'must be greater than 0 (specified value is', surfdep, ').'
           call store_error(errmsg)
         end if
-        if (surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
+        if (surfdep >= this%dis%top(ic) - this%dis%bot(ic)) then
           write (errmsg, '(a,1x,i0,1x,a)') &
             'SURFDEP for uzf cell', i, &
             'cannot be greater than the cell thickness.'
@@ -2033,8 +2025,8 @@ contains
         ! -- set data if there are no data errors
         if (count_errors() == 0) then
           n = this%igwfnode(i)
-          call this%uzfobj%setdata(i, this%gwfarea(n), this%gwftop(n), &
-                                   this%gwfbot(n), surfdep, vks, thtr, thts, &
+          call this%uzfobj%setdata(i, this%dis%area(n), this%dis%top(n), &
+                                   this%dis%bot(n), surfdep, vks, thtr, thts, &
                                    thti, eps, this%ntrail_pvar, landflag, &
                                    ivertcon)
           if (ivertcon > 0) then
@@ -2533,7 +2525,7 @@ contains
           !
           ! -- determine maximum cell depth
           ! -- This is presently complicated for landflag = 1 cells and surfdep
-          !    greater than zero.  In this case, celtop is gwftop - surfdep.
+          !    greater than zero.  In this case, celtop is dis%top - surfdep.
           iuzid = obsrv%intPak1
           dmax = this%uzfobj%celtop(iuzid) - this%uzfobj%celbot(iuzid)
           ! -- check that obs depth is valid; call store_error if not
