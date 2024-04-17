@@ -277,7 +277,7 @@ def check_output(idx, test):
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
     ja = grb.ja
-    assert ia.shape[0] == grb.nodes + 1, "ia in grb file is not correct size"
+    assert ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
 
     # check to make sure stage file can be read
     fpth = test.workspace / f"{name}.stage"

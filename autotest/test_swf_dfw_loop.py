@@ -443,7 +443,7 @@ def check_output(idx, test):
     fpth = test.workspace / f"{name}.disv1d.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
-    assert ia.shape[0] == grb.nodes + 1, "ia in grb file is not correct size"
+    assert ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
 
     # read stage file
     fpth = test.workspace / f"{name}.stage"

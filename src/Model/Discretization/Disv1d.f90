@@ -873,7 +873,7 @@ contains
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
     !
     ! -- Initialize
-    ntxt = 9
+    ntxt = 10
     if (this%nvert > 0) ntxt = ntxt + 5
     !
     ! -- Open the file
@@ -898,7 +898,7 @@ contains
     write (iunit) txthdr
     !
     ! -- write variable definitions
-    write (txt, '(3a, i0)') 'NODES ', 'INTEGER ', 'NDIM 0 # ', this%nodesuser
+    write (txt, '(3a, i0)') 'NCELLS ', 'INTEGER ', 'NDIM 0 # ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write (iunit) txt
     write (txt, '(3a, i0)') 'NJA ', 'INTEGER ', 'NDIM 0 # ', this%con%nja
@@ -911,6 +911,9 @@ contains
     txt(lentxt:lentxt) = new_line('a')
     write (iunit) txt
     write (txt, '(3a, 1pg24.15)') 'ANGROT ', 'DOUBLE ', 'NDIM 0 # ', this%angrot
+    txt(lentxt:lentxt) = new_line('a')
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'BOTM ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write (iunit) txt
     write (txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
@@ -951,6 +954,7 @@ contains
     write (iunit) this%xorigin ! xorigin
     write (iunit) this%yorigin ! yorigin
     write (iunit) this%angrot ! angrot
+    write (iunit) this%bottom ! botm
     write (iunit) this%con%iausr ! ia
     write (iunit) this%con%jausr ! ja
     write (iunit) icelltype ! icelltype
