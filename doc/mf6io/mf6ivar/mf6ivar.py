@@ -654,7 +654,6 @@ def write_appendix(blocks):
 
         f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")
 
-
 def get_dfn_files(models):
     def is_sim_dfn(stem):
         return "sim" in stem

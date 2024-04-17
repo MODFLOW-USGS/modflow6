@@ -338,8 +338,8 @@ def build_models(idx, test):
         ath1=dispersivity,
         ktw=0.5918 * 86400,
         kts=0.2700 * 86400,
-        pname="DSP",
-        filename=f"{gwename}.dsp",
+        pname="CND",
+        filename=f"{gwename}.cnd",
     )
 
     # Instantiating MODFLOW 6 transport mass storage package
@@ -353,8 +353,8 @@ def build_models(idx, test):
         cps=760.0,
         rhos=1500.0,
         packagedata=[cpw, rhow, lhv],
-        pname="MST",
-        filename=f"{gwename}.mst",
+        pname="EST",
+        filename=f"{gwename}.est",
     )
 
     # Instantiating MODFLOW 6 constant temperature boundary condition at
