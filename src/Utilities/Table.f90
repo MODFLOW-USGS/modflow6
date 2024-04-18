@@ -6,7 +6,8 @@ module TableModule
   use KindModule, only: I4B, I8B, DP
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
-                             TABCENTER
+                             TABCENTER, &
+                             DHNOFLO, DHDRY
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error
@@ -794,52 +795,59 @@ contains
     integer(I4B) :: width
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
-    !
-    ! -- write header
-    if (this%icount == 0 .and. this%ientry == 0) then
-      call this%write_header()
-    end if
-    !
-    ! -- update index for tableterm
-    this%ientry = this%ientry + 1
-    !
-    ! -- check that ientry is within bounds
-    call this%add_error()
-    !
-    ! -- initialize local variables
-    j = this%ientry
-    width = this%tableterm(j)%get_width()
-    alignment = this%tableterm(j)%get_alignment()
-    line_end = .FALSE.
-    if (j == this%ntableterm) then
-      line_end = .TRUE.
-    end if
-    !
-    ! -- add data to line
-    if (this%write_csv) then
-      if (j == 1) then
-        write (this%dataline, '(G0)') rval
-      else
-        write (this%dataline, '(a,",",G0)') trim(this%dataline), rval
-      end if
+!
+    if (rval == DHNOFLO) then
+      call this%add_string("INACTIVE")
+    else if (rval == DHDRY) then
+      call this%add_string("DRY")
     else
-      if (j == this%ntableterm) then
-        call UWWORD(this%dataline, this%iloc, width, TABREAL, &
-                    cval, ival, rval, ALIGNMENT=alignment)
-      else
-        call UWWORD(this%dataline, this%iloc, width, TABREAL, &
-                    cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      !
+      ! -- write header
+      if (this%icount == 0 .and. this%ientry == 0) then
+        call this%write_header()
       end if
-    end if
-    !
-    ! -- write the data line, if necessary
-    if (line_end) then
-      call this%write_line()
-    end if
-    !
-    ! -- finalize the table, if necessary
-    if (this%allow_finalization) then
-      call this%finalize()
+      !
+      ! -- update index for tableterm
+      this%ientry = this%ientry + 1
+      !
+      ! -- check that ientry is within bounds
+      call this%add_error()
+      !
+      ! -- initialize local variables
+      j = this%ientry
+      width = this%tableterm(j)%get_width()
+      alignment = this%tableterm(j)%get_alignment()
+      line_end = .FALSE.
+      if (j == this%ntableterm) then
+        line_end = .TRUE.
+      end if
+      !
+      ! -- add data to line
+      if (this%write_csv) then
+        if (j == 1) then
+          write (this%dataline, '(G0)') rval
+        else
+          write (this%dataline, '(a,",",G0)') trim(this%dataline), rval
+        end if
+      else
+        if (j == this%ntableterm) then
+          call UWWORD(this%dataline, this%iloc, width, TABREAL, &
+                      cval, ival, rval, ALIGNMENT=alignment)
+        else
+          call UWWORD(this%dataline, this%iloc, width, TABREAL, &
+                      cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+        end if
+      end if
+      !
+      ! -- write the data line, if necessary
+      if (line_end) then
+        call this%write_line()
+      end if
+      !
+      ! -- finalize the table, if necessary
+      if (this%allow_finalization) then
+        call this%finalize()
+      end if
     end if
     !
     ! -- Return
