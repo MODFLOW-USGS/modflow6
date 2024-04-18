@@ -176,7 +176,8 @@ contains
   end subroutine vds_add_solution
 
   !> @brief Restrict the models and exchanges in the halo
-  !< to the set that has an actual chance of being used
+  !! to the set that has an actual chance of being used.
+  !! This can be done after 
   subroutine vds_set_halo(this)
     use ListsModule, only: basesolutionlist
     use VirtualDataListsModule
@@ -226,12 +227,10 @@ contains
       if (ve%v_model1%is_local .or. ve%v_model2%is_local) then
         cycle
       end if
-      if (halo_model_ids%contains(ve%v_model1%id) .and. &
-          halo_model_ids%contains(ve%v_model2%id)) then
-        cycle
+      if (.not. halo_model_ids%contains(ve%v_model1%id) .or. &
+          .not. halo_model_ids%contains(ve%v_model2%id)) then
+        ve%is_active = .false.
       end if
-
-      ve%is_active = .false.
     end do
 
     call halo_model_ids%destroy()
