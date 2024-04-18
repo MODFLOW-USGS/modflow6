@@ -129,26 +129,16 @@
 
 
 import os
-from pathlib import Path
-import sys
-from collections import OrderedDict
 import re
 import shutil
-from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional, Tuple
-from packaging.version import Version
-
-VERBOSE = False
-for arg in sys.argv:
-    if arg in ("-v", "--verbose"):
-        VERBOSE = True
+import textwrap
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from collections import OrderedDict
+from pathlib import Path
 
 
 def parse_mf6var_file(fname):
-    f = open(fname, "r")
-    lines = f.readlines()
-    f.close()
-
+    lines = open(fname, "r").readlines()
     vardict = OrderedDict()
     vd = {}
 
@@ -163,9 +153,7 @@ def parse_mf6var_file(fname):
                 else:
                     key = name
                 if key in vardict:
-                    raise Exception(
-                        "Variable already exists in dictionary: " + name
-                    )
+                    raise ValueError(f"Variable already exists in dictionary: {k}")
                 vardict[key] = vd
             vd = {}
             continue
@@ -180,7 +168,7 @@ def parse_mf6var_file(fname):
             istart = line.index(" ")
             v = line[istart:].strip()
             if k in vd:
-                raise Exception("Attribute already exists in dictionary: " + k)
+                raise ValueError(f"Attribute already exists in dictionary: {k}")
             vd[k] = v
 
     if len(vd) > 0:
@@ -191,13 +179,20 @@ def parse_mf6var_file(fname):
         else:
             key = name
         if key in vardict:
-            raise Exception("Variable already exists in dictionary: " + name)
+            raise ValueError(f"Variable already exists in dictionary: {k}")
         vardict[key] = vd
     return vardict
 
 
-COMMONDESCRIPTIONS = parse_mf6var_file(os.path.join(".", "dfn", "common.dfn"))
-
+MF6IVAR_DIR_PATH = Path(__file__).parent
+DFNS_DIR_PATH = MF6IVAR_DIR_PATH / "dfn"
+EXAMPLES_DIR_PATH = MF6IVAR_DIR_PATH / "examples"
+MD_DIR_PATH = MF6IVAR_DIR_PATH / "md"
+TEX_DIR_PATH = MF6IVAR_DIR_PATH / "tex"
+RTD_DOC_DIR_PATH = Path(__file__).parents[3] / ".build_rtd_docs" / "_mf6io"
+COMMON_DFN_PATH = parse_mf6var_file(DFNS_DIR_PATH / "common.dfn")
+COMMON_DIR_PATH = MF6IVAR_DIR_PATH.parent.parent / "Common"
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 VALID_TYPES = [
     "integer",
     "double precision",
@@ -278,14 +273,8 @@ def block_entry(varname, block, vardict, prefix="  "):
     return s
 
 
-def write_block(
-    vardict, block, blk_var_list, varexcludeprefix=None, indent=None
-):
-    if indent is None:
-        prepend = ""
-    else:
-        prepend = indent * " "
-
+def write_block(vardict, block, blk_var_list, varexcludeprefix=None, indent=None):
+    prepend = "" if indent is None else indent * " "
     s = prepend + "BEGIN {}".format(block.upper())
     for variable in blk_var_list:
         ts = block_entry(variable[0], block, vardict).strip()
@@ -294,7 +283,7 @@ def write_block(
         else:
             s = "{} {}".format(s, ts)
     s += "\n"
-    for iv, key in enumerate(vardict):
+    for key in vardict.keys():
         name, b = key
         v = vardict[key]
         if b == block:
@@ -333,11 +322,10 @@ def get_description(desc):
     """
     if desc.strip().split()[0] == "REPLACE":
         bcoption = desc.strip().split()[1]
-        constantstring = COMMONDESCRIPTIONS[bcoption]["description"]
+        constantstring = COMMON_DFN_PATH[bcoption]["description"]
         istart = desc.index("{")
         istop = desc.rfind("}") + 1
         d = eval(desc[istart:istop])
-        # d = eval(desc[desc.index('{'):])
         for k in d:
             v = d[k]
             constantstring = constantstring.replace(k, v)
@@ -347,7 +335,7 @@ def get_description(desc):
 
 def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
     s = ""
-    for iv, (name, b) in enumerate(vardict):
+    for name, b in vardict.keys():
         v = vardict[(name, b)]
         if v["block"] == block:
             if "block_variable" in v and v["block_variable"]:
@@ -409,7 +397,7 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
 
 def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
     s = ""
-    for iv, (name, b) in enumerate(vardict):
+    for name, b in vardict.keys():
         v = vardict[(name, b)]
         if v["block"] == block:
             if "block_variable" in v and v["block_variable"]:
@@ -505,12 +493,10 @@ def md_replace(s):
 
 
 def get_examples(component):
-    pth = os.path.join("examples")
     files = [
         filename
-        for filename in sorted(os.listdir(pth))
-        if component.lower() in filename.lower()
-        and "-obs" not in filename.lower()
+        for filename in sorted(os.listdir(EXAMPLES_DIR_PATH))
+        if component.lower() in filename.lower() and "-obs" not in filename.lower()
     ]
     s = ""
     for idx, filename in enumerate(files):
@@ -518,7 +504,7 @@ def get_examples(component):
             s += "#### Example Input File\n"
         if len(files) > 1:
             s += "Example {}\n\n".format(idx + 1)
-        fpth = os.path.join(pth, filename)
+        fpth = os.path.join(EXAMPLES_DIR_PATH, filename)
         with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
@@ -530,10 +516,9 @@ def get_examples(component):
 
 
 def get_obs_examples(component):
-    pth = os.path.join("examples")
     files = [
         filename
-        for filename in sorted(os.listdir(pth))
+        for filename in sorted(os.listdir(EXAMPLES_DIR_PATH))
         if component.lower() in filename.lower() and "-obs" in filename.lower()
     ]
     s = ""
@@ -541,7 +526,7 @@ def get_obs_examples(component):
         s += "#### Example Observation Input File\n"
         if len(files) > 1:
             s += "Example {}\n\n".format(idx + 1)
-        fpth = os.path.join(pth, filename)
+        fpth = os.path.join(EXAMPLES_DIR_PATH, filename)
         with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
@@ -553,24 +538,19 @@ def get_obs_examples(component):
 
 
 def get_obs_table(component):
-    pth = os.path.join("..", "..", "Common")
     files = [
         filename
-        for filename in sorted(os.listdir(pth))
+        for filename in sorted(os.listdir(COMMON_DIR_PATH))
         if component.lower() in filename.lower()
         and filename.lower().endswith("obs.tex")
     ]
     s = ""
     if files:
         s += "#### Available Observation Types\n\n"
-        s += (
-            "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
-        )
-        s += (
-            "|----------------|------------------|-----|-----|-------------|\n"
-        )
-    for idx, filename in enumerate(files):
-        fpth = os.path.join(pth, filename)
+        s += "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
+        s += "|----------------|------------------|-----|-----|-------------|\n"
+    for filename in files:
+        fpth = os.path.join(COMMON_DIR_PATH, filename)
         with open(fpth, "r") as f:
             lines = f.readlines()
         for line in lines:
@@ -589,22 +569,21 @@ def get_obs_table(component):
 
 def write_md_header(f):
     s = "# MODFLOW 6 INPUT VARIABLES\n\n"
-    fmd.write(s)
+    f.write(s)
     s = "| {} | {} | {} | {} | {} | {} |\n".format(
         "component", "package", "block", "variable name", "type", "description"
     )
-    fmd.write(s)
+    f.write(s)
     s = "| {} | {} | {} | {} | {} | {} |\n".format(
         ":---:", ":---:", ":---:", ":---:", ":---:", "---"
     )
-    fmd.write(s)
-    return
+    f.write(s)
 
 
 def write_md(f, vardict, component, package):
     c = component.upper()
     p = package.upper()
-    for iv, (name, b) in enumerate(vardict):
+    for name, b in vardict.keys():
         n = name.upper()
         v = vardict[(name, b)]
         b = v["block"].upper()
@@ -622,12 +601,10 @@ def write_md(f, vardict, component, package):
             d = get_description(v["description"])
             s = "| {} | {} | {} | {} | {} | {} |\n".format(c, p, b, n, t, d)
         f.write(s)
-    return
 
 
-def write_appendix(texdir, allblocks):
-    fname = os.path.join(texdir, "appendixA.tex")
-    with open(fname, "w") as f:
+def write_appendix(blocks):
+    with open(Path(TEX_DIR_PATH) / "appendixA.tex", "w") as f:
         f.write("\\small\n\\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}\n")
         f.write(
             "\\caption{List of block names organized by component and input file "
@@ -655,7 +632,7 @@ def write_appendix(texdir, allblocks):
         f.write("\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n")
 
         lastftype = ""
-        for b in allblocks:
+        for b in blocks:
             l = b.strip().split("-")
             component, ftype, blockname = l
             if lastftype != ftype:
@@ -675,168 +652,49 @@ def write_appendix(texdir, allblocks):
             f.write(s)
             lastftype = ftype
 
-        f.write(
-            "\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n"
-        )
+        f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")
 
 
-if __name__ == "__main__":
-    file_order = [
-        "sim-nam",  # dfn completed  tex updated
-        "sim-tdis",  # dfn completed  tex updated
-        "exg-gwfgwf",  # dfn completed  tex updated
-        "exg-gwfgwt",
-        "exg-gwtgwt",
-        "exg-gwfgwe",
-        "exg-gwegwe",
-        "exg-gwfprt",
-        "exg-swfgwf",
-        "sln-ims",  # dfn completed  tex updated
-        "sln-ems",  # dfn completed  tex updated
-        "sln-pts",
-        "gwf-nam",  # dfn completed  tex updated
-        "gwf-dis",  # dfn completed  tex updated
-        "gwf-disv",  # dfn completed  tex updated
-        "gwf-disu",  # dfn completed  tex updated
-        "gwf-ic",  # dfn completed  tex updated
-        "gwf-npf",  # dfn completed  tex updated
-        "gwf-buy",  # dfn completed  tex updated
-        "gwf-sto",  # dfn completed  tex updated
-        "gwf-csub",  # dfn completed  tex updated
-        "gwf-hfb",  # dfn completed  tex updated
-        "gwf-chd",  # dfn completed  tex updated
-        "gwf-wel",  # dfn completed  tex updated
-        "gwf-drn",  # dfn completed  tex updated
-        "gwf-riv",  # dfn completed  tex updated
-        "gwf-ghb",  # dfn completed  tex updated
-        "gwf-rch",  # dfn completed  tex updated
-        "gwf-rcha",  # dfn completed  tex updated
-        "gwf-evt",  # dfn completed  tex updated
-        "gwf-evta",  # dfn completed  tex updated
-        "gwf-maw",  # dfn completed  tex updated
-        "gwf-sfr",  # dfn completed  tex updated
-        "gwf-lak",  # dfn completed  tex updated
-        "gwf-uzf",  # dfn completed  tex updated
-        "gwf-mvr",  # dfn completed  tex updated
-        "gwf-gnc",  # dfn completed  tex updated
-        "gwf-oc",  # dfn completed  tex updated
-        "gwf-vsc",
-        "gwf-api",
-        "gwt-adv",
-        "gwt-dsp",
-        "gwt-cnc",
-        "gwt-dis",
-        "gwt-disv",
-        "gwt-disu",
-        "gwt-ic",
-        "gwt-nam",
-        "gwt-oc",
-        "gwt-ssm",
-        "gwt-src",
-        "gwt-mst",
-        "gwt-ist",
-        "gwt-sft",
-        "gwt-lkt",
-        "gwt-mwt",
-        "gwt-uzt",
-        "gwt-fmi",
-        "gwt-mvt",
-        "gwt-api",
-        "gwe-adv",
-        "gwe-cnd",
-        "gwe-ctp",
-        "gwe-dis",
-        "gwe-disv",
-        "gwe-disu",
-        "gwe-esl",
-        "gwe-est",
-        "gwe-ic",
-        "gwe-lke",
-        "gwe-mwe",
-        "gwe-nam",
-        "gwe-oc",
-        "gwe-ssm",
-        "gwe-sfe",
-        "gwe-uze",
-        "gwe-fmi",
-        "swf-nam",
-        "swf-disv1d",
-        "swf-dis2d",
-        "swf-disv2d",
-        "swf-dfw",
-        "swf-cxs",
-        "swf-ic",
-        "swf-sto",
-        "swf-oc",
-        "swf-chd",
-        "swf-cdb",
-        "swf-flw",
-        "swf-zdg",
-        'prt-nam',
-        'prt-dis',
-        'prt-disv',
-        'prt-mip',
-        'prt-prp',
-        'prt-oc',
-        'prt-fmi',
-        "utl-spc",
-        "utl-spca",
-        "utl-spt",
-        "utl-spta",
-        "utl-obs",
-        "utl-laktab",
-        "utl-sfrtab",
-        "utl-ts",
-        "utl-tas",
-        "utl-ats",
-        "utl-tvk",
-        "utl-tvs",
-    ]
+def get_dfn_files(models):
+    def is_sim_dfn(stem):
+        return "sim" in stem
 
-    # directories
-    dfndir = os.path.join(".", "dfn")
-    texdir = os.path.join(".", "tex")
-    mddir = os.path.join(".", "md")
-    docdir = os.path.join("..", "..", "..", ".build_rtd_docs", "_mf6io")
+    def is_sln_dfn(stem):
+        return "sln" in stem
 
-    # regenerate docdir
-    if os.path.isdir(docdir):
-        shutil.rmtree(docdir)
-    os.makedirs(docdir)
+    def is_utl_dfn(stem):
+        return "utl" in stem
 
-    # list for storing all block names
-    allblocks = []
+    def is_model_dfn(stem):
+        return any(stem.startswith(m) for m in models)
 
-    # setup a markdown file
-    fname = os.path.join(mddir, "mf6ivar.md")
-    with open(fname, "w") as fmd:
+    def is_exg_dfn(stem):
+        exg = stem.rpartition("-")[2]
+        left = exg[:3]
+        right = exg[-3:]
+        return left in models and right in models
+
+    files = list(DFNS_DIR_PATH.glob("*.dfn"))
+    files = (
+        sorted([f for f in files if is_sim_dfn(f.stem)])
+        + sorted([f for f in files if is_exg_dfn(f.stem)])
+        + sorted([f for f in files if is_sln_dfn(f.stem)])
+        + sorted([f for f in files if is_model_dfn(f.stem)])
+        + sorted([f for f in files if is_utl_dfn(f.stem)])
+    )
+    return files
+
+
+def write_variables():
+    allblocks = []  # cumulative list of all block names
+
+    # write markdown input variables file
+    with open(MD_DIR_PATH / "mf6ivar.md", "w") as fmd:
         write_md_header(fmd)
 
-        # construct list of dfn files to process in the order of file_order
-        files = os.listdir(dfndir)
-        for f in files:
-            if "common" in f:
-                continue
-            if ".DS_Store" in f:
-                continue
-            if os.path.splitext(f)[0] not in file_order:
-                raise Exception("File not in file_order: ", f)
-        files = [
-            fname + ".dfn" for fname in file_order if fname + ".dfn" in files
-        ]
-        # files = ['gwf-obs.dfn']
-
-        # # create rst file for markdown
-        # fpth = os.path.join(docdir, "mf6io.rst")
-        # frst = open(fpth, "w")
-        # s =  ".. toctree::\n"
-        # s += "   :maxdepth: 4\n"
-        # s += "   :name: mf6-io\n\n"
-        # frst.write(s)
-
-        for txtname in files:
-            component, package = os.path.splitext(txtname)[0].split("-")[0:2]
-            vardict = parse_mf6var_file(os.path.join(dfndir, txtname))
+        for fpath in dfns:
+            component, package = fpath.stem.split("-")[0:2]
+            vardict = parse_mf6var_file(fpath)
 
             # make list of unique block names
             blocks = []
@@ -852,117 +710,137 @@ if __name__ == "__main__":
                 allblocks.append(b)
 
             # go through each block and write information
-            desc = "% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n"
+            desc = (
+                "% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n"
+            )
             for b in blocks:
                 blk_var_list = []
 
                 # Write the name of the block to the latex file
-                desc += "\item \\textbf{}\n\n".format(
-                    "{Block: " + b.upper() + "}"
-                )
-
+                desc += "\item \\textbf{}\n\n".format("{Block: " + b.upper() + "}")
                 desc += "\\begin{description}\n"
-                desc += write_desc(
-                    vardict, b, blk_var_list, varexcludeprefix="dev_"
-                )
+                desc += write_desc(vardict, b, blk_var_list, varexcludeprefix="dev_")
                 desc += "\\end{description}\n"
 
-                fname = os.path.join(
-                    texdir, os.path.splitext(txtname)[0] + "-" + b + ".dat"
-                )
-                f = open(fname, "w")
-                s = (
-                    write_block(
-                        vardict, b, blk_var_list, varexcludeprefix="dev_"
+                with open(TEX_DIR_PATH / f"{fpath.stem}-{b}.dat", "w") as f:
+                    s = (
+                        write_block(vardict, b, blk_var_list, varexcludeprefix="dev_")
+                        + "\n"
                     )
-                    + "\n"
-                )
+                    f.write(s)
+                    if verbose:
+                        print(s)
+
+            with open(TEX_DIR_PATH / f"{fpath.stem}-desc.tex", "w") as f:
+                s = desc + "\n"
                 f.write(s)
-                if VERBOSE:
+                if verbose:
                     print(s)
-                f.close()
-            fname = os.path.join(
-                texdir, os.path.splitext(txtname)[0] + "-desc" + ".tex"
-            )
-            f = open(fname, "w")
-            s = desc + "\n"
-            f.write(s)
-            if VERBOSE:
-                print(s)
-            f.close()
 
             # write markdown description
-            mdname = os.path.splitext(txtname)[0]
-            fname = os.path.join(docdir, mdname + ".md")
-            f = open(fname, "w")
-            f.write("### {}\n\n".format(mdname.upper()))
-            f.write("#### Structure of Blocks\n\n")
-            f.write("_FOR EACH SIMULATION_\n\n")
-            desc = ""
-            for b in blocks:
-                blk_var_list = []
+            mdname = fpath.stem
+            with open(RTD_DOC_DIR_PATH / f"{mdname}.md", "w") as f:
+                f.write("### {}\n\n".format(mdname.upper()))
+                f.write("#### Structure of Blocks\n\n")
+                f.write("_FOR EACH SIMULATION_\n\n")
+                desc = ""
+                for b in blocks:
+                    blk_var_list = []
 
-                # Write the name of the block to the latex file
-                desc += "##### Block: {}\n\n".format(b.upper())
+                    # Write the name of the block to the latex file
+                    desc += "##### Block: {}\n\n".format(b.upper())
 
-                desc += write_desc_md(
-                    vardict, b, blk_var_list, varexcludeprefix="dev_"
-                )
-
-                if "period" in b.lower():
-                    f.write("\n_FOR ANY STRESS PERIOD_\n\n")
-                f.write("```\n")
-                s = (
-                    md_replace(
-                        write_block(
-                            vardict,
-                            b,
-                            blk_var_list,
-                            varexcludeprefix="dev_",
-                            indent=4,
-                        )
+                    desc += write_desc_md(
+                        vardict, b, blk_var_list, varexcludeprefix="dev_"
                     )
-                    + "\n"
-                )
-                # s = s.replace("@", "") + "\n"
-                f.write(s)
-                f.write("```\n")
-                if VERBOSE:
-                    print(s)
 
-            f.write("\n#### Explanation of Variables\n\n")
-            f.write(desc)
+                    if "period" in b.lower():
+                        f.write("\n_FOR ANY STRESS PERIOD_\n\n")
+                    f.write("```\n")
+                    s = (
+                        md_replace(
+                            write_block(
+                                vardict,
+                                b,
+                                blk_var_list,
+                                varexcludeprefix="dev_",
+                                indent=4,
+                            )
+                        )
+                        + "\n"
+                    )
+                    f.write(s)
+                    f.write("```\n")
+                    if verbose:
+                        print(s)
 
-            # add examples
-            s = get_examples(mdname)
-            if len(s) > 0:
-                f.write(s)
+                f.write("\n#### Explanation of Variables\n\n")
+                f.write(desc)
 
-            # add observation table
-            s = get_obs_table(mdname)
-            if len(s) > 0:
-                f.write(s)
+                # add examples
+                s = get_examples(mdname)
+                if len(s) > 0:
+                    f.write(s)
 
-            # add observation examples
-            s = get_obs_examples(mdname)
-            if len(s) > 0:
-                f.write(s)
+                # add observation table
+                s = get_obs_table(mdname)
+                if len(s) > 0:
+                    f.write(s)
 
-            # close the markdown file
-            f.close()
-
-            # # add to rst catalog
-            # s = "   {}\n".format(os.path.basename(fname))
-            # frst.write(s)
+                # add observation examples
+                s = get_obs_examples(mdname)
+                if len(s) > 0:
+                    f.write(s)
 
             # write markdown
             write_md(fmd, vardict, component, package)
 
-        # # close restart catalog
-        # frst.write("\n\n")
-        # frst.close()
+    return allblocks
 
-        if VERBOSE:
-            for b in allblocks:
-                print(b)
-        write_appendix(texdir, allblocks)
+
+if __name__ == "__main__":
+    # parse arguments
+    parser = ArgumentParser(
+        prog="Generate MF6 IO documentation files from DFN files",
+        formatter_class=RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent(
+            """\
+            Generate markdown and latex files for MF6 IO documents
+            from DFN files. This script reads DFN files and creates
+            tables and appendices describing input/output variables
+            supported by MODFLOW 6.
+            """
+        ),
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        required=False,
+        action="append",
+        help="Filter models to include",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Whether to show verbose output",
+    )
+    args = parser.parse_args()
+    models = args.model if args.model else DEFAULT_MODELS
+    verbose = args.verbose
+
+    # clean/recreate docdir
+    if os.path.isdir(RTD_DOC_DIR_PATH):
+        shutil.rmtree(RTD_DOC_DIR_PATH)
+    os.makedirs(RTD_DOC_DIR_PATH)
+
+    # filter dfn files corresponding to the selected set of models
+    # and write variables and appendix to markdown and latex files
+    dfns = get_dfn_files(models)
+    blocks = write_variables()
+    write_appendix(blocks)
+    if verbose:
+        for block in blocks:
+            print(block)
