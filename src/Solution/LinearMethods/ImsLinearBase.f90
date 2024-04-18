@@ -8,7 +8,7 @@ MODULE IMSLinearBaseModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO, &
-                             DZERO, DPREC, DEM6, DEM3, DHALF, DONE
+                             DZERO, DPREC, DEM6, DEM3, DEM4, DHALF, DONE
   use MathUtilModule, only: is_close
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
@@ -139,8 +139,10 @@ contains
       rmax = DZERO
       l2norm = DZERO
       DO im = 1, CONVNMOD
+        summary%locdv(im) = 0
         summary%dvmax(im) = DZERO
-        summary%drmax(im) = DZERO
+        summary%locr(im) = 0
+        summary%rmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -172,9 +174,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
-          summary%drmax(im) = tv
-          summary%locdr(im) = n
+        IF (ABS(tv) > ABS(summary%rmax(im))) THEN
+          summary%rmax(im) = tv
+          summary%locr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -188,9 +190,9 @@ contains
         summary%itinner(n) = iiter
         DO im = 1, CONVNMOD
           summary%convlocdv(im, n) = summary%locdv(im)
-          summary%convlocdr(im, n) = summary%locdr(im)
+          summary%convlocr(im, n) = summary%locr(im)
           summary%convdvmax(im, n) = summary%dvmax(im)
-          summary%convdrmax(im, n) = summary%drmax(im)
+          summary%convrmax(im, n) = summary%rmax(im)
         END DO
       END IF
       !
@@ -433,7 +435,7 @@ contains
       l2norm = DZERO
       DO im = 1, CONVNMOD
         summary%dvmax(im) = DZERO
-        summary%drmax(im) = DZERO
+        summary%rmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -472,9 +474,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
-          summary%drmax(im) = tv
-          summary%locdr(im) = n
+        IF (ABS(tv) > ABS(summary%rmax(im))) THEN
+          summary%rmax(im) = tv
+          summary%locr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -490,8 +492,8 @@ contains
         DO im = 1, CONVNMOD
           summary%convdvmax(im, n) = summary%dvmax(im)
           summary%convlocdv(im, n) = summary%locdv(im)
-          summary%convdrmax(im, n) = summary%drmax(im)
-          summary%convlocdr(im, n) = summary%locdr(im)
+          summary%convrmax(im, n) = summary%rmax(im)
+          summary%convlocr(im, n) = summary%locr(im)
         END DO
       END IF
       !
@@ -1173,6 +1175,57 @@ contains
     RETURN
   END SUBROUTINE ims_base_testcnvg
 
+  subroutine ims_calc_pcdims(neq, nja, ia, level, ipc, &
+                             niapc, njapc, njlu, njw, nwlu)
+    integer(I4B), intent(in) :: neq !< nr. of rows A
+    integer(I4B), intent(in) :: nja !< nr. of nonzeros A
+    integer(I4B), dimension(:), intent(in) :: ia !< CSR row pointers A
+    integer(I4B), intent(in) :: level !< fill level ILU
+    integer(I4B), intent(in) :: ipc !< IMS preconditioner type
+    integer(I4B), intent(inout) :: niapc !< work array size
+    integer(I4B), intent(inout) :: njapc !< work array size
+    integer(I4B), intent(inout) :: njlu !< work array size
+    integer(I4B), intent(inout) :: njw !< work array size
+    integer(I4B), intent(inout) :: nwlu !< work array size
+    ! local
+    integer(I4B) :: n, i
+    integer(I4B) :: ijlu, ijw, iwlu, iwk
+
+    ijlu = 1
+    ijw = 1
+    iwlu = 1
+
+    ! ILU0 and MILU0
+    niapc = neq
+    njapc = nja
+
+    ! ILUT and MILUT
+    if (ipc == 3 .or. ipc == 4) then
+      niapc = neq
+      if (level > 0) then
+        iwk = neq * (level * 2 + 1)
+      else
+        iwk = 0
+        do n = 1, neq
+          i = ia(n + 1) - ia(n)
+          if (i > iwk) then
+            iwk = i
+          end if
+        end do
+        iwk = neq * iwk
+      end if
+      njapc = iwk
+      ijlu = iwk
+      ijw = 2 * neq
+      iwlu = neq + 1
+    end if
+
+    njlu = ijlu
+    njw = ijw
+    nwlu = iwlu
+
+  end subroutine ims_calc_pcdims
+
   !> @ brief Generate CRS pointers for the preconditioner
   !!
   !!  Generate the CRS row and column pointers for the preconditioner.
@@ -1296,5 +1349,26 @@ contains
     ! -- return
     RETURN
   END SUBROUTINE ims_base_residual
+
+  !> @brief Function returning EPFACT
+  !<
+  function ims_base_epfact(icnvgopt, kstp) result(epfact)
+    integer(I4B) :: icnvgopt !< IMS convergence option
+    integer(I4B) :: kstp !< time step number
+    real(DP) :: epfact !< factor for decreasing convergence criteria in subsequent Picard iterations
+
+    if (icnvgopt == 2) then
+      if (kstp == 1) then
+        epfact = 0.01
+      else
+        epfact = 0.10
+      end if
+    else if (icnvgopt == 4) then
+      epfact = DEM4
+    else
+      epfact = DONE
+    end if
+
+  end function ims_base_epfact
 
 END MODULE IMSLinearBaseModule

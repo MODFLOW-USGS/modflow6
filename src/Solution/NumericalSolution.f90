@@ -452,7 +452,7 @@ contains
     allocate (this%linear_settings)
     !
     ! -- create linear system matrix and compatible vectors
-    this%linear_solver => create_linear_solver(this%solver_mode)
+    this%linear_solver => create_linear_solver(this%solver_mode, this%name)
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', &
                                                    this%memory_path)
@@ -1985,8 +1985,8 @@ contains
     integer(I4B) :: k
     integer(I4B) :: locdv
     integer(I4B) :: locdr
-    real(DP) :: dv
-    real(DP) :: dr
+    real(DP) :: dv !< the maximum change in the dependent variable
+    real(DP) :: res !< the maximum value of the residual vector
     !
     ! -- initialize local variables
     strh = ''
@@ -2037,22 +2037,22 @@ contains
       end if
       if (im > this%convnmod) then
         dv = DZERO
-        dr = DZERO
+        res = DZERO
         do j = 1, this%convnmod
           if (ABS(this%cnvg_summary%convdvmax(j, k)) > ABS(dv)) then
             locdv = this%cnvg_summary%convlocdv(j, k)
             dv = this%cnvg_summary%convdvmax(j, k)
           end if
-          if (ABS(this%cnvg_summary%convdrmax(j, k)) > ABS(dr)) then
-            locdr = this%cnvg_summary%convlocdr(j, k)
-            dr = this%cnvg_summary%convdrmax(j, k)
+          if (ABS(this%cnvg_summary%convrmax(j, k)) > ABS(res)) then
+            locdr = this%cnvg_summary%convlocr(j, k)
+            res = this%cnvg_summary%convrmax(j, k)
           end if
         end do
       else
         locdv = this%cnvg_summary%convlocdv(im, k)
-        locdr = this%cnvg_summary%convlocdr(im, k)
+        locdr = this%cnvg_summary%convlocr(im, k)
         dv = this%cnvg_summary%convdvmax(im, k)
-        dr = this%cnvg_summary%convdrmax(im, k)
+        res = this%cnvg_summary%convrmax(im, k)
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
@@ -2063,7 +2063,7 @@ contains
       call this%innertab%add_term(iinner)
       call this%innertab%add_term(dv)
       call this%innertab%add_term(adjustr(trim(strh)))
-      call this%innertab%add_term(dr)
+      call this%innertab%add_term(res)
       call this%innertab%add_term(adjustr(trim(strr)))
       !
       ! -- update i0
@@ -2123,9 +2123,9 @@ contains
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
         end if
-        if (ABS(this%cnvg_summary%convdrmax(j, kpos)) > ABS(dr)) then
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+        if (ABS(this%cnvg_summary%convrmax(j, kpos)) > ABS(dr)) then
+          locdr = this%cnvg_summary%convlocr(j, kpos)
+          dr = this%cnvg_summary%convrmax(j, kpos)
         end if
       end do
       !
@@ -2148,8 +2148,8 @@ contains
         do j = 1, this%cnvg_summary%convnmod
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+          locdr = this%cnvg_summary%convlocr(j, kpos)
+          dr = this%cnvg_summary%convrmax(j, kpos)
           !
           ! -- get model number and user node number for dv
           call this%sln_get_nodeu(locdv, im, nodeu)
@@ -2423,7 +2423,6 @@ contains
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
-    ! -- TODO_MJR: add this for PETSc/parallel
     if (this%isymmetric == 1 .and. simulation_mode == "SEQUENTIAL") then
       do ieq = 1, this%neq
         if (this%active(ieq) > 0) then
@@ -3097,14 +3096,14 @@ contains
     real(DP) :: ahdif
     !
     ! -- determine the maximum change
-    nb = 1
+    nb = 0
     bigch = DZERO
     abigch = DZERO
     do n = 1, this%neq
       if (this%active(n) < 1) cycle
       hdif = this%x(n) - this%xtemp(n)
       ahdif = abs(hdif)
-      if (ahdif >= abigch) then
+      if (ahdif > abigch) then
         bigch = hdif
         abigch = ahdif
         nb = n
