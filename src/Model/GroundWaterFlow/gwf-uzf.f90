@@ -21,8 +21,9 @@ module UzfModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: count_errors, store_error, store_error_unit
+  use SimVariablesModule, only: errmsg, warnmsg
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       deprecation_warning
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
@@ -486,6 +487,15 @@ contains
     case ('SIMULATE_GWSEEP')
       this%iseepflag = 1
       write (this%iout, fmtgwseepout)
+      !
+      ! -- Create warning message
+      write (warnmsg, '(a)') &
+        'USE DRN PACKAGE TO SIMULATE GROUNDWATER DISCHARGE TO LAND SURFACE '// &
+        'INSTEAD'
+      !
+      ! -- Create deprecation warning
+      call deprecation_warning('OPTIONS', 'SIMULATE_GWSEEP', '6.5.0', &
+                               warnmsg, this%parser%GetUnit())
     case ('UNSAT_ETWC')
       this%ietflag = 1
       write (this%iout, fmtuzetwc)
