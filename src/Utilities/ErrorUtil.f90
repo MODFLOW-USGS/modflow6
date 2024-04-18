@@ -1,6 +1,16 @@
 module ErrorUtilModule
   use KindModule, only: I4B
   implicit none
+
+  procedure(pstop_iface), pointer :: pstop_alternative => null()
+
+  interface
+    subroutine pstop_iface(status)
+      import I4B
+      integer(I4B) :: status
+    end subroutine
+  end interface
+
 contains
 
   !> @brief Stop the program, optionally specifying an error status code.
@@ -13,6 +23,15 @@ contains
   subroutine pstop(status, message)
     integer(I4B), intent(in), optional :: status !< optional error code to return (default=0)
     character(len=*), intent(in), optional :: message !< optional message to print before stopping
+
+    if (associated(pstop_alternative)) then
+      if (present(message)) print *, message
+      if (present(status)) then
+        call pstop_alternative(status)
+      else
+        call pstop_alternative(0)
+      end if
+    end if
 
     if (present(message)) print *, message
     if (present(status)) then
