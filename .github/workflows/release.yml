@@ -575,40 +575,14 @@ jobs:
           echo "dist directory contains:"
           ls
       
-      - name: Install dependencies for example models
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          pip install -r modflow6-examples/etc/requirements.pip.txt
-          distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
-          echo "$distname/bin" >> $GITHUB_PATH
-          # execute permissions may not have survived artifact upload/download
-          chmod +x "$distname/bin/mf6"
-          chmod +x "$distname/bin/mf5to6"
-          chmod +x "$distname/bin/zbud6"
-
-      # the example models also need mf2005, triangle and gridgen
-      - name: Install extra executables
-        uses: modflowpy/install-modflow-action@v1
-        with:
-          subset: mf2005,triangle,gridgen
-
-      - name: Update Flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-  
-      - name: Build example models
-        if: inputs.full == true
-        working-directory: modflow6-examples/autotest
-        run: pytest -v -n auto test_scripts.py --init
-
       - name: Build distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # build distribution
           distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
-          cmd="python modflow6/distribution/build_dist.py -o $distname -e modflow6-examples"
+          models="${{ inputs.models }}"
+          cmd="python modflow6/distribution/build_dist.py -o $distname -m ${models//,/ -m }"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi

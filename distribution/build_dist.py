@@ -124,7 +124,7 @@ def setup_examples(
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # filter examples for models selected for release
-    for p in os.listdir(examples_path):
+    for p in examples_path.glob("*"):
         if not any(m in p.stem for m in models):
             p.unlink()
 
@@ -418,5 +418,5 @@ if __name__ == "__main__":
         output_path=out_path,
         full=args.full,
         overwrite=args.force,
-        model=models,
+        models=models,
     )

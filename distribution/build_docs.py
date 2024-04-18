@@ -487,11 +487,15 @@ def build_documentation(
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
 
+    if (output_path / "mf6io.pdf").is_file() and not overwrite:
+        print(f"{output_path / 'mf6io.pdf'} already exists")
+        return
+
     # make sure output directory exists
     output_path.mkdir(parents=True, exist_ok=True)
 
     # build LaTex input/output docs from DFN files
-    build_mf6io_tex_from_dfn(overwrite=True, models=models)
+    build_mf6io_tex_from_dfn(overwrite=overwrite, models=models)
 
     # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
