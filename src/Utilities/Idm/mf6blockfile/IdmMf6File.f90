@@ -37,7 +37,9 @@ module IdmMf6FileModule
   !<
   type, extends(DynamicPkgLoadBaseType) :: Mf6FileDynamicPkgLoadType
     type(BlockParserType), pointer :: parser !< parser for MF6File period blocks
-    class(AsciiDynamicPkgLoadBaseType), pointer :: rp_loader
+    integer(I4B), pointer :: iper => null() !< memory managed variable, loader iper
+    integer(I4B), pointer :: ionper => null() !< memory managed variable, next load period
+    class(AsciiDynamicPkgLoadBaseType), pointer :: rp_loader => null()
   contains
     procedure :: init => dynamic_init
     procedure :: df => dynamic_df
@@ -148,6 +150,7 @@ contains
   !<
   subroutine dynamic_init(this, mf6_input, component_name, component_input_name, &
                           input_name, iperblock, iout)
+    use MemoryManagerModule, only: mem_allocate
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
@@ -164,8 +167,13 @@ contains
                                       component_input_name, input_name, &
                                       iperblock, iout)
     !
-    ! -- initialize rp_loader
-    nullify (this%rp_loader)
+    ! -- allocate scalars
+    call mem_allocate(this%iper, 'IPER', mf6_input%mempath)
+    call mem_allocate(this%ionper, 'IONPER', mf6_input%mempath)
+    !
+    ! -- initialize
+    this%iper = 0
+    this%ionper = 0
     !
     ! -- open input file
     inunit = open_mf6file(mf6_input%pkgtype, input_name, &
@@ -324,7 +332,12 @@ contains
   !> @brief dynamic loader destroy
   !<
   subroutine dynamic_destroy(this)
+    use MemoryManagerModule, only: mem_deallocate
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    !
+    ! -- deallocate scalars
+    call mem_deallocate(this%iper)
+    call mem_deallocate(this%ionper)
     !
     ! -- deallocate loader
     call this%rp_loader%destroy()
