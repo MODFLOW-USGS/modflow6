@@ -12,7 +12,8 @@ module PetscConvergenceModule
   public :: petsc_check_convergence
   public :: KSPSetConvergenceTest
 
-  type, public :: PetscContextType
+  !< Context for the custom convergence check
+  type, public :: PetscCnvgCtxType
     Vec :: x_old !< x vector from the previous iteration
     Vec :: delta_x !< delta in x w.r.t. previous iteration
     Vec :: residual !< the unpreconditoned residual vector (a la IMS)
@@ -27,33 +28,33 @@ module PetscConvergenceModule
   contains
     procedure :: create
     procedure :: destroy
-  end type PetscContextType
+  end type PetscCnvgCtxType
 
   ! passing our context into PETSc requires an explicit interface
   ! on KSPSetConvergenceTest, it is defined here:
   interface
     subroutine CnvgCheckFunc(ksp, n, rnorm, flag, context, ierr)
-      import tKSP, PetscContextType
+      import tKSP, PetscCnvgCtxType
       type(tKSP) :: ksp
       PetscInt :: n
       PetscReal :: rnorm
       KSPConvergedReason :: flag
-      class(PetscContextType), pointer :: context
+      class(PetscCnvgCtxType), pointer :: context
       PetscErrorCode :: ierr
     end subroutine
 
     subroutine CnvgDestroyFunc(context, ierr)
-      import PetscContextType
-      class(PetscContextType), pointer :: context
+      import PetscCnvgCtxType
+      class(PetscCnvgCtxType), pointer :: context
       PetscErrorCode :: ierr
     end subroutine
 
     subroutine KSPSetConvergenceTest(ksp, check_convergence, context, &
                                      destroy, ierr)
-      import tKSP, CnvgCheckFunc, PetscContextType, CnvgDestroyFunc
+      import tKSP, CnvgCheckFunc, PetscCnvgCtxType, CnvgDestroyFunc
       type(tKSP) :: ksp
       procedure(CnvgCheckFunc) :: check_convergence
-      class(PetscContextType), pointer :: context
+      class(PetscCnvgCtxType), pointer :: context
       procedure(CnvgDestroyFunc) :: destroy
       PetscErrorCode :: ierr
     end subroutine
@@ -62,7 +63,7 @@ module PetscConvergenceModule
 contains
 
   subroutine create(this, mat, settings, summary)
-    class(PetscContextType) :: this
+    class(PetscCnvgCtxType) :: this
     Mat, pointer :: mat
     type(ImsLinearSettingsType), pointer :: settings
     type(ConvergenceSummaryType), pointer :: summary
@@ -92,7 +93,7 @@ contains
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm_L2 !< 2-norm (preconditioned) residual value
     KSPConvergedReason :: flag !< Converged reason
-    class(PetscContextType), pointer :: context !< context
+    class(PetscCnvgCtxType), pointer :: context !< context
     PetscErrorCode :: ierr !< error
     ! local
     PetscReal, parameter :: min_one = -1.0
@@ -237,7 +238,7 @@ contains
   function apply_check(ctx, nit, dvmax, rnorm_inf, rnorm_L2) result(flag)
     use TdisModule, only: kstp
     use IMSLinearBaseModule, only: ims_base_testcnvg, ims_base_epfact
-    class(PetscContextType) :: ctx
+    class(PetscCnvgCtxType) :: ctx
     integer(I4B) :: nit !< iteration number
     real(DP) :: dvmax !< infinity norm of dep. var. change
     real(DP) :: rnorm_inf !< infinity norm of residual change
@@ -272,12 +273,9 @@ contains
   end function apply_check
 
   subroutine destroy(this)
-    use SimVariablesModule, only: iout
-    class(PetscContextType) :: this
+    class(PetscCnvgCtxType) :: this
     ! local
     integer(I4B) :: ierr
-
-    ! write(iout,*) "convergence check: ", this%t_convergence_check
 
     call VecDestroy(this%x_old, ierr)
     CHKERRQ(ierr)

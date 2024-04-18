@@ -20,20 +20,20 @@ module PetscSolverModule
 
   public :: create_petsc_solver
 
+  !< Linear solver using PETSc KSP
   type, public, extends(LinearSolverBaseType) :: PetscSolverType
-    KSP :: ksp_petsc
-    class(PetscMatrixType), pointer :: matrix => null()
-    Mat, pointer :: mat_petsc => null()
-    Vec, pointer :: vec_residual => null()
+    KSP :: ksp_petsc !< the KSP linear solver object
+    class(PetscMatrixType), pointer :: matrix => null() !< the system matrix in PETSc compatible format
+    Mat, pointer :: mat_petsc => null() !< the PETSc internal matrix format
 
-    type(ImsLinearSettingsType), pointer :: linear_settings => null()
+    type(ImsLinearSettingsType), pointer :: linear_settings => null() !< pointer to linear settings from IMS
     logical(LGP) :: use_ims_pc !< when true, use custom IMS-style preconditioning
-    KSPType :: ksp_type
-    PCType :: pc_type
-    PCType :: sub_pc_type
-    class(PetscContextType), pointer :: petsc_ctx => null()
-    type(PcShellCtxType), pointer :: pc_context => null()
-    type(ConvergenceSummaryType), pointer :: convergence_summary => null()
+    KSPType :: ksp_type !< the KSP solver type (CG, BCGS, ...)
+    PCType :: pc_type !< the (global) preconditioner type, should be parallel
+    PCType :: sub_pc_type !< the block preconditioner type (for the subdomain)
+    class(PetscCnvgCtxType), pointer :: petsc_ctx => null() !< context for the PETSc custom convergence check
+    type(PcShellCtxType), pointer :: pc_context => null() !< context for the custom (IMS) precondioner
+    type(ConvergenceSummaryType), pointer :: convergence_summary => null() !< data structure wrapping the convergence data
 
   contains
     procedure :: initialize => petsc_initialize
@@ -85,8 +85,6 @@ contains
     class(MatrixBaseType), pointer :: matrix !< The solution matrix as KSP operator
     type(ImsLinearSettingsType), pointer :: linear_settings !< the settings for the linear solver from the .ims file
     type(ConvergenceSummaryType), pointer :: convergence_summary !< a convergence record for diagnostics
-    ! local
-    PetscErrorCode :: ierr
 
     this%linear_settings => linear_settings
 
@@ -104,10 +102,6 @@ contains
     this%use_ims_pc = .true. ! default is true, override with .petscrc
     allocate (this%pc_context)
     call this%pc_context%create(this%matrix, linear_settings)
-
-    allocate (this%vec_residual)
-    call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
-    CHKERRQ(ierr)
 
     if (linear_settings%ilinmeth == CG_METHOD) then
       this%ksp_type = KSPCG
@@ -433,11 +427,6 @@ contains
 
     call KSPDestroy(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
-
-    ! delete work vector
-    call VecDestroy(this%vec_residual, ierr)
-    CHKERRQ(ierr)
-    deallocate (this%vec_residual)
 
     ! delete context
     call this%petsc_ctx%destroy()
