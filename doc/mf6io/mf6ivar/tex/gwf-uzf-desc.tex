@@ -51,8 +51,6 @@
 
 \item \texttt{SQUARE\_GWET}---keyword specifying that groundwater ET will be simulated by assuming a constant ET rate for groundwater levels between land surface (TOP) and land surface minus the ET extinction depth (TOP-EXTDP). Groundwater ET is smoothly reduced from the PET rate to zero over a nominal interval at TOP-EXTDP.
 
-\item \texttt{SIMULATE\_GWSEEP}---keyword specifying that groundwater discharge (GWSEEP) to land surface will be simulated. Groundwater discharge is nonzero when groundwater head is greater than land surface.  This option is no longer recommended; a better approach is to use the Drain Package with discharge scaling as a way to handle seepage to land surface.  The Drain Package with discharge scaling is described in Chapter 3 of the Supplemental Technical Information.
-
 \item \texttt{UNSAT\_ETWC}---keyword specifying that ET in the unsaturated zone will be simulated as a function of the specified PET rate while the water content (THETA) is greater than the ET extinction water content (EXTWC).
 
 \item \texttt{UNSAT\_ETAE}---keyword specifying that ET in the unsaturated zone will be simulated using a capillary pressure based formulation. Capillary pressure is calculated using the Brooks-Corey retention function.
