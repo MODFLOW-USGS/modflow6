@@ -47,6 +47,10 @@ on:
         description: 'Version number to use for release.'
         required: true
         type: string
+      models:
+        description: 'Models to include in the release documentation'
+        required: false
+        type: string
     outputs:
       version:
         description: 'Version number used for release'
@@ -419,7 +423,9 @@ jobs:
       - name: Build example models
         if: inputs.full == true
         working-directory: modflow6-examples/autotest
-        run: pytest -v -n auto test_scripts.py --init
+        run: |
+          models="${{ inputs.models }}""
+          pytest -v -n auto test_scripts.py --init -k "${$models/,/ or }"
       
       - name: Create folder structure
         if: inputs.full == true
@@ -461,7 +467,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
+          models="${{ inputs.models }}""
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -m ${models/,/ -m }"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
