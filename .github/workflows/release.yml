@@ -424,8 +424,8 @@ jobs:
         if: inputs.full == true
         working-directory: modflow6-examples/autotest
         run: |
-          models="${{ inputs.models }}""
-          pytest -v -n auto test_scripts.py --init -k "${$models/,/ or }"
+          models="${{ inputs.models }}"
+          pytest -v -n auto test_scripts.py --init -k "${models//,/ or }"
       
       - name: Create folder structure
         if: inputs.full == true
@@ -467,8 +467,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          models="${{ inputs.models }}""
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -m ${models/,/ -m }"
+          models="${{ inputs.models }}"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -m ${models//,/ -m }"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi

@@ -618,7 +618,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-m",
-        "--models",
+        "--model",
         required=False,
         action="append",
         help="Filter model types to include",
