@@ -16,6 +16,7 @@ module SwfDisv1DInputModule
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
+    logical :: export_ascii = .false.
     logical :: nodes = .false.
     logical :: nvert = .false.
     logical :: length = .false.
@@ -110,6 +111,23 @@ module SwfDisv1DInputModule
     'ANGROT', & ! tag name
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfdisv1d_export_ascii = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DISV1D', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -347,6 +365,7 @@ module SwfDisv1DInputModule
     swfdisv1d_xorigin, &
     swfdisv1d_yorigin, &
     swfdisv1d_angrot, &
+    swfdisv1d_export_ascii, &
     swfdisv1d_nodes, &
     swfdisv1d_nvert, &
     swfdisv1d_length, &

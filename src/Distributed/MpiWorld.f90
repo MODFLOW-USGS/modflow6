@@ -6,6 +6,7 @@ module MpiWorldModule
   private
 
   public :: get_mpi_world
+  public :: mpi_stop
   public :: CHECK_MPI
 
   type, public :: MpiWorldType
@@ -125,5 +126,17 @@ contains
     end if
 
   end subroutine CHECK_MPI
+
+  subroutine mpi_stop(status)
+    integer(I4B) :: status
+    ! local
+    type(MpiWorldType), pointer :: mpi_world
+    integer :: ierr
+
+    mpi_world => get_mpi_world()
+    write (*, *) "" ! empty line
+    call MPI_Abort(mpi_world%comm, status, ierr)
+
+  end subroutine mpi_stop
 
 end module MpiWorldModule

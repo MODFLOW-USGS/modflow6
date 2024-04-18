@@ -245,6 +245,13 @@ def check_output(idx, test):
     if makeplot:
         make_plot(test, mfsim)
 
+    # read the binary grid file
+    fpth = test.workspace / f"{swfname}.dis2d.grb"
+    grb = flopy.mf6.utils.MfGrdFile(fpth)
+    ia = grb.ia
+    ja = grb.ja
+    assert ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
+
     # read binary stage file
     fpth = test.workspace / f"{swfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")

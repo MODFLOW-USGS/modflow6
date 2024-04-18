@@ -45,7 +45,7 @@ gwe-dis.dfn
 swf-nam.dfn
 swf-disv1d.dfn
 swf-dis2d.dfn
-swf-disv.dfn
+swf-disv2d.dfn
 swf-cxs.dfn
 swf-dfw.dfn
 swf-ic.dfn

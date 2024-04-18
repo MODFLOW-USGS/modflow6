@@ -181,7 +181,7 @@
 		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv1didm.f90"/>
-		<File RelativePath="..\src\Idm\swf-disvidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-disv2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
@@ -207,7 +207,8 @@
 		<File RelativePath="..\src\Model\Discretization\Dis2d.f90"/>
 		<File RelativePath="..\src\Model\Discretization\Disu.f90"/>
 		<File RelativePath="..\src\Model\Discretization\Disv.f90"/>
-		<File RelativePath="..\src\Model\Discretization\Disv1d.f90"/></Filter>
+		<File RelativePath="..\src\Model\Discretization\Disv1d.f90"/>
+		<File RelativePath="..\src\Model\Discretization\Disv2d.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>

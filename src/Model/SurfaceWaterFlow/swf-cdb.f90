@@ -23,7 +23,6 @@ module SwfCdbModule
   use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use BaseDisModule, only: DisBaseType
-  use Disv1dModule, only: Disv1dType
   use SwfCxsModule, only: SwfCxsType
   !
   implicit none
@@ -41,7 +40,6 @@ module SwfCdbModule
     real(DP), pointer :: gravconv => null() !< conversion factor gravity in m/s^2 to model units
 
     ! -- pointers other objects
-    type(Disv1dType), pointer :: disv1d
     type(SwfCxsType), pointer :: cxs
 
   contains
@@ -111,13 +109,10 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'DFW')
-    !
-    ! -- store pointer to disv1d
-    select type (dis)
-    type is (Disv1dType)
-      cdbobj%disv1d => dis
-    end select
-    !
+
+    ! -- store pointer to dis
+    cdbobj%dis => dis
+
     ! -- store pointer to cxs
     cdbobj%cxs => cxs
     !

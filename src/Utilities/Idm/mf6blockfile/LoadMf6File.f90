@@ -279,7 +279,8 @@ contains
     !
     ! -- disu vertices/cell2d blocks are contingent on NVERT dimension
     if (this%mf6_input%pkgtype == 'DISU6' .or. &
-        this%mf6_input%pkgtype == 'DISV1D6') then
+        this%mf6_input%pkgtype == 'DISV1D6' .or. &
+        this%mf6_input%pkgtype == 'DISV2D6') then
       if (this%mf6_input%block_dfns(iblk)%blockname == 'VERTICES' .or. &
           this%mf6_input%block_dfns(iblk)%blockname == 'CELL2D') then
         call get_from_memorylist('NVERT', this%mf6_input%mempath, mt, found, &

@@ -10,11 +10,9 @@ filelock = "*"
 flaky = "*"
 fortran-language-server = "*"
 fprettify = "*"
-hatchling = "*"
 jupytext = "*"
 matplotlib = "*"
 meson = "1.3.0"
-mfpymake = "*"
 networkx = "*"
 ninja = "*"
 numpy = "*"
@@ -33,12 +31,19 @@ scipy = "*"
 shapely = "*"
 xmipy = "*"
 
-[pypi-dependencies]
-flopy = { git = "https://github.com/modflowpy/flopy.git" }
-modflowapi = { git = "https://github.com/MODFLOW-USGS/modflowapi.git" }
-modflow-devtools = { git = "https://github.com/MODFLOW-USGS/modflow-devtools.git" }
-
 [tasks]
+# install
+install-flopy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/flopy.git"
+install-pymake = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/pymake.git"
+install-modflowapi = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflowapi.git"
+install-modflow-devtools = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflow-devtools.git"
+install = { depends_on = [
+    "install-flopy",
+    "install-pymake",
+    "install-modflowapi",
+    "install-modflow-devtools",
+] }
+
 # format
 fortran-format-check = "python .github/common/fortran_format_check.py"
 msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"

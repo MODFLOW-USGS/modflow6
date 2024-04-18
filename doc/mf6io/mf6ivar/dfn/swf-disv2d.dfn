@@ -1,4 +1,4 @@
-# --------------------- gwt disv options ---------------------
+# --------------------- swf disv2d options ---------------------
 
 block options
 name length_units
@@ -21,16 +21,16 @@ name xorigin
 type double precision
 reader urword
 optional true
-longname x-position origin of the model grid coordinate system
-description x-position of the origin used for model grid vertices.  This value should be provided in a real-world coordinate system.  A default value of zero is assigned if not specified.  The value for XORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+longname x-position of the model grid origin
+description x-position of the lower-left corner of the model grid.  A default value of zero is assigned if not specified.  The value for XORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
 
 block options
 name yorigin
 type double precision
 reader urword
 optional true
-longname y-position origin of the model grid coordinate system
-description y-position of the origin used for model grid vertices.  This value should be provided in a real-world coordinate system.  If not specified, then a default value equal to zero is used.  The value for YORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+longname y-position of the model grid origin
+description y-position of the lower-left corner of the model grid.  If not specified, then a default value equal to zero is used.  The value for YORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
 
 block options
 name angrot
@@ -38,7 +38,7 @@ type double precision
 reader urword
 optional true
 longname rotation angle
-description counter-clockwise rotation angle (in degrees) of the model grid coordinate system relative to a real-world coordinate system.  If not specified, then a default value of 0.0 is assigned.  The value for ANGROT does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
+description counter-clockwise rotation angle (in degrees) of the lower-left corner of the model grid.  If not specified, then a default value of 0.0 is assigned.  The value for ANGROT does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space.
 
 block options
 name export_array_ascii
@@ -49,18 +49,10 @@ mf6internal export_ascii
 longname export array variables to layered ascii files.
 description keyword that specifies input grid arrays, which already support the layered keyword, should be written to layered ascii output files.
 
-# --------------------- gwt disv dimensions ---------------------
+# --------------------- swf disv2d dimensions ---------------------
 
 block dimensions
-name nlay
-type integer
-reader urword
-optional false
-longname number of layers
-description is the number of layers in the model grid.
-
-block dimensions
-name ncpl
+name nodes
 type integer
 reader urword
 optional false
@@ -75,37 +67,28 @@ optional false
 longname number of columns
 description is the total number of (x, y) vertex pairs used to characterize the horizontal configuration of the model grid.
 
-# --------------------- gwt disv griddata ---------------------
+# --------------------- swf disv2d griddata ---------------------
 
 block griddata
-name top
+name bottom
 type double precision
-shape (ncpl)
+shape (nodes)
 reader readarray
-longname model top elevation
-description is the top elevation for each cell in the top model layer.
-
-block griddata
-name botm
-type double precision
-shape (ncpl, nlay)
-reader readarray
-layered true
+layered false
 longname model bottom elevation
 description is the bottom elevation for each cell.
 
 block griddata
 name idomain
 type integer
-shape (ncpl, nlay)
+shape (nodes)
 reader readarray
-layered true
+layered false
 optional true
 longname idomain existence array
-description is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell.
+description is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1 or greater, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell.
 
-
-# --------------------- gwt disv vertices ---------------------
+# --------------------- swf disv2d vertices ---------------------
 
 block vertices
 name vertices
@@ -148,12 +131,12 @@ longname y-coordinate for vertex
 description is the y-coordinate for the vertex.
 
 
-# --------------------- gwt disv cell2d ---------------------
+# --------------------- swf disv cell2d ---------------------
 
 block cell2d
 name cell2d
 type recarray icell2d xc yc ncvert icvert
-shape (ncpl)
+shape (nodes)
 reader urword
 optional false
 longname cell2d data

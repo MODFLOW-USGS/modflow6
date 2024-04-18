@@ -138,10 +138,14 @@ jobs:
           version: ${{ matrix.version }}
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.5.2
+        uses: prefix-dev/setup-pixi@v0.6.0
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Build modflow6
         working-directory: modflow6

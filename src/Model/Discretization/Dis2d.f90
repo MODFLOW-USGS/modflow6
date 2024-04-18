@@ -490,7 +490,7 @@ contains
     class(Dis2dType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
     ! -- local
-    integer(I4B) :: iunit, ntxt, ncpl
+    integer(I4B) :: iunit, ntxt
     integer(I4B), parameter :: lentxt = 100
     character(len=50) :: txthdr
     character(len=lentxt) :: txt
@@ -500,8 +500,7 @@ contains
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
     !
     ! -- Initialize
-    ntxt = 16
-    ncpl = this%nrow * this%ncol
+    ntxt = 14
     !
     ! -- Open the file
     fname = trim(this%input_fname)//'.grb'

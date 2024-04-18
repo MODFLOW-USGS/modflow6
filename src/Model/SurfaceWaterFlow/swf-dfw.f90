@@ -184,6 +184,9 @@ contains
     if (distype == "DIS2D") then
       this%is2d = 1
     end if
+    if (distype == "DISV2D") then
+      this%is2d = 1
+    end if
 
     ! -- check if dfw is enabled
     ! this will need to become if (.not. present(dfw_options)) then
