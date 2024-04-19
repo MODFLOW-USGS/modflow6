@@ -77,7 +77,7 @@ contains
     this%halo_activated = .false.
 
     ! to log or not to log
-    this%enable_monitor = .true.
+    this%enable_monitor = .false.
 
     ! initialize the MPI message builder and cache
     call this%message_builder%init()
