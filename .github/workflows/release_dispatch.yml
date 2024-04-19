@@ -48,6 +48,10 @@ on:
         description: 'Version number to use for release.'
         required: true
         type: string
+      models:
+        description: 'Models to include in the release documentation'
+        required: false
+        type: string
 jobs:
   set_options:
     name: Set release options
@@ -137,6 +141,7 @@ jobs:
       full: true
       run_tests: ${{ inputs.run_tests }}
       version: ${{ needs.set_options.outputs.version }}
+      models: ${{ inputs.models }}
   pr:
     name: Draft release PR
     if: ${{ github.ref_name != 'master' && ((github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc'))) }}
