@@ -167,7 +167,7 @@ contains ! module procedures
     integer(I4B) :: neighbor_id
     integer(I4B) :: model_mask
     type(STLVecInt) :: models_at_depth !< model ids at a certain depth, to
-                                       !< recurse on for nbrs-of-nbrs search
+                                       !! recurse on for nbrs-of-nbrs search
 
     if (.not. present(mask)) then
       model_mask = 0
