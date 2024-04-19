@@ -294,7 +294,7 @@ def build_models(idx, test):
     return sim, None
 
 
-# Instatiate the upper and lower flow models
+# Instantiate the upper and lower flow models
 def add_flow(sim):
     # Instantiating MODFLOW 6 solver for flow model
     imsgwf = flopy.mf6.ModflowIms(

@@ -87,7 +87,7 @@ contains
     call this%bndlist%Clear()
     deallocate (this%bndlist)
 
-    ! -- deallocate base tpye
+    ! -- deallocate base type
     call this%BaseModelType%model_da()
   end subroutine model_da
 

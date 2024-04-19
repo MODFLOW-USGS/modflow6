@@ -917,7 +917,7 @@ contains
 
   !> @brief Observations
   !!
-  !! Store the observation type supported by the APT package and overide
+  !! Store the observation type supported by the APT package and override
   !! BndType%bnd_df_obs
   !<
   subroutine sfe_df_obs(this)

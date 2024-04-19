@@ -513,7 +513,7 @@ contains
     return
   end subroutine save_flows
 
-  !> @brief Read froms from a binary file into this BudgetObjectType
+  !> @brief Read from a binary file into this BudgetObjectType
   !<
   subroutine read_flows(this, dis, ibinun)
     ! -- dummy

@@ -224,7 +224,7 @@ contains
     real(DP) :: qnm, qmax, qupj, elupdn, elup2up
     real(DP) :: smooth, cdiff, alimiter
     !
-    ! -- intialize
+    ! -- initialize
     qtvd = DZERO
     !
     ! -- Find upstream node

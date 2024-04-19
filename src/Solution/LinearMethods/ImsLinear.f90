@@ -455,7 +455,7 @@ CONTAINS
 
   !> @ brief Allocate and initialize scalars
     !!
-    !!  Allocate and inititialize linear accelerator scalars
+    !!  Allocate and initialize linear accelerator scalars
     !!
   !<
   subroutine allocate_scalars(this)

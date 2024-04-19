@@ -4,7 +4,7 @@ In that autotest, flow and transport run separately, which is the case here
 as well. However, by adding SFR we can now invoke MVR, in this case
 WEL -> SFR at the same time as invoking auxiliary variables.  A
 companion autotest runs this same simulation (uses SFR in place of RIV for
-receiving MVR water), but runs both flow and tranport simultaneously which,
+receiving MVR water), but runs both flow and transport simultaneously which,
 at one time, wrongly threw an input error.  However, running the models
 separately never threw the error.
 """

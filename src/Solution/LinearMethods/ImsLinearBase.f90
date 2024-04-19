@@ -563,7 +563,7 @@ contains
     ! -- modules
     use SimModule, only: store_error, count_errors
     ! -- dummy variables
-    integer(I4B), INTENT(IN) :: IORD !< reordering optionn
+    integer(I4B), INTENT(IN) :: IORD !< reordering option
     integer(I4B), INTENT(IN) :: NEQ !< number of rows
     integer(I4B), INTENT(IN) :: NJA !< number of non-zero entries
     integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA !< row pointer
@@ -609,7 +609,7 @@ contains
       IORDER(LORDER(n)) = n
     END DO
     !
-    ! -- terminate if errors occured
+    ! -- terminate if errors occurred
     if (count_errors() > 0) then
       call parser%StoreErrorUnit()
     end if
@@ -790,7 +790,7 @@ contains
     integer(I4B), DIMENSION(NIAPC + 1), INTENT(INOUT) :: IAPC !< preconditioner CRS row pointers
     integer(I4B), DIMENSION(NJAPC), INTENT(INOUT) :: JAPC !< preconditioner CRS column pointers
     integer(I4B), DIMENSION(NIAPC), INTENT(INOUT) :: IW !< preconditioner integed work vector
-    real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W !< preconditioner work verctor
+    real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W !< preconditioner work vector
     ! -- ILUT dummy variables
     integer(I4B), INTENT(IN) :: LEVEL !< number of levels of fill for ILUT and MILUT
     real(DP), INTENT(IN) :: DROPTOL !< drop tolerance
@@ -1137,7 +1137,7 @@ contains
     real(DP), INTENT(IN) :: Rmax0 !< initial flow change (initial L2-norm)
     real(DP), INTENT(IN) :: Epfact !< factor for reducing convergence criteria in subsequent Picard iterations
     real(DP), INTENT(IN) :: Dvclose !< Maximum depenendent-variable change allowed
-    real(DP), INTENT(IN) :: Rclose !< Maximum flow change alowed
+    real(DP), INTENT(IN) :: Rclose !< Maximum flow change allowed
     ! -- code
     IF (Icnvgopt == 0) THEN
       IF (ABS(Dvmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN
@@ -1300,7 +1300,7 @@ contains
   !<
   SUBROUTINE ims_base_isort(NVAL, IARRAY)
     ! -- dummy variables
-    integer(I4B), INTENT(IN) :: NVAL !< length of the interger array
+    integer(I4B), INTENT(IN) :: NVAL !< length of the integer array
     integer(I4B), DIMENSION(NVAL), INTENT(INOUT) :: IARRAY !< integer array to be sorted
     ! -- local variables
     integer(I4B) :: i, j, itemp

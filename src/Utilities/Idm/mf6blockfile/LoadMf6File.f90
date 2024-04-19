@@ -832,7 +832,7 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
 
-    ! determine the array shape from the input data defintion (idt%shape),
+    ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
     call get_shape_from_string(idt%shape, array_shape, memoryPath)
     nsize1 = array_shape(1)
@@ -884,7 +884,7 @@ contains
     character(len=LINELENGTH) :: keyword
     integer(I4B), dimension(:), pointer, contiguous :: int1d_ptr
 
-    ! determine the array shape from the input data defintion (idt%shape),
+    ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
     call get_shape_from_string(idt%shape, array_shape, memoryPath)
     nsize1 = array_shape(1)
@@ -1007,7 +1007,7 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
 
-    ! determine the array shape from the input data defintion (idt%shape),
+    ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
     call get_shape_from_string(idt%shape, array_shape, memoryPath)
     nsize1 = array_shape(1)
@@ -1059,7 +1059,7 @@ contains
     character(len=LINELENGTH) :: keyword
     real(DP), dimension(:), pointer, contiguous :: dbl1d_ptr
 
-    ! determine the array shape from the input data defintion (idt%shape),
+    ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
     call get_shape_from_string(idt%shape, array_shape, memoryPath)
     nsize1 = array_shape(1)

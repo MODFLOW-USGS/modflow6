@@ -218,7 +218,7 @@ contains
   !!
   !!  - creates object
   !!  - allocates pointer
-  !!  - initilizes values
+  !!  - initializes values
   !!
   !<
   subroutine obs_cr(obs, inobs)

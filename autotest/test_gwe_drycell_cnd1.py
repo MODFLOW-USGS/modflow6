@@ -429,7 +429,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load temperature data from "{fpth}"'
 
-    # Ensure constant temperatures are initiated properly in teh 1st and 3rd
+    # Ensure constant temperatures are initiated properly in the 1st and 3rd
     # stress periods, which are separated by period of "turning off" the
     # constant temperature boundary
     msg0 = "Grid cell temperatures do not reflect user-specified difference"

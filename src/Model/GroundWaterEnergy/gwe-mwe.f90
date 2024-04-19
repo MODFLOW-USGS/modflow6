@@ -254,7 +254,7 @@ contains
         this%idxbudssm(ip) = 0
       case default
         !
-        ! -- Set idxbudssm equal to a column index for where the tempeartures
+        ! -- Set idxbudssm equal to a column index for where the temperatures
         !    are stored in the tempbud(nbudssm, ncv) array
         this%idxbudssm(ip) = icount
         icount = icount + 1
@@ -716,7 +716,7 @@ contains
     return
   end subroutine mwe_da
 
-  !> @brief Thermal transport matrix term(s) associcated with a user-specified
+  !> @brief Thermal transport matrix term(s) associated with a user-specified
   !! flow rate (mwe_rate_term)
   !<
   subroutine mwe_rate_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
@@ -754,7 +754,7 @@ contains
     return
   end subroutine mwe_rate_term
 
-  !> @brief Thermal transport matrix term(s) associcated with a flowing-
+  !> @brief Thermal transport matrix term(s) associated with a flowing-
   !! well rate term associated with pumping (or injection)
   !<
   subroutine mwe_fwrt_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
@@ -782,7 +782,7 @@ contains
     return
   end subroutine mwe_fwrt_term
 
-  !> @brief Thermal transport matrix term(s) associcated with pumped-water-
+  !> @brief Thermal transport matrix term(s) associated with pumped-water-
   !! to-mover term (mwe_rtmv_term)
   !<
   subroutine mwe_rtmv_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
@@ -810,7 +810,7 @@ contains
     return
   end subroutine mwe_rtmv_term
 
-  !> @brief Thermal transport matrix term(s) associcated with the flowing-
+  !> @brief Thermal transport matrix term(s) associated with the flowing-
   !! well-rate-to-mover term (mwe_frtm_term)
   !<
   subroutine mwe_frtm_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
@@ -840,7 +840,7 @@ contains
 
   !> @brief Observations
   !!
-  !! Store the observation type supported by the APT package and overide
+  !! Store the observation type supported by the APT package and override
   !! BndType%bnd_df_obs
   !<
   subroutine mwe_df_obs(this)

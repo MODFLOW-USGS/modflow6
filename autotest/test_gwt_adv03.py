@@ -345,7 +345,7 @@ def check_output(idx, test):
         assert False, f'could not load data from "{fpth}"'
 
     # This is the answer to this problem.  These concentrations are for
-    # the time eqaul to 1/5 of perlen.
+    # the time equal to 1/5 of perlen.
     cres1 = [
         9.75305991e-01,
         9.52167956e-01,

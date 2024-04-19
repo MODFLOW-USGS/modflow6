@@ -554,7 +554,7 @@ contains
     logical :: convertFlux
     !
     ! -- these time array series pointers need to be non-contiguous
-    !    beacuse a slice of bound is passed
+    !    because a slice of bound is passed
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
     ! -- formats
     ! -- data

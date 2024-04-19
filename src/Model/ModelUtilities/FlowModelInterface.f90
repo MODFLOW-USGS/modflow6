@@ -739,7 +739,7 @@ contains
 
   !> @brief Initialize gwf terms from budget file
   !!
-  !! initalize terms and figure out how many
+  !! initialize terms and figure out how many
   !! different terms and packages are contained within the file
   !!
   !<

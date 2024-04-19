@@ -97,7 +97,7 @@ contains
     ! -- modules
     use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(MvrType) :: this !< MvrType objec
+    class(MvrType) :: this !< MvrType object
     integer(I4B), intent(in) :: inunit !< input file unit number
     character(len=LENMEMPATH), &
       dimension(:), pointer, contiguous :: pckMemPaths !< array of strings

@@ -3291,7 +3291,7 @@ end module SwfGwfExchangeModule
 !     return
 !   end subroutine swf_gwf_save_simvals
 
-!   !> @ brief Obs ID processer
+!   !> @ brief Obs ID processor
 !   !!
 !   !! Process observations for this exchange
 !   !<

@@ -36,7 +36,7 @@ module GwfStoModule
     integer(I4B), pointer :: iss => null() !< steady state flag: 1 = steady, 0 = transient
     integer(I4B), pointer :: iusesy => null() !< flag set if any cell is convertible (0, 1)
     integer(I4B), dimension(:), pointer, contiguous :: iconvert => null() !< confined (0) or convertible (1)
-    real(DP), dimension(:), pointer, contiguous :: ss => null() !< specfic storage or storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: ss => null() !< specific storage or storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sy => null() !< specific yield
     real(DP), dimension(:), pointer, contiguous :: strgss => null() !< vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous :: strgsy => null() !< vector of specific yield rates

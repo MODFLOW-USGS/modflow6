@@ -22,7 +22,7 @@ module ModelPackageInputsModule
   !> @brief derived type for loadable package type
   !!
   !!  This derived type is used to store package instance
-  !!  desriptions for a supported package type.
+  !!  descriptions for a supported package type.
   !!
   !<
   type :: LoadablePackageType

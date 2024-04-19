@@ -17,7 +17,7 @@ decomposed and joined by a GWF-GWF exchange with XT3D applied.
    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
 
-The head values should always be indentical. All models are
+The head values should always be identical. All models are
 part of the same solution for convenience.
 In addition, a check on the x,y,z components of specific discharge
 is present. The values of the left submodel are compared to

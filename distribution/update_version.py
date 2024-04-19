@@ -381,7 +381,7 @@ _current_version = Version(version_file_path.read_text().strip())
 
 
 @no_parallel
-@pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
+@pytest.mark.skip(reason="reverts repo files on cleanup, treat carefully")
 @pytest.mark.parametrize(
     "version",
     [

@@ -811,7 +811,7 @@ contains
       cm = this%get_cond_n(m, depth_m, clm, width_m, dhds_m)
 
       ! -- Use harmonic mean to calculated weighted
-      !    conductance bewteen the centers of reaches
+      !    conductance between the centers of reaches
       !    n and m
       if ((cn + cm) > DPREC) then
         cond = cn * cm / (cn + cm)

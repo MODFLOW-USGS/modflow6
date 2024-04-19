@@ -426,7 +426,7 @@ contains
     integer(I4B), intent(in) :: inunit
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
-    ! -- non-contiguous beacuse a slice of bound is passed
+    ! -- non-contiguous because a slice of bound is passed
     real(DP), dimension(:), pointer :: auxArrayPtr, bndArrayPtr
     real(DP), dimension(:), pointer, contiguous :: bound
     integer(I4B), dimension(:), pointer, contiguous :: nodelist

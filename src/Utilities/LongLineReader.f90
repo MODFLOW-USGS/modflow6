@@ -94,7 +94,7 @@ contains
     return
   end subroutine rdcom
 
-  !> @brief Emulate a Fortan backspace
+  !> @brief Emulate a Fortran backspace
   !!
   !!  Emulate a fortran backspace call by storing
   !!  the current line in long_line

@@ -87,7 +87,7 @@ module GweUzeModule
 
 contains
 
-  !> @breif Create a new UZE package
+  !> @brief Create a new UZE package
   !<
   subroutine uze_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, eqnsclfac, gwecommon, dvt, dvu, dvua)

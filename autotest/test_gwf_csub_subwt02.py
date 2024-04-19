@@ -412,7 +412,7 @@ def build_models(idx, test):
     ws = test.workspace
     sim = get_model(idx, ws)
 
-    # build comparision files
+    # build comparison files
     ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
 
@@ -427,7 +427,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    # comparision total compaction results
+    # comparison total compaction results
     cpth = cmppth
     fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:

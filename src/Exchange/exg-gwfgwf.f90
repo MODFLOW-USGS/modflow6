@@ -2129,7 +2129,7 @@ contains
     return
   end subroutine gwf_gwf_save_simvals
 
-  !> @ brief Obs ID processer
+  !> @ brief Obs ID processor
   !!
   !! Process observations for this exchange
   !<

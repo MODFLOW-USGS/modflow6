@@ -245,7 +245,7 @@ contains
     integer, dimension(:), allocatable :: body_rcv_t
     integer, dimension(:), allocatable :: body_snd_t
 
-    ! update adress list
+    ! update address list
     call this%update_senders()
     call this%update_receivers()
 

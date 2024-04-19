@@ -361,7 +361,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    # Comparision total compaction results
+    # Comparison total compaction results
     fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")

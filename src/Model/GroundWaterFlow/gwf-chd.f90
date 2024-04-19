@@ -263,7 +263,7 @@ contains
     return
   end subroutine chd_fc
 
-  !> @brief Calculate flow associated with constant head bondary
+  !> @brief Calculate flow associated with constant head boundary
   !!
   !! This method overrides bnd_cq()
   !<

@@ -1153,7 +1153,7 @@ contains
     return
   end subroutine gwt_gwt_save_simvals
 
-  !> @ brief Obs ID processer
+  !> @ brief Obs ID processor
   !!
   !! Process observations for this exchange
   !<

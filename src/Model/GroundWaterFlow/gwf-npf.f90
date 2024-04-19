@@ -2843,7 +2843,7 @@ contains
     class(GwfNpfType) :: this !< this NPF instance
     integer(I4B) :: n !< node n
     integer(I4B) :: m !< node m
-    integer(I4B) :: ihc !< 1 = horizonal connection, 0 for vertical
+    integer(I4B) :: ihc !< 1 = horizontal connection, 0 for vertical
     ! -- return
     real(DP) :: satThickness !< saturated thickness
     !

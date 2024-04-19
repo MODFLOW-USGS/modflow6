@@ -82,7 +82,7 @@ contains
 
   !> @brief Initialize a cross-section object
   !!
-  !! Subroutine to inititialize the cross-section object with the current
+  !! Subroutine to initialize the cross-section object with the current
   !! data.
   !!
   !<

@@ -94,7 +94,7 @@ contains
     character(len=*), intent(inout) :: option
     logical, intent(inout) :: found
     !
-    ! -- process pakage options
+    ! -- process package options
     select case (option)
     case ('MOVER')
       this%imover = 1
@@ -113,7 +113,7 @@ contains
   !> @ brief Read and prepare stress period data for package
   !!
   !!  Method reads and prepares stress period data for the USR package.
-  !!  This method overides the base read and prepare method and does not read
+  !!  This method overrides the base read and prepare method and does not read
   !!  any stress period data from the USR package input file.
   !!
   !<

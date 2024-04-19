@@ -4,9 +4,9 @@
 !!    to GwtEstModule; however, there are some important differences
 !!    owing to the fact that a sorbed phase is not considered.
 !!    Instead, a single temperature is simulated for each grid
-!!    cell and is represenative of both the aqueous and solid
+!!    cell and is representative of both the aqueous and solid
 !!    phases (i.e., instantaneous thermal equilibrium is
-!!    assumed).  Also, "thermal bleeding" is accomodated, where
+!!    assumed).  Also, "thermal bleeding" is accommodated, where
 !!    conductive processes can transport into, through, or
 !!    out of dry cells that are part of the active domain.
 !<
@@ -47,7 +47,7 @@ module GweEstModule
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer :: ilhv => null() !< latent heat of vaporization for calculating temperature change associcated with evaporation (0: not specified, not 0: specified)
+    integer(I4B), pointer :: ilhv => null() !< latent heat of vaporization for calculating temperature change associated with evaporation (0: not specified, not 0: specified)
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order decay rate (aqueous)
     real(DP), dimension(:), pointer, contiguous :: ratedcy => null() !< rate of decay
     real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
@@ -462,7 +462,7 @@ contains
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
-    integer(I4B), intent(in) :: isuppress_output !< flag to supress output
+    integer(I4B), intent(in) :: isuppress_output !< flag to suppress output
     type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
     real(DP) :: rin

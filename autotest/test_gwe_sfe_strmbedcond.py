@@ -328,7 +328,7 @@ def build_models(idx, test):
         chdelev1 = top[0, 0] - 3.0  # convection from stream to gw,
         chdelev2 = top[0, -1] - 3.0  # conduction from gw to strm
 
-    # Instatiate constant head boundary package
+    # Instantiate constant head boundary package
     if chd_on:
         chdlist1 = [
             [(0, 0, 0), chdelev1, strt_gw_temp[idx]],

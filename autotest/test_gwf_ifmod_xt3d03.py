@@ -24,7 +24,7 @@ bottom right corner of model "tl" (and also in "ref" of course)
 
                                   'bl'             'br'
 
-The head values should always be indentical. All models are
+The head values should always be identical. All models are
 part of the same solution for convenience.
 In addition, a check on the x,y,z components of specific discharge
 is present. Finally, the budget error is checked.
