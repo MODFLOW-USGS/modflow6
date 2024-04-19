@@ -19,10 +19,9 @@ module MpiRunControlModule
     ! override
     procedure :: start => mpi_ctrl_start
     procedure :: finish => mpi_ctrl_finish
-    procedure :: at_stage => mpi_ctrl_at_stage
+    procedure :: ctrl_after_con_cr => mpi_ctrl_after_con_cr
     ! private
-    procedure, private :: after_con_cr_handler
-    procedure, private :: after_con_df_handler
+    procedure, private :: mpi_ctrl_after_con_cr
     procedure, private :: wait_for_debugger
   end type MpiRunControlType
 
@@ -143,47 +142,19 @@ contains
 
   end subroutine mpi_ctrl_finish
 
-  !> @brief Overrides to prepare for (efficient) synchronization,
-  !< RunControl is called after.
-  subroutine mpi_ctrl_at_stage(this, stage)
-    class(MpiRunControlType) :: this
-    integer(I4B) :: stage
-    
-    if (stage == STG_AFT_CON_CR) then
-      call this%after_con_cr_handler()
-    else if (stage == STG_AFT_CON_DF) then
-      call this%after_con_df_handler()
-    end if
-
-    ! call base
-    call this%RunControlType%at_stage(stage)
-
-  end subroutine mpi_ctrl_at_stage
-
   !> @brief Actions after creating connections
   !<
-  subroutine after_con_cr_handler(this)
+  subroutine mpi_ctrl_after_con_cr(this)
     class(MpiRunControlType) :: this
 
-    ! set halo to virtual data
-    call this%virtual_data_mgr%set_halo()
+    ! set halo to virtual data in base
 
     ! synchronize
     ! if vdc is remote
     ! if vdc is active
     ! -- sync --
-    ! update 
+    ! update
 
-  end subroutine after_con_cr_handler
-
-  !> @brief Actions after definining connections
-  !<
-  subroutine after_con_df_handler(this)
-    class(MpiRunControlType) :: this
-
-    ! Reduce the array sizes in the halo with maps
-    call this%virtual_data_mgr%reduce_halo()
-
-  end subroutine after_con_df_handler
+  end subroutine mpi_ctrl_after_con_cr
 
 end module MpiRunControlModule
