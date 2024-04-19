@@ -179,7 +179,6 @@ contains
   !> @brief Activates models and exchanges in the halo,
   !! i.e. the ones that have an actual chance of being used
   subroutine vds_activate_halo(this)
-    use SimVariablesModule, only: proc_id
     class(VirtualDataManagerType) :: this
     ! local
     integer(I4B) :: im, ic, ix
@@ -187,7 +186,6 @@ contains
     class(VirtualModelType), pointer :: vm
     class(VirtualExchangeType), pointer :: ve
     class(SpatialModelConnectionType), pointer :: conn
-    class(*), pointer :: sln_ptr
 
     call halo_model_ids%init()
 
@@ -231,12 +229,13 @@ contains
   !! activate the mapping tables in the virtual data items
   !< such that only relevant part of data arrays can be sync'ed
   subroutine vds_compress_halo(this)
+    use ArrayHandlersModule, only: ifind
     use InputOutputModule, only: getunit
     use SimVariablesModule, only: proc_id
     use IndexMapModule
     class(VirtualDataManagerType) :: this
     ! local
-    integer(I4B) :: ivm, isol, iexg
+    integer(I4B) :: ivm, isol, iexg, m_idx
     integer(I4B) :: outunit
     character(len=128) :: monitor_file
     type(VirtualSolutionType), pointer :: virt_sol
@@ -277,11 +276,15 @@ contains
       virt_sol => this%virtual_solutions(isol)
       do ivm = 1, size(virt_sol%models)
         vdc => virt_sol%models(ivm)%ptr
-        if (vdc%is_local) cycle
-        nmap => virt_sol%interface_map%get_node_map(vdc%id)
-        cmap => virt_sol%interface_map%get_connection_map(vdc%id)
-        call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
-        call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+        if (.not. vdc%is_local .and. vdc%is_active) then
+          m_idx = ifind(virt_sol%interface_map%model_ids, vdc%id)
+          if (m_idx == -1) cycle
+
+          nmap => virt_sol%interface_map%get_node_map(vdc%id)
+          cmap => virt_sol%interface_map%get_connection_map(vdc%id)
+          call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
+          call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+        end if
       end do
     end do
 
