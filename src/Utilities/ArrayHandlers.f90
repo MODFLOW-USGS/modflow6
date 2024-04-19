@@ -488,7 +488,7 @@ contains
     end do findloop
   end function ifind_character
 
-  !> @brief Find the first element containing str, or -1 if not found.
+  !> @brief Find the first element containing ival, or -1 if not found.
   function ifind_integer(iarray, ival)
     ! -- return
     integer(I4B) :: ifind_integer

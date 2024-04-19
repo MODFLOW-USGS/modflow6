@@ -3,9 +3,7 @@ module RunControlModule
   use SimStagesModule
   use VirtualDataManagerModule
   use MapperModule
-  use ListsModule, only: baseconnectionlist, basesolutionlist
-  use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          get_smc_from_list
+  use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType
   implicit none
   private
@@ -20,11 +18,11 @@ module RunControlModule
     procedure :: start => ctrl_start
     procedure :: at_stage => ctrl_at_stage
     procedure :: finish => ctrl_finish
+    procedure :: after_con_cr => ctrl_after_con_cr
     ! private
     procedure, private :: init_handler
-    procedure, private :: after_con_cr_handler
-    procedure, private :: before_con_df_handler
-    procedure, private :: after_con_df_handler
+    procedure, private :: before_con_df
+    procedure, private :: after_con_df
     procedure, private :: destroy
   end type RunControlType
 
@@ -71,11 +69,11 @@ contains
     if (stage == STG_BFR_MDL_DF) then
       call this%init_handler()
     else if (stage == STG_AFT_CON_CR) then
-      call this%after_con_cr_handler()
+      call this%after_con_cr()
     else if (stage == STG_BFR_CON_DF) then
-      call this%before_con_df_handler()
+      call this%before_con_df()
     else if (stage == STG_AFT_CON_DF) then
-      call this%after_con_df_handler()
+      call this%after_con_df()
     end if
 
     call this%virtual_data_mgr%synchronize(stage)
@@ -95,12 +93,12 @@ contains
 
   !> @brief Actions after connections have been created
   !<
-  subroutine after_con_cr_handler(this)
-    class(RunControlType), target :: this
+  subroutine ctrl_after_con_cr(this)
+    class(RunControlType) :: this
 
-    call this%virtual_data_mgr%set_halo()
+    call this%virtual_data_mgr%activate_halo()
 
-  end subroutine after_con_cr_handler
+  end subroutine ctrl_after_con_cr
 
   !> @brief Actions before defining the connections
   !!
@@ -109,7 +107,7 @@ contains
   !! have been determined. Add them to the virtual data manager
   !! for synchronization. (After which the interface model
   !< grids can be constructed)
-  subroutine before_con_df_handler(this)
+  subroutine before_con_df(this)
     class(RunControlType), target :: this
     ! local
     integer(I4B) :: i
@@ -134,20 +132,20 @@ contains
     ! be copied in from the virtual exchanges
     call this%mapper%add_exchange_vars()
 
-  end subroutine before_con_df_handler
+  end subroutine before_con_df
 
   !> @brief Actions after defining connections
   !<
-  subroutine after_con_df_handler(this)
+  subroutine after_con_df(this)
     class(RunControlType) :: this
 
     ! Reduce the halo
-    call this%virtual_data_mgr%reduce_halo()
+    call this%virtual_data_mgr%compress_halo()
 
     ! Add variables in interface models to the mapper
     call this%mapper%add_interface_vars()
 
-  end subroutine after_con_df_handler
+  end subroutine after_con_df
 
   !> @brief Synchronizes from within numerical solution (delegate)
   !<

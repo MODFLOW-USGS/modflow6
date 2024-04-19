@@ -1,11 +1,12 @@
 module RouterBaseModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use VirtualSolutionModule
   implicit none
   private
 
   type, abstract, public :: RouterBaseType
-
+    logical(LGP) :: halo_activated !< when true, the halo has been activated
+    !< (allowing more efficient routing of virtual data)
   contains
     procedure(initialize_if), deferred :: initialize
     procedure(route_all_if), deferred :: route_all
