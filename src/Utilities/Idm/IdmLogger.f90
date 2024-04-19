@@ -33,8 +33,7 @@ module IdmLoggerModule
   interface idm_export
     module procedure idm_export_int1d, idm_export_int2d, &
       idm_export_int3d, idm_export_dbl1d, &
-      idm_export_dbl2d, idm_export_dbl3d, &
-      idm_export_int1d_dynamic, idm_export_dbl1d_dynamic
+      idm_export_dbl2d, idm_export_dbl3d
   end interface idm_export
 
 contains
@@ -380,7 +379,7 @@ contains
       int3d = reshape(p_mem, dis3d_shape)
       ! -- write export files 3D array
       do k = 1, dis3d_shape(3)
-        inunit = create_export_file(varname, mempath, k, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, model_shape(2)
           write (inunit, '(*(i0, " "))') (int3d(j, i, k), j=1, &
                                           dis3d_shape(1))
@@ -399,13 +398,13 @@ contains
       if (is_layered) then
         ! -- write layered export files 2D array
         do i = 1, dis2d_shape(2)
-          inunit = create_export_file(varname, mempath, i, 0, 0, iout)
+          inunit = create_export_file(varname, mempath, i, iout)
           write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
       else
         ! -- write export file 2D array
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, 0, iout)
         do i = 1, dis2d_shape(2)
           write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
         end do
@@ -415,7 +414,7 @@ contains
       deallocate (int2d)
     case (1)
       ! -- write export file 1D array
-      inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+      inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(i0, " "))') p_mem
       close (inunit)
     case default
@@ -455,7 +454,7 @@ contains
     select case (export_dim)
     case (1)
       ! -- write export file 1D array
-      inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+      inunit = create_export_file(varname, mempath, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
       end do
@@ -464,13 +463,13 @@ contains
       if (is_layered) then
         ! -- write layered export files 2D array
         do i = 1, size(p_mem, dim=2)
-          inunit = create_export_file(varname, mempath, i, 0, 0, iout)
+          inunit = create_export_file(varname, mempath, i, iout)
           write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
           close (inunit)
         end do
       else
         ! -- write export file 2D array
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, 0, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
         end do
@@ -514,7 +513,7 @@ contains
     case (3)
       ! -- write export files 3D array
       do k = 1, size(p_mem, dim=3)
-        inunit = create_export_file(varname, mempath, k, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
         end do
@@ -573,7 +572,7 @@ contains
       dbl3d = reshape(p_mem, dis3d_shape)
       do k = 1, dis3d_shape(3)
         ! -- write export files 3D array
-        inunit = create_export_file(varname, mempath, k, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, model_shape(2)
           write (inunit, '(*(G0.10, " "))') (dbl3d(j, i, k), j=1, &
                                              dis3d_shape(1))
@@ -592,13 +591,13 @@ contains
       if (is_layered) then
         ! -- write layered export files 2D array
         do i = 1, dis2d_shape(2)
-          inunit = create_export_file(varname, mempath, i, 0, 0, iout)
+          inunit = create_export_file(varname, mempath, i, iout)
           write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
           close (inunit)
         end do
       else
         ! -- write export file 2D array
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, 0, iout)
         do i = 1, dis2d_shape(2)
           write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
         end do
@@ -608,7 +607,7 @@ contains
       deallocate (dbl2d)
     case (1)
       ! -- write export file 1D array
-      inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+      inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(G0.10, " "))') p_mem
       close (inunit)
     case default
@@ -648,7 +647,7 @@ contains
     select case (export_dim)
     case (1)
       ! -- write export file 1D array
-      inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+      inunit = create_export_file(varname, mempath, 0, iout)
       do i = 1, size(p_mem, dim=2)
         write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
       end do
@@ -657,13 +656,13 @@ contains
       if (is_layered) then
         ! -- write layered export files 2D array
         do i = 1, size(p_mem, dim=2)
-          inunit = create_export_file(varname, mempath, i, 0, 0, iout)
+          inunit = create_export_file(varname, mempath, i, iout)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
           close (inunit)
         end do
       else
         ! -- write export file 2D array
-        inunit = create_export_file(varname, mempath, 0, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, 0, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
         end do
@@ -707,7 +706,7 @@ contains
     case (3)
       ! -- write export files 3D array
       do k = 1, size(p_mem, dim=3)
-        inunit = create_export_file(varname, mempath, k, 0, 0, iout)
+        inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, size(p_mem, dim=2)
           write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
                                              size(p_mem, dim=1))
@@ -720,61 +719,6 @@ contains
       call store_error(errmsg, .true.)
     end select
   end subroutine idm_export_dbl3d
-
-  !> @brief Create export file int1d for period data
-  !!
-  !! export int1d dyanamic parameters
-  !!
-  !<
-  subroutine idm_export_int1d_dynamic(p_mem, varname, mempath, shapestr, kper, &
-                                      iout)
-    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 1d integer array
-    character(len=*), intent(in) :: varname !< variable name
-    character(len=*), intent(in) :: mempath !< variable memory path
-    character(len=*), intent(in) :: shapestr !< dfn shape string
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iout
-    ! -- dummy
-    integer(I4B) :: inunit
-    !
-    select case (shapestr)
-    case ('NCPL')
-      inunit = create_export_file(varname, mempath, 0, kper, 0, iout)
-      write (inunit, '(*(i0, " "))') p_mem
-      close (inunit)
-    case default
-      errmsg = 'EXPORT unsupported int1d_dynamic shape='//trim(shapestr)
-      call store_error(errmsg, .true.)
-    end select
-  end subroutine idm_export_int1d_dynamic
-
-  !> @brief Create export file dbl1d for period data
-  !!
-  !! export dbl1d dynamic parameters
-  !!
-  !<
-  subroutine idm_export_dbl1d_dynamic(p_mem, varname, mempath, shapestr, kper, &
-                                      iaux, iout)
-    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 1d dbl array
-    character(len=*), intent(in) :: varname !< variable name
-    character(len=*), intent(in) :: mempath !< variable memory path
-    character(len=*), intent(in) :: shapestr !< dfn shape string
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iaux
-    integer(I4B), intent(in) :: iout
-    ! -- dummy
-    integer(I4B) :: inunit
-    !
-    select case (shapestr)
-    case ('NCPL')
-      inunit = create_export_file(varname, mempath, 0, kper, iaux, iout)
-      write (inunit, '(*(G0.10, " "))') p_mem
-      close (inunit)
-    case default
-      errmsg = 'EXPORT unsupported dbl1d_dynamic shape='//trim(shapestr)
-      call store_error(errmsg, .true.)
-    end select
-  end subroutine idm_export_dbl1d_dynamic
 
   !> @brief Set dis type export_dim
   !!
@@ -834,7 +778,7 @@ contains
   !!    : <comp>-<subcomp>.varname.p<num>.txt
   !!    : <comp>-<subcomp>.varname.a<num>.p<num>.txt
   !<
-  function create_export_file(varname, mempath, layer, kper, iaux, iout) &
+  function create_export_file(varname, mempath, layer, iout) &
     result(inunit)
     use ConstantsModule, only: LENVARNAME
     use InputOutputModule, only: openfile, getunit
@@ -843,19 +787,11 @@ contains
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B), intent(in) :: layer
-    integer(I4B), intent(in) :: kper
-    integer(I4B), intent(in) :: iaux
     integer(I4B), intent(in) :: iout
     integer(I4B) :: inunit
     ! -- dummy
     character(len=LENCOMPONENTNAME) :: comp, subcomp
     character(len=LINELENGTH) :: filename, suffix
-    !
-    !
-    if (layer > 0 .and. kper > 0) then
-      errmsg = 'EXPORT layered per period files not supported.'
-      call store_error(errmsg, .true.)
-    end if
     !
     ! -- split the mempath
     call split_mem_path(mempath, comp, subcomp)
@@ -867,13 +803,6 @@ contains
     call lowcase(suffix)
     if (layer > 0) then
       write (suffix, '(a,i0)') trim(suffix)//'.l', layer
-    else
-      if (iaux > 0) then
-        write (suffix, '(a,i0)') trim(suffix)//'.a', iaux
-      end if
-      if (kper > 0) then
-        write (suffix, '(a,i0)') trim(suffix)//'.p', kper
-      end if
     end if
     suffix = trim(suffix)//'.txt'
     !

@@ -36,7 +36,6 @@ module Mf6FileGridInputModule
     type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
     type(TimeArraySeriesManagerType), pointer :: tasmanager !< TAS manager
     type(BoundInputContextType) :: bound_context
-    logical(LGP) :: export
   contains
     procedure :: ainit => bndgrid_init
     procedure :: df => bndgrid_df
@@ -83,9 +82,8 @@ contains
     this%tas_active = 0
     this%iout = iout
     !
-    ! -- load static input and set export
+    ! -- load static input
     call loader%load(parser, mf6_input, this%input_name, iout)
-    this%export = loader%export
     !
     ! -- create tasmanager
     allocate (this%tasmanager)
@@ -327,7 +325,6 @@ contains
   subroutine bndgrid_param_load(this, parser, datatype, varname, &
                                 tagname, shapestr, mempath, iaux)
     ! -- modules
-    use TdisModule, only: kper
     use MemoryManagerModule, only: mem_setptr
     use ArrayHandlersModule, only: ifind
     use InputDefinitionModule, only: InputParamDefinitionType
@@ -335,7 +332,7 @@ contains
     use Double1dReaderModule, only: read_dbl1d
     use Double2dReaderModule, only: read_dbl2d
     use Integer1dReaderModule, only: read_int1d
-    use IdmLoggerModule, only: idm_log_var, idm_export
+    use IdmLoggerModule, only: idm_log_var
     ! -- dummy
     class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     type(BlockParserType), intent(in) :: parser
@@ -357,18 +354,12 @@ contains
       call mem_setptr(int1d, varname, mempath)
       call read_int1d(parser, int1d, varname)
       call idm_log_var(int1d, tagname, mempath, this%iout)
-      if (this%export) then
-        call idm_export(int1d, tagname, mempath, shapestr, kper, this%iout)
-      end if
       !
     case ('DOUBLE1D')
       !
       call mem_setptr(dbl1d, varname, mempath)
       call read_dbl1d(parser, dbl1d, varname)
       call idm_log_var(dbl1d, tagname, mempath, this%iout)
-      if (this%export) then
-        call idm_export(dbl1d, tagname, mempath, shapestr, kper, 0, this%iout)
-      end if
       !
     case ('DOUBLE2D')
       !
@@ -379,10 +370,6 @@ contains
         dbl2d(iaux, n) = dbl1d(n)
       end do
       call idm_log_var(dbl1d, tagname, mempath, this%iout)
-      if (this%export) then
-        call idm_export(dbl1d, tagname, mempath, 'NCPL', kper, iaux, &
-                        this%iout)
-      end if
       deallocate (dbl1d)
       !
     case default
