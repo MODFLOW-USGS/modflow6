@@ -1876,7 +1876,7 @@ contains
                                     this%itertot_timestep)
     end if
     !
-    ! -- set solution goup convergence flag
+    ! -- set solution group convergence flag
     if (this%icnvg == 0) isgcnvg = 0
     !
     ! -- Calculate flow for each model
@@ -2753,7 +2753,7 @@ contains
   !> @ brief Backtracking update of the dependent variable
   !!
   !!  Backtracking update of the dependent variable if the calculated backtracking
-  !!  update exceeds the dependent variable closure critera.
+  !!  update exceeds the dependent variable closure criteria.
   !!
   !<
   subroutine sln_backtracking_xupdate(this, btflag)
@@ -2796,7 +2796,7 @@ contains
   !! active cells using
   !!
   !!  A = the linear system matrix
-  !!  x = the dependendent variable vector
+  !!  x = the dependent variable vector
   !!  b = the right-hand side vector
   !!
   !!       r = A * x - b
@@ -3153,7 +3153,7 @@ contains
 
   end function sln_package_convergence
 
-  !> @brief Syncronize Newton Under-relaxation flag
+  !> @brief Synchronize Newton Under-relaxation flag
   !<
   function sln_sync_newtonur_flag(this, inewtonur) result(ivalue)
     ! dummy

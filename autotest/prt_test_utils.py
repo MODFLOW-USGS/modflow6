@@ -294,7 +294,7 @@ def get_track_dtype(path: os.PathLike):
 
 def get_ireason_code(output_event):
     """
-    Map output event to PRT ireason code specifing
+    Map output event to PRT ireason code specifying
     the reason a particle track datum was recorded.
     """
 

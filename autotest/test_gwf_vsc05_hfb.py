@@ -186,7 +186,7 @@ def build_models(idx, test):
         pname="HFB-1",
     )
 
-    # Instatiating OC
+    # Instantiating OC
     head_filerecord = "{}.hds".format(gwfname)
     budget_filerecord = "{}.bud".format(gwfname)
     flopy.mf6.ModflowGwfoc(

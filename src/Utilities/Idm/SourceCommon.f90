@@ -56,7 +56,7 @@ contains
   !!
   !! Return the component type typically derived from package file type,
   !! i.e. return GWF when input is GWF6. This function checks the
-  !! resultant commponent type and throws a terminating error if not
+  !! resultant component type and throws a terminating error if not
   !! supported by IDM in some capacity.
   !!
   !<
@@ -135,8 +135,8 @@ contains
 
   !> @brief model package subcomponent name
   !!
-  !! Return the IDM component name, which is the pacage type for
-  !! base packages and the package name for mutli package (i.e.
+  !! Return the IDM component name, which is the package type for
+  !! base packages and the package name for multi package (i.e.
   !! stress) types.
   !!
   !<

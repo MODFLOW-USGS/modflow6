@@ -300,7 +300,7 @@ contains
       if (lrotate) then
         ! -- Calculate modified rotation matrix (represented by sinrot
         ! -- and cosrot) as R_add^T R, where R and R_add^T are the existing
-        ! -- rotation matirx and the transpose of the additional rotation
+        ! -- rotation matrix and the transpose of the additional rotation
         ! -- matrix, respectively
         sinrot = cosrot_add * s0 - sinrot_add * c0
         cosrot = cosrot_add * c0 + sinrot_add * s0

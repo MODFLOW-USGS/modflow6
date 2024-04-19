@@ -24,7 +24,7 @@ module BndExtModule
   !> @ brief BndExtType
   !!
   !!  Generic extended boundary package type.  This derived type can be
-  !!  overriden to define concrete boundary package types that source
+  !!  overridden to define concrete boundary package types that source
   !!  all input from the input context.
   !<
   type, extends(BndType) :: BndExtType

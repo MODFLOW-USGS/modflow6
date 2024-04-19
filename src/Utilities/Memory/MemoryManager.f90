@@ -1750,7 +1750,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint !< returned copy of 1d integer array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
-    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy wil be stored,
+    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy will be stored,
                                                             !! if passed then the copy is added to the
                                                             !! memory manager
     ! -- local
@@ -1781,7 +1781,7 @@ contains
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< returned copy of 2d integer array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
-    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy wil be stored,
+    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy will be stored,
                                                             !! if passed then the copy is added to the
                                                             !! memory manager
     ! -- local
@@ -1819,7 +1819,7 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl !< returned copy of 1d real array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
-    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy wil be stored,
+    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy will be stored,
                                                             !! if passed then the copy is added to the
                                                             !! memory manager
     ! -- local
@@ -1850,7 +1850,7 @@ contains
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< returned copy of 2d real array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
-    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy wil be stored,
+    character(len=*), intent(in), optional :: mem_path_copy !< optional path where the copy will be stored,
                                                             !! if passed then the copy is added to the
                                                             !! memory manager
     ! -- local

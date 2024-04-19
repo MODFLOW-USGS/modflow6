@@ -216,7 +216,7 @@ contains
   !> @brief Calculate coefficients and fill amat and rhs
   !!
   !! The mvt package adds the mass flow rate to the provider qmfrommvr array.
-  !! The advanced packages know enough to subract any mass that is leaving, so
+  !! The advanced packages know enough to subtract any mass that is leaving, so
   !! the mvt just adds mass coming in from elsewhere.  Because the movers
   !! change by stress period, their solute effects must be added to the right-
   !! hand side of the transport matrix equations.
@@ -281,7 +281,7 @@ contains
           if (fmi_pr%iatp(ipr) /= 0) then
             !
             ! -- Provider package is being represented by an APT (SFT, LKT, MWT, UZT)
-            !    so set the concentration to the simulated concentation of APT
+            !    so set the concentration to the simulated concentration of APT
             cp = concpak(id1)
           else
             !

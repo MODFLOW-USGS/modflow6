@@ -474,7 +474,7 @@ contains
       call store_error('Required GRIDDATA block not found.')
     end if
     !
-    ! -- detemine if cg_ske and cg_theta have been specified
+    ! -- determine if cg_ske and cg_theta have been specified
     if (iske == 0) then
       write (errmsg, '(a)') 'CG_SKE GRIDDATA must be specified.'
       call store_error(errmsg)
@@ -735,7 +735,7 @@ contains
         case ('NDELAYCELLS')
           this%ndelaycells = this%parser%GetInteger()
           !
-          ! -- compression indicies (CR amd CC) will be specified instead of
+          ! -- compression indices (CR amd CC) will be specified instead of
           !    storage coefficients (SSE and SSV)
         case ('COMPRESSION_INDICES')
           this%istoragec = 0
@@ -3325,7 +3325,7 @@ contains
       end if
       !
       ! -- update coarse-grained storage and water
-      !    compresion variables
+      !    compression variables
       this%cg_stor(node) = rrate
       this%cell_wcstor(node) = rratewc
       this%cell_thick(node) = this%cg_thick(node)
@@ -4406,7 +4406,7 @@ contains
           pcs = this%cg_es(node) + pcs0
         end if
       else
-        ! specified pcs...substract head (u) from sigma
+        ! specified pcs...subtract head (u) from sigma
         if (this%ipch /= 0) then
           pcs = this%cg_gs(node) - (pcs0 - bot)
         end if
@@ -5156,7 +5156,7 @@ contains
 
   !> @ brief Update coarse-grained material properties
   !!
-  !!  Method updates coarse-grained material proerties in a cell.
+  !!  Method updates coarse-grained material properties in a cell.
   !!
   !<
   subroutine csub_cg_update(this, node)
@@ -5293,7 +5293,7 @@ contains
     bot = this%dis%bot(node)
     tthk = this%cg_thick(node)
     !
-    ! -- calculate saturation derivitive
+    ! -- calculate saturation derivative
     satderv = this%csub_calc_sat_derivative(node, hcell)
     !
     ! -- calculate water compressibility factor
@@ -5413,7 +5413,7 @@ contains
     !
     f = this%brg * area * tled
     !
-    ! -- calculate saturation derivitive
+    ! -- calculate saturation derivative
     satderv = this%csub_calc_sat_derivative(node, hcell)
     !
     ! -- calculate the current water compressibility factor
@@ -6057,7 +6057,7 @@ contains
       !    of the cell based on current head
       zcell = this%csub_calc_znode(topcell, botcell, hbarcell)
       !
-      ! -- set variables for delay interbed zcell calulations
+      ! -- set variables for delay interbed zcell calculations
       zcenter = zcell + this%dbrelz(n, idelay)
       dzhalf = DHALF * this%dbdzini(1, idelay)
       top = zcenter + dzhalf

@@ -995,7 +995,7 @@ contains
       end if
     end if
     !
-    ! -- set node number based on wheter it is reduced or not
+    ! -- set node number based on whether it is reduced or not
     if (this%nodes == this%nodesuser) then
       nodenumber = nodeu
     else

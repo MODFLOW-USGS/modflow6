@@ -603,7 +603,7 @@ contains
       call store_error(errmsg)
     end if
     !
-    ! -- teminate if there are dimension errors
+    ! -- terminate if there are dimension errors
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
@@ -854,7 +854,7 @@ contains
                                            'BND', this%tsManager, this%iprpak, &
                                            'ROOTACT')
         !
-        ! -- read auxillary variables
+        ! -- read auxiliary variables
         do j = 1, this%naux
           call this%parser%GetStringCaps(text)
           bndElem => this%uauxvar(j, i)
@@ -1891,7 +1891,7 @@ contains
     type(sparsematrix) :: sparse
     integer(I4B), dimension(:), allocatable :: nboundchk
     !
-    ! -- allocate space for node counter and initilize
+    ! -- allocate space for node counter and initialize
     allocate (rowmaxnnz(this%dis%nodes))
     do n = 1, this%dis%nodes
       rowmaxnnz(n) = 0

@@ -274,7 +274,7 @@ contains
       write (monitor_file, '(a,i0,a)') "iface.p", proc_id, ".log"
       open (unit=outunit, file=monitor_file)
       do isol = 1, this%nr_solutions
-        write (outunit, '(a,i0,/)') "interface mape for solution ", &
+        write (outunit, '(a,i0,/)') "interface map for solution ", &
           this%virtual_solutions(isol)%solution_id
         virt_sol => this%virtual_solutions(isol)
         call virt_sol%interface_map%print_interface(outunit)

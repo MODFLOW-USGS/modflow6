@@ -74,7 +74,7 @@ An example below is the second line in the ts subpackage dfn:
 
 \# flopy parent_name_type parent_package MFPackage
 
-There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, seperating each type with a / (MFPackage/MFModel). 
+There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, separating each type with a / (MFPackage/MFModel).
 
 ## Creating Definition Files for New Models
 
@@ -666,7 +666,7 @@ END NPFDATA
 
 # Common Text Strings
 
-Many of the MODFLOW 6 input variables share common description information.  This information can be defined in one place and then referenced as many times as needed throughout the definition files.  The definition file [./dfn/common.dfn](./dfn/common.dfn) is where common infomation is defined.  For example, there is a text string defined as:
+Many of the MODFLOW 6 input variables share common description information.  This information can be defined in one place and then referenced as many times as needed throughout the definition files.  The definition file [./dfn/common.dfn](./dfn/common.dfn) is where common information is defined.  For example, there is a text string defined as:
 
 ```
 name auxnames

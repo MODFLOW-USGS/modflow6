@@ -290,7 +290,7 @@ def build_models(idx, test):
 
     # Instantiate energy source loading (ESL) package
     # Energy is added such that the temperature change in the cell will be
-    # +1.0, +2.0, -1.0, and 0.0 degrees Celcius from stress period to stress
+    # +1.0, +2.0, -1.0, and 0.0 degrees Celsius from stress period to stress
     # period
     factor = ncol[idx]
     Specified_joules_added = (

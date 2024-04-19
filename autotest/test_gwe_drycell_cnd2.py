@@ -2,7 +2,7 @@
 Test problem for GWE
 
 Test conduction from a partially saturated group of cells into their dry
-neighbors.  Referring to this test as a flowing trough problem.
+neighbors.  Referring to this test as a flowing through problem.
 
 
   Profile view of columns w/ approximate water table profile shown
@@ -278,7 +278,7 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 initial conditions package for flow model
     flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
-    # Instatiate left and right general-head boundaries for driving flow
+    # Instantiate left and right general-head boundaries for driving flow
     flopy.mf6.ModflowGwfghb(
         gwf,
         maxbound=len(ghbspd[0]),

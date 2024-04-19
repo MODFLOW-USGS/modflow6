@@ -237,7 +237,7 @@ contains
 
   !> @brief Activate viscosity in advanced packages
   !!
-  !! Viscosity ar_bnd rountine to activate viscosity in the advanced
+  !! Viscosity ar_bnd routine to activate viscosity in the advanced
   !! packages.  This routine is called from gwf_ar() as it moves through each
   !! package
   !<
@@ -519,7 +519,7 @@ contains
       ! -- Check if boundary cell is active, cycle if not
       if (packobj%ibound(node) <= 0) cycle
       !
-      ! -- calculate the viscosity associcated with the boundary
+      ! -- calculate the viscosity associated with the boundary
       viscbnd = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
                                    cviscref, ctemp, ivisc, a2, a3, a4, &
                                    packobj%auxvar)
@@ -595,7 +595,7 @@ contains
         !
         ! --
         !
-        ! -- calculate the viscosity associcated with the boundary
+        ! -- calculate the viscosity associated with the boundary
         viscsfr = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
                                      cviscref, ctemp, ivisc, a2, a3, a4, &
                                      packobj%auxvar)
@@ -652,7 +652,7 @@ contains
         !
         ! --
         !
-        ! -- calculate the viscosity associcated with the boundary
+        ! -- calculate the viscosity associated with the boundary
         visclak = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
                                      cviscref, ctemp, ivisc, a2, a3, a4, &
                                      packobj%auxvar)
@@ -709,7 +709,7 @@ contains
         !
         ! --
         !
-        ! -- calculate the viscosity associcated with the boundary
+        ! -- calculate the viscosity associated with the boundary
         viscmaw = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
                                      cviscref, ctemp, ivisc, a2, a3, a4, &
                                      packobj%auxvar)

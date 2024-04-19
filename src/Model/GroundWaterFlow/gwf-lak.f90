@@ -3091,7 +3091,7 @@ contains
       bndElem => this%withdrawal(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
-                                         this%iprpak, 'WITHDRAWL')
+                                         this%iprpak, 'WITHDRAWAL')
       if (this%withdrawal(itemno) < DZERO) then
         write (errmsg, '(a,i0,a,G0,a)') &
           'Lake ', itemno, ' was assigned a withdrawal value of ', &
@@ -6359,7 +6359,7 @@ contains
       !
     else
       !
-      ! -- calulate average relative density
+      ! -- calculate average relative density
       rdenseavg = DHALF * (rdenselak + rdensegwf)
       !
       ! -- Add contribution of first density term:

@@ -1013,7 +1013,7 @@ contains
     real(DP), intent(in) :: satm !< not used for dis2d
     integer(I4B), intent(in) :: ihc !< not used for dis2d (always horizontal)
     real(DP), intent(inout) :: xcomp !< x component of the connection vector
-    real(DP), intent(inout) :: ycomp !< y componenet of the connection vector
+    real(DP), intent(inout) :: ycomp !< y component of the connection vector
     real(DP), intent(inout) :: zcomp !< z component, which is always zero
     real(DP), intent(inout) :: conlen !< calculated connection length
     ! local

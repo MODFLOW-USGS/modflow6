@@ -1547,7 +1547,7 @@ contains
       call mem_reallocate(this%divq, ndiversions, 'DIVQ', this%memoryPath)
     end if
     !
-    ! -- inititialize diversion flow
+    ! -- initialize diversion flow
     do n = 1, ndiversions
       this%divflow(n) = DZERO
       this%divq(n) = DZERO
@@ -5084,7 +5084,7 @@ contains
         end do
       end if
       !
-      ! -- evaluate if an error condition has occured
+      ! -- evaluate if an error condition has occurred
       !    the sum of fractions is not equal to 1
       if (ids /= 0) then
         if (abs(f - DONE) > DEM6) then
@@ -5822,7 +5822,7 @@ contains
 
   !> @brief Activate viscosity terms
     !!
-    !! Method to activate addition of viscosity terms for exhange
+    !! Method to activate addition of viscosity terms for exchange
     !! with groundwater along a SFR package reach.
     !!
   !<
@@ -5922,7 +5922,7 @@ contains
       !
     else
       !
-      ! -- calulate average relative density
+      ! -- calculate average relative density
       rdenseavg = DHALF * (rdensesfr + rdensegwf)
       !
       ! -- Add contribution of first density term:

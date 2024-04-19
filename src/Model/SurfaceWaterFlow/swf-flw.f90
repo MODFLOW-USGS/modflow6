@@ -1,7 +1,7 @@
 !> @brief This module contains the FLW package methods
 !!
 !! This module can be used to represent inflow to streams.  It is
-!! designed similiarly to the GWF WEL package.
+!! designed similarly to the GWF WEL package.
 !!
 !<
 module SwfFlwModule

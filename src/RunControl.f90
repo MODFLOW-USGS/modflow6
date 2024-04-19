@@ -136,7 +136,7 @@ contains
 
   end subroutine before_con_df_handler
 
-  !> @brief Actions after definining connections
+  !> @brief Actions after defining connections
   !<
   subroutine after_con_df_handler(this)
     class(RunControlType) :: this

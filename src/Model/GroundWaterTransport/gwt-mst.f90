@@ -878,7 +878,7 @@ contains
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
-    integer(I4B), intent(in) :: isuppress_output !< flag to supress output
+    integer(I4B), intent(in) :: isuppress_output !< flag to suppress output
     type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
     real(DP) :: rin

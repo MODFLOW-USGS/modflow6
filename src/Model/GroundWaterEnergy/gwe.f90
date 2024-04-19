@@ -601,7 +601,7 @@ contains
 
   !> @brief Deallocate
   !!
-  !! Deallocate memmory at conclusion of model run
+  !! Deallocate memory at conclusion of model run
   !<
   subroutine gwe_da(this)
     ! -- modules

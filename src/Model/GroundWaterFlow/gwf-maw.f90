@@ -1549,7 +1549,7 @@ contains
         ! -- connection screen data
         if (this%botscrn(jpos) >= this%topscrn(jpos)) then
           call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom '// &
-                                            'must be less tha screen top. '// &
+                                            'must be less than screen top. '// &
                                             trim(cgwfnode))
         end if
         !
@@ -2159,7 +2159,7 @@ contains
       end if
     end do
     !
-    !--use the appropriate xoldsto if intial heads are above the
+    !--use the appropriate xoldsto if initial heads are above the
     !  specified flowing well discharge elevation
     if (kper == 1 .and. kstp == 1) then
       do n = 1, this%nmawwells
@@ -3605,7 +3605,7 @@ contains
     end if
     !
     ! -- ensure that the conductance is not negative. Only write error message
-    !    if error condition has not occured for skin calculations (LC2)
+    !    if error condition has not occurred for skin calculations (LC2)
     if (c < DZERO .and. iTcontrastErr == 0) then
       write (errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))') &
         'Invalid calculated negative conductance (', c, &
@@ -4717,7 +4717,7 @@ contains
     return
   end subroutine maw_activate_viscosity
 
-  !> @brief Calculate the groundwater-maw density exchnage terms
+  !> @brief Calculate the groundwater-maw density exchange terms
   !!
   !! Arguments are as follows:
   !!     iconn       : maw-gwf connection number

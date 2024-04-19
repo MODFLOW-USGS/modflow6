@@ -911,7 +911,7 @@ contains
     !   Print budget summaries
     call this%gwf_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output; if any dependendent variables or budgets
+    ! -- Timing Output; if any dependent variables or budgets
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
     !

@@ -237,7 +237,7 @@ contains
     integer(I4B) :: node
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate total number of exising flow boundaries. It is possible
+    ! -- Calculate total number of existing flow boundaries. It is possible
     !    that a node may equal zero.  In this case, the bound should be
     !    skipped and not written to ssm output.
     this%nbound = 0
@@ -309,7 +309,7 @@ contains
       qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
       call this%get_ssm_conc(ipackage, ientry, nbound_flow, ctmp, lauxmixed)
       !
-      ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
+      ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assignment
       !    of hcof, rhs, and rate
       if (.not. lauxmixed) then
         !
@@ -452,7 +452,7 @@ contains
 
   !> @ brief Calculate flow
   !!
-  !! Calulate the resulting mass flow between the boundary and the connected
+  !! Calculate the resulting mass flow between the boundary and the connected
   !! GWT model cell.  Update the diagonal position of the flowja array so that
   !! it ultimately contains the solute balance residual.
   !<

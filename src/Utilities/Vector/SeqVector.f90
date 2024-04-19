@@ -26,7 +26,7 @@ module SeqVectorModule
 
 contains
 
-  !> @brief Create a sequential vector: the classic MF6 verion,
+  !> @brief Create a sequential vector: the classic MF6 version,
   !< storing in the memory manager.
   subroutine sqv_create_mm(this, n, name, mem_path)
     class(SeqVectorType) :: this !< this vector
@@ -41,7 +41,7 @@ contains
 
   end subroutine sqv_create_mm
 
-  !> @brief Create a sequential vector: the classic MF6 verion
+  !> @brief Create a sequential vector: the classic MF6 version
   !<
   subroutine sqv_create(this, n)
     class(SeqVectorType) :: this !< this vector

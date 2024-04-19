@@ -306,7 +306,7 @@ def check_output(idx, test):
         q = -ra[0]["q"]
         qoutflow_mf6.append(q)
 
-    # check to make sure the difference in outflow bewteen mf6 and
+    # check to make sure the difference in outflow between mf6 and
     # mf2005 is less than atol
     diff = np.abs(qoutflow_mf6 - qoutflow_mf2005)
     print(diff)

@@ -69,7 +69,7 @@ module TspFmiModule
 
 contains
 
-  !> @breif Create a new FMI object
+  !> @brief Create a new FMI object
   !<
   subroutine fmi_cr(fmiobj, name_model, inunit, iout, eqnsclfac, depvartype)
     ! -- dummy
@@ -773,7 +773,7 @@ contains
   !> @brief Initialize the groundwater flow terms based on the budget file
   !! reader
   !!
-  !! Initalize terms and figure out how many different terms and packages
+  !! Initialize terms and figure out how many different terms and packages
   !! are contained within the file
   !<
   subroutine initialize_gwfterms_from_bfr(this)

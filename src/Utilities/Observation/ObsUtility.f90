@@ -61,7 +61,7 @@ contains
     ! -- flush the file
     !    Added flush after each non-advancing write to resolve
     !    issue with ifort (IFORT) 19.1.0.166 20191121 for Linux
-    !    that occured on some Linux systems.
+    !    that occurred on some Linux systems.
     flush (nunit)
     !
     ! -- return

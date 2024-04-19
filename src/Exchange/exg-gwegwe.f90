@@ -1156,7 +1156,7 @@ contains
     return
   end subroutine gwe_gwe_save_simvals
 
-  !> @ brief Obs ID processer
+  !> @ brief Obs ID processor
   !!
   !! Process observations for this exchange
   !<

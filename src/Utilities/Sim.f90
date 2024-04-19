@@ -479,7 +479,7 @@ contains
     character(len=*), parameter :: fmtnocnvg = &
       &"(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
     !
-    ! -- Write message if nonconvergence occured in at least one timestep
+    ! -- Write message if nonconvergence occurred in at least one timestep
     if (numnoconverge > 0) then
       write (warnmsg, fmtnocnvg) numnoconverge
       if (isimcontinue == 0) then

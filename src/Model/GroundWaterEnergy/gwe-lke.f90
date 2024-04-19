@@ -484,7 +484,7 @@ contains
     !    2) evap
     !    3) runoff
     !    4) ext-inflow
-    !    5) withdrawl
+    !    5) withdrawal
     !    6) ext-outflow
     !    7) lakebed-cond
     !
@@ -999,7 +999,7 @@ contains
 
   !> @brief Defined observation types
   !!
-  !! Store the observation type supported by the APT package and overide
+  !! Store the observation type supported by the APT package and override
   !! BndType%bnd_df_obs
   !<
   subroutine lke_df_obs(this)

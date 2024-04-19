@@ -242,7 +242,7 @@ def build_models(idx, test):
     # build MODFLOW 6 files
     sim = get_model(idx, test.workspace)
 
-    # build comparision files
+    # build comparison files
     ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
 
@@ -257,7 +257,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    # Comparision total compaction results
+    # Comparison total compaction results
     cpth = cmppth
     fpth = os.path.join(test.workspace, cpth, "csub_obs.csv")
     try:

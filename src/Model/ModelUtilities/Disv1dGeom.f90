@@ -7,7 +7,7 @@ module Disv1dGeom
 
 contains
 
-  !> @brief Calculate distance bewteen two vertices
+  !> @brief Calculate distance between two vertices
   !<
   function calcdist(vertices, ivert1, ivert2) result(dist)
     ! -- dummy
@@ -26,7 +26,7 @@ contains
     return
   end function calcdist
 
-  !> @brief Calculate distance bewteen two vertices
+  !> @brief Calculate distance between two vertices
   !!
   !! Calculate the vector components (xcomp, ycomp, and zcomp)
   !! for a line defined by two points, (x0, y0, z0), (x1, y1, z1). Also

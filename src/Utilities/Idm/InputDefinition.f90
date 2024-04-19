@@ -1,7 +1,7 @@
 !> @brief This module contains the InputDefinitionModule
 !!
 !! This module contains type definitions that represent
-!! descriptions of input from modflow 6 defintion files.
+!! descriptions of input from modflow 6 definition files.
 !!
 !<
 module InputDefinitionModule
@@ -14,7 +14,7 @@ module InputDefinitionModule
   public :: InputParamDefinitionType, &
             InputBlockDefinitionType
 
-  !> @brief Input paramater definition type
+  !> @brief Input parameter definition type
   !!
   !! This type is used to store information for
   !! each modflow input record

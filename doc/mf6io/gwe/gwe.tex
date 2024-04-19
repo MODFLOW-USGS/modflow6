@@ -23,7 +23,7 @@ The following list summarizes important aspects of GWE for simulating heat trans
 
 \item Thermal energy transport budgets written to the \mf list file are reported in units of energy (e.g., joules).  Previously, using a program like MT3D-USGS \citep{mt3dusgs} to simulate heat transport, units in the list file budget did not correspond to thermal energy, but were reported in units of $\frac{m^{3 \;\circ}C}{d}$. To convert to thermal energy units, values in the list file had to be post-processed by multiplying each line item by the density of water ($\rho_w$) and the heat capacity of water ($C_p$) \citep{langevin2008seawat}.
 
-\item Thermal equilibrium between the aqueous and solid phases is assumed.  Thus, simulated temperatures are representive of both phases.  As a result, thermal conduction between adjacent cells may still occur even in the absense of convection.  
+\item Thermal equilibrium between the aqueous and solid phases is assumed.  Thus, simulated temperatures are representative of both phases.  As a result, thermal conduction between adjacent cells may still occur even in the absence of convection.
 
 \item In GWE, dry cells (devoid of groundwater) remain active for simulating thermal conduction. For example, energy (heat) transfer will be simulated between a partially saturated cell (i.e., ``water-table'' cell) and an overlying dry cell. In this way, a more full accounting of various heat transport processes is represented in the subsurface.  Moreover, this approach readily supports heat transport in the unsaturated-zone when the UZE (unsaturated-zone energy transport) Package is active.  
 

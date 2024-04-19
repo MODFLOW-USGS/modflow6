@@ -351,7 +351,7 @@ contains
     ! -- Print budget summaries
     call this%tsp_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output; if any dependendent variables or budgets
+    ! -- Timing Output; if any dependent variables or budgets
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
     !
@@ -609,7 +609,7 @@ contains
 
   !> @brief Deallocate memory
   !!
-  !! Deallocate memmory at conclusion of model run
+  !! Deallocate memory at conclusion of model run
   !<
   subroutine tsp_da(this)
     ! -- modules

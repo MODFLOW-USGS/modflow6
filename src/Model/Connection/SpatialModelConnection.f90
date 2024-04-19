@@ -436,7 +436,7 @@ contains ! module procedures
 
   !> @brief Calculate (or adjust) matrix coefficients,
   !! in this case those which are determined or affected
-  !< by the connection of a GWF model with its neigbors
+  !< by the connection of a GWF model with its neighbors
   subroutine spatialcon_cf(this, kiter)
     class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
