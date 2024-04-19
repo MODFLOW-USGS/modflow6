@@ -41,9 +41,7 @@ module MpiRouterModule
     procedure, private :: activate
     procedure, private :: deactivate
     procedure, private :: update_senders
-    procedure, private :: update_senders_sln
     procedure, private :: update_receivers
-    procedure, private :: update_receivers_sln
     procedure, private :: route_active
     procedure, private :: is_cached
     procedure, private :: compose_messages
@@ -75,8 +73,11 @@ contains
     class(VirtualDataContainerType), pointer :: vdc
     character(len=LINELENGTH) :: monitor_file
 
+    ! routing over all when starting
+    this%halo_activated = .false.
+
     ! to log or not to log
-    this%enable_monitor = .false.
+    this%enable_monitor = .true.
 
     ! initialize the MPI message builder and cache
     call this%message_builder%init()
@@ -249,19 +250,14 @@ contains
     call this%update_senders()
     call this%update_receivers()
 
-    if (this%senders%size /= this%receivers%size) then
-      call store_error("Internal error: receivers should equal senders", &
-                       terminate=.true.)
-    end if
-
     ! allocate body data
     allocate (body_rcv_t(this%senders%size))
     allocate (body_snd_t(this%receivers%size))
 
     ! allocate handles
-    allocate (rcv_req(this%receivers%size))
-    allocate (snd_req(this%senders%size))
-    allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
+    allocate (rcv_req(this%senders%size))
+    allocate (snd_req(this%receivers%size))
+    allocate (rcv_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! always initialize request handles
     rcv_req = MPI_REQUEST_NULL
@@ -635,58 +631,36 @@ contains
 
   end subroutine update_senders
 
-  subroutine update_senders_sln(this, virtual_sol)
-    class(MpiRouterType) :: this
-    type(VirtualSolutionType) :: virtual_sol
-    ! local
-    integer(I4B) :: i
-    class(VirtualDataContainerType), pointer :: vdc
-
-    call this%senders%clear()
-
-    do i = 1, size(virtual_sol%models)
-      vdc => virtual_sol%models(i)%ptr
-      if (.not. vdc%is_local .and. vdc%is_active) then
-        call this%senders%push_back_unique(vdc%orig_rank)
-      end if
-    end do
-    do i = 1, size(virtual_sol%exchanges)
-      vdc => virtual_sol%exchanges(i)%ptr
-      if (.not. vdc%is_local .and. vdc%is_active) then
-        call this%senders%push_back_unique(vdc%orig_rank)
-      end if
-    end do
-
-  end subroutine update_senders_sln
-
   subroutine update_receivers(this)
     class(MpiRouterType) :: this
     ! local
-    integer(I4B) :: i
+    integer(I4B) :: i, j
+    class(VirtualDataContainerType), pointer :: vdc
 
     call this%receivers%clear()
 
-    ! assuming symmetry for now
-    do i = 1, this%senders%size
-      call this%receivers%push_back(this%senders%at(i))
-    end do
+    if (.not. this%halo_activated) then
+      ! assuming symmetry for now
+      do i = 1, this%senders%size
+        call this%receivers%push_back(this%senders%at(i))
+      end do
+    else
+      ! get the receivers from the VDCs
+      do i = 1, size(this%rte_models)
+        vdc => this%rte_models(i)%ptr
+        do j = 1, vdc%rcv_ranks%size
+          call this%receivers%push_back_unique(vdc%rcv_ranks%at(j))
+        end do
+      end do
+      do i = 1, size(this%rte_exchanges)
+        vdc => this%rte_exchanges(i)%ptr
+        do j = 1, vdc%rcv_ranks%size
+          call this%receivers%push_back_unique(vdc%rcv_ranks%at(j))
+        end do
+      end do
+    end if
 
   end subroutine update_receivers
-
-  subroutine update_receivers_sln(this, virtual_sol)
-    class(MpiRouterType) :: this
-    type(VirtualSolutionType) :: virtual_sol
-    ! local
-    integer(I4B) :: i
-
-    call this%receivers%clear()
-
-    ! assuming symmetry for now
-    do i = 1, this%senders%size
-      call this%receivers%push_back(this%senders%at(i))
-    end do
-
-  end subroutine update_receivers_sln
 
   !> @brief Check if this stage is cached
   !<

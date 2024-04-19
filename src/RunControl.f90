@@ -3,9 +3,7 @@ module RunControlModule
   use SimStagesModule
   use VirtualDataManagerModule
   use MapperModule
-  use ListsModule, only: baseconnectionlist, basesolutionlist
-  use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          get_smc_from_list
+  use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType
   implicit none
   private
@@ -96,9 +94,9 @@ contains
   !> @brief Actions after connections have been created
   !<
   subroutine ctrl_after_con_cr(this)
-    class(RunControlType), target :: this
+    class(RunControlType) :: this
 
-    call this%virtual_data_mgr%set_halo()
+    call this%virtual_data_mgr%activate_halo()
 
   end subroutine ctrl_after_con_cr
 
@@ -142,7 +140,7 @@ contains
     class(RunControlType) :: this
 
     ! Reduce the halo
-    call this%virtual_data_mgr%reduce_halo()
+    call this%virtual_data_mgr%compress_halo()
 
     ! Add variables in interface models to the mapper
     call this%mapper%add_interface_vars()
