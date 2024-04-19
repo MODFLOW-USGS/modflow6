@@ -943,7 +943,6 @@ contains
         this%bthick(n) = this%parser%GetDouble()
         ! -- get reach bed hk
         call this%parser%GetStringCaps(hkname)
-        ! this%hk(n) = this%parser%GetDouble()
         ! -- get reach roughness
         call this%parser%GetStringCaps(manningname)
         ! -- get number of connections for reach
@@ -2965,7 +2964,11 @@ contains
           case ('EXT-OUTFLOW')
             v = this%qextoutflow(n)
           case ('RAINFALL')
-            v = this%rain(n)
+            if (this%iboundpak(n) /= 0) then
+              v = this%rain(n)
+            else
+              v = DZERO
+            end if
           case ('RUNOFF')
             v = this%simrunoff(n)
           case ('EVAPORATION')
@@ -3447,13 +3450,13 @@ contains
     rhs = DZERO
     !
     if (this%iboundpak(n) == 0) then
-      this%depth(n) = DHNOFLO
+      this%depth(n) = DZERO
       this%stage(n) = DHNOFLO
-      this%usflow(n) = DHNOFLO
-      this%simevap(n) = DHNOFLO
-      this%simrunoff(n) = DHNOFLO
-      this%dsflow(n) = DHNOFLO
-      this%gwflow(n) = DHNOFLO
+      this%usflow(n) = DZERO
+      this%simevap(n) = DZERO
+      this%simrunoff(n) = DZERO
+      this%dsflow(n) = DZERO
+      this%gwflow(n) = DZERO
     else
       hgwf = h
       d1 = DZERO
