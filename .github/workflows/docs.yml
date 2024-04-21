@@ -15,8 +15,25 @@ on:
 env:
   PIXI_BETA_WARNING_OFF: true
 jobs:
+  lint:
+    name: Check format
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.6.0
+        with:
+          pixi-version: v0.19.1
+
+      - name: Check documents using codespell
+        run: pixi run check-docs
+  
   rtd_build:
     name: Build ReadTheDocs
+    needs:
+      - lint
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -59,9 +76,6 @@ jobs:
       - name: Print python package versions
         working-directory: modflow6
         run: pixi run pip list
-
-      - name: Check documents using codespell
-        run: pixi run check-docs
 
       - name: Install TeX Live
         run: |
