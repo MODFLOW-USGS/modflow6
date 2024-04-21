@@ -60,6 +60,9 @@ jobs:
         working-directory: modflow6
         run: pixi run pip list
 
+      - name: Check documents using codespell
+        run: pixi run check-docs
+
       - name: Install TeX Live
         run: |
           sudo apt-get update

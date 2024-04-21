@@ -100,7 +100,7 @@ contains
         end do
       end do
       !
-      ! -- Write time and zone informatio to CSV header
+      ! -- Write time and zone information to CSV header
       write (ioutcsv, '(a)', advance='no') 'totim,'
       write (ioutcsv, '(a)', advance='no') 'kstp,'
       write (ioutcsv, '(a)', advance='no') 'kper,'
