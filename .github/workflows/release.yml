@@ -467,8 +467,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
           models="${{ inputs.models }}"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -m ${models//,/ -m }"
+          if [ -n "$models" ]; then
+            cmd="$cmd -m ${models//,/ -m }"
+          fi
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
@@ -581,8 +584,11 @@ jobs:
         run: |
           # build distribution
           distname="${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}"
+          cmd="python modflow6/distribution/build_dist.py -o $distname"
           models="${{ inputs.models }}"
-          cmd="python modflow6/distribution/build_dist.py -o $distname -m ${models//,/ -m }"
+          if [ -n "$models" ]; then
+            cmd="$cmd -m ${models//,/ -m }"
+          fi
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi

@@ -6,7 +6,7 @@ import textwrap
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
-from shutil import copy, copyfile, copytree, ignore_patterns
+from shutil import copy, copyfile, copytree, ignore_patterns, rmtree
 from typing import List, Optional
 
 import pytest
@@ -114,19 +114,18 @@ def setup_examples(
     models: Optional[List[str]] = None,
 ):
     examples_path = Path(examples_path).expanduser().absolute()
-
-    # download example models zip asset
     latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
     assets = latest["assets"]
     asset = next(
         iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None
     )
+    # download example models zip asset
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # filter examples for models selected for release
     for p in examples_path.glob("*"):
         if not any(m in p.stem for m in models):
-            p.unlink()
+            rmtree(p)
 
     # list folders with mfsim.nam (recursively)
     # and add run.sh/bat script to each folder
