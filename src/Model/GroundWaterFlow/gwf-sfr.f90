@@ -183,6 +183,7 @@ module SfrModule
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
     procedure, private :: sfr_update_flows
+    procedure, private :: sfr_adjust_ro_ev
     procedure, private :: sfr_calc_qgwf
     procedure, private :: sfr_gwf_conn
     procedure, private :: sfr_calc_cond
@@ -3406,7 +3407,6 @@ contains
     real(DP) :: qgwf
     real(DP) :: qmpsrc
     real(DP) :: qc
-    real(DP) :: qt
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
@@ -3499,22 +3499,7 @@ contains
       qc = qu + qi + qr - qe + qro + qfrommvr
       !
       ! -- adjust runoff or evaporation if sum of sources is negative
-      if (qc < DZERO) then
-        !
-        ! -- calculate sources without et
-        qt = qu + qi + qr + qro + qfrommvr
-        !
-        ! -- runoff exceeds sources of water for reach
-        if (qt < DZERO) then
-          qro = -(qu + qi + qr + qfrommvr)
-          qe = DZERO
-          !
-          ! -- evaporation exceeds sources of water for reach
-        else
-          qe = qu + qi + qr + qro + qfrommvr
-        end if
-        qc = qu + qi + qr - qe + qro + qfrommvr
-      end if
+      call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
       !
       ! -- set simulated evaporation and runoff
       this%simevap(n) = qe
@@ -3891,6 +3876,48 @@ contains
     return
   end subroutine sfr_update_flows
 
+  !> @brief Adjust runoff and evaporation
+    !!
+    !! Method to adjust runoff and evaporation for a SFR package reach
+    !! based on the total reach flow.
+    !!
+  !<
+  subroutine sfr_adjust_ro_ev(this, qc, qu, qi, qr, qro, qe, qfrommvr)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    real(DP), intent(inout) :: qc !< total reach volumetric flow
+    real(DP), intent(in) :: qu !< upstream reach volumetric flow
+    real(DP), intent(in) :: qi !< reach volumetric inflow
+    real(DP), intent(in) :: qr !< reach volumetric rainfall
+    real(DP), intent(inout) :: qro !< reach volumetric runoff
+    real(DP), intent(inout) :: qe !< reach volumetric evaporation
+    real(DP), intent(in) :: qfrommvr !< reach volumetric flow from mover
+    ! -- local variables
+    real(DP) :: qt
+    !
+    ! -- adjust runoff or evaporation if sum of sources is negative
+    if (qc < DZERO) then
+      !
+      ! -- calculate sources without evaporation
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        if (qro < DZERO) then
+          qro = -(qu + qi + qr + qfrommvr)
+          qe = DZERO
+        end if
+        !
+        ! -- evaporation exceeds sources of water for reach
+      else
+        if (qe > DZERO) then
+          qe = qu + qi + qr + qro + qfrommvr
+        end if
+      end if
+      qc = qu + qi + qr - qe + qro + qfrommvr
+    end if
+  end subroutine sfr_adjust_ro_ev  
+
   !> @brief Calculate downstream flow term
     !!
     !! Method to calculate downstream flow for a SFR package reach.
@@ -3946,7 +3973,6 @@ contains
     real(DP) :: qe
     real(DP) :: qro
     real(DP) :: qfrommvr
-    real(DP) :: qt
     real(DP) :: a
     real(DP) :: ae
     !
@@ -3974,22 +4000,7 @@ contains
     qsrc = qu + qi + qr - qe + qro + qfrommvr
     !
     ! -- adjust runoff or evaporation if sum of sources is negative
-    if (qsrc < DZERO) then
-      !
-      ! -- calculate sources without et
-      qt = qu + qi + qr + qro + qfrommvr
-      !
-      ! -- runoff exceeds sources of water for reach
-      if (qt < DZERO) then
-        qro = -(qu + qi + qr + qfrommvr)
-        qe = DZERO
-        !
-        ! -- evaporation exceeds sources of water for reach
-      else
-        qe = qu + qi + qr + qro + qfrommvr
-      end if
-      qsrc = qu + qi + qr - qe + qro + qfrommvr
-    end if
+    call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
     !
     ! -- return
     return
