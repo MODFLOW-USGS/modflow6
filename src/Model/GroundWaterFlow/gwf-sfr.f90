@@ -3142,19 +3142,19 @@ contains
     integer(I4B) :: icol
     integer(I4B) :: istart
     integer(I4B) :: istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     !
     ! -- initialize local variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
     !
     ! -- get reach number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     end if
@@ -3916,7 +3916,7 @@ contains
       end if
       qc = qu + qi + qr - qe + qro + qfrommvr
     end if
-  end subroutine sfr_adjust_ro_ev  
+  end subroutine sfr_adjust_ro_ev
 
   !> @brief Calculate downstream flow term
     !!
@@ -4100,7 +4100,7 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: cond
     real(DP) :: sat
     real(DP) :: derv
@@ -4124,16 +4124,16 @@ contains
     tp = this%strtop(n)
     bt = tp - this%bthick(n)
     hsfr = tp + depth
-    htmp = hgwf
-    if (htmp < bt) then
-      htmp = bt
+    h_temp = hgwf
+    if (h_temp < bt) then
+      h_temp = bt
     end if
     !
     ! -- calculate conductance
-    call this%sfr_calc_cond(n, depth, cond, hsfr, htmp)
+    call this%sfr_calc_cond(n, depth, cond, hsfr, h_temp)
     !
     ! -- calculate groundwater leakage
-    qgwf = sat * cond * (htmp - hsfr)
+    qgwf = sat * cond * (h_temp - hsfr)
     gwfrhs0 = -sat * cond * hsfr
     gwfhcof0 = -sat * cond
     !
@@ -4178,14 +4178,14 @@ contains
     !! Method to calculate the reach-aquifer conductance for a SFR package reach.
     !!
   !<
-  subroutine sfr_calc_cond(this, n, depth, cond, hsfr, htmp)
+  subroutine sfr_calc_cond(this, n, depth, cond, hsfr, h_temp)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(inout) :: cond !< reach-aquifer conductance
     real(DP), intent(in), optional :: hsfr !< stream stage
-    real(DP), intent(in), optional :: htmp !< head in gw cell
+    real(DP), intent(in), optional :: h_temp !< head in gw cell
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: wp
@@ -4205,7 +4205,7 @@ contains
         !
         ! -- direction of gradient across streambed determines which vsc ratio
         if (this%ivsc == 1) then
-          if (hsfr > htmp) then
+          if (hsfr > h_temp) then
             ! strm stg > gw head
             vscratio = this%viscratios(1, n)
           else
