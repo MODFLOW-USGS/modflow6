@@ -543,7 +543,7 @@ contains
   !> @brief Call this subroutine if the time-series link is available or needed
   !!
   !! This routine assumes that there is not an existing link for the
-  !! specified package and array row and column.  For the standard 
+  !! specified package and array row and column.  For the standard
   !! boundary package, all links are removed by calling the tsmanager%reset()
   !! method.  For advanced packages, there is a separate routine called
   !! read_value_or_time_series_adv, which should be used instead of this one.
@@ -586,7 +586,7 @@ contains
         bndElem = r
         ! Make a new linke and add it to the list.
         call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
-                                  ii, jj, iprpak, tsLink, '', '')
+                                 ii, jj, iprpak, tsLink, '', '')
       else
         errmsg = 'Error in list input. Expected numeric value or '// &
                  "time-series name, but found '"//trim(textInput)//"'."
