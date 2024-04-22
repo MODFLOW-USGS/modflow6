@@ -3389,12 +3389,12 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ii
     integer(I4B) :: n2
-    integer(I4B) :: isolve  !< old
-    integer(I4B) :: iic  !< old
-    integer(I4B) :: iic2  !< old
-    integer(I4B) :: iic3  !< old
-    integer(I4B) :: iic4  !< old
-    integer(I4B) :: ibflg  !< old
+    integer(I4B) :: isolve !< old
+    integer(I4B) :: iic !< old
+    integer(I4B) :: iic2 !< old
+    integer(I4B) :: iic3 !< old
+    integer(I4B) :: iic4 !< old
+    integer(I4B) :: ibflg !< old
     real(DP) :: hgwf
     real(DP) :: sa
     real(DP) :: sa_wet
@@ -3403,38 +3403,38 @@ contains
     real(DP) :: qr
     real(DP) :: qe
     real(DP) :: qro
-    real(DP) :: qmp  !< old
+    real(DP) :: qmp !< old
     real(DP) :: qsrc
     real(DP) :: qfrommvr
     real(DP) :: qgwf
-    real(DP) :: qmpsrc  !< old
+    real(DP) :: qmpsrc !< old
     real(DP) :: qc
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
     real(DP) :: qd
-    real(DP) :: en1  !< old
-    real(DP) :: en2  !< old
-    real(DP) :: qen1  !< old
-    real(DP) :: f1, f2  !< old
-    real(DP) :: qgwf1  !< old
-    real(DP) :: qgwf2  !< old
-    real(DP) :: qgwfp  !< old
+    real(DP) :: en1 !< old
+    real(DP) :: en2 !< old
+    real(DP) :: qen1 !< old
+    real(DP) :: f1, f2 !< old
+    real(DP) :: qgwf1 !< old
+    real(DP) :: qgwf2 !< old
+    real(DP) :: qgwfp !< old
     real(DP) :: qgwfold
-    real(DP) :: fhstr1  !< old
-    real(DP) :: fhstr2  !< old
+    real(DP) :: fhstr1 !< old
+    real(DP) :: fhstr2 !< old
     real(DP) :: d1
     real(DP) :: d2
-    real(DP) :: dpp  !< old
-    real(DP) :: dx  !< old
+    real(DP) :: dpp !< old
+    real(DP) :: dx !< old
     real(DP) :: q1
     real(DP) :: q2
-    real(DP) :: derv  !< old
-    real(DP) :: dlh  !< old
-    real(DP) :: dlhold  !< old
-    real(DP) :: fp  !< old
-    real(DP) :: err  !< old
-    real(DP) :: errold  !< old
+    real(DP) :: derv !< old
+    real(DP) :: dlh !< old
+    real(DP) :: dlhold !< old
+    real(DP) :: fp !< old
+    real(DP) :: err !< old
+    real(DP) :: errold !< old
     real(DP) :: sumleak
     real(DP) :: sumrch
     real(DP) :: gwfhcof
@@ -3514,7 +3514,9 @@ contains
         if (this%iboundpak(n) < 0) then
           call this%sfr_calc_constant(n, d1, hgwf, qgwf, qd)
         else
-          call this%sfr_calc_steady(n, d1, hgwf, qc, qu, qi, qfrommvr, qr, qe, qro, qgwf, qd)
+          call this%sfr_calc_steady(n, d1, hgwf, qc, qu, qi, &
+                                    qfrommvr, qr, qe, qro, &
+                                    qgwf, qd)
         end if
         !
         ! -- update qsrc with updated depth
@@ -4248,7 +4250,7 @@ contains
     real(DP), intent(in) :: hgwf !< head in gw cell
     real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
     real(DP), intent(inout) :: qd !< reach outflow
-    ! -- local variables 
+    ! -- local variables
     real(DP) :: qsrc
 
     this%stage(n) = this%sstage(n)
@@ -4275,7 +4277,9 @@ contains
 
   end subroutine sfr_calc_constant
 
-  subroutine sfr_calc_steady(this, n, d1, hgwf, qc, qu, qi, qfrommvr, qr, qe, qro, qgwf, qd)
+  subroutine sfr_calc_steady(this, n, d1, hgwf, qc, &
+                             qu, qi, qfrommvr, qr, qe, qro, &
+                             qgwf, qd)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
@@ -4342,7 +4346,7 @@ contains
     !    excluding groundwater leakage
     qc = qu + qi + qr - qe + qro + qfrommvr
     !
-    ! -- calculate flow at the middle of the reach 
+    ! -- calculate flow at the middle of the reach
     !    excluding groundwater leakage
     qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
     qmpsrc = qmp
@@ -4350,11 +4354,11 @@ contains
     ! -- calculate stream depth at the midpoint
     call this%sfr_calc_reach_depth(n, qmp, d1)
     !
-    ! -- calculate sources/sinks for reach 
+    ! -- calculate sources/sinks for reach
     !    excluding groundwater leakage
     call this%sfr_calc_qsource(n, d1, qsrc)
     !
-    ! -- calculate initial reach stage, downstream flow, 
+    ! -- calculate initial reach stage, downstream flow,
     !    and groundwater leakage
     tp = this%strtop(n)
     bt = tp - this%bthick(n)
