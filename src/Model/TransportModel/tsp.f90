@@ -791,7 +791,7 @@ contains
         mempathic = mempath
       case ('FMI6')
         this%infmi = inunit
-      case ('MVT6')
+      case ('MVT6', 'MVE6')
         this%inmvt = inunit
       case ('ADV6')
         this%inadv = inunit
@@ -816,7 +816,7 @@ contains
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%eqnsclfac, this%depvartype)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
-                this%eqnsclfac)
+                this%eqnsclfac, this%depvartype)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
     !

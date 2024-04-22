@@ -6,7 +6,8 @@ module TspMvtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
-                             DNODATA, LENPACKAGENAME, TABCENTER, LENMODELNAME
+                             DNODATA, LENPACKAGENAME, TABCENTER, &
+                             LENMODELNAME, LENVARNAME
 
   use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
@@ -23,6 +24,7 @@ module TspMvtModule
   public :: mvt_cr
 
   type, extends(NumericalPackageType) :: TspMvtType
+
     character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of model 1
     character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of model 2 (set to modelname 1 for single model MVT)
     integer(I4B), pointer :: maxpackages !< max number of packages
@@ -36,10 +38,13 @@ module TspMvtModule
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the water mover budget object
     character(len=LENPACKAGENAME), &
       dimension(:), pointer, contiguous :: paknames => null() !< array of package names
+    character(len=LENVARNAME) :: depvartype = ''
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
+
   contains
+
     procedure :: mvt_df
     procedure :: mvt_ar
     procedure :: mvt_rp
@@ -66,7 +71,7 @@ contains
   !> @brief Create a new mover transport object
   !<
   subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, &
-                    gwfmodelname1, gwfmodelname2, fmi2)
+                    depvartype, gwfmodelname1, gwfmodelname2, fmi2)
     ! -- dummy
     type(TspMvtType), pointer :: mvt
     character(len=*), intent(in) :: name_model
@@ -74,15 +79,15 @@ contains
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi1
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=LENVARNAME), intent(in) :: depvartype !< dependent variable type ('concentration' or 'temperature')
     character(len=*), intent(in), optional :: gwfmodelname1
     character(len=*), intent(in), optional :: gwfmodelname2
     type(TspFmiType), intent(in), target, optional :: fmi2
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (mvt)
     !
-    ! -- create name and memory path
+    ! -- Create name and memory path
     call mvt%set_names(1, name_model, 'MVT', 'MVT')
     !
     ! -- Allocate scalars
@@ -95,12 +100,12 @@ contains
     mvt%fmi1 => fmi1
     mvt%fmi2 => fmi1
     !
-    ! -- set pointers
+    ! -- Set pointers
     if (present(fmi2)) then
       mvt%fmi2 => fmi2
     end if
     !
-    ! -- set model names
+    ! -- Set model names
     if (present(gwfmodelname1)) then
       mvt%gwfmodelname1 = gwfmodelname1
     end if
@@ -108,11 +113,15 @@ contains
       mvt%gwfmodelname2 = gwfmodelname2
     end if
     !
-    ! -- create the budget object
+    ! -- Create the budget object
     call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
     !
     ! -- Store pointer to governing equation scale factor
     mvt%eqnsclfac => eqnsclfac
+    !
+    ! -- Store pointer to labels associated with the current model so that the
+    !    package has access to the corresponding dependent variable type
+    mvt%depvartype = depvartype
     !
     ! -- Return
     return
@@ -121,27 +130,24 @@ contains
   !> @brief Define mover transport object
   !<
   subroutine mvt_df(this, dis)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtmvt = &
       "(1x,/1x,'MVT -- MOVER TRANSPORT PACKAGE, VERSION 1, 4/15/2020', &
       &' INPUT READ FROM UNIT ', i0, //)"
-! ------------------------------------------------------------------------------
     !
-    ! -- set pointer to dis
+    ! -- Set pointer to dis
     this%dis => dis
     !
-    ! -- print a message identifying the MVT package.
+    ! -- Print a message identifying the MVT package.
     write (this%iout, fmtmvt) this%inunit
     !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
-    ! -- initialize the budget table writer
+    ! -- Initialize the budget table writer
     call budget_cr(this%budget, this%memoryPath)
     !
     ! -- Read mvt options
@@ -156,7 +162,6 @@ contains
   !! Store a pointer to mvrbudobj, which contains the simulated water
   !! mover flows from either a gwf model MVR package or from a gwf-gwf
   !! exchange MVR package.
-  !!
   !<
   subroutine set_pointer_mvrbudobj(this, mvrbudobj)
     class(TspMvtType) :: this
@@ -167,13 +172,10 @@ contains
   !> @brief Allocate and read mover-for-transport information
   !<
   subroutine mvt_ar(this)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
-    ! -- locals
-! ------------------------------------------------------------------------------
     !
-    ! -- setup the output table
+    ! -- Setup the output table
     call this%mvt_setup_outputtab()
     !
     ! -- Return
@@ -187,20 +189,17 @@ contains
     use TdisModule, only: kper, kstp
     ! -- dummy
     class(TspMvtType) :: this
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- At this point, the mvrbudobj is available to set up the mvt budobj
     if (kper * kstp == 1) then
       !
-      ! -- if mvt is for a single model then point to fmi1
+      ! -- If mvt is for a single model then point to fmi1
       !cdl todo: this needs to be called from GwtGwtExg somehow for the 2 model case
       if (associated(this%fmi1, this%fmi2)) then
         call this%set_pointer_mvrbudobj(this%fmi1%mvrbudobj)
       end if
       !
-      ! -- set up the mvt budobject
+      ! -- Set up the mvt budobject
       call this%mvt_scan_mvrbudobj()
       call this%mvt_setup_budobj()
       !
@@ -222,7 +221,6 @@ contains
   !! hand side of the transport matrix equations.
   !<
   subroutine mvt_fc(this, cnew1, cnew2)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
@@ -238,7 +236,6 @@ contains
     real(DP), dimension(:), contiguous, pointer :: cnew
     type(TspFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
     type(TspFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
-! ------------------------------------------------------------------------------
     !
     ! -- Add mover QC terms to the receiver packages
     nbudterm = this%mvrbudobj%nbudterm
@@ -249,7 +246,8 @@ contains
         ! -- Set pointers to the fmi packages for the provider and the receiver
         call this%set_fmi_pr_rc(i, fmi_pr, fmi_rc)
         !
-        ! -- Set a pointer to the GWT model concentration associated with the provider
+        ! -- Set a pointer to the GWT model concentration (or temperature)
+        !    associated with the provider
         cnew => cnew1
         if (associated(fmi_pr, this%fmi2)) then
           cnew => cnew2
@@ -280,8 +278,9 @@ contains
           cp = DZERO
           if (fmi_pr%iatp(ipr) /= 0) then
             !
-            ! -- Provider package is being represented by an APT (SFT, LKT, MWT, UZT)
-            !    so set the concentration to the simulated concentration of APT
+            ! -- Provider package is being represented by an APT (SFT, LKT, MWT, UZT,
+            !    SFE, LKE, MWE, UZE) so set the dependent variable (concentration or
+            !    temperature) to the simulated dependent variable of the APT.
             cp = concpak(id1)
           else
             !
@@ -290,10 +289,10 @@ contains
             !    SFT, LKT, MWT, or UZT, so use the GWT cell concentration
             igwtnode = fmi_pr%gwfpackages(ipr)%nodelist(id1)
             cp = cnew(igwtnode)
-
+            !
           end if
           !
-          ! -- add the mover rate times the provider concentration into the receiver
+          ! -- Add the mover rate times the provider concentration into the receiver
           !    make sure these are accumulated since multiple providers can move
           !    water into the same receiver
           if (fmi_rc%iatp(irc) /= 0) then
@@ -323,40 +322,40 @@ contains
     integer(I4B), intent(in) :: ibudterm
     type(TspFmiType), pointer :: fmi_pr
     type(TspFmiType), pointer :: fmi_rc
-
+    !
     fmi_pr => null()
     fmi_rc => null()
     if (this%gwfmodelname1 == '' .and. this%gwfmodelname2 == '') then
       fmi_pr => this%fmi1
       fmi_rc => this%fmi1
     else
-      ! modelname for provider is this%mvrbudobj%budterm(i)%text1id1
+      ! -- Modelname for provider is this%mvrbudobj%budterm(i)%text1id1
       if (this%mvrbudobj%budterm(ibudterm)%text1id1 == this%gwfmodelname1) then
-        ! -- model 1 is the provider
+        ! -- Model 1 is the provider
         fmi_pr => this%fmi1
       else if (this%mvrbudobj%budterm(ibudterm)%text1id1 == &
                this%gwfmodelname2) then
-        ! -- model 2 is the provider
+        ! -- Model 2 is the provider
         fmi_pr => this%fmi2
       else
-        ! must be an error
+        ! -- Must be an error
         !cdl todo: programming error
         print *, this%mvrbudobj%budterm(ibudterm)%text1id1
         print *, this%gwfmodelname1
         print *, this%gwfmodelname2
         stop "error in set_fmi_pr_rc"
       end if
-
-      ! modelname for receiver is this%mvrbudobj%budterm(i)%text1id2
+      !
+      ! -- Modelname for receiver is this%mvrbudobj%budterm(i)%text1id2
       if (this%mvrbudobj%budterm(ibudterm)%text1id2 == this%gwfmodelname1) then
-        ! -- model 1 is the receiver
+        ! -- Model 1 is the receiver
         fmi_rc => this%fmi1
       else if (this%mvrbudobj%budterm(ibudterm)%text1id2 == &
                this%gwfmodelname2) then
-        ! -- model 2 is the receiver
+        ! -- Model 2 is the receiver
         fmi_rc => this%fmi2
       else
-        ! must be an error
+        ! -- Must be an error
         !cdl todo: programming error
         print *, this%mvrbudobj%budterm(ibudterm)%text1id2
         print *, this%gwfmodelname1
@@ -364,7 +363,7 @@ contains
         stop "error in set_fmi_pr_rc"
       end if
     end if
-
+    !
     if (.not. associated(fmi_pr)) then
       print *, 'Could not find FMI Package...'
       stop "error in set_fmi_pr_rc"
@@ -388,7 +387,6 @@ contains
     integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
     real(DP), intent(inout) :: dpak
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtmvrcnvg = &
       "(/,1x,'MOVER PACKAGE REQUIRES AT LEAST TWO OUTER ITERATIONS. CONVERGE &
@@ -403,25 +401,22 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_cc
 
   !> @brief Write mover terms to listing file
   !<
   subroutine mvt_bd(this, cnew1, cnew2)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
     real(DP), dimension(:), contiguous, intent(in) :: cnew1
     real(DP), dimension(:), contiguous, intent(in) :: cnew2
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- fill the budget object
+    ! -- Fill the budget object
     call this%mvt_fill_budobj(cnew1, cnew2)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_bd
 
@@ -436,7 +431,6 @@ contains
     integer(I4B), intent(in) :: ibudfl
     ! -- locals
     integer(I4B) :: ibinun
-! ------------------------------------------------------------------------------
     !
     ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
@@ -456,13 +450,10 @@ contains
   !> @brief Print mover flow table
   !<
   subroutine mvt_ot_printflow(this, icbcfl, ibudfl)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
-    ! -- locals
-! ------------------------------------------------------------------------------
     !
     ! -- Print the mover flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
@@ -494,28 +485,21 @@ contains
     !
     ! -- Accumulate the rates
     do i = 1, this%maxpackages
-
       do j = 1, this%budobj%nbudterm
-
         do n = 1, this%budobj%budterm(j)%nlist
-
           !
-          ! -- provider is inflow to mover
+          ! -- Provider is inflow to mover
           if (this%paknames(i) == this%budobj%budterm(j)%text2id1) then
             ratin(i) = ratin(i) + this%budobj%budterm(j)%flow(n)
           end if
           !
-          ! -- receiver is outflow from mover
+          ! -- Receiver is outflow from mover
           if (this%paknames(i) == this%budobj%budterm(j)%text2id2) then
             ratout(i) = ratout(i) + this%budobj%budterm(j)%flow(n)
           end if
-
         end do
-
       end do
-
     end do
-
     !
     ! -- Send rates to budget object
     call this%budget%reset()
@@ -554,25 +538,23 @@ contains
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(TspMvtType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       !
-      ! -- character array
+      ! -- Character array
       deallocate (this%paknames)
       !
-      ! -- budget object
+      ! -- Budget object
       call this%budget%budget_da()
       deallocate (this%budget)
       !
-      ! -- budobj
+      ! -- Budobj
       call this%budobj%budgetobject_da()
       deallocate (this%budobj)
       nullify (this%budobj)
       !
-      ! -- output table object
+      ! -- Output table object
       if (associated(this%outputtab)) then
         call this%outputtab%table_da()
         deallocate (this%outputtab)
@@ -588,7 +570,7 @@ contains
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ibudcsv)
     !
-    ! -- deallocate scalars in NumericalPackageType
+    ! -- Deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()
     !
     ! -- Return
@@ -604,10 +586,8 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(TspMvtType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in NumericalPackageType
+    ! -- Allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
@@ -637,18 +617,18 @@ contains
     character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+    ! -- formats
     character(len=*), parameter :: fmtflow = &
       "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
       &/4x, 'OPENED ON UNIT: ', I0)"
     character(len=*), parameter :: fmtflow2 = &
       &"(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE')"
-! ------------------------------------------------------------------------------
     !
-    ! -- get options block
+    ! -- Get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
                               supportOpenClose=.true.)
     !
-    ! -- parse options block if detected
+    ! -- Parse options block if detected
     if (isfound) then
       write (this%iout, '(1x,a)') 'PROCESSING MVT OPTIONS'
       do
@@ -702,7 +682,7 @@ contains
       write (this%iout, '(1x,a)') 'END OF MVT OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
@@ -722,15 +702,18 @@ contains
     character(len=LENMODELNAME) :: modelname1, modelname2
     character(len=LENPACKAGENAME) :: packagename1, packagename2
     character(len=LENBUDTXT) :: text
-! ------------------------------------------------------------------------------
     !
     ! -- Assign terms to set up the mover budget object
     nbudterm = this%mvrbudobj%nbudterm
     ncv = 0
-    text = '        MVT-FLOW'
     naux = 0
+    if (this%depvartype == 'CONCENTRATION') then
+      text = '        MVT-FLOW'
+    else
+      text = '        MVE-FLOW'
+    end if
     !
-    ! -- set up budobj
+    ! -- Set up budobj
     call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0, bddim_opt='M')
     !
     ! -- Go through the water mover budget terms and set up the transport
@@ -757,7 +740,6 @@ contains
   !> @brief Copy mover-for-transport flow terms into this%budobj
   !<
   subroutine mvt_fill_budobj(this, cnew1, cnew2)
-    ! -- modules
     ! -- dummy
     class(TspMvtType) :: this
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
@@ -777,8 +759,6 @@ contains
     real(DP) :: cp
     real(DP) :: q
     real(DP) :: rate
-    ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- Go through the water mover budget terms and set up the transport
     !    mover budget terms
@@ -813,7 +793,7 @@ contains
           rate = -q * cp * this%eqnsclfac
         end if
         !
-        ! -- add the rate to the budterm
+        ! -- Add the rate to the budterm
         call this%budobj%budterm(i)%update_term(n1, n2, rate)
       end do
     end do
@@ -821,7 +801,7 @@ contains
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_fill_budobj
 
@@ -848,13 +828,13 @@ contains
     end do
     this%maxpackages = maxpackages
     !
-    ! -- allocate paknames
+    ! -- Allocate paknames
     allocate (this%paknames(this%maxpackages))
     do i = 1, this%maxpackages
       this%paknames(i) = ''
     end do
     !
-    ! -- scan through mvrbudobj and create unique paknames
+    ! -- Scan through mvrbudobj and create unique paknames
     ipos = 1
     do i = 1, nbudterm
       found = .false.
@@ -886,14 +866,14 @@ contains
     integer(I4B) :: maxrow
     integer(I4B) :: ilen
     !
-    ! -- allocate and initialize the output table
+    ! -- Allocate and initialize the output table
     if (this%iprflow /= 0) then
       !
-      ! -- dimension table
+      ! -- Dimension table
       ntabcol = 7
       maxrow = 0
       !
-      ! -- initialize the output table object
+      ! -- Initialize the output table object
       title = 'TRANSPORT MOVER PACKAGE ('//trim(this%packName)// &
               ') FLOW RATES'
       call table_cr(this%outputtab, this%packName, title)
@@ -915,10 +895,10 @@ contains
       call this%outputtab%initialize_column(text, ilen)
       text = 'RECEIVER ID'
       call this%outputtab%initialize_column(text, 10)
-
+      !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_setup_outputtab
 
@@ -937,16 +917,15 @@ contains
     integer(I4B) :: inum
     integer(I4B) :: ntabrows
     integer(I4B) :: nlist
-! ------------------------------------------------------------------------------
     !
-    ! -- determine number of table rows
+    ! -- Determine number of table rows
     ntabrows = 0
     do i = 1, this%budobj%nbudterm
       nlist = this%budobj%budterm(i)%nlist
       ntabrows = ntabrows + nlist
     end do
     !
-    ! -- set table kstp and kper
+    ! -- Set table kstp and kper
     call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
@@ -975,7 +954,7 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_print_outputtab
 

@@ -123,7 +123,7 @@ contains
     character(len=16) :: labeltitle
     character(len=20) :: bdzone
     !
-    ! -- set values
+    ! -- Set values
     this%ncv = ncv
     this%nbudterm = nbudterm
     this%iflowja = iflowja
@@ -288,7 +288,7 @@ contains
     use TdisModule, only: delt
     ! -- dummy
     class(BudgetObjectType) :: this
-    ! -- dummy
+    ! -- local
     character(len=LENBUDTXT) :: flowtype
     integer(I4B) :: i
     real(DP) :: ratin, ratout
@@ -526,7 +526,6 @@ contains
     real(DP) :: delt
     real(DP) :: pertim
     real(DP) :: totim
-    ! -- dummy
     integer(I4B) :: i
     !
     ! -- Read flows for each budget term
@@ -544,7 +543,7 @@ contains
   subroutine budgetobject_da(this)
     ! -- dummy
     class(BudgetObjectType) :: this
-    ! -- dummy
+    ! -- local
     integer(I4B) :: i
     !
     ! -- Save flows for each budget term
@@ -658,8 +657,9 @@ contains
     class(BudgetObjectType) :: this
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: iout
-    ! -- dummy
+    ! -- local
     logical :: readnext
+    ! -- formats
     character(len=*), parameter :: fmtkstpkper = &
       &"(1x,/1x, a, ' READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
     character(len=*), parameter :: fmtbudkstpkper = &
@@ -708,7 +708,7 @@ contains
     class(BudgetObjectType) :: this
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: iout
-    ! -- dummy
+    ! -- local
     integer(I4B) :: i
     logical :: success
     !

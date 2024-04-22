@@ -797,7 +797,7 @@ contains
     !    for gwtmodel1 so that a call to save flows has an associated dis
     !    object.
     call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%fmi, &
-                this%gwtmodel1%eqnsclfac, &
+                this%gwtmodel1%eqnsclfac, this%gwtmodel1%depvartype, &
                 gwfmodelname1=this%gwfmodelname1, &
                 gwfmodelname2=this%gwfmodelname2, &
                 fmi2=this%gwtmodel2%fmi)
