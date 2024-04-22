@@ -4373,7 +4373,7 @@ contains
     if (this%sfr_gwf_conn(n) == 0) isolve = 0
     !
     ! -- iterate to achieve solution
-    itersol: if (isolve /= 0) then
+    getsol: if (isolve /= 0) then
       !
       ! -- estimate initial end points
       en1 = DZERO
@@ -4559,10 +4559,8 @@ contains
         !
         ! -- end of iteration
       end do
-    end if itersol
-
-    ! -- depth = 0 and hgwf < bt
-    if (isolve == 0) then
+      ! -- depth = 0 and hgwf < bt
+    else
       call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
       qgwf = -qgwf
       !
@@ -4574,7 +4572,7 @@ contains
       end if
       ! -- set qd
       qd = qsrc - qgwf
-    end if
+    end if getsol
 
   end subroutine sfr_calc_steady
 
