@@ -227,8 +227,8 @@ contains
 
     ! -- expand array to the requested size, keeping
     !    existing items, or allocate if still needed
-    ! [Ned TODO: may be able to use mold here, e.g.:
-    !       allocate(values(num), mold=proto)]
+    !    TODO: may be able to use mold here, e.g.:
+    !          allocate(values(num), mold=proto)
     if (allocated(array)) then
       nold = size(array)
       nnew = nold + inc

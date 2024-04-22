@@ -677,7 +677,7 @@ contains
     integer(I4B) :: ixy !< x, y column index
     real(DP) :: length !< reach length = sum of individual line reaches
     real(DP) :: fd0 !< fractional distance to start of this line reach
-    real(DP) :: fd1 !< fractional distance to end fo this line reach
+    real(DP) :: fd1 !< fractional distance to end of this line reach
     real(DP) :: fd !< fractional distance where midpoint (defined by fdc) is located
     real(DP) :: d !< distance
 

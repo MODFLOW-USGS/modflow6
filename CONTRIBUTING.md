@@ -136,11 +136,11 @@ from the main (upstream) repository:
 To ensure consistency throughout the source code, keep these rules in mind as you are working:
 
 * All features or bug fixes **must be tested** by one or more specs (unit-tests and/or integration/regression-tests).
-* All Fortran souce code submissions must adhere to modflow6 [Format Rules](#format)
+* All Fortran source code submissions must adhere to modflow6 [Format Rules](#format)
 
 ## <a name="format"></a> Format Rules
 
-Fortran souce code format rules are met by running the
+Fortran source code format rules are met by running the
 [fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). `fprettify` is included in the conda and pixi environments and can be run on the command line or integrated into a [VSCode](.vscode/README.md) or Visual Studio environment.
 
 The configuration file reflects the current minimum standard for Fortran source

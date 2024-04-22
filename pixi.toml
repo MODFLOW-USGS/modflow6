@@ -1,11 +1,12 @@
 [project]
 name = "modflow6"
 channels = ["conda-forge"]
-platforms = ["win-64", "linux-64", "osx-arm64", "osx-64"]
+platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
 version = "6.5.0.dev2"
 
 [dependencies]
 appdirs = "*"
+codespell = "*"
 filelock = "*"
 flaky = "*"
 fortran-language-server = "*"
@@ -58,6 +59,8 @@ autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd 
 
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
+run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
+check-docs = "python .github/common/codespell_docs_check.py"
 build-docs = { cmd = "python build_docs.py", cwd = "distribution" }
 build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
 build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }

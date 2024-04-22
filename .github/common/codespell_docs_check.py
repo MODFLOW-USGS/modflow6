@@ -6,45 +6,50 @@ from pathlib import Path
 from subprocess import run
 
 # MODFLOW 6 repository directories to check (relative to root)
-searchpaths = ["src", "srcbmi", "utils/zonebudget/src"]
+searchpaths = [
+    "doc",
+    ".hpc",
+    ".vscode",
+    "distribution",
+]
 
 # Exclude these directories from checks
 excludedirs = [
-    "src/Utilities/Libraries/blas",  # external library blas
-    "src/Utilities/Libraries/daglib",  # external library dag
-    "src/Utilities/Libraries/rcm",  # external library rcm
-    "src/Utilities/Libraries/sparsekit",  # external library sparsekit
-    "src/Utilities/Libraries/sparskit2",  # external library sparsekit2
+    "srcbmi/latex",
 ]
 
 # Exclude these files from checks
 excludefiles = []  # add excluded files here
 
 
-class FortranFormatCheck:
+class CodespellCheck:
     """
     Verify MODFLOW 6 fortran source code format
     """
 
     def __init__(self, root: Path, verbose: bool, write_changes: bool):
         self._checkcount = 0
-        self._fprettifyfails = []
         self._codespellfails = []
         self._exclude_dirs = []
         self._exclude_files = []
         self._root = root.resolve()
-        self.write_changes = write_changes
         self._verbose = verbose
+        self.write_changes = write_changes
         self._entrypath = Path().cwd()
 
         os.chdir(self._root)
 
-    def add_search_path(self, path: Path) -> None:
-        p = Path(path)
+    def add_search_paths(self) -> None:
+        files = []
+        files += Path(".").glob("*.md")
 
-        for f in p.glob("**/*.[fF]9[05]"):
-            self._check_src_fprettify(f)
-            self._check_src_codespell(f)
+        for dir_path in searchpaths:
+            p = Path(dir_path)
+            for e in ("**/*.dfn", "**/*.tex", "**/*.md"):
+                files += p.glob(e)
+
+        for f in sorted(files):
+            self._check_docs_codespell(f)
 
     def add_exclude_dirs(self, excl_dirs: list) -> None:
         self._exclude_dirs += excl_dirs
@@ -61,19 +66,10 @@ class FortranFormatCheck:
         self._exclude_files = []
 
     def report(self) -> None:
-        print(f"\nFortran source files checked: {self._checkcount}")
+        print(f"\nDocument files checked: {self._checkcount}")
         print(
-            f"Fortran source files fprettify failures: {len(self._fprettifyfails)}"
+            f"Document files codespell failures: {len(self._codespellfails)}\n"
         )
-        print(
-            f"Fortran source files codespell failures: {len(self._codespellfails)}\n"
-        )
-
-        if len(self._fprettifyfails) > 0:
-            print(f"fprettify failures\n{71*'-'}")
-            for f in self._fprettifyfails:
-                print(f"fprettify -c .fprettify.yaml {f}")
-            print()
 
         if len(self._codespellfails) > 0:
             print(f"codespell failures\n{71*'-'}")
@@ -84,12 +80,12 @@ class FortranFormatCheck:
     def exit(self) -> int:
         os.chdir(self._entrypath)
 
-        if len(self._fprettifyfails) > 0 or len(self._codespellfails) > 0:
+        if len(self._codespellfails):
             return 1
 
         return 0
 
-    def _check_src_fprettify(self, path: Path) -> None:
+    def _check_docs_codespell(self, path: Path) -> None:
         if self._excluded(path):
             return
 
@@ -97,16 +93,6 @@ class FortranFormatCheck:
 
         if self._verbose:
             print(f"{self._checkcount: 5d}: {path}")
-
-        cmd = f"fprettify -d -c .fprettify.yaml {path}"
-        result = run(cmd, capture_output=True, shell=True)
-
-        if result.stdout or result.stderr:
-            self._fprettifyfails.append(path)
-
-    def _check_src_codespell(self, path: Path) -> None:
-        if self._excluded(path):
-            return
 
         if self.write_changes:
             wc_str = "-w"
@@ -133,15 +119,17 @@ class FortranFormatCheck:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        "MODFLOW 6 fortran format source code verification"
+        "MODFLOW 6 Documents spell check with codespell verification"
     )
     parser.add_argument(
-        "-r", "--root", help="path to MODFLOW 6 repository root directory"
+        "-r",
+        "--root",
+        help="path to MODFLOW 6 repository root directory",
     )
     parser.add_argument(
         "-w",
         "--write-changes",
-        help="write codespell changes in place if possible",
+        help="write changes in place if possible",
         action="store_true",
     )
     parser.add_argument(
@@ -155,16 +143,15 @@ if __name__ == "__main__":
     # set MODFLOW 6 repository root
     root = Path(args.root).resolve() if args.root else Path(".").resolve()
 
-    fformat_check = FortranFormatCheck(
+    doccheck = CodespellCheck(
         root=root,
         verbose=args.verbose,
         write_changes=args.write_changes,
     )
-    fformat_check.add_exclude_dirs(excl_dirs=excludedirs)
-    fformat_check.add_exclude_files(excl_files=excludefiles)
+    doccheck.add_exclude_dirs(excl_dirs=excludedirs)
+    doccheck.add_exclude_files(excl_files=excludefiles)
 
-    for path in searchpaths:
-        fformat_check.add_search_path(path=path)
+    doccheck.add_search_paths()
 
-    fformat_check.report()
-    sys.exit(fformat_check.exit())
+    doccheck.report()
+    sys.exit(doccheck.exit())
