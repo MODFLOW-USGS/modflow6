@@ -550,7 +550,7 @@ contains
   !<
   subroutine read_value_or_time_series(textInput, ii, jj, bndElem, pkgName, &
                                        auxOrBnd, tsManager, iprpak, tsLink)
-    ! -- dummy
+    ! dummy
     character(len=*), intent(in) :: textInput
     integer(I4B), intent(in) :: ii
     integer(I4B), intent(in) :: jj
@@ -560,31 +560,34 @@ contains
     type(TimeSeriesManagerType), intent(inout) :: tsManager
     integer(I4B), intent(in) :: iprpak
     type(TimeSeriesLinkType), pointer, intent(inout) :: tsLink
-    ! -- local
+    ! local
     type(TimeSeriesType), pointer :: timeseries => null()
     integer(I4B) :: istat
     real(DP) :: r
     character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
-    !
+
     read (textInput, *, iostat=istat) r
     if (istat == 0) then
       bndElem = r
     else
+
+      ! Check to see if this is a time series name
       tsNameTemp = textInput
       call UPCASE(tsNameTemp)
-      ! -- If text is a time-series name, get value
-      !    from time series.
       timeseries => tsManager%get_time_series(tsNameTemp)
-      ! -- Create a time series link and add it to the package
-      !    list of time series links used by the array.
+
+      ! If this is a time series, then create a link between
+      ! the time series and the row and column position of
+      ! bndElem
       if (associated(timeseries)) then
         ! -- Assign value from time series to current
         !    array element
         r = timeseries%GetValue(totimsav, totim, &
                                 tsManager%extendTsToEndOfSimulation)
         bndElem = r
-        ! Make a new linke and add it to the list.
+        ! Make a new link between the time series and the row and
+        ! column position in the array
         call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
                                  ii, jj, iprpak, tsLink, '', '')
       else
@@ -593,9 +596,7 @@ contains
         call store_error(errmsg)
       end if
     end if
-    !
-    ! -- Return
-    return
+
   end subroutine read_value_or_time_series
 
   !> @brief Call this subroutine from advanced packages to define timeseries
