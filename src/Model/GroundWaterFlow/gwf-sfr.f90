@@ -5202,7 +5202,7 @@ contains
         end do
       end if
       !
-      ! -- Evaluate if an error condition has occured
+      ! -- Evaluate if an error condition has occurred
       !    the sum of fractions is not equal to 1
       if (ids /= 0) then
         if (abs(f - DONE) > DEM6) then
