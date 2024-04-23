@@ -11,6 +11,14 @@ longname
 description REPLACE boundnames {'{#1}': 'release-point'}
 
 block options
+name localz
+type keyword
+reader urword
+optional true
+longname whether to use local z coordinates
+description indicates that rptz defines the local z coordinate of the release point within the cell, with value between 0 and 1 (inclusive).  If the cell is unsaturated at release time, the z coordinate is computed relative to the water table rather than the top of the cell.
+
+block options
 name track_filerecord
 type record track fileout trackfile
 shape
