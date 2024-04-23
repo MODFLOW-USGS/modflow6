@@ -279,89 +279,91 @@ def check_output(idx, test):
     qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # setup map view plot
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-    for a in ax:
-        a.set_aspect("equal")
-
-    # plot mf6 pathlines in map view
-    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-    pmv.plot_grid()
-    pmv.plot_array(hds[0], alpha=0.1)
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-        pl.plot(
-            title="MF6 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[0],
-            legend=False,
-            color=cm.plasma(ipl / len(mf6_plines)),
-        )
-
-    # plot mp7 pathlines in map view
-    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-    pmv.plot_grid()
-    pmv.plot_array(hds[0], alpha=0.1)
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    mp7_plines = mp7_pls.groupby(["particleid"])
-    for ipl, (pid, pl) in enumerate(mp7_plines):
-        pl.plot(
-            title="MP7 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[1],
-            legend=False,
-            color=cm.plasma(ipl / len(mp7_plines)),
-        )
-
-    def sort_square_verts(verts):
-        """Sort 4 or more points on a square in clockwise order, starting with the top-left point"""
-
-        # sort by y coordinate
-        verts.sort(key=lambda v: v[1], reverse=True)
-
-        # separate top and bottom rows
-        y0 = verts[0][1]
-        t = [v for v in verts if v[1] == y0]
-        b = verts[len(t) :]
-
-        # sort top and bottom rows by x coordinate
-        t.sort(key=lambda v: v[0])
-        b.sort(key=lambda v: v[0])
-
-        # return vertices in clockwise order
-        return t + list(reversed(b))
-
-    def plot_stop_zone(nn, ax):
-        ifaces = []
-        iverts = mg.iverts[nn]
-
-        # sort vertices of well cell in clockwise order
-        verts = [tuple(mg.verts[v]) for v in iverts]
-        sorted_verts = sort_square_verts(list(set(verts.copy())))
-        for i in range(len(sorted_verts) - 1):
-            if i == 0:
-                p0 = sorted_verts[-1]
-                p1 = sorted_verts[i]
-                ifaces.append([p0, p1])
-            p0 = sorted_verts[i]
-            p1 = sorted_verts[(i + 1)]
-            ifaces.append([p0, p1])
-
-        lc = LineCollection(ifaces, color="red", lw=4)
-        ax.add_collection(lc)
-
-    # plot stop zones
-    for iz in stopzone_cells:
+    plot_results = False
+    if plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
         for a in ax:
-            plot_stop_zone(mg.get_node([iz])[0], a)
+            a.set_aspect("equal")
 
-    # view/save plot
-    # plt.show()
-    plt.savefig(gwf_ws / f"test_{name}_map.png")
+        # plot mf6 pathlines in map view
+        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
+        pmv.plot_grid()
+        pmv.plot_array(hds[0], alpha=0.1)
+        pmv.plot_vector(qx, qy, normalize=True, color="white")
+        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+            pl.plot(
+                title="MF6 pathlines",
+                kind="line",
+                x="x",
+                y="y",
+                ax=ax[0],
+                legend=False,
+                color=cm.plasma(ipl / len(mf6_plines)),
+            )
+
+        # plot mp7 pathlines in map view
+        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
+        pmv.plot_grid()
+        pmv.plot_array(hds[0], alpha=0.1)
+        pmv.plot_vector(qx, qy, normalize=True, color="white")
+        mp7_plines = mp7_pls.groupby(["particleid"])
+        for ipl, (pid, pl) in enumerate(mp7_plines):
+            pl.plot(
+                title="MP7 pathlines",
+                kind="line",
+                x="x",
+                y="y",
+                ax=ax[1],
+                legend=False,
+                color=cm.plasma(ipl / len(mp7_plines)),
+            )
+
+        def sort_square_verts(verts):
+            """Sort 4 or more points on a square in clockwise order, starting with the top-left point"""
+
+            # sort by y coordinate
+            verts.sort(key=lambda v: v[1], reverse=True)
+
+            # separate top and bottom rows
+            y0 = verts[0][1]
+            t = [v for v in verts if v[1] == y0]
+            b = verts[len(t) :]
+
+            # sort top and bottom rows by x coordinate
+            t.sort(key=lambda v: v[0])
+            b.sort(key=lambda v: v[0])
+
+            # return vertices in clockwise order
+            return t + list(reversed(b))
+
+        def plot_stop_zone(nn, ax):
+            ifaces = []
+            iverts = mg.iverts[nn]
+
+            # sort vertices of well cell in clockwise order
+            verts = [tuple(mg.verts[v]) for v in iverts]
+            sorted_verts = sort_square_verts(list(set(verts.copy())))
+            for i in range(len(sorted_verts) - 1):
+                if i == 0:
+                    p0 = sorted_verts[-1]
+                    p1 = sorted_verts[i]
+                    ifaces.append([p0, p1])
+                p0 = sorted_verts[i]
+                p1 = sorted_verts[(i + 1)]
+                ifaces.append([p0, p1])
+
+            lc = LineCollection(ifaces, color="red", lw=4)
+            ax.add_collection(lc)
+
+        # plot stop zones
+        for iz in stopzone_cells:
+            for a in ax:
+                plot_stop_zone(mg.get_node([iz])[0], a)
+
+        # view/save plot
+        plt.show()
+        plt.savefig(gwf_ws / f"test_{name}_map.png")
 
     # check that cell numbers are correct
     for i, row in list(mf6_pls.iterrows()):

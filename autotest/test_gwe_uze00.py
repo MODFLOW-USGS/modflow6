@@ -556,7 +556,8 @@ def check_output(idx, test):
     assert np.min(analytical_sln[100] - temps[100]) >= -0.20763221276, msg4
 
     # If a plot is needed for visual inspection, change following if statement to "True"
-    if False:
+    plot_results = False
+    if plot_results:
         analytical_sln = np.zeros((len(t), len(z)))
         for i, tm in enumerate(t):
             for j, depth in enumerate(z):
