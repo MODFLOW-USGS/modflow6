@@ -182,7 +182,10 @@ module SfrModule
     ! -- private procedures
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
+    procedure, private :: sfr_calc_constant
+    procedure, private :: sfr_calc_steady
     procedure, private :: sfr_update_flows
+    procedure, private :: sfr_adjust_ro_ev
     procedure, private :: sfr_calc_qgwf
     procedure, private :: sfr_gwf_conn
     procedure, private :: sfr_calc_cond
@@ -3141,19 +3144,19 @@ contains
     integer(I4B) :: icol
     integer(I4B) :: istart
     integer(I4B) :: istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     !
     ! -- initialize local variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
     !
     ! -- get reach number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     end if
@@ -3386,12 +3389,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ii
     integer(I4B) :: n2
-    integer(I4B) :: isolve
-    integer(I4B) :: iic
-    integer(I4B) :: iic2
-    integer(I4B) :: iic3
-    integer(I4B) :: iic4
-    integer(I4B) :: ibflg
     real(DP) :: hgwf
     real(DP) :: sa
     real(DP) :: sa_wet
@@ -3400,39 +3397,14 @@ contains
     real(DP) :: qr
     real(DP) :: qe
     real(DP) :: qro
-    real(DP) :: qmp
     real(DP) :: qsrc
     real(DP) :: qfrommvr
     real(DP) :: qgwf
-    real(DP) :: qmpsrc
-    real(DP) :: qc
-    real(DP) :: qt
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
     real(DP) :: qd
-    real(DP) :: en1
-    real(DP) :: en2
-    real(DP) :: qen1
-    real(DP) :: f1, f2
-    real(DP) :: qgwf1
-    real(DP) :: qgwf2
-    real(DP) :: qgwfp
-    real(DP) :: qgwfold
-    real(DP) :: fhstr1
-    real(DP) :: fhstr2
     real(DP) :: d1
-    real(DP) :: d2
-    real(DP) :: dpp
-    real(DP) :: dx
-    real(DP) :: q1
-    real(DP) :: q2
-    real(DP) :: derv
-    real(DP) :: dlh
-    real(DP) :: dlhold
-    real(DP) :: fp
-    real(DP) :: err
-    real(DP) :: errold
     real(DP) :: sumleak
     real(DP) :: sumrch
     real(DP) :: gwfhcof
@@ -3460,15 +3432,11 @@ contains
     else
       hgwf = h
       d1 = DZERO
-      d2 = DZERO
-      q1 = DZERO
-      q2 = DZERO
       qsrc = DZERO
       qgwf = DZERO
-      qgwfold = DZERO
-      !
-      ! -- calculate initial depth assuming a wide cross-section and ignore
-      !    groundwater leakage
+
+      ! -- calculate initial depth assuming a wide cross-section and
+      !    ignore groundwater leakage
       ! -- calculate upstream flow
       qu = DZERO
       do i = this%ia(n) + 1, this%ia(n + 1) - 1
@@ -3481,6 +3449,7 @@ contains
         end do
       end do
       this%usflow(n) = qu
+
       ! -- calculate remaining terms
       sa = this%calc_surface_area(n)
       sa_wet = this%calc_surface_area_wet(n, this%depth(n))
@@ -3488,285 +3457,46 @@ contains
       qr = this%rain(n) * sa
       qe = this%evap(n) * sa_wet
       qro = this%runoff(n)
-      !
+
       ! -- Water mover term; assume that it goes in at the upstream end of the reach
       qfrommvr = DZERO
       if (this%imover == 1) then
         qfrommvr = this%pakmvrobj%get_qfrommvr(n)
       end if
-      !
-      ! -- calculate sum of sources to the reach excluding groundwater leakage
-      qc = qu + qi + qr - qe + qro + qfrommvr
-      !
+
+      ! -- calculate downstream flow ignoring groundwater leakage
+      qsrc = qu + qi + qr - qe + qro + qfrommvr
+
       ! -- adjust runoff or evaporation if sum of sources is negative
-      if (qc < DZERO) then
-        !
-        ! -- calculate sources without et
-        qt = qu + qi + qr + qro + qfrommvr
-        !
-        ! -- runoff exceeds sources of water for reach
-        if (qt < DZERO) then
-          qro = -(qu + qi + qr + qfrommvr)
-          qe = DZERO
-          !
-          ! -- evaporation exceeds sources of water for reach
-        else
-          qe = qu + qi + qr + qro + qfrommvr
-        end if
-        qc = qu + qi + qr - qe + qro + qfrommvr
-      end if
-      !
+      call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
+
       ! -- set simulated evaporation and runoff
       this%simevap(n) = qe
       this%simrunoff(n) = qro
-      !
-      ! -- calculate flow at the middle of the reach and excluding groundwater leakage
-      qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
-      qmpsrc = qmp
-      !
-      ! -- calculate stream depth at the midpoint
-      if (this%iboundpak(n) > 0) then
-        call this%sfr_calc_reach_depth(n, qmp, d1)
+
+      ! -- calculate reach flow using appropriate method
+      if (this%iboundpak(n) < 0) then
+        call this%sfr_calc_constant(n, d1, hgwf, qgwf, qd)
       else
-        this%stage(n) = this%sstage(n)
-        d1 = max(DZERO, this%stage(n) - this%strtop(n))
+        call this%sfr_calc_steady(n, d1, hgwf, qu, qi, &
+                                  qfrommvr, qr, qe, qro, &
+                                  qgwf, qd)
       end if
-      !
-      ! -- calculate sources/sinks for reach excluding groundwater leakage
-      call this%sfr_calc_qsource(n, d1, qsrc)
-      !
-      ! -- calculate initial reach stage, downstream flow, and groundwater leakage
+
+      ! -- update sfr stage
       tp = this%strtop(n)
       bt = tp - this%bthick(n)
-      hsfr = d1 + tp
-      qd = MAX(qsrc, DZERO)
-      qgwf = DZERO
-      !
-      ! -- set flag to skip iterations
-      isolve = 1
-      if (hsfr <= tp .and. hgwf <= tp) isolve = 0
-      if (hgwf <= tp .and. qc < DEM30) isolve = 0
-      if (this%sfr_gwf_conn(n) == 0) isolve = 0
-      if (this%iboundpak(n) < 0) isolve = 0
-      !
-      ! -- iterate to achieve solution
-      itersol: if (isolve /= 0) then
-        !
-        ! -- estimate initial end points
-        en1 = DZERO
-        if (d1 > DEM30) then
-          if ((tp - hgwf) > DEM30) then
-            en2 = DP9 * d1
-          else
-            en2 = D1P1 * d1 - (tp - hgwf)
-          end if
-        else if ((tp - hgwf) > DEM30) then
-          en2 = DONE
-        else
-          en2 = DP99 * (hgwf - tp)
-        end if
-        !
-        ! -- estimate flow at end points
-        ! -- end point 1
-        if (hgwf > tp) then
-          call this%sfr_calc_qgwf(n, DZERO, hgwf, qgwf1)
-          qgwf1 = -qgwf1
-          qen1 = qmp - DHALF * qgwf1
-        else
-          qgwf1 = DZERO
-          qen1 = qmpsrc
-        end if
-        if (hgwf > bt) then
-          call this%sfr_calc_qgwf(n, en2, hgwf, qgwf2)
-          qgwf2 = -qgwf2
-        else
-          call this%sfr_calc_qgwf(n, en2, bt, qgwf2)
-          qgwf2 = -qgwf2
-        end if
-        if (qgwf2 > qsrc) qgwf2 = qsrc
-        ! -- calculate two depths
-        call this%sfr_calc_reach_depth(n, (qmpsrc - DHALF * qgwf1), d1)
-        call this%sfr_calc_reach_depth(n, (qmpsrc - DHALF * qgwf2), d2)
-        ! -- determine roots
-        if (d1 > DEM30) then
-          f1 = en1 - d1
-        else
-          en1 = DZERO
-          f1 = en1 - DZERO
-        end if
-        if (d2 > DEM30) then
-          f2 = en2 - d2
-          if (f2 < DEM30) en2 = d2
-        else
-          d2 = DZERO
-          f2 = en2 - DZERO
-        end if
-        !
-        ! -- iterate to find a solution
-        dpp = DHALF * (en1 + en2)
-        dx = dpp
-        iic = 0
-        iic2 = 0
-        iic3 = 0
-        fhstr1 = DZERO
-        fhstr2 = DZERO
-        qgwfp = DZERO
-        dlhold = DZERO
-        do i = 1, this%maxsfrit
-          ibflg = 0
-          d1 = dpp
-          d2 = d1 + DTWO * this%deps
-          ! -- calculate q at midpoint at both end points
-          call this%sfr_calc_qman(n, d1, q1)
-          call this%sfr_calc_qman(n, d2, q2)
-          ! -- calculate groundwater leakage at both end points
-          call this%sfr_calc_qgwf(n, d1, hgwf, qgwf1)
-          qgwf1 = -qgwf1
-          call this%sfr_calc_qgwf(n, d2, hgwf, qgwf2)
-          qgwf2 = -qgwf2
-          !
-          if (qgwf1 >= qsrc) then
-            en2 = dpp
-            dpp = DHALF * (en1 + en2)
-            call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
-            qgwfp = -qgwfp
-            if (qgwfp > qsrc) qgwfp = qsrc
-            call this%sfr_calc_reach_depth(n, (qmpsrc - DHALF * qgwfp), dx)
-            ibflg = 1
-          else
-            fhstr1 = (qmpsrc - DHALF * qgwf1) - q1
-            fhstr2 = (qmpsrc - DHALF * qgwf2) - q2
-          end if
-          !
-          if (ibflg == 0) then
-            derv = DZERO
-            if (abs(d1 - d2) > DZERO) then
-              derv = (fhstr1 - fhstr2) / (d1 - d2)
-            end if
-            if (abs(derv) > DEM30) then
-              dlh = -fhstr1 / derv
-            else
-              dlh = DZERO
-            end if
-            dpp = d1 + dlh
-            !
-            ! -- updated depth outside of endpoints - use bisection instead
-            if ((dpp >= en2) .or. (dpp <= en1)) then
-              if (abs(dlh) > abs(dlhold) .or. dpp < DEM30) then
-                ibflg = 1
-                dpp = DHALF * (en1 + en2)
-              end if
-            end if
-            !
-            ! -- check for slow convergence
-            ! -- set flags to determine if the Newton-Raphson method oscillates
-            !    or if convergence is slow
-            if (qgwf1 * qgwfold < DEM30) then
-              iic2 = iic2 + 1
-            else
-              iic2 = 0
-            end if
-            if (qgwf1 < DEM30) then
-              iic3 = iic3 + 1
-            else
-              iic3 = 0
-            end if
-            if (dlh * dlhold < DEM30 .or. ABS(dlh) > ABS(dlhold)) then
-              iic = iic + 1
-            end if
-            iic4 = 0
-            if (iic3 > 7 .and. iic > 12) then
-              iic4 = 1
-            end if
-            !
-            ! -- switch to bisection when the Newton-Raphson method oscillates
-            !    or when convergence is slow
-            if (iic2 > 7 .or. iic > 12 .or. iic4 == 1) then
-              ibflg = 1
-              dpp = DHALF * (en1 + en2)
-            end if
-            !
-            ! -- Calculate perturbed gwf flow
-            call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
-            qgwfp = -qgwfp
-            if (qgwfp > qsrc) then
-              qgwfp = qsrc
-              if (abs(en1 - en2) < this%dmaxchg * DEM6) then
-                call this%sfr_calc_reach_depth(n, (qmpsrc - DHALF * qgwfp), dpp)
-              end if
-            end if
-            call this%sfr_calc_reach_depth(n, (qmpsrc - DHALF * qgwfp), dx)
-          end if
-          !
-          ! -- bisection to update end points
-          fp = dpp - dx
-          if (ibflg == 1) then
-            dlh = fp
-            ! -- change end points
-            ! -- root is between f1 and fp
-            if (f1 * fp < DZERO) then
-              en2 = dpp
-              f2 = fp
-              ! -- root is between fp and f2
-            else
-              en1 = dpp
-              f1 = fp
-            end if
-            err = min(abs(fp), abs(en2 - en1))
-          else
-            err = abs(dlh)
-          end if
-          !
-          ! -- check for convergence and exit if converged
-          if (err < this%dmaxchg) then
-            d1 = dpp
-            qgwf = qgwfp
-            qd = qsrc - qgwf
-            exit
-          end if
-          !
-          ! -- save iterates
-          errold = err
-          dlhold = dlh
-          if (ibflg == 1) then
-            qgwfold = qgwfp
-          else
-            qgwfold = qgwf1
-          end if
-          !
-          ! -- end of iteration
-        end do
-      end if itersol
-
-      ! -- simple routing option or where depth = 0 and hgwf < bt
-      if (isolve == 0) then
-        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
-        qgwf = -qgwf
-        !
-        ! -- leakage exceeds inflow
-        if (qgwf > qsrc) then
-          d1 = DZERO
-          call this%sfr_calc_qsource(n, d1, qsrc)
-          qgwf = qsrc
-        end if
-        ! -- set qd
-        qd = qsrc - qgwf
-      end if
-      !
-      ! -- update sfr stage
       hsfr = tp + d1
-      !
+
       ! -- update stored values
       if (lupdate) then
-        !
         ! -- save depth and calculate stage
         this%depth(n) = d1
         this%stage(n) = hsfr
-        !
         ! -- update flows
         call this%sfr_update_flows(n, qd, qgwf)
       end if
-      !
+
       ! -- calculate sumleak and sumrch
       sumleak = DZERO
       sumrch = DZERO
@@ -3778,17 +3508,16 @@ contains
       if (hgwf < bt) then
         sumrch = qgwf
       end if
-      !
+
       ! -- make final qgwf calculation and obtain
       !    gwfhcof and gwfrhs values
       call this%sfr_calc_qgwf(n, d1, hgwf, qgwf, gwfhcof, gwfrhs)
-      !
-      !
+
+      ! -- update hcof and rhs terms
       if (abs(sumleak) > DZERO) then
         ! -- stream leakage is not head dependent
         if (hgwf < bt) then
           rhs = rhs - sumrch
-          !
           ! -- stream leakage is head dependent
         else if ((sumleak - qsrc) < -DEM30) then
           if (this%gwfiss == 0) then
@@ -3797,7 +3526,6 @@ contains
             rhs = rhs + gwfrhs
           end if
           hcof = gwfhcof
-          !
           ! -- place holder for UZF
         else
           if (this%gwfiss == 0) then
@@ -3806,15 +3534,12 @@ contains
             rhs = rhs - sumleak
           end if
         end if
-        !
+
         ! -- add groundwater leakage
       else if (hgwf < bt) then
         rhs = rhs - sumrch
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_solve
 
   !> @brief Update flow terms
@@ -3891,6 +3616,48 @@ contains
     return
   end subroutine sfr_update_flows
 
+  !> @brief Adjust runoff and evaporation
+    !!
+    !! Method to adjust runoff and evaporation for a SFR package reach
+    !! based on the total reach flow.
+    !!
+  !<
+  subroutine sfr_adjust_ro_ev(this, qc, qu, qi, qr, qro, qe, qfrommvr)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    real(DP), intent(inout) :: qc !< total reach volumetric flow
+    real(DP), intent(in) :: qu !< upstream reach volumetric flow
+    real(DP), intent(in) :: qi !< reach volumetric inflow
+    real(DP), intent(in) :: qr !< reach volumetric rainfall
+    real(DP), intent(inout) :: qro !< reach volumetric runoff
+    real(DP), intent(inout) :: qe !< reach volumetric evaporation
+    real(DP), intent(in) :: qfrommvr !< reach volumetric flow from mover
+    ! -- local variables
+    real(DP) :: qt
+    !
+    ! -- adjust runoff or evaporation if sum of sources is negative
+    if (qc < DZERO) then
+      !
+      ! -- calculate sources without evaporation
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        if (qro < DZERO) then
+          qro = -(qu + qi + qr + qfrommvr)
+          qe = DZERO
+        end if
+        !
+        ! -- evaporation exceeds sources of water for reach
+      else
+        if (qe > DZERO) then
+          qe = qu + qi + qr + qro + qfrommvr
+        end if
+      end if
+      qc = qu + qi + qr - qe + qro + qfrommvr
+    end if
+  end subroutine sfr_adjust_ro_ev
+
   !> @brief Calculate downstream flow term
     !!
     !! Method to calculate downstream flow for a SFR package reach.
@@ -3946,7 +3713,6 @@ contains
     real(DP) :: qe
     real(DP) :: qro
     real(DP) :: qfrommvr
-    real(DP) :: qt
     real(DP) :: a
     real(DP) :: ae
     !
@@ -3974,22 +3740,7 @@ contains
     qsrc = qu + qi + qr - qe + qro + qfrommvr
     !
     ! -- adjust runoff or evaporation if sum of sources is negative
-    if (qsrc < DZERO) then
-      !
-      ! -- calculate sources without et
-      qt = qu + qi + qr + qro + qfrommvr
-      !
-      ! -- runoff exceeds sources of water for reach
-      if (qt < DZERO) then
-        qro = -(qu + qi + qr + qfrommvr)
-        qe = DZERO
-        !
-        ! -- evaporation exceeds sources of water for reach
-      else
-        qe = qu + qi + qr + qro + qfrommvr
-      end if
-      qsrc = qu + qi + qr - qe + qro + qfrommvr
-    end if
+    call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
     !
     ! -- return
     return
@@ -4089,7 +3840,7 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: hsfr
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: cond
     real(DP) :: sat
     real(DP) :: derv
@@ -4113,16 +3864,16 @@ contains
     tp = this%strtop(n)
     bt = tp - this%bthick(n)
     hsfr = tp + depth
-    htmp = hgwf
-    if (htmp < bt) then
-      htmp = bt
+    h_temp = hgwf
+    if (h_temp < bt) then
+      h_temp = bt
     end if
     !
     ! -- calculate conductance
-    call this%sfr_calc_cond(n, depth, cond, hsfr, htmp)
+    call this%sfr_calc_cond(n, depth, cond, hsfr, h_temp)
     !
     ! -- calculate groundwater leakage
-    qgwf = sat * cond * (htmp - hsfr)
+    qgwf = sat * cond * (h_temp - hsfr)
     gwfrhs0 = -sat * cond * hsfr
     gwfhcof0 = -sat * cond
     !
@@ -4167,14 +3918,14 @@ contains
     !! Method to calculate the reach-aquifer conductance for a SFR package reach.
     !!
   !<
-  subroutine sfr_calc_cond(this, n, depth, cond, hsfr, htmp)
+  subroutine sfr_calc_cond(this, n, depth, cond, hsfr, h_temp)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(inout) :: cond !< reach-aquifer conductance
     real(DP), intent(in), optional :: hsfr !< stream stage
-    real(DP), intent(in), optional :: htmp !< head in gw cell
+    real(DP), intent(in), optional :: h_temp !< head in gw cell
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: wp
@@ -4194,7 +3945,7 @@ contains
         !
         ! -- direction of gradient across streambed determines which vsc ratio
         if (this%ivsc == 1) then
-          if (hsfr > htmp) then
+          if (hsfr > h_temp) then
             ! strm stg > gw head
             vscratio = this%viscratios(1, n)
           else
@@ -4209,6 +3960,337 @@ contains
     ! -- return
     return
   end subroutine sfr_calc_cond
+
+  subroutine sfr_calc_constant(this, n, d1, hgwf, qgwf, qd)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(inout) :: d1 !< current reach depth estimate
+    real(DP), intent(in) :: hgwf !< head in gw cell
+    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+    real(DP), intent(inout) :: qd !< reach outflow
+    ! -- local variables
+    real(DP) :: qsrc
+
+    this%stage(n) = this%sstage(n)
+    d1 = max(DZERO, this%stage(n) - this%strtop(n))
+
+    call this%sfr_calc_qsource(n, d1, qsrc)
+
+    if (this%sfr_gwf_conn(n) == 1) then
+      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+      qgwf = -qgwf
+    else
+      qgwf = DZERO
+    end if
+
+    ! -- leakage exceeds inflow
+    if (qgwf > qsrc) then
+      d1 = DZERO
+      call this%sfr_calc_qsource(n, d1, qsrc)
+      qgwf = qsrc
+    end if
+
+    ! -- set qd
+    qd = qsrc - qgwf
+
+  end subroutine sfr_calc_constant
+
+  subroutine sfr_calc_steady(this, n, d1, hgwf, &
+                             qu, qi, qfrommvr, qr, qe, qro, &
+                             qgwf, qd)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(inout) :: d1 !< current reach depth estimate
+    real(DP), intent(in) :: hgwf !< head in gw cell
+    real(DP), intent(in) :: qu !< reach upstream flow
+    real(DP), intent(in) :: qi !< reach specified inflow
+    real(DP), intent(in) :: qfrommvr !< reach flow from mover
+    real(DP), intent(in) :: qr !< reach rainfall
+    real(DP), intent(in) :: qe !< reach evaporation
+    real(DP), intent(in) :: qro !< reach runoff flow
+    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+    real(DP), intent(inout) :: qd !< reach outflow
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: isolve
+    integer(I4B) :: iic
+    integer(I4B) :: iic2
+    integer(I4B) :: iic3
+    integer(I4B) :: iic4
+    integer(I4B) :: ibflg
+    real(DP) :: qmp
+    real(DP) :: qsrc
+    real(DP) :: qsrcmp
+    real(DP) :: tp
+    real(DP) :: bt
+    real(DP) :: hsfr
+    real(DP) :: qc
+    real(DP) :: en1
+    real(DP) :: en2
+    real(DP) :: qen1
+    real(DP) :: f1
+    real(DP) :: f2
+    real(DP) :: qgwf1
+    real(DP) :: qgwf2
+    real(DP) :: qgwfp
+    real(DP) :: qgwfold
+    real(DP) :: fhstr1
+    real(DP) :: fhstr2
+    real(DP) :: d2
+    real(DP) :: dpp
+    real(DP) :: dx
+    real(DP) :: q1
+    real(DP) :: q2
+    real(DP) :: derv
+    real(DP) :: dlh
+    real(DP) :: dlhold
+    real(DP) :: fp
+    real(DP) :: err
+    real(DP) :: errold
+    !
+    ! -- initialize local variables
+    d2 = DZERO
+    q1 = DZERO
+    q2 = DZERO
+    qsrc = DZERO
+    qgwf = DZERO
+    qgwfold = DZERO
+    !
+    ! -- calculate the flow at end of the reach
+    !    excluding groundwater leakage
+    qc = qu + qi + qr - qe + qro + qfrommvr
+    !
+    ! -- calculate flow at the middle of the reach
+    !    excluding groundwater leakage
+    qsrcmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
+    qmp = qsrcmp ! initial estimate flow at the midpoint
+    !
+    ! -- calculate stream depth at the midpoint
+    call this%sfr_calc_reach_depth(n, qmp, d1)
+    !
+    ! -- calculate sources/sinks for reach
+    !    excluding groundwater leakage
+    call this%sfr_calc_qsource(n, d1, qsrc)
+    !
+    ! -- calculate initial reach stage, downstream flow,
+    !    and groundwater leakage
+    tp = this%strtop(n)
+    bt = tp - this%bthick(n)
+    hsfr = d1 + tp
+    qd = MAX(qsrc, DZERO)
+    qgwf = DZERO
+    !
+    ! -- set flag to skip iterations
+    isolve = 1
+    if (hsfr <= tp .and. hgwf <= tp) isolve = 0
+    if (hgwf <= tp .and. qc < DEM30) isolve = 0
+    if (this%sfr_gwf_conn(n) == 0) isolve = 0
+    !
+    ! -- iterate to achieve solution
+    calc_solution: if (isolve /= 0) then
+      !
+      ! -- estimate initial end points
+      en1 = DZERO
+      if (d1 > DEM30) then
+        if ((tp - hgwf) > DEM30) then
+          en2 = DP9 * d1
+        else
+          en2 = D1P1 * d1 - (tp - hgwf)
+        end if
+      else if ((tp - hgwf) > DEM30) then
+        en2 = DONE
+      else
+        en2 = DP99 * (hgwf - tp)
+      end if
+      !
+      ! -- estimate flow at end points
+      ! -- end point 1
+      if (hgwf > tp) then
+        call this%sfr_calc_qgwf(n, DZERO, hgwf, qgwf1)
+        qgwf1 = -qgwf1
+        qen1 = qmp - DHALF * qgwf1
+      else
+        qgwf1 = DZERO
+        qen1 = qsrcmp
+      end if
+      if (hgwf > bt) then
+        call this%sfr_calc_qgwf(n, en2, hgwf, qgwf2)
+        qgwf2 = -qgwf2
+      else
+        call this%sfr_calc_qgwf(n, en2, bt, qgwf2)
+        qgwf2 = -qgwf2
+      end if
+      if (qgwf2 > qsrc) qgwf2 = qsrc
+      ! -- calculate two depths
+      call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwf1), d1)
+      call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwf2), d2)
+      ! -- determine roots
+      if (d1 > DEM30) then
+        f1 = en1 - d1
+      else
+        en1 = DZERO
+        f1 = en1 - DZERO
+      end if
+      if (d2 > DEM30) then
+        f2 = en2 - d2
+        if (f2 < DEM30) en2 = d2
+      else
+        d2 = DZERO
+        f2 = en2 - DZERO
+      end if
+      !
+      ! -- iterate to find a solution
+      dpp = DHALF * (en1 + en2)
+      dx = dpp
+      iic = 0
+      iic2 = 0
+      iic3 = 0
+      fhstr1 = DZERO
+      fhstr2 = DZERO
+      qgwfp = DZERO
+      dlhold = DZERO
+      do i = 1, this%maxsfrit
+        ibflg = 0
+        d1 = dpp
+        d2 = d1 + DTWO * this%deps
+        ! -- calculate q at midpoint at both end points
+        call this%sfr_calc_qman(n, d1, q1)
+        call this%sfr_calc_qman(n, d2, q2)
+        ! -- calculate groundwater leakage at both end points
+        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf1)
+        qgwf1 = -qgwf1
+        call this%sfr_calc_qgwf(n, d2, hgwf, qgwf2)
+        qgwf2 = -qgwf2
+        !
+        if (qgwf1 >= qsrc) then
+          en2 = dpp
+          dpp = DHALF * (en1 + en2)
+          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
+          qgwfp = -qgwfp
+          if (qgwfp > qsrc) qgwfp = qsrc
+          call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dx)
+          ibflg = 1
+        else
+          fhstr1 = (qsrcmp - DHALF * qgwf1) - q1
+          fhstr2 = (qsrcmp - DHALF * qgwf2) - q2
+        end if
+        !
+        if (ibflg == 0) then
+          derv = DZERO
+          if (abs(d1 - d2) > DZERO) then
+            derv = (fhstr1 - fhstr2) / (d1 - d2)
+          end if
+          if (abs(derv) > DEM30) then
+            dlh = -fhstr1 / derv
+          else
+            dlh = DZERO
+          end if
+          dpp = d1 + dlh
+          !
+          ! -- updated depth outside of endpoints - use bisection instead
+          if ((dpp >= en2) .or. (dpp <= en1)) then
+            if (abs(dlh) > abs(dlhold) .or. dpp < DEM30) then
+              ibflg = 1
+              dpp = DHALF * (en1 + en2)
+            end if
+          end if
+          !
+          ! -- check for slow convergence
+          ! -- set flags to determine if the Newton-Raphson method oscillates
+          !    or if convergence is slow
+          if (qgwf1 * qgwfold < DEM30) then
+            iic2 = iic2 + 1
+          else
+            iic2 = 0
+          end if
+          if (qgwf1 < DEM30) then
+            iic3 = iic3 + 1
+          else
+            iic3 = 0
+          end if
+          if (dlh * dlhold < DEM30 .or. ABS(dlh) > ABS(dlhold)) then
+            iic = iic + 1
+          end if
+          iic4 = 0
+          if (iic3 > 7 .and. iic > 12) then
+            iic4 = 1
+          end if
+          !
+          ! -- switch to bisection when the Newton-Raphson method oscillates
+          !    or when convergence is slow
+          if (iic2 > 7 .or. iic > 12 .or. iic4 == 1) then
+            ibflg = 1
+            dpp = DHALF * (en1 + en2)
+          end if
+          !
+          ! -- Calculate perturbed gwf flow
+          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
+          qgwfp = -qgwfp
+          if (qgwfp > qsrc) then
+            qgwfp = qsrc
+            if (abs(en1 - en2) < this%dmaxchg * DEM6) then
+              call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dpp)
+            end if
+          end if
+          call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dx)
+        end if
+        !
+        ! -- bisection to update end points
+        fp = dpp - dx
+        if (ibflg == 1) then
+          dlh = fp
+          ! -- change end points
+          ! -- root is between f1 and fp
+          if (f1 * fp < DZERO) then
+            en2 = dpp
+            f2 = fp
+            ! -- root is between fp and f2
+          else
+            en1 = dpp
+            f1 = fp
+          end if
+          err = min(abs(fp), abs(en2 - en1))
+        else
+          err = abs(dlh)
+        end if
+        !
+        ! -- check for convergence and exit if converged
+        if (err < this%dmaxchg) then
+          d1 = dpp
+          qgwf = qgwfp
+          qd = qsrc - qgwf
+          exit
+        end if
+        !
+        ! -- save iterates
+        errold = err
+        dlhold = dlh
+        if (ibflg == 1) then
+          qgwfold = qgwfp
+        else
+          qgwfold = qgwf1
+        end if
+        !
+        ! -- end of iteration
+      end do
+      ! -- depth = 0 and hgwf < bt
+    else
+      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+      qgwf = -qgwf
+      !
+      ! -- leakage exceeds inflow
+      if (qgwf > qsrc) then
+        d1 = DZERO
+        call this%sfr_calc_qsource(n, d1, qsrc)
+        qgwf = qsrc
+      end if
+      ! -- set qd
+      qd = qsrc - qgwf
+    end if calc_solution
+
+  end subroutine sfr_calc_steady
 
   !> @brief Calculate diversion flow
     !!
