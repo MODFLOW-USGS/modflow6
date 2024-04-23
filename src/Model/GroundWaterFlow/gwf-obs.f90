@@ -205,16 +205,16 @@ contains
     ! -- local
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: ermsg, strng
+    character(len=LINELENGTH) :: ermsg, string
     !
     ! -- Initialize variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     icol = 1
     !
     ! Get node number, with option for ID string to be either node
     ! number or lay, row, column (when dis is structured).
     nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                iout, strng, .false.)
+                                iout, string, .false.)
     !
     if (nn1 > 0) then
       obsrv%NodeNumber = nn1
@@ -239,41 +239,41 @@ contains
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop, jaidx
-    character(len=LINELENGTH) :: ermsg, strng
+    character(len=LINELENGTH) :: ermsg, string
     ! formats
 70  format('Error: No connection exists between cells identified in text: ', a)
     !
     ! -- Initialize variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     icol = 1
     !
     ! Get node number, with option for ID string to be either node
     ! number or lay, row, column (when dis is structured).
     nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                iout, strng, .false.)
+                                iout, string, .false.)
     !
     if (nn1 > 0) then
       obsrv%NodeNumber = nn1
     else
-      ermsg = 'Error reading data from ID string: '//strng(istart:istop)
+      ermsg = 'Error reading data from ID string: '//string(istart:istop)
       call store_error(ermsg)
     end if
     !
     ! Get node number, with option for ID string to be either node
     ! number or lay, row, column (when dis is structured).
     nn2 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                iout, strng, .false.)
+                                iout, string, .false.)
     if (nn2 > 0) then
       obsrv%NodeNumber2 = nn2
     else
-      ermsg = 'Error reading data from ID string: '//strng(istart:istop)
+      ermsg = 'Error reading data from ID string: '//string(istart:istop)
       call store_error(ermsg)
     end if
     !
     ! -- store JA index
     jaidx = dis%con%getjaindex(nn1, nn2)
     if (jaidx == 0) then
-      write (ermsg, 70) trim(strng)
+      write (ermsg, 70) trim(string)
       call store_error(ermsg)
     end if
     obsrv%JaIndex = jaidx

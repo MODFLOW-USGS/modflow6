@@ -87,7 +87,7 @@ contains
     real(DP) :: rmax
     real(DP) :: l2norm
     real(DP) :: rcnvg
-    real(DP) :: denom
+    real(DP) :: denominator
     real(DP) :: alpha, beta
     real(DP) :: rho, rho0
     !
@@ -130,9 +130,9 @@ contains
       !
       ! -- UPDATE Q
       call amux(NEQ, P, Q, A0, JA0, IA0)
-      denom = ddot(NEQ, P, 1, Q, 1)
-      denom = denom + SIGN(DPREC, denom)
-      alpha = rho / denom
+      denominator = ddot(NEQ, P, 1, Q, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      alpha = rho / denominator
       !
       ! -- UPDATE X AND RESIDUAL
       deltax = DZERO
@@ -320,7 +320,7 @@ contains
     real(DP) :: beta
     real(DP) :: rho, rho0
     real(DP) :: omega, omega0
-    real(DP) :: numer, denom
+    real(DP) :: numerator, denominator
     !
     ! -- initialize local variables
     INNERIT = 0
@@ -375,9 +375,9 @@ contains
       call amux(NEQ, PHAT, V, A0, JA0, IA0)
       !
       ! -- UPDATE alpha WITH DHAT AND V
-      denom = ddot(NEQ, DHAT, 1, V, 1)
-      denom = denom + SIGN(DPREC, denom)
-      alpha = rho / denom
+      denominator = ddot(NEQ, DHAT, 1, V, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      alpha = rho / denominator
       !
       ! -- UPDATE Q
       DO n = 1, NEQ
@@ -424,10 +424,10 @@ contains
       call amux(NEQ, QHAT, T, A0, JA0, IA0)
       !
       ! -- UPDATE omega
-      numer = ddot(NEQ, T, 1, Q, 1)
-      denom = ddot(NEQ, T, 1, T, 1)
-      denom = denom + SIGN(DPREC, denom)
-      omega = numer / denom
+      numerator = ddot(NEQ, T, 1, Q, 1)
+      denominator = ddot(NEQ, T, 1, T, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      omega = numerator / denominator
       !
       ! -- UPDATE X AND RESIDUAL
       deltax = DZERO

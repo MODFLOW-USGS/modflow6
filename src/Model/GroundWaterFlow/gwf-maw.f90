@@ -3358,23 +3358,23 @@ contains
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     ! formats
     !
-    strng = obsrv%IDstring
-    ! -- Extract multi-aquifer well number from strng and store it.
+    string = obsrv%IDstring
+    ! -- Extract multi-aquifer well number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    maw name--deal with it.
     icol = 1
     ! -- get multi-aquifer well number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
       if (obsrv%ObsTypeId == 'MAW' .or. &
           obsrv%ObsTypeId == 'CONDUCTANCE') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (len_trim(bndName) < 1 .and. nn2 < 0) then
           write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
             'For observation type', trim(adjustl(obsrv%ObsTypeId)), &
@@ -3634,7 +3634,7 @@ contains
     real(DP), intent(inout) :: sat
     ! -- local
     integer(I4B) :: jpos
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: hwell
     real(DP) :: topw
     real(DP) :: botw
@@ -3658,25 +3658,25 @@ contains
       !
       ! -- calculate appropriate saturation
       if (this%inewton /= 1) then
-        htmp = this%xnew(node)
-        if (htmp < botw) then
-          htmp = botw
+        h_temp = this%xnew(node)
+        if (h_temp < botw) then
+          h_temp = botw
         end if
         if (hwell < botw) then
           hwell = botw
         end if
-        htmp = DHALF * (htmp + hwell)
+        h_temp = DHALF * (h_temp + hwell)
       else
-        htmp = this%xnew(node)
-        if (hwell > htmp) then
-          htmp = hwell
+        h_temp = this%xnew(node)
+        if (hwell > h_temp) then
+          h_temp = hwell
         end if
-        if (htmp < botw) then
-          htmp = botw
+        if (h_temp < botw) then
+          h_temp = botw
         end if
       end if
       ! -- calculate saturation
-      sat = sQuadraticSaturation(topw, botw, htmp, this%satomega)
+      sat = sQuadraticSaturation(topw, botw, h_temp, this%satomega)
     else
       sat = DONE
     end if
@@ -4031,15 +4031,15 @@ contains
     real(DP) :: cmaw
     real(DP) :: hgwf
     real(DP) :: bmaw
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: hv
     real(DP) :: vscratio
     ! -- format
     !
-    ! -- initialize qnet and htmp
+    ! -- initialize qnet and h_temp
     qnet = DZERO
     vscratio = DONE
-    htmp = this%shutofflevel(n)
+    h_temp = this%shutofflevel(n)
     !
     ! -- if vsc active, select appropriate viscosity ratio
     if (this%ivsc == 1) then
@@ -4056,21 +4056,21 @@ contains
       if (this%fwcond(n) > DZERO) then
         bt = this%fwelev(n)
         tp = bt + this%fwrlen(n)
-        scale = sQSaturation(tp, bt, htmp)
+        scale = sQSaturation(tp, bt, h_temp)
         cfw = scale * this%fwcond(n) * this%viscratios(2, n)
         this%ifwdischarge(n) = 0
         if (cfw > DZERO) then
           this%ifwdischarge(n) = 1
           this%xsto(n) = bt
         end if
-        qnet = qnet + cfw * (bt - htmp)
+        qnet = qnet + cfw * (bt - h_temp)
       end if
     end if
     !
     ! -- calculate maw storage changes
     if (this%imawiss /= 1) then
       if (this%ifwdischarge(n) /= 1) then
-        hdterm = this%xoldsto(n) - htmp
+        hdterm = this%xoldsto(n) - h_temp
       else
         hdterm = this%xoldsto(n) - this%fwelev(n)
       end if
@@ -4085,7 +4085,7 @@ contains
       cmaw = this%satcond(jpos) * vscratio * sat
       hgwf = this%xnew(igwfnode)
       bmaw = this%botscrn(jpos)
-      hv = htmp
+      hv = h_temp
       if (hv < bmaw) then
         hv = bmaw
       end if

@@ -1628,11 +1628,11 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     !
     ! -- Initialize variables
-    strng = obsrv%IDstring
-    read (strng, *) n
+    string = obsrv%IDstring
+    read (string, *) n
     !
     if (n > 0) then
       obsrv%NodeNumber = n
