@@ -399,10 +399,13 @@ contains
     !
     ! -- stage, usflow, and dsflow for previous timestep
     if (this%istorage == 1) then
-      call mem_allocate(this%stageold, this%maxbound, 'STAGEOLD', this%memoryPath)
-      call mem_allocate(this%usflowold, this%maxbound, 'USFLOWOLD', this%memoryPath)
-      call mem_allocate(this%dsflowold, this%maxbound, 'DSFLOWOLD', this%memoryPath)
-    end if    
+      call mem_allocate(this%stageold, this%maxbound, 'STAGEOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%usflowold, this%maxbound, 'USFLOWOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%dsflowold, this%maxbound, 'DSFLOWOLD', &
+                        this%memoryPath)
+    end if
     !
     ! -- reach order and connection data
     call mem_allocate(this%isfrorder, this%maxbound, 'ISFRORDER', &
@@ -474,7 +477,7 @@ contains
         this%stageold(i) = DZERO
         this%usflowold(i) = DZERO
         this%dsflowold(i) = DZERO
-      end if      
+      end if
       !
       ! -- boundary data
       this%rough(i) = DZERO
@@ -633,7 +636,7 @@ contains
     call this%sfr_read_diversions()
     !
     ! -- read initial stage data
-    call this%sfr_read_initial_stages()    
+    call this%sfr_read_initial_stages()
     !
     ! -- setup the budget object
     call this%sfr_setup_budobj()
@@ -1781,7 +1784,7 @@ contains
         do n = 1, this%maxbound
           nboundchk(n) = 0
         end do
-          
+
         do
           call this%parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
@@ -1824,12 +1827,13 @@ contains
             call store_error(errmsg)
           else if (nboundchk(i) > 1) then
             write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
-              'Initial stage information specified', nboundchk(i), 'times for reach', i
+              'Initial stage information specified', &
+              nboundchk(i), 'times for reach', i
             call store_error(errmsg)
           end if
         end do
         deallocate (nboundchk)
-      
+
       end if
     else
       ! -- set default intital stage
@@ -2072,7 +2076,7 @@ contains
         end do
       end do
     end if
-    
+
     ! -- update previous values
     if (this%istorage == 1) then
       do n = 1, this%maxbound
@@ -2080,7 +2084,7 @@ contains
         this%usflowold(n) = this%usflow(n)
         this%dsflowold(n) = this%dsflow(n)
       end do
-    end if    
+    end if
     !
     ! -- reset upstream flow to zero and set specified stage
     do n = 1, this%maxbound
@@ -2823,7 +2827,7 @@ contains
       call mem_deallocate(this%stageold)
       call mem_deallocate(this%usflowold)
       call mem_deallocate(this%dsflowold)
-    end if    
+    end if
     !
     ! -- deallocate reach order and connection data
     call mem_deallocate(this%isfrorder)
