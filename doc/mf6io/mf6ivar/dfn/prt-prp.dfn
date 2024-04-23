@@ -11,7 +11,7 @@ longname
 description REPLACE boundnames {'{#1}': 'release-point'}
 
 block options
-name localz
+name local_z
 type keyword
 reader urword
 optional true

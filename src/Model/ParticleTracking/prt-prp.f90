@@ -808,7 +808,7 @@ contains
           &FOLLOWED BY FILEOUT')
       end if
       found = .true.
-    case ('LOCALZ')
+    case ('LOCAL_Z')
       this%localz = .true.
     case default
       found = .false.
