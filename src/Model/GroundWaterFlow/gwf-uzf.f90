@@ -2593,26 +2593,26 @@ contains
     real(DP) :: obsdepth
     integer(I4B) :: icol, istart, istop, istat
     real(DP) :: r
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     ! formats
 30  format(i10)
     !
-    strng = obsrv%IDstring
-    ! -- Extract node number from strng and store it.
+    string = obsrv%IDstring
+    ! -- Extract node number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    feature name--deal with it.
     icol = 1
     ! -- get node number
-    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
-    read (strng(istart:istop), 30, iostat=istat) nn
+    call urword(string, icol, istart, istop, 1, n, r, iout, inunitobs)
+    read (string(istart:istop), 30, iostat=istat) nn
     if (istat == 0) then
       ! -- store uzf node number (NodeNumber)
       obsrv%NodeNumber = nn
     else
-      ! Integer can't be read from strng; it's presumed to be a boundary
+      ! Integer can't be read from string; it's presumed to be a boundary
       ! name (already converted to uppercase)
-      obsrv%FeatureName = strng(istart:istop)
-      !obsrv%FeatureName = trim(adjustl(strng))
+      obsrv%FeatureName = string(istart:istop)
+      !obsrv%FeatureName = trim(adjustl(string))
       ! -- Observation may require summing rates from multiple boundaries,
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.
@@ -2621,7 +2621,7 @@ contains
     !
     ! -- for soil water observation, store depth
     if (obsrv%ObsTypeId == 'WATER-CONTENT') then
-      call urword(strng, icol, istart, istop, 3, n, r, iout, inunitobs)
+      call urword(string, icol, istart, istop, 3, n, r, iout, inunitobs)
       obsdepth = r
       ! -- store observations depth
       obsrv%Obsdepth = obsdepth

@@ -2129,7 +2129,7 @@ contains
     real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ii, ihc
-    real(DP) :: ttop, bbot, thck
+    real(DP) :: ttop, bbot, thick
     integer(I4B) :: ncnvrt, ihdcnv
     character(len=30), dimension(5) :: nodcnvrt
     character(len=30) :: nodestr
@@ -2188,16 +2188,16 @@ contains
       if (this%icelltype(n) /= 0) then
         if (hnew(n) < ttop) ttop = hnew(n)
       end if
-      thck = ttop - bbot
+      thick = ttop - bbot
       !
-      ! -- If thck<0 print message, set hnew, and ibound
-      if (thck <= DZERO) then
+      ! -- If thick<0 print message, set hnew, and ibound
+      if (thick <= DZERO) then
         call this%wdmsg(1, ncnvrt, nodcnvrt, acnvrt, ihdcnv, kiter, n)
         hnew(n) = this%hdry
         if (this%ibound(n) < 0) then
           errmsg = 'CONSTANT-HEAD CELL WENT DRY -- SIMULATION ABORTED'
           call store_error(errmsg)
-          write (errmsg, fmttopbotthk) ttop, bbot, thck
+          write (errmsg, fmttopbotthk) ttop, bbot, thick
           call store_error(errmsg)
           call this%dis%noder_to_string(n, nodestr)
           write (errmsg, fmtni) trim(adjustl(nodestr)), kiter, kstp, kper

@@ -7510,14 +7510,14 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     logical :: flag_string
     !
     ! -- initialize variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
@@ -7542,10 +7542,10 @@ contains
         obsrv%ObsTypeId == 'DELAY-THETA' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
-      call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+      call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     else
       nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                  iout, strng, flag_string)
+                                  iout, string, flag_string)
     end if
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
@@ -7557,7 +7557,7 @@ contains
           obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
           obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
           obsrv%ObsTypeId == 'DELAY-THETA') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname
           ! -- reset nn1

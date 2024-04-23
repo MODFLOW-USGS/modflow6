@@ -3607,7 +3607,7 @@ contains
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
-    real(DP) :: hlak, blak
+    real(DP) :: hlak, bottom_lake
     !
     ! -- save groundwater seepage for lake solution
     do n = 1, this%nlakes
@@ -3665,8 +3665,8 @@ contains
         end if
         !
         ! -- Mark ibound for wet lakes or inactive lakes; reset to 1 otherwise
-        blak = this%belev(j)
-        if (hlak > blak .or. this%iboundpak(n) == 0) then
+        bottom_lake = this%belev(j)
+        if (hlak > bottom_lake .or. this%iboundpak(n) == 0) then
           this%ibound(igwfnode) = IWETLAKE
         else
           this%ibound(igwfnode) = 1
@@ -4998,22 +4998,22 @@ contains
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     !
-    strng = obsrv%IDstring
-    ! -- Extract lake number from strng and store it.
+    string = obsrv%IDstring
+    ! -- Extract lake number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    lake name--deal with it.
     icol = 1
     ! -- get lake number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
       if (obsrv%ObsTypeId == 'LAK' .or. obsrv%ObsTypeId == 'CONDUCTANCE' .or. &
           obsrv%ObsTypeId == 'WETTED-AREA') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (len_trim(bndName) < 1 .and. nn2 < 0) then
           write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
             'For observation type', trim(adjustl(obsrv%ObsTypeId)), &
