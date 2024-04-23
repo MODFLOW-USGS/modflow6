@@ -1,5 +1,6 @@
 BEGIN OPTIONS
   [STORAGE]
+  [STORAGE_WEIGHT <storage_weight>]
   [AUXILIARY <auxiliary(naux)>]
   [BOUNDNAMES]
   [PRINT_INPUT]

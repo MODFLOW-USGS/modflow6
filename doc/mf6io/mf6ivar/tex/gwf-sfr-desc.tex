@@ -5,6 +5,8 @@
 \begin{description}
 \item \texttt{STORAGE}---keyword that activates storage contributions to the stream-flow routing package continuity equation.
 
+\item \texttt{storage\_weight}---real number value that defines the time weighting factor used to calculate the change in channel storage. STORAGE_WEIGHT has a value between 0.5 and 1. Default STORAGE_WEIGHT value is 0.5.
+
 \item \texttt{auxiliary}---defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block.
 
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of stream reach cells.

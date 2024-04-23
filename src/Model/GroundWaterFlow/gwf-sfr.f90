@@ -81,6 +81,7 @@ module SfrModule
     real(DP), pointer :: timeconv => NULL() !< time conversion factor (SI to model units)
     real(DP), pointer :: dmaxchg => NULL() !< maximum depth change allowed
     real(DP), pointer :: deps => NULL() !< perturbation value
+    real(DP), pointer :: storage_weight => NULL() !< time weighting factor for kinematic wave approximation
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous :: isfrorder => null() !< sfr reach order determined from DAG of upstream reaches
     integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< CRS row pointer for SFR reaches
@@ -187,6 +188,7 @@ module SfrModule
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
     procedure, private :: sfr_calc_constant
+    procedure, private :: sfr_calc_transient
     procedure, private :: sfr_calc_steady
     procedure, private :: sfr_update_flows
     procedure, private :: sfr_adjust_ro_ev
@@ -317,12 +319,16 @@ contains
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
     call mem_allocate(this%ianynone, 'IANYNONE', this%memoryPath)
     call mem_allocate(this%ncrossptstot, 'NCROSSPTSTOT', this%memoryPath)
+    if (this%istorage == 1) then
+      call mem_allocate(this%storage_weight, 'STORAGE_WEIGHT', this%memoryPath)
+    end if
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Set values
     this%istorage = 0
+    this%storage_weight = DHALF
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
@@ -345,6 +351,9 @@ contains
     this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
+    if (this%istorage == 1) then
+      this%storage_weight = DHALF
+    end if
     !
     ! -- return
     return
@@ -679,6 +688,8 @@ contains
     character(len=*), parameter :: fmtsfrbin = &
       "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, &
     &'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtstoweight = &
+      &"(4x, 'KINEMATIC STORAGE WEIGHT (',g0,') SPECIFIED.')"
     !
     ! -- Check for SFR options
     found = .true.
@@ -687,10 +698,13 @@ contains
       this%istorage = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' REACH STORAGE IS ACTIVE.'
+    case ('STORAGE_WEIGHT')
+      this%storage_weight = this%parser%GetDouble()
+      write (this%iout, fmtstoweight) this%storage_weight
     case ('PRINT_STAGE')
-      this%iprhed = 1
-      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
-        ' STAGES WILL BE PRINTED TO LISTING FILE.'
+    this%iprhed = 1
+    write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
+      ' STAGES WILL BE PRINTED TO LISTING FILE.'
     case ('STAGE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -2822,8 +2836,9 @@ contains
     call mem_deallocate(this%denseterms)
     call mem_deallocate(this%viscratios)
     !
-    ! -- stage, usflow, and dsflow for previous timestep
+    ! -- storage_weight and stage, usflow, and dsflow for previous timestep
     if (this%istorage == 1) then
+      call mem_deallocate(this%storage_weight)
       call mem_deallocate(this%stageold)
       call mem_deallocate(this%usflowold)
       call mem_deallocate(this%dsflowold)
@@ -3631,9 +3646,15 @@ contains
       if (this%iboundpak(n) < 0) then
         call this%sfr_calc_constant(n, d1, hgwf, qgwf, qd)
       else
-        call this%sfr_calc_steady(n, d1, hgwf, qu, qi, &
-                                  qfrommvr, qr, qe, qro, &
-                                  qgwf, qd)
+        if (this%istorage == 1) then
+          call this%sfr_calc_transient(n, d1, hgwf, qu, qi, &
+                                       qfrommvr, qr, qe, qro, &
+                                       qgwf, qd)
+        else
+          call this%sfr_calc_steady(n, d1, hgwf, qu, qi, &
+                                    qfrommvr, qr, qe, qro, &
+                                    qgwf, qd)
+        end if
       end if
 
       ! -- update sfr stage
@@ -4149,7 +4170,44 @@ contains
 
   end subroutine sfr_calc_constant
 
-  subroutine sfr_calc_steady(this, n, d1, hgwf, &
+  subroutine sfr_calc_transient(this, n, d1, hgwf, &
+                                qu, qi, qfrommvr, qr, qe, qro, &
+                                qgwf, qd)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    integer(I4B), intent(in) :: n !< reach number
+    real(DP), intent(inout) :: d1 !< current reach depth estimate
+    real(DP), intent(in) :: hgwf !< head in gw cell
+    real(DP), intent(in) :: qu !< reach upstream flow
+    real(DP), intent(in) :: qi !< reach specified inflow
+    real(DP), intent(in) :: qfrommvr !< reach flow from mover
+    real(DP), intent(in) :: qr !< reach rainfall
+    real(DP), intent(in) :: qe !< reach evaporation
+    real(DP), intent(in) :: qro !< reach runoff flow
+    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+    real(DP), intent(inout) :: qd !< reach outflow
+    ! -- local  variables
+    real(DP) :: qlat
+    real(DP) :: da
+    real(DP) :: db
+    real(DP) :: dc
+    real(DP) :: dd
+    real(DP) :: qa
+    real(DP) :: qb
+    real(DP) :: qc
+
+    qlat = (qr + qro - qe) / this%length(n)
+
+    qa = this%usflowold(n)
+    qb = this%dsflowold(n)
+    call this%sfr_calc_reach_depth(n, qa, da)
+    call this%sfr_calc_reach_depth(n, qb, db)
+
+
+
+end subroutine sfr_calc_transient
+
+subroutine sfr_calc_steady(this, n, d1, hgwf, &
                              qu, qi, qfrommvr, qr, qe, qro, &
                              qgwf, qd)
     ! -- dummy variables
