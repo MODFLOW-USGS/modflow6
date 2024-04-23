@@ -54,6 +54,25 @@ def create_izone(nlay, nrow, ncol):
     return izone
 
 
+def build_gwf_sim(name, ws, mf6):
+    gwf_sim = FlopyReadmeCase.get_gwf_sim(
+        name, ws, mf6
+    )
+    gwf = gwf_sim.get_model()
+    dis = gwf.get_package("DIS")
+    nlay = int(name[-1])
+    botm = [FlopyReadmeCase.top - (k + 1) for k in range(nlay)]
+    botm_data = np.array(
+        [
+            list(repeat(b, FlopyReadmeCase.nrow * FlopyReadmeCase.ncol))
+            for b in botm
+        ]
+    ).reshape((nlay, FlopyReadmeCase.nrow, FlopyReadmeCase.ncol))
+    dis.nlay = nlay
+    dis.botm.set_data(botm_data)
+    return gwf_sim
+
+
 def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     # create simulation
     sim = flopy.mf6.MFSimulation(
@@ -193,21 +212,8 @@ def build_mp7_sim(name, ws, mp7, gwf):
 
 
 def build_models(idx, test):
-    gwf_sim = FlopyReadmeCase.get_gwf_sim(
-        test.name, test.workspace, test.targets["mf6"]
-    )
+    gwf_sim = build_gwf_sim(test.name, test.workspace, test.targets["mf6"])
     gwf = gwf_sim.get_model()
-    dis = gwf.get_package("DIS")
-    nlay = int(test.name[-1])
-    botm = [FlopyReadmeCase.top - (k + 1) for k in range(nlay)]
-    botm_data = np.array(
-        [
-            list(repeat(b, FlopyReadmeCase.nrow * FlopyReadmeCase.ncol))
-            for b in botm
-        ]
-    ).reshape((nlay, FlopyReadmeCase.nrow, FlopyReadmeCase.ncol))
-    dis.nlay = nlay
-    dis.botm.set_data(botm_data)
     prt_sim = build_prt_sim(
         test.name, test.workspace, test.workspace / "prt", test.targets["mf6"]
     )
