@@ -216,6 +216,7 @@ module SfrModule
     procedure, private :: sfr_calc_xs_depth
     ! -- error checking
     procedure, private :: sfr_check_conversion
+    procedure, private :: sfr_check_storage_weight
     procedure, private :: sfr_check_reaches
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
@@ -313,15 +314,13 @@ contains
     call mem_allocate(this%timeconv, 'TIMECONV', this%memoryPath)
     call mem_allocate(this%dmaxchg, 'DMAXCHG', this%memoryPath)
     call mem_allocate(this%deps, 'DEPS', this%memoryPath)
+    call mem_allocate(this%storage_weight, 'STORAGE_WEIGHT', this%memoryPath)
     call mem_allocate(this%nconn, 'NCONN', this%memoryPath)
     call mem_allocate(this%icheck, 'ICHECK', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
     call mem_allocate(this%ianynone, 'IANYNONE', this%memoryPath)
     call mem_allocate(this%ncrossptstot, 'NCROSSPTSTOT', this%memoryPath)
-    if (this%istorage == 1) then
-      call mem_allocate(this%storage_weight, 'STORAGE_WEIGHT', this%memoryPath)
-    end if
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
@@ -344,6 +343,7 @@ contains
     this%timeconv = DNODATA
     this%dmaxchg = DEM5
     this%deps = DP999 * this%dmaxchg
+    this%storage_weight = DNODATA
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
@@ -351,9 +351,6 @@ contains
     this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
-    if (this%istorage == 1) then
-      this%storage_weight = DHALF
-    end if
     !
     ! -- return
     return
@@ -699,8 +696,16 @@ contains
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' REACH STORAGE IS ACTIVE.'
     case ('STORAGE_WEIGHT')
-      this%storage_weight = this%parser%GetDouble()
-      write (this%iout, fmtstoweight) this%storage_weight
+      r = this%parser%GetDouble()
+      if (r < DHALF .or. r > DONE) then
+        write(errmsg, '(a,g0,a)') &
+          "STORAGE_WEIGHT SPECIFIED TO BE '", r, &
+          "' BUT CANNOT BE LESS THAN 0.5 OR GREATER THAN 1.0"
+        call store_error(errmsg)
+      else
+        this%storage_weight = r
+        write (this%iout, fmtstoweight) this%storage_weight
+      end if
     case ('PRINT_STAGE')
     this%iprhed = 1
     write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
@@ -852,6 +857,9 @@ contains
     !
     ! -- check the sfr unit conversion data
     call this%sfr_check_conversion()
+    !
+    ! -- check the storage_weight
+    call this%sfr_check_storage_weight()
     !
     ! -- check the sfr reach data
     call this%sfr_check_reaches()
@@ -2836,9 +2844,8 @@ contains
     call mem_deallocate(this%denseterms)
     call mem_deallocate(this%viscratios)
     !
-    ! -- storage_weight and stage, usflow, and dsflow for previous timestep
+    ! -- stage, usflow, and dsflow for previous timestep
     if (this%istorage == 1) then
-      call mem_deallocate(this%storage_weight)
       call mem_deallocate(this%stageold)
       call mem_deallocate(this%usflowold)
       call mem_deallocate(this%dsflowold)
@@ -2903,6 +2910,7 @@ contains
     !
     ! -- deallocate scalars
     call mem_deallocate(this%istorage)
+    call mem_deallocate(this%storage_weight)
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
@@ -4190,11 +4198,11 @@ contains
     real(DP) :: qlat
     real(DP) :: da
     real(DP) :: db
-    real(DP) :: dc
-    real(DP) :: dd
+    ! real(DP) :: dc
+    ! real(DP) :: dd
     real(DP) :: qa
     real(DP) :: qb
-    real(DP) :: qc
+    ! real(DP) :: qc
 
     qlat = (qr + qro - qe) / this%length(n)
 
@@ -4694,6 +4702,31 @@ subroutine sfr_calc_steady(this, n, d1, hgwf, &
     return
   end subroutine sfr_check_conversion
 
+  !> @brief Check storage weight
+    !!
+    !! Method to check specified data for a SFR package. This method
+    !! also creates the tables used to print input data, if this
+    !! option in enabled in the SFR package.
+    !!
+  !<
+  subroutine sfr_check_storage_weight(this)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    ! -- formats
+    character(len=*), parameter :: fmtweight = &
+      &"(1x,'SFR PACKAGE (',a,') SETTING DEFAULT',&
+      &/4x,'STORAGE_WEIGHT VALUE (',g0,').',/)"
+    !
+    ! -- set storage weight if it has not been defined yet
+    if (this%istorage == 1) then
+      if (this%storage_weight == DNODATA) then
+        this%storage_weight = DHALF
+        write (this%iout, fmtweight) &
+          trim(adjustl(this%packName)), this%storage_weight
+      end if
+    end if
+  end subroutine sfr_check_storage_weight
+
   !> @brief Check reach data
     !!
     !! Method to check specified data for a SFR package. This method
@@ -4742,8 +4775,6 @@ subroutine sfr_calc_steady(this, n, d1, hgwf, &
       text = 'UPSTREAM FRACTION'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
-    !
-    ! --
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound

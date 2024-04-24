@@ -16,7 +16,7 @@ type double precision
 reader urword
 optional true
 longname reach storage time weighting
-description real number value that defines the time weighting factor used to calculate the change in channel storage. STORAGE_WEIGHT has a value between 0.5 and 1. Default STORAGE_WEIGHT value is 0.5.
+description real number value that defines the time weighting factor used to calculate the change in channel storage. STORAGE_WEIGHT must have a value between 0.5 and 1. Default STORAGE_WEIGHT value is 0.5.
 
 block options
 name auxiliary
