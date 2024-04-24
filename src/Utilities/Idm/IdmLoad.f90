@@ -14,7 +14,8 @@ module IdmLoadModule
   use ListModule, only: ListType
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, &
                                  DynamicPkgLoadBaseType, &
-                                 ModelDynamicPkgsType
+                                 ModelDynamicPkgsType, &
+                                 model_dynamic_pkgs
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
 
@@ -28,8 +29,6 @@ module IdmLoadModule
   public :: idm_rp
   public :: idm_ad
   public :: idm_da
-
-  type(ListType) :: model_dynamic_pkgs
 
 contains
 
@@ -122,29 +121,27 @@ contains
 
   !> @brief load an integrated model package from supported source
   !<
-  subroutine model_pkg_load(model_pkg_inputs, itype, ipkg, iout)
+  recursive subroutine input_load(component_type, subcomponent_type, modelname, &
+                                  pkgname, pkgtype, filename, modelfname, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
     use SourceLoadModule, only: create_input_loader
-    type(ModelPackageInputsType), intent(in) :: model_pkg_inputs
-    integer(I4B), intent(in) :: itype
-    integer(I4B), intent(in) :: ipkg
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: subcomponent_type
+    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: pkgtype
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
     integer(I4B), intent(in) :: iout
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
     class(ModelDynamicPkgsType), pointer :: dynamic_pkgs
-    !
-    ! -- initialize
-    nullify (dynamic_pkgs)
+    integer(I4B) :: n
     !
     ! -- create model package loader
     static_loader => &
-      create_input_loader(model_pkg_inputs%component_type, &
-                          model_pkg_inputs%pkglist(itype)%subcomponent_type, &
-                          model_pkg_inputs%modelname, &
-                          model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
-                          model_pkg_inputs%pkglist(itype)%pkgtype, &
-                          model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
-                          model_pkg_inputs%modelfname)
+      create_input_loader(component_type, subcomponent_type, modelname, pkgname, &
+                          pkgtype, filename, modelfname)
     !
     ! -- load static input and set dynamic loader
     dynamic_loader => static_loader%load(iout)
@@ -152,14 +149,30 @@ contains
     if (associated(dynamic_loader)) then
       !
       ! -- set pointer to model dynamic packages list
-      dynamic_pkgs => dynamic_model_pkgs(model_pkg_inputs%modelname, &
-                                         static_loader%component_input_name, &
-                                         iout)
+      dynamic_pkgs => &
+        dynamic_model_pkgs(static_loader%mf6_input%component_type, modelname, &
+                           static_loader%component_input_name, iout)
       !
       ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
       !
     end if
+    !
+    ! -- create subpackage list
+    call static_loader%create_subpkg_list()
+    !
+    ! -- load idm integrated subpackages
+    do n = 1, static_loader%subpkg_list%pnum
+      !
+      ! -- load subpackage
+      call input_load(static_loader%subpkg_list%component_types(n), &
+                      static_loader%subpkg_list%subcomponent_types(n), &
+                      static_loader%mf6_input%component_name, &
+                      static_loader%subpkg_list%subcomponent_types(n), &
+                      static_loader%subpkg_list%pkgtypes(n), &
+                      static_loader%subpkg_list%filenames(n), &
+                      modelfname, iout)
+    end do
     !
     ! -- cleanup
     call static_loader%destroy()
@@ -167,7 +180,7 @@ contains
     !
     ! -- return
     return
-  end subroutine model_pkg_load
+  end subroutine input_load
 
   !> @brief load integrated model package files
   !<
@@ -190,7 +203,13 @@ contains
           then
           !
           ! -- only load if model pkg can read from input context
-          call model_pkg_load(model_pkg_inputs, itype, ipkg, iout)
+          call input_load(model_pkg_inputs%component_type, &
+                          model_pkg_inputs%pkglist(itype)%subcomponent_type, &
+                          model_pkg_inputs%modelname, &
+                          model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
+                          model_pkg_inputs%pkglist(itype)%pkgtype, &
+                          model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
+                          model_pkg_inputs%modelfname, iout)
         else
           !
           ! -- open input file for package parser
@@ -478,9 +497,10 @@ contains
 
   !> @brief retrieve list of model dynamic loaders
   !<
-  function dynamic_model_pkgs(modelname, modelfname, iout) &
+  function dynamic_model_pkgs(modeltype, modelname, modelfname, iout) &
     result(model_dynamic_input)
     use InputLoadTypeModule, only: AddDynamicModelToList, GetDynamicModelFromList
+    character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     integer(I4B), intent(in) :: iout
@@ -503,7 +523,7 @@ contains
     ! -- create if not found
     if (.not. associated(model_dynamic_input)) then
       allocate (model_dynamic_input)
-      call model_dynamic_input%init(modelname, modelfname, iout)
+      call model_dynamic_input%init(modeltype, modelname, modelfname, iout)
       call AddDynamicModelToList(model_dynamic_pkgs, model_dynamic_input)
     end if
     !

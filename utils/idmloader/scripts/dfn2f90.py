@@ -31,6 +31,7 @@ class Dfn2F90:
         self._aggregate_varnames = []
         self._warnings = []
         self._multi_package = False
+        self._subpackage = []
         self._verbose = verbose
 
         self.component, self.subcomponent = self._dfnfspec.stem.upper().split(
@@ -80,6 +81,17 @@ class Dfn2F90:
                 f"  logical :: {self.component.lower()}_"
                 f"{self.subcomponent.lower()}_multi_package = {smult}\n\n"
             )
+
+            # subpackage
+            f.write(
+                f"  character(len=16), parameter :: &\n"
+                f"    {self.component.lower()}_{self.subcomponent.lower()}_subpackages(*) = &\n"
+            )
+            if not len(self._subpackage):
+              self._subpackage.append(''.ljust(16))
+            f.write(f"    [ &\n")
+            f.write("    '" + "', &\n    '" .join(self._subpackage) + "' &\n")
+            f.write(f"    ]\n\n")
 
             # params
             if len(self._param_varnames):
@@ -196,6 +208,10 @@ class Dfn2F90:
                 # flopy multi-package
                 if "flopy multi-package" in line.strip():
                     self._multi_package = True
+                elif "mf6 subpackage" in line.strip():
+                    sp = line.replace("# mf6 subpackage ", "").strip()
+                    sp = sp.upper()
+                    self._subpackage.append(sp.ljust(16))
                 continue
 
             ll = line.strip().split()
@@ -520,7 +536,9 @@ class Dfn2F90:
             f"  public {component.capitalize()}{subcomponent.capitalize()}"
             f"ParamFoundType\n"
             f"  public {component.lower()}_{subcomponent.lower()}_"
-            f"multi_package\n\n"
+            f"multi_package\n"
+            f"  public {component.lower()}_{subcomponent.lower()}_"
+            f"subpackages\n\n"
         )
 
         return s
@@ -588,6 +606,7 @@ class IdmDfnSelector:
             self._write_master_defn(fh, defn="aggregate", dtype="param")
             self._write_master_defn(fh, defn="block", dtype="block")
             self._write_master_multi(fh)
+            self._write_master_sub(fh)
             self._write_master_integration(fh)
             self._write_master_component(fh)
             fh.write(f"end module IdmDfnSelectorModule\n")
@@ -620,6 +639,7 @@ class IdmDfnSelector:
                     dtype="block",
                 )
                 self._write_selector_multi(fh, component=c, sc_list=self._d[c])
+                self._write_selector_sub(fh, component=c, sc_list=self._d[c])
                 self._write_selector_integration(
                     fh, component=c, sc_list=self._d[c]
                 )
@@ -652,6 +672,7 @@ class IdmDfnSelector:
             f"  public :: {c.lower()}_aggregate_definitions\n"
             f"  public :: {c.lower()}_block_definitions\n"
             f"  public :: {c.lower()}_idm_multi_package\n"
+            f"  public :: {c.lower()}_idm_subpackages\n"
             f"  public :: {c.lower()}_idm_integrated\n\n"
         )
         s += f"contains\n\n"
@@ -677,6 +698,16 @@ class IdmDfnSelector:
             f"target :: input_dfn_target\n"
             f"    input_dfn => input_dfn_target\n"
             f"  end subroutine set_block_pointer\n\n"
+        )
+
+        s += (
+            f"  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)\n"
+            f"    character(len=16), dimension(:), "
+            f"pointer :: subpkg_list\n"
+            f"    character(len=16), dimension(:), "
+            f"target :: subpkg_list_target\n"
+            f"    subpkg_list => subpkg_list_target\n"
+            f"  end subroutine set_subpkg_pointer\n\n"
         )
 
         fh.write(s)
@@ -744,6 +775,33 @@ class IdmDfnSelector:
 
         fh.write(s)
 
+    def _write_selector_sub(self, fh=None, component=None, sc_list=None):
+        c = component
+
+        s = (
+            f"  function {c.lower()}_idm_subpackages(subcomponent) "
+            f"result(subpackages)\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    character(len=16), dimension(:), pointer :: subpackages\n"
+            f"    select case (subcomponent)\n"
+        )
+
+        for sc in sc_list:
+            s += (
+                f"    case ('{sc}')\n"
+                f"      call set_subpkg_pointer(subpackages, "
+                f"{c.lower()}_{sc.lower()}_subpackages)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function {c.lower()}_idm_subpackages\n\n"
+        )
+
+        fh.write(s)
+
     def _write_selector_integration(
         self, fh=None, component=None, sc_list=None
     ):
@@ -795,6 +853,7 @@ class IdmDfnSelector:
             f"  public :: aggregate_definitions\n"
             f"  public :: block_definitions\n"
             f"  public :: idm_multi_package\n"
+            f"  public :: idm_subpackages\n"
             f"  public :: idm_integrated\n"
             f"  public :: idm_component\n\n"
             f"contains\n\n"
@@ -856,6 +915,36 @@ class IdmDfnSelector:
             f"    end select\n"
             f"    return\n"
             f"  end function idm_multi_package\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_sub(self, fh=None):
+        s = (
+            f"  function idm_subpackages(component, subcomponent) "
+            f"result(subpackages)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    character(len=16), dimension(:), pointer :: subpackages\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += (
+                f"    case ('{c}')\n"
+                f"      subpackages => {c.lower()}_idm_"
+                f"subpackages(subcomponent)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"      call store_error('Idm selector component not found; '//&\n"
+            f"                       &'component=\"'//trim(component)//&\n"
+            f"                       &'\", subcomponent=\"'//trim(subcomponent)"
+            f"//'\".', .true.)\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function idm_subpackages\n\n"
         )
 
         fh.write(s)
