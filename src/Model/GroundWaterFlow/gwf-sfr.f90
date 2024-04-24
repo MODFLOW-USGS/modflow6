@@ -698,7 +698,7 @@ contains
     case ('STORAGE_WEIGHT')
       r = this%parser%GetDouble()
       if (r < DHALF .or. r > DONE) then
-        write(errmsg, '(a,g0,a)') &
+        write (errmsg, '(a,g0,a)') &
           "STORAGE_WEIGHT SPECIFIED TO BE '", r, &
           "' BUT CANNOT BE LESS THAN 0.5 OR GREATER THAN 1.0"
         call store_error(errmsg)
@@ -707,9 +707,9 @@ contains
         write (this%iout, fmtstoweight) this%storage_weight
       end if
     case ('PRINT_STAGE')
-    this%iprhed = 1
-    write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
-      ' STAGES WILL BE PRINTED TO LISTING FILE.'
+      this%iprhed = 1
+      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
+        ' STAGES WILL BE PRINTED TO LISTING FILE.'
     case ('STAGE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -4211,11 +4211,9 @@ contains
     call this%sfr_calc_reach_depth(n, qa, da)
     call this%sfr_calc_reach_depth(n, qb, db)
 
+  end subroutine sfr_calc_transient
 
-
-end subroutine sfr_calc_transient
-
-subroutine sfr_calc_steady(this, n, d1, hgwf, &
+  subroutine sfr_calc_steady(this, n, d1, hgwf, &
                              qu, qi, qfrommvr, qr, qe, qro, &
                              qgwf, qd)
     ! -- dummy variables
