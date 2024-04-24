@@ -9,6 +9,7 @@ module SwfIcInputModule
   public swf_ic_block_definitions
   public SwfIcParamFoundType
   public swf_ic_multi_package
+  public swf_ic_subpackages
 
   type SwfIcParamFoundType
     logical :: export_ascii = .false.
@@ -16,6 +17,12 @@ module SwfIcInputModule
   end type SwfIcParamFoundType
 
   logical :: swf_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfic_export_ascii = InputParamDefinitionType &

@@ -9,6 +9,7 @@ module SimTdisInputModule
   public sim_tdis_block_definitions
   public SimTdisParamFoundType
   public sim_tdis_multi_package
+  public sim_tdis_subpackages
 
   type SimTdisParamFoundType
     logical :: time_units = .false.
@@ -24,6 +25,12 @@ module SimTdisInputModule
   end type SimTdisParamFoundType
 
   logical :: sim_tdis_multi_package = .false.
+
+  character(len=16), parameter :: &
+    sim_tdis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     simtdis_time_units = InputParamDefinitionType &

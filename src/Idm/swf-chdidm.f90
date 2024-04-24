@@ -9,6 +9,7 @@ module SwfChdInputModule
   public swf_chd_block_definitions
   public SwfChdParamFoundType
   public swf_chd_multi_package
+  public swf_chd_subpackages
 
   type SwfChdParamFoundType
     logical :: auxiliary = .false.
@@ -32,6 +33,12 @@ module SwfChdInputModule
   end type SwfChdParamFoundType
 
   logical :: swf_chd_multi_package = .true.
+
+  character(len=16), parameter :: &
+    swf_chd_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfchd_auxiliary = InputParamDefinitionType &

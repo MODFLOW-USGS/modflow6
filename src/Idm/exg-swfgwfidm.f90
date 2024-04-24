@@ -9,6 +9,7 @@ module ExgSwfgwfInputModule
   public exg_swfgwf_block_definitions
   public ExgSwfgwfParamFoundType
   public exg_swfgwf_multi_package
+  public exg_swfgwf_subpackages
 
   type ExgSwfgwfParamFoundType
     logical :: ipr_input = .false.
@@ -24,6 +25,12 @@ module ExgSwfgwfInputModule
   end type ExgSwfgwfParamFoundType
 
   logical :: exg_swfgwf_multi_package = .true.
+
+  character(len=16), parameter :: &
+    exg_swfgwf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exgswfgwf_ipr_input = InputParamDefinitionType &

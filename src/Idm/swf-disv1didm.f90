@@ -9,6 +9,7 @@ module SwfDisv1DInputModule
   public swf_disv1d_block_definitions
   public SwfDisv1dParamFoundType
   public swf_disv1d_multi_package
+  public swf_disv1d_subpackages
 
   type SwfDisv1dParamFoundType
     logical :: length_units = .false.
@@ -33,6 +34,12 @@ module SwfDisv1DInputModule
   end type SwfDisv1dParamFoundType
 
   logical :: swf_disv1d_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_disv1d_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfdisv1d_length_units = InputParamDefinitionType &

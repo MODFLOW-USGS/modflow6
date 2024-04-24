@@ -9,6 +9,7 @@ module PrtNamInputModule
   public prt_nam_block_definitions
   public PrtNamParamFoundType
   public prt_nam_multi_package
+  public prt_nam_subpackages
 
   type PrtNamParamFoundType
     logical :: list = .false.
@@ -21,6 +22,12 @@ module PrtNamInputModule
   end type PrtNamParamFoundType
 
   logical :: prt_nam_multi_package = .false.
+
+  character(len=16), parameter :: &
+    prt_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     prtnam_list = InputParamDefinitionType &

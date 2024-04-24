@@ -9,6 +9,7 @@ module GweCtpInputModule
   public gwe_ctp_block_definitions
   public GweCtpParamFoundType
   public gwe_ctp_multi_package
+  public gwe_ctp_subpackages
 
   type GweCtpParamFoundType
     logical :: auxiliary = .false.
@@ -32,6 +33,12 @@ module GweCtpInputModule
   end type GweCtpParamFoundType
 
   logical :: gwe_ctp_multi_package = .true.
+
+  character(len=16), parameter :: &
+    gwe_ctp_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwectp_auxiliary = InputParamDefinitionType &

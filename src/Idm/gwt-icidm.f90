@@ -9,6 +9,7 @@ module GwtIcInputModule
   public gwt_ic_block_definitions
   public GwtIcParamFoundType
   public gwt_ic_multi_package
+  public gwt_ic_subpackages
 
   type GwtIcParamFoundType
     logical :: export_ascii = .false.
@@ -16,6 +17,12 @@ module GwtIcInputModule
   end type GwtIcParamFoundType
 
   logical :: gwt_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwt_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtic_export_ascii = InputParamDefinitionType &

@@ -9,6 +9,7 @@ module ExgGwfgwfInputModule
   public exg_gwfgwf_block_definitions
   public ExgGwfgwfParamFoundType
   public exg_gwfgwf_multi_package
+  public exg_gwfgwf_subpackages
 
   type ExgGwfgwfParamFoundType
     logical :: auxiliary = .false.
@@ -45,6 +46,12 @@ module ExgGwfgwfInputModule
   end type ExgGwfgwfParamFoundType
 
   logical :: exg_gwfgwf_multi_package = .true.
+
+  character(len=16), parameter :: &
+    exg_gwfgwf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exggwfgwf_auxiliary = InputParamDefinitionType &

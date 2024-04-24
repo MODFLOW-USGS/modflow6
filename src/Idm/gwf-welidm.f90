@@ -9,6 +9,7 @@ module GwfWelInputModule
   public gwf_wel_block_definitions
   public GwfWelParamFoundType
   public gwf_wel_multi_package
+  public gwf_wel_subpackages
 
   type GwfWelParamFoundType
     logical :: auxiliary = .false.
@@ -38,6 +39,12 @@ module GwfWelInputModule
   end type GwfWelParamFoundType
 
   logical :: gwf_wel_multi_package = .true.
+
+  character(len=16), parameter :: &
+    gwf_wel_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfwel_auxiliary = InputParamDefinitionType &

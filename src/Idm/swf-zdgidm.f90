@@ -9,6 +9,7 @@ module SwfZdgInputModule
   public swf_zdg_block_definitions
   public SwfZdgParamFoundType
   public swf_zdg_multi_package
+  public swf_zdg_subpackages
 
   type SwfZdgParamFoundType
     logical :: auxiliary = .false.
@@ -34,6 +35,12 @@ module SwfZdgInputModule
   end type SwfZdgParamFoundType
 
   logical :: swf_zdg_multi_package = .true.
+
+  character(len=16), parameter :: &
+    swf_zdg_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfzdg_auxiliary = InputParamDefinitionType &

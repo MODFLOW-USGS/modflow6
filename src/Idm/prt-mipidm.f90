@@ -9,6 +9,7 @@ module PrtMipInputModule
   public prt_mip_block_definitions
   public PrtMipParamFoundType
   public prt_mip_multi_package
+  public prt_mip_subpackages
 
   type PrtMipParamFoundType
     logical :: export_ascii = .false.
@@ -18,6 +19,12 @@ module PrtMipInputModule
   end type PrtMipParamFoundType
 
   logical :: prt_mip_multi_package = .false.
+
+  character(len=16), parameter :: &
+    prt_mip_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     prtmip_export_ascii = InputParamDefinitionType &

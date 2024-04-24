@@ -9,6 +9,7 @@ module GwfRivInputModule
   public gwf_riv_block_definitions
   public GwfRivParamFoundType
   public gwf_riv_multi_package
+  public gwf_riv_subpackages
 
   type GwfRivParamFoundType
     logical :: auxiliary = .false.
@@ -35,6 +36,12 @@ module GwfRivInputModule
   end type GwfRivParamFoundType
 
   logical :: gwf_riv_multi_package = .true.
+
+  character(len=16), parameter :: &
+    gwf_riv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfriv_auxiliary = InputParamDefinitionType &

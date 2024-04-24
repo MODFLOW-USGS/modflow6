@@ -9,6 +9,7 @@ module GwfDisuInputModule
   public gwf_disu_block_definitions
   public GwfDisuParamFoundType
   public gwf_disu_multi_package
+  public gwf_disu_subpackages
 
   type GwfDisuParamFoundType
     logical :: length_units = .false.
@@ -42,6 +43,12 @@ module GwfDisuInputModule
   end type GwfDisuParamFoundType
 
   logical :: gwf_disu_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_disu_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfdisu_length_units = InputParamDefinitionType &

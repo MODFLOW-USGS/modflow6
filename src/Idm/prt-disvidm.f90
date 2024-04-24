@@ -9,6 +9,7 @@ module PrtDisvInputModule
   public prt_disv_block_definitions
   public PrtDisvParamFoundType
   public prt_disv_multi_package
+  public prt_disv_subpackages
 
   type PrtDisvParamFoundType
     logical :: length_units = .false.
@@ -34,6 +35,12 @@ module PrtDisvInputModule
   end type PrtDisvParamFoundType
 
   logical :: prt_disv_multi_package = .false.
+
+  character(len=16), parameter :: &
+    prt_disv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     prtdisv_length_units = InputParamDefinitionType &

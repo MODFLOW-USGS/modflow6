@@ -9,6 +9,7 @@ module GweDisuInputModule
   public gwe_disu_block_definitions
   public GweDisuParamFoundType
   public gwe_disu_multi_package
+  public gwe_disu_subpackages
 
   type GweDisuParamFoundType
     logical :: length_units = .false.
@@ -42,6 +43,12 @@ module GweDisuInputModule
   end type GweDisuParamFoundType
 
   logical :: gwe_disu_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_disu_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwedisu_length_units = InputParamDefinitionType &

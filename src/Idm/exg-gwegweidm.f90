@@ -9,6 +9,7 @@ module ExgGwegweInputModule
   public exg_gwegwe_block_definitions
   public ExgGwegweParamFoundType
   public exg_gwegwe_multi_package
+  public exg_gwegwe_subpackages
 
   type ExgGwegweParamFoundType
     logical :: gwfmodelname1 = .false.
@@ -41,6 +42,12 @@ module ExgGwegweInputModule
   end type ExgGwegweParamFoundType
 
   logical :: exg_gwegwe_multi_package = .true.
+
+  character(len=16), parameter :: &
+    exg_gwegwe_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exggwegwe_gwfmodelname1 = InputParamDefinitionType &

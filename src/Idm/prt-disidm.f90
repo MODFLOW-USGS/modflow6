@@ -9,6 +9,7 @@ module PrtDisInputModule
   public prt_dis_block_definitions
   public PrtDisParamFoundType
   public prt_dis_multi_package
+  public prt_dis_subpackages
 
   type PrtDisParamFoundType
     logical :: length_units = .false.
@@ -28,6 +29,12 @@ module PrtDisInputModule
   end type PrtDisParamFoundType
 
   logical :: prt_dis_multi_package = .false.
+
+  character(len=16), parameter :: &
+    prt_dis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     prtdis_length_units = InputParamDefinitionType &

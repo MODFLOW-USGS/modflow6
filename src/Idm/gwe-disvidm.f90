@@ -9,6 +9,7 @@ module GweDisvInputModule
   public gwe_disv_block_definitions
   public GweDisvParamFoundType
   public gwe_disv_multi_package
+  public gwe_disv_subpackages
 
   type GweDisvParamFoundType
     logical :: length_units = .false.
@@ -34,6 +35,12 @@ module GweDisvInputModule
   end type GweDisvParamFoundType
 
   logical :: gwe_disv_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_disv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwedisv_length_units = InputParamDefinitionType &

@@ -9,6 +9,7 @@ module GwtCncInputModule
   public gwt_cnc_block_definitions
   public GwtCncParamFoundType
   public gwt_cnc_multi_package
+  public gwt_cnc_subpackages
 
   type GwtCncParamFoundType
     logical :: auxiliary = .false.
@@ -32,6 +33,12 @@ module GwtCncInputModule
   end type GwtCncParamFoundType
 
   logical :: gwt_cnc_multi_package = .true.
+
+  character(len=16), parameter :: &
+    gwt_cnc_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtcnc_auxiliary = InputParamDefinitionType &

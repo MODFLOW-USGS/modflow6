@@ -9,6 +9,7 @@ module GweDisInputModule
   public gwe_dis_block_definitions
   public GweDisParamFoundType
   public gwe_dis_multi_package
+  public gwe_dis_subpackages
 
   type GweDisParamFoundType
     logical :: length_units = .false.
@@ -28,6 +29,12 @@ module GweDisInputModule
   end type GweDisParamFoundType
 
   logical :: gwe_dis_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_dis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwedis_length_units = InputParamDefinitionType &

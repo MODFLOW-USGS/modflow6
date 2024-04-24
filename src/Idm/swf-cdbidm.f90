@@ -9,6 +9,7 @@ module SwfCdbInputModule
   public swf_cdb_block_definitions
   public SwfCdbParamFoundType
   public swf_cdb_multi_package
+  public swf_cdb_subpackages
 
   type SwfCdbParamFoundType
     logical :: auxiliary = .false.
@@ -29,6 +30,12 @@ module SwfCdbInputModule
   end type SwfCdbParamFoundType
 
   logical :: swf_cdb_multi_package = .true.
+
+  character(len=16), parameter :: &
+    swf_cdb_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfcdb_auxiliary = InputParamDefinitionType &

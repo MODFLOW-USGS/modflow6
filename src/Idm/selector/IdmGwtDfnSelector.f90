@@ -19,6 +19,7 @@ module IdmGwtDfnSelectorModule
   public :: gwt_aggregate_definitions
   public :: gwt_block_definitions
   public :: gwt_idm_multi_package
+  public :: gwt_idm_subpackages
   public :: gwt_idm_integrated
 
 contains
@@ -34,6 +35,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function gwt_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -132,6 +139,29 @@ contains
     end select
     return
   end function gwt_idm_multi_package
+
+  function gwt_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('NAM')
+      call set_subpkg_pointer(subpackages, gwt_nam_subpackages)
+    case ('DIS')
+      call set_subpkg_pointer(subpackages, gwt_dis_subpackages)
+    case ('DISU')
+      call set_subpkg_pointer(subpackages, gwt_disu_subpackages)
+    case ('DISV')
+      call set_subpkg_pointer(subpackages, gwt_disv_subpackages)
+    case ('DSP')
+      call set_subpkg_pointer(subpackages, gwt_dsp_subpackages)
+    case ('CNC')
+      call set_subpkg_pointer(subpackages, gwt_cnc_subpackages)
+    case ('IC')
+      call set_subpkg_pointer(subpackages, gwt_ic_subpackages)
+    case default
+    end select
+    return
+  end function gwt_idm_subpackages
 
   function gwt_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

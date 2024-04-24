@@ -9,6 +9,7 @@ module GwtDisvInputModule
   public gwt_disv_block_definitions
   public GwtDisvParamFoundType
   public gwt_disv_multi_package
+  public gwt_disv_subpackages
 
   type GwtDisvParamFoundType
     logical :: length_units = .false.
@@ -34,6 +35,12 @@ module GwtDisvInputModule
   end type GwtDisvParamFoundType
 
   logical :: gwt_disv_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwt_disv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtdisv_length_units = InputParamDefinitionType &

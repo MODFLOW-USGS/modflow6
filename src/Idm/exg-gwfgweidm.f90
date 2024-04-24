@@ -9,11 +9,18 @@ module ExgGwfgweInputModule
   public exg_gwfgwe_block_definitions
   public ExgGwfgweParamFoundType
   public exg_gwfgwe_multi_package
+  public exg_gwfgwe_subpackages
 
   type ExgGwfgweParamFoundType
   end type ExgGwfgweParamFoundType
 
   logical :: exg_gwfgwe_multi_package = .false.
+
+  character(len=16), parameter :: &
+    exg_gwfgwe_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exg_gwfgwe_param_definitions(*) = &

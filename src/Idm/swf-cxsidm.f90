@@ -9,6 +9,7 @@ module SwfCxsInputModule
   public swf_cxs_block_definitions
   public SwfCxsParamFoundType
   public swf_cxs_multi_package
+  public swf_cxs_subpackages
 
   type SwfCxsParamFoundType
     logical :: iprpak = .false.
@@ -22,6 +23,12 @@ module SwfCxsInputModule
   end type SwfCxsParamFoundType
 
   logical :: swf_cxs_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_cxs_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfcxs_iprpak = InputParamDefinitionType &

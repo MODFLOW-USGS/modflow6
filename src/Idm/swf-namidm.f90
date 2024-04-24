@@ -9,6 +9,7 @@ module SwfNamInputModule
   public swf_nam_block_definitions
   public SwfNamParamFoundType
   public swf_nam_multi_package
+  public swf_nam_subpackages
 
   type SwfNamParamFoundType
     logical :: list = .false.
@@ -24,6 +25,12 @@ module SwfNamInputModule
   end type SwfNamParamFoundType
 
   logical :: swf_nam_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfnam_list = InputParamDefinitionType &

@@ -9,6 +9,7 @@ module SwfFlwInputModule
   public swf_flw_block_definitions
   public SwfFlwParamFoundType
   public swf_flw_multi_package
+  public swf_flw_subpackages
 
   type SwfFlwParamFoundType
     logical :: auxiliary = .false.
@@ -32,6 +33,12 @@ module SwfFlwInputModule
   end type SwfFlwParamFoundType
 
   logical :: swf_flw_multi_package = .true.
+
+  character(len=16), parameter :: &
+    swf_flw_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfflw_auxiliary = InputParamDefinitionType &

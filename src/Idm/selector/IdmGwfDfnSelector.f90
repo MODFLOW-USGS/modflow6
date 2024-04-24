@@ -27,6 +27,7 @@ module IdmGwfDfnSelectorModule
   public :: gwf_aggregate_definitions
   public :: gwf_block_definitions
   public :: gwf_idm_multi_package
+  public :: gwf_idm_subpackages
   public :: gwf_idm_integrated
 
 contains
@@ -42,6 +43,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function gwf_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -204,6 +211,45 @@ contains
     end select
     return
   end function gwf_idm_multi_package
+
+  function gwf_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('NAM')
+      call set_subpkg_pointer(subpackages, gwf_nam_subpackages)
+    case ('CHD')
+      call set_subpkg_pointer(subpackages, gwf_chd_subpackages)
+    case ('DIS')
+      call set_subpkg_pointer(subpackages, gwf_dis_subpackages)
+    case ('DISU')
+      call set_subpkg_pointer(subpackages, gwf_disu_subpackages)
+    case ('DISV')
+      call set_subpkg_pointer(subpackages, gwf_disv_subpackages)
+    case ('DRN')
+      call set_subpkg_pointer(subpackages, gwf_drn_subpackages)
+    case ('EVT')
+      call set_subpkg_pointer(subpackages, gwf_evt_subpackages)
+    case ('EVTA')
+      call set_subpkg_pointer(subpackages, gwf_evta_subpackages)
+    case ('GHB')
+      call set_subpkg_pointer(subpackages, gwf_ghb_subpackages)
+    case ('IC')
+      call set_subpkg_pointer(subpackages, gwf_ic_subpackages)
+    case ('NPF')
+      call set_subpkg_pointer(subpackages, gwf_npf_subpackages)
+    case ('RCH')
+      call set_subpkg_pointer(subpackages, gwf_rch_subpackages)
+    case ('RCHA')
+      call set_subpkg_pointer(subpackages, gwf_rcha_subpackages)
+    case ('RIV')
+      call set_subpkg_pointer(subpackages, gwf_riv_subpackages)
+    case ('WEL')
+      call set_subpkg_pointer(subpackages, gwf_wel_subpackages)
+    case default
+    end select
+    return
+  end function gwf_idm_subpackages
 
   function gwf_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

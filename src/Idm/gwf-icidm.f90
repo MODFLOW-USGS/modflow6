@@ -9,6 +9,7 @@ module GwfIcInputModule
   public gwf_ic_block_definitions
   public GwfIcParamFoundType
   public gwf_ic_multi_package
+  public gwf_ic_subpackages
 
   type GwfIcParamFoundType
     logical :: export_ascii = .false.
@@ -16,6 +17,12 @@ module GwfIcInputModule
   end type GwfIcParamFoundType
 
   logical :: gwf_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfic_export_ascii = InputParamDefinitionType &

@@ -9,6 +9,7 @@ module SwfDfwInputModule
   public swf_dfw_block_definitions
   public SwfDfwParamFoundType
   public swf_dfw_multi_package
+  public swf_dfw_subpackages
 
   type SwfDfwParamFoundType
     logical :: icentral = .false.
@@ -28,6 +29,12 @@ module SwfDfwInputModule
   end type SwfDfwParamFoundType
 
   logical :: swf_dfw_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_dfw_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfdfw_icentral = InputParamDefinitionType &
