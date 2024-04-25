@@ -39,6 +39,7 @@ module DisvModule
     procedure :: dis_da => disv_da
     procedure :: disv_load
     procedure :: get_dis_type => get_dis_type
+    procedure :: get_dis_enum => get_dis_enum
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -1088,6 +1089,14 @@ contains
     dis_type = "DISV"
     !
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DISV
+    class(DisvType), intent(in) :: this
+    integer(I4B) :: dis_enum
+    dis_enum = DISV
+  end function get_dis_enum
 
   !> @brief Allocate and initialize scalars
   !<

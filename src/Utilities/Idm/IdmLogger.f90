@@ -7,8 +7,10 @@
 module IdmLoggerModule
 
   use KindModule, only: DP, LGP, I4B
-  use SimVariablesModule, only: iparamlog
-  use ConstantsModule, only: LINELENGTH
+  use SimVariablesModule, only: iparamlog, errmsg, idm_context
+  use SimModule, only: store_error
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENCOMPONENTNAME, &
+                             DISUNDEF, DIS, DISV, DISU, DIS2D, DISV1D
 
   implicit none
   private
@@ -333,98 +335,195 @@ contains
 
   !> @brief Create export file int1d
   !!
-  !! export layered int1d parameters with NODES shape
+  !! export layered int1d parameter files
   !!
   !<
-  subroutine idm_export_int1d(p_mem, varname, mempath, iout)
-    use SimVariablesModule, only: idm_context
-    use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+  subroutine idm_export_int1d(p_mem, varname, mempath, shapestr, iout)
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path, split_mem_path
     integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 1d integer array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
     integer(I4B), dimension(:), pointer, contiguous :: model_shape
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d
-    integer(I4B), dimension(3) :: dis_shape
-    integer(I4B), dimension(2) :: disv_shape
+    integer(I4B), dimension(3) :: dis3d_shape
+    integer(I4B), dimension(2) :: dis2d_shape
+    integer(I4B), pointer :: distype
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
-    integer(I4B) :: i, j, k, inunit
+    integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
+    ! -- set pointer to DISENUM and MODEL_SHAPE
     call split_mem_path(mempath, comp, subcomp)
     input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
-    if (size(model_shape) == 3) then
-      dis_shape(1) = model_shape(3)
-      dis_shape(2) = model_shape(2)
-      dis_shape(3) = model_shape(1)
-      allocate (int3d(dis_shape(1), dis_shape(2), dis_shape(3)))
-      int3d = reshape(p_mem, dis_shape)
-      do k = 1, dis_shape(3)
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    ! -- create export file(s)
+    select case (export_dim)
+    case (3)
+      ! -- set reshape array
+      dis3d_shape(1) = model_shape(3)
+      dis3d_shape(2) = model_shape(2)
+      dis3d_shape(3) = model_shape(1)
+      ! -- allocate and reshape
+      allocate (int3d(dis3d_shape(1), dis3d_shape(2), dis3d_shape(3)))
+      int3d = reshape(p_mem, dis3d_shape)
+      ! -- write export files 3D array
+      do k = 1, dis3d_shape(3)
         inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, model_shape(2)
           write (inunit, '(*(i0, " "))') (int3d(j, i, k), j=1, &
-                                          dis_shape(1))
+                                          dis3d_shape(1))
         end do
         close (inunit)
       end do
+      ! -- cleanup
       deallocate (int3d)
-    else if (size(model_shape) == 2) then
-      disv_shape(1) = model_shape(2)
-      disv_shape(2) = model_shape(1)
-      allocate (int2d(disv_shape(1), disv_shape(2)))
-      int2d = reshape(p_mem, disv_shape)
-      do i = 1, disv_shape(2)
-        inunit = create_export_file(varname, mempath, i, iout)
-        write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, disv_shape(1))
+    case (2)
+      ! -- set reshape array
+      dis2d_shape(1) = model_shape(2)
+      dis2d_shape(2) = model_shape(1)
+      ! -- allocate and reshape
+      allocate (int2d(dis2d_shape(1), dis2d_shape(2)))
+      int2d = reshape(p_mem, dis2d_shape)
+      if (is_layered) then
+        ! -- write layered export files 2D array
+        do i = 1, dis2d_shape(2)
+          inunit = create_export_file(varname, mempath, i, iout)
+          write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
+          close (inunit)
+        end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, iout)
+        do i = 1, dis2d_shape(2)
+          write (inunit, '(*(i0, " "))') (int2d(j, i), j=1, dis2d_shape(1))
+        end do
         close (inunit)
-      end do
-    else if (size(model_shape) == 1) then
+      end if
+      ! -- cleanup
+      deallocate (int2d)
+    case (1)
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(i0, " "))') p_mem
       close (inunit)
-    end if
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported int1d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_int1d
 
   !> @brief Create export file int2d
   !<
-  subroutine idm_export_int2d(p_mem, varname, mempath, iout)
+  subroutine idm_export_int2d(p_mem, varname, mempath, shapestr, iout)
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
     integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    integer(I4B), pointer :: distype
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, inunit, export_dim
+    logical(LGP) :: is_layered
     !
-    do i = 1, size(p_mem, dim=2)
-      inunit = create_export_file(varname, mempath, i, iout)
-      write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+    ! -- set pointer to DISENUM
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
+    !
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    select case (export_dim)
+    case (1)
+      ! -- write export file 1D array
+      inunit = create_export_file(varname, mempath, 0, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+      end do
       close (inunit)
-    end do
+    case (2)
+      if (is_layered) then
+        ! -- write layered export files 2D array
+        do i = 1, size(p_mem, dim=2)
+          inunit = create_export_file(varname, mempath, i, iout)
+          write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+          close (inunit)
+        end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(i0, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+        end do
+        close (inunit)
+      end if
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported int2d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_int2d
 
   !> @brief Create export file int3d
   !<
-  subroutine idm_export_int3d(p_mem, varname, mempath, iout)
+  subroutine idm_export_int3d(p_mem, varname, mempath, shapestr, iout)
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
     integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, k, inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    integer(I4B), pointer :: distype
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
-    do k = 1, size(p_mem, dim=3)
-      inunit = create_export_file(varname, mempath, k, iout)
-      do i = 1, size(p_mem, dim=2)
-        write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
+    ! -- set pointer to DISENUM
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
+    !
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    select case (export_dim)
+    case (3)
+      ! -- write export files 3D array
+      do k = 1, size(p_mem, dim=3)
+        inunit = create_export_file(varname, mempath, k, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(i0, " "))') (p_mem(j, i, k), j=1, size(p_mem, dim=1))
+        end do
+        close (inunit)
       end do
-      close (inunit)
-    end do
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported int3d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_int3d
 
   !> @brief Create export file dbl1d
@@ -432,105 +531,256 @@ contains
   !! export layered dbl1d parameters with NODES shape
   !!
   !<
-  subroutine idm_export_dbl1d(p_mem, varname, mempath, iout)
-    use SimVariablesModule, only: idm_context
-    use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME
+  subroutine idm_export_dbl1d(p_mem, varname, mempath, shapestr, iout)
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path, split_mem_path
     real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 1d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
     integer(I4B), dimension(:), pointer, contiguous :: model_shape
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B), dimension(3) :: dis_shape
-    integer(I4B), dimension(2) :: disv_shape
+    integer(I4B), dimension(3) :: dis3d_shape
+    integer(I4B), dimension(2) :: dis2d_shape
+    integer(I4B), pointer :: distype
     character(LENMEMPATH) :: input_mempath
     character(LENCOMPONENTNAME) :: comp, subcomp
-    integer(I4B) :: i, j, k, inunit
+    integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
+    ! -- set pointer to DISENUM and MODEL_SHAPE
     call split_mem_path(mempath, comp, subcomp)
     input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
     call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
     !
-    if (size(model_shape) == 3) then
-      dis_shape(1) = model_shape(3)
-      dis_shape(2) = model_shape(2)
-      dis_shape(3) = model_shape(1)
-      allocate (dbl3d(dis_shape(1), dis_shape(2), dis_shape(3)))
-      dbl3d = reshape(p_mem, dis_shape)
-      do k = 1, dis_shape(3)
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    ! -- create export file(s)
+    select case (export_dim)
+    case (3)
+      ! -- set reshape array
+      dis3d_shape(1) = model_shape(3)
+      dis3d_shape(2) = model_shape(2)
+      ! -- allocate and reshape
+      dis3d_shape(3) = model_shape(1)
+      allocate (dbl3d(dis3d_shape(1), dis3d_shape(2), dis3d_shape(3)))
+      dbl3d = reshape(p_mem, dis3d_shape)
+      do k = 1, dis3d_shape(3)
+        ! -- write export files 3D array
         inunit = create_export_file(varname, mempath, k, iout)
         do i = 1, model_shape(2)
           write (inunit, '(*(G0.10, " "))') (dbl3d(j, i, k), j=1, &
-                                             dis_shape(1))
+                                             dis3d_shape(1))
         end do
         close (inunit)
       end do
+      ! -- cleanup
       deallocate (dbl3d)
-    else if (size(model_shape) == 2) then
-      disv_shape(1) = model_shape(2)
-      disv_shape(2) = model_shape(1)
-      allocate (dbl2d(disv_shape(1), disv_shape(2)))
-      dbl2d = reshape(p_mem, disv_shape)
-      do i = 1, disv_shape(2)
-        inunit = create_export_file(varname, mempath, i, iout)
-        write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, disv_shape(1))
+    case (2)
+      ! -- set reshape array
+      dis2d_shape(1) = model_shape(2)
+      dis2d_shape(2) = model_shape(1)
+      ! -- allocate and reshape
+      allocate (dbl2d(dis2d_shape(1), dis2d_shape(2)))
+      dbl2d = reshape(p_mem, dis2d_shape)
+      if (is_layered) then
+        ! -- write layered export files 2D array
+        do i = 1, dis2d_shape(2)
+          inunit = create_export_file(varname, mempath, i, iout)
+          write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
+          close (inunit)
+        end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, iout)
+        do i = 1, dis2d_shape(2)
+          write (inunit, '(*(G0.10, " "))') (dbl2d(j, i), j=1, dis2d_shape(1))
+        end do
         close (inunit)
-      end do
-    else if (size(model_shape) == 1) then
+      end if
+      ! -- cleanup
+      deallocate (dbl2d)
+    case (1)
+      ! -- write export file 1D array
       inunit = create_export_file(varname, mempath, 0, iout)
       write (inunit, '(*(G0.10, " "))') p_mem
       close (inunit)
-    end if
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported dbl1d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_dbl1d
 
   !> @brief Create export file dbl2d
   !<
-  subroutine idm_export_dbl2d(p_mem, varname, mempath, iout)
+  subroutine idm_export_dbl2d(p_mem, varname, mempath, shapestr, iout)
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
     real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    integer(I4B), pointer :: distype
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, inunit, export_dim
+    logical(LGP) :: is_layered
     !
-    do i = 1, size(p_mem, dim=2)
-      inunit = create_export_file(varname, mempath, i, iout)
-      write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+    ! -- set pointer to DISENUM
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
+    !
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    select case (export_dim)
+    case (1)
+      ! -- write export file 1D array
+      inunit = create_export_file(varname, mempath, 0, iout)
+      do i = 1, size(p_mem, dim=2)
+        write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+      end do
       close (inunit)
-    end do
+    case (2)
+      if (is_layered) then
+        ! -- write layered export files 2D array
+        do i = 1, size(p_mem, dim=2)
+          inunit = create_export_file(varname, mempath, i, iout)
+          write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+          close (inunit)
+        end do
+      else
+        ! -- write export file 2D array
+        inunit = create_export_file(varname, mempath, 0, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(G0.10, " "))') (p_mem(j, i), j=1, size(p_mem, dim=1))
+        end do
+        close (inunit)
+      end if
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported dbl2d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_dbl2d
 
   !> @brief Create export file dbl3d
   !<
-  subroutine idm_export_dbl3d(p_mem, varname, mempath, iout)
+  subroutine idm_export_dbl3d(p_mem, varname, mempath, shapestr, iout)
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path, split_mem_path
     real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
+    character(len=*), intent(in) :: shapestr !< dfn shape string
     integer(I4B), intent(in) :: iout
     ! -- dummy
-    integer(I4B) :: i, j, k, inunit
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+    integer(I4B), pointer :: distype
+    character(LENMEMPATH) :: input_mempath
+    character(LENCOMPONENTNAME) :: comp, subcomp
+    integer(I4B) :: i, j, k, inunit, export_dim
+    logical(LGP) :: is_layered
     !
-    do k = 1, size(p_mem, dim=3)
-      inunit = create_export_file(varname, mempath, k, iout)
-      do i = 1, size(p_mem, dim=2)
-        write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
-                                           size(p_mem, dim=1))
+    ! -- set pointer to DISENUM
+    call split_mem_path(mempath, comp, subcomp)
+    input_mempath = create_mem_path(component=comp, context=idm_context)
+    call mem_setptr(distype, 'DISENUM', input_mempath)
+    call mem_setptr(model_shape, 'MODEL_SHAPE', input_mempath)
+    !
+    ! -- set export_dim
+    export_dim = distype_export_dim(distype, shapestr, is_layered)
+    !
+    select case (export_dim)
+    case (3)
+      ! -- write export files 3D array
+      do k = 1, size(p_mem, dim=3)
+        inunit = create_export_file(varname, mempath, k, iout)
+        do i = 1, size(p_mem, dim=2)
+          write (inunit, '(*(G0.10, " "))') (p_mem(j, i, k), j=1, &
+                                             size(p_mem, dim=1))
+        end do
+        close (inunit)
       end do
-      close (inunit)
-    end do
+    case default
+      write (errmsg, '(a,i0)') 'EXPORT unsupported dbl3d export_dim=', &
+        export_dim
+      call store_error(errmsg, .true.)
+    end select
   end subroutine idm_export_dbl3d
+
+  !> @brief Set dis type export_dim
+  !!
+  !! Set the dimension of the export
+  !<
+  function distype_export_dim(distype, shapestr, is_layered) &
+    result(export_dim)
+    integer(I4B), pointer, intent(in) :: distype
+    character(len=*), intent(in) :: shapestr !< dfn shape string
+    logical(LGP), intent(inout) :: is_layered !< does this data represent layers
+    integer(I4B) :: export_dim
+    !
+    ! -- initialize is_layered to false
+    is_layered = .false.
+    !
+    select case (distype)
+    case (DIS)
+      if (shapestr == 'NODES') then
+        export_dim = 3
+        is_layered = .true.
+      else if (shapestr == 'NCOL NROW NLAY') then
+        export_dim = 3
+        is_layered = .true.
+      else
+        export_dim = 1
+      end if
+    case (DISV)
+      if (shapestr == 'NODES') then
+        export_dim = 2
+        is_layered = .true.
+      else if (shapestr == 'NCPL NLAY') then
+        export_dim = 2
+        is_layered = .true.
+      else
+        export_dim = 1
+      end if
+    case (DIS2D)
+      if (shapestr == 'NODES') then
+        export_dim = 2
+      else if (shapestr == 'NCOL NROW') then
+        export_dim = 2
+      else
+        export_dim = 1
+      end if
+    case (DISU, DISV1D)
+      export_dim = 1
+    case default
+      export_dim = 0
+    end select
+  end function distype_export_dim
 
   !> @brief Create export file
   !!
-  !! Name format: <comp>-<subcomp>.varname.[layer].txt
-  !!
+  !! Name formats where l=layer, a=auxiliary, p=period
+  !!    : <comp>-<subcomp>.varname.txt
+  !!    : <comp>-<subcomp>.varname.l<num>.txt
+  !!    : <comp>-<subcomp>.varname.p<num>.txt
+  !!    : <comp>-<subcomp>.varname.a<num>.p<num>.txt
   !<
-  function create_export_file(varname, mempath, layer, iout) result(inunit)
-    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME
+  function create_export_file(varname, mempath, layer, iout) &
+    result(inunit)
+    use ConstantsModule, only: LENVARNAME
     use InputOutputModule, only: openfile, getunit
     use InputOutputModule, only: upcase, lowcase
     use MemoryHelperModule, only: create_mem_path, split_mem_path

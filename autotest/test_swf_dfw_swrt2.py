@@ -12,7 +12,7 @@ should be 1.0 m.
 """
 
 import os
-
+import pathlib as pl
 import flopy
 import numpy as np
 import pytest
@@ -89,6 +89,7 @@ def build_models(idx, test):
 
     disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
+        export_array_ascii=True,
         nodes=nodes,
         nvert=nvert,
         length=dx,
@@ -101,6 +102,7 @@ def build_models(idx, test):
 
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
+        export_array_ascii=True,
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
@@ -114,6 +116,7 @@ def build_models(idx, test):
 
     ic = flopy.mf6.ModflowSwfic(
         swf,
+        export_array_ascii=True,
         strt=2.05,
     )
 
@@ -222,6 +225,27 @@ def check_output(idx, test):
     np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"
+
+    # ensure export array is working properly
+    flist = [
+        "disv1d.length",
+        "disv1d.width",
+        "disv1d.bottom",
+        "disv1d.idomain",
+        "dfw.manningsn",
+        "ic.strt",
+    ]
+    files = [pl.Path(ws / f"{swfname}-{f}.txt") for f in flist]
+    swf = test.sims[0].swf[0]
+    for i, fpth in enumerate(files):
+        assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
+        a = np.loadtxt(fpth)
+        array_name = flist[i][flist[i].index(".") + 1 :]
+        package_name = flist[i][0 : flist[i].index(".")]
+        package = getattr(swf, package_name)
+        b = getattr(package, array_name).array
+        assert np.allclose(a, b)
+    return
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

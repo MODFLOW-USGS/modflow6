@@ -38,6 +38,7 @@ module DisModule
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
     procedure :: get_dis_type => get_dis_type
+    procedure :: get_dis_enum => get_dis_enum
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -1170,6 +1171,14 @@ contains
     dis_type = "DIS"
     !
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DIS
+    class(DisType), intent(in) :: this
+    integer(I4B) :: dis_enum
+    dis_enum = DIS
+  end function get_dis_enum
 
   !> @brief Get a 2D array of polygon vertices, listed in
   !!

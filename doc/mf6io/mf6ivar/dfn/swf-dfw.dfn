@@ -97,6 +97,15 @@ optional false
 longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'DFW'}
 
+block options
+name export_array_ascii
+type keyword
+reader urword
+optional true
+mf6internal export_ascii
+longname export array variables to layered ascii files.
+description keyword that specifies input griddata arrays should be written to layered ascii output files.
+
 # dev options
 
 block options
@@ -107,7 +116,6 @@ optional true
 longname use SWR conductance formulation
 description use the conductance formulation in the Surface Water Routing (SWR) Process for MODFLOW-2005.
 mf6internal iswrcond
-
 
 # --------------------- swf dfw griddata ---------------------
 

@@ -17,6 +17,7 @@ module GwfDisuInputModule
     logical :: yorigin = .false.
     logical :: angrot = .false.
     logical :: voffsettol = .false.
+    logical :: export_ascii = .false.
     logical :: nodes = .false.
     logical :: nja = .false.
     logical :: nvert = .false.
@@ -136,6 +137,23 @@ module GwfDisuInputModule
     'VERTICAL_OFFSET_TOLERANCE', & ! tag name
     'VOFFSETTOL', & ! fortran variable
     'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfdisu_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'DISU', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -510,6 +528,7 @@ module GwfDisuInputModule
     gwfdisu_yorigin, &
     gwfdisu_angrot, &
     gwfdisu_voffsettol, &
+    gwfdisu_export_ascii, &
     gwfdisu_nodes, &
     gwfdisu_nja, &
     gwfdisu_nvert, &

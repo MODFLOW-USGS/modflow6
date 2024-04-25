@@ -108,20 +108,17 @@ def build_models(idx, test):
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(
-        gwf, 
-        export_array_ascii=True,
-        strt=strt, 
-        filename=f"{name}.ic"
+        gwf, export_array_ascii=True, strt=strt, filename=f"{name}.ic"
     )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
-        gwf, 
+        gwf,
         export_array_ascii=True,
-        save_flows=False, 
-        icelltype=laytyp[idx], 
-        k=hk, 
-        k33=hk
+        save_flows=False,
+        icelltype=laytyp[idx],
+        k=hk,
+        k33=hk,
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -210,17 +207,45 @@ def check_output(idx, test):
 
     # ensure export array is working properly
     name = cases[idx]
-    flist = ["dis.botm", "dis.idomain", "ic.strt", "npf.icelltype", "npf.k", "npf.k33"]
-    files = [pl.Path(ws / f"{name}-{f}.l1.txt") for f in flist]
+    layered = [
+        "dis.botm",
+        "dis.idomain",
+        "ic.strt",
+        "npf.icelltype",
+        "npf.k",
+        "npf.k33",
+    ]
+    flist = [
+        "dis.botm",
+        "dis.delc",
+        "dis.delr",
+        "dis.idomain",
+        "dis.top",
+        "ic.strt",
+        "npf.icelltype",
+        "npf.k",
+        "npf.k33",
+    ]
+    files = [
+        (
+            pl.Path(ws / f"{name}-{f}.l1.txt")
+            if f in layered
+            else pl.Path(ws / f"{name}-{f}.txt")
+        )
+        for f in flist
+    ]
     gwf = test.sims[0].gwf[0]
     for i, fpth in enumerate(files):
         assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
         a = np.loadtxt(fpth)
-        array_name = flist[i][flist[i].index(".") + 1:]
-        package_name = flist[i][0:flist[i].index(".")]
+        array_name = flist[i][flist[i].index(".") + 1 :]
+        package_name = flist[i][0 : flist[i].index(".")]
         package = getattr(gwf, package_name)
         b = getattr(package, array_name).array
         assert np.allclose(a, b)
+        print(f"compared: {fpth}")
+        print(f"a={a}")
+        print(f"b={b}")
     return
 
 

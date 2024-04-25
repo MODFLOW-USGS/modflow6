@@ -82,6 +82,7 @@ module BaseDisModule
     procedure :: connection_normal
     procedure :: connection_vector
     procedure :: get_dis_type
+    procedure :: get_dis_enum
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -376,6 +377,17 @@ contains
     call store_error('Programmer error: get_dis_type must be overridden', &
                      terminate=.true.)
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DISUNDEF
+    class(DisBaseType), intent(in) :: this
+    integer(I4B) :: dis_enum
+
+    dis_enum = DISUNDEF
+    call store_error('Programmer error: get_dis_enum must be overridden', &
+                     terminate=.true.)
+  end function get_dis_enum
 
   !> @brief Allocate and initialize scalar variables
   subroutine allocate_scalars(this, name_model, input_mempath)

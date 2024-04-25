@@ -52,6 +52,7 @@ module DisuModule
     procedure :: disu_load
     procedure :: dis_da => disu_da
     procedure :: get_dis_type => get_dis_type
+    procedure :: get_dis_enum => get_dis_enum
     procedure :: disu_ck
     procedure :: grid_finalize
     procedure :: get_nodenumber_idx1
@@ -1168,6 +1169,14 @@ contains
     dis_type = "DISU"
     !
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DISU
+    class(DisuType), intent(in) :: this
+    integer(I4B) :: dis_enum
+    dis_enum = DISU
+  end function get_dis_enum
 
   !> @brief Allocate and initialize scalar variables
   !<

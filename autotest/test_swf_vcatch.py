@@ -8,7 +8,7 @@ Advances in Water Resources 27 (2004) 361-382.
 """
 
 import os
-
+import pathlib as pl
 import flopy
 import numpy as np
 import pytest
@@ -123,6 +123,7 @@ def build_models(idx, test):
     botm = land_surface.reshape((nrow, ncol))
     dis = flopy.mf6.ModflowSwfdis2D(
         swf,
+        export_array_ascii=True,
         nrow=nrow,
         ncol=ncol,
         delr=dx,
@@ -136,6 +137,7 @@ def build_models(idx, test):
 
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
+        export_array_ascii=True,
         print_flows=False,
         save_flows=True,
         manningsn=rough,
@@ -151,6 +153,7 @@ def build_models(idx, test):
 
     ic = flopy.mf6.ModflowSwfic(
         swf,
+        export_array_ascii=True,
         strt=botm,
     )
 
@@ -190,9 +193,7 @@ def build_models(idx, test):
 
     idcxs = -1  # use cross section 0
     width = dx
-    spd = [
-        ((nrow - 1, int(ncol / 2)), idcxs, width, slope_y, rough_channel)
-    ]
+    spd = [((nrow - 1, int(ncol / 2)), idcxs, width, slope_y, rough_channel)]
     zdg = flopy.mf6.ModflowSwfzdg(
         swf,
         observations=zdg_obs,
@@ -264,9 +265,31 @@ def check_output(idx, test):
     outflow_answer = 4.859497719  # outflow value at end of first period
     idx = np.where(obsvals["time"] == 5400.0)
     outflow_sim = -obsvals["OUTFLOW"][idx]
-    msg = (f"Simulated outflow at end of period should be {outflow_answer} "
-           f"but found {outflow_sim}")
+    msg = (
+        f"Simulated outflow at end of period should be {outflow_answer} "
+        f"but found {outflow_sim}"
+    )
     assert np.allclose(outflow_answer, outflow_sim, atol=0.001), msg
+
+    # ensure export array is working properly
+    flist = [
+        "dis2d.botm",
+        "dis2d.delc",
+        "dis2d.delr",
+        "dfw.manningsn",
+        "ic.strt",
+    ]
+    files = [pl.Path(ws / f"{swfname}-{f}.txt") for f in flist]
+    swf = test.sims[0].swf[0]
+    for i, fpth in enumerate(files):
+        assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
+        a = np.loadtxt(fpth)
+        array_name = flist[i][flist[i].index(".") + 1 :]
+        package_name = flist[i][0 : flist[i].index(".")]
+        package = getattr(swf, package_name)
+        b = getattr(package, array_name).array
+        assert np.allclose(a, b)
+    return
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
