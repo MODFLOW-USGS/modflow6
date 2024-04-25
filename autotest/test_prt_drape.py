@@ -282,29 +282,31 @@ def check_output(idx, test):
     qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # setup plot
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    ax.set_aspect("equal")
+    plot_results = False
+    if plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
+        ax.set_aspect("equal")
 
-    # plot mf6 pathlines in map view
-    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax)
-    pmv.plot_grid()
-    pmv.plot_array(hds[0], alpha=0.1)
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-        pl.plot(
-            title=f"MF6 pathlines{' (drape)' if drape else ''}",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax,
-            legend=False,
-            color=cm.plasma(ipl / len(mf6_plines)),
-        )
+        # plot mf6 pathlines in map view
+        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax)
+        pmv.plot_grid()
+        pmv.plot_array(hds[0], alpha=0.1)
+        pmv.plot_vector(qx, qy, normalize=True, color="white")
+        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+            pl.plot(
+                title=f"MF6 pathlines{' (drape)' if drape else ''}",
+                kind="line",
+                x="x",
+                y="y",
+                ax=ax,
+                legend=False,
+                color=cm.plasma(ipl / len(mf6_plines)),
+            )
 
-    # view/save plot
-    # plt.show()
-    plt.savefig(gwf_ws / f"test_{simname}.png")
+        # view/save plot
+        plt.show()
+        plt.savefig(gwf_ws / f"test_{simname}.png")
 
     if drape:
         assert mf6_pls.shape[0] == 36

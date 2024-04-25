@@ -285,60 +285,62 @@ def check_output(idx, test):
     qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # setup plot
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-    for a in ax:
-        a.set_aspect("equal")
+    plot_results = False
+    if plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+        for a in ax:
+            a.set_aspect("equal")
 
-    # plot mf6 pathlines in map view
-    pmv = flopy.plot.PlotMapView(model=gwf, ax=ax[0])
-    pmv.plot_grid()
-    pmv.plot_array(hds[0], alpha=0.1)
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    pmv.plot_bc("WEL")
-    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-        pl.plot(
-            title="MF6 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[0],
-            legend=False,
-            color=cm.plasma(ipl / len(mf6_plines)),
-        )
+        # plot mf6 pathlines in map view
+        pmv = flopy.plot.PlotMapView(model=gwf, ax=ax[0])
+        pmv.plot_grid()
+        pmv.plot_array(hds[0], alpha=0.1)
+        pmv.plot_vector(qx, qy, normalize=True, color="white")
+        pmv.plot_bc("WEL")
+        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+            pl.plot(
+                title="MF6 pathlines",
+                kind="line",
+                x="x",
+                y="y",
+                ax=ax[0],
+                legend=False,
+                color=cm.plasma(ipl / len(mf6_plines)),
+            )
 
-    # plot mp7 pathlines in map view
-    pmv = flopy.plot.PlotMapView(model=gwf, ax=ax[1])
-    pmv.plot_grid()
-    pmv.plot_array(hds[0], alpha=0.1)
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    pmv.plot_bc("WEL")
-    mp7_plines = mp7_pls.groupby(["particleid"])
-    for ipl, (pid, pl) in enumerate(mp7_plines):
-        pl.plot(
-            title="MP7 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[1],
-            legend=False,
-            color=cm.plasma(ipl / len(mp7_plines)),
-        )
+        # plot mp7 pathlines in map view
+        pmv = flopy.plot.PlotMapView(model=gwf, ax=ax[1])
+        pmv.plot_grid()
+        pmv.plot_array(hds[0], alpha=0.1)
+        pmv.plot_vector(qx, qy, normalize=True, color="white")
+        pmv.plot_bc("WEL")
+        mp7_plines = mp7_pls.groupby(["particleid"])
+        for ipl, (pid, pl) in enumerate(mp7_plines):
+            pl.plot(
+                title="MP7 pathlines",
+                kind="line",
+                x="x",
+                y="y",
+                ax=ax[1],
+                legend=False,
+                color=cm.plasma(ipl / len(mp7_plines)),
+            )
 
-    # plot cell centers
-    # xc, yc = mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0)
-    # xc = xc.flatten()
-    # yc = yc.flatten()
-    # for i in range(mg.ncpl):
-    #     x, y = xc[i], yc[i]
-    #     nn = mg.get_node(mg.intersect(x, y, 0))[0]
-    #     for a in ax:
-    #         a.plot(x, y, "ro")
-    #         a.annotate(str(nn + 1), (x, y), color="r")
+        # plot cell centers
+        # xc, yc = mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0)
+        # xc = xc.flatten()
+        # yc = yc.flatten()
+        # for i in range(mg.ncpl):
+        #     x, y = xc[i], yc[i]
+        #     nn = mg.get_node(mg.intersect(x, y, 0))[0]
+        #     for a in ax:
+        #         a.plot(x, y, "ro")
+        #         a.annotate(str(nn + 1), (x, y), color="r")
 
-    # view/save plot
-    # plt.show()
-    plt.savefig(gwf_ws / f"test_{simname}.png")
+        # view/save plot
+        plt.show()
+        plt.savefig(gwf_ws / f"test_{simname}.png")
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)

@@ -531,9 +531,10 @@ def check_output(idx, test):
         p.add_mesh(path_mesh, label="Time", style="points", color="black")
         p.camera.zoom(1)
         p.add_slider_widget(lambda v: callback(path_mesh, v), [0, 30202])
-        p.show()
+        # p.show()
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
     if (
