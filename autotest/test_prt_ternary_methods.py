@@ -165,9 +165,9 @@ def check_output(idx, test):
     )
 
     # check pathline shape and endpoints
-    assert pls.shape == (112, 16)
+    assert pls.shape == (116, 16)
     assert endpts.shape == (2, 16)
-    assert set(endpts.icell) == {111, 144}
+    assert set(endpts.icell) == {111, 112}
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

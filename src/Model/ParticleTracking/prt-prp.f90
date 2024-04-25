@@ -810,6 +810,7 @@ contains
       found = .true.
     case ('LOCAL_Z')
       this%localz = .true.
+      found = .true.
     case default
       found = .false.
     end select
