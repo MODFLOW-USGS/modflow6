@@ -46,7 +46,10 @@ $(OBJDIR)/CharString.o \
 $(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
+$(OBJDIR)/Iterator.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/ListIterator.o \
+$(OBJDIR)/MemoryContainerIterator.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/Utilities.o \
