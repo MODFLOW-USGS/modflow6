@@ -6,13 +6,12 @@ module MemoryListModule
   public :: MemoryListType
 
   type :: MemoryListType
-    type(ListType), private :: list
+    type(ListType), public :: list
   contains
     procedure :: add
     procedure :: get
     procedure :: count
     procedure :: clear
-    procedure :: remove
   end type MemoryListType
 
 contains
@@ -49,12 +48,5 @@ contains
     class(MemoryListType) :: this
     call this%list%Clear()
   end subroutine clear
-
-  subroutine remove(this, ipos, destroyValue)
-    class(MemoryListType) :: this
-    integer(I4B), intent(in) :: ipos
-    logical, intent(in) :: destroyValue
-    call this%list%RemoveNode(ipos, destroyValue)
-  end subroutine remove
 
 end module MemoryListModule

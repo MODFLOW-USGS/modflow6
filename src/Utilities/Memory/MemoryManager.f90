@@ -13,6 +13,7 @@ module MemoryManagerModule
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
   use MemoryListModule, only: MemoryListType
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryHelperModule, only: mem_check_length, split_mem_path, &
                                 strip_context_mem_path, get_mem_path_context
   use TableModule, only: TableType, table_cr
@@ -313,7 +314,7 @@ contains
     logical(LGP), intent(in), optional :: check !< to suppress aborting the program when not found,
                                                 !! set check = .false.
     ! -- local
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     logical(LGP) check_opt
     ! -- code
     !
@@ -322,8 +323,10 @@ contains
     found = .false.
     !
     ! -- iterate over the memory list
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (mt%name == name .and. mt%path == mem_path) then
         found = .true.
         exit
@@ -2089,15 +2092,17 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%strsclr)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%strsclr, sclr)) then
           nullify (mt%strsclr)
           found = .true.
@@ -2129,7 +2134,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2138,8 +2143,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%astr1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%astr1d, astr1d)) then
           nullify (mt%astr1d)
           found = .true.
@@ -2172,7 +2179,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2181,8 +2188,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%acharstr1d, astr1d)) then
           nullify (mt%acharstr1d)
           found = .true.
@@ -2212,11 +2221,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%logicalsclr, sclr)) then
         nullify (mt%logicalsclr)
         found = .true.
@@ -2245,11 +2256,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%intsclr, sclr)) then
         nullify (mt%intsclr)
         found = .true.
@@ -2277,11 +2290,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%dblsclr, sclr)) then
         nullify (mt%dblsclr)
         found = .true.
@@ -2311,7 +2326,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2320,8 +2335,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint1d, aint)) then
           nullify (mt%aint1d)
           found = .true.
@@ -2352,7 +2369,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2361,8 +2378,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint2d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint2d, aint)) then
           nullify (mt%aint2d)
           found = .true.
@@ -2393,7 +2412,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2402,8 +2421,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint3d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint3d, aint)) then
           nullify (mt%aint3d)
           found = .true.
@@ -2434,7 +2455,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2443,8 +2464,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl1d, adbl)) then
           nullify (mt%adbl1d)
           found = .true.
@@ -2475,7 +2498,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2484,8 +2507,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl2d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl2d, adbl)) then
           nullify (mt%adbl2d)
           found = .true.
@@ -2516,7 +2541,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2525,8 +2550,10 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl3d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl3d, adbl)) then
           nullify (mt%adbl3d)
           found = .true.
@@ -2837,7 +2864,7 @@ contains
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
     character(LEN=10) :: cunits
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     integer(I4B) :: icomp
     integer(I4B) :: ilen
     integer(I8B) :: nchars
@@ -2877,8 +2904,10 @@ contains
         nreal = 0
         bytes = DZERO
         ilen = len_trim(cunique(icomp))
-        do ipos = 1, memorylist%count()
-          mt => memorylist%Get(ipos)
+        itr = MemoryContainerIteratorType(memorylist)
+        do while (itr%has_next())
+          call itr%next()
+          mt => itr%value()
           call split_mem_path(mt%path, component, subcomponent)
           context = get_mem_path_context(mt%path)
           context_component = trim(context)//component
@@ -2926,11 +2955,13 @@ contains
     integer(I4B) :: iout
     ! local
     class(MemoryType), pointer :: mt
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
 
     call mem_detailed_table(iout, memorylist%count())
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       call mt%table_entry(memtab)
     end do
     call mem_cleanup_table()
@@ -2942,12 +2973,14 @@ contains
   function calc_virtual_mem() result(vmem_size)
     real(DP) :: vmem_size
     ! local
-    integer(I4B) :: i
+    type(MemoryContainerIteratorType) :: itr
     type(MemoryType), pointer :: mt
 
     vmem_size = DZERO
-    do i = 1, memorylist%count()
-      mt => memorylist%Get(i)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (index(mt%path, "__P") == 1) then
         vmem_size = mt%element_size * mt%isize + vmem_size
       end if
@@ -2965,10 +2998,12 @@ contains
     class(MemoryType), pointer :: mt
     character(len=LINELENGTH) :: error_msg
     character(len=LENVARNAME) :: ucname
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     ! -- code
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (IDEVELOPMODE == 1) then
         !
         ! -- check if memory has been deallocated
@@ -3022,7 +3057,7 @@ contains
     character(len=LENCOMPONENTNAME) :: component
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     integer(I4B) :: ipa
     ! -- code
     !
@@ -3030,8 +3065,10 @@ contains
     allocate (cunique(0))
     !
     ! -- find unique origins
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = MemoryContainerIteratorType(memorylist)
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       call split_mem_path(mt%path, component, subcomponent)
       context = get_mem_path_context(mt%path)
       context_component = trim(context)//component

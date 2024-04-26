@@ -4,6 +4,7 @@ module MemoryManagerExtModule
   use SimModule, only: store_error
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: memorylist, get_from_memorylist
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
 
   implicit none
   private
@@ -30,7 +31,7 @@ contains
     character(len=*), intent(in), optional :: context !< name of the context (optional)
     character(len=LENMEMPATH) :: memory_path !< the memory path
     type(MemoryType), pointer :: mt
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType) :: itr
     logical(LGP) :: removed
 
     memory_path = create_mem_path(component, subcomponent, context)
@@ -38,8 +39,10 @@ contains
 
     do while (removed)
       removed = .false.
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = MemoryContainerIteratorType(memorylist)
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (mt%path == memory_path .and. mt%mt_associated()) then
           call mt%mt_deallocate()
           removed = .true.

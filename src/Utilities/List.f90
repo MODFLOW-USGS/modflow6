@@ -29,8 +29,8 @@ module ListModule
     generic, public :: GetItem => get_item_by_index, get_current_item
     procedure, public :: InsertAfter
     procedure, public :: InsertBefore
-    procedure, public :: Next
-    procedure, public :: Previous
+    procedure, private :: Next
+    procedure, private :: Previous
     procedure, public :: Reset
     generic, public :: RemoveNode => remove_node_by_index, remove_this_node
     ! -- Private procedures
