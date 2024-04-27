@@ -4242,7 +4242,6 @@ contains
     real(DP) :: dd2
     ! real(DP) :: darea
 
-
     ! -- initialize local parameters
     weight = this%storage_weight
     weightinv = DONE - weight
@@ -4268,7 +4267,7 @@ contains
     call this%sfr_calc_reach_depth(n, qa, da)
     call this%sfr_calc_reach_depth(n, qb, db)
     call this%sfr_calc_reach_depth(n, qc, dc)
-    
+
     xsa_a = this%calc_area_wet(n, da)
     xsa_b = this%calc_area_wet(n, db)
     xsa_c = this%calc_area_wet(n, dc)
@@ -4311,11 +4310,11 @@ contains
         if ((qb + qa) <= DZERO) then
           f11 = (qd2 - qc) / this%length(n)
         else
-          f11 = (weight * (qd2-qc) + weightinv * (qb-qa)) / this%length(n)
+          f11 = (weight * (qd2 - qc) + weightinv * (qb - qa)) / this%length(n)
         end if
         f12 = ((ad2 - xsa_b) + (xsa_c + xsa_a)) / (delt * DTWO)
         residual2 = f11 + f12 - qlat - qgwf_pul
-        
+
         qderv = (residual2 - residual) / dq
         if (qderv > DZERO) then
           delq = -residual / qderv
@@ -4361,7 +4360,7 @@ contains
       end if
 
     end do kinematicpicard
-    
+
     ! xsa_d = this%calc_area_wet(n, qd)
     ! darea = (xsa_d + xsa_c) * DHALF - (xsa_b + xsa_a) * DHALF
     ! this%storage(n) = -((qc + qd) - (qa + qb)) * DHALF
