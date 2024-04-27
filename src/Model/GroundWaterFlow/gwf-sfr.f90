@@ -114,9 +114,10 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null() !< total fraction of connected reaches that are not diversions
     integer(I4B), dimension(:), pointer, contiguous :: ndiv => null() !< number of diversions for each reach
     real(DP), dimension(:), pointer, contiguous :: usflow => null() !< upstream reach flow
-    real(DP), dimension(:), pointer, contiguous :: usflowold => null() !< upstream reach flow for previous time step
     real(DP), dimension(:), pointer, contiguous :: dsflow => null() !< downstream reach flow
     real(DP), dimension(:), pointer, contiguous :: dsflowold => null() !< downstream reach flow for previous time step
+    real(DP), dimension(:), pointer, contiguous :: usinflow => null() !< upstream reach flow for previous time step
+    real(DP), dimension(:), pointer, contiguous :: usinflowold => null() !< upstream reach flow for previous time step
     real(DP), dimension(:), pointer, contiguous :: depth => null() !< reach depth
     real(DP), dimension(:), pointer, contiguous :: stage => null() !< reach stage
     real(DP), dimension(:), pointer, contiguous :: stageold => null() !< reach stage for last timestep
@@ -125,6 +126,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null() !< simulated reach runoff
     real(DP), dimension(:), pointer, contiguous :: stage0 => null() !< previous reach stage iterate
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null() !< previous upstream reach flow iterate
+    real(DP), dimension(:), pointer, contiguous :: storage => null() !< previous upstream reach flow iterate
     ! -- cross-section data
     integer(I4B), pointer :: ncrossptstot => null() !< total number of cross-section points
     integer(I4B), dimension(:), pointer, contiguous :: ncrosspts => null() !< number of cross-section points for each reach
@@ -327,7 +329,6 @@ contains
     !
     ! -- Set values
     this%istorage = 0
-    this%storage_weight = DHALF
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
@@ -403,13 +404,17 @@ contains
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%memoryPath)
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%memoryPath)
     !
-    ! -- stage, usflow, and dsflow for previous timestep
+    ! -- stage, usflow, inflow, and dsflow for previous timestep
     if (this%istorage == 1) then
       call mem_allocate(this%stageold, this%maxbound, 'STAGEOLD', &
                         this%memoryPath)
-      call mem_allocate(this%usflowold, this%maxbound, 'USFLOWOLD', &
+      call mem_allocate(this%usinflow, this%maxbound, 'USINFLOW', &
+                        this%memoryPath)
+      call mem_allocate(this%usinflowold, this%maxbound, 'USINFLOWOLD', &
                         this%memoryPath)
       call mem_allocate(this%dsflowold, this%maxbound, 'DSFLOWOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%storage, this%maxbound, 'STORAGE', &
                         this%memoryPath)
     end if
     !
@@ -481,8 +486,10 @@ contains
       ! -- stage
       if (this%istorage == 1) then
         this%stageold(i) = DZERO
-        this%usflowold(i) = DZERO
+        this%usinflow(i) = DZERO
+        this%usinflowold(i) = DZERO
         this%dsflowold(i) = DZERO
+        this%storage(i) = DZERO
       end if
       !
       ! -- boundary data
@@ -2072,6 +2079,15 @@ contains
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: iaux
+
+    ! -- update previous values
+    if (this%istorage == 1) then
+      do n = 1, this%maxbound
+        this%stageold(n) = this%stage(n)
+        this%usinflowold(n) = this%usinflow(n)
+        this%dsflowold(n) = this%dsflow(n)
+      end do
+    end if
     !
     ! -- Most advanced package AD routines have to restore state if
     !    the solution failed and the time step is being retried with a smaller
@@ -2096,15 +2112,6 @@ contains
           if (this%noupdateauxvar(iaux) /= 0) cycle
           this%auxvar(iaux, n) = this%rauxvar(iaux, n)
         end do
-      end do
-    end if
-
-    ! -- update previous values
-    if (this%istorage == 1) then
-      do n = 1, this%maxbound
-        this%stageold(n) = this%stage(n)
-        this%usflowold(n) = this%usflow(n)
-        this%dsflowold(n) = this%dsflow(n)
       end do
     end if
     !
@@ -2847,8 +2854,10 @@ contains
     ! -- stage, usflow, and dsflow for previous timestep
     if (this%istorage == 1) then
       call mem_deallocate(this%stageold)
-      call mem_deallocate(this%usflowold)
       call mem_deallocate(this%dsflowold)
+      call mem_deallocate(this%storage)
+      call mem_deallocate(this%usinflow)
+      call mem_deallocate(this%usinflowold)
     end if
     !
     ! -- deallocate reach order and connection data
@@ -3654,7 +3663,7 @@ contains
       if (this%iboundpak(n) < 0) then
         call this%sfr_calc_constant(n, d1, hgwf, qgwf, qd)
       else
-        if (this%istorage == 1) then
+        if (this%gwfiss == 0 .and. this%istorage == 1) then
           call this%sfr_calc_transient(n, d1, hgwf, qu, qi, &
                                        qfrommvr, qr, qe, qro, &
                                        qgwf, qd)
@@ -4181,6 +4190,7 @@ contains
   subroutine sfr_calc_transient(this, n, d1, hgwf, &
                                 qu, qi, qfrommvr, qr, qe, qro, &
                                 qgwf, qd)
+    use TdisModule, only: delt
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
@@ -4195,21 +4205,167 @@ contains
     real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
     real(DP), intent(inout) :: qd !< reach outflow
     ! -- local  variables
+    integer(I4B) :: igwfconn
+    integer(I4B) :: number_picard
+    integer(I4B) :: iconverged
+    integer(I4B) :: i
+    integer(I4B) :: j
+    real(DP) :: weight
+    real(DP) :: weightinv
+    real(DP) :: dq
+    real(DP) :: qtol
+    real(DP) :: qsrc
     real(DP) :: qlat
     real(DP) :: da
     real(DP) :: db
-    ! real(DP) :: dc
-    ! real(DP) :: dd
+    real(DP) :: dc
+    real(DP) :: dd
     real(DP) :: qa
     real(DP) :: qb
-    ! real(DP) :: qc
+    real(DP) :: qc
+    real(DP) :: xsa_a
+    real(DP) :: xsa_b
+    real(DP) :: xsa_c
+    ! real(DP) :: xsa_d
+    real(DP) :: d1old
+    real(DP) :: qd2
+    real(DP) :: ad1
+    real(DP) :: ad2
+    real(DP) :: qgwf_pul
+    real(DP) :: f11
+    real(DP) :: f12
+    real(DP) :: residual
+    real(DP) :: residual2
+    real(DP) :: qderv
+    real(DP) :: delq
+    real(DP) :: delh
+    real(DP) :: dd2
+    ! real(DP) :: darea
+
+
+    ! -- initialize local parameters
+    weight = this%storage_weight
+    weightinv = DONE - weight
+    dq = DEM4 !this%deps
+    qtol = dq * DTWO
+
+    ! -- initialize variables
+    qgwf = DZERO
+    qgwf_pul = DZERO
+
+    !
+    ! -- calculate the flow at end of the reach
+    !    excluding groundwater leakage
+    qsrc = qu + qi + qr - qe + qro + qfrommvr
 
     qlat = (qr + qro - qe) / this%length(n)
 
-    qa = this%usflowold(n)
+    this%usinflow(n) = qu + qi + qfrommvr
+
+    qa = this%usinflowold(n)
     qb = this%dsflowold(n)
+    qc = this%usinflow(n)
     call this%sfr_calc_reach_depth(n, qa, da)
     call this%sfr_calc_reach_depth(n, qb, db)
+    call this%sfr_calc_reach_depth(n, qc, dc)
+    
+    xsa_a = this%calc_area_wet(n, da)
+    xsa_b = this%calc_area_wet(n, db)
+    xsa_c = this%calc_area_wet(n, dc)
+
+    ! -- estimate qd
+    qd = (qc + qb) * DHALF
+    call this%sfr_calc_reach_depth(n, qd, dd)
+    d1 = (dc + dd) * DHALF
+    d1old = d1
+
+    igwfconn = this%sfr_gwf_conn(n)
+    if (igwfconn == 1) then
+      number_picard = this%maxsfrpicard
+    else
+      number_picard = 1
+    end if
+
+    kinematicpicard: do i = 1, number_picard
+      if (igwfconn == 1) then
+        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+        if (qgwf > qsrc) then
+          qgwf = qsrc
+        end if
+        qgwf_pul = -qgwf / this%length(n)
+      end if
+
+      newton: do j = 1, this%maxsfrit
+        qd2 = qd + dq
+        ad1 = this%calc_area_wet(n, qd)
+        ad2 = this%calc_area_wet(n, qd2)
+
+        if ((qb + qa) <= DZERO) then
+          f11 = (qd - qc) / this%length(n)
+        else
+          f11 = (weight * (qd - qc) + weightinv * (qb - qa)) / this%length(n)
+        end if
+        f12 = ((ad1 - xsa_b) + (xsa_c - xsa_a)) / (delt * DTWO)
+        residual = f11 + f12 - qlat - qgwf_pul
+
+        if ((qb + qa) <= DZERO) then
+          f11 = (qd2 - qc) / this%length(n)
+        else
+          f11 = (weight * (qd2-qc) + weightinv * (qb-qa)) / this%length(n)
+        end if
+        f12 = ((ad2 - xsa_b) + (xsa_c + xsa_a)) / (delt * DTWO)
+        residual2 = f11 + f12 - qlat - qgwf_pul
+        
+        qderv = (residual2 - residual) / dq
+        if (qderv > DZERO) then
+          delq = -residual / qderv
+        else
+          delq = DZERO
+        end if
+
+        if (qd + delq <= DZERO) then
+          delq = -qd
+          qd = DZERO
+        else
+          qd = qd + delq
+        end if
+
+        call this%sfr_calc_reach_depth(n, qd, dd2)
+        delh = dd2 - dd
+        dd = dd2
+        if (abs(delh) < this%dmaxchg .and. abs(delq) < qtol) then ! .and. abs(residual) < qtol) then
+          exit newton
+        end if
+
+      end do newton
+
+      qd = max(qd, DZERO)
+      if (qd == DZERO) then
+        d1 = DZERO
+      else
+        d1 = (dc + dd) * DHALF
+      end if
+      delh = (d1 - d1old)
+
+      if (igwfconn == 1) then
+        iconverged = 0
+        if (i == 1 .and. qd == DZERO) then
+          iconverged = 1
+        end if
+        if (i > 1 .and. abs(delh) < this%dmaxchg) then
+          iconverged = 1
+        end if
+        if (iconverged == 1) then
+          exit kinematicpicard
+        end if
+      end if
+
+    end do kinematicpicard
+    
+    ! xsa_d = this%calc_area_wet(n, qd)
+    ! darea = (xsa_d + xsa_c) * DHALF - (xsa_b + xsa_a) * DHALF
+    ! this%storage(n) = -((qc + qd) - (qa + qb)) * DHALF
+    this%storage(n) = qd - qc
 
   end subroutine sfr_calc_transient
 
@@ -4718,7 +4874,7 @@ contains
     ! -- set storage weight if it has not been defined yet
     if (this%istorage == 1) then
       if (this%storage_weight == DNODATA) then
-        this%storage_weight = DHALF
+        this%storage_weight = DONE
         write (this%iout, fmtweight) &
           trim(adjustl(this%packName)), this%storage_weight
       end if
@@ -5842,6 +5998,9 @@ contains
         d = this%depth(n)
         a = this%calc_surface_area_wet(n, d)
         this%qauxcbc(1) = a * d
+        if (this%gwfiss == 0 .and. this%istorage == 1) then
+          q = this%storage(n)
+        end if
       else
         q = DZERO
         this%qauxcbc(1) = DZERO
