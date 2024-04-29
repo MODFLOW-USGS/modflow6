@@ -7,7 +7,8 @@ module TimeArraySeriesModule
   use MathUtilModule, only: is_close
   use InputOutputModule, only: GetUnit, openfile
   use KindModule, only: DP, I4B
-  use ListModule, only: ListType, ListNodeType
+  use ListModule, only: ListType
+  use ListNodeModule, only: ListNodeType
   use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, store_error_unit
   use TimeArrayModule, only: TimeArrayType, ConstructTimeArray, &

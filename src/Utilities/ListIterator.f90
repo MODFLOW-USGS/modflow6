@@ -1,7 +1,7 @@
 module ListIteratorModule
   use KindModule, only: I4B
   use IteratorModule, only: IteratorType
-  use ListModule, only: ListType, ListNodeType
+  use ListNodeModule, only: ListNodeType
 
   implicit none
   private
@@ -12,7 +12,7 @@ module ListIteratorModule
   !!
   !<
   type, extends(IteratorType) :: ListIteratorType
-    type(ListType), pointer, private :: container => null() !< the List to iterate through
+    type(ListNodeType), pointer, private :: first_node => null() !< the List to iterate through
     type(ListNodeType), pointer, private :: current_node => null() !< the current node in the list the iterator is pointing at
   contains
     procedure :: has_next
@@ -29,12 +29,12 @@ contains
   !> @brief Constructor to create a ListIterator
   !!
   !<
-  function Constructor(container) result(iterator)
+  function Constructor(first_node) result(iterator)
     ! -- dummy
-    type(ListType), target :: container
+    type(ListNodeType), pointer :: first_node
     type(ListIteratorType) :: iterator
 
-    iterator%container => container
+    iterator%first_node => first_node
     iterator%current_node => null()
 
   end function Constructor
@@ -50,7 +50,7 @@ contains
     if (associated(this%current_node)) then
       res = associated(this%current_node%nextNode)
     else
-      res = associated(this%container%firstNode)
+      res = associated(this%first_node)
     end if
 
   end function
@@ -65,7 +65,7 @@ contains
     if (associated(this%current_node)) then
       this%current_node => this%current_node%nextNode
     else
-      this%current_node => this%container%firstNode
+      this%current_node => this%first_node
     end if
   end subroutine
 

@@ -343,6 +343,7 @@ modflow_sources = files(
     'Utilities' / 'kind.f90',
     'Utilities' / 'List.f90',
     'Utilities' / 'ListIterator.f90',
+    'Utilities' / 'ListNode.f90',
     'Utilities' / 'ListReader.f90',
     'Utilities' / 'LongLineReader.f90',
     'Utilities' / 'MathUtil.f90',

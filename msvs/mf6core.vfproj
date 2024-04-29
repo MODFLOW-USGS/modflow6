@@ -523,6 +523,7 @@
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListIterator.f90"/>
+		<File RelativePath="..\src\Utilities\ListNode.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
 		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
 		<File RelativePath="..\src\Utilities\MathUtil.f90"/>

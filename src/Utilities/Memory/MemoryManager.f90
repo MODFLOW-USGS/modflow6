@@ -318,7 +318,7 @@ contains
     ! -- code
     mt => memorylist%get(name, mem_path)
     found = associated(mt)
-    
+
     check_opt = .true.
     if (present(check)) then
       check_opt = check

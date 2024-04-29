@@ -18,6 +18,7 @@
 ../../../src/Utilities/kind.f90
 ../../../src/Utilities/List.f90
 ../../../src/Utilities/ListIterator.f90
+../../../src/Utilities/ListNode.f90
 ../../../src/Utilities/LongLineReader.f90
 ../../../src/Utilities/MathUtil.f90
 ../../../src/Utilities/OpenSpec.f90

@@ -1,17 +1,15 @@
 module MemoryListModule
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME
-  use KindModule, only: DP, I4B
+  use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
   use ListModule, only: ListType
   use IteratorModule, only: IteratorType
-  use ListIteratorModule, only: ListIteratorType
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
-  
+
   private
   public :: MemoryListType
 
   type :: MemoryListType
-    type(ListType), private :: list
+    type(ListType), private :: container
   contains
     procedure :: iterator
     procedure :: add
@@ -26,10 +24,7 @@ contains
     class(MemoryListType) :: this
     type(MemoryContainerIteratorType) :: itr
 
-    class(IteratorType), allocatable :: container_iterator
-    allocate(container_iterator, source=ListIteratorType(this%list))
-
-    itr = MemoryContainerIteratorType(container_iterator)
+    itr = MemoryContainerIteratorType(this%container%Iterator())
   end function
 
   subroutine add(this, mt)
@@ -37,7 +32,7 @@ contains
     type(MemoryType), pointer :: mt
     class(*), pointer :: obj => null()
     obj => mt
-    call this%list%add(obj)
+    call this%container%add(obj)
   end subroutine add
 
   function get(this, name, path) result(mt)
@@ -65,13 +60,13 @@ contains
   function count(this) result(nval)
     class(MemoryListType) :: this
     integer(I4B) :: nval
-    nval = this%list%count()
+    nval = this%container%count()
     return
   end function count
 
   subroutine clear(this)
     class(MemoryListType) :: this
-    call this%list%Clear()
+    call this%container%Clear()
   end subroutine clear
 
 end module MemoryListModule

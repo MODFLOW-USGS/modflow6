@@ -29,7 +29,7 @@ contains
   !<
   function Constructor(container_iterator) Result(iterator)
     ! -- dummy
-    class(IteratorType), allocatable :: container_iterator
+    class(IteratorType) :: container_iterator
     type(MemoryContainerIteratorType) :: iterator
 
     iterator%container_iterator = container_iterator

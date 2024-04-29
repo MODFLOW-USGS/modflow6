@@ -100,12 +100,13 @@ $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
-$(OBJDIR)/Memory.o \
-$(OBJDIR)/List.o \
+$(OBJDIR)/ListNode.o \
 $(OBJDIR)/Iterator.o \
-$(OBJDIR)/InputDefinition.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/Memory.o \
 $(OBJDIR)/ListIterator.o \
+$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/MemoryContainerIterator.o \
+$(OBJDIR)/List.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
@@ -161,7 +162,7 @@ $(OBJDIR)/exg-gwfgweidm.o \
 $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
-$(OBJDIR)/MemoryContainerIterator.o \
+$(OBJDIR)/MemoryList.o \
 $(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmPrtDfnSelector.o \

@@ -27,7 +27,7 @@ module mf6bmi
   use CharacterStringModule
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
-                                 memorylist, get_from_memorylist
+                                 memorylist
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
