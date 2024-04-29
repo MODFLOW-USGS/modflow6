@@ -2,7 +2,7 @@
                               aa, ab, ac, ad, &
                               qsrc, length, weight, delt)
     use KindModule, only: DP
-    use ConstantsModule, only: DZERO, DEM30, DONE, DTWO
+    use ConstantsModule, only: DZERO, DONE, DTWO
     ! -- return variable
     real(DP) :: kinematic_residual !< kinematic-wave residual
     ! -- dummy variables
@@ -25,13 +25,15 @@
 
     weightinv = DONE - weight
 
-    if ((qb + qa) < DEM30) then
-      f11 = (qd - qc) / length
-      f12 = (ad - ac) / delt
-    else
-      f11 = (weight * (qd - qc) + weightinv * (qb - qa)) / length
-      f12 = ((ad - ab) + (ac - aa)) / (delt * DTWO)
-    end if
+    f11 = (qd - qc) / length
+    f12 = (ad - ac) / delt
+    ! if ((qb + qa) == DZERO) then
+    !   f11 = (qd - qc) / length
+    !   f12 = (ad - ac) / delt
+    ! else
+    !   f11 = (weight * (qd - qc) + weightinv * (qb - qa)) / length
+    !   f12 = ((ad - ab) + (ac - aa)) / (delt * DTWO)
+    ! end if
     kinematic_residual = f11 + f12 - qsrc
 
   end function kinematic_residual

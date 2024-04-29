@@ -4213,7 +4213,7 @@ contains
     integer(I4B) :: j
     real(DP) :: kinematic_residual
     real(DP) :: weight
-    real(DP) :: weightinv
+    ! real(DP) :: weightinv
     real(DP) :: dq
     real(DP) :: qtol
     real(DP) :: qsrc
@@ -4249,9 +4249,9 @@ contains
 
     ! -- initialize local parameters
     weight = this%storage_weight
-    weightinv = DONE - weight
-    qtol = DEM4
-    dq = qtol / 10_DP !this%deps
+    ! weightinv = DONE - weight
+    dq = DEM4 !this%deps
+    qtol = dq * DTWO
 
     ! -- initialize variables
     qgwf = DZERO
@@ -4280,6 +4280,8 @@ contains
     ! -- estimate qd
     ! if (qd == DZERO) then
     qd = (qc + qb) * DHALF
+    call this%sfr_calc_reach_depth(n, qd, dd)
+    ad = this%calc_area_wet(n, dd)
 
     ! end if
     call this%sfr_calc_reach_depth(n, qd, dd)
@@ -4307,9 +4309,8 @@ contains
     ibisect_count = 0
 
     newton: do j = 1, this%maxsfrit
-      dd2 = dd + this%deps
-      call this%sfr_calc_qman(n, dd2, qd2)
-      ad = this%calc_area_wet(n, dd)
+      qd2 = qd + dq
+      call this%sfr_calc_reach_depth(n, qd2, dd2)
       ad2 = this%calc_area_wet(n, dd2)
 
       residual = kinematic_residual(qa, qb, qc, qd, &
@@ -4319,57 +4320,26 @@ contains
       residual2 = kinematic_residual(qa, qb, qc, qd2, &
                                      xsa_a, xsa_b, xsa_c, ad2, &
                                      qsrc, this%length(n), weight, delt)
-      qderv = (residual2 - residual) / (dd2 - dd)
+      qderv = (residual2 - residual) / dq
       if (qderv > DZERO) then
-        delh = -residual / qderv
+        delq = -residual / qderv
       else
-        delh = DZERO
+        delq = DZERO
       end if
 
-      if (kper == 2) then
-        write (*, *) 'per 2'
+      if (qd + delq < DEM30) then
+        delq = -qd * DHALF
       end if
 
-      if (delh * delhold < DEM30 .or. ABS(delh) > ABS(delhold)) then
-        ibisect_count = ibisect_count + 1
-      end if
+      qd = qd + delq
 
-      ! if (ibisect_count > 5) then
-      !   ibisect_count = 0
-      !   ! delh = delh * DHALF
-      !   dd2 = dd + delh * DHALF
-      !   call this%sfr_calc_qman(n, dd2, qd2)
-      !   ad2 = this%calc_area_wet(n, qd2)
-      !   residual2 = kinematic_residual(qa, qb, qc, qd2, &
-      !                                  xsa_a, xsa_b, xsa_c, ad2, &
-      !                                  qsrc, this%length(n), weight, delt)
-
-      !   qderv = (residual2 - residual) / (dd2 - dd)
-      !   if (qderv > DZERO) then
-      !     delh = -residual / qderv
-      !   else
-      !     delh = DZERO
-      !   end if
-      ! end if
-
-      if (dd + delh < DEM30) then
-        delh = -dd
-      end if
-
-      dd = dd + delh
-      delhold = delh
-
-      call this%sfr_calc_qman(n, dd, qd)
-      ad = this%calc_area_wet(n, qd)
+      call this%sfr_calc_reach_depth(n, qd, dd)
+      ad = this%calc_area_wet(n, dd)
       residual_final = kinematic_residual(qa, qb, qc, qd, &
                                           xsa_a, xsa_b, xsa_c, ad, &
                                           qsrc, this%length(n), weight, delt)
 
-      ! if (abs(residual_final) > abs(residual)) then
-      !   write(*,*) 'whoa', j
-      ! end if
-
-      if (abs(delh) < this%dmaxchg .and. abs(residual_final) < 1e-2_DP) then
+      if (abs(delq) < qtol) then
         exit newton
       end if
 
@@ -4910,7 +4880,7 @@ contains
     ! -- set storage weight if it has not been defined yet
     if (this%istorage == 1) then
       if (this%storage_weight == DNODATA) then
-        this%storage_weight = DONE
+        this%storage_weight = DHALF
         write (this%iout, fmtweight) &
           trim(adjustl(this%packName)), this%storage_weight
       end if
