@@ -314,24 +314,11 @@ contains
     logical(LGP), intent(in), optional :: check !< to suppress aborting the program when not found,
                                                 !! set check = .false.
     ! -- local
-    type(MemoryContainerIteratorType) :: itr
     logical(LGP) check_opt
     ! -- code
-    !
-    ! -- initialize
-    mt => null()
-    found = .false.
-    !
-    ! -- iterate over the memory list
-    itr = MemoryContainerIteratorType(memorylist)
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (mt%name == name .and. mt%path == mem_path) then
-        found = .true.
-        exit
-      end if
-    end do
+    mt => memorylist%get(name, mem_path)
+    found = associated(mt)
+    
     check_opt = .true.
     if (present(check)) then
       check_opt = check
@@ -2099,7 +2086,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%strsclr)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2143,7 +2130,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%astr1d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2188,7 +2175,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2224,7 +2211,7 @@ contains
     type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2259,7 +2246,7 @@ contains
     type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2293,7 +2280,7 @@ contains
     type(MemoryContainerIteratorType) :: itr
     ! -- code
     found = .false.
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2335,7 +2322,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint1d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2378,7 +2365,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint2d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2421,7 +2408,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint3d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2464,7 +2451,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl1d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2507,7 +2494,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl2d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2550,7 +2537,7 @@ contains
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl3d)
     else
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2904,7 +2891,7 @@ contains
         nreal = 0
         bytes = DZERO
         ilen = len_trim(cunique(icomp))
-        itr = MemoryContainerIteratorType(memorylist)
+        itr = memorylist%iterator()
         do while (itr%has_next())
           call itr%next()
           mt => itr%value()
@@ -2958,7 +2945,7 @@ contains
     type(MemoryContainerIteratorType) :: itr
 
     call mem_detailed_table(iout, memorylist%count())
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2977,7 +2964,7 @@ contains
     type(MemoryType), pointer :: mt
 
     vmem_size = DZERO
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -3000,7 +2987,7 @@ contains
     character(len=LENVARNAME) :: ucname
     type(MemoryContainerIteratorType) :: itr
     ! -- code
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -3065,7 +3052,7 @@ contains
     allocate (cunique(0))
     !
     ! -- find unique origins
-    itr = MemoryContainerIteratorType(memorylist)
+    itr = memorylist%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()

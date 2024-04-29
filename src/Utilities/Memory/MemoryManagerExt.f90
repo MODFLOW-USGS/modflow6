@@ -39,7 +39,7 @@ contains
 
     do while (removed)
       removed = .false.
-      itr = MemoryContainerIteratorType(memorylist)
+      itr = memorylist%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()

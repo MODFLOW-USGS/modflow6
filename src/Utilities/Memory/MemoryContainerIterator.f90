@@ -1,9 +1,7 @@
 module MemoryContainerIteratorModule
   use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
-  use MemoryListModule, only: MemoryListType
   use IteratorModule, only: IteratorType
-  use ListIteratorModule, only: ListIteratorType
 
   implicit none
   private
@@ -29,12 +27,12 @@ contains
   !> @brief Constructor to create a MemoryContainerIterator
   !!
   !<
-  function Constructor(container) Result(iterator)
+  function Constructor(container_iterator) Result(iterator)
     ! -- dummy
-    type(MemoryListType), target :: container
+    class(IteratorType), allocatable :: container_iterator
     type(MemoryContainerIteratorType) :: iterator
 
-    iterator%container_iterator = ListIteratorType(container%list)
+    iterator%container_iterator = container_iterator
 
   end function Constructor
 

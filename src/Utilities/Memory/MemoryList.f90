@@ -1,13 +1,19 @@
 module MemoryListModule
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use KindModule, only: DP, I4B
   use MemoryTypeModule, only: MemoryType
   use ListModule, only: ListType
+  use IteratorModule, only: IteratorType
+  use ListIteratorModule, only: ListIteratorType
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
+  
   private
   public :: MemoryListType
 
   type :: MemoryListType
-    type(ListType), public :: list
+    type(ListType), private :: list
   contains
+    procedure :: iterator
     procedure :: add
     procedure :: get
     procedure :: count
@@ -15,6 +21,16 @@ module MemoryListModule
   end type MemoryListType
 
 contains
+
+  function iterator(this) result(itr)
+    class(MemoryListType) :: this
+    type(MemoryContainerIteratorType) :: itr
+
+    class(IteratorType), allocatable :: container_iterator
+    allocate(container_iterator, source=ListIteratorType(this%list))
+
+    itr = MemoryContainerIteratorType(container_iterator)
+  end function
 
   subroutine add(this, mt)
     class(MemoryListType) :: this
@@ -24,17 +40,26 @@ contains
     call this%list%add(obj)
   end subroutine add
 
-  function get(this, ipos) result(res)
+  function get(this, name, path) result(mt)
+    ! -- dummy variables
     class(MemoryListType) :: this
-    integer(I4B), intent(in) :: ipos
-    type(MemoryType), pointer :: res
-    class(*), pointer :: obj => null()
-    obj => this%list%getitem(ipos)
-    select type (obj)
-    type is (MemoryType)
-      res => obj
-    end select
-    return
+    character(len=*) :: name
+    character(len=*) :: path
+    type(MemoryType), pointer :: mt
+    ! -- local
+    type(MemoryContainerIteratorType) :: itr
+
+    itr = this%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
+      if (mt%name == name .and. mt%path == path) then
+        return
+      end if
+    end do
+
+    mt => null()
+
   end function get
 
   function count(this) result(nval)

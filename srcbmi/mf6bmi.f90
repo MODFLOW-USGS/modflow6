@@ -28,6 +28,7 @@ module mf6bmi
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
                                  memorylist, get_from_memorylist
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
@@ -251,13 +252,16 @@ contains
     character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for input variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-    integer(I4B) :: imem, start, i
+    integer(I4B) :: start, i
+    type(MemoryContainerIteratorType) :: itr
     type(MemoryType), pointer :: mt => null()
     character(len=LENMEMADDRESS) :: var_address
 
     start = 1
-    do imem = 1, memorylist%count()
-      mt => memorylist%Get(imem)
+    itr = memorylist%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       var_address = create_mem_address(mt%path, mt%name)
       do i = 1, len(trim(var_address))
         c_names(start + i - 1) = var_address(i:i)
@@ -283,13 +287,16 @@ contains
     character(kind=c_char, len=1), intent(inout) :: c_names(*) !< array with memory paths for output variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-    integer(I4B) :: imem, start, i
+    integer(I4B) :: start, i
+    type(MemoryContainerIteratorType) :: itr
     type(MemoryType), pointer :: mt => null()
     character(len=LENMEMADDRESS) :: var_address
 
     start = 1
-    do imem = 1, memorylist%count()
-      mt => memorylist%Get(imem)
+    itr = memorylist%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       var_address = create_mem_address(mt%path, mt%name)
       do i = 1, len(trim(var_address))
         c_names(start + i - 1) = var_address(i:i)
