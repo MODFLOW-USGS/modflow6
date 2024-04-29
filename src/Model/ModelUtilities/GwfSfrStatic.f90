@@ -24,7 +24,7 @@
     real(DP) :: f12
 
     weightinv = DONE - weight
-                          
+
     if ((qb + qa) < DEM30) then
       f11 = (qd - qc) / length
       f12 = (ad - ac) / delt

@@ -295,7 +295,6 @@ contains
         if (p * r > DZERO) then
           a = areas(n)
           rh = a / p
-          ! q = q + conv_fact * a * rh**DTWOTHIRDS * sqrt(slope) / r
           conveyance = conveyance + conv_fact * a * rh**DTWOTHIRDS / r
         end if
       end do
