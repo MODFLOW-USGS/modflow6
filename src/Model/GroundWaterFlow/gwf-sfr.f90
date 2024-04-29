@@ -3619,6 +3619,7 @@ contains
       d1 = DZERO
       qsrc = DZERO
       qgwf = DZERO
+      qd = this%dsflow(n)
 
       ! -- calculate initial depth assuming a wide cross-section and
       !    ignore groundwater leakage
@@ -4190,7 +4191,7 @@ contains
   subroutine sfr_calc_transient(this, n, d1, hgwf, &
                                 qu, qi, qfrommvr, qr, qe, qro, &
                                 qgwf, qd)
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kper
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
@@ -4210,6 +4211,7 @@ contains
     integer(I4B) :: iconverged
     integer(I4B) :: i
     integer(I4B) :: j
+    real(DP) :: kinematic_residual
     real(DP) :: weight
     real(DP) :: weightinv
     real(DP) :: dq
@@ -4229,24 +4231,27 @@ contains
     ! real(DP) :: xsa_d
     real(DP) :: d1old
     real(DP) :: qd2
-    real(DP) :: ad1
+    real(DP) :: ad
     real(DP) :: ad2
     real(DP) :: qgwf_pul
     real(DP) :: f11
     real(DP) :: f12
     real(DP) :: residual
     real(DP) :: residual2
+    real(DP) :: residual_final
     real(DP) :: qderv
     real(DP) :: delq
     real(DP) :: delh
+    real(DP) :: delhold
+    real(DP) :: ibisect_count
     real(DP) :: dd2
     ! real(DP) :: darea
 
     ! -- initialize local parameters
     weight = this%storage_weight
     weightinv = DONE - weight
-    dq = DEM4 !this%deps
-    qtol = dq * DTWO
+    qtol = DEM4
+    dq = qtol / 10_DP !this%deps
 
     ! -- initialize variables
     qgwf = DZERO
@@ -4273,93 +4278,125 @@ contains
     xsa_c = this%calc_area_wet(n, dc)
 
     ! -- estimate qd
+    ! if (qd == DZERO) then
     qd = (qc + qb) * DHALF
+
+    ! end if
     call this%sfr_calc_reach_depth(n, qd, dd)
     d1 = (dc + dd) * DHALF
     d1old = d1
 
     igwfconn = this%sfr_gwf_conn(n)
+    number_picard = this%maxsfrpicard
+    ! if (igwfconn == 1) then
+    !   number_picard = this%maxsfrpicard
+    ! else
+    !   number_picard = 1
+    ! end if
+
+    ! kinematicpicard: do i = 1, number_picard
     if (igwfconn == 1) then
-      number_picard = this%maxsfrpicard
-    else
-      number_picard = 1
+      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+      if (qgwf > qsrc) then
+        qgwf = qsrc
+      end if
+      qgwf_pul = -qgwf / this%length(n)
     end if
 
-    kinematicpicard: do i = 1, number_picard
-      if (igwfconn == 1) then
-        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
-        if (qgwf > qsrc) then
-          qgwf = qsrc
-        end if
-        qgwf_pul = -qgwf / this%length(n)
-      end if
+    qsrc = qlat + qgwf_pul
+    ibisect_count = 0
 
-      newton: do j = 1, this%maxsfrit
-        qd2 = qd + dq
-        ad1 = this%calc_area_wet(n, qd)
-        ad2 = this%calc_area_wet(n, qd2)
+    newton: do j = 1, this%maxsfrit
+      dd2 = dd + this%deps
+      call this%sfr_calc_qman(n, dd2, qd2)
+      ad = this%calc_area_wet(n, dd)
+      ad2 = this%calc_area_wet(n, dd2)
 
-        if ((qb + qa) <= DZERO) then
-          f11 = (qd - qc) / this%length(n)
-        else
-          f11 = (weight * (qd - qc) + weightinv * (qb - qa)) / this%length(n)
-        end if
-        f12 = ((ad1 - xsa_b) + (xsa_c - xsa_a)) / (delt * DTWO)
-        residual = f11 + f12 - qlat - qgwf_pul
+      residual = kinematic_residual(qa, qb, qc, qd, &
+                                    xsa_a, xsa_b, xsa_c, ad, &
+                                    qsrc, this%length(n), weight, delt)
 
-        if ((qb + qa) <= DZERO) then
-          f11 = (qd2 - qc) / this%length(n)
-        else
-          f11 = (weight * (qd2 - qc) + weightinv * (qb - qa)) / this%length(n)
-        end if
-        f12 = ((ad2 - xsa_b) + (xsa_c + xsa_a)) / (delt * DTWO)
-        residual2 = f11 + f12 - qlat - qgwf_pul
-
-        qderv = (residual2 - residual) / dq
-        if (qderv > DZERO) then
-          delq = -residual / qderv
-        else
-          delq = DZERO
-        end if
-
-        if (qd + delq <= DZERO) then
-          delq = -qd
-          qd = DZERO
-        else
-          qd = qd + delq
-        end if
-
-        call this%sfr_calc_reach_depth(n, qd, dd2)
-        delh = dd2 - dd
-        dd = dd2
-        if (abs(delh) < this%dmaxchg .and. abs(delq) < qtol) then ! .and. abs(residual) < qtol) then
-          exit newton
-        end if
-
-      end do newton
-
-      qd = max(qd, DZERO)
-      if (qd == DZERO) then
-        d1 = DZERO
+      residual2 = kinematic_residual(qa, qb, qc, qd2, &
+                                     xsa_a, xsa_b, xsa_c, ad2, &
+                                     qsrc, this%length(n), weight, delt)
+      qderv = (residual2 - residual) / (dd2 - dd)
+      if (qderv > DZERO) then
+        delh = -residual / qderv
       else
-        d1 = (dc + dd) * DHALF
-      end if
-      delh = (d1 - d1old)
-
-      if (igwfconn == 1) then
-        iconverged = 0
-        if (i == 1 .and. qd == DZERO) then
-          iconverged = 1
-        end if
-        if (i > 1 .and. abs(delh) < this%dmaxchg) then
-          iconverged = 1
-        end if
-        if (iconverged == 1) then
-          exit kinematicpicard
-        end if
+        delh = DZERO
       end if
 
-    end do kinematicpicard
+      if (kper == 2) then
+        write (*, *) 'per 2'
+      end if
+
+      if (delh * delhold < DEM30 .or. ABS(delh) > ABS(delhold)) then
+        ibisect_count = ibisect_count + 1
+      end if
+
+      ! if (ibisect_count > 5) then
+      !   ibisect_count = 0
+      !   ! delh = delh * DHALF
+      !   dd2 = dd + delh * DHALF
+      !   call this%sfr_calc_qman(n, dd2, qd2)
+      !   ad2 = this%calc_area_wet(n, qd2)
+      !   residual2 = kinematic_residual(qa, qb, qc, qd2, &
+      !                                  xsa_a, xsa_b, xsa_c, ad2, &
+      !                                  qsrc, this%length(n), weight, delt)
+
+      !   qderv = (residual2 - residual) / (dd2 - dd)
+      !   if (qderv > DZERO) then
+      !     delh = -residual / qderv
+      !   else
+      !     delh = DZERO
+      !   end if
+      ! end if
+
+      if (dd + delh < DEM30) then
+        delh = -dd
+      end if
+
+      dd = dd + delh
+      delhold = delh
+
+      call this%sfr_calc_qman(n, dd, qd)
+      ad = this%calc_area_wet(n, qd)
+      residual_final = kinematic_residual(qa, qb, qc, qd, &
+                                          xsa_a, xsa_b, xsa_c, ad, &
+                                          qsrc, this%length(n), weight, delt)
+
+      ! if (abs(residual_final) > abs(residual)) then
+      !   write(*,*) 'whoa', j
+      ! end if
+
+      if (abs(delh) < this%dmaxchg .and. abs(residual_final) < 1e-2_DP) then
+        exit newton
+      end if
+
+    end do newton
+
+    !   qd = max(qd, DZERO)
+    !   if (qd == DZERO) then
+    !     d1 = DZERO
+    !   else
+    !     d1 = (dc + dd) * DHALF
+    !   end if
+    !   delh = (d1 - d1old)
+
+    !   ! if (igwfconn == 1) then
+    !     iconverged = 0
+    !     if (i == 1 .and. qd == DZERO) then
+    !       iconverged = 1
+    !     end if
+    !     if (i > 1 .and. abs(delh) < this%dmaxchg) then
+    !       iconverged = 1
+    !     end if
+    !     if (iconverged == 1) then
+    !       exit kinematicpicard
+    !     end if
+    !   ! end if
+
+    ! end do kinematicpicard
 
     ! xsa_d = this%calc_area_wet(n, qd)
     ! darea = (xsa_d + xsa_c) * DHALF - (xsa_b + xsa_a) * DHALF

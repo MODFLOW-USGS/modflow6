@@ -257,6 +257,7 @@ contains
     real(DP), intent(in) :: d !< depth to evaluate cross-section
     ! -- local variables
     integer(I4B) :: n
+    real(DP) :: conveyance
     real(DP) :: q
     real(DP) :: rh
     real(DP) :: r
@@ -266,6 +267,7 @@ contains
     real(DP), dimension(npts - 1) :: perimeters
     !
     ! -- initialize the hydraulic radius, perimeter, and area
+    conveyance = DZERO
     q = DZERO
     rh = DZERO
     r = DZERO
@@ -293,9 +295,11 @@ contains
         if (p * r > DZERO) then
           a = areas(n)
           rh = a / p
-          q = q + conv_fact * a * rh**DTWOTHIRDS * sqrt(slope) / r
+          ! q = q + conv_fact * a * rh**DTWOTHIRDS * sqrt(slope) / r
+          conveyance = conveyance + conv_fact * a * rh**DTWOTHIRDS / r
         end if
       end do
+      q = conveyance * sqrt(slope)
     end if
     !
     ! -- return
