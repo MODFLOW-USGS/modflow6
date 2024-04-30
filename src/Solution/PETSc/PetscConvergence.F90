@@ -88,7 +88,6 @@ contains
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
   subroutine petsc_check_convergence(ksp, n, rnorm_L2, flag, context, ierr)
-    use TimerModule
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm_L2 !< 2-norm (preconditioned) residual value
@@ -106,9 +105,6 @@ contains
     type(ConvergenceSummaryType), pointer :: summary
     PetscInt :: iter_cnt
     PetscInt :: i, j, istart, iend
-    real(DP) :: start_time
-
-    call code_timer(0, start_time, context%t_convergence_check)
 
     summary => context%cnvg_summary
 
@@ -144,8 +140,7 @@ contains
         CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
-
-      call code_timer(1, start_time, context%t_convergence_check)
+      ! early return
       return
     end if
 
@@ -228,8 +223,6 @@ contains
         flag = KSP_DIVERGED_ITS
       end if
     end if
-
-    call code_timer(1, start_time, context%t_convergence_check)
 
   end subroutine petsc_check_convergence
 
