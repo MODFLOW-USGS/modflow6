@@ -1359,8 +1359,8 @@ contains
         'ninner', 'solution_inner_dvmax', 'solution_inner_dvmax_model', &
         'solution_inner_dvmax_node'
       write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
-        '', 'solution_inner_drmax', 'solution_inner_drmax_model', &
-        'solution_inner_drmax_node'
+        '', 'solution_inner_rmax', 'solution_inner_rmax_model', &
+        'solution_inner_rmax_node'
       ! solver items specific to ims solver
       if (this%linsolver == IMS_SOLVER) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -1371,14 +1371,14 @@ contains
         end if
       end if
       ! -- check for more than one model - ims only
-      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
+      if (this%convnmod > 1) then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
             '', trim(adjustl(mp%name))//'_inner_dvmax', &
             trim(adjustl(mp%name))//'_inner_dvmax_node', &
-            trim(adjustl(mp%name))//'_inner_drmax', &
-            trim(adjustl(mp%name))//'_inner_drmax_node'
+            trim(adjustl(mp%name))//'_inner_rmax', &
+            trim(adjustl(mp%name))//'_inner_rmax_node'
         end do
       end if
       write (this%icsvinnerout, '(a)') ''
@@ -1500,7 +1500,7 @@ contains
     character(len=25) :: cval
     character(len=7) :: cmsg
     integer(I4B) :: ic
-    integer(I4B) :: im
+    integer(I4B) :: im, model_idx
     integer(I4B) :: icsv0
     integer(I4B) :: kcsv0
     integer(I4B) :: ntabrows
@@ -1789,17 +1789,20 @@ contains
       if (abs(outer_hncg) > abs(dpak)) then
         !
         ! -- get model number and user node number
-        call this%sln_get_nodeu(this%lrch(1, kiter), im, nodeu)
+        call this%sln_get_nodeu(this%lrch(1, kiter), model_idx, nodeu)
         cpakout = ''
+      else if (outer_hncg == DZERO .and. dpak == DZERO) then ! zero change, location could be any
+        model_idx = 0
+        nodeu = 0
         !
-        ! -- package convergence error
+        ! -- then it's a package convergence error
       else
         !
         ! -- set convergence error, model number, user node number,
         !    and package name
         outer_hncg = dpak
         ipos0 = index(cmod, '_')
-        read (cmod(1:ipos0 - 1), *) im
+        read (cmod(1:ipos0 - 1), *) model_idx
         nodeu = ipak
         ipos0 = index(cpak, '-', back=.true.)
         cpakout = cpak(1:ipos0 - 1)
@@ -1808,7 +1811,7 @@ contains
       ! -- write line to outer iteration csv file
       write (this%icsvouterout, '(*(G0,:,","))') &
         this%itertot_sim, totim, kper, kstp, kiter, iter, &
-        outer_hncg, im, trim(cpakout), nodeu
+        outer_hncg, model_idx, trim(cpakout), nodeu
     end if
     !
     ! -- write to inner iteration csv file
@@ -2129,6 +2132,10 @@ contains
         end if
       end do
       !
+      ! -- no change, could be anywhere
+      if (dv == DZERO) locdv = 0
+      if (dr == DZERO) locdr = 0
+      !
       ! -- get model number and user node number for dv
       call this%sln_get_nodeu(locdv, im, nodeu)
       write (iu, '(*(G0,:,","))', advance='NO') '', dv, im, nodeu
@@ -2144,7 +2151,7 @@ contains
       end if
       !
       ! -- write information for each model - ims only
-      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
+      if (this%convnmod > 1) then
         do j = 1, this%cnvg_summary%convnmod
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
@@ -3243,10 +3250,13 @@ contains
     integer(I4B) :: i
     integer(I4B) :: istart
     integer(I4B) :: iend
-    integer(I4B) :: noder
+    integer(I4B) :: noder, nglo
     !
     ! -- initialize local variables
     noder = 0
+    !
+    ! -- when parallel, account for offset
+    nglo = nodesln + this%matrix_offset
     !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
@@ -3254,8 +3264,8 @@ contains
       istart = 0
       iend = 0
       call mp%get_mrange(istart, iend)
-      if (nodesln >= istart .and. nodesln <= iend) then
-        noder = nodesln - istart + 1
+      if (nglo >= istart .and. nglo <= iend) then
+        noder = nglo - istart + 1
         call mp%get_mnodeu(noder, nodeu)
         im = i
         exit

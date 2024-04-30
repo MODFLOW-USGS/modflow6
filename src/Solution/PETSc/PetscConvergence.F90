@@ -2,7 +2,7 @@ module PetscConvergenceModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC
+  use ConstantsModule, only: DPREC, DZERO
   use ListModule
   use ConvergenceSummaryModule
   use ImsLinearSettingsModule
@@ -156,10 +156,10 @@ contains
     if (summary%nitermax > 1) then
       summary%itinner(iter_cnt) = n
       do i = 1, summary%convnmod
-        summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
-        summary%convlocdv(i, iter_cnt) = -1
-        summary%convrmax(i, iter_cnt) = -huge(rmax_model)
-        summary%convlocr(i, iter_cnt) = -1
+        summary%convdvmax(i, iter_cnt) = DZERO
+        summary%convlocdv(i, iter_cnt) = 0
+        summary%convrmax(i, iter_cnt) = DZERO
+        summary%convlocr(i, iter_cnt) = 0
       end do
     end if
 
@@ -185,10 +185,10 @@ contains
     CHKERRQ(ierr)
     do i = 1, summary%convnmod
       ! reset
-      dvmax_model = 0.0
-      idx_dv = -1
-      rmax_model = 0.0
-      idx_r = -1
+      dvmax_model = DZERO
+      idx_dv = 0
+      rmax_model = DZERO
+      idx_r = 0
       ! get first and last model index
       istart = summary%model_bounds(i)
       iend = summary%model_bounds(i + 1) - 1
