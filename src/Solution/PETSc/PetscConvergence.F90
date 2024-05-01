@@ -2,7 +2,7 @@ module PetscConvergenceModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC
+  use ConstantsModule, only: DPREC, DZERO
   use ListModule
   use ConvergenceSummaryModule
   use ImsLinearSettingsModule
@@ -11,6 +11,9 @@ module PetscConvergenceModule
 
   public :: petsc_check_convergence
   public :: KSPSetConvergenceTest
+
+  ! TODO_MJR: this could be smaller, find a bound
+  real(DP), private, parameter :: RNORM_L2_TOL = DPREC
 
   !< Context for the custom convergence check
   type, public :: PetscCnvgCtxType
@@ -88,7 +91,6 @@ contains
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
   subroutine petsc_check_convergence(ksp, n, rnorm_L2, flag, context, ierr)
-    use TimerModule
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm_L2 !< 2-norm (preconditioned) residual value
@@ -106,9 +108,6 @@ contains
     type(ConvergenceSummaryType), pointer :: summary
     PetscInt :: iter_cnt
     PetscInt :: i, j, istart, iend
-    real(DP) :: start_time
-
-    call code_timer(0, start_time, context%t_convergence_check)
 
     summary => context%cnvg_summary
 
@@ -136,7 +135,7 @@ contains
     ! n == 0 is before the iteration starts
     if (n == 0) then
       context%rnorm_L2_init = rnorm_L2_ims
-      if (rnorm_L2 < DPREC) then
+      if (rnorm_L2 < RNORM_L2_TOL) then
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
       else
@@ -144,8 +143,7 @@ contains
         CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
-
-      call code_timer(1, start_time, context%t_convergence_check)
+      ! early return
       return
     end if
 
@@ -156,10 +154,10 @@ contains
     if (summary%nitermax > 1) then
       summary%itinner(iter_cnt) = n
       do i = 1, summary%convnmod
-        summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
-        summary%convlocdv(i, iter_cnt) = -1
-        summary%convrmax(i, iter_cnt) = -huge(rmax_model)
-        summary%convlocr(i, iter_cnt) = -1
+        summary%convdvmax(i, iter_cnt) = DZERO
+        summary%convlocdv(i, iter_cnt) = 0
+        summary%convrmax(i, iter_cnt) = DZERO
+        summary%convlocr(i, iter_cnt) = 0
       end do
     end if
 
@@ -185,10 +183,10 @@ contains
     CHKERRQ(ierr)
     do i = 1, summary%convnmod
       ! reset
-      dvmax_model = 0.0
-      idx_dv = -1
-      rmax_model = 0.0
-      idx_r = -1
+      dvmax_model = DZERO
+      idx_dv = 0
+      rmax_model = DZERO
+      idx_r = 0
       ! get first and last model index
       istart = summary%model_bounds(i)
       iend = summary%model_bounds(i + 1) - 1
@@ -214,7 +212,7 @@ contains
     call VecRestoreArrayF90(context%residual, local_res, ierr)
     CHKERRQ(ierr)
 
-    if (rnorm_L2 < DPREC) then
+    if (rnorm_L2 < RNORM_L2_TOL) then
       ! exact solution, set to 'converged'
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN
     else
@@ -228,8 +226,6 @@ contains
         flag = KSP_DIVERGED_ITS
       end if
     end if
-
-    call code_timer(1, start_time, context%t_convergence_check)
 
   end subroutine petsc_check_convergence
 

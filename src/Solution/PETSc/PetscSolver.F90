@@ -2,7 +2,7 @@ module PetscSolverModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME
+  use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, DZERO
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -338,10 +338,6 @@ contains
     this%is_converged = 0
     if (kiter == 1) then
       this%petsc_ctx%cnvg_summary%iter_cnt = 0
-      this%petsc_ctx%cnvg_summary%convlocdv = 0
-      this%petsc_ctx%cnvg_summary%convdvmax = 0.0
-      this%petsc_ctx%cnvg_summary%convlocr = 0
-      this%petsc_ctx%cnvg_summary%convrmax = 0.0
     end if
 
     ! update matrix coefficients
