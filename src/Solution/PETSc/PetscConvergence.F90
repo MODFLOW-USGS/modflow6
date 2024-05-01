@@ -12,6 +12,9 @@ module PetscConvergenceModule
   public :: petsc_check_convergence
   public :: KSPSetConvergenceTest
 
+  ! TODO_MJR: this could be smaller, find a bound
+  real(DP), private, parameter :: RNORM_L2_TOL = DPREC
+
   !< Context for the custom convergence check
   type, public :: PetscCnvgCtxType
     Vec :: x_old !< x vector from the previous iteration
@@ -132,7 +135,7 @@ contains
     ! n == 0 is before the iteration starts
     if (n == 0) then
       context%rnorm_L2_init = rnorm_L2_ims
-      if (rnorm_L2 < DPREC) then
+      if (rnorm_L2 < RNORM_L2_TOL) then
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
       else
@@ -209,7 +212,7 @@ contains
     call VecRestoreArrayF90(context%residual, local_res, ierr)
     CHKERRQ(ierr)
 
-    if (rnorm_L2 < DPREC) then
+    if (rnorm_L2 < RNORM_L2_TOL) then
       ! exact solution, set to 'converged'
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN
     else
