@@ -410,7 +410,7 @@ contains
           newDepth = newDepth - 1
         end if
       end if
-      ! and add neigbors with the new depth
+      ! and add neighbors with the new depth
       call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth, &
                              cellNbrs%cell, interior)
     end do
@@ -465,7 +465,7 @@ contains
   subroutine addNeighborCell(this, cellNbrs, newNbrIdx, v_nbr_model, mask)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
-    integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
+    integer(I4B), intent(in) :: newNbrIdx !< the neighboring cell's index
     class(VirtualModelType), pointer :: v_nbr_model !< the model where the new neighbor lives
     type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
 
@@ -480,7 +480,7 @@ contains
   end subroutine addNeighborCell
 
   !> @brief Recursively set interface cell indexes and
-  !< add to the region-to-interface loopup table
+  !< add to the region-to-interface lookup table
   recursive subroutine registerInterfaceCells(this, cellWithNbrs)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     type(CellWithNbrsType) :: cellWithNbrs !< the cell from where to start registering neighbors
@@ -626,7 +626,7 @@ contains
   end subroutine makePrimaryConnections
 
   !> @brief Recursively add higher order connections (from
-  !! cells neighoring the primarily connected cells) to the
+  !! cells neighboring the primarily connected cells) to the
   !< sparse data structure
   recursive subroutine connectNeighborCells(this, cell, sparse)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
@@ -739,7 +739,7 @@ contains
         nIfaceIdx = this%region_to_iface_map(noffset + v_exg%nodem1%get(iexg))
         mIfaceIdx = this%region_to_iface_map(moffset + v_exg%nodem2%get(iexg))
         ! not all nodes from the exchanges are part of the interface grid
-        ! (think of exchanges between neigboring models, and their neighbors)
+        ! (think of exchanges between neighboring models, and their neighbors)
         if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
           cycle
         end if

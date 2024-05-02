@@ -797,7 +797,7 @@ contains
     !    for gwtmodel1 so that a call to save flows has an associated dis
     !    object.
     call mvt_cr(this%mvt, this%name, this%inmvt, iout, this%gwtmodel1%fmi, &
-                this%gwtmodel1%eqnsclfac, &
+                this%gwtmodel1%eqnsclfac, this%gwtmodel1%depvartype, &
                 gwfmodelname1=this%gwfmodelname1, &
                 gwfmodelname2=this%gwfmodelname2, &
                 fmi2=this%gwtmodel2%fmi)
@@ -1153,7 +1153,7 @@ contains
     return
   end subroutine gwt_gwt_save_simvals
 
-  !> @ brief Obs ID processer
+  !> @ brief Obs ID processor
   !!
   !! Process observations for this exchange
   !<
@@ -1172,19 +1172,19 @@ contains
     integer(I4B) :: n, iexg, istat
     integer(I4B) :: icol, istart, istop
     real(DP) :: r
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     !
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     icol = 1
     ! -- get exchange index
-    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
-    read (strng(istart:istop), '(i10)', iostat=istat) iexg
+    call urword(string, icol, istart, istop, 1, n, r, iout, inunitobs)
+    read (string(istart:istop), '(i10)', iostat=istat) iexg
     if (istat == 0) then
       obsrv%intPak1 = iexg
     else
-      ! Integer can't be read from strng; it's presumed to be an exchange
+      ! Integer can't be read from string; it's presumed to be an exchange
       ! boundary name (already converted to uppercase)
-      obsrv%FeatureName = trim(adjustl(strng))
+      obsrv%FeatureName = trim(adjustl(string))
       ! -- Observation may require summing rates from multiple exchange
       !    boundaries, so assign intPak1 as a value that indicates observation
       !    is for a named exchange boundary or group of exchange boundaries.

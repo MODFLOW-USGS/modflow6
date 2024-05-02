@@ -1,0 +1,10 @@
+BEGIN GRIDDATA
+  LENGTH
+    <length(nodes)> -- READARRAY
+  WIDTH
+    <width(nodes)> -- READARRAY
+  BOTTOM
+    <bottom(nodes)> -- READARRAY
+  [IDOMAIN
+    <idomain(nodes)> -- READARRAY]
+END GRIDDATA

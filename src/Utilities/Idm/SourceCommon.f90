@@ -56,7 +56,7 @@ contains
   !!
   !! Return the component type typically derived from package file type,
   !! i.e. return GWF when input is GWF6. This function checks the
-  !! resultant commponent type and throws a terminating error if not
+  !! resultant component type and throws a terminating error if not
   !! supported by IDM in some capacity.
   !!
   !<
@@ -135,8 +135,8 @@ contains
 
   !> @brief model package subcomponent name
   !!
-  !! Return the IDM component name, which is the pacage type for
-  !! base packages and the package name for mutli package (i.e.
+  !! Return the IDM component name, which is the package type for
+  !! base packages and the package name for multi package (i.e.
   !! stress) types.
   !!
   !<
@@ -234,6 +234,7 @@ contains
   !<
   subroutine set_model_shape(ftype, fname, model_mempath, dis_mempath, &
                              model_shape)
+    use ConstantsModule, only: DISUNDEF, DIS, DISV, DISU, DIS2D, DISV1D
     use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     character(len=*), intent(in) :: ftype
     character(len=*), intent(in) :: fname
@@ -244,11 +245,18 @@ contains
     integer(I4B), pointer :: ndim2
     integer(I4B), pointer :: ndim3
     integer(I4B), pointer :: ncelldim
-    integer(I4B) :: dim1_size, dim2_size, dim3_size
+    integer(I4B), pointer :: distype
+    integer(I4B) :: dim1_size, dim2_size, dim3_size, dis_type
+    !
+    ! -- initialize dis_type
+    dis_type = DISUNDEF
     !
     ! -- allocate and set model shape in model input context
     select case (ftype)
     case ('DIS6')
+      !
+      ! -- set dis_type
+      dis_type = DIS
       !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NROW', dis_mempath, dim2_size)
@@ -282,7 +290,39 @@ contains
         call store_error_filename(fname)
       end if
       !
+    case ('DIS2D6')
+      !
+      ! -- set dis_type
+      dis_type = DIS2D
+      !
+      call get_isize('NROW', dis_mempath, dim1_size)
+      call get_isize('NCOL', dis_mempath, dim2_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NROW" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim2_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NCOL" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1 .and. dim2_size >= 1) then
+        call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NROW', dis_mempath)
+        call mem_setptr(ndim2, 'NCOL', dis_mempath)
+        model_shape = [ndim1, ndim2]
+      else
+        call store_error_filename(fname)
+      end if
+      !
     case ('DISV6')
+      !
+      ! -- set dis_type
+      dis_type = DISV
       !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NCPL', dis_mempath, dim2_size)
@@ -307,7 +347,31 @@ contains
       else
         call store_error_filename(fname)
       end if
-    case ('DISU6', 'DISL6')
+    case ('DISV2D6')
+      !
+      call get_isize('NODES', dis_mempath, dim1_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NODES" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1) then
+        call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NODES', dis_mempath)
+        model_shape = [ndim1]
+      else
+        call store_error_filename(fname)
+      end if
+    case ('DISU6', 'DISV1D6')
+      !
+      ! -- set dis_type
+      if (ftype == 'DISU6') then
+        dis_type = DISU
+      else if (ftype == 'DISV1D6') then
+        dis_type = DISV1D
+      end if
       !
       call get_isize('NODES', dis_mempath, dim1_size)
       !
@@ -321,11 +385,21 @@ contains
       call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
       call mem_setptr(ndim1, 'NODES', dis_mempath)
       model_shape = [ndim1]
+    case default
+      errmsg = 'Unknown discretization type.  IDM cannot set shape for "' &
+               //trim(ftype)//"'"
+      call store_error(errmsg)
+      call store_error_filename(fname)
     end select
     !
     ! -- allocate and set ncelldim in model input context
     call mem_allocate(ncelldim, 'NCELLDIM', model_mempath)
     ncelldim = size(model_shape)
+    !
+    ! -- allocate and set distype in model input context
+    ! TODO make sure this doesn't clash name GRIDTYPE, e.g.
+    call mem_allocate(distype, 'DISENUM', model_mempath)
+    distype = dis_type
     !
     ! -- return
     return

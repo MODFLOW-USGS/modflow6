@@ -452,7 +452,7 @@ contains
     allocate (this%linear_settings)
     !
     ! -- create linear system matrix and compatible vectors
-    this%linear_solver => create_linear_solver(this%solver_mode)
+    this%linear_solver => create_linear_solver(this%solver_mode, this%name)
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', &
                                                    this%memory_path)
@@ -1359,8 +1359,8 @@ contains
         'ninner', 'solution_inner_dvmax', 'solution_inner_dvmax_model', &
         'solution_inner_dvmax_node'
       write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
-        '', 'solution_inner_drmax', 'solution_inner_drmax_model', &
-        'solution_inner_drmax_node'
+        '', 'solution_inner_rmax', 'solution_inner_rmax_model', &
+        'solution_inner_rmax_node'
       ! solver items specific to ims solver
       if (this%linsolver == IMS_SOLVER) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -1371,14 +1371,14 @@ contains
         end if
       end if
       ! -- check for more than one model - ims only
-      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
+      if (this%convnmod > 1) then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
             '', trim(adjustl(mp%name))//'_inner_dvmax', &
             trim(adjustl(mp%name))//'_inner_dvmax_node', &
-            trim(adjustl(mp%name))//'_inner_drmax', &
-            trim(adjustl(mp%name))//'_inner_drmax_node'
+            trim(adjustl(mp%name))//'_inner_rmax', &
+            trim(adjustl(mp%name))//'_inner_rmax_node'
         end do
       end if
       write (this%icsvinnerout, '(a)') ''
@@ -1500,7 +1500,7 @@ contains
     character(len=25) :: cval
     character(len=7) :: cmsg
     integer(I4B) :: ic
-    integer(I4B) :: im
+    integer(I4B) :: im, m_idx, model_id
     integer(I4B) :: icsv0
     integer(I4B) :: kcsv0
     integer(I4B) :: ntabrows
@@ -1513,7 +1513,7 @@ contains
     integer(I4B) :: iend
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
-    integer(I4B) :: nodeu
+    integer(I4B) :: node_user
     integer(I4B) :: ipak
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
@@ -1593,7 +1593,7 @@ contains
     !
     ! -- linear solve
     call code_timer(0, ttsoln, this%ttsoln)
-    CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
+    call this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
     ! -- increment counters storing the total number of linear and
@@ -1789,26 +1789,35 @@ contains
       if (abs(outer_hncg) > abs(dpak)) then
         !
         ! -- get model number and user node number
-        call this%sln_get_nodeu(this%lrch(1, kiter), im, nodeu)
+        call this%sln_get_nodeu(this%lrch(1, kiter), m_idx, node_user)
         cpakout = ''
+      else if (outer_hncg == DZERO .and. dpak == DZERO) then ! zero change, location could be any
+        m_idx = 0
+        node_user = 0
         !
-        ! -- package convergence error
+        ! -- then it's a package convergence error
       else
         !
         ! -- set convergence error, model number, user node number,
         !    and package name
         outer_hncg = dpak
         ipos0 = index(cmod, '_')
-        read (cmod(1:ipos0 - 1), *) im
-        nodeu = ipak
+        read (cmod(1:ipos0 - 1), *) m_idx
+        node_user = ipak
         ipos0 = index(cpak, '-', back=.true.)
         cpakout = cpak(1:ipos0 - 1)
       end if
       !
       ! -- write line to outer iteration csv file
+      if (m_idx > 0) then
+        mp => GetNumericalModelFromList(this%modellist, m_idx) ! TODO_MJR: right list?
+        model_id = mp%id
+      else
+        model_id = 0
+      end if
       write (this%icsvouterout, '(*(G0,:,","))') &
         this%itertot_sim, totim, kper, kstp, kiter, iter, &
-        outer_hncg, im, trim(cpakout), nodeu
+        outer_hncg, model_id, trim(cpakout), node_user
     end if
     !
     ! -- write to inner iteration csv file
@@ -1876,7 +1885,7 @@ contains
                                     this%itertot_timestep)
     end if
     !
-    ! -- set solution goup convergence flag
+    ! -- set solution group convergence flag
     if (this%icnvg == 0) isgcnvg = 0
     !
     ! -- Calculate flow for each model
@@ -1974,8 +1983,8 @@ contains
     ! -- local variables
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=LENPAKLOC) :: strh
-    character(len=LENPAKLOC) :: strr
+    character(len=LENPAKLOC) :: loc_dvmax_str
+    character(len=LENPAKLOC) :: loc_rmax_str
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: iinner
@@ -1985,12 +1994,12 @@ contains
     integer(I4B) :: k
     integer(I4B) :: locdv
     integer(I4B) :: locdr
-    real(DP) :: dv
-    real(DP) :: dr
+    real(DP) :: dv !< the maximum change in the dependent variable
+    real(DP) :: res !< the maximum value of the residual vector
     !
     ! -- initialize local variables
-    strh = ''
-    strr = ''
+    loc_dvmax_str = ''
+    loc_rmax_str = ''
     iouter = 1
     locdv = 0
     locdr = 0
@@ -2037,34 +2046,34 @@ contains
       end if
       if (im > this%convnmod) then
         dv = DZERO
-        dr = DZERO
+        res = DZERO
         do j = 1, this%convnmod
           if (ABS(this%cnvg_summary%convdvmax(j, k)) > ABS(dv)) then
             locdv = this%cnvg_summary%convlocdv(j, k)
             dv = this%cnvg_summary%convdvmax(j, k)
           end if
-          if (ABS(this%cnvg_summary%convdrmax(j, k)) > ABS(dr)) then
-            locdr = this%cnvg_summary%convlocdr(j, k)
-            dr = this%cnvg_summary%convdrmax(j, k)
+          if (ABS(this%cnvg_summary%convrmax(j, k)) > ABS(res)) then
+            locdr = this%cnvg_summary%convlocr(j, k)
+            res = this%cnvg_summary%convrmax(j, k)
           end if
         end do
       else
         locdv = this%cnvg_summary%convlocdv(im, k)
-        locdr = this%cnvg_summary%convlocdr(im, k)
+        locdr = this%cnvg_summary%convlocr(im, k)
         dv = this%cnvg_summary%convdvmax(im, k)
-        dr = this%cnvg_summary%convdrmax(im, k)
+        res = this%cnvg_summary%convrmax(im, k)
       end if
-      call this%sln_get_loc(locdv, strh)
-      call this%sln_get_loc(locdr, strr)
+      call this%sln_get_loc(locdv, loc_dvmax_str)
+      call this%sln_get_loc(locdr, loc_rmax_str)
       !
       ! -- add data to innertab
       call this%innertab%add_term(k)
       call this%innertab%add_term(iouter)
       call this%innertab%add_term(iinner)
       call this%innertab%add_term(dv)
-      call this%innertab%add_term(adjustr(trim(strh)))
-      call this%innertab%add_term(dr)
-      call this%innertab%add_term(adjustr(trim(strr)))
+      call this%innertab%add_term(adjustr(trim(loc_dvmax_str)))
+      call this%innertab%add_term(res)
+      call this%innertab%add_term(adjustr(trim(loc_rmax_str)))
       !
       ! -- update i0
       i0 = iinner
@@ -2095,15 +2104,14 @@ contains
     integer(I4B), intent(in) :: kstart !< starting position in the conv* arrays
     ! -- local
     integer(I4B) :: itot
-    integer(I4B) :: im
-    integer(I4B) :: j
-    integer(I4B) :: k
+    integer(I4B) :: m_idx, j, k
     integer(I4B) :: kpos
-    integer(I4B) :: locdv
-    integer(I4B) :: locdr
-    integer(I4B) :: nodeu
-    real(DP) :: dv
-    real(DP) :: dr
+    integer(I4B) :: loc_dvmax !< solution node number (row) of max. dep. var. change
+    integer(I4B) :: loc_rmax !< solution node number (row) of max. residual
+    integer(I4B) :: model_id, node_user
+    real(DP) :: dvmax !< maximum dependent variable change
+    real(DP) :: rmax !< maximum residual
+    class(NumericalModelType), pointer :: num_mod => null()
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
@@ -2116,26 +2124,44 @@ contains
         itot, totim, kper, kstp, kouter, k
       !
       ! -- solution summary
-      dv = DZERO
-      dr = DZERO
+      dvmax = DZERO
+      rmax = DZERO
       do j = 1, this%convnmod
-        if (ABS(this%cnvg_summary%convdvmax(j, kpos)) > ABS(dv)) then
-          locdv = this%cnvg_summary%convlocdv(j, kpos)
-          dv = this%cnvg_summary%convdvmax(j, kpos)
+        if (ABS(this%cnvg_summary%convdvmax(j, kpos)) > ABS(dvmax)) then
+          loc_dvmax = this%cnvg_summary%convlocdv(j, kpos)
+          dvmax = this%cnvg_summary%convdvmax(j, kpos)
         end if
-        if (ABS(this%cnvg_summary%convdrmax(j, kpos)) > ABS(dr)) then
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+        if (ABS(this%cnvg_summary%convrmax(j, kpos)) > ABS(rmax)) then
+          loc_rmax = this%cnvg_summary%convlocr(j, kpos)
+          rmax = this%cnvg_summary%convrmax(j, kpos)
         end if
       end do
       !
-      ! -- get model number and user node number for dv
-      call this%sln_get_nodeu(locdv, im, nodeu)
-      write (iu, '(*(G0,:,","))', advance='NO') '', dv, im, nodeu
+      ! -- no change, could be anywhere
+      if (dvmax == DZERO) loc_dvmax = 0
+      if (rmax == DZERO) loc_rmax = 0
       !
-      ! -- get model number and user node number for dr
-      call this%sln_get_nodeu(locdr, im, nodeu)
-      write (iu, '(*(G0,:,","))', advance='NO') '', dr, im, nodeu
+      ! -- get model number and user node number for max. dep. var. change
+      if (loc_dvmax > 0) then
+        call this%sln_get_nodeu(loc_dvmax, m_idx, node_user)
+        num_mod => GetNumericalModelFromList(this%modellist, m_idx)
+        model_id = num_mod%id
+      else
+        model_id = 0
+        node_user = 0
+      end if
+      write (iu, '(*(G0,:,","))', advance='NO') '', dvmax, model_id, node_user
+      !
+      ! -- get model number and user node number for max. residual
+      if (loc_rmax > 0) then
+        call this%sln_get_nodeu(loc_rmax, m_idx, node_user)
+        num_mod => GetNumericalModelFromList(this%modellist, m_idx)
+        model_id = num_mod%id
+      else
+        model_id = 0
+        node_user = 0
+      end if
+      write (iu, '(*(G0,:,","))', advance='NO') '', rmax, model_id, node_user
       !
       ! -- write ims acceleration parameters
       if (this%linsolver == IMS_SOLVER) then
@@ -2143,21 +2169,29 @@ contains
           '', trim(adjustl(this%caccel(kpos)))
       end if
       !
-      ! -- write information for each model - ims only
-      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
+      ! -- write information for each model
+      if (this%convnmod > 1) then
         do j = 1, this%cnvg_summary%convnmod
-          locdv = this%cnvg_summary%convlocdv(j, kpos)
-          dv = this%cnvg_summary%convdvmax(j, kpos)
-          locdr = this%cnvg_summary%convlocdr(j, kpos)
-          dr = this%cnvg_summary%convdrmax(j, kpos)
+          loc_dvmax = this%cnvg_summary%convlocdv(j, kpos)
+          dvmax = this%cnvg_summary%convdvmax(j, kpos)
+          loc_rmax = this%cnvg_summary%convlocr(j, kpos)
+          rmax = this%cnvg_summary%convrmax(j, kpos)
           !
-          ! -- get model number and user node number for dv
-          call this%sln_get_nodeu(locdv, im, nodeu)
-          write (iu, '(*(G0,:,","))', advance='NO') '', dv, nodeu
+          ! -- get model number and user node number for max. dep. var. change
+          if (loc_dvmax > 0) then
+            call this%sln_get_nodeu(loc_dvmax, m_idx, node_user)
+          else
+            node_user = 0
+          end if
+          write (iu, '(*(G0,:,","))', advance='NO') '', dvmax, node_user
           !
-          ! -- get model number and user node number for dr
-          call this%sln_get_nodeu(locdr, im, nodeu)
-          write (iu, '(*(G0,:,","))', advance='NO') '', dr, nodeu
+          ! -- get model number and user node number for max. residual
+          if (loc_rmax > 0) then
+            call this%sln_get_nodeu(loc_rmax, m_idx, node_user)
+          else
+            node_user = 0
+          end if
+          write (iu, '(*(G0,:,","))', advance='NO') '', rmax, node_user
         end do
       end if
       !
@@ -2423,7 +2457,6 @@ contains
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
-    ! -- TODO_MJR: add this for PETSc/parallel
     if (this%isymmetric == 1 .and. simulation_mode == "SEQUENTIAL") then
       do ieq = 1, this%neq
         if (this%active(ieq) > 0) then
@@ -2754,7 +2787,7 @@ contains
   !> @ brief Backtracking update of the dependent variable
   !!
   !!  Backtracking update of the dependent variable if the calculated backtracking
-  !!  update exceeds the dependent variable closure critera.
+  !!  update exceeds the dependent variable closure criteria.
   !!
   !<
   subroutine sln_backtracking_xupdate(this, btflag)
@@ -2797,7 +2830,7 @@ contains
   !! active cells using
   !!
   !!  A = the linear system matrix
-  !!  x = the dependendent variable vector
+  !!  x = the dependent variable vector
   !!  b = the right-hand side vector
   !!
   !!       r = A * x - b
@@ -3097,14 +3130,14 @@ contains
     real(DP) :: ahdif
     !
     ! -- determine the maximum change
-    nb = 1
+    nb = 0
     bigch = DZERO
     abigch = DZERO
     do n = 1, this%neq
       if (this%active(n) < 1) cycle
       hdif = this%x(n) - this%xtemp(n)
       ahdif = abs(hdif)
-      if (ahdif >= abigch) then
+      if (ahdif > abigch) then
         bigch = hdif
         abigch = ahdif
         nb = n
@@ -3154,7 +3187,7 @@ contains
 
   end function sln_package_convergence
 
-  !> @brief Syncronize Newton Under-relaxation flag
+  !> @brief Synchronize Newton Under-relaxation flag
   !<
   function sln_sync_newtonur_flag(this, inewtonur) result(ivalue)
     ! dummy
@@ -3186,9 +3219,8 @@ contains
 
   !> @ brief Get cell location string
   !!
-  !!  Get the cell location string for the provided solution node number.
-  !!
-  !<
+  !! Get the cell location string for the provided solution node number.
+  !< Returns empty string when node not found.
   subroutine sln_get_loc(this, nodesln, str)
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
@@ -3237,17 +3269,20 @@ contains
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
     integer(I4B), intent(in) :: nodesln !< solution node number
-    integer(I4B), intent(inout) :: im !< solution model number
+    integer(I4B), intent(inout) :: im !< solution model index (index in model list for this solution)
     integer(I4B), intent(inout) :: nodeu !< user node number
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B) :: istart
     integer(I4B) :: iend
-    integer(I4B) :: noder
+    integer(I4B) :: noder, nglo
     !
     ! -- initialize local variables
     noder = 0
+    !
+    ! -- when parallel, account for offset
+    nglo = nodesln + this%matrix_offset
     !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
@@ -3255,8 +3290,8 @@ contains
       istart = 0
       iend = 0
       call mp%get_mrange(istart, iend)
-      if (nodesln >= istart .and. nodesln <= iend) then
-        noder = nodesln - istart + 1
+      if (nglo >= istart .and. nglo <= iend) then
+        noder = nglo - istart + 1
         call mp%get_mnodeu(noder, nodeu)
         im = i
         exit

@@ -16,7 +16,7 @@ module VirtualSolutionModule
     type(InterfaceMapType), pointer :: interface_map => null() !< contains the aggregate interface map for the solution
                                                                !! NB: the aggregation is over multiple interface models
                                                                !! and there is no unique numbering there. The target
-                                                               !! indexes should therefore be considere invalid.
+                                                               !! indexes should therefore be considered invalid.
   end type VirtualSolutionType
 
 end module VirtualSolutionModule

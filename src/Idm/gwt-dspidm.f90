@@ -13,6 +13,7 @@ module GwtDspInputModule
   type GwtDspParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
+    logical :: export_ascii = .false.
     logical :: diffc = .false.
     logical :: alh = .false.
     logical :: alv = .false.
@@ -48,6 +49,23 @@ module GwtDspInputModule
     'OPTIONS', & ! block
     'XT3D_RHS', & ! tag name
     'XT3D_RHS', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtdsp_export_ascii = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -164,6 +182,7 @@ module GwtDspInputModule
     [ &
     gwtdsp_xt3d_off, &
     gwtdsp_xt3d_rhs, &
+    gwtdsp_export_ascii, &
     gwtdsp_diffc, &
     gwtdsp_alh, &
     gwtdsp_alv, &

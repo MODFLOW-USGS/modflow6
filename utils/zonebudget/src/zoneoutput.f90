@@ -100,7 +100,7 @@ contains
         end do
       end do
       !
-      ! -- Write time and zone informatio to CSV header
+      ! -- Write time and zone information to CSV header
       write (ioutcsv, '(a)', advance='no') 'totim,'
       write (ioutcsv, '(a)', advance='no') 'kstp,'
       write (ioutcsv, '(a)', advance='no') 'kper,'
@@ -216,6 +216,7 @@ contains
           call budobj(izone)%addentry(rin, rout, delt, txt)
         end if
       end do
+      call budobj(izone)%finalize_step(delt)
       call budobj(izone)%budget_ot(kstp, kper, iout)
       !
       ! -- write line ending after each zone

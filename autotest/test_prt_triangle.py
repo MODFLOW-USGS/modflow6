@@ -100,21 +100,36 @@ def build_gwf_sim(name, ws, targets, chd_sides=None):
     if isinstance(chd_sides, (list, tuple)):
         if "left" in chd_sides:
             leftcells = tri.get_edge_cells(4)
+            leftcells = set(leftcells) - set(cells)
             cells.extend(leftcells)
         if "right" in chd_sides:
             rightcells = tri.get_edge_cells(2)
+            rightcells = set(rightcells) - set(cells)
             cells.extend(rightcells)
         if "botm" in chd_sides:
             botmcells = tri.get_edge_cells(3)
+            botmcells = set(botmcells) - set(cells)
             cells.extend(botmcells)
         if "top" in chd_sides:
             topcells = tri.get_edge_cells(1)
+            topcells = set(topcells) - set(cells)
             cells.extend(topcells)
         for icpl in set(cells):
             h = get_chd_head(xcyc[icpl, 0])
             chdlist.append([(0, icpl), h])
 
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist)
+        iflowface_map = {89: 3, 87: 2, 130: 3, 136: 3, 112: 3, 111: 3}
+
+        def add_iflowface(row):
+            ic = row[0][1] + 1  # 0 to 1-based indexing
+            iff = iflowface_map.get(ic, -1)
+            return (*row, iff)
+
+        chdlist = [add_iflowface(row) for row in chdlist]
+
+    chd = flopy.mf6.ModflowGwfchd(
+        gwf, stress_period_data=chdlist, auxiliary=["IFLOWFACE"]
+    )
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         budget_filerecord=f"{gwfname}.cbc",
@@ -130,17 +145,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
 
-    # create grid
-    tri = get_tri(prt_ws / "grid", targets)
-    grid = VertexGrid(tri)
-    gi = GridIntersect(grid)
-
-    # identify cells on left edge
-    line = LineString([active_domain[0], active_domain[-1]])
-    cells_left = gi.intersect(line)["cellids"]
-    cells_left = np.array(list(cells_left))
-
-    # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
@@ -148,6 +152,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
     )
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
+    tri = get_tri(prt_ws / "grid", targets)
     cell2d = tri.get_cell2d()
     vertices = tri.get_vertices()
     xcyc = tri.get_xcyc()
@@ -268,20 +273,33 @@ def check_output(idx, test):
                 y="y",
                 ax=ax,
                 legend=False,
-                color="black",
+                color="blue",
             )
+        grid = gwf.modelgrid
+        xc, yc = grid.get_xcellcenters_for_layer(
+            0
+        ), grid.get_ycellcenters_for_layer(0)
+        for i in range(grid.ncpl):
+            x, y = xc[i], yc[i]
+            ax.plot(x, y, "o", color="grey", alpha=0.25, ms=2)
+            ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
         plt.show()
 
     if "r2l" in name:
-        assert pls.shape == (76, 16)
+        assert pls.shape == (82, 16)
         assert (pls.z == 0.5).all()
-        assert isclose(min(pls.x), 5.1145, rel_tol=1e-6)
-        assert isclose(max(pls.x), 96, rel_tol=1e-6)
-        assert set(endpts.icell) == {12, 128}
+        rtol = 1e-6
+        assert isclose(min(pls.x), 0, rel_tol=rtol)
+        assert isclose(max(pls.x), 96, rel_tol=rtol)
+        assert isclose(min(pls[pls.irpt == 1].y), 91.690657, rel_tol=rtol)
+        assert isclose(max(pls[pls.irpt == 1].y), 92, rel_tol=rtol)
+        assert isclose(min(pls[pls.irpt == 2].y), 85.585069, rel_tol=rtol)
+        assert isclose(max(pls[pls.irpt == 2].y), 86, rel_tol=rtol)
+        assert set(endpts.icell) == {130, 136}
     elif "diag" in name:
-        assert pls.shape == (112, 16)
+        assert pls.shape == (116, 16)
         assert endpts.shape == (2, 16)
-        assert set(endpts.icell) == {111, 144}
+        assert set(endpts.icell) == {111, 112}
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

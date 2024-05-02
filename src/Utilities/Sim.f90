@@ -444,7 +444,7 @@ contains
   subroutine initial_message()
     ! -- modules
     use VersionModule, only: write_listfile_header
-    use SimVariablesModule, only: simulation_mode
+    use SimVariablesModule, only: simulation_mode, nr_procs
     !
     ! -- initialize message lists
     call sim_errors%init()
@@ -456,9 +456,11 @@ contains
     call write_listfile_header(istdout, write_kind_info=.false., &
                                write_sys_command=.false.)
     !
-    if (simulation_mode == 'PARALLEL') then
-      call write_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
-                         skipafter=1)
+    call write_message(' MODFLOW runs in '//trim(simulation_mode)//' mode', &
+                       skipafter=1)
+    !
+    if (simulation_mode == 'PARALLEL' .and. nr_procs == 1) then
+      call store_warning('Running parallel MODFLOW on only 1 process')
     end if
     !
   end subroutine initial_message
@@ -477,7 +479,7 @@ contains
     character(len=*), parameter :: fmtnocnvg = &
       &"(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
     !
-    ! -- Write message if nonconvergence occured in at least one timestep
+    ! -- Write message if nonconvergence occurred in at least one timestep
     if (numnoconverge > 0) then
       write (warnmsg, fmtnocnvg) numnoconverge
       if (isimcontinue == 0) then

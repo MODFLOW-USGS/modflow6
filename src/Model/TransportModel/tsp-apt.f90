@@ -182,6 +182,7 @@ module TspAptModule
     procedure, public :: apt_fjf_term ! Made public for uze
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
+    procedure, public :: get_mvr_depvar
 
   end type TspAptType
 
@@ -335,7 +336,7 @@ contains
     !    SSM would handle the flows into GWT from this pack.  Then point the
     !    fmi data for an advanced package to xnewpak and qmfrommvr
     this%fmi%iatp(this%igwfaptpak) = 1
-    this%fmi%datp(this%igwfaptpak)%concpack => this%xnewpak
+    this%fmi%datp(this%igwfaptpak)%concpack => this%get_mvr_depvar()
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- If there is an associated flow package and the user wishes to put
@@ -624,7 +625,6 @@ contains
     ! -- dummy
     class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    ! -- local
     ! -- formats
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
@@ -634,6 +634,19 @@ contains
       ierr = 1
     end if
   end function apt_check_valid
+
+  !> @brief Advanced package transport utility function
+  !!
+  !! Set the concentration (or temperature) to be used by either MVT or MVE
+  !<
+  function get_mvr_depvar(this)
+    ! -- dummy
+    class(TspAptType) :: this
+    ! -- return
+    real(dp), dimension(:), contiguous, pointer :: get_mvr_depvar
+    !
+    get_mvr_depvar => this%xnewpak
+  end function get_mvr_depvar
 
   !> @brief Advanced package transport routine
   !!
@@ -696,7 +709,6 @@ contains
   end subroutine apt_ad
 
   !> @brief Override bnd reset for custom mover logic
-  !< TODO_MJR: check this
   subroutine apt_reset(this)
     class(TspAptType) :: this !< GwtAptType object
     ! local
@@ -1067,7 +1079,7 @@ contains
   !<
   subroutine apt_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
-    use TdisModule, only: totim
+    use TdisModule, only: totim, delt
     ! -- dummy
     class(TspAptType) :: this !< TspAptType object
     integer(I4B), intent(in) :: kstp !< time step number
@@ -1075,7 +1087,7 @@ contains
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
-    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
     !
     ! -- Return
     return
@@ -2993,19 +3005,19 @@ contains
     integer(I4B) :: icol
     integer(I4B) :: istart
     integer(I4B) :: istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     !
     ! -- initialize local variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
     !
     ! -- get reach number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     end if
@@ -3040,23 +3052,23 @@ contains
     integer(I4B) :: icol
     integer(I4B) :: istart
     integer(I4B) :: istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     !
     ! -- initialize local variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
     !
     ! -- get reach number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      call extract_idnum_or_bndname(strng, icol, istart, istop, iconn, bndname)
+      call extract_idnum_or_bndname(string, icol, istart, istop, iconn, bndname)
       if (len_trim(bndName) < 1 .and. iconn < 0) then
         write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
           'For observation type', trim(adjustl(obsrv%ObsTypeId)), &

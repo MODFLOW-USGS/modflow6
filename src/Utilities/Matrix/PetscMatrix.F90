@@ -14,10 +14,14 @@ module PetscMatrixModule
   type, public, extends(MatrixBaseType) :: PetscMatrixType
     Mat :: mat
     ! offset in the global matrix
-    integer(I4B) :: nrow
-    integer(I4B) :: ncol
-    integer(I4B) :: nnz
-    integer(I4B) :: offset
+    integer(I4B) :: nrow !< number of rows in this portion of the global matrix
+    integer(I4B) :: ncol !< number of columns in the matrix
+    integer(I4B) :: nnz !< number of nonzeros in the matrix
+    integer(I4B) :: nnz_local !< number of nonzeros in the local matrix (the diagonal block tied to this process)
+    integer(I4B) :: offset !< global offset for the first row in the matrix
+    integer(I4B), dimension(:), pointer, contiguous, private :: ia_local !< IA(CSR) for local block, contains 1-based index values
+    integer(I4B), dimension(:), pointer, contiguous, private :: ja_local !< JA(CSR) for local block, contains 1-based index values
+    real(DP), dimension(:), pointer, contiguous, private :: amat_local !< A(CSR) for local block
     integer(I4B), dimension(:), pointer, contiguous :: ia_petsc !< IA(CSR) for petsc, contains 0-based index values
     integer(I4B), dimension(:), pointer, contiguous :: ja_petsc !< JA(CSR) for petsc, contains 0-based index values
     real(DP), dimension(:), pointer, contiguous :: amat_petsc !< A(CSR) for petsc
@@ -48,6 +52,7 @@ module PetscMatrixModule
 
     ! public
     procedure :: update => pm_update
+    procedure :: get_aij_local => pm_get_aij_local
 
     ! private
     procedure, private :: pm_get_position
@@ -64,17 +69,26 @@ contains
     ! local
     PetscErrorCode :: ierr
     integer(I4B) :: i, ierror
+    Mat :: local_mat
+    integer(I4B), dimension(:), pointer :: ia_tmp, ja_tmp
+    integer(I4B) :: nrows_local
+    logical(LGP) :: done
 
     this%memory_path = mem_path
     this%nrow = sparse%nrow
     this%ncol = sparse%ncol
     this%nnz = sparse%nnz
+    this%nnz_local = sparse%nnz - sparse%nnz_od
     this%offset = sparse%offset
 
     ! allocate the diagonal block of the matrix
-    allocate (this%ia_petsc(this%nrow + 1))
-    allocate (this%ja_petsc(this%nnz))
-    allocate (this%amat_petsc(this%nnz))
+    call mem_allocate(this%ia_local, this%nrow + 1, 'IA_LOCAL', this%memory_path)
+    call mem_allocate(this%ja_local, this%nnz_local, 'JA_LOCAL', this%memory_path)
+    call mem_allocate(this%amat_local, this%nnz_local, 'AMAT_LOCAL', &
+                      this%memory_path)
+    call mem_allocate(this%ia_petsc, this%nrow + 1, 'IA_PETSC', this%memory_path)
+    call mem_allocate(this%ja_petsc, this%nnz, 'JA_PETSC', this%memory_path)
+    call mem_allocate(this%amat_petsc, this%nnz, 'AMAT_PETSC', this%memory_path)
 
     call sparse%sort(with_csr=.true.) !< PETSc has full row sorting, MF6 had diagonal first and then sorted
     call sparse%filliaja(this%ia_petsc, this%ja_petsc, ierror)
@@ -107,6 +121,27 @@ contains
     end if
     CHKERRQ(ierr)
 
+    ! set up local block sparsity structure
+    nrows_local = 0
+    call MatGetDiagonalBlock(this%mat, local_mat, ierr)
+    CHKERRQ(ierr)
+
+    call MatGetRowIJF90(local_mat, 1, PETSC_FALSE, PETSC_FALSE, &
+                        nrows_local, ia_tmp, ja_tmp, &
+                        done, ierr)
+    CHKERRQ(ierr)
+
+    do i = 1, size(ia_tmp)
+      this%ia_local(i) = ia_tmp(i)
+    end do
+    do i = 1, size(ja_tmp) - 1
+      this%ja_local(i) = ja_tmp(i)
+    end do
+
+    call MatRestoreRowIJF90(local_mat, 1, PETSC_FALSE, PETSC_FALSE, &
+                            nrows_local, ia_tmp, ja_tmp, done, ierr)
+    CHKERRQ(ierr)
+
   end subroutine pm_init
 
   !> @brief Copies the values from the CSR array into
@@ -134,9 +169,12 @@ contains
     call MatDestroy(this%mat, ierr)
     CHKERRQ(ierr)
 
-    deallocate (this%ia_petsc)
-    deallocate (this%ja_petsc)
-    deallocate (this%amat_petsc)
+    call mem_deallocate(this%ia_local)
+    call mem_deallocate(this%ja_local)
+    call mem_deallocate(this%amat_local)
+    call mem_deallocate(this%ia_petsc)
+    call mem_deallocate(this%ja_petsc)
+    call mem_deallocate(this%amat_petsc)
 
   end subroutine pm_destroy
 
@@ -344,10 +382,40 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: ja
     real(DP), dimension(:), pointer, contiguous :: amat
 
-    write (*, *) 'NOT IMPLEMENTED'
-    call ustop()
+    call ustop("pm_get_aij not implemented")
 
   end subroutine pm_get_aij
+
+  !> @brief Get the ia/ja and amat values for the local
+  !< diagonal block of this matrix. It's a copy.
+  subroutine pm_get_aij_local(this, ia, ja, amat)
+    class(PetscMatrixType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja
+    real(DP), dimension(:), pointer, contiguous :: amat
+    ! local
+    PetscErrorCode :: ierr
+    integer(I4B) :: irow, icol, ipos
+    real(DP) :: val
+    Mat :: local_mat
+
+    call MatGetDiagonalBlock(this%mat, local_mat, ierr)
+    CHKERRQ(ierr)
+
+    do irow = 1, this%nrow
+      do ipos = this%ia_local(irow), this%ia_local(irow + 1) - 1
+        icol = this%ja_local(ipos)
+        call MatGetValues(local_mat, 1, irow - 1, 1, icol - 1, val, ierr)
+        CHKERRQ(ierr)
+        this%amat_local(ipos) = val
+      end do
+    end do
+
+    ia => this%ia_local
+    ja => this%ja_local
+    amat => this%amat_local
+
+  end subroutine pm_get_aij_local
 
   function pm_get_row_offset(this) result(offset)
     class(PetscMatrixType) :: this

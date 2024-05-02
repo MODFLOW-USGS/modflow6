@@ -8,6 +8,15 @@ optional true
 longname zero method
 description the root finding algorithm to solve ternary subcells.  0 euler, 1 brent, 2 chandrupatla, 3 test.
 
+block options
+name export_array_ascii
+type keyword
+reader urword
+optional true
+mf6internal export_ascii
+longname export array variables to layered ascii files.
+description keyword that specifies input griddata arrays should be written to layered ascii output files.
+
 # --------------------- prt mip griddata ---------------------
 
 block griddata

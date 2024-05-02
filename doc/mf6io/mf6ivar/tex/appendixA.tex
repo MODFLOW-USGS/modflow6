@@ -33,6 +33,10 @@ SIM & TDIS & OPTIONS & yes \\
 SIM & TDIS & DIMENSIONS & yes \\ 
 SIM & TDIS & PERIODDATA & yes \\ 
 \hline
+EXG & GWEGWE & OPTIONS & yes \\ 
+EXG & GWEGWE & DIMENSIONS & yes \\ 
+EXG & GWEGWE & EXCHANGEDATA & yes \\ 
+\hline
 EXG & GWFGWF & OPTIONS & yes \\ 
 EXG & GWFGWF & DIMENSIONS & yes \\ 
 EXG & GWFGWF & EXCHANGEDATA & yes \\ 
@@ -40,10 +44,6 @@ EXG & GWFGWF & EXCHANGEDATA & yes \\
 EXG & GWTGWT & OPTIONS & yes \\ 
 EXG & GWTGWT & DIMENSIONS & yes \\ 
 EXG & GWTGWT & EXCHANGEDATA & yes \\ 
-\hline
-EXG & GWEGWE & OPTIONS & yes \\ 
-EXG & GWEGWE & DIMENSIONS & yes \\ 
-EXG & GWEGWE & EXCHANGEDATA & yes \\ 
 \hline
 EXG & SWFGWF & OPTIONS & yes \\ 
 EXG & SWFGWF & DIMENSIONS & yes \\ 
@@ -55,201 +55,6 @@ SLN & IMS & LINEAR & yes \\
 \hline
 SLN & PTS & OPTIONS & yes \\ 
 SLN & PTS & NONLINEAR & yes \\ 
-\hline
-GWF & NAM & OPTIONS & yes \\ 
-GWF & NAM & PACKAGES & yes \\ 
-\hline
-GWF & DIS & OPTIONS & yes \\ 
-GWF & DIS & DIMENSIONS & yes \\ 
-GWF & DIS & GRIDDATA & no \\ 
-\hline
-GWF & DISV & OPTIONS & yes \\ 
-GWF & DISV & DIMENSIONS & yes \\ 
-GWF & DISV & GRIDDATA & no \\ 
-GWF & DISV & VERTICES & yes \\ 
-GWF & DISV & CELL2D & yes \\ 
-\hline
-GWF & DISU & OPTIONS & yes \\ 
-GWF & DISU & DIMENSIONS & yes \\ 
-GWF & DISU & GRIDDATA & no \\ 
-GWF & DISU & CONNECTIONDATA & yes \\ 
-GWF & DISU & VERTICES & yes \\ 
-GWF & DISU & CELL2D & yes \\ 
-\hline
-GWF & IC & GRIDDATA & no \\ 
-\hline
-GWF & NPF & OPTIONS & yes \\ 
-GWF & NPF & GRIDDATA & no \\ 
-\hline
-GWF & BUY & OPTIONS & yes \\ 
-GWF & BUY & DIMENSIONS & yes \\ 
-GWF & BUY & PACKAGEDATA & yes \\ 
-\hline
-GWF & STO & OPTIONS & yes \\ 
-GWF & STO & GRIDDATA & no \\ 
-GWF & STO & PERIOD & yes \\ 
-\hline
-GWF & CSUB & OPTIONS & yes \\ 
-GWF & CSUB & DIMENSIONS & yes \\ 
-GWF & CSUB & GRIDDATA & no \\ 
-GWF & CSUB & PACKAGEDATA & yes \\ 
-GWF & CSUB & PERIOD & yes \\ 
-\hline
-GWF & HFB & OPTIONS & yes \\ 
-GWF & HFB & DIMENSIONS & yes \\ 
-GWF & HFB & PERIOD & yes \\ 
-\hline
-GWF & CHD & OPTIONS & yes \\ 
-GWF & CHD & DIMENSIONS & yes \\ 
-GWF & CHD & PERIOD & yes \\ 
-\hline
-GWF & WEL & OPTIONS & yes \\ 
-GWF & WEL & DIMENSIONS & yes \\ 
-GWF & WEL & PERIOD & yes \\ 
-\hline
-GWF & DRN & OPTIONS & yes \\ 
-GWF & DRN & DIMENSIONS & yes \\ 
-GWF & DRN & PERIOD & yes \\ 
-\hline
-GWF & RIV & OPTIONS & yes \\ 
-GWF & RIV & DIMENSIONS & yes \\ 
-GWF & RIV & PERIOD & yes \\ 
-\hline
-GWF & GHB & OPTIONS & yes \\ 
-GWF & GHB & DIMENSIONS & yes \\ 
-GWF & GHB & PERIOD & yes \\ 
-\hline
-GWF & RCH & OPTIONS & yes \\ 
-GWF & RCH & DIMENSIONS & yes \\ 
-GWF & RCH & PERIOD & yes \\ 
-\hline
-GWF & RCHA & OPTIONS & yes \\ 
-GWF & RCHA & PERIOD & yes \\ 
-\hline
-GWF & EVT & OPTIONS & yes \\ 
-GWF & EVT & DIMENSIONS & yes \\ 
-GWF & EVT & PERIOD & yes \\ 
-\hline
-GWF & EVTA & OPTIONS & yes \\ 
-GWF & EVTA & PERIOD & yes \\ 
-\hline
-GWF & MAW & OPTIONS & yes \\ 
-GWF & MAW & DIMENSIONS & yes \\ 
-GWF & MAW & PACKAGEDATA & yes \\ 
-GWF & MAW & CONNECTIONDATA & yes \\ 
-GWF & MAW & PERIOD & yes \\ 
-\hline
-GWF & SFR & OPTIONS & yes \\ 
-GWF & SFR & DIMENSIONS & yes \\ 
-GWF & SFR & PACKAGEDATA & yes \\ 
-GWF & SFR & CROSSSECTIONS & yes \\ 
-GWF & SFR & CONNECTIONDATA & yes \\ 
-GWF & SFR & DIVERSIONS & yes \\ 
-GWF & SFR & PERIOD & yes \\ 
-\hline
-GWF & LAK & OPTIONS & yes \\ 
-GWF & LAK & DIMENSIONS & yes \\ 
-GWF & LAK & PACKAGEDATA & yes \\ 
-GWF & LAK & CONNECTIONDATA & yes \\ 
-GWF & LAK & TABLES & yes \\ 
-GWF & LAK & OUTLETS & yes \\ 
-GWF & LAK & PERIOD & yes \\ 
-\hline
-GWF & UZF & OPTIONS & yes \\ 
-GWF & UZF & DIMENSIONS & yes \\ 
-GWF & UZF & PACKAGEDATA & yes \\ 
-GWF & UZF & PERIOD & yes \\ 
-\hline
-GWF & MVR & OPTIONS & yes \\ 
-GWF & MVR & DIMENSIONS & yes \\ 
-GWF & MVR & PACKAGES & yes \\ 
-GWF & MVR & PERIOD & yes \\ 
-\hline
-GWF & GNC & OPTIONS & yes \\ 
-GWF & GNC & DIMENSIONS & yes \\ 
-GWF & GNC & GNCDATA & yes \\ 
-\hline
-GWF & OC & OPTIONS & yes \\ 
-GWF & OC & PERIOD & yes \\ 
-\hline
-GWF & VSC & OPTIONS & yes \\ 
-GWF & VSC & DIMENSIONS & yes \\ 
-GWF & VSC & PACKAGEDATA & yes \\ 
-\hline
-GWF & API & OPTIONS & yes \\ 
-GWF & API & DIMENSIONS & yes \\ 
-\hline
-GWT & ADV & OPTIONS & yes \\ 
-\hline
-GWT & DSP & OPTIONS & yes \\ 
-GWT & DSP & GRIDDATA & no \\ 
-\hline
-GWT & CNC & OPTIONS & yes \\ 
-GWT & CNC & DIMENSIONS & yes \\ 
-GWT & CNC & PERIOD & yes \\ 
-\hline
-GWT & DIS & OPTIONS & yes \\ 
-GWT & DIS & DIMENSIONS & yes \\ 
-GWT & DIS & GRIDDATA & no \\ 
-\hline
-GWT & DISV & OPTIONS & yes \\ 
-GWT & DISV & DIMENSIONS & yes \\ 
-GWT & DISV & GRIDDATA & no \\ 
-GWT & DISV & VERTICES & yes \\ 
-GWT & DISV & CELL2D & yes \\ 
-\hline
-GWT & DISU & OPTIONS & yes \\ 
-GWT & DISU & DIMENSIONS & yes \\ 
-GWT & DISU & GRIDDATA & no \\ 
-GWT & DISU & CONNECTIONDATA & yes \\ 
-GWT & DISU & VERTICES & yes \\ 
-GWT & DISU & CELL2D & yes \\ 
-\hline
-GWT & IC & GRIDDATA & no \\ 
-\hline
-GWT & NAM & OPTIONS & yes \\ 
-GWT & NAM & PACKAGES & yes \\ 
-\hline
-GWT & OC & OPTIONS & yes \\ 
-GWT & OC & PERIOD & yes \\ 
-\hline
-GWT & SSM & OPTIONS & yes \\ 
-GWT & SSM & SOURCES & yes \\ 
-GWT & SSM & FILEINPUT & yes \\ 
-\hline
-GWT & SRC & OPTIONS & yes \\ 
-GWT & SRC & DIMENSIONS & yes \\ 
-GWT & SRC & PERIOD & yes \\ 
-\hline
-GWT & MST & OPTIONS & yes \\ 
-GWT & MST & GRIDDATA & no \\ 
-\hline
-GWT & IST & OPTIONS & yes \\ 
-GWT & IST & GRIDDATA & no \\ 
-\hline
-GWT & SFT & OPTIONS & yes \\ 
-GWT & SFT & PACKAGEDATA & yes \\ 
-GWT & SFT & PERIOD & yes \\ 
-\hline
-GWT & LKT & OPTIONS & yes \\ 
-GWT & LKT & PACKAGEDATA & yes \\ 
-GWT & LKT & PERIOD & yes \\ 
-\hline
-GWT & MWT & OPTIONS & yes \\ 
-GWT & MWT & PACKAGEDATA & yes \\ 
-GWT & MWT & PERIOD & yes \\ 
-\hline
-GWT & UZT & OPTIONS & yes \\ 
-GWT & UZT & PACKAGEDATA & yes \\ 
-GWT & UZT & PERIOD & yes \\ 
-\hline
-GWT & FMI & OPTIONS & yes \\ 
-GWT & FMI & PACKAGEDATA & yes \\ 
-\hline
-GWT & MVT & OPTIONS & yes \\ 
-\hline
-GWT & API & OPTIONS & yes \\ 
-GWT & API & DIMENSIONS & yes \\ 
 \hline
 GWE & ADV & OPTIONS & yes \\ 
 \hline
@@ -264,18 +69,18 @@ GWE & DIS & OPTIONS & yes \\
 GWE & DIS & DIMENSIONS & yes \\ 
 GWE & DIS & GRIDDATA & no \\ 
 \hline
-GWE & DISV & OPTIONS & yes \\ 
-GWE & DISV & DIMENSIONS & yes \\ 
-GWE & DISV & GRIDDATA & no \\ 
-GWE & DISV & VERTICES & yes \\ 
-GWE & DISV & CELL2D & yes \\ 
-\hline
 GWE & DISU & OPTIONS & yes \\ 
 GWE & DISU & DIMENSIONS & yes \\ 
 GWE & DISU & GRIDDATA & no \\ 
 GWE & DISU & CONNECTIONDATA & yes \\ 
 GWE & DISU & VERTICES & yes \\ 
 GWE & DISU & CELL2D & yes \\ 
+\hline
+GWE & DISV & OPTIONS & yes \\ 
+GWE & DISV & DIMENSIONS & yes \\ 
+GWE & DISV & GRIDDATA & no \\ 
+GWE & DISV & VERTICES & yes \\ 
+GWE & DISV & CELL2D & yes \\ 
 \hline
 GWE & ESL & OPTIONS & yes \\ 
 GWE & ESL & DIMENSIONS & yes \\ 
@@ -285,11 +90,17 @@ GWE & EST & OPTIONS & yes \\
 GWE & EST & GRIDDATA & no \\ 
 GWE & EST & PACKAGEDATA & yes \\ 
 \hline
+GWE & FMI & OPTIONS & yes \\ 
+GWE & FMI & PACKAGEDATA & yes \\ 
+\hline
+GWE & IC & OPTIONS & yes \\ 
 GWE & IC & GRIDDATA & no \\ 
 \hline
 GWE & LKE & OPTIONS & yes \\ 
 GWE & LKE & PACKAGEDATA & yes \\ 
 GWE & LKE & PERIOD & yes \\ 
+\hline
+GWE & MVE & OPTIONS & yes \\ 
 \hline
 GWE & MWE & OPTIONS & yes \\ 
 GWE & MWE & PACKAGEDATA & yes \\ 
@@ -301,70 +112,214 @@ GWE & NAM & PACKAGES & yes \\
 GWE & OC & OPTIONS & yes \\ 
 GWE & OC & PERIOD & yes \\ 
 \hline
-GWE & SSM & OPTIONS & yes \\ 
-GWE & SSM & SOURCES & yes \\ 
-GWE & SSM & FILEINPUT & yes \\ 
-\hline
 GWE & SFE & OPTIONS & yes \\ 
 GWE & SFE & PACKAGEDATA & yes \\ 
 GWE & SFE & PERIOD & yes \\ 
+\hline
+GWE & SSM & OPTIONS & yes \\ 
+GWE & SSM & SOURCES & yes \\ 
+GWE & SSM & FILEINPUT & yes \\ 
 \hline
 GWE & UZE & OPTIONS & yes \\ 
 GWE & UZE & PACKAGEDATA & yes \\ 
 GWE & UZE & PERIOD & yes \\ 
 \hline
-GWE & FMI & OPTIONS & yes \\ 
-GWE & FMI & PACKAGEDATA & yes \\ 
+GWF & API & OPTIONS & yes \\ 
+GWF & API & DIMENSIONS & yes \\ 
 \hline
-SWF & NAM & OPTIONS & yes \\ 
-SWF & NAM & PACKAGES & yes \\ 
+GWF & BUY & OPTIONS & yes \\ 
+GWF & BUY & DIMENSIONS & yes \\ 
+GWF & BUY & PACKAGEDATA & yes \\ 
 \hline
-SWF & DISL & OPTIONS & yes \\ 
-SWF & DISL & DIMENSIONS & yes \\ 
-SWF & DISL & GRIDDATA & no \\ 
-SWF & DISL & VERTICES & yes \\ 
-SWF & DISL & CELL2D & yes \\ 
+GWF & CHD & OPTIONS & yes \\ 
+GWF & CHD & DIMENSIONS & yes \\ 
+GWF & CHD & PERIOD & yes \\ 
 \hline
-SWF & DIS & OPTIONS & yes \\ 
-SWF & DIS & DIMENSIONS & yes \\ 
-SWF & DIS & GRIDDATA & no \\ 
+GWF & CSUB & OPTIONS & yes \\ 
+GWF & CSUB & DIMENSIONS & yes \\ 
+GWF & CSUB & GRIDDATA & no \\ 
+GWF & CSUB & PACKAGEDATA & yes \\ 
+GWF & CSUB & PERIOD & yes \\ 
 \hline
-SWF & DISV & OPTIONS & yes \\ 
-SWF & DISV & DIMENSIONS & yes \\ 
-SWF & DISV & GRIDDATA & no \\ 
-SWF & DISV & VERTICES & yes \\ 
-SWF & DISV & CELL2D & yes \\ 
+GWF & DIS & OPTIONS & yes \\ 
+GWF & DIS & DIMENSIONS & yes \\ 
+GWF & DIS & GRIDDATA & no \\ 
 \hline
-SWF & DFW & OPTIONS & yes \\ 
-SWF & DFW & GRIDDATA & no \\ 
+GWF & DISU & OPTIONS & yes \\ 
+GWF & DISU & DIMENSIONS & yes \\ 
+GWF & DISU & GRIDDATA & no \\ 
+GWF & DISU & CONNECTIONDATA & yes \\ 
+GWF & DISU & VERTICES & yes \\ 
+GWF & DISU & CELL2D & yes \\ 
 \hline
-SWF & CXS & OPTIONS & yes \\ 
-SWF & CXS & DIMENSIONS & yes \\ 
-SWF & CXS & PACKAGEDATA & yes \\ 
-SWF & CXS & CROSSSECTIONDATA & yes \\ 
+GWF & DISV & OPTIONS & yes \\ 
+GWF & DISV & DIMENSIONS & yes \\ 
+GWF & DISV & GRIDDATA & no \\ 
+GWF & DISV & VERTICES & yes \\ 
+GWF & DISV & CELL2D & yes \\ 
 \hline
-SWF & IC & GRIDDATA & no \\ 
+GWF & DRN & OPTIONS & yes \\ 
+GWF & DRN & DIMENSIONS & yes \\ 
+GWF & DRN & PERIOD & yes \\ 
 \hline
-SWF & STO & OPTIONS & yes \\ 
-SWF & STO & PERIOD & yes \\ 
+GWF & EVT & OPTIONS & yes \\ 
+GWF & EVT & DIMENSIONS & yes \\ 
+GWF & EVT & PERIOD & yes \\ 
 \hline
-SWF & OC & OPTIONS & yes \\ 
-SWF & OC & PERIOD & yes \\ 
+GWF & EVTA & OPTIONS & yes \\ 
+GWF & EVTA & PERIOD & yes \\ 
 \hline
-SWF & CHD & OPTIONS & yes \\ 
-SWF & CHD & DIMENSIONS & yes \\ 
-SWF & CHD & PERIOD & yes \\ 
+GWF & GHB & OPTIONS & yes \\ 
+GWF & GHB & DIMENSIONS & yes \\ 
+GWF & GHB & PERIOD & yes \\ 
 \hline
-SWF & FLW & OPTIONS & yes \\ 
-SWF & FLW & DIMENSIONS & yes \\ 
-SWF & FLW & PERIOD & yes \\ 
+GWF & GNC & OPTIONS & yes \\ 
+GWF & GNC & DIMENSIONS & yes \\ 
+GWF & GNC & GNCDATA & yes \\ 
 \hline
-SWF & ZDG & OPTIONS & yes \\ 
-SWF & ZDG & DIMENSIONS & yes \\ 
-SWF & ZDG & PERIOD & yes \\ 
+GWF & HFB & OPTIONS & yes \\ 
+GWF & HFB & DIMENSIONS & yes \\ 
+GWF & HFB & PERIOD & yes \\ 
 \hline
-PRT & NAM & OPTIONS & yes \\ 
-PRT & NAM & PACKAGES & yes \\ 
+GWF & IC & OPTIONS & yes \\ 
+GWF & IC & GRIDDATA & no \\ 
+\hline
+GWF & LAK & OPTIONS & yes \\ 
+GWF & LAK & DIMENSIONS & yes \\ 
+GWF & LAK & PACKAGEDATA & yes \\ 
+GWF & LAK & CONNECTIONDATA & yes \\ 
+GWF & LAK & TABLES & yes \\ 
+GWF & LAK & OUTLETS & yes \\ 
+GWF & LAK & PERIOD & yes \\ 
+\hline
+GWF & MAW & OPTIONS & yes \\ 
+GWF & MAW & DIMENSIONS & yes \\ 
+GWF & MAW & PACKAGEDATA & yes \\ 
+GWF & MAW & CONNECTIONDATA & yes \\ 
+GWF & MAW & PERIOD & yes \\ 
+\hline
+GWF & MVR & OPTIONS & yes \\ 
+GWF & MVR & DIMENSIONS & yes \\ 
+GWF & MVR & PACKAGES & yes \\ 
+GWF & MVR & PERIOD & yes \\ 
+\hline
+GWF & NAM & OPTIONS & yes \\ 
+GWF & NAM & PACKAGES & yes \\ 
+\hline
+GWF & NPF & OPTIONS & yes \\ 
+GWF & NPF & GRIDDATA & no \\ 
+\hline
+GWF & OC & OPTIONS & yes \\ 
+GWF & OC & PERIOD & yes \\ 
+\hline
+GWF & RCH & OPTIONS & yes \\ 
+GWF & RCH & DIMENSIONS & yes \\ 
+GWF & RCH & PERIOD & yes \\ 
+\hline
+GWF & RCHA & OPTIONS & yes \\ 
+GWF & RCHA & PERIOD & yes \\ 
+\hline
+GWF & RIV & OPTIONS & yes \\ 
+GWF & RIV & DIMENSIONS & yes \\ 
+GWF & RIV & PERIOD & yes \\ 
+\hline
+GWF & SFR & OPTIONS & yes \\ 
+GWF & SFR & DIMENSIONS & yes \\ 
+GWF & SFR & PACKAGEDATA & yes \\ 
+GWF & SFR & CROSSSECTIONS & yes \\ 
+GWF & SFR & CONNECTIONDATA & yes \\ 
+GWF & SFR & DIVERSIONS & yes \\ 
+GWF & SFR & PERIOD & yes \\ 
+\hline
+GWF & STO & OPTIONS & yes \\ 
+GWF & STO & GRIDDATA & no \\ 
+GWF & STO & PERIOD & yes \\ 
+\hline
+GWF & UZF & OPTIONS & yes \\ 
+GWF & UZF & DIMENSIONS & yes \\ 
+GWF & UZF & PACKAGEDATA & yes \\ 
+GWF & UZF & PERIOD & yes \\ 
+\hline
+GWF & VSC & OPTIONS & yes \\ 
+GWF & VSC & DIMENSIONS & yes \\ 
+GWF & VSC & PACKAGEDATA & yes \\ 
+\hline
+GWF & WEL & OPTIONS & yes \\ 
+GWF & WEL & DIMENSIONS & yes \\ 
+GWF & WEL & PERIOD & yes \\ 
+\hline
+GWT & ADV & OPTIONS & yes \\ 
+\hline
+GWT & API & OPTIONS & yes \\ 
+GWT & API & DIMENSIONS & yes \\ 
+\hline
+GWT & CNC & OPTIONS & yes \\ 
+GWT & CNC & DIMENSIONS & yes \\ 
+GWT & CNC & PERIOD & yes \\ 
+\hline
+GWT & DIS & OPTIONS & yes \\ 
+GWT & DIS & DIMENSIONS & yes \\ 
+GWT & DIS & GRIDDATA & no \\ 
+\hline
+GWT & DISU & OPTIONS & yes \\ 
+GWT & DISU & DIMENSIONS & yes \\ 
+GWT & DISU & GRIDDATA & no \\ 
+GWT & DISU & CONNECTIONDATA & yes \\ 
+GWT & DISU & VERTICES & yes \\ 
+GWT & DISU & CELL2D & yes \\ 
+\hline
+GWT & DISV & OPTIONS & yes \\ 
+GWT & DISV & DIMENSIONS & yes \\ 
+GWT & DISV & GRIDDATA & no \\ 
+GWT & DISV & VERTICES & yes \\ 
+GWT & DISV & CELL2D & yes \\ 
+\hline
+GWT & DSP & OPTIONS & yes \\ 
+GWT & DSP & GRIDDATA & no \\ 
+\hline
+GWT & FMI & OPTIONS & yes \\ 
+GWT & FMI & PACKAGEDATA & yes \\ 
+\hline
+GWT & IC & OPTIONS & yes \\ 
+GWT & IC & GRIDDATA & no \\ 
+\hline
+GWT & IST & OPTIONS & yes \\ 
+GWT & IST & GRIDDATA & no \\ 
+\hline
+GWT & LKT & OPTIONS & yes \\ 
+GWT & LKT & PACKAGEDATA & yes \\ 
+GWT & LKT & PERIOD & yes \\ 
+\hline
+GWT & MST & OPTIONS & yes \\ 
+GWT & MST & GRIDDATA & no \\ 
+\hline
+GWT & MVT & OPTIONS & yes \\ 
+\hline
+GWT & MWT & OPTIONS & yes \\ 
+GWT & MWT & PACKAGEDATA & yes \\ 
+GWT & MWT & PERIOD & yes \\ 
+\hline
+GWT & NAM & OPTIONS & yes \\ 
+GWT & NAM & PACKAGES & yes \\ 
+\hline
+GWT & OC & OPTIONS & yes \\ 
+GWT & OC & PERIOD & yes \\ 
+\hline
+GWT & SFT & OPTIONS & yes \\ 
+GWT & SFT & PACKAGEDATA & yes \\ 
+GWT & SFT & PERIOD & yes \\ 
+\hline
+GWT & SRC & OPTIONS & yes \\ 
+GWT & SRC & DIMENSIONS & yes \\ 
+GWT & SRC & PERIOD & yes \\ 
+\hline
+GWT & SSM & OPTIONS & yes \\ 
+GWT & SSM & SOURCES & yes \\ 
+GWT & SSM & FILEINPUT & yes \\ 
+\hline
+GWT & UZT & OPTIONS & yes \\ 
+GWT & UZT & PACKAGEDATA & yes \\ 
+GWT & UZT & PERIOD & yes \\ 
 \hline
 PRT & DIS & OPTIONS & yes \\ 
 PRT & DIS & DIMENSIONS & yes \\ 
@@ -376,19 +331,86 @@ PRT & DISV & GRIDDATA & no \\
 PRT & DISV & VERTICES & yes \\ 
 PRT & DISV & CELL2D & yes \\ 
 \hline
+PRT & FMI & OPTIONS & yes \\ 
+PRT & FMI & PACKAGEDATA & yes \\ 
+\hline
 PRT & MIP & OPTIONS & yes \\ 
 PRT & MIP & GRIDDATA & no \\ 
+\hline
+PRT & NAM & OPTIONS & yes \\ 
+PRT & NAM & PACKAGES & yes \\ 
+\hline
+PRT & OC & OPTIONS & yes \\ 
+PRT & OC & PERIOD & yes \\ 
 \hline
 PRT & PRP & OPTIONS & yes \\ 
 PRT & PRP & DIMENSIONS & yes \\ 
 PRT & PRP & PACKAGEDATA & yes \\ 
 PRT & PRP & PERIOD & yes \\ 
 \hline
-PRT & OC & OPTIONS & yes \\ 
-PRT & OC & PERIOD & yes \\ 
+SWF & CDB & OPTIONS & yes \\ 
+SWF & CDB & DIMENSIONS & yes \\ 
+SWF & CDB & PERIOD & yes \\ 
 \hline
-PRT & FMI & OPTIONS & yes \\ 
-PRT & FMI & PACKAGEDATA & yes \\ 
+SWF & CHD & OPTIONS & yes \\ 
+SWF & CHD & DIMENSIONS & yes \\ 
+SWF & CHD & PERIOD & yes \\ 
+\hline
+SWF & CXS & OPTIONS & yes \\ 
+SWF & CXS & DIMENSIONS & yes \\ 
+SWF & CXS & PACKAGEDATA & yes \\ 
+SWF & CXS & CROSSSECTIONDATA & yes \\ 
+\hline
+SWF & DFW & OPTIONS & yes \\ 
+SWF & DFW & GRIDDATA & no \\ 
+\hline
+SWF & DIS2D & OPTIONS & yes \\ 
+SWF & DIS2D & DIMENSIONS & yes \\ 
+SWF & DIS2D & GRIDDATA & no \\ 
+\hline
+SWF & DISV1D & OPTIONS & yes \\ 
+SWF & DISV1D & DIMENSIONS & yes \\ 
+SWF & DISV1D & GRIDDATA & no \\ 
+SWF & DISV1D & VERTICES & yes \\ 
+SWF & DISV1D & CELL2D & yes \\ 
+\hline
+SWF & DISV2D & OPTIONS & yes \\ 
+SWF & DISV2D & DIMENSIONS & yes \\ 
+SWF & DISV2D & GRIDDATA & no \\ 
+SWF & DISV2D & VERTICES & yes \\ 
+SWF & DISV2D & CELL2D & yes \\ 
+\hline
+SWF & FLW & OPTIONS & yes \\ 
+SWF & FLW & DIMENSIONS & yes \\ 
+SWF & FLW & PERIOD & yes \\ 
+\hline
+SWF & IC & OPTIONS & yes \\ 
+SWF & IC & GRIDDATA & no \\ 
+\hline
+SWF & NAM & OPTIONS & yes \\ 
+SWF & NAM & PACKAGES & yes \\ 
+\hline
+SWF & OC & OPTIONS & yes \\ 
+SWF & OC & PERIOD & yes \\ 
+\hline
+SWF & STO & OPTIONS & yes \\ 
+SWF & STO & PERIOD & yes \\ 
+\hline
+SWF & ZDG & OPTIONS & yes \\ 
+SWF & ZDG & DIMENSIONS & yes \\ 
+SWF & ZDG & PERIOD & yes \\ 
+\hline
+UTL & ATS & DIMENSIONS & yes \\ 
+UTL & ATS & PERIODDATA & yes \\ 
+\hline
+UTL & LAKTAB & DIMENSIONS & yes \\ 
+UTL & LAKTAB & TABLE & yes \\ 
+\hline
+UTL & OBS & OPTIONS & yes \\ 
+UTL & OBS & CONTINUOUS & yes \\ 
+\hline
+UTL & SFRTAB & DIMENSIONS & yes \\ 
+UTL & SFRTAB & TABLE & yes \\ 
 \hline
 UTL & SPC & OPTIONS & yes \\ 
 UTL & SPC & DIMENSIONS & yes \\ 
@@ -404,23 +426,11 @@ UTL & SPT & PERIOD & yes \\
 UTL & SPTA & OPTIONS & yes \\ 
 UTL & SPTA & PERIOD & yes \\ 
 \hline
-UTL & OBS & OPTIONS & yes \\ 
-UTL & OBS & CONTINUOUS & yes \\ 
-\hline
-UTL & LAKTAB & DIMENSIONS & yes \\ 
-UTL & LAKTAB & TABLE & yes \\ 
-\hline
-UTL & SFRTAB & DIMENSIONS & yes \\ 
-UTL & SFRTAB & TABLE & yes \\ 
-\hline
-UTL & TS & ATTRIBUTES & yes \\ 
-UTL & TS & TIMESERIES & yes \\ 
-\hline
 UTL & TAS & ATTRIBUTES & yes \\ 
 UTL & TAS & TIME & no \\ 
 \hline
-UTL & ATS & DIMENSIONS & yes \\ 
-UTL & ATS & PERIODDATA & yes \\ 
+UTL & TS & ATTRIBUTES & yes \\ 
+UTL & TS & TIMESERIES & yes \\ 
 \hline
 UTL & TVK & OPTIONS & yes \\ 
 UTL & TVK & PERIOD & yes \\ 

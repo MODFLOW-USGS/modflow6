@@ -3,14 +3,15 @@ module VirtualDataManagerModule
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
   use VirtualBaseModule, only: MAP_NODE_TYPE, MAP_CONN_TYPE
-  use VirtualModelModule, only: get_virtual_model, get_virtual_model_from_list
-  use VirtualExchangeModule, only: get_virtual_exchange, &
+  use VirtualModelModule, only: VirtualModelType, get_virtual_model, &
+                                get_virtual_model_from_list
+  use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange, &
                                    get_virtual_exchange_from_list
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule
   use RouterFactoryModule, only: create_router
-  use ListsModule, only: basesolutionlist
+  use ListsModule, only: basesolutionlist, baseconnectionlist
   use NumericalSolutionModule, only: NumericalSolutionType, &
                                      CastAsNumericalSolutionClass
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
@@ -32,8 +33,8 @@ module VirtualDataManagerModule
     procedure :: create => vds_create
     procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
-    procedure :: set_halo => vds_set_halo
-    procedure :: reduce_halo => vds_reduce_halo
+    procedure :: activate_halo => vds_activate_halo
+    procedure :: compress_halo => vds_compress_halo
     procedure :: synchronize => vds_synchronize
     procedure :: synchronize_sln => vds_synchronize_sln
     procedure :: destroy
@@ -175,44 +176,30 @@ contains
 
   end subroutine vds_add_solution
 
-  !> @brief Restrict the models and exchanges in the halo
-  !< to the set that has an actual chance of being used
-  subroutine vds_set_halo(this)
-    use ListsModule, only: basesolutionlist
-    use VirtualDataListsModule
-    use VirtualModelModule
-    use VirtualExchangeModule
+  !> @brief Activates models and exchanges in the halo,
+  !! i.e. the ones that have an actual chance of being used
+  subroutine vds_activate_halo(this)
     class(VirtualDataManagerType) :: this
     ! local
-    integer(I4B) :: i, imod, isol, iexg
+    integer(I4B) :: im, ic, ix
     type(STLVecInt) :: halo_model_ids
     class(VirtualModelType), pointer :: vm
     class(VirtualExchangeType), pointer :: ve
     class(SpatialModelConnectionType), pointer :: conn
-    class(*), pointer :: sln_ptr
 
     call halo_model_ids%init()
 
     ! add halo models to list with ids (unique)
-    do isol = 1, basesolutionlist%Count()
-      sln_ptr => basesolutionlist%GetItem(isol)
-      select type (sln_ptr)
-      class is (NumericalSolutionType)
-        do iexg = 1, sln_ptr%exchangelist%Count()
-          conn => get_smc_from_list(sln_ptr%exchangelist, iexg)
-          if (.not. associated(conn)) cycle
-
-          ! add halo model ids to the list
-          do i = 1, conn%halo_models%size
-            call halo_model_ids%push_back_unique(conn%halo_models%at(i))
-          end do
-        end do
-      end select
+    do ic = 1, baseconnectionlist%Count()
+      conn => get_smc_from_list(baseconnectionlist, ic)
+      do im = 1, conn%halo_models%size
+        call halo_model_ids%push_back_unique(conn%halo_models%at(im))
+      end do
     end do
 
     ! deactivate models that are not local, and not in halo
-    do imod = 1, virtual_model_list%Count()
-      vm => get_virtual_model_from_list(virtual_model_list, imod)
+    do im = 1, virtual_model_list%Count()
+      vm => get_virtual_model_from_list(virtual_model_list, im)
       if (.not. vm%is_local) then
         if (.not. halo_model_ids%contains(vm%id)) then
           vm%is_active = .false.
@@ -221,32 +208,34 @@ contains
     end do
 
     ! deactivate exchanges that are not local and outside halo
-    do iexg = 1, virtual_exchange_list%Count()
-      ve => get_virtual_exchange_from_list(virtual_exchange_list, iexg)
-      if (ve%v_model1%is_local .or. ve%v_model2%is_local) then
-        cycle
+    ! (inside halo means both models are part of halo models)
+    do ix = 1, virtual_exchange_list%Count()
+      ve => get_virtual_exchange_from_list(virtual_exchange_list, ix)
+      if (.not. ve%is_local) then
+        if (.not. halo_model_ids%contains(ve%v_model1%id) .or. &
+            .not. halo_model_ids%contains(ve%v_model2%id)) then
+          ve%is_active = .false.
+        end if
       end if
-      if (halo_model_ids%contains(ve%v_model1%id) .and. &
-          halo_model_ids%contains(ve%v_model2%id)) then
-        cycle
-      end if
-
-      ve%is_active = .false.
     end do
+
+    this%router%halo_activated = .true.
 
     call halo_model_ids%destroy()
 
-  end subroutine vds_set_halo
+  end subroutine vds_activate_halo
 
-  !> @brief Reduce the halo for all solutions. This will
-  !< activate the mapping tables in the virtual data items.
-  subroutine vds_reduce_halo(this)
+  !> @brief Compress the halo for all solutions. This will
+  !! activate the mapping tables in the virtual data items
+  !< such that only relevant part of data arrays can be sync'ed
+  subroutine vds_compress_halo(this)
+    use ArrayHandlersModule, only: ifind
     use InputOutputModule, only: getunit
     use SimVariablesModule, only: proc_id
     use IndexMapModule
     class(VirtualDataManagerType) :: this
     ! local
-    integer(I4B) :: ivm, isol, iexg
+    integer(I4B) :: ivm, isol, iexg, m_idx
     integer(I4B) :: outunit
     character(len=128) :: monitor_file
     type(VirtualSolutionType), pointer :: virt_sol
@@ -274,7 +263,7 @@ contains
       write (monitor_file, '(a,i0,a)') "iface.p", proc_id, ".log"
       open (unit=outunit, file=monitor_file)
       do isol = 1, this%nr_solutions
-        write (outunit, '(a,i0,/)') "interface mape for solution ", &
+        write (outunit, '(a,i0,/)') "interface map for solution ", &
           this%virtual_solutions(isol)%solution_id
         virt_sol => this%virtual_solutions(isol)
         call virt_sol%interface_map%print_interface(outunit)
@@ -287,15 +276,19 @@ contains
       virt_sol => this%virtual_solutions(isol)
       do ivm = 1, size(virt_sol%models)
         vdc => virt_sol%models(ivm)%ptr
-        if (vdc%is_local) cycle
-        nmap => virt_sol%interface_map%get_node_map(vdc%id)
-        cmap => virt_sol%interface_map%get_connection_map(vdc%id)
-        call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
-        call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+        if (.not. vdc%is_local .and. vdc%is_active) then
+          m_idx = ifind(virt_sol%interface_map%model_ids, vdc%id)
+          if (m_idx == -1) cycle
+
+          nmap => virt_sol%interface_map%get_node_map(vdc%id)
+          cmap => virt_sol%interface_map%get_connection_map(vdc%id)
+          call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
+          call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+        end if
       end do
     end do
 
-  end subroutine vds_reduce_halo
+  end subroutine vds_compress_halo
 
   !> @brief Synchronize the full virtual data store for this stage
   !<

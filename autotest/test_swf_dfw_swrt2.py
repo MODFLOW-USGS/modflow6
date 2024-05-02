@@ -3,7 +3,7 @@
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
 from SWIFT2D, a USGS 2D overland flow simulator.  Because the DFW
-Package in MF6 presently works only with the DISL Package, it cannot
+Package in MF6 presently works only with the DISV1D Package, it cannot
 represent flow on a grid, so it is used here to simulate a one-
 dimensional version of this same problem.  The problem is set up
 so that once steady conditions are achieved, the depth in each reach
@@ -12,7 +12,7 @@ should be 1.0 m.
 """
 
 import os
-
+import pathlib as pl
 import flopy
 import numpy as np
 import pytest
@@ -78,7 +78,7 @@ def build_models(idx, test):
     sim.register_ims_package(imsswf, [swf.name])
 
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
@@ -87,13 +87,14 @@ def build_models(idx, test):
 
     reach_bottom = np.linspace(1.05, 0.05, nreach)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
+        export_array_ascii=True,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=dx,
-        reach_bottom=reach_bottom,
+        length=dx,
+        width=dx,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -101,10 +102,10 @@ def build_models(idx, test):
 
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
+        export_array_ascii=True,
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
-        slope=0.05 / 500.0,
         idcxs=None,
     )
 
@@ -115,6 +116,7 @@ def build_models(idx, test):
 
     ic = flopy.mf6.ModflowSwfic(
         swf,
+        export_array_ascii=True,
         strt=2.05,
     )
 
@@ -219,10 +221,31 @@ def check_output(idx, test):
 
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.disl.reach_bottom.array
+    depth = stage_all[-1] - swf.disv1d.bottom.array
     np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"
+
+    # ensure export array is working properly
+    flist = [
+        "disv1d.length",
+        "disv1d.width",
+        "disv1d.bottom",
+        "disv1d.idomain",
+        "dfw.manningsn",
+        "ic.strt",
+    ]
+    files = [pl.Path(ws / f"{swfname}-{f}.txt") for f in flist]
+    swf = test.sims[0].swf[0]
+    for i, fpth in enumerate(files):
+        assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
+        a = np.loadtxt(fpth)
+        array_name = flist[i][flist[i].index(".") + 1 :]
+        package_name = flist[i][0 : flist[i].index(".")]
+        package = getattr(swf, package_name)
+        b = getattr(package, array_name).array
+        assert np.allclose(a, b)
+    return
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

@@ -141,7 +141,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    # check flow for indivdual reach
+    # check flow for individual reach
     fname = os.path.join(test.workspace, f"{test.name}.sfr.cbb")
     with flopy.utils.CellBudgetFile(fname) as cbb:
         outflows = cbb.get_data(text="EXT-OUTFLOW")

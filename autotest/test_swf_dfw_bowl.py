@@ -93,20 +93,20 @@ def build_models(idx, test):
     sim.register_ims_package(imsswf, [swf.name])
 
     vertices = []
-    vertices = [[j, j * dx, 0.0, 0.0] for j in range(nreach + 1)]
+    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
     cell2d = []
     for j in range(nreach):
         cell2d.append([j, 0.5, 2, j, j + 1])
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disl = flopy.mf6.ModflowSwfdisl(
+    disv1d = flopy.mf6.ModflowSwfdisv1D(
         swf,
         nodes=nodes,
         nvert=nvert,
-        reach_length=dx,
-        reach_width=1.,
-        reach_bottom=reach_bottom,
+        length=dx,
+        width=1.,
+        bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
         cell2d=cell2d,
@@ -117,7 +117,6 @@ def build_models(idx, test):
         print_flows=True,
         save_flows=True,
         manningsn=0.035,
-        slope=1 / dx,
         idcxs=0,
     )
 
@@ -228,25 +227,25 @@ def check_output(idx, test):
     if inflow_location[idx] == "middle":
         stage_answer = [
             0.00610977,
-            1.00848343,
-            2.00848545,
-            2.00848562,
-            2.00848566,
-            2.00848562,
-            2.00848545,
-            1.00848343,
+            1.00610977,
+            2.00610977,
+            2.00610995,
+            2.00610998,
+            2.00610995,
+            2.00610977,
+            1.00610977,
             0.00610977,
         ]
     elif inflow_location[idx] == "left":
         stage_answer = [
-            2.03027679,
-            2.03027665,
-            2.03027599,
-            2.00975688,
-            2.00975618,
-            2.00975605,
-            2.00975535,
-            1.00975489,
+            2.03013084,
+            2.03013070,
+            2.03013004,
+            2.00928540,
+            2.00928470,
+            2.00928457,
+            2.00928387,
+            1.00928387,
             0.00928387,
         ]
 

@@ -64,6 +64,7 @@ module BudgetModule
     procedure :: add_single_entry
     procedure :: add_multi_entry
     generic :: addentry => add_single_entry, add_multi_entry
+    procedure :: finalize_step
     procedure :: writecsv
     ! -- private
     procedure :: allocate_scalars
@@ -84,7 +85,6 @@ contains
     ! -- dummy
     type(BudgetType), pointer :: this !< BudgetType object
     character(len=*), intent(in) :: name_model !< name of the model
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (this)
@@ -363,12 +363,11 @@ contains
     integer(I4B) :: i
     !
     this%msum = 1
-    !
     do i = 1, this%maxsize
       this%vbvl(3, i) = DZERO
       this%vbvl(4, i) = DZERO
     end do
-    !
+
     ! -- Return
     return
   end subroutine reset
@@ -423,11 +422,6 @@ contains
           trim(adjustl(text))
         call store_error(errmsg, terminate=.TRUE.)
       end if
-    end if
-    !
-    if (iscv == 0) then
-      this%vbvl(1, this%msum) = this%vbvl(1, this%msum) + rin * delt
-      this%vbvl(2, this%msum) = this%vbvl(2, this%msum) + rout * delt
     end if
     !
     this%vbvl(3, this%msum) = rin
@@ -499,11 +493,6 @@ contains
         end if
       end if
       !
-      if (iscv == 0) then
-        this%vbvl(1, this%msum) = this%vbvl(1, this%msum) + budterm(1, i) * delt
-        this%vbvl(2, this%msum) = this%vbvl(2, this%msum) + budterm(2, i) * delt
-      end if
-      !
       this%vbvl(3, this%msum) = budterm(1, i)
       this%vbvl(4, this%msum) = budterm(2, i)
       this%vbnm(this%msum) = adjustr(budtxt(i))
@@ -523,6 +512,29 @@ contains
     ! -- Return
     return
   end subroutine add_multi_entry
+
+  !> @ brief Update accumulators
+  !!
+  !! This must be called before any output is written
+  !! in order to update the accumulators in vbvl(1,:)
+  !! and vbl(2,:).
+  !<
+  subroutine finalize_step(this, delt)
+    ! -- modules
+    ! -- dummy
+    class(BudgetType) :: this !< BudgetType object
+    real(DP), intent(in) :: delt
+    ! -- local
+    integer(I4B) :: i
+    !
+    do i = 1, this%msum - 1
+      this%vbvl(1, i) = this%vbvl(1, i) + this%vbvl(3, i) * delt
+      this%vbvl(2, i) = this%vbvl(2, i) + this%vbvl(4, i) * delt
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine finalize_step
 
   !> @ brief allocate scalar variables
   !!

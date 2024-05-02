@@ -474,7 +474,7 @@ contains
       call store_error('Required GRIDDATA block not found.')
     end if
     !
-    ! -- detemine if cg_ske and cg_theta have been specified
+    ! -- determine if cg_ske and cg_theta have been specified
     if (iske == 0) then
       write (errmsg, '(a)') 'CG_SKE GRIDDATA must be specified.'
       call store_error(errmsg)
@@ -735,7 +735,7 @@ contains
         case ('NDELAYCELLS')
           this%ndelaycells = this%parser%GetInteger()
           !
-          ! -- compression indicies (CR amd CC) will be specified instead of
+          ! -- compression indices (CR amd CC) will be specified instead of
           !    storage coefficients (SSE and SSV)
         case ('COMPRESSION_INDICES')
           this%istoragec = 0
@@ -3325,7 +3325,7 @@ contains
       end if
       !
       ! -- update coarse-grained storage and water
-      !    compresion variables
+      !    compression variables
       this%cg_stor(node) = rrate
       this%cell_wcstor(node) = rratewc
       this%cell_thick(node) = this%cg_thick(node)
@@ -4406,7 +4406,7 @@ contains
           pcs = this%cg_es(node) + pcs0
         end if
       else
-        ! specified pcs...substract head (u) from sigma
+        ! specified pcs...subtract head (u) from sigma
         if (this%ipch /= 0) then
           pcs = this%cg_gs(node) - (pcs0 - bot)
         end if
@@ -5156,7 +5156,7 @@ contains
 
   !> @ brief Update coarse-grained material properties
   !!
-  !!  Method updates coarse-grained material proerties in a cell.
+  !!  Method updates coarse-grained material properties in a cell.
   !!
   !<
   subroutine csub_cg_update(this, node)
@@ -5293,7 +5293,7 @@ contains
     bot = this%dis%bot(node)
     tthk = this%cg_thick(node)
     !
-    ! -- calculate saturation derivitive
+    ! -- calculate saturation derivative
     satderv = this%csub_calc_sat_derivative(node, hcell)
     !
     ! -- calculate water compressibility factor
@@ -5413,7 +5413,7 @@ contains
     !
     f = this%brg * area * tled
     !
-    ! -- calculate saturation derivitive
+    ! -- calculate saturation derivative
     satderv = this%csub_calc_sat_derivative(node, hcell)
     !
     ! -- calculate the current water compressibility factor
@@ -6057,7 +6057,7 @@ contains
       !    of the cell based on current head
       zcell = this%csub_calc_znode(topcell, botcell, hbarcell)
       !
-      ! -- set variables for delay interbed zcell calulations
+      ! -- set variables for delay interbed zcell calculations
       zcenter = zcell + this%dbrelz(n, idelay)
       dzhalf = DHALF * this%dbdzini(1, idelay)
       top = zcenter + dzhalf
@@ -7510,14 +7510,14 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     logical :: flag_string
     !
     ! -- initialize variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     !
-    ! -- Extract reach number from strng and store it.
+    ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
@@ -7542,10 +7542,10 @@ contains
         obsrv%ObsTypeId == 'DELAY-THETA' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
-      call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+      call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     else
       nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                  iout, strng, flag_string)
+                                  iout, string, flag_string)
     end if
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
@@ -7557,7 +7557,7 @@ contains
           obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
           obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
           obsrv%ObsTypeId == 'DELAY-THETA') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname
           ! -- reset nn1

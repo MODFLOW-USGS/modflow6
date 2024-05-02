@@ -102,7 +102,7 @@ botm = np.array([bot1, bot2, bot3, bot4, bot5])
 nlay = botm.shape[0]
 ibound = np.ones_like(botm)
 
-# deactive gw cells where lake cells are active
+# deactivate gw cells where lake cells are active
 ibound[0, 6:11, 6:11] = 0  # layer 1
 ibound[1, 7:10, 7:10] = 0  # layer 2
 

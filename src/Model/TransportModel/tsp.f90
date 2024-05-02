@@ -351,7 +351,7 @@ contains
     ! -- Print budget summaries
     call this%tsp_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output; if any dependendent variables or budgets
+    ! -- Timing Output; if any dependent variables or budgets
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
     !
@@ -509,7 +509,7 @@ contains
   !! Loop through attached packages and write budget summaries
   !<
   subroutine tsp_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper, totim
+    use TdisModule, only: kstp, kper, totim, delt
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -528,6 +528,7 @@ contains
     end if
     !
     ! -- Model budget summary
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       ipflag = 1
       call this%budget%budget_ot(kstp, kper, this%iout)
@@ -608,7 +609,7 @@ contains
 
   !> @brief Deallocate memory
   !!
-  !! Deallocate memmory at conclusion of model run
+  !! Deallocate memory at conclusion of model run
   !<
   subroutine tsp_da(this)
     ! -- modules
@@ -790,7 +791,7 @@ contains
         mempathic = mempath
       case ('FMI6')
         this%infmi = inunit
-      case ('MVT6')
+      case ('MVT6', 'MVE6')
         this%inmvt = inunit
       case ('ADV6')
         this%inadv = inunit
@@ -815,7 +816,7 @@ contains
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%eqnsclfac, this%depvartype)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
-                this%eqnsclfac)
+                this%eqnsclfac, this%depvartype)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
     !

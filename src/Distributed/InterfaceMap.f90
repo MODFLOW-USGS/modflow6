@@ -105,6 +105,7 @@ contains
   end subroutine add
 
   function get_node_map(this, model_id) result(node_map)
+    use SimModule, only: ustop
     class(InterfaceMapType) :: this
     integer(I4B) :: model_id
     type(IndexMapType), pointer :: node_map
@@ -115,6 +116,8 @@ contains
     m_idx = ifind(this%model_ids, model_id)
     if (m_idx > 0) then
       node_map => this%node_maps(m_idx)
+    else
+      call ustop("Internal error. Can't find node map in interface")
     end if
 
   end function get_node_map

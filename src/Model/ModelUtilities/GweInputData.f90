@@ -187,7 +187,7 @@ contains
     return
   end subroutine set_gwe_shared_arrays
 
-  !> @ breif Deallocate memory
+  !> @ brief Deallocate memory
   !!
   !!  Deallocate GWE shared data array memory
   !<

@@ -60,7 +60,7 @@ contains
     write (iout, '(1x,a,i0,a,a)') 'Created ', newConnections%Count(), &
       ' model connections for solution ', trim(solution%name)
 
-    ! craete the topology of models participating in the interfaces
+    ! create the topology of models participating in the interfaces
     call this%createModelConnectivity(newConnections)
 
     ! replace numerical exchanges in solution with connections

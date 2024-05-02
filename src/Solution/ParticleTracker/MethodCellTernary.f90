@@ -9,7 +9,6 @@ module MethodCellTernaryModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
   use TrackModule, only: TrackFileControlType
-  use ArrayHandlersModule, only: ExpandArray
   implicit none
 
   private
@@ -147,7 +146,6 @@ contains
   !> @brief Apply the ternary method to a polygonal cell
   subroutine apply_mct(this, particle, tmax)
     use ConstantsModule, only: DZERO, DONE, DHALF
-    use TdisModule, only: kper, kstp
     ! dummy
     class(MethodCellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -194,8 +192,7 @@ contains
       ! -- particle state to file
       if (particle%z > cell%defn%top) then
         particle%z = cell%defn%top
-        call this%trackfilectl%save(particle, kper=kper, &
-                                    kstp=kstp, reason=1) ! reason=1: cell transition
+        call this%save(particle, reason=1) ! reason=1: cell transition
       end if
 
       npolyverts = cell%defn%npolyverts

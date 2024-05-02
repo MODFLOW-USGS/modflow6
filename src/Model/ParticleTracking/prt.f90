@@ -539,7 +539,7 @@ contains
     ! -- Print budget summaries
     call this%prt_ot_bdsummary(ibudfl, ipflag)
 
-    ! -- Timing Output; if any dependendent variables or budgets
+    ! -- Timing Output; if any dependent variables or budgets
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
   end subroutine prt_ot
@@ -689,7 +689,7 @@ contains
   !> @brief Print budget summary
   subroutine prt_ot_bdsummary(this, ibudfl, ipflag)
     ! -- modules
-    use TdisModule, only: kstp, kper, totim
+    use TdisModule, only: kstp, kper, totim, delt
     ! -- dummy
     class(PrtModelType) :: this
     integer(I4B), intent(in) :: ibudfl
@@ -705,6 +705,7 @@ contains
     end do
 
     ! -- model budget summary
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       ipflag = 1
       ! -- model budget summary
@@ -928,7 +929,7 @@ contains
   !> @brief Solve the model
   subroutine prt_solve(this)
     ! -- modules
-    use TdisModule, only: kper, kstp, totimc, totim, nper, nstp
+    use TdisModule, only: kper, kstp, totimc, nper, nstp, delt
     use PrtPrpModule, only: PrtPrpType
     ! -- dummy variables
     class(PrtModelType) :: this
@@ -972,8 +973,7 @@ contains
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
-            call this%trackfilectl%save(particle, kper=kper, &
-                                        kstp=kstp, reason=3) ! reason=3: termination
+            call this%method%save(particle, reason=3) ! reason=3: termination
 
           ! -- If particle is inactive or not yet to be released, cycle
           if (particle%istatus > 1) cycle
@@ -981,14 +981,14 @@ contains
           ! -- If particle released this time step, record its initial state
           particle%istatus = 1
           if (particle%trelease >= totimc) &
-            call this%trackfilectl%save(particle, kper=kper, &
-                                        kstp=kstp, reason=0) ! reason=0: release
+            call this%method%save(particle, reason=0) ! reason=0: release
 
-          ! -- Unless in last stress period and it has only one time step,
-          ! -- limit max time to no later than end of time step
-          tmax = particle%tstop
-          if (kper == nper .and. nstp(kper) /= 1 .and. totim < particle%tstop) &
-            tmax = totim
+          ! -- Maximum time is end of time step unless this is the last
+          !    time step in the simulation, which case it's the particle
+          !    stop time.
+          tmax = totimc + delt
+          if (nper == kper .and. nstp(kper) == kstp) &
+            tmax = particle%tstop
 
           ! -- Get and apply the tracking method
           call this%method%apply(particle, tmax)

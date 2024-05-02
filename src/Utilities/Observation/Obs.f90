@@ -218,7 +218,7 @@ contains
   !!
   !!  - creates object
   !!  - allocates pointer
-  !!  - initilizes values
+  !!  - initializes values
   !!
   !<
   subroutine obs_cr(obs, inobs)
@@ -254,23 +254,23 @@ contains
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     logical :: flag_string
     !
     ! -- Initialize variables
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     icol = 1
-    flag_string = .true. ! Allow strng to contain a boundary name
+    flag_string = .true. ! Allow string to contain a boundary name
     !
     n = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                              iout, strng, flag_string)
+                              iout, string, flag_string)
     !
     if (n > 0) then
       obsrv%NodeNumber = n
     elseif (n == -2) then
-      ! Integer can't be read from strng; it's presumed to be a boundary
+      ! Integer can't be read from string; it's presumed to be a boundary
       ! name (already converted to uppercase)
-      obsrv%FeatureName = strng(istart:istop)
+      obsrv%FeatureName = string(istart:istop)
       ! -- Observation may require summing rates from multiple boundaries,
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.

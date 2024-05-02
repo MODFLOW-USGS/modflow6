@@ -11,7 +11,7 @@ PROJ_ROOT_PATH = Path(__file__).parents[3]
 DEFAULT_DFNS_PATH = Path(__file__).parents[1] / "dfns.txt"
 DFN_PATH = PROJ_ROOT_PATH / "doc" / "mf6io" / "mf6ivar" / "dfn"
 SRC_PATH = PROJ_ROOT_PATH / "src"
-IDM_PATH = SRC_PATH / "IDM"
+IDM_PATH = SRC_PATH / "Idm"
 
 
 class Dfn2F90:

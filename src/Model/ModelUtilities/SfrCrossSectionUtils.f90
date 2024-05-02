@@ -67,7 +67,7 @@ contains
     real(DP) :: w
     real(DP), dimension(npts - 1) :: widths
     !
-    ! -- intitialize the wetted perimeter for the reach
+    ! -- initialize the wetted perimeter for the reach
     w = DZERO
     !
     ! -- calculate the wetted top width for each line segment
@@ -135,7 +135,7 @@ contains
     real(DP) :: p
     real(DP), dimension(npts - 1) :: perimeters
     !
-    ! -- intitialize the wetted perimeter for the reach
+    ! -- initialize the wetted perimeter for the reach
     p = DZERO
     !
     ! -- calculate the wetted perimeter for each line segment
@@ -168,7 +168,7 @@ contains
     real(DP) :: a
     real(DP), dimension(npts - 1) :: areas
     !
-    ! -- intitialize the area
+    ! -- initialize the area
     a = DZERO
     !
     ! -- calculate the cross-sectional area for each line segment
@@ -204,7 +204,7 @@ contains
     real(DP), dimension(npts - 1) :: areas
     real(DP), dimension(npts - 1) :: perimeters
     !
-    ! -- intitialize the hydraulic radius, perimeter, and area
+    ! -- initialize the hydraulic radius, perimeter, and area
     r = DZERO
     p = DZERO
     a = DZERO
@@ -265,7 +265,7 @@ contains
     real(DP), dimension(npts - 1) :: areas
     real(DP), dimension(npts - 1) :: perimeters
     !
-    ! -- intitialize the hydraulic radius, perimeter, and area
+    ! -- initialize the hydraulic radius, perimeter, and area
     q = DZERO
     rh = DZERO
     r = DZERO

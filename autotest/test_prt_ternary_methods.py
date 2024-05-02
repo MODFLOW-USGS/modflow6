@@ -58,17 +58,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
 
-    # create grid
-    tri = get_tri(prt_ws / "grid", targets)
-    grid = VertexGrid(tri)
-    gi = GridIntersect(grid)
-
-    # identify cells on left edge
-    line = LineString([active_domain[0], active_domain[-1]])
-    cells_left = gi.intersect(line)["cellids"]
-    cells_left = np.array(list(cells_left))
-
-    # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
@@ -76,6 +65,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
     )
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
+    tri = get_tri(prt_ws / "grid", targets)
     cell2d = tri.get_cell2d()
     vertices = tri.get_vertices()
     xcyc = tri.get_xcyc()
@@ -175,9 +165,9 @@ def check_output(idx, test):
     )
 
     # check pathline shape and endpoints
-    assert pls.shape == (112, 16)
+    assert pls.shape == (116, 16)
     assert endpts.shape == (2, 16)
-    assert set(endpts.icell) == {111, 144}
+    assert set(endpts.icell) == {111, 112}
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

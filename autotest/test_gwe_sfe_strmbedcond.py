@@ -1,7 +1,6 @@
 # Test conduction between an advanced package feature, in this case stream
 # reaches with varying channel geometries and the host GWE gw cells.
 # This test should include:
-#  - no gw-sw interaction
 #  - with gw-sw interaction
 #  - hot gw cell warming an upstream reach
 #  - thermally hot stream water warming host gw cells
@@ -329,7 +328,7 @@ def build_models(idx, test):
         chdelev1 = top[0, 0] - 3.0  # convection from stream to gw,
         chdelev2 = top[0, -1] - 3.0  # conduction from gw to strm
 
-    # Instatiate constant head boundary package
+    # Instantiate constant head boundary package
     if chd_on:
         chdlist1 = [
             [(0, 0, 0), chdelev1, strt_gw_temp[idx]],
@@ -623,15 +622,9 @@ def check_output(idx, test):
             + str(j)
             + "in stress period 1 does not match explicitly-calculated answer"
         )
+
         assert np.isclose(wa, shared_area[0, j], atol=1e-4), msg
-
-    msg = (
-        "Wetted streambed area of all reaches should be zero in stess "
-        "period 2"
-    )
-    for val in list(sfrstg[1])[1:]:
-        assert val == 0.0, msg
-
+    
     # Sub-scenario checks
     # initialize search term
     srchStr = "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"

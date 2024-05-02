@@ -216,7 +216,7 @@ contains
       !
       ! -- read and load the parameter
       call this%param_load(parser, idt%datatype, idt%mf6varname, idt%tagname, &
-                           this%mf6_input%mempath, iaux)
+                           idt%shape, this%mf6_input%mempath, iaux)
       !
     end do
     !
@@ -323,7 +323,7 @@ contains
   end subroutine bndgrid_params_alloc
 
   subroutine bndgrid_param_load(this, parser, datatype, varname, &
-                                tagname, mempath, iaux)
+                                tagname, shapestr, mempath, iaux)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use ArrayHandlersModule, only: ifind
@@ -339,13 +339,14 @@ contains
     character(len=*), intent(in) :: datatype
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: tagname
+    character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: iaux
     ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B) :: iparam
+    integer(I4B) :: iparam, n
     !
     select case (datatype)
     case ('INTEGER1D')
@@ -363,8 +364,13 @@ contains
     case ('DOUBLE2D')
       !
       call mem_setptr(dbl2d, varname, mempath)
-      call read_dbl1d(parser, dbl2d(iaux, :), varname)
-      call idm_log_var(dbl2d, tagname, mempath, this%iout)
+      allocate (dbl1d(this%bound_context%ncpl))
+      call read_dbl1d(parser, dbl1d, varname)
+      do n = 1, this%bound_context%ncpl
+        dbl2d(iaux, n) = dbl1d(n)
+      end do
+      call idm_log_var(dbl1d, tagname, mempath, this%iout)
+      deallocate (dbl1d)
       !
     case default
       !
@@ -426,7 +432,7 @@ contains
     integer(I4B), intent(in) :: inunit
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
-    ! -- non-contiguous beacuse a slice of bound is passed
+    ! -- non-contiguous because a slice of bound is passed
     real(DP), dimension(:), pointer :: auxArrayPtr, bndArrayPtr
     real(DP), dimension(:), pointer, contiguous :: bound
     integer(I4B), dimension(:), pointer, contiguous :: nodelist

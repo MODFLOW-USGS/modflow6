@@ -1,5 +1,5 @@
 BEGIN PACKAGEDATA
-  <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <@man@> <ncon> <@ustrf@> <ndv> [<@aux(naux)@>] [<boundname>]
-  <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <@man@> <ncon> <@ustrf@> <ndv> [<@aux(naux)@>] [<boundname>]
+  <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <@rhk@> <@man@> <ncon> <@ustrf@> <ndv> [<@aux(naux)@>] [<boundname>]
+  <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <@rhk@> <@man@> <ncon> <@ustrf@> <ndv> [<@aux(naux)@>] [<boundname>]
   ...
 END PACKAGEDATA

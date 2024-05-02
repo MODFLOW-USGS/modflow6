@@ -12,7 +12,7 @@ module CharacterStringModule
   !!
   !! The overloaded methods allow instances to behave like
   !! a regular string and work with intrinsic Fortran
-  !! character strings.  Ideas for the implmentation were
+  !! character strings.  Ideas for the implementation were
   !! inspired by:
   !!   https://gitlab.com/everythingfunctional/iso_varying_string
   !

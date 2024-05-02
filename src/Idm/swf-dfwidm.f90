@@ -16,12 +16,14 @@ module SwfDfwInputModule
     logical :: timeconv = .false.
     logical :: ipakcb = .false.
     logical :: iprflow = .false.
+    logical :: isavvelocity = .false.
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: filein = .false.
     logical :: obs6_filename = .false.
+    logical :: export_ascii = .false.
+    logical :: iswrcond = .false.
     logical :: manningsn = .false.
-    logical :: slope = .false.
     logical :: idcxs = .false.
   end type SwfDfwParamFoundType
 
@@ -113,6 +115,23 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    swfdfw_isavvelocity = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DFW', & ! subcomponent
+    'OPTIONS', & ! block
+    'SAVE_VELOCITY', & ! tag name
+    'ISAVVELOCITY', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     swfdfw_obs_filerecord = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -181,16 +200,16 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdfw_manningsn = InputParamDefinitionType &
+    swfdfw_export_ascii = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DFW', & ! subcomponent
-    'GRIDDATA', & ! block
-    'MANNINGSN', & ! tag name
-    'MANNINGSN', & ! fortran variable
-    'DOUBLE1D', & ! type
-    'NODES', & ! shape
-    .true., & ! required
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_ASCII', & ! tag name
+    'EXPORT_ASCII', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -198,13 +217,30 @@ module SwfDfwInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdfw_slope = InputParamDefinitionType &
+    swfdfw_iswrcond = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'DFW', & ! subcomponent
+    'OPTIONS', & ! block
+    'DEV_SWR_CONDUCTANCE', & ! tag name
+    'ISWRCOND', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfdfw_manningsn = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DFW', & ! subcomponent
     'GRIDDATA', & ! block
-    'SLOPE', & ! tag name
-    'SLOPE', & ! fortran variable
+    'MANNINGSN', & ! tag name
+    'MANNINGSN', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
     .true., & ! required
@@ -239,12 +275,14 @@ module SwfDfwInputModule
     swfdfw_timeconv, &
     swfdfw_ipakcb, &
     swfdfw_iprflow, &
+    swfdfw_isavvelocity, &
     swfdfw_obs_filerecord, &
     swfdfw_obs6, &
     swfdfw_filein, &
     swfdfw_obs6_filename, &
+    swfdfw_export_ascii, &
+    swfdfw_iswrcond, &
     swfdfw_manningsn, &
-    swfdfw_slope, &
     swfdfw_idcxs &
     ]
 

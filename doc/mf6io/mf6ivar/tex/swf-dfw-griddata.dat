@@ -1,8 +1,6 @@
 BEGIN GRIDDATA
   MANNINGSN
     <manningsn(nodes)> -- READARRAY
-  SLOPE
-    <slope(nodes)> -- READARRAY
   [IDCXS
     <idcxs(nodes)> -- READARRAY]
 END GRIDDATA

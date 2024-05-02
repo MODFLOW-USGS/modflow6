@@ -1,0 +1,8 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [OBS6 FILEIN <obs6_filename>]
+END OPTIONS

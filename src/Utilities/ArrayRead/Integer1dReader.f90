@@ -20,12 +20,12 @@ module Integer1dReaderModule
   contains
 
     procedure :: reset_reader
-    procedure :: set_constant ! must be overriden
-    procedure :: fill_constant ! must be overriden
-    procedure :: read_ascii ! must be overriden
-    procedure :: read_binary ! must be overriden
-    procedure :: set_factor ! must be overriden
-    procedure :: apply_factor ! must be overriden
+    procedure :: set_constant ! must be overridden
+    procedure :: fill_constant ! must be overridden
+    procedure :: read_ascii ! must be overridden
+    procedure :: read_binary ! must be overridden
+    procedure :: set_factor ! must be overridden
+    procedure :: apply_factor ! must be overridden
 
   end type Integer1dReaderType
 

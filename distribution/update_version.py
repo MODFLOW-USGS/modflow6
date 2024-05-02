@@ -44,6 +44,9 @@ import yaml
 
 from utils import get_modified_time
 
+from modflow_devtools.markers import no_parallel
+
+
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
 version_file_path = project_root_path / "version.txt"
@@ -316,6 +319,28 @@ def update_codejson(version: Version, timestamp: datetime, approved: bool = Fals
     log_update(path, version)
 
 
+def update_doxyfile(version: Version):
+    path = project_root_path / ".build_rtd_docs" / "Doxyfile"
+    lines = open(path, "r").readlines()
+    tag = "PROJECT_NUMBER"
+    with open(path, "w") as fp:
+        for line in lines:
+            if tag in line:
+                line = f'{tag}         = "version {version}"\n'
+            fp.write(line)
+
+
+def update_pixi(version: Version):
+    path = project_root_path / "pixi.toml"
+    lines = open(path, "r").readlines()
+    tag = "version ="
+    with open(path, "w") as fp:
+        for line in lines:
+            if tag in line:
+                line = f'{tag} "{version}"\n'
+            fp.write(line)
+
+
 def update_version(
     version: Version = None,
     timestamp: datetime = datetime.now(),
@@ -345,6 +370,8 @@ def update_version(
             update_readme_and_disclaimer(version, approved)
             update_citation_cff(version, timestamp)
             update_codejson(version, timestamp, approved)
+            update_doxyfile(version)
+            update_pixi(version)
     finally:
         lock_path.unlink(missing_ok=True)
 
@@ -353,7 +380,8 @@ _initial_version = Version("0.0.1")
 _current_version = Version(version_file_path.read_text().strip())
 
 
-@pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
+@no_parallel
+@pytest.mark.skip(reason="reverts repo files on cleanup, treat carefully")
 @pytest.mark.parametrize(
     "version",
     [

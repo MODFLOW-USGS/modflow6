@@ -9,7 +9,8 @@ MODULE IMSLinearModule
   use IMSLinearBaseModule, only: ims_base_cg, ims_base_bcgs, &
                                  ims_base_pccrs, ims_base_calc_order, &
                                  ims_base_scale, ims_base_pcu, &
-                                 ims_base_residual
+                                 ims_base_residual, ims_base_epfact, &
+                                 ims_calc_pcdims
   use BlockParserModule, only: BlockParserType
   use MatrixBaseModule
   use ConvergenceSummaryModule
@@ -127,13 +128,10 @@ CONTAINS
     type(ImsLinearSettingsType), pointer :: linear_settings !< the settings form the IMS file
     ! -- local variables
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: i, n
+    integer(I4B) :: n
     integer(I4B) :: i0
     integer(I4B) :: iscllen, iolen
-    integer(I4B) :: ijlu
-    integer(I4B) :: ijw
-    integer(I4B) :: iwlu
-    integer(I4B) :: iwk
+
     !
     ! -- DEFINE NAME
     this%memoryPath = create_mem_path(name, 'IMSLINEAR')
@@ -225,38 +223,9 @@ CONTAINS
     CALL mem_allocate(this%DSCALE, iscllen, 'DSCALE', TRIM(this%memoryPath))
     CALL mem_allocate(this%DSCALE2, iscllen, 'DSCALE2', TRIM(this%memoryPath))
     !
-    ! -- ALLOCATE MEMORY FOR PRECONDITIONING MATRIX
-    ijlu = 1
-    ijw = 1
-    iwlu = 1
-    !
-    ! -- ILU0 AND MILU0
-    this%NIAPC = this%NEQ
-    this%NJAPC = this%NJA
-    !
-    ! -- ILUT AND MILUT
-    IF (this%IPC == 3 .OR. this%IPC == 4) THEN
-      this%NIAPC = this%NEQ
-      IF (this%LEVEL > 0) THEN
-        iwk = this%NEQ * (this%LEVEL * 2 + 1)
-      ELSE
-        iwk = 0
-        DO n = 1, NEQ
-          i = this%IA(n + 1) - this%IA(n)
-          IF (i > iwk) THEN
-            iwk = i
-          END IF
-        END DO
-        iwk = this%NEQ * iwk
-      END IF
-      this%NJAPC = iwk
-      ijlu = iwk
-      ijw = 2 * this%NEQ
-      iwlu = this%NEQ + 1
-    END IF
-    this%NJLU = ijlu
-    this%NJW = ijw
-    this%NWLU = iwlu
+    ! -- determine dimensions for preconditing arrays
+    call ims_calc_pcdims(this%NEQ, this%NJA, this%IA, this%LEVEL, this%IPC, &
+                         this%NIAPC, this%NJAPC, this%NJLU, this%NJW, this%NWLU)
     !
     ! -- ALLOCATE BASE PRECONDITIONER VECTORS
     CALL mem_allocate(this%IAPC, this%NIAPC + 1, 'IAPC', TRIM(this%memoryPath))
@@ -268,9 +237,9 @@ CONTAINS
     CALL mem_allocate(this%W, this%NIAPC, 'W', TRIM(this%memoryPath))
     !
     ! -- ALLOCATE MEMORY FOR ILUT VECTORS
-    CALL mem_allocate(this%JLU, ijlu, 'JLU', TRIM(this%memoryPath))
-    CALL mem_allocate(this%JW, ijw, 'JW', TRIM(this%memoryPath))
-    CALL mem_allocate(this%WLU, iwlu, 'WLU', TRIM(this%memoryPath))
+    CALL mem_allocate(this%JLU, this%NJLU, 'JLU', TRIM(this%memoryPath))
+    CALL mem_allocate(this%JW, this%NJW, 'JW', TRIM(this%memoryPath))
+    CALL mem_allocate(this%WLU, this%NWLU, 'WLU', TRIM(this%memoryPath))
     !
     ! -- GENERATE IAPC AND JAPC FOR ILU0 AND MILU0
     IF (this%IPC == 1 .OR. this%IPC == 2) THEN
@@ -341,13 +310,13 @@ CONTAINS
     END DO
     !
     ! -- ILUT AND MILUT WORKING VECTORS
-    DO n = 1, ijlu
-      this%JLU(n) = DZERO
+    DO n = 1, this%NJLU
+      this%JLU(n) = IZERO
     END DO
-    DO n = 1, ijw
-      this%JW(n) = DZERO
+    DO n = 1, this%NJW
+      this%JW(n) = IZERO
     END DO
-    DO n = 1, iwlu
+    DO n = 1, this%NWLU
       this%WLU(n) = DZERO
     END DO
     !
@@ -486,7 +455,7 @@ CONTAINS
 
   !> @ brief Allocate and initialize scalars
     !!
-    !!  Allocate and inititialize linear accelerator scalars
+    !!  Allocate and initialize linear accelerator scalars
     !!
   !<
   subroutine allocate_scalars(this)
@@ -685,17 +654,7 @@ CONTAINS
     real(DP) :: dnrm2
     !
     ! -- set epfact based on timestep
-    IF (this%ICNVGOPT == 2) THEN
-      IF (KSTP == 1) THEN
-        this%EPFACT = 0.01
-      ELSE
-        this%EPFACT = 0.10
-      END IF
-    ELSE IF (this%ICNVGOPT == 4) THEN
-      this%EPFACT = DEM4
-    ELSE
-      this%EPFACT = DONE
-    END IF
+    this%EPFACT = ims_base_epfact(this%ICNVGOPT, KSTP)
     !
     ! -- SCALE PROBLEM
     IF (this%ISCL .NE. 0) THEN

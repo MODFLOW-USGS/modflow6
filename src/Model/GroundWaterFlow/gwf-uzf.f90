@@ -21,8 +21,9 @@ module UzfModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: count_errors, store_error, store_error_unit
+  use SimVariablesModule, only: errmsg, warnmsg
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       deprecation_warning
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
@@ -61,15 +62,12 @@ module UzfModule
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer :: gwfiss => null()
-    real(DP), dimension(:), pointer, contiguous :: gwftop => null()
-    real(DP), dimension(:), pointer, contiguous :: gwfbot => null()
-    real(DP), dimension(:), pointer, contiguous :: gwfarea => null()
     real(DP), dimension(:), pointer, contiguous :: gwfhcond => null()
     !
     ! -- uzf data
-    integer(I4B), pointer :: ntrail => null()
+    integer(I4B), pointer :: nwav_pvar => null()
+    integer(I4B), pointer :: ntrail_pvar => null()
     integer(I4B), pointer :: nsets => null()
-    integer(I4B), pointer :: nwav => null()
     integer(I4B), pointer :: nodes => null()
     integer(I4B), pointer :: readflag => null()
     integer(I4B), pointer :: ietflag => null() !< et flag, 0 is off, 1 or 2 are different types
@@ -87,7 +85,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: rejinf0 => null()
     real(DP), dimension(:), pointer, contiguous :: rejinftomvr => null()
     real(DP), dimension(:), pointer, contiguous :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous :: gwet => null()
+    real(DP), dimension(:), pointer, contiguous :: gwet_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: uzet => null()
     real(DP), dimension(:), pointer, contiguous :: gwd => null()
     real(DP), dimension(:), pointer, contiguous :: gwd0 => null()
@@ -98,14 +96,17 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: wcnew => null() !< water content for this time step
     real(DP), dimension(:), pointer, contiguous :: wcold => null() !< water content for previous time step
     !
-    ! -- timeseries aware variables
-    real(DP), dimension(:), pointer, contiguous :: sinf => null()
-    real(DP), dimension(:), pointer, contiguous :: pet => null()
+    ! -- timeseries aware package variables; these variables with
+    !    _pvar have uzfobj counterparts
+    real(DP), dimension(:), pointer, contiguous :: sinf_pvar => null()
+    real(DP), dimension(:), pointer, contiguous :: pet_pvar => null()
     real(DP), dimension(:), pointer, contiguous :: extdp => null()
-    real(DP), dimension(:), pointer, contiguous :: extwc => null()
-    real(DP), dimension(:), pointer, contiguous :: ha => null()
-    real(DP), dimension(:), pointer, contiguous :: hroot => null()
-    real(DP), dimension(:), pointer, contiguous :: rootact => null()
+    real(DP), dimension(:), pointer, contiguous :: extwc_pvar => null()
+    real(DP), dimension(:), pointer, contiguous :: ha_pvar => null()
+    real(DP), dimension(:), pointer, contiguous :: hroot_pvar => null()
+    real(DP), dimension(:), pointer, contiguous :: rootact_pvar => null()
+    !
+    ! -- aux variable
     real(DP), dimension(:, :), pointer, contiguous :: uauxvar => null()
     !
     ! -- convergence check
@@ -281,7 +282,7 @@ contains
                       this%memoryPath)
     call mem_allocate(this%infiltration, this%nodes, 'INFILTRATION', &
                       this%memoryPath)
-    call mem_allocate(this%gwet, this%nodes, 'GWET', this%memoryPath)
+    call mem_allocate(this%gwet_pvar, this%nodes, 'GWET_PVAR', this%memoryPath)
     call mem_allocate(this%uzet, this%nodes, 'UZET', this%memoryPath)
     call mem_allocate(this%gwd, this%nodes, 'GWD', this%memoryPath)
     call mem_allocate(this%gwd0, this%nodes, 'GWD0', this%memoryPath)
@@ -296,13 +297,14 @@ contains
     call mem_allocate(this%ja, this%nodes, 'JA', this%memoryPath)
     !
     ! -- allocate timeseries aware variables
-    call mem_allocate(this%sinf, this%nodes, 'SINF', this%memoryPath)
-    call mem_allocate(this%pet, this%nodes, 'PET', this%memoryPath)
-    call mem_allocate(this%extdp, this%nodes, 'EXDP', this%memoryPath)
-    call mem_allocate(this%extwc, this%nodes, 'EXTWC', this%memoryPath)
-    call mem_allocate(this%ha, this%nodes, 'HA', this%memoryPath)
-    call mem_allocate(this%hroot, this%nodes, 'HROOT', this%memoryPath)
-    call mem_allocate(this%rootact, this%nodes, 'ROOTACT', this%memoryPath)
+    call mem_allocate(this%sinf_pvar, this%nodes, 'SINF_PVAR', this%memoryPath)
+    call mem_allocate(this%pet_pvar, this%nodes, 'PET_PVAR', this%memoryPath)
+    call mem_allocate(this%extdp, this%nodes, 'EXDP_PVAR', this%memoryPath)
+    call mem_allocate(this%extwc_pvar, this%nodes, 'EXTWC_PVAR', this%memoryPath)
+    call mem_allocate(this%ha_pvar, this%nodes, 'HA_PVAR', this%memoryPath)
+    call mem_allocate(this%hroot_pvar, this%nodes, 'HROOT_PVAR', this%memoryPath)
+    call mem_allocate(this%rootact_pvar, this%nodes, 'ROOTACT_PVAR', &
+                      this%memoryPath)
     call mem_allocate(this%uauxvar, this%naux, this%nodes, 'UAUXVAR', &
                       this%memoryPath)
     !
@@ -312,7 +314,7 @@ contains
       this%rejinf(i) = DZERO
       this%rejinf0(i) = DZERO
       this%rejinftomvr(i) = DZERO
-      this%gwet(i) = DZERO
+      this%gwet_pvar(i) = DZERO
       this%uzet(i) = DZERO
       this%gwd(i) = DZERO
       this%gwd0(i) = DZERO
@@ -324,13 +326,13 @@ contains
       ! -- integer variables
       this%ja(i) = 0
       ! -- timeseries aware variables
-      this%sinf(i) = DZERO
-      this%pet(i) = DZERO
+      this%sinf_pvar(i) = DZERO
+      this%pet_pvar(i) = DZERO
       this%extdp(i) = DZERO
-      this%extwc(i) = DZERO
-      this%ha(i) = DZERO
-      this%hroot(i) = DZERO
-      this%rootact(i) = DZERO
+      this%extwc_pvar(i) = DZERO
+      this%ha_pvar(i) = DZERO
+      this%hroot_pvar(i) = DZERO
+      this%rootact_pvar(i) = DZERO
       do j = 1, this%naux
         if (this%iauxmultcol > 0 .and. j == this%iauxmultcol) then
           this%uauxvar(j, i) = DONE
@@ -485,6 +487,15 @@ contains
     case ('SIMULATE_GWSEEP')
       this%iseepflag = 1
       write (this%iout, fmtgwseepout)
+      !
+      ! -- Create warning message
+      write (warnmsg, '(a)') &
+        'USE DRN PACKAGE TO SIMULATE GROUNDWATER DISCHARGE TO LAND SURFACE '// &
+        'INSTEAD'
+      !
+      ! -- Create deprecation warning
+      call deprecation_warning('OPTIONS', 'SIMULATE_GWSEEP', '6.5.0', &
+                               warnmsg, this%parser%GetUnit())
     case ('UNSAT_ETWC')
       this%ietflag = 1
       write (this%iout, fmtuzetwc)
@@ -533,7 +544,7 @@ contains
     !
     ! -- initialize dimensions to -1
     this%nodes = -1
-    this%ntrail = 0
+    this%ntrail_pvar = 0
     this%nsets = 0
     !
     ! -- get dimensions block
@@ -553,8 +564,8 @@ contains
           this%nodes = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'NUZFCELLS = ', this%nodes
         case ('NTRAILWAVES')
-          this%ntrail = this%parser%GetInteger()
-          write (this%iout, '(4x,a,i0)') 'NTRAILWAVES = ', this%ntrail
+          this%ntrail_pvar = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NTRAILWAVES = ', this%ntrail_pvar
         case ('NWAVESETS')
           this%nsets = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'NTRAILSETS = ', this%nsets
@@ -580,7 +591,7 @@ contains
       call store_error(errmsg)
     end if
 
-    if (this%ntrail <= 0) then
+    if (this%ntrail_pvar <= 0) then
       write (errmsg, '(a)') &
         'NTRAILWAVES was not specified or was specified incorrectly.'
       call store_error(errmsg)
@@ -592,13 +603,13 @@ contains
       call store_error(errmsg)
     end if
     !
-    ! -- teminate if there are dimension errors
+    ! -- terminate if there are dimension errors
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- set the number of waves
-    this%nwav = this%ntrail * this%nsets
+    this%nwav_pvar = this%ntrail_pvar * this%nsets
     !
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
@@ -609,13 +620,8 @@ contains
     !
     ! -- initialize uzf group object
     allocate (this%uzfobj)
-    call this%uzfobj%init(this%nodes, this%nwav, this%memoryPath)
-    call this%uzfobjwork%init(1, this%nwav)
-    !
-    ! -- Set pointers to GWF model arrays
-    call mem_setptr(this%gwftop, 'TOP', create_mem_path(this%name_model, 'DIS'))
-    call mem_setptr(this%gwfbot, 'BOT', create_mem_path(this%name_model, 'DIS'))
-    call mem_setptr(this%gwfarea, 'AREA', create_mem_path(this%name_model, 'DIS'))
+    call this%uzfobj%init(this%nodes, this%nwav_pvar, this%memoryPath)
+    call this%uzfobjwork%init(1, this%nwav_pvar)
     !
     !--Read uzf cell properties and set values
     call this%read_cell_properties()
@@ -795,7 +801,7 @@ contains
         ! -- FINF
         call this%parser%GetStringCaps(text)
         jj = 1 ! For SINF
-        bndElem => this%sinf(i)
+        bndElem => this%sinf_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'SINF')
@@ -803,7 +809,7 @@ contains
         ! -- PET
         call this%parser%GetStringCaps(text)
         jj = 1 ! For PET
-        bndElem => this%pet(i)
+        bndElem => this%pet_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'PET')
@@ -819,7 +825,7 @@ contains
         ! -- EXTWC
         call this%parser%GetStringCaps(text)
         jj = 1 ! For EXTWC
-        bndElem => this%extwc(i)
+        bndElem => this%extwc_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'EXTWC')
@@ -827,7 +833,7 @@ contains
         ! -- HA
         call this%parser%GetStringCaps(text)
         jj = 1 ! For HA
-        bndElem => this%ha(i)
+        bndElem => this%ha_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'HA')
@@ -835,7 +841,7 @@ contains
         ! -- HROOT
         call this%parser%GetStringCaps(text)
         jj = 1 ! For HROOT
-        bndElem => this%hroot(i)
+        bndElem => this%hroot_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'HROOT')
@@ -843,12 +849,12 @@ contains
         ! -- ROOTACT
         call this%parser%GetStringCaps(text)
         jj = 1 ! For ROOTACT
-        bndElem => this%rootact(i)
+        bndElem => this%rootact_pvar(i)
         call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak, &
                                            'ROOTACT')
         !
-        ! -- read auxillary variables
+        ! -- read auxiliary variables
         do j = 1, this%naux
           call this%parser%GetStringCaps(text)
           bndElem => this%uauxvar(j, i)
@@ -871,15 +877,15 @@ contains
           ! -- write data to the table
           call this%inputtab%add_term(i)
           call this%inputtab%add_term(cellid)
-          call this%inputtab%add_term(this%sinf(i))
+          call this%inputtab%add_term(this%sinf_pvar(i))
           if (this%ietflag /= 0) then
-            call this%inputtab%add_term(this%pet(i))
+            call this%inputtab%add_term(this%pet_pvar(i))
             call this%inputtab%add_term(this%extdp(i))
-            call this%inputtab%add_term(this%extwc(i))
+            call this%inputtab%add_term(this%extwc_pvar(i))
             if (this%ietflag == 2) then
-              call this%inputtab%add_term(this%ha(i))
-              call this%inputtab%add_term(this%hroot(i))
-              call this%inputtab%add_term(this%rootact(i))
+              call this%inputtab%add_term(this%ha_pvar(i))
+              call this%inputtab%add_term(this%hroot_pvar(i))
+              call this%inputtab%add_term(this%rootact_pvar(i))
             end if
           end if
           if (this%inamedbound == 1) then
@@ -991,22 +997,22 @@ contains
       end if
       !
       ! -- FINF
-      rval1 = this%sinf(i)
+      rval1 = this%sinf_pvar(i)
       call this%uzfobj%setdatafinf(i, rval1)
       !
       ! -- PET, EXTDP
-      rval1 = this%pet(i)
+      rval1 = this%pet_pvar(i)
       rval2 = this%extdp(i)
       call this%uzfobj%setdataet(i, ivertflag, rval1, rval2)
       !
       ! -- ETWC
-      rval1 = this%extwc(i)
+      rval1 = this%extwc_pvar(i)
       call this%uzfobj%setdataetwc(i, ivertflag, rval1)
       !
       ! -- HA, HROOT, ROOTACT
-      rval1 = this%ha(i)
-      rval2 = this%hroot(i)
-      rval3 = this%rootact(i)
+      rval1 = this%ha_pvar(i)
+      rval2 = this%hroot_pvar(i)
+      rval3 = this%rootact_pvar(i)
       call this%uzfobj%setdataetha(i, ivertflag, rval1, rval2, rval3)
     end do
     !
@@ -1435,7 +1441,7 @@ contains
       this%gwd(i) = q
       !
       ! -- calculate and store remaining budget terms
-      this%gwet(i) = this%uzfobj%gwet(i)
+      this%gwet_pvar(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       !
       ! -- End of UZF cell loop
@@ -1518,7 +1524,7 @@ contains
     !
     ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
     if (this%igwetflag /= 0) then
-      call rate_accumulator(-this%gwet, ratin, ratout)
+      call rate_accumulator(-this%gwet_pvar, ratin, ratout)
       call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4), &
                                  isuppress_output, this%packName)
     end if
@@ -1593,7 +1599,7 @@ contains
               trim(this%packName)//') FLOW RATES'
       call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
                                   this%outputtab, this%nbound, this%nodelist, &
-                                  -this%gwet, this%ibound, title, &
+                                  -this%gwet_pvar, this%ibound, title, &
                                   this%bdtxt(itxt), this%ipakcb, this%dis, &
                                   this%naux, this%name_model, this%name_model, &
                                   this%name_model, this%packName, this%auxname, &
@@ -1670,7 +1676,7 @@ contains
   !<
   subroutine uzf_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
-    use TdisModule, only: totim
+    use TdisModule, only: totim, delt
     ! -- dummy
     class(UzfType) :: this !< UzfType object
     integer(I4B), intent(in) :: kstp !< time step number
@@ -1678,7 +1684,7 @@ contains
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
-    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
     !
     ! -- Return
     return
@@ -1885,7 +1891,7 @@ contains
     type(sparsematrix) :: sparse
     integer(I4B), dimension(:), allocatable :: nboundchk
     !
-    ! -- allocate space for node counter and initilize
+    ! -- allocate space for node counter and initialize
     allocate (rowmaxnnz(this%dis%nodes))
     do n = 1, this%dis%nodes
       rowmaxnnz(n) = 0
@@ -1968,7 +1974,7 @@ contains
             'must be greater than 0 (specified value is', surfdep, ').'
           call store_error(errmsg)
         end if
-        if (surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
+        if (surfdep >= this%dis%top(ic) - this%dis%bot(ic)) then
           write (errmsg, '(a,1x,i0,1x,a)') &
             'SURFDEP for uzf cell', i, &
             'cannot be greater than the cell thickness.'
@@ -2029,9 +2035,10 @@ contains
         ! -- set data if there are no data errors
         if (count_errors() == 0) then
           n = this%igwfnode(i)
-          call this%uzfobj%setdata(i, this%gwfarea(n), this%gwftop(n), &
-                                   this%gwfbot(n), surfdep, vks, thtr, thts, &
-                                   thti, eps, this%ntrail, landflag, ivertcon)
+          call this%uzfobj%setdata(i, this%dis%area(n), this%dis%top(n), &
+                                   this%dis%bot(n), surfdep, vks, thtr, thts, &
+                                   thti, eps, this%ntrail_pvar, landflag, &
+                                   ivertcon)
           if (ivertcon > 0) then
             this%iuzf2uzf = 1
           end if
@@ -2388,7 +2395,7 @@ contains
             end if
           case ('UZF-GWET')
             if (this%igwetflag > 0) then
-              v = this%gwet(n)
+              v = this%gwet_pvar(n)
               if (v > DZERO) then
                 v = -v
               end if
@@ -2528,7 +2535,7 @@ contains
           !
           ! -- determine maximum cell depth
           ! -- This is presently complicated for landflag = 1 cells and surfdep
-          !    greater than zero.  In this case, celtop is gwftop - surfdep.
+          !    greater than zero.  In this case, celtop is dis%top - surfdep.
           iuzid = obsrv%intPak1
           dmax = this%uzfobj%celtop(iuzid) - this%uzfobj%celbot(iuzid)
           ! -- check that obs depth is valid; call store_error if not
@@ -2586,26 +2593,26 @@ contains
     real(DP) :: obsdepth
     integer(I4B) :: icol, istart, istop, istat
     real(DP) :: r
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     ! formats
 30  format(i10)
     !
-    strng = obsrv%IDstring
-    ! -- Extract node number from strng and store it.
+    string = obsrv%IDstring
+    ! -- Extract node number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    feature name--deal with it.
     icol = 1
     ! -- get node number
-    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
-    read (strng(istart:istop), 30, iostat=istat) nn
+    call urword(string, icol, istart, istop, 1, n, r, iout, inunitobs)
+    read (string(istart:istop), 30, iostat=istat) nn
     if (istat == 0) then
       ! -- store uzf node number (NodeNumber)
       obsrv%NodeNumber = nn
     else
-      ! Integer can't be read from strng; it's presumed to be a boundary
+      ! Integer can't be read from string; it's presumed to be a boundary
       ! name (already converted to uppercase)
-      obsrv%FeatureName = strng(istart:istop)
-      !obsrv%FeatureName = trim(adjustl(strng))
+      obsrv%FeatureName = string(istart:istop)
+      !obsrv%FeatureName = trim(adjustl(string))
       ! -- Observation may require summing rates from multiple boundaries,
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.
@@ -2614,7 +2621,7 @@ contains
     !
     ! -- for soil water observation, store depth
     if (obsrv%ObsTypeId == 'WATER-CONTENT') then
-      call urword(strng, icol, istart, istop, 3, n, r, iout, inunitobs)
+      call urword(string, icol, istart, istop, 3, n, r, iout, inunitobs)
       obsdepth = r
       ! -- store observations depth
       obsrv%Obsdepth = obsdepth
@@ -2641,11 +2648,11 @@ contains
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
-    call mem_allocate(this%ntrail, 'NTRAIL', this%memoryPath)
+    call mem_allocate(this%ntrail_pvar, 'NTRAIL', this%memoryPath)
     call mem_allocate(this%nsets, 'NSETS', this%memoryPath)
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%istocb, 'ISTOCB', this%memoryPath)
-    call mem_allocate(this%nwav, 'NWAV', this%memoryPath)
+    call mem_allocate(this%nwav_pvar, 'NWAV_PVAR', this%memoryPath)
     call mem_allocate(this%totfluxtot, 'TOTFLUXTOT', this%memoryPath)
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%nbdtxt, 'NBDTXT', this%memoryPath)
@@ -2725,11 +2732,11 @@ contains
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ibudcsv)
     call mem_deallocate(this%ipakcsv)
-    call mem_deallocate(this%ntrail)
+    call mem_deallocate(this%ntrail_pvar)
     call mem_deallocate(this%nsets)
     call mem_deallocate(this%nodes)
     call mem_deallocate(this%istocb)
-    call mem_deallocate(this%nwav)
+    call mem_deallocate(this%nwav_pvar)
     call mem_deallocate(this%totfluxtot)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%nbdtxt)
@@ -2753,7 +2760,7 @@ contains
     call mem_deallocate(this%rejinf0)
     call mem_deallocate(this%rejinftomvr)
     call mem_deallocate(this%infiltration)
-    call mem_deallocate(this%gwet)
+    call mem_deallocate(this%gwet_pvar)
     call mem_deallocate(this%uzet)
     call mem_deallocate(this%gwd)
     call mem_deallocate(this%gwd0)
@@ -2771,13 +2778,13 @@ contains
     call mem_deallocate(this%ja)
     !
     ! -- deallocate timeseries aware variables
-    call mem_deallocate(this%sinf)
-    call mem_deallocate(this%pet)
+    call mem_deallocate(this%sinf_pvar)
+    call mem_deallocate(this%pet_pvar)
     call mem_deallocate(this%extdp)
-    call mem_deallocate(this%extwc)
-    call mem_deallocate(this%ha)
-    call mem_deallocate(this%hroot)
-    call mem_deallocate(this%rootact)
+    call mem_deallocate(this%extwc_pvar)
+    call mem_deallocate(this%ha_pvar)
+    call mem_deallocate(this%hroot_pvar)
+    call mem_deallocate(this%rootact_pvar)
     call mem_deallocate(this%uauxvar)
     !
     ! -- Parent object

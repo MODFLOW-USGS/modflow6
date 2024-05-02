@@ -550,7 +550,7 @@ contains
     ! -- dummy variable
     class(BlockParserType), intent(inout) :: this !< BlockParserType object
     logical, intent(in), optional :: terminate !< boolean indicating if the simulation should be terminated
-    ! -- loacl variables
+    ! -- local variables
     logical :: lterminate
     !
     ! -- process optional variables

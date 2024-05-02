@@ -24,7 +24,7 @@ delc = ylen / float(nrow)
 extents = (0, xlen, 0, ylen)
 shape2d = (nrow, ncol)
 shape3d = (nlay, nrow, ncol)
-nouter = 50
+nouter = 75
 ninner = 100
 hclose = 1e-9
 hclose_outer = hclose * 10.0
@@ -53,6 +53,7 @@ def build_models(idx, test):
     flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
+        no_ptcrecord="ALL",
         linear_acceleration=linear_acceleration,
         outer_maximum=nouter,
         outer_dvclose=hclose_outer,

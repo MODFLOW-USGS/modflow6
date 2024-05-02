@@ -1,46 +1,46 @@
-# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.10.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Idm
-SOURCEDIR3=../src/Idm/selector
-SOURCEDIR4=../src/Exchange
-SOURCEDIR5=../src/Distributed
-SOURCEDIR6=../src/Solution
-SOURCEDIR7=../src/Solution/LinearMethods
-SOURCEDIR8=../src/Solution/ParticleTracker
-SOURCEDIR9=../src/Solution/PETSc
-SOURCEDIR10=../src/Timing
-SOURCEDIR11=../src/Utilities
-SOURCEDIR12=../src/Utilities/Idm
-SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR14=../src/Utilities/TimeSeries
-SOURCEDIR15=../src/Utilities/Memory
-SOURCEDIR16=../src/Utilities/OutputControl
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/Libraries
-SOURCEDIR19=../src/Utilities/Libraries/rcm
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/sparskit2
-SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Libraries/sparsekit
-SOURCEDIR24=../src/Utilities/Vector
-SOURCEDIR25=../src/Utilities/Matrix
-SOURCEDIR26=../src/Utilities/Observation
-SOURCEDIR27=../src/Model
-SOURCEDIR28=../src/Model/Connection
-SOURCEDIR29=../src/Model/ParticleTracking
-SOURCEDIR30=../src/Model/SurfaceWaterFlow
-SOURCEDIR31=../src/Model/GroundWaterTransport
-SOURCEDIR32=../src/Model/ModelUtilities
-SOURCEDIR33=../src/Model/GroundWaterFlow
-SOURCEDIR34=../src/Model/Discretization
-SOURCEDIR35=../src/Model/TransportModel
-SOURCEDIR36=../src/Model/Geometry
-SOURCEDIR37=../src/Model/GroundWaterEnergy
+SOURCEDIR2=../src/Model
+SOURCEDIR3=../src/Model/SurfaceWaterFlow
+SOURCEDIR4=../src/Model/TransportModel
+SOURCEDIR5=../src/Model/GroundWaterFlow
+SOURCEDIR6=../src/Model/GroundWaterEnergy
+SOURCEDIR7=../src/Model/Geometry
+SOURCEDIR8=../src/Model/ParticleTracking
+SOURCEDIR9=../src/Model/Discretization
+SOURCEDIR10=../src/Model/ModelUtilities
+SOURCEDIR11=../src/Model/GroundWaterTransport
+SOURCEDIR12=../src/Model/Connection
+SOURCEDIR13=../src/Idm
+SOURCEDIR14=../src/Idm/selector
+SOURCEDIR15=../src/Distributed
+SOURCEDIR16=../src/Utilities
+SOURCEDIR17=../src/Utilities/Idm
+SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR19=../src/Utilities/Vector
+SOURCEDIR20=../src/Utilities/Matrix
+SOURCEDIR21=../src/Utilities/Observation
+SOURCEDIR22=../src/Utilities/ArrayRead
+SOURCEDIR23=../src/Utilities/OutputControl
+SOURCEDIR24=../src/Utilities/Libraries
+SOURCEDIR25=../src/Utilities/Libraries/blas
+SOURCEDIR26=../src/Utilities/Libraries/rcm
+SOURCEDIR27=../src/Utilities/Libraries/sparsekit
+SOURCEDIR28=../src/Utilities/Libraries/sparskit2
+SOURCEDIR29=../src/Utilities/Libraries/daglib
+SOURCEDIR30=../src/Utilities/Memory
+SOURCEDIR31=../src/Utilities/TimeSeries
+SOURCEDIR32=../src/Timing
+SOURCEDIR33=../src/Solution
+SOURCEDIR34=../src/Solution/ParticleTracker
+SOURCEDIR35=../src/Solution/PETSc
+SOURCEDIR36=../src/Solution/LinearMethods
+SOURCEDIR37=../src/Exchange
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -107,12 +107,13 @@ $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
-$(OBJDIR)/swf-disvidm.o \
-$(OBJDIR)/swf-dislidm.o \
-$(OBJDIR)/swf-disidm.o \
+$(OBJDIR)/swf-disv2didm.o \
+$(OBJDIR)/swf-disv1didm.o \
+$(OBJDIR)/swf-dis2didm.o \
 $(OBJDIR)/swf-dfwidm.o \
 $(OBJDIR)/swf-cxsidm.o \
 $(OBJDIR)/swf-chdidm.o \
+$(OBJDIR)/swf-cdbidm.o \
 $(OBJDIR)/sim-tdisidm.o \
 $(OBJDIR)/sim-namidm.o \
 $(OBJDIR)/prt-namidm.o \
@@ -310,8 +311,8 @@ $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
 $(OBJDIR)/DefinitionSelect.o \
-$(OBJDIR)/DislGeom.o \
 $(OBJDIR)/SwfCxsUtils.o \
+$(OBJDIR)/Disv1dGeom.o \
 $(OBJDIR)/MethodCellPool.o \
 $(OBJDIR)/CellUtil.o \
 $(OBJDIR)/VirtualExchange.o \
@@ -355,9 +356,10 @@ $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
-$(OBJDIR)/swf-disl.o \
 $(OBJDIR)/swf-cxs.o \
+$(OBJDIR)/Disv1d.o \
 $(OBJDIR)/swf-ic.o \
+$(OBJDIR)/VectorInterpolation.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
 $(OBJDIR)/GridConnection.o \
@@ -381,6 +383,9 @@ $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
 $(OBJDIR)/swf-dfw.o \
+$(OBJDIR)/swf-cdb.o \
+$(OBJDIR)/Disv2d.o \
+$(OBJDIR)/Dis2d.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-obs.o \
@@ -439,7 +444,8 @@ $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o \
-$(OBJDIR)/ExplicitModel.o
+$(OBJDIR)/ExplicitModel.o \
+$(OBJDIR)/swf-disidm.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)

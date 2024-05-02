@@ -531,11 +531,12 @@ def check_output(idx, test):
         p.add_mesh(path_mesh, label="Time", style="points", color="black")
         p.camera.zoom(1)
         p.add_slider_widget(lambda v: callback(path_mesh, v), [0, 30202])
-        p.show()
+        # p.show()
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
     if (
         "weli" in name
         and system() == "Darwin"
@@ -552,4 +553,4 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         targets=targets,
         compare=None,
     )
-    test.run()
+    benchmark(test.run)

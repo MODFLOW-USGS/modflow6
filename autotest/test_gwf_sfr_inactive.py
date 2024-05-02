@@ -42,7 +42,7 @@ def build_models(idx, test):
         tdis_rc.append((1.0, 1, 1.0))
 
     # spatial discretization data
-    nlay, nrow, ncol = 1, 10, 10
+    nlay, nrow, ncol = 1, 1, 6
     delr, delc = 100.0, 100.0
     top = 0.0
     botm = -10

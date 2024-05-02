@@ -607,7 +607,7 @@ contains
 
   !> @brief Deallocate
   !!
-  !! Deallocate memmory at conclusion of model run
+  !! Deallocate memory at conclusion of model run
   !<
   subroutine gwt_da(this)
     ! -- modules

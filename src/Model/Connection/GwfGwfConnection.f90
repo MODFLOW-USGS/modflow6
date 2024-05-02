@@ -383,7 +383,7 @@ contains
   !! Stops with error message on config mismatch
   !<
   subroutine validateGwfExchange(this)
-    use SimVariablesModule, only: errmsg
+    use SimVariablesModule, only: errmsg, simulation_mode
     use SimModule, only: store_error
     use GwfNpfModule, only: GwfNpfType
     class(GwfGwfConnectionType) :: this !< this connection
@@ -397,7 +397,19 @@ contains
 
     gwfEx => this%gwfExchange
 
-    ! we cannot validate this (yet) in parallel mode
+    ! GNC not allowed
+    if (gwfEx%ingnc /= 0 .and. gwfEx%ixt3d /= 0) then
+      write (errmsg, '(2a)') 'Ghost node correction not supported '// &
+        'combined with XT3D for exchange ', trim(gwfEx%name)
+      call store_error(errmsg)
+    end if
+    if (gwfEx%ingnc /= 0 .and. simulation_mode == 'PARALLEL') then
+      write (errmsg, '(2a)') 'Ghost node correction not supported '// &
+        'in parallel run for exchange ', trim(gwfEx%name)
+      call store_error(errmsg)
+    end if
+
+    ! we cannot validate the remainder (yet) in parallel mode
     if (.not. gwfEx%v_model1%is_local) return
     if (.not. gwfEx%v_model2%is_local) return
 
@@ -405,14 +417,6 @@ contains
     gwfModel1 => CastAsGwfModel(modelPtr)
     modelPtr => this%gwfExchange%model2
     gwfModel2 => CastAsGwfModel(modelPtr)
-
-    ! GNC not allowed
-    if (gwfEx%ingnc /= 0) then
-      write (errmsg, '(2a)') 'Ghost node correction not supported '// &
-        'with interface model for exchange', &
-        trim(gwfEx%name)
-      call store_error(errmsg)
-    end if
 
     if ((gwfModel1%inbuy > 0 .and. gwfModel2%inbuy == 0) .or. &
         (gwfModel1%inbuy == 0 .and. gwfModel2%inbuy > 0)) then

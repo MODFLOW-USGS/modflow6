@@ -70,7 +70,7 @@ module GweModule
   character(len=LENPACKAGETYPE), dimension(GWE_NBASEPKG) :: GWE_BASEPKG
   data GWE_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
                   &'IC6  ', 'FMI6 ', 'EST6 ', 'ADV6 ', '     ', & ! 10
-                  &'CND6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
+                  &'CND6 ', 'SSM6 ', 'MVE6 ', 'OC6  ', '     ', & ! 15
                   &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
                   &30*'     '/ ! 50
 
@@ -601,7 +601,7 @@ contains
 
   !> @brief Deallocate
   !!
-  !! Deallocate memmory at conclusion of model run
+  !! Deallocate memory at conclusion of model run
   !<
   subroutine gwe_da(this)
     ! -- modules

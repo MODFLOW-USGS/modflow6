@@ -6,6 +6,8 @@ on:
   # workflow_dispatch trigger to run tests via GitHub UI or CLI,
   # see https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
   workflow_dispatch:
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   # caching only necessary on Windows
   cache_ifort:
@@ -15,20 +17,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ifx
-          - {os: windows-2022, compiler: intel, version: 2022.2}
-          # ifort
-          - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.9}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.8}
+          # this combo is for windows parallel oneapi components (compilers + mkl/mpi) and petsc
+          - {os: windows-2022, compiler: intel, version: 2024.0}
+          # ifort 2021.7 currently used for all other CI testing
           - {os: windows-2022, compiler: intel-classic, version: 2021.7}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.6}
     steps:
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+        if: (!(matrix.compiler == 'intel' && matrix.version == '2024.0'))
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
+
+      # cache oneapi and petsc for mf6 parallel
+      - name: Checkout modflow6
+        if: matrix.compiler == 'intel' && matrix.version == '2024.0'
+        uses: actions/checkout@v4
+        with:
+          path: modflow6
+      - name: Cache oneAPI and PETSc
+        if: matrix.compiler == 'intel' && matrix.version == '2024.0'
+        uses: ./modflow6/.github/actions/build-petsc-win
   test:
     name: Test
     runs-on: ubuntu-22.04
@@ -57,12 +66,15 @@ jobs:
           repository: MODFLOW-USGS/modflow6-largetestmodels
           path: modflow6-largetestmodels
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.6.0
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         uses: fortran-lang/setup-fortran@v1
@@ -73,22 +85,22 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Get executables
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Run tests
-        working-directory: modflow6/autotest
-        run: pytest -v -n auto --durations 0 test_largetestmodels.py --keep-failed .failed
+        working-directory: modflow6
+        run: pixi run autotest -m "large"
       
       - name: Upload failed test output
         if: failure()

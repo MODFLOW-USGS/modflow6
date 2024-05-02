@@ -4,7 +4,7 @@ Test problem for GWE
 Test the energy "flowing" through a dry cell. The test checks for
 some of the flow-through energy being left behind and warming the
 cell it passes through.  Based on the model appearing in the
-MT3D-USGS documention, pages 13-14.  Dry cell is in layer 1, row 1
+MT3D-USGS documentation, pages 13-14.  Dry cell is in layer 1, row 1
 column 4.
 
      +-------+-------+-------+-------+-------+-------+
@@ -403,7 +403,7 @@ def check_output(idx, test):
         "Pass through cell should not be as warm as its neighbor to "
         "the left"
     )
-    assert np.all(conc1[1:, 0, 0, 2] > conc1[1:, 0, 0, 3]), msg5
+    assert np.all(np.round(conc1[:, 0, 0, 3] - conc1[:, 0, 0, 2], 8) <= 0), msg5
 
 
 # - No need to change any code below

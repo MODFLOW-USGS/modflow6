@@ -42,7 +42,7 @@ module BndModule
 
   !> @ brief BndType
   !!
-  !!  Generic boundary package type.  This derived type can be overriden to
+  !!  Generic boundary package type.  This derived type can be overridden to
   !!  become concrete boundary package types.
   !<
   type, extends(NumericalPackageType) :: BndType
@@ -270,7 +270,7 @@ contains
   !> @ brief Allocate and read method for boundary package
     !!
     !!  Generic method to allocate and read static data for model boundary
-    !!  packages. A boundary package only needs to overide this method if
+    !!  packages. A boundary package only needs to override this method if
     !!  input data varies from the standard boundary package.
     !!
   !<
@@ -302,7 +302,7 @@ contains
   !> @ brief Allocate and read method for package
     !!
     !!  Generic method to read and prepare period data for model boundary
-    !!  packages. A boundary package only needs to overide this method if
+    !!  packages. A boundary package only needs to override this method if
     !!  period data varies from the standard boundary package.
     !!
   !<
@@ -403,7 +403,7 @@ contains
     !!
     !!  Advance data in the boundary package. The method sets advances
     !!  time series, time array series, and observation data. A boundary
-    !!  package only needs to overide this method if additional data
+    !!  package only needs to override this method if additional data
     !!  needs to be advanced.
     !!
   !<
@@ -479,7 +479,7 @@ contains
     !!
     !!  Add the hcof and rhs terms for the boundary package to the
     !!  coefficient matrix and right-hand side vector. A boundary
-    !!  package only needs to overide this method if it is different for
+    !!  package only needs to override this method if it is different for
     !!  a specific boundary package.
     !!
   !<
@@ -511,7 +511,7 @@ contains
     !!
     !!  Calculate and add the Newton-Raphson terms for the boundary package
     !!  to the coefficient matrix and right-hand side vector. A boundary
-    !!  package only needs to overide this method if a specific boundary
+    !!  package only needs to override this method if a specific boundary
     !!  package needs to add Newton-Raphson terms.
     !!
   !<
@@ -533,7 +533,7 @@ contains
   !> @ brief Apply Newton-Raphson under-relaxation for package.
     !!
     !!  Apply Newton-Raphson under-relaxation for a boundary package. A boundary
-    !!  package only needs to overide this method if a specific boundary
+    !!  package only needs to override this method if a specific boundary
     !!  package needs to apply Newton-Raphson under-relaxation. An example is
     !!  the MAW package which adds rows to the system of equations and may need
     !!  to have the dependent-variable constrained by the bottom of the model.
@@ -561,9 +561,9 @@ contains
     !!
     !!  Perform additional convergence checks on the flow between the package
     !!  and the model it is attached to. This additional convergence check is
-    !!  applied to pacakages that solve their own continuity equation as
+    !!  applied to packages that solve their own continuity equation as
     !!  part of the formulate step at the beginning of a Picard iteration.
-    !!  A boundary package only needs to overide this method if a specific boundary
+    !!  A boundary package only needs to override this method if a specific boundary
     !!  package solves its own continuity equation. Example packages that implement
     !!  this additional convergence check is the CSUB, SFR, LAK, and UZF packages.
     !!
@@ -588,7 +588,7 @@ contains
   !> @ brief Calculate advanced package flows.
     !!
     !!  Calculate the flow between connected advanced package control volumes.
-    !!  Only advanced boundary packages need to overide this method.
+    !!  Only advanced boundary packages need to override this method.
     !!
   !<
   subroutine bnd_cq(this, x, flowja, iadv)
@@ -1846,7 +1846,7 @@ contains
 
   ! -- Procedures related to casting
 
-  !> @brief Cast as a boundary tyoe
+  !> @brief Cast as a boundary type
     !!
     !!  Subroutine to cast an object as a boundary package type.
     !!

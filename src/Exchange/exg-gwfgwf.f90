@@ -250,8 +250,10 @@ contains
     !
     ! -- Create and read ghost node information
     if (this%ingnc > 0) then
-      call gnc_cr(this%gnc, this%name, this%ingnc, iout)
-      call this%read_gnc()
+      if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+        call gnc_cr(this%gnc, this%name, this%ingnc, iout)
+        call this%read_gnc()
+      end if
     end if
     !
     ! -- Read mover information
@@ -2127,7 +2129,7 @@ contains
     return
   end subroutine gwf_gwf_save_simvals
 
-  !> @ brief Obs ID processer
+  !> @ brief Obs ID processor
   !!
   !! Process observations for this exchange
   !<
@@ -2146,19 +2148,19 @@ contains
     integer(I4B) :: n, iexg, istat
     integer(I4B) :: icol, istart, istop
     real(DP) :: r
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     !
-    strng = obsrv%IDstring
+    string = obsrv%IDstring
     icol = 1
     ! -- get exchange index
-    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
-    read (strng(istart:istop), '(i10)', iostat=istat) iexg
+    call urword(string, icol, istart, istop, 1, n, r, iout, inunitobs)
+    read (string(istart:istop), '(i10)', iostat=istat) iexg
     if (istat == 0) then
       obsrv%intPak1 = iexg
     else
-      ! Integer can't be read from strng; it's presumed to be an exchange
+      ! Integer can't be read from string; it's presumed to be an exchange
       ! boundary name (already converted to uppercase)
-      obsrv%FeatureName = trim(adjustl(strng))
+      obsrv%FeatureName = trim(adjustl(string))
       ! -- Observation may require summing rates from multiple exchange
       !    boundaries, so assign intPak1 as a value that indicates observation
       !    is for a named exchange boundary or group of exchange boundaries.

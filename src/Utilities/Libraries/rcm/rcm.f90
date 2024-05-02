@@ -3847,7 +3847,7 @@ function adj_bandwidth ( node_num, adj_num, adj_row, adj )
   !    in the sample grid.  On the left, we list the node, and its neighbors,
   !    with an asterisk to indicate the adjacency of the node to itself
   !    (in some cases, you want to count this self adjacency and in some
-  !    you don't).  On the right, we list the number of adjancencies to
+  !    you don't).  On the right, we list the number of adjacencies to
   !    lower-indexed nodes, to the node itself, to higher-indexed nodes,
   !    the total number of adjacencies for this node, and the location
   !    of the first and last entries required to list this set of adjacencies
@@ -4050,7 +4050,7 @@ function adj_bandwidth ( node_num, adj_num, adj_row, adj )
   !    in the sample grid.  On the left, we list the node, and its neighbors,
   !    with an asterisk to indicate the adjacency of the node to itself
   !    (in some cases, you want to count this self adjacency and in some
-  !    you don't).  On the right, we list the number of adjancencies to
+  !    you don't).  On the right, we list the number of adjacencies to
   !    lower-indexed nodes, to the node itself, to higher-indexed nodes,
   !    the total number of adjacencies for this node, and the location
   !    of the first and last entries required to list this set of adjacencies
@@ -4512,7 +4512,7 @@ function adj_bandwidth ( node_num, adj_num, adj_row, adj )
   !   24: 15 19 20 23  * 25
   !   25: 15 19 20 23 24  *    
   !
-  !    Below, we list the number of adjancencies to lower-indexed nodes, to 
+  !    Below, we list the number of adjacencies to lower-indexed nodes, to 
   !    the node itself, to higher-indexed nodes, the total number of 
   !    adjacencies for this node, and the location of the first and last 
   !    entries required to list this set of adjacencies in a single list 
@@ -4797,7 +4797,7 @@ function adj_bandwidth ( node_num, adj_num, adj_row, adj )
   !   24: 15 19 20 23  * 25
   !   25: 15 19 20 23 24  *    
   !
-  !    Below, we list the number of adjancencies to lower-indexed nodes, to 
+  !    Below, we list the number of adjacencies to lower-indexed nodes, to 
   !    the node itself, to higher-indexed nodes, the total number of 
   !    adjacencies for this node, and the location of the first and last 
   !    entries required to list this set of adjacencies in a single list 

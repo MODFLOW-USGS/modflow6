@@ -1549,7 +1549,7 @@ contains
         ! -- connection screen data
         if (this%botscrn(jpos) >= this%topscrn(jpos)) then
           call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom '// &
-                                            'must be less tha screen top. '// &
+                                            'must be less than screen top. '// &
                                             trim(cgwfnode))
         end if
         !
@@ -2159,7 +2159,7 @@ contains
       end if
     end do
     !
-    !--use the appropriate xoldsto if intial heads are above the
+    !--use the appropriate xoldsto if initial heads are above the
     !  specified flowing well discharge elevation
     if (kper == 1 .and. kstp == 1) then
       do n = 1, this%nmawwells
@@ -2792,7 +2792,7 @@ contains
   !<
   subroutine maw_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
-    use TdisModule, only: totim
+    use TdisModule, only: totim, delt
     ! -- dummy
     class(MawType) :: this !< MawType object
     integer(I4B), intent(in) :: kstp !< time step number
@@ -2800,7 +2800,7 @@ contains
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
-    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
+    call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
     !
     ! -- Return
     return
@@ -3358,23 +3358,23 @@ contains
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop
-    character(len=LINELENGTH) :: strng
+    character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     ! formats
     !
-    strng = obsrv%IDstring
-    ! -- Extract multi-aquifer well number from strng and store it.
+    string = obsrv%IDstring
+    ! -- Extract multi-aquifer well number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    maw name--deal with it.
     icol = 1
     ! -- get multi-aquifer well number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
       if (obsrv%ObsTypeId == 'MAW' .or. &
           obsrv%ObsTypeId == 'CONDUCTANCE') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (len_trim(bndName) < 1 .and. nn2 < 0) then
           write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
             'For observation type', trim(adjustl(obsrv%ObsTypeId)), &
@@ -3605,7 +3605,7 @@ contains
     end if
     !
     ! -- ensure that the conductance is not negative. Only write error message
-    !    if error condition has not occured for skin calculations (LC2)
+    !    if error condition has not occurred for skin calculations (LC2)
     if (c < DZERO .and. iTcontrastErr == 0) then
       write (errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))') &
         'Invalid calculated negative conductance (', c, &
@@ -3634,7 +3634,7 @@ contains
     real(DP), intent(inout) :: sat
     ! -- local
     integer(I4B) :: jpos
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: hwell
     real(DP) :: topw
     real(DP) :: botw
@@ -3658,25 +3658,25 @@ contains
       !
       ! -- calculate appropriate saturation
       if (this%inewton /= 1) then
-        htmp = this%xnew(node)
-        if (htmp < botw) then
-          htmp = botw
+        h_temp = this%xnew(node)
+        if (h_temp < botw) then
+          h_temp = botw
         end if
         if (hwell < botw) then
           hwell = botw
         end if
-        htmp = DHALF * (htmp + hwell)
+        h_temp = DHALF * (h_temp + hwell)
       else
-        htmp = this%xnew(node)
-        if (hwell > htmp) then
-          htmp = hwell
+        h_temp = this%xnew(node)
+        if (hwell > h_temp) then
+          h_temp = hwell
         end if
-        if (htmp < botw) then
-          htmp = botw
+        if (h_temp < botw) then
+          h_temp = botw
         end if
       end if
       ! -- calculate saturation
-      sat = sQuadraticSaturation(topw, botw, htmp, this%satomega)
+      sat = sQuadraticSaturation(topw, botw, h_temp, this%satomega)
     else
       sat = DONE
     end if
@@ -4031,15 +4031,15 @@ contains
     real(DP) :: cmaw
     real(DP) :: hgwf
     real(DP) :: bmaw
-    real(DP) :: htmp
+    real(DP) :: h_temp
     real(DP) :: hv
     real(DP) :: vscratio
     ! -- format
     !
-    ! -- initialize qnet and htmp
+    ! -- initialize qnet and h_temp
     qnet = DZERO
     vscratio = DONE
-    htmp = this%shutofflevel(n)
+    h_temp = this%shutofflevel(n)
     !
     ! -- if vsc active, select appropriate viscosity ratio
     if (this%ivsc == 1) then
@@ -4056,21 +4056,21 @@ contains
       if (this%fwcond(n) > DZERO) then
         bt = this%fwelev(n)
         tp = bt + this%fwrlen(n)
-        scale = sQSaturation(tp, bt, htmp)
+        scale = sQSaturation(tp, bt, h_temp)
         cfw = scale * this%fwcond(n) * this%viscratios(2, n)
         this%ifwdischarge(n) = 0
         if (cfw > DZERO) then
           this%ifwdischarge(n) = 1
           this%xsto(n) = bt
         end if
-        qnet = qnet + cfw * (bt - htmp)
+        qnet = qnet + cfw * (bt - h_temp)
       end if
     end if
     !
     ! -- calculate maw storage changes
     if (this%imawiss /= 1) then
       if (this%ifwdischarge(n) /= 1) then
-        hdterm = this%xoldsto(n) - htmp
+        hdterm = this%xoldsto(n) - h_temp
       else
         hdterm = this%xoldsto(n) - this%fwelev(n)
       end if
@@ -4085,7 +4085,7 @@ contains
       cmaw = this%satcond(jpos) * vscratio * sat
       hgwf = this%xnew(igwfnode)
       bmaw = this%botscrn(jpos)
-      hv = htmp
+      hv = h_temp
       if (hv < bmaw) then
         hv = bmaw
       end if
@@ -4717,7 +4717,7 @@ contains
     return
   end subroutine maw_activate_viscosity
 
-  !> @brief Calculate the groundwater-maw density exchnage terms
+  !> @brief Calculate the groundwater-maw density exchange terms
   !!
   !! Arguments are as follows:
   !!     iconn       : maw-gwf connection number

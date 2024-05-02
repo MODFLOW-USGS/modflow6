@@ -292,7 +292,7 @@ contains
 
   end subroutine deallocate_data
 
-  !> @brief Returs a virtual exchange with the specified id
+  !> @brief Returns a virtual exchange with the specified id
   !< from the global list
   function get_virtual_exchange(exg_id) result(virtual_exg)
     use VirtualDataListsModule, only: virtual_exchange_list

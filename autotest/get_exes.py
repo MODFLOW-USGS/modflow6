@@ -53,6 +53,7 @@ def test_rebuild_release(rebuilt_bin_path: Path):
         )
 
     with TemporaryDirectory() as td:
+        # download the release
         download_path = Path(td)
         download_and_unzip(
             asset["browser_download_url"],
@@ -76,21 +77,11 @@ def test_rebuild_release(rebuilt_bin_path: Path):
                 f.write(f"{line}\n")
 
         # rebuild with Meson
-        def rebuild():
-            meson_build(
-                project_path=source_files_path.parent,
-                build_path=download_path / "builddir",
-                bin_path=rebuilt_bin_path,
-            )
-
-        # temp workaround until next release,
-        # ifx fails to build 6.4.2 on Windows
-        # most likely due to backspace issues
-        if system() == "Windows" and environ.get("FC") == "ifx":
-            with set_env(FC="ifort", CC="icl"):
-                rebuild()
-        else:
-            rebuild()
+        meson_build(
+            project_path=source_files_path.parent,
+            build_path=download_path / "builddir",
+            bin_path=rebuilt_bin_path,
+        )
 
 
 @flaky(max_runs=3)

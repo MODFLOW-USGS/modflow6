@@ -14,6 +14,7 @@ from urllib.error import HTTPError
 from warnings import warn
 
 import pytest
+from benchmark import run_benchmarks
 from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import (
@@ -22,10 +23,9 @@ from modflow_devtools.download import (
     get_release,
     list_artifacts,
 )
-from modflow_devtools.markers import requires_exe, requires_github
+from modflow_devtools.markers import no_parallel, requires_exe, requires_github
 from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
-from benchmark import run_benchmarks
 from utils import convert_line_endings, get_project_root_path
 
 # paths
@@ -47,6 +47,7 @@ _full_dist_tex_paths = [
     _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
     _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
 ]
+_default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
 
 # OS-specific extensions
 _system = platform.system()
@@ -141,6 +142,7 @@ def github_user() -> Optional[str]:
 
 
 @flaky
+@no_parallel
 @requires_github
 def test_download_benchmarks(tmp_path, github_user):
     path = download_benchmarks(
@@ -189,6 +191,7 @@ def build_benchmark_tex(
 
 
 @flaky
+@no_parallel
 @requires_github
 def test_build_benchmark_tex(tmp_path):
     benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
@@ -217,7 +220,9 @@ def build_deprecations_tex():
     assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
 
 
-def build_mf6io_tex_from_dfn(overwrite: bool = False):
+def build_mf6io_tex_from_dfn(
+    overwrite: bool = False, models: Optional[List[str]] = None
+):
     if overwrite:
         clean_tex_files()
 
@@ -259,13 +264,18 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
                 f.unlink()
 
             # run python script
-            out, err, ret = run_cmd(sys.executable, "mf6ivar.py")
+            args = [sys.executable, "mf6ivar.py"]
+            if models is not None and any(models):
+                for model in models:
+                    args += ["--model", model]
+            out, err, ret = run_cmd(*args)
             assert not ret, out + err
 
             # check that dfn and tex files match
             assert files_match(tex_pth, dfn_pth, ignored)
 
 
+@no_parallel
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_build_mf6io_tex_from_dfn(overwrite):
     mf6ivar_path = _project_root_path / "doc" / "mf6io" / "mf6ivar"
@@ -311,6 +321,7 @@ def build_tex_folder_structure(overwrite: bool = False):
     assert path.is_file(), f"Failed to create {path}"
 
 
+@no_parallel
 def test_build_tex_folder_structure():
     path = _project_root_path / "doc" / "ReleaseNotes" / "folder_struct.tex"
     try:
@@ -384,6 +395,7 @@ def build_mf6io_tex_example(
             f.write("}\n")
 
 
+@no_parallel
 @pytest.mark.skip(reason="todo")
 def test_build_mf6io_tex_example():
     pass
@@ -439,6 +451,7 @@ def build_pdfs_from_tex(
         built_paths.add(tgt_path)
 
 
+@no_parallel
 @requires_exe("pdflatex")
 def test_build_pdfs_from_tex(tmp_path):
     tex_paths = [
@@ -467,17 +480,22 @@ def build_documentation(
     output_path: Optional[PathLike] = None,
     overwrite: bool = False,
     repo_owner: str = "MODFLOW-USGS",
+    models: Optional[List[str]] = None,
 ):
     print(f"Building {'full' if full else 'minimal'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
 
+    if (output_path / "mf6io.pdf").is_file() and not overwrite:
+        print(f"{output_path / 'mf6io.pdf'} already exists")
+        return
+
     # make sure output directory exists
     output_path.mkdir(parents=True, exist_ok=True)
 
     # build LaTex input/output docs from DFN files
-    build_mf6io_tex_from_dfn(overwrite=True)
+    build_mf6io_tex_from_dfn(overwrite=overwrite, models=models)
 
     # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
@@ -540,6 +558,7 @@ def build_documentation(
         assert (output_path / "mf6examples.pdf").is_file()
 
 
+@no_parallel
 @requires_exe("pdflatex")
 # skip if in CI so we don't have to build/process example models,
 # example model docs can be tested in the modflow6-examples repo
@@ -601,14 +620,23 @@ if __name__ == "__main__":
         default="MODFLOW-USGS",
         help="Repository owner (substitute your own for a fork)",
     )
+    parser.add_argument(
+        "-m",
+        "--model",
+        required=False,
+        action="append",
+        help="Filter model types to include",
+    )
     args = parser.parse_args()
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()
+    models = args.model if args.model else _default_models
     build_documentation(
         bin_path=bin_path,
         full=args.full,
         output_path=output_path,
         overwrite=args.force,
         repo_owner=args.repo_owner,
+        models=models,
     )

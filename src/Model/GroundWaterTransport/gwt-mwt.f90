@@ -657,7 +657,7 @@ contains
     return
   end subroutine mwt_rate_term
 
-  !> @brief Transport matrix term(s) associcated with a flowing-
+  !> @brief Transport matrix term(s) associated with a flowing-
   !! well rate term associated with pumping (or injection)
   !<
   subroutine mwt_fwrt_term(this, ientry, n1, n2, rrate, &
@@ -750,7 +750,7 @@ contains
 
   !> @brief Observations
   !!
-  !! Store the observation type supported by the APT package and overide
+  !! Store the observation type supported by the APT package and override
   !! BndType%bnd_df_obs
   !<
   subroutine mwt_df_obs(this)

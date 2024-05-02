@@ -449,7 +449,7 @@ contains
       cof2 = DTHREE
     end if
     !
-    ! -- calculate head diference from bottom (w),
+    ! -- calculate head difference from bottom (w),
     !    calculate range (b), and
     !    calculate normalized head difference from bottom (s)
     w = x - bot
@@ -507,7 +507,7 @@ contains
       cof2 = DTHREE
     end if
     !
-    ! -- calculate head diference from bottom (w),
+    ! -- calculate head difference from bottom (w),
     !    calculate range (b), and
     !    calculate normalized head difference from bottom (s)
     w = x - bot

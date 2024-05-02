@@ -5,7 +5,7 @@ module MethodCellPassToBotModule
   use CellDefnModule, only: CellDefnType, create_defn
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType
-  use ParticleModule
+  use ParticleModule, only: ParticleType
   use CellModule, only: CellType
   use SubcellModule, only: SubcellType
   use TrackModule, only: TrackFileControlType
@@ -43,8 +43,6 @@ contains
 
   !> @brief Pass particle vertically and instantaneously to the cell bottom
   subroutine apply_ptb(this, particle, tmax)
-    ! -- modules
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -54,8 +52,7 @@ contains
     if (.not. particle%advancing) return
     particle%z = this%defn%bot
     particle%iboundary(2) = this%defn%npolyverts + 2
-    call this%trackfilectl%save(particle, kper=kper, &
-                                kstp=kstp, reason=1) ! reason=1: cell transition
+    call this%save(particle, reason=1) ! reason=1: cell transition
   end subroutine apply_ptb
 
 end module MethodCellPassToBotModule

@@ -46,6 +46,7 @@ module PrtPrpModule
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
     integer(I4B), pointer :: irlstls => null() !< release time file
+    logical(LGP), pointer :: localz => null() !< compute z coordinates local to the cell
     logical(LGP), pointer :: rlsall => null() !< release in all time step
     logical(LGP), pointer :: rlsfirst => null() !< release in first time step
     logical(LGP), pointer :: rlstimelist => null() !< use global release time
@@ -58,6 +59,7 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: rptx(:) => null() !< release point x coordinates
     real(DP), pointer, contiguous :: rpty(:) => null() !< release point y coordinates
     real(DP), pointer, contiguous :: rptz(:) => null() !< release point z coordinates
+    real(DP), pointer, contiguous :: locz(:) => null() !< release point local z coordinates
     real(DP), pointer, contiguous :: rptmass(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
     type(TimeSelectType), pointer :: releasetimes
@@ -140,6 +142,7 @@ contains
     call mem_deallocate(this%rlsall)
     call mem_deallocate(this%rlsfirst)
     call mem_deallocate(this%rlstimelist)
+    call mem_deallocate(this%localz)
     call mem_deallocate(this%offset)
     call mem_deallocate(this%stoptime)
     call mem_deallocate(this%stoptraveltime)
@@ -157,6 +160,7 @@ contains
     call mem_deallocate(this%rptx)
     call mem_deallocate(this%rpty)
     call mem_deallocate(this%rptz)
+    call mem_deallocate(this%locz)
     call mem_deallocate(this%rptnode)
     call mem_deallocate(this%rptmass)
     call mem_deallocate(this%rlskstp)
@@ -201,6 +205,7 @@ contains
     call mem_allocate(this%rptx, this%nreleasepts, 'RPTX', this%memoryPath)
     call mem_allocate(this%rpty, this%nreleasepts, 'RPTY', this%memoryPath)
     call mem_allocate(this%rptz, this%nreleasepts, 'RPTZ', this%memoryPath)
+    call mem_allocate(this%locz, this%nreleasepts, 'LOCZ', this%memoryPath)
     call mem_allocate(this%rptmass, this%nreleasepts, 'RPTMASS', this%memoryPath)
     call mem_allocate(this%rptnode, this%nreleasepts, 'RPTNODER', &
                       this%memoryPath)
@@ -230,6 +235,7 @@ contains
     call mem_allocate(this%rlsall, 'RLSALL', this%memoryPath)
     call mem_allocate(this%rlsfirst, 'RLSFIRST', this%memoryPath)
     call mem_allocate(this%rlstimelist, 'RELEASETIME', this%memoryPath)
+    call mem_allocate(this%localz, 'LOCALZ', this%memoryPath)
     call mem_allocate(this%offset, 'OFFSET', this%memoryPath)
     call mem_allocate(this%stoptime, 'STOPTIME', this%memoryPath)
     call mem_allocate(this%stoptraveltime, 'STOPTRAVELTIME', this%memoryPath)
@@ -247,6 +253,7 @@ contains
     this%rlsall = .false.
     this%rlsfirst = .false.
     this%rlstimelist = .false.
+    this%localz = .false.
     this%offset = DZERO
     this%stoptime = huge(1d0)
     this%stoptraveltime = huge(1d0)
@@ -303,7 +310,7 @@ contains
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ic, icu, nps, nts, nrel, &
                     nreleasets, np, irow, icol, ilay, icpl
-    real(DP) :: x, y, z, trelease, tend
+    real(DP) :: x, y, z, trelease, tend, top, bot, hds
     real(DP), allocatable :: polyverts(:, :)
     type(ParticleType), pointer :: particle
 
@@ -418,7 +425,14 @@ contains
         end if
         particle%x = x
         particle%y = y
-        particle%z = this%rptz(nps)
+        if (this%localz) then
+          top = this%fmi%dis%top(ic)
+          bot = this%fmi%dis%bot(ic)
+          hds = this%fmi%gwfhead(ic)
+          particle%z = bot + this%rptz(nps) * (hds - bot)
+        else
+          particle%z = this%rptz(nps)
+        end if
         particle%trelease = trelease
         ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
         if (this%stoptraveltime == huge(1d0)) then
@@ -794,6 +808,9 @@ contains
           &FOLLOWED BY FILEOUT')
       end if
       found = .true.
+    case ('LOCAL_Z')
+      this%localz = .true.
+      found = .true.
     case default
       found = .false.
     end select
@@ -872,6 +889,11 @@ contains
         x(n) = this%parser%GetDouble()
         y(n) = this%parser%GetDouble()
         z(n) = this%parser%GetDouble()
+
+        if (this%localz .and. (z(n) < 0 .or. z(n) > 1)) then
+          call store_error('Local z coordinate must fall in the interval [0, 1]')
+          cycle
+        end if
 
         ! -- set default boundname
         write (cno, '(i9.9)') n

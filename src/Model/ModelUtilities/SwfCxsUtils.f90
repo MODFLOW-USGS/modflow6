@@ -40,7 +40,7 @@ contains
     ! -- dummy variables
     real(DP), intent(in) :: qrch !< streamflow
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -81,7 +81,7 @@ contains
     !integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: qrch !< streamflow
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -148,7 +148,7 @@ contains
     !integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: qrch !< streamflow
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -221,7 +221,7 @@ contains
     ! -- dummy variables
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -262,7 +262,7 @@ contains
     ! -- dummy variables
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -316,7 +316,7 @@ contains
     integer(I4B), intent(in) :: npts
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -382,7 +382,7 @@ contains
     ! -- dummy variables
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(in) :: width !< reach width
-    real(DP), intent(in) :: rough !< mannings reach roughness coefficent
+    real(DP), intent(in) :: rough !< mannings reach roughness coefficient
     real(DP), intent(in) :: slope !< reach bottom slope
     real(DP), dimension(:), intent(in) :: cxs_xf ! xfraction distances for this cross section
     real(DP), dimension(:), intent(in) :: cxs_h ! heights for this cross section
@@ -496,7 +496,7 @@ contains
       stations(n) = xfraction(n) * width
     end do
     !
-    ! -- intitialize the wetted perimeter for the reach
+    ! -- initialize the wetted perimeter for the reach
     w = DZERO
     !
     ! -- calculate the wetted top width for each line segment
@@ -536,7 +536,7 @@ contains
       stations(n) = xfraction(n) * width
     end do
     !
-    ! -- intitialize the wetted perimeter for the reach
+    ! -- initialize the wetted perimeter for the reach
     p = DZERO
     !
     ! -- calculate the wetted perimeter for each line segment
@@ -576,7 +576,7 @@ contains
       stations(n) = xfraction(n) * width
     end do
     !
-    ! -- intitialize the area
+    ! -- initialize the area
     a = DZERO
     !
     ! -- calculate the cross-sectional area for each line segment
@@ -764,7 +764,7 @@ contains
     real(DP), dimension(npts - 1) :: areas
     real(DP), dimension(npts - 1) :: perimeters
     !
-    ! -- intitialize the hydraulic radius, perimeter, and area
+    ! -- initialize the hydraulic radius, perimeter, and area
     r = DZERO
     p = DZERO
     a = DZERO
@@ -860,7 +860,7 @@ contains
     real(DP), dimension(npts - 1) :: areas
     real(DP), dimension(npts - 1) :: perimeters
     !
-    ! -- intitialize the hydraulic radius, perimeter, and area
+    ! -- initialize the hydraulic radius, perimeter, and area
     q = DZERO
     rh = DZERO
     r = DZERO

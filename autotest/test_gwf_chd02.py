@@ -1,4 +1,4 @@
-# test use of binary stress period data with auxilliary data
+# test use of binary stress period data with auxiliary data
 import os
 
 import flopy

@@ -145,7 +145,7 @@ contains ! module procedures
     call this%halo_exchanges%init()
 
     call this%addModelNeighbors(this%owner%id, virtual_exchange_list, &
-                                this%exg_stencil_depth)
+                                this%exg_stencil_depth, .true.)
 
   end subroutine createModelHalo
 
@@ -153,19 +153,21 @@ contains ! module procedures
   !<
   recursive subroutine addModelNeighbors(this, model_id, &
                                          virtual_exchanges, &
-                                         depth, mask)
+                                         depth, is_root, mask)
     use VirtualExchangeModule, only: get_virtual_exchange
     class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B) :: model_id !< the model (id) to add neighbors for
     type(ListType) :: virtual_exchanges !< list with all virtual exchanges
     integer(I4B), value :: depth !< the maximal number of exchanges between
+    logical(LGP) :: is_root !< true when called for neighbor from primary exchange
     integer(I4B), optional :: mask !< don't add this one as a neighbor
     ! local
     integer(I4B) :: i, n
     class(VirtualExchangeType), pointer :: v_exg
     integer(I4B) :: neighbor_id
     integer(I4B) :: model_mask
-    type(STLVecInt) :: nbr_models
+    type(STLVecInt) :: models_at_depth !< model ids at a certain depth, to
+                                       !! recurse on for nbrs-of-nbrs search
 
     if (.not. present(mask)) then
       model_mask = 0
@@ -173,47 +175,61 @@ contains ! module procedures
       model_mask = mask
     end if
 
-    call nbr_models%init()
+    call models_at_depth%init()
 
-    ! first find all direct neighbors of the model and add them,
-    ! avoiding duplicates
-    do i = 1, virtual_exchanges%Count()
-      neighbor_id = -1
-      v_exg => get_virtual_exchange_from_list(virtual_exchanges, i)
-      if (v_exg%v_model1%id == model_id) then
-        neighbor_id = v_exg%v_model2%id
-      else if (v_exg%v_model2%id == model_id) then
-        neighbor_id = v_exg%v_model1%id
+    if (is_root) then
+      ! first layer in the recursive search
+      call models_at_depth%push_back_unique(model_id)
+
+      ! fetch primary neighbor
+      if (this%prim_exchange%v_model1%id == this%owner%id) then
+        neighbor_id = this%prim_exchange%v_model2%id
+      else
+        neighbor_id = this%prim_exchange%v_model1%id
       end if
+      ! add
+      call models_at_depth%push_back_unique(neighbor_id)
+      call this%halo_models%push_back_unique(neighbor_id)
+      call this%halo_exchanges%push_back_unique(this%prim_exchange%id)
+    else
+      ! find all direct neighbors of the model and add them,
+      ! avoiding duplicates
+      do i = 1, virtual_exchanges%Count()
+        neighbor_id = -1
+        v_exg => get_virtual_exchange_from_list(virtual_exchanges, i)
+        if (v_exg%v_model1%id == model_id) then
+          neighbor_id = v_exg%v_model2%id
+        else if (v_exg%v_model2%id == model_id) then
+          neighbor_id = v_exg%v_model1%id
+        end if
 
-      ! check if there is a neighbor, and it is not masked
-      ! (to prevent back-and-forth connections)
-      if (neighbor_id > 0) then
-
-        ! check if masked
-        if (neighbor_id == model_mask) cycle
-        call nbr_models%push_back_unique(neighbor_id)
-        call this%halo_models%push_back_unique(neighbor_id)
-        call this%halo_exchanges%push_back_unique(v_exg%id)
-      end if
-
-    end do
+        ! check if there is a neighbor, and it is not masked
+        ! (to prevent back-and-forth connections)
+        if (neighbor_id > 0) then
+          ! check if masked
+          if (neighbor_id == model_mask) cycle
+          call models_at_depth%push_back_unique(neighbor_id)
+          call this%halo_models%push_back_unique(neighbor_id)
+          call this%halo_exchanges%push_back_unique(v_exg%id)
+        end if
+      end do
+    end if
 
     depth = depth - 1
     if (depth == 0) then
       ! and we're done with this branch
-      call nbr_models%destroy()
+      call models_at_depth%destroy()
       return
     end if
 
     ! now recurse on the neighbors up to the specified depth
-    do n = 1, nbr_models%size
-      call this%addModelNeighbors(nbr_models%at(n), virtual_exchanges, &
-                                  depth, model_id)
+    do n = 1, models_at_depth%size
+      call this%addModelNeighbors(models_at_depth%at(n), virtual_exchanges, &
+                                  depth, .false., model_id)
     end do
 
     ! we're done with the tree
-    call nbr_models%destroy()
+    call models_at_depth%destroy()
 
   end subroutine addModelNeighbors
 
@@ -436,7 +452,7 @@ contains ! module procedures
 
   !> @brief Calculate (or adjust) matrix coefficients,
   !! in this case those which are determined or affected
-  !< by the connection of a GWF model with its neigbors
+  !< by the connection of a GWF model with its neighbors
   subroutine spatialcon_cf(this, kiter)
     class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B), intent(in) :: kiter !< the iteration counter

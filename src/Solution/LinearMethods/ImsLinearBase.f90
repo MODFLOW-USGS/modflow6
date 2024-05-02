@@ -8,7 +8,7 @@ MODULE IMSLinearBaseModule
   ! -- modules
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, IZERO, &
-                             DZERO, DPREC, DEM6, DEM3, DHALF, DONE
+                             DZERO, DPREC, DEM6, DEM3, DEM4, DHALF, DONE
   use MathUtilModule, only: is_close
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
@@ -87,7 +87,7 @@ contains
     real(DP) :: rmax
     real(DP) :: l2norm
     real(DP) :: rcnvg
-    real(DP) :: denom
+    real(DP) :: denominator
     real(DP) :: alpha, beta
     real(DP) :: rho, rho0
     !
@@ -130,17 +130,19 @@ contains
       !
       ! -- UPDATE Q
       call amux(NEQ, P, Q, A0, JA0, IA0)
-      denom = ddot(NEQ, P, 1, Q, 1)
-      denom = denom + SIGN(DPREC, denom)
-      alpha = rho / denom
+      denominator = ddot(NEQ, P, 1, Q, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      alpha = rho / denominator
       !
       ! -- UPDATE X AND RESIDUAL
       deltax = DZERO
       rmax = DZERO
       l2norm = DZERO
       DO im = 1, CONVNMOD
+        summary%locdv(im) = 0
         summary%dvmax(im) = DZERO
-        summary%drmax(im) = DZERO
+        summary%locr(im) = 0
+        summary%rmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -172,9 +174,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
-          summary%drmax(im) = tv
-          summary%locdr(im) = n
+        IF (ABS(tv) > ABS(summary%rmax(im))) THEN
+          summary%rmax(im) = tv
+          summary%locr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -188,9 +190,9 @@ contains
         summary%itinner(n) = iiter
         DO im = 1, CONVNMOD
           summary%convlocdv(im, n) = summary%locdv(im)
-          summary%convlocdr(im, n) = summary%locdr(im)
+          summary%convlocr(im, n) = summary%locr(im)
           summary%convdvmax(im, n) = summary%dvmax(im)
-          summary%convdrmax(im, n) = summary%drmax(im)
+          summary%convrmax(im, n) = summary%rmax(im)
         END DO
       END IF
       !
@@ -318,7 +320,7 @@ contains
     real(DP) :: beta
     real(DP) :: rho, rho0
     real(DP) :: omega, omega0
-    real(DP) :: numer, denom
+    real(DP) :: numerator, denominator
     !
     ! -- initialize local variables
     INNERIT = 0
@@ -373,9 +375,9 @@ contains
       call amux(NEQ, PHAT, V, A0, JA0, IA0)
       !
       ! -- UPDATE alpha WITH DHAT AND V
-      denom = ddot(NEQ, DHAT, 1, V, 1)
-      denom = denom + SIGN(DPREC, denom)
-      alpha = rho / denom
+      denominator = ddot(NEQ, DHAT, 1, V, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      alpha = rho / denominator
       !
       ! -- UPDATE Q
       DO n = 1, NEQ
@@ -422,10 +424,10 @@ contains
       call amux(NEQ, QHAT, T, A0, JA0, IA0)
       !
       ! -- UPDATE omega
-      numer = ddot(NEQ, T, 1, Q, 1)
-      denom = ddot(NEQ, T, 1, T, 1)
-      denom = denom + SIGN(DPREC, denom)
-      omega = numer / denom
+      numerator = ddot(NEQ, T, 1, Q, 1)
+      denominator = ddot(NEQ, T, 1, T, 1)
+      denominator = denominator + SIGN(DPREC, denominator)
+      omega = numerator / denominator
       !
       ! -- UPDATE X AND RESIDUAL
       deltax = DZERO
@@ -433,7 +435,7 @@ contains
       l2norm = DZERO
       DO im = 1, CONVNMOD
         summary%dvmax(im) = DZERO
-        summary%drmax(im) = DZERO
+        summary%rmax(im) = DZERO
       END DO
       im = 1
       im0 = CONVMODSTART(1)
@@ -472,9 +474,9 @@ contains
           rmax = tv
           rloc = n
         END IF
-        IF (ABS(tv) > ABS(summary%drmax(im))) THEN
-          summary%drmax(im) = tv
-          summary%locdr(im) = n
+        IF (ABS(tv) > ABS(summary%rmax(im))) THEN
+          summary%rmax(im) = tv
+          summary%locr(im) = n
         END IF
         l2norm = l2norm + tv * tv
       END DO
@@ -490,8 +492,8 @@ contains
         DO im = 1, CONVNMOD
           summary%convdvmax(im, n) = summary%dvmax(im)
           summary%convlocdv(im, n) = summary%locdv(im)
-          summary%convdrmax(im, n) = summary%drmax(im)
-          summary%convlocdr(im, n) = summary%locdr(im)
+          summary%convrmax(im, n) = summary%rmax(im)
+          summary%convlocr(im, n) = summary%locr(im)
         END DO
       END IF
       !
@@ -561,7 +563,7 @@ contains
     ! -- modules
     use SimModule, only: store_error, count_errors
     ! -- dummy variables
-    integer(I4B), INTENT(IN) :: IORD !< reordering optionn
+    integer(I4B), INTENT(IN) :: IORD !< reordering option
     integer(I4B), INTENT(IN) :: NEQ !< number of rows
     integer(I4B), INTENT(IN) :: NJA !< number of non-zero entries
     integer(I4B), DIMENSION(NEQ + 1), INTENT(IN) :: IA !< row pointer
@@ -607,7 +609,7 @@ contains
       IORDER(LORDER(n)) = n
     END DO
     !
-    ! -- terminate if errors occured
+    ! -- terminate if errors occurred
     if (count_errors() > 0) then
       call parser%StoreErrorUnit()
     end if
@@ -788,7 +790,7 @@ contains
     integer(I4B), DIMENSION(NIAPC + 1), INTENT(INOUT) :: IAPC !< preconditioner CRS row pointers
     integer(I4B), DIMENSION(NJAPC), INTENT(INOUT) :: JAPC !< preconditioner CRS column pointers
     integer(I4B), DIMENSION(NIAPC), INTENT(INOUT) :: IW !< preconditioner integed work vector
-    real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W !< preconditioner work verctor
+    real(DP), DIMENSION(NIAPC), INTENT(INOUT) :: W !< preconditioner work vector
     ! -- ILUT dummy variables
     integer(I4B), INTENT(IN) :: LEVEL !< number of levels of fill for ILUT and MILUT
     real(DP), INTENT(IN) :: DROPTOL !< drop tolerance
@@ -1135,7 +1137,7 @@ contains
     real(DP), INTENT(IN) :: Rmax0 !< initial flow change (initial L2-norm)
     real(DP), INTENT(IN) :: Epfact !< factor for reducing convergence criteria in subsequent Picard iterations
     real(DP), INTENT(IN) :: Dvclose !< Maximum depenendent-variable change allowed
-    real(DP), INTENT(IN) :: Rclose !< Maximum flow change alowed
+    real(DP), INTENT(IN) :: Rclose !< Maximum flow change allowed
     ! -- code
     IF (Icnvgopt == 0) THEN
       IF (ABS(Dvmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN
@@ -1172,6 +1174,57 @@ contains
     ! -- return
     RETURN
   END SUBROUTINE ims_base_testcnvg
+
+  subroutine ims_calc_pcdims(neq, nja, ia, level, ipc, &
+                             niapc, njapc, njlu, njw, nwlu)
+    integer(I4B), intent(in) :: neq !< nr. of rows A
+    integer(I4B), intent(in) :: nja !< nr. of nonzeros A
+    integer(I4B), dimension(:), intent(in) :: ia !< CSR row pointers A
+    integer(I4B), intent(in) :: level !< fill level ILU
+    integer(I4B), intent(in) :: ipc !< IMS preconditioner type
+    integer(I4B), intent(inout) :: niapc !< work array size
+    integer(I4B), intent(inout) :: njapc !< work array size
+    integer(I4B), intent(inout) :: njlu !< work array size
+    integer(I4B), intent(inout) :: njw !< work array size
+    integer(I4B), intent(inout) :: nwlu !< work array size
+    ! local
+    integer(I4B) :: n, i
+    integer(I4B) :: ijlu, ijw, iwlu, iwk
+
+    ijlu = 1
+    ijw = 1
+    iwlu = 1
+
+    ! ILU0 and MILU0
+    niapc = neq
+    njapc = nja
+
+    ! ILUT and MILUT
+    if (ipc == 3 .or. ipc == 4) then
+      niapc = neq
+      if (level > 0) then
+        iwk = neq * (level * 2 + 1)
+      else
+        iwk = 0
+        do n = 1, neq
+          i = ia(n + 1) - ia(n)
+          if (i > iwk) then
+            iwk = i
+          end if
+        end do
+        iwk = neq * iwk
+      end if
+      njapc = iwk
+      ijlu = iwk
+      ijw = 2 * neq
+      iwlu = neq + 1
+    end if
+
+    njlu = ijlu
+    njw = ijw
+    nwlu = iwlu
+
+  end subroutine ims_calc_pcdims
 
   !> @ brief Generate CRS pointers for the preconditioner
   !!
@@ -1247,7 +1300,7 @@ contains
   !<
   SUBROUTINE ims_base_isort(NVAL, IARRAY)
     ! -- dummy variables
-    integer(I4B), INTENT(IN) :: NVAL !< length of the interger array
+    integer(I4B), INTENT(IN) :: NVAL !< length of the integer array
     integer(I4B), DIMENSION(NVAL), INTENT(INOUT) :: IARRAY !< integer array to be sorted
     ! -- local variables
     integer(I4B) :: i, j, itemp
@@ -1296,5 +1349,26 @@ contains
     ! -- return
     RETURN
   END SUBROUTINE ims_base_residual
+
+  !> @brief Function returning EPFACT
+  !<
+  function ims_base_epfact(icnvgopt, kstp) result(epfact)
+    integer(I4B) :: icnvgopt !< IMS convergence option
+    integer(I4B) :: kstp !< time step number
+    real(DP) :: epfact !< factor for decreasing convergence criteria in subsequent Picard iterations
+
+    if (icnvgopt == 2) then
+      if (kstp == 1) then
+        epfact = 0.01
+      else
+        epfact = 0.10
+      end if
+    else if (icnvgopt == 4) then
+      epfact = DEM4
+    else
+      epfact = DONE
+    end if
+
+  end function ims_base_epfact
 
 END MODULE IMSLinearBaseModule

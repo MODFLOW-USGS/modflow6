@@ -81,12 +81,13 @@ module GweUzeModule
     procedure :: pak_set_stressperiod => uze_set_stressperiod
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
+    procedure :: get_mvr_depvar
 
   end type GweUzeType
 
 contains
 
-  !> @breif Create a new UZE package
+  !> @brief Create a new UZE package
   !<
   subroutine uze_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, eqnsclfac, gwecommon, dvt, dvu, dvua)
@@ -648,6 +649,20 @@ contains
     ! -- Return
     return
   end function uze_get_nbudterms
+
+  !> @brief Override similarly named function in APT
+  !!
+  !! Set the temperature to be used by MVE as the user-specified
+  !! temperature applied to the infiltration
+  !<
+  function get_mvr_depvar(this)
+    ! -- dummy
+    class(GweUzeType) :: this
+    ! -- return
+    real(dp), dimension(:), contiguous, pointer :: get_mvr_depvar
+    !
+    get_mvr_depvar => this%tempinfl
+  end function get_mvr_depvar
 
   !> @brief Setup budget object
   !!

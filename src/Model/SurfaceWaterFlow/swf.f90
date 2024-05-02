@@ -6,7 +6,7 @@
 !! Status and remaining tasks
 !!   ONGOING -- Implement SWF infrastructure
 !!   DONE -- Implement Explicit Model Solution (EMS6) to handle explicit models
-!!   DONE -- Implement DISL Package
+!!   DONE -- Implement DISV1D Package
 !!   DONE -- Implement FLW Package to handle lateral and point inflows
 !!   DONE -- Transfer results into the flowja vector
 !!   DONE -- Implement strategy for storing outflow terms and getting them into budget
@@ -27,7 +27,7 @@
 !!   We may need subcells and subtiming to improve accuracy
 !!   Add support for nonlinear Muskingum Cunge
 !!   Deal with the timestep and subtiming issues
-!!   Flopy support for DISL and DISL binary grid file
+!!   Flopy support for DISV1D and DISV1D binary grid file
 !!   Flopy support for .output() method for SWF
 !!   Mover support?
 !!   SWF-SWF Exchange
@@ -114,11 +114,11 @@ module SwfModule
   !! SWF model base package types.  Only listed packages are candidates
   !! for input and these will be loaded in the order specified.
   !<
-  integer(I4B), parameter :: SWF_NBASEPKG = 50
-  character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: SWF_BASEPKG
-  data SWF_BASEPKG/'DISL6', 'DIS6 ', 'DISV6', 'DFW6 ', 'CXS6 ', & !  5
-                  &'OC6  ', 'IC6  ', 'OBS6 ', 'STO6 ', '     ', & ! 10
-                  &40*'     '/ ! 50
+  integer(I4B), parameter :: SWF_NBASEPKG = 9
+  character(len=LENPACKAGETYPE), dimension(SWF_NBASEPKG) :: &
+    SWF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV2D6', &
+                   'DFW6   ', 'CXS6   ', 'OC6    ', &
+                   'IC6    ', 'OBS6   ', 'STO6   ']
 
   !> @brief SWF multi package array descriptors
   !!
@@ -127,7 +127,7 @@ module SwfModule
   !<
   integer(I4B), parameter :: SWF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(SWF_NMULTIPKG) :: SWF_MULTIPKG
-  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'ZDG6 ', '     ', '     ', & !  5
+  data SWF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', '     ', & !  5
                    &45*'     '/ ! 50
 
   ! -- size of supported model package arrays
@@ -391,7 +391,7 @@ contains
     !
     ! -- Call dis_ar to write binary grid file
     call this%dis%dis_ar(itemp)
-    if (this%indfw > 0) call this%dfw%dfw_ar(this%ibound)
+    if (this%indfw > 0) call this%dfw%dfw_ar(this%ibound, this%x)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%inobs > 0) call this%obs%swf_obs_ar(this%ic, this%x, this%flowja)
     deallocate (itemp)
@@ -704,6 +704,14 @@ contains
       call packobj%bnd_bd(this%budget)
     end do
     !
+    ! -- dfw velocities have to be calculated here, after swf-swf exchanges
+    !    have passed in their contributions from exg_cq()
+    if (this%indfw > 0) then
+      if (this%dfw%icalcvelocity /= 0) then
+        call this%dfw%calc_velocity(this%flowja)
+      end if
+    end if
+    !
     ! -- Return
     return
   end subroutine swf_bd
@@ -752,7 +760,7 @@ contains
     !   Print budget summaries
     call this%swf_ot_bdsummary(ibudfl, ipflag)
     !
-    ! -- Timing Output; if any dependendent variables or budgets
+    ! -- Timing Output; if any dependent variables or budgets
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
     !
@@ -855,7 +863,7 @@ contains
   end subroutine swf_ot_dv
 
   subroutine swf_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper, totim
+    use TdisModule, only: kstp, kper, totim, delt
     class(SwfModelType) :: this
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(inout) :: ipflag
@@ -875,6 +883,7 @@ contains
     ! end if
 
     ! -- model budget summary
+    call this%budget%finalize_step(delt)
     if (ibudfl /= 0) then
       ipflag = 1
       call this%budget%budget_ot(kstp, kper, this%iout)
@@ -976,6 +985,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use SwfFlwModule, only: flw_create
     use ChdModule, only: chd_create
+    use SwfCdbModule, only: cdb_create
     use SwfZdgModule, only: zdg_create
     ! -- dummy
     class(SwfModelType) :: this
@@ -1001,6 +1011,10 @@ contains
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
       packobj%ictMemPath = create_mem_path(this%name, 'DFW')
+    case ('CDB6')
+      call cdb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath, this%dis, this%cxs, &
+                      this%dfw%lengthconv, this%dfw%timeconv)
     case ('ZDG6')
       call zdg_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath, this%dis, this%cxs, this%dfw%unitconv)
@@ -1036,8 +1050,8 @@ contains
     !
     ! -- Check for required packages. Stop if not present.
     if (indis == 0) then
-      write (errmsg, '(1x,a)') &
-        'Discretization (DISL6) Package not specified.'
+      write (errmsg, '(a)') &
+        'Discretization Package (DISV1D6 or DIS2D6) not specified.'
       call store_error(errmsg)
     end if
     if (this%inic == 0 .and. this%indfw /= 0) then
@@ -1052,8 +1066,9 @@ contains
       call store_error(errmsg)
     end if
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'One or more required package(s) not specified.'
+      write (errmsg, '(a)') 'One or more required package(s) not specified.'
       call store_error(errmsg)
+      call store_error_filename(this%filename)
     end if
     !
     ! -- return
@@ -1127,9 +1142,9 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use SwfDislModule, only: disl_cr
-    use DisModule, only: dis_cr
-    use DisvModule, only: disv_cr
+    use Disv1dModule, only: disv1d_cr
+    use Dis2dModule, only: dis2d_cr
+    use Disv2dModule, only: disv2d_cr
     use SwfDfWModule, only: dfw_cr
     use SwfCxsModule, only: cxs_cr
     use SwfStoModule, only: sto_cr
@@ -1147,7 +1162,7 @@ contains
     integer(I4B), dimension(:), contiguous, &
       pointer :: inunits => null()
     character(len=LENMEMPATH) :: model_mempath
-    character(len=LENFTYPE) :: pkgtype
+    character(len=LENPACKAGETYPE) :: pkgtype
     character(len=LENPACKAGENAME) :: pkgname
     character(len=LENMEMPATH) :: mempath
     integer(I4B), pointer :: inunit
@@ -1177,15 +1192,15 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('DISL6')
+      case ('DISV1D6')
         indis = 1
-        call disl_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DIS6')
+        call disv1d_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('DIS2D6')
         indis = 1
-        call dis_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DISV6')
+        call dis2d_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('DISV2D6')
         indis = 1
-        call disv_cr(this%dis, this%name, mempath, indis, this%iout)
+        call disv2d_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('DFW6')
         this%indfw = 1
         mempathdfw = mempath
@@ -1201,7 +1216,7 @@ contains
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      case ('CHD6', 'FLW6', 'ZDG6')
+      case ('CHD6', 'FLW6', 'CDB6', 'ZDG6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default

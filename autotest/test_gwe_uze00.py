@@ -338,8 +338,8 @@ def build_models(idx, test):
         ath1=dispersivity,
         ktw=0.5918 * 86400,
         kts=0.2700 * 86400,
-        pname="DSP",
-        filename=f"{gwename}.dsp",
+        pname="CND",
+        filename=f"{gwename}.cnd",
     )
 
     # Instantiating MODFLOW 6 transport mass storage package
@@ -353,8 +353,8 @@ def build_models(idx, test):
         cps=760.0,
         rhos=1500.0,
         packagedata=[cpw, rhow, lhv],
-        pname="MST",
-        filename=f"{gwename}.mst",
+        pname="EST",
+        filename=f"{gwename}.est",
     )
 
     # Instantiating MODFLOW 6 constant temperature boundary condition at
@@ -556,7 +556,8 @@ def check_output(idx, test):
     assert np.min(analytical_sln[100] - temps[100]) >= -0.20763221276, msg4
 
     # If a plot is needed for visual inspection, change following if statement to "True"
-    if False:
+    plot_results = False
+    if plot_results:
         analytical_sln = np.zeros((len(t), len(z)))
         for i, tm in enumerate(t):
             for j, depth in enumerate(z):

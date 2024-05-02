@@ -28,15 +28,16 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
-        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/bin" >> $GITHUB_PATH
 
     - name: Configure PETSc
       if: runner.os == 'Linux'
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
+        sudo wget -P $GITHUB_WORKSPACE/petsc https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.2.tar.gz
+        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz
         sudo make all
 
     - name: Configure PETSc
@@ -44,16 +45,16 @@ runs:
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
+        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
         sudo make all
 
     - name: Build modflow6
-      shell: bash -l {0}
+      shell: bash
       working-directory: modflow6
       run: |
-        meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
-        meson install -C builddir
-        meson test --verbose --no-rebuild -C builddir
+        pixi run setup -Dparallel=true builddir
+        pixi run build builddir
+        pixi run test builddir
 
     - name: Show Meson logs
       if: failure()
@@ -62,20 +63,20 @@ runs:
       run: cat builddir/meson-logs/meson-log.txt
 
     - name: Update flopy
-      shell: bash -l {0}
-      working-directory: modflow6/autotest
-      run: python update_flopy.py
+      shell: bash
+      working-directory: modflow6
+      run: pixi run update-flopy
 
     - name: Get executables
-      shell: bash -l {0}
-      working-directory: modflow6/autotest
+      shell: bash
+      working-directory: modflow6
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: pytest -v --durations 0 get_exes.py
+      run: pixi run get-exes
 
     - name: Test programs
-      shell: bash -l {0}
-      working-directory: modflow6/autotest
+      shell: bash
+      working-directory: modflow6
       env:
         REPOS_PATH: ${{ github.workspace }}
-      run: pytest -v -n auto --parallel --durations 0 -k "test_par" --keep-failed .failed
+      run: pixi run autotest --parallel -k "test_par"
