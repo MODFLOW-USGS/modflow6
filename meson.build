@@ -22,9 +22,6 @@ else
 endif
 message('The used profile is:', profile)
 
-is_debug = get_option('debug')
-message('Building debug version:', is_debug)
-
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
@@ -78,10 +75,10 @@ if fc_id == 'intel-cl'
                    '/Qdiag-disable:10448',# ifort deprecation warning
                   ]
   # add the correct C/C++ CRT runtime on Windows based on profile
-  if is_debug
-    compile_args += '/MTd'
-  else
+  if profile == 'release'
     compile_args += '/MT'
+  else
+    compile_args += '/MTd'
   endif
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
