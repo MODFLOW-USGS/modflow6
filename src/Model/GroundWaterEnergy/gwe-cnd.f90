@@ -470,9 +470,9 @@ contains
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then
-      call mem_deallocate(this%alh)
+      call mem_deallocate(this%alh, 'ALH', trim(this%memoryPath))
       call mem_deallocate(this%alv, 'ALV', trim(this%memoryPath))
-      call mem_deallocate(this%ath1)
+      call mem_deallocate(this%ath1, 'ATH1', trim(this%memoryPath))
       call mem_deallocate(this%ath2, 'ATH2', trim(this%memoryPath))
       call mem_deallocate(this%atv, 'ATV', trim(this%memoryPath))
       call mem_deallocate(this%d11)

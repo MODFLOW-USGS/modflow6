@@ -233,7 +233,7 @@ contains
     !
     ! -- Arrays
     call mem_deallocate(this%xold)
-    call mem_deallocate(this%flowja)
+    call mem_deallocate(this%flowja, 'FLOWJA', this%memoryPath)
     call mem_deallocate(this%idxglo)
     !
     ! -- derived types
