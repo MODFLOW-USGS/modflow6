@@ -22,10 +22,14 @@ else
 endif
 message('The used profile is:', profile)
 
+is_debug = get_option('debug')
+message('Building debug version:', is_debug)
+
+
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
-message('The fc_id is:', fc_id)
+message('Fortran compiler id:', fc_id)
 compile_args = []
 link_args = []
 
@@ -116,7 +120,7 @@ endif
 
 # add the correct C/C++ CRT runtime on Windows based on profile
 if c_runtime_flag == 'true'
-  if get_option('debug') == 'true'
+  if is_debug
     compile_args += ['/MTd']
   else
     compile_args += ['/MT']
