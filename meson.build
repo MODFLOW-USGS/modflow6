@@ -29,6 +29,16 @@ message('The fc_id is:', fc_id)
 compile_args = []
 link_args = []
 
+if build_machine.system() == 'windows'
+  if fc_id == 'gcc'
+    c_runtime_flag = 'false'
+  else
+    c_runtime_flag = 'true'
+  endif
+else
+  c_runtime_flag = 'false'
+endif 
+
 # Command line options for gfortran
 if fc_id == 'gcc'
   # General options
@@ -105,7 +115,7 @@ elif fc_id == 'intel-llvm-cl'
 endif
 
 # add the correct C/C++ CRT runtime on Windows based on profile
-if build_machine.system() == 'windows'
+if c_runtime_flag == 'true'
   if get_option('debug') == 'true'
     compile_args += ['/MTd']
   else
