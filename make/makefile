@@ -100,13 +100,15 @@ $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
-$(OBJDIR)/ListNode.o \
+$(OBJDIR)/KeyValueNode.o \
 $(OBJDIR)/Iterator.o \
+$(OBJDIR)/ListNode.o \
 $(OBJDIR)/Memory.o \
-$(OBJDIR)/ListIterator.o \
+$(OBJDIR)/KeyValueListIterator.o \
 $(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ListIterator.o \
 $(OBJDIR)/MemoryContainerIterator.o \
-$(OBJDIR)/List.o \
+$(OBJDIR)/KeyValueList.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
@@ -160,6 +162,7 @@ $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/exg-gwfgweidm.o \
 $(OBJDIR)/exg-gwegweidm.o \
+$(OBJDIR)/List.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
