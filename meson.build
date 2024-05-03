@@ -79,9 +79,9 @@ if fc_id == 'intel-cl'
                   ]
   # add the correct C/C++ CRT runtime on Windows based on profile
   if is_debug
-    compile_args += ['/MTd']
+    compile_args += '/MTd'
   else
-    compile_args += ['/MT']
+    compile_args += '/MT'
   endif
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
