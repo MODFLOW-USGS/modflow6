@@ -25,7 +25,6 @@ message('The used profile is:', profile)
 is_debug = get_option('debug')
 message('Building debug version:', is_debug)
 
-
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
@@ -88,6 +87,12 @@ if fc_id == 'intel-cl'
                    '/Qdiag-disable:5268', # Line too long
                    '/Qdiag-disable:10448',# ifort deprecation warning
                   ]
+  # add the correct C/C++ CRT runtime on Windows based on profile
+  if is_debug
+    compile_args += ['/MTd']
+  else
+    compile_args += ['/MT']
+  endif
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
@@ -116,15 +121,6 @@ elif fc_id == 'intel-llvm-cl'
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
-endif
-
-# add the correct C/C++ CRT runtime on Windows based on profile
-if c_runtime_flag == 'true'
-  if is_debug
-    compile_args += ['/MTd']
-  else
-    compile_args += ['/MT']
-  endif
 endif
 
 # parallel build options
