@@ -1,15 +1,18 @@
 module MemoryListModule
   use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
-  use ListModule, only: ListType
+  use KeyValueListModule, only: KeyValueListType
   use IteratorModule, only: IteratorType
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
+  use MemoryHelperModule, only: create_mem_address
+  use ConstantsModule, only: LENMEMADDRESS
 
   private
   public :: MemoryListType
 
   type :: MemoryListType
-    type(ListType), private :: container
+    private
+    type(KeyValueListType), private :: container
   contains
     procedure :: iterator
     procedure :: add
@@ -20,52 +23,79 @@ module MemoryListModule
 
 contains
 
+  !> @brief An iterator used to iterate through a MemoryContainer
+  !!
+  !<
   function iterator(this) result(itr)
+    ! -- dummy
     class(MemoryListType) :: this
     type(MemoryContainerIteratorType) :: itr
 
     itr = MemoryContainerIteratorType(this%container%Iterator())
   end function
 
+  !> @brief Add a MemoryType to the container
+  !!
+  !! The MemoryType is stored together with a key for easy lookup
+  !! The key is constructed using the memory type's path and name
+  !<
   subroutine add(this, mt)
+    ! -- dummy
     class(MemoryListType) :: this
-    type(MemoryType), pointer :: mt
+    type(MemoryType), pointer, intent(in) :: mt
+    ! -- local
     class(*), pointer :: obj => null()
+    character(len=LENMEMADDRESS) :: key
+
+    key = create_mem_address(mt%path, mt%name)
     obj => mt
-    call this%container%add(obj)
+    call this%container%add(key, obj)
   end subroutine add
 
+  !> @brief Get a MemoryType using a key
+  !!
+  !! If the key can't be found the return value will be a null pointer
+  !<
   function get(this, name, path) result(mt)
-    ! -- dummy variables
+    ! -- dummy
     class(MemoryListType) :: this
-    character(len=*) :: name
-    character(len=*) :: path
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: path
     type(MemoryType), pointer :: mt
     ! -- local
-    type(MemoryContainerIteratorType) :: itr
+    character(len=LENMEMADDRESS) :: key
+    class(*), pointer :: obj
 
-    itr = this%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (mt%name == name .and. mt%path == path) then
-        return
-      end if
-    end do
+    key = create_mem_address(path, name)
+    obj => this%container%get(key)
 
-    mt => null()
+    select type (obj)
+    type is (MemoryType)
+      mt => obj
+    class default
+      mt => null()
+    end select
 
   end function get
 
-  function count(this) result(nval)
+  !> @brief The nummer of items in the container
+  !!
+  !<
+  function count(this) result(cnt)
+    ! -- dummy
     class(MemoryListType) :: this
-    integer(I4B) :: nval
-    nval = this%container%count()
-    return
+    integer(I4B) :: cnt
+
+    cnt = this%container%count()
   end function count
 
+  !> @brief Clears the memory container
+  !!
+  !<
   subroutine clear(this)
+    ! -- dummy
     class(MemoryListType) :: this
+
     call this%container%Clear()
   end subroutine clear
 
