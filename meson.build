@@ -102,7 +102,15 @@ elif fc_id == 'intel-llvm-cl'
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
+endif
 
+# add the correct C/C++ CRT runtime on Windows based on profile
+if build_machine.system() == 'windows'
+  if get_option('debug') == 'true'
+    compile_args += ['/MTd']
+  else
+    compile_args += ['/MT']
+  endif
 endif
 
 # parallel build options
@@ -240,6 +248,7 @@ if with_mpi
   if mpiexec.found()
     test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'], is_parallel : false)
     test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'], is_parallel : false)
+    test('Parallel compiler options command line test', mpiexec, args : ['-n', '2', mf6exe, '-co', '-p'], is_parallel : false)
     test('Serial simulation test', mf6exe, workdir : testdir, is_parallel : false)
     test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'], is_parallel : false)
     test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'], is_parallel : false)
@@ -247,6 +256,7 @@ if with_mpi
 else
   test('Version command line test', mf6exe, args : ['-v',])
   test('Compiler command line test', mf6exe, args : ['-c',])
+  test('Compiler options command line test', mf6exe, args : ['-co',])
   test('Test installation help', mf6exe, args : ['-h',])
   test('Serial simulation test', mf6exe, workdir : testdir)
 endif
