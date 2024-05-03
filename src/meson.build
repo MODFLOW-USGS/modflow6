@@ -353,6 +353,8 @@ modflow_sources = files(
     'Utilities' / 'Message.f90',
     'Utilities' / 'OpenSpec.f90',
     'Utilities' / 'PackageBudget.f90',
+    'Utilities' / 'PtrHashTable.f90',
+    'Utilities' / 'PtrHashTableIterator.f90',
     'Utilities' / 'Sim.f90',
     'Utilities' / 'SimStages.f90',
     'Utilities' / 'SimVariables.f90',

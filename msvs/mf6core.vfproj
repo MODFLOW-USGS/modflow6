@@ -533,6 +533,8 @@
 		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTable.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTableIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimStages.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>

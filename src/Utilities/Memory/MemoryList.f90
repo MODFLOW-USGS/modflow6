@@ -1,7 +1,7 @@
 module MemoryListModule
   use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
-  use KeyValueListModule, only: KeyValueListType
+  use PtrHashTableModule, only: PtrHashTableType
   use IteratorModule, only: IteratorType
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryHelperModule, only: create_mem_address
@@ -12,7 +12,7 @@ module MemoryListModule
 
   type :: MemoryListType
     private
-    type(KeyValueListType), private :: container
+    type(PtrHashTableType), private :: container
   contains
     procedure :: iterator
     procedure :: add

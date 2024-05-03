@@ -25,6 +25,8 @@
 ../../../src/Utilities/LongLineReader.f90
 ../../../src/Utilities/MathUtil.f90
 ../../../src/Utilities/OpenSpec.f90
+../../../src/Utilities/PtrHashTable.f90
+../../../src/Utilities/PtrHashTableIterator.f90
 ../../../src/Utilities/defmacro.F90
 ../../../src/Utilities/version.f90
 ../../../src/Utilities/Table.f90
