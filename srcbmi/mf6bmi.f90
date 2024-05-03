@@ -253,7 +253,7 @@ contains
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     integer(I4B) :: start, i
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     type(MemoryType), pointer :: mt => null()
     character(len=LENMEMADDRESS) :: var_address
 
@@ -288,7 +288,7 @@ contains
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     integer(I4B) :: start, i
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     type(MemoryType), pointer :: mt => null()
     character(len=LENMEMADDRESS) :: var_address
 

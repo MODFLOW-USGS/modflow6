@@ -2079,7 +2079,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
     if (present(name) .and. present(mem_path)) then
@@ -2121,7 +2121,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2166,7 +2166,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2208,7 +2208,7 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
     itr = memorylist%iterator()
@@ -2243,7 +2243,7 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
     itr = memorylist%iterator()
@@ -2277,7 +2277,7 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
     itr = memorylist%iterator()
@@ -2313,7 +2313,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2356,7 +2356,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2399,7 +2399,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2442,7 +2442,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2485,7 +2485,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2528,7 +2528,7 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
@@ -2851,7 +2851,7 @@ contains
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
     character(LEN=10) :: cunits
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     integer(I4B) :: icomp
     integer(I4B) :: ilen
     integer(I8B) :: nchars
@@ -2942,7 +2942,7 @@ contains
     integer(I4B) :: iout
     ! local
     class(MemoryType), pointer :: mt
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
 
     call mem_detailed_table(iout, memorylist%count())
     itr = memorylist%iterator()
@@ -2960,7 +2960,7 @@ contains
   function calc_virtual_mem() result(vmem_size)
     real(DP) :: vmem_size
     ! local
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     type(MemoryType), pointer :: mt
 
     vmem_size = DZERO
@@ -2985,7 +2985,7 @@ contains
     class(MemoryType), pointer :: mt
     character(len=LINELENGTH) :: error_msg
     character(len=LENVARNAME) :: ucname
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     itr = memorylist%iterator()
     do while (itr%has_next())
@@ -3044,7 +3044,7 @@ contains
     character(len=LENCOMPONENTNAME) :: component
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     integer(I4B) :: ipa
     ! -- code
     !

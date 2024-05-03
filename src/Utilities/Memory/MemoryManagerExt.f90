@@ -31,7 +31,7 @@ contains
     character(len=*), intent(in), optional :: context !< name of the context (optional)
     character(len=LENMEMPATH) :: memory_path !< the memory path
     type(MemoryType), pointer :: mt
-    type(MemoryContainerIteratorType) :: itr
+    type(MemoryContainerIteratorType), allocatable :: itr
     logical(LGP) :: removed
 
     memory_path = create_mem_path(component, subcomponent, context)
