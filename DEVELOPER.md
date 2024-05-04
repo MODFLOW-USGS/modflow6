@@ -217,7 +217,7 @@ Like MODFLOW 6, `flopy` is modular &mdash; for each MODFLOW 6 package there is g
 
 ##### `modflow-devtools`
 
-The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github/com/MODFLOW-USGS/modflow-devtools) package.
+The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-USGS/modflow-devtools) package.
 
 ### Optional tools
 
