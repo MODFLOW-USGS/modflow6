@@ -16,6 +16,10 @@ module SimNamInputModule
     logical :: prmem = .false.
     logical :: maxerrors = .false.
     logical :: print_input = .false.
+    logical :: hpc_filerecord = .false.
+    logical :: hpc6 = .false.
+    logical :: filein = .false.
+    logical :: hpc6_filename = .false.
     logical :: tdis6 = .false.
     logical :: mtype = .false.
     logical :: mfname = .false.
@@ -113,6 +117,74 @@ module SimNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_hpc_filerecord = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'HPC_FILERECORD', & ! tag name
+    'HPC_FILERECORD', & ! fortran variable
+    'RECORD HPC6 FILEIN HPC6_FILENAME', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_hpc6 = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'HPC6', & ! tag name
+    'HPC6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_filein = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_hpc6_filename = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'HPC6_FILENAME', & ! tag name
+    'HPC6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -329,6 +401,10 @@ module SimNamInputModule
     simnam_prmem, &
     simnam_maxerrors, &
     simnam_print_input, &
+    simnam_hpc_filerecord, &
+    simnam_hpc6, &
+    simnam_filein, &
+    simnam_hpc6_filename, &
     simnam_tdis6, &
     simnam_mtype, &
     simnam_mfname, &
