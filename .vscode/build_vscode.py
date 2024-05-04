@@ -19,15 +19,13 @@ if os.getenv("BUILD_PARALLEL_MF6") is not None:
     if os.environ["BUILD_PARALLEL_MF6"] == '1':
         arg_parallel = "-Dparallel=true"
 
-if args.buildtype == "release":
-    setup_flag = ["-Ddebug=false", "-Doptimization=2"]
-elif args.buildtype == "debug":
-    setup_flag = ["-Ddebug=true", "-Doptimization=0"]
+setup_flag = [f"-Dbuildtype={args.buildtype}"]
     
 if args.action == "rebuild":
     setup_flag += ["--wipe"]
 
 if args.action == "rebuild":
+    shutil.rmtree(builddir)
     command = [
         "meson",
         "setup",

@@ -5,22 +5,13 @@ project(
   license: 'CC0',
   meson_version: '>= 1.1.0',
   default_options : [
+    'buildtype=release',
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
-    'optimization=2',
-    'debug=false',
     'fortran_std=f2008',
 ])
 
-if get_option('optimization') == '3'
-  error('Only optimization levels <= 2 are supported')
-endif
-
-if get_option('optimization') == '2'
-  profile = 'release'
-else
-  profile = 'develop'
-endif
-message('The used profile is:', profile)
+build_type = get_option('buildtype')
+message('The build type is:', build_type)
 
 # parse compiler options
 fc = meson.get_compiler('fortran')
@@ -43,11 +34,11 @@ if fc_id == 'gcc'
                    '-Wno-uninitialized',
                    ]
   
-  # Options specific to profile
-  if profile == 'release'
-    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
-  elif profile == 'develop'
+  # Options specific to build_type
+  if build_type.startswith('debug')
     compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+  else
+    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
   endif
 
   # Define OS with gfortran for OS specific code
@@ -74,12 +65,6 @@ if fc_id == 'intel-cl'
                    '/Qdiag-disable:5268', # Line too long
                    '/Qdiag-disable:10448',# ifort deprecation warning
                   ]
-  # add the correct C/C++ CRT runtime on Windows based on profile
-  if profile == 'release'
-    compile_args += '/MT'
-  else
-    compile_args += '/MTd'
-  endif
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
