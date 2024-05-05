@@ -368,7 +368,7 @@ pixi run update-flopy doc/mf6io/mf6ivar/dfn
 
 ##### Updating Fortran definitions
 
-Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. The can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing.
+Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated definition files should accompany related dfn file changes when creating a pull request.
 
 ```shell
 cd utils/idmloader/scripts
