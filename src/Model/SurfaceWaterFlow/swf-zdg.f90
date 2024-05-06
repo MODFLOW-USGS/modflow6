@@ -304,6 +304,8 @@ contains
   !!
   !<
   subroutine zdg_cf(this)
+    ! modules
+    use MathUtilModule, only: get_perturbation
     ! -- dummy variables
     class(SwfZdgType) :: this !< SwfZdgType  object
     ! -- local variables
@@ -320,7 +322,6 @@ contains
     if (this%nbound == 0) return
     !
     ! -- Calculate hcof and rhs for each zdg entry
-    eps = 1.D-8
     do i = 1, this%nbound
 
       node = this%nodelist(i)
@@ -340,6 +341,7 @@ contains
       q = -cond * this%slope(i)
 
       ! -- calculate perturbed q
+      eps = get_perturbation(depth)
       cond = this%get_cond(i, depth + eps, absdhdxsq, this%unitconv)
       qeps = -cond * this%slope(i)
 
