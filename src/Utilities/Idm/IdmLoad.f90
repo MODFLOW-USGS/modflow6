@@ -619,6 +619,7 @@ contains
     use SimVariablesModule, only: simfile
     use MemoryManagerModule, only: mem_allocate
     use CharacterStringModule, only: CharacterStringType
+    use DefinitionSelectModule, only: idt_datatype
     character(len=LENMEMPATH), intent(in) :: input_mempath
     type(InputParamDefinitionType), pointer, intent(in) :: idt
     character(len=LINELENGTH), pointer :: cstr
@@ -627,11 +628,15 @@ contains
     !
     ! -- initialize
     !
-    select case (idt%datatype)
+    select case (idt_datatype(idt))
     case ('KEYWORD', 'INTEGER')
       !
-      ! -- allocate and set default
-      call allocate_simnam_int(input_mempath, idt)
+      if (idt%in_record) then
+        ! -- no-op
+      else
+        ! -- allocate and set default
+        call allocate_simnam_int(input_mempath, idt)
+      end if
       !
     case ('STRING')
       !
@@ -647,6 +652,8 @@ contains
         call mem_allocate(cstr, LINELENGTH, idt%mf6varname, input_mempath)
         cstr = ''
       end if
+    case ('RECORD')
+      ! -- no-op
     case default
       write (errmsg, '(a,a)') &
         'IdmLoad allocate simnam param unhandled datatype: ', &
