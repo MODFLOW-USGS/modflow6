@@ -4,7 +4,8 @@ module TestMathUtil
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use MathUtilModule, only: f1d, is_close, mod_offset, &
-                            zero_ch, zero_test, zero_br
+                            zero_ch, zero_test, zero_br, &
+                            get_perturbation
   implicit none
   private
   public :: collect_mathutil
@@ -24,7 +25,9 @@ contains
                 new_unittest("zero_br", &
                              test_zero_br), &
                 new_unittest("zero_test", &
-                             test_zero_test) &
+                             test_zero_test), &
+                new_unittest("get_perturbation", &
+                             test_get_perturbation) &
                 ]
   end subroutine collect_mathutil
 
@@ -239,5 +242,46 @@ contains
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
   end subroutine test_zero_test
+
+  subroutine test_get_perturbation(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP) :: x, eps
+    real(DP) :: v1, v2
+
+    ! test perturbation calculation for pos and negative x
+    v1 = get_perturbation(1.D0)
+    v2 = -get_perturbation(-1.D0)
+    call check(error, &
+               is_close(v1, v2, atol=1d-12), &
+               'expected '//to_string(v1)//' got: '//to_string(v2))
+
+    ! test derivative calculation for sin(x) where x=1
+    x = 1.d0
+    eps = get_perturbation(x)
+    v1 = (sin(x + eps) - sin(x)) / eps
+    v2 = cos(x)
+    call check(error, &
+               is_close(v1, v2, atol=1d-5), &
+               'expected '//to_string(v1)//' got: '//to_string(v2))
+
+    ! test derivative calculation for sin(x) where x=0
+    x = 0.d0
+    eps = get_perturbation(x)
+    v1 = (sin(x + eps) - sin(x)) / eps
+    v2 = cos(x)
+    call check(error, &
+               is_close(v1, v2, atol=1d-5), &
+               'expected '//to_string(v1)//' got: '//to_string(v2))
+
+    ! test derivative calculation for x ** 2
+    x = 1.d6
+    eps = get_perturbation(x)
+    v1 = ((x + eps) ** 2 - x ** 2) / eps
+    v2 = 2 * x
+    call check(error, &
+               is_close(v1, v2, atol=1d-1), &
+               'expected '//to_string(v1)//' got: '//to_string(v2))
+
+  end subroutine test_get_perturbation
 
 end module TestMathUtil
