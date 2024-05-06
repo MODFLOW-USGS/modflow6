@@ -1,68 +1,148 @@
+import argparse
 import xml.etree.ElementTree as ET
+from itertools import chain
 from pathlib import Path
+from pprint import pformat
 
 
-def get_source_files(src_folder):
-    p = Path(".")
-    src_files = []
-    print(f"Processing {src_folder} folder")
-    ftypes = ("*.[fF]9[05]", "*.inc")
-    src_files = []
-    for ft in ftypes:
-        src_files.extend(p.glob(f"{src_folder}/**/{ft}"))
-    return src_files
+PROJ_ROOT = Path(__file__).parents[2]
 
 
-def get_msvs_files(vfproj_file):
-    print(f"Processing {vfproj_file}")
-    tree = ET.parse(vfproj_file)
+def get_source_files(src_path, verbose=False):
+    if verbose:
+        print(f"    Checking source files in dir: {src_path}")
+    extensions = ("*.[fF]", "*.[fF]9[05]", "*.inc")
+    for ext in extensions:
+        for path in src_path.glob(f"**/{ext}"):
+            yield path.absolute()
+
+
+def get_extra_files(extrafiles_path, src_path, extra_path, verbose=False):
+    if verbose:
+        print(f"    Checking extra files in dir: {extra_path}")
+    paths = set(get_source_files(extra_path))
+    with open(extrafiles_path) as ef:
+        for path in ef:
+            path = path.replace("\\", "/").strip()
+            root = extra_path if "../../../" in path else src_path
+            path = root / path.replace("../", "").replace("src/", "")
+            if path in paths:
+                yield path.absolute()
+
+
+def get_msvs_files(vfproj_path, src_path, extra_path=None, verbose=False):
+    if verbose:
+        print(f"    Checking MSVS file: {vfproj_path}")
+    tree = ET.parse(vfproj_path)
     root = tree.getroot()
-    msvs_files = []
     for f in root.iter("File"):
-        s = f.attrib["RelativePath"]
-        s = s.replace("\\", "/")
-        s = s.replace("../", "")
-        fpath = Path(s)
-        msvs_files.append(fpath)
-    return msvs_files
+        path = f.attrib["RelativePath"].replace("\\", "/")
+        yield (
+            (
+                extra_path
+                if (extra_path is not None and "../../../" in path)
+                else src_path
+            )
+            / path.replace("../", "").replace("src/", "").replace("srcbmi/", "")
+        ).absolute()
 
 
-def check_files(name, src_files, msvs_files):
-    print(
-        f"Verifying {name} files referenced in msvs project files are in src folder..."
-    )
-    s, m = set(src_files), set(msvs_files)
+def check_files(name, src, msvs, verbose=False):
+    if verbose:
+        print(f"Checking that {name} MSVS files match source files...")
+    s, m = set(src), set(msvs)
     diff = s ^ m
-    from pprint import pformat
-
     assert not any(diff), (
-        f"{name} src files don't match msvs project file\n"
+        f"{name} src files don't match MSVS project file\n"
         f"=> symmetric difference:\n{pformat(diff)}\n"
         f"=> src - msvs:\n{pformat(s - m)}\n"
         f"=> msvs - src:\n{pformat(m - s)}\n"
-        "Check to make sure msvs project file is consistent with source files."
     )
 
 
-def check_mf6():
-    # get list of source files and files referenced in msvs project files
-    src_files = get_source_files("src")
-    msvs_files = []
-    for vfproj in ["./msvs/mf6core.vfproj", "./msvs/mf6.vfproj"]:
-        msvs_files.extend(get_msvs_files(vfproj))
-    check_files("MF6", src_files, msvs_files)
+def check_mf6(verbose):
+    src_path = PROJ_ROOT / "src"
+    src = get_source_files(src_path=src_path, verbose=verbose)
+    msvs = chain(
+        *[
+            get_msvs_files(
+                vfproj_path=PROJ_ROOT / "msvs" / f, src_path=src_path, verbose=verbose
+            )
+            for f in ["mf6core.vfproj", "mf6.vfproj"]
+        ]
+    )
+    check_files("MF6", src, msvs, verbose)
 
 
-def check_bmi():
-    # get list of source files and files referenced in msvs project files
-    src_files = get_source_files("srcbmi")
-    msvs_files = []
-    for vfproj in ["./msvs/mf6bmi.vfproj"]:
-        msvs_files.extend(get_msvs_files(vfproj))
-    check_files("BMI", src_files, msvs_files)
+def check_bmi(verbose):
+    src_path = PROJ_ROOT / "srcbmi"
+    src = get_source_files(src_path=src_path, verbose=verbose)
+    msvs = get_msvs_files(
+        vfproj_path=PROJ_ROOT / "msvs" / "mf6bmi.vfproj",
+        src_path=src_path,
+        verbose=verbose,
+    )
+    check_files("BMI", src, msvs, verbose)
+
+
+def check_mf5to6(verbose):
+    util_path = PROJ_ROOT / "utils" / "mf5to6"
+    src_path = util_path / "src"
+    src_files = chain(
+        get_source_files(src_path=src_path, verbose=verbose),
+        get_extra_files(
+            extrafiles_path=util_path / "pymake" / "extrafiles.txt",
+            src_path=src_path,
+            extra_path=PROJ_ROOT / "src",
+            verbose=verbose,
+        ),
+    )
+    msvs_files = get_msvs_files(
+        vfproj_path=util_path / "msvs" / "mf5to6.vfproj",
+        src_path=src_path,
+        extra_path=PROJ_ROOT / "src",
+        verbose=verbose,
+    )
+    check_files("MODFLOW 5 to 6 converter", src_files, msvs_files, verbose)
+
+
+def check_zonebudget(verbose):
+    util_path = PROJ_ROOT / "utils" / "zonebudget"
+    src_path = util_path / "src"
+    src_files = chain(
+        get_source_files(src_path=src_path, verbose=verbose),
+        get_extra_files(
+            extrafiles_path=util_path / "pymake" / "extrafiles.txt",
+            src_path=src_path,
+            extra_path=PROJ_ROOT / "src",
+            verbose=verbose,
+        ),
+    )
+    msvs_files = get_msvs_files(
+        vfproj_path=util_path / "msvs" / "zonebudget.vfproj",
+        src_path=src_path,
+        extra_path=PROJ_ROOT / "src",
+        verbose=verbose,
+    )
+    check_files("Zonebudget", src_files, msvs_files, verbose)
 
 
 if __name__ == "__main__":
-    check_mf6()
-    check_bmi()
-    print("msvs project (vfproj) files appear up-to-date...")
+    parser = argparse.ArgumentParser(
+        prog="Check Microsoft Visual Studio project files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        default=True,
+        required=False,
+        help="Show verbose output",
+    )
+    args = parser.parse_args()
+    verbose = args.verbose
+    check_mf6(verbose)
+    check_bmi(verbose)
+    check_mf5to6(verbose)
+    check_zonebudget(verbose)
+    print("MSVS project (vfproj) files are up-to-date.")
