@@ -4317,8 +4317,8 @@ contains
                                       qsrc, this%length(n), weight, delt)
 
         residual2 = kinematic_residual(qa, qb, qc, qd2, &
-                                      xsa_a, xsa_b, xsa_c, ad2, &
-                                      qsrc, this%length(n), weight, delt)
+                                       xsa_a, xsa_b, xsa_c, ad2, &
+                                       qsrc, this%length(n), weight, delt)
         qderv = (residual2 - residual) / dq
         if (qderv > DZERO) then
           delq = -residual / qderv
@@ -4364,9 +4364,11 @@ contains
       end if
 
     end do kinematicpicard
-    write(*,*) 'residual: ', residual_final
+    write (*, *) 'residual: ', residual_final
 
-    this%storage(n) = kinematic_storage(qa, qb, qc, qd, xsa_a, xsa_b, xsa_c, ad, this%length(n), weight, delt)
+    this%storage(n) = kinematic_storage(qa, qb, qc, qd, &
+                                        xsa_a, xsa_b, xsa_c, ad, &
+                                        this%length(n), weight, delt)
     ! this%storage(n) = kinematic_storage(xsa_a, xsa_b, xsa_c, ad, this%length(n), weight, delt)
 
   end subroutine sfr_calc_transient
