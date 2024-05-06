@@ -290,6 +290,8 @@ contains
   !!
   !<
   subroutine cdb_cf(this)
+    ! modules
+    use MathUtilModule, only: get_perturbation
     ! -- dummy variables
     class(SwfCdbType) :: this !< SwfCdbType  object
     ! -- local variables
@@ -304,7 +306,6 @@ contains
     if (this%nbound == 0) return
     !
     ! -- Calculate hcof and rhs for each cdb entry
-    eps = 1.D-8
     do i = 1, this%nbound
 
       node = this%nodelist(i)
@@ -321,6 +322,7 @@ contains
       q = this%qcalc(i, depth)
 
       ! -- calculate perturbed q
+      eps = get_perturbation(depth)
       qeps = this%qcalc(i, depth + eps)
 
       ! -- calculate derivative

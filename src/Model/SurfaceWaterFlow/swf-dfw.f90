@@ -4,12 +4,6 @@
 !! wave approach.
 !!
 !<
-
-! todo:
-!   Move Newton to FN routines
-!   Implement a proper perturbation epsilon
-!   Parameterize the smoothing depth?
-!
 module SwfDfwModule
 
   use KindModule, only: DP, I4B, LGP
@@ -100,6 +94,7 @@ module SwfDfwModule
     procedure :: get_cond
     procedure :: get_cond_swr
     procedure :: get_cond_n
+    procedure :: get_flow_area_nm
     procedure :: calc_velocity
     procedure :: sav_velocity
     procedure, public :: increase_edge_count
@@ -625,7 +620,7 @@ contains
   !<
   subroutine dfw_qnm_fc_nr(this, kiter, matrix_sln, idxglo, rhs, stage, stage_old)
     ! -- modules
-    use ConstantsModule, only: DONE
+    use MathUtilModule, only: get_perturbation
     ! -- dummy
     class(SwfDfwType) :: this
     integer(I4B) :: kiter
@@ -640,9 +635,6 @@ contains
     real(DP) :: qeps
     real(DP) :: eps
     real(DP) :: derv
-    !
-    ! -- set perturbation derivative epsilon
-    eps = 1.D-8
     !
     ! -- Calculate conductance and put into amat
     do n = 1, this%dis%nodes
@@ -659,17 +651,19 @@ contains
         ! -- connection variables
         m = this%dis%con%ja(ii)
         !
-        ! -- Fill the qnm term on the right hand side
+        ! -- Fill the qnm term on the right-hand side
         qnm = this%qcalc(n, m, stage(n), stage(m), ii)
         rhs(n) = rhs(n) - qnm
         !
         ! -- Derivative calculation and fill of n terms
+        eps = get_perturbation(stage(n))
         qeps = this%qcalc(n, m, stage(n) + eps, stage(m), ii)
         derv = (qeps - qnm) / eps
         call matrix_sln%add_value_pos(idxglo(idiag), derv)
         rhs(n) = rhs(n) + derv * stage(n)
         !
         ! -- Derivative calculation and fill of m terms
+        eps = get_perturbation(stage(m))
         qeps = this%qcalc(n, m, stage(n), stage(m) + eps, ii)
         derv = (qeps - qnm) / eps
         call matrix_sln%add_value_pos(idxglo(ii), derv)
@@ -972,6 +966,78 @@ contains
     end if
 
   end function get_cond_swr
+
+  !> @brief Calculate flow area between cell n and m
+  !!
+  !! Calculate an average flow area between cell n and m.
+  !! First calculate a flow area for cell n and then for 
+  !! cell m and linearly weight the areas using the connection
+  !! distances.
+  !<
+  function get_flow_area_nm(this, n, m, stage_n, stage_m, cln, clm, &
+                            ipos) result(area_avg)
+    ! module
+    use SmoothingModule, only: sQuadratic
+    ! dummy
+    class(SwfDfwType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: m
+    real(DP), intent(in) :: stage_n
+    real(DP), intent(in) :: stage_m
+    real(DP), intent(in) :: cln
+    real(DP), intent(in) :: clm
+    integer(I4B), intent(in) :: ipos
+    ! local
+    real(DP) :: depth_n
+    real(DP) :: depth_m
+    real(DP) :: width_n
+    real(DP) :: width_m
+    real(DP) :: area_n
+    real(DP) :: area_m
+    real(DP) :: weight_n
+    real(DP) :: weight_m
+    real(DP) :: length_nm
+    real(DP) :: range = 1.d-6
+    real(DP) :: dydx
+    real(DP) :: smooth_factor
+    ! return
+    real(DP) :: area_avg
+    
+    ! depths
+    depth_n = stage_n - this%dis%bot(n)
+    depth_m = stage_m - this%dis%bot(m)
+
+    ! -- Assign upstream depth, if not central
+    if (this%icentral == 0) then
+      ! -- use upstream weighting
+      if (stage_n > stage_m) then
+        depth_m = depth_n
+      else
+        depth_n = depth_m
+      end if
+    end if
+
+    ! -- Calculate a smoothed depth that goes to zero over
+    !    the specified range
+    call sQuadratic(depth_n, range, dydx, smooth_factor)
+    depth_n = depth_n * smooth_factor
+    call sQuadratic(depth_m, range, dydx, smooth_factor)
+    depth_m = depth_m * smooth_factor
+
+    ! Get the flow widths for n and m from dis package
+    call this%dis%get_flow_width(n, m, ipos, width_n, width_m)
+
+    ! linear weight toward node closer to shared face
+    length_nm = cln + clm
+    weight_n = clm / length_nm
+    weight_m = DONE - weight_n
+
+    ! average cross sectional flow area
+    area_n = this%cxs%get_area(this%idcxs(n), width_n, depth_n)
+    area_m = this%cxs%get_area(this%idcxs(m), width_m, depth_m)
+    area_avg = weight_n * area_n + weight_m * area_m
+
+  end function get_flow_area_nm
 
   subroutine calc_dhds(this)
     ! modules
@@ -1281,7 +1347,6 @@ contains
     real(DP) :: dsumz
     real(DP) :: denom
     real(DP) :: area
-    real(DP) :: dz
     real(DP) :: axy
     real(DP) :: ayx
     real(DP), allocatable, dimension(:) :: vi
@@ -1353,16 +1418,7 @@ contains
         m = this%dis%con%ja(ipos)
         isympos = this%dis%con%jas(ipos)
         ihc = this%dis%con%ihc(isympos)
-        area = this%dis%con%hwva(isympos)
-
-        ! -- horizontal connection
         ic = ic + 1
-        if (this%hnew(n) > this%hnew(m)) then
-          dz = this%hnew(n) - this%dis%bot(n)
-        else
-          dz = this%hnew(m) - this%dis%bot(m)
-        end if
-        area = area * dz
         call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
         call this%dis%connection_vector(n, m, nozee, DONE, DONE, &
                                         ihc, xc, yc, zc, dltot)
@@ -1376,6 +1432,8 @@ contains
         nix(ic) = -xn
         niy(ic) = -yn
         di(ic) = dltot * cl1 * ooclsum
+        area = this%get_flow_area_nm(n, m, this%hnew(n), this%hnew(m), &
+                                     cl1, cl2, ipos)
         if (area > DZERO) then
           vi(ic) = flowja(ipos) / area
         else

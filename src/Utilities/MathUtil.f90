@@ -7,7 +7,8 @@ module MathUtilModule
 
   implicit none
   private
-  public :: f1d, is_close, mod_offset, zero_ch, zero_br, zero_test
+  public :: f1d, is_close, mod_offset, zero_ch, zero_br, zero_test, &
+            get_perturbation
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
@@ -433,5 +434,19 @@ contains
       end if
     end do
   end function
+
+  !> @brief Calculate a numerical perturbation given the value of x
+  !!
+  !! Calculate a perturbation value to use for a numerical derivative
+  !! calculation.  Taken from the book "Solving Nonlinear Equations with
+  !! Newton's Method" 2003, by C.T. Kelley.  Method also used in the
+  !! SWR Process for MODFLOW-2005.
+  !<
+  function get_perturbation(x) result(res)
+    use ConstantsModule, only: DPRECSQRT, DONE
+    real(DP), intent(in) :: x !< value that will be perturbed by the result
+    real(DP) :: res !< calculated perturbation value
+    res = DPRECSQRT * max(abs(x), DONE) * sign(DONE, x)
+  end function get_perturbation
 
 end module MathUtilModule
