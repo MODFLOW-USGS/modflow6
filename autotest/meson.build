@@ -7,6 +7,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'HashTable',
     'InputOutput',
     'List',
+    'ListIterator',
     'MathUtil',
     'Message',
     'Sim',

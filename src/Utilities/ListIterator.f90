@@ -12,8 +12,9 @@ module ListIteratorModule
   !!
   !<
   type, extends(IteratorType) :: ListIteratorType
-    type(ListNodeType), pointer, private :: first_node => null() !< the List to iterate through
-    type(ListNodeType), pointer, private :: current_node => null() !< the current node in the list the iterator is pointing at
+    private
+    type(ListNodeType), pointer :: first_node => null() !< the List to iterate through
+    type(ListNodeType), pointer :: current_node => null() !< the current node in the list the iterator is pointing at
   contains
     procedure :: has_next
     procedure :: next
