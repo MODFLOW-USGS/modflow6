@@ -970,7 +970,7 @@ contains
   !> @brief Calculate flow area between cell n and m
   !!
   !! Calculate an average flow area between cell n and m.
-  !! First calculate a flow area for cell n and then for 
+  !! First calculate a flow area for cell n and then for
   !! cell m and linearly weight the areas using the connection
   !! distances.
   !<
@@ -1002,7 +1002,7 @@ contains
     real(DP) :: smooth_factor
     ! return
     real(DP) :: area_avg
-    
+
     ! depths
     depth_n = stage_n - this%dis%bot(n)
     depth_m = stage_m - this%dis%bot(m)
