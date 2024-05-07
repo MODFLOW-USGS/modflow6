@@ -117,6 +117,7 @@ module ConstantsModule
   real(DP), parameter :: DEM30 = 1.0e-30_DP !< real constant 1e-30
 
   real(DP), parameter :: DPREC = EPSILON(1.0_DP) !< real constant machine precision
+  real(DP), parameter :: DPRECSQRT = SQRT(DPREC)
   real(DP), parameter :: DSAME = DHUNDRED * DPREC !< real constant for values that are considered
                                                   !! the same based on machine precision
 

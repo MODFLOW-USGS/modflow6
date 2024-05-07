@@ -410,6 +410,7 @@ contains
   subroutine calc_storage_dis1d(this, n, stage_new, stage_old, dx, qsto, derv)
     ! module
     use TdisModule, only: delt
+    use MathUtilModule, only: get_perturbation
     ! dummy
     class(SwfStoType) :: this
     integer(I4B), intent(in) :: n
@@ -426,7 +427,7 @@ contains
     real(DP) :: cxs_area_new
     real(DP) :: cxs_area_old
     real(DP) :: cxs_area_eps
-    real(DP) :: eps = 1.d-8
+    real(DP) :: eps
 
     call this%dis%get_flow_width(n, n, 0, width_n, width_m)
     depth_new = stage_new - this%dis%bot(n)
@@ -435,6 +436,7 @@ contains
     cxs_area_old = this%cxs%get_area(this%idcxs(n), width_n, depth_old)
     qsto = (cxs_area_new - cxs_area_old) * dx / delt
     if (present(derv)) then
+      eps = get_perturbation(depth_new)
       cxs_area_eps = this%cxs%get_area(this%idcxs(n), width_n, depth_new + eps)
       derv = (cxs_area_eps - cxs_area_new) * dx / delt / eps
     end if
@@ -444,6 +446,7 @@ contains
   subroutine calc_storage_dis2d(this, n, stage_new, stage_old, qsto, derv)
     ! module
     use TdisModule, only: delt
+    use MathUtilModule, only: get_perturbation
     ! dummy
     class(SwfStoType) :: this
     integer(I4B), intent(in) :: n
@@ -458,7 +461,7 @@ contains
     real(DP) :: depth_eps
     real(DP) :: volume_new
     real(DP) :: volume_old
-    real(DP) :: eps = 1.d-8
+    real(DP) :: eps
 
     area = this%dis%get_area(n)
     depth_new = stage_new - this%dis%bot(n)
@@ -468,6 +471,7 @@ contains
     qsto = (volume_new - volume_old) / delt
 
     if (present(derv)) then
+      eps = get_perturbation(depth_new)
       depth_eps = depth_new + eps
       derv = (depth_eps - depth_new) * area / delt / eps
     end if

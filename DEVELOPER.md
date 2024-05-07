@@ -39,6 +39,7 @@ To build and test a parallel version of the program, first read the instructions
     - [Configuring integration tests](#configuring-integration-tests)
       - [Rebuilding release binaries](#rebuilding-release-binaries)
       - [Updating FloPy packages](#updating-flopy-packages)
+      - [Updating Fortran definitions](#updating-fortran-definitions)
       - [Installing external models](#installing-external-models)
   - [Running tests](#running-tests)
     - [Running unit tests](#running-unit-tests)
@@ -217,7 +218,7 @@ Like MODFLOW 6, `flopy` is modular &mdash; for each MODFLOW 6 package there is g
 
 ##### `modflow-devtools`
 
-The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github/com/MODFLOW-USGS/modflow-devtools) package.
+The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-USGS/modflow-devtools) package.
 
 ### Optional tools
 
@@ -363,6 +364,15 @@ There is a single optional argument, the path to the folder containing definitio
 ```shell
 pixi run update-flopy
 pixi run update-flopy doc/mf6io/mf6ivar/dfn
+```
+
+##### Updating Fortran definitions
+
+Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated definition files should accompany related dfn file changes when creating a pull request.
+
+```shell
+cd utils/idmloader/scripts
+python dfn2f90.py
 ```
 
 ##### Installing external models

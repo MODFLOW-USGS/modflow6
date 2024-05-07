@@ -19,6 +19,7 @@ module DefinitionSelectModule
   public :: get_aggregate_definition_type
   public :: split_record_definition
   public :: idt_parse_rectype
+  public :: idt_datatype
 
 contains
 
