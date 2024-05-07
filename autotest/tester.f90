@@ -7,6 +7,7 @@ program tester
   use TestGeomUtil, only: collect_geomutil
   use TestHashTable, only: collect_hashtable
   use TestInputOutput, only: collect_inputoutput
+  use TestKeyValueList, only: collect_keyvaluelist
   use TestList, only: collect_list
   use TestListIterator, only: collect_listiterator
   use TestMathUtil, only: collect_mathutil
@@ -28,6 +29,7 @@ program tester
                new_testsuite("GeomUtil", collect_geomutil), &
                new_testsuite("HashTable", collect_hashtable), &
                new_testsuite("InputOutput", collect_inputoutput), &
+               new_testsuite("KeyValueList", collect_keyvaluelist), &
                new_testsuite("List", collect_list), &
                new_testsuite("ListIterator", collect_listiterator), &
                new_testsuite("MathUtil", collect_mathutil), &
