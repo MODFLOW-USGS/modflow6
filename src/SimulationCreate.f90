@@ -254,7 +254,7 @@ contains
     allocate (model_loc_idx(nr_models_glob))
     !
     ! -- assign models to cpu cores (in serial all to rank 0)
-    call create_load_balance(model_ranks)
+    call get_load_balance(model_ranks)
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
@@ -840,7 +840,7 @@ contains
     ! local
     integer(I4B) :: i
 
-    call create_load_balance(mask_array)
+    call get_load_balance(mask_array)
     do i = 1, size(mask_array)
       if (mask_array(i) == proc_id) then
         mask_array(i) = 1
@@ -850,6 +850,116 @@ contains
     end do
 
   end subroutine create_load_mask
+
+  !> @brief Get the model load balance for the simulation
+  !<
+  subroutine get_load_balance(mranks)
+    use SimVariablesModule, only: idm_context
+    use MemoryManagerModule, only: get_isize
+    use MemoryHelperModule, only: create_mem_path
+    integer(I4B) :: isize
+    integer(I4B), dimension(:) :: mranks
+    character(len=LENMEMPATH) :: simnam_mempath
+
+    ! TODO_MJR: this should be less obscure
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call get_isize('HPC6_FILENAME', simnam_mempath, isize)
+
+    if (isize > 0) then
+      ! get balance from HPC file
+      call get_load_balance_from_input(mranks)
+    else
+      ! default
+      call create_load_balance(mranks)
+    end if
+
+  end subroutine get_load_balance
+
+  !> @brief Load load balance from the input configuration
+  !<
+  subroutine get_load_balance_from_input(mranks)
+    use SimVariablesModule, only: idm_context, nr_procs, errmsg
+    use SimModule, only: store_error, count_errors, ustop
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    integer(I4B), dimension(:) :: mranks !< ranks for each model
+    ! local
+    character(len=LENMEMPATH) :: simnam_mempath, hpc_mempath
+    character(len=LENMODELNAME) :: model_name
+    type(CharacterStringType), dimension(:), contiguous, pointer :: mnames !< model names (all) from the simulation nam file
+    type(CharacterStringType), dimension(:), contiguous, pointer :: mnames_hpc !< model names in the hpc file
+    integer(I4B), dimension(:), contiguous, pointer :: mranks_hpc !< rank numbers in the hpc file
+    integer(I4B) :: i, model_idx
+    integer(I4B) :: target_rank
+    integer(I4B), dimension(:), allocatable :: rank_used
+
+    ! set to uninitialized
+    mranks = -1
+
+    ! from IDM
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    hpc_mempath = create_mem_path('UTL', 'HPC', idm_context)
+    call mem_setptr(mnames, 'MNAME', simnam_mempath)
+    call mem_setptr(mnames_hpc, 'MNAME', hpc_mempath)
+    call mem_setptr(mranks_hpc, 'MRANK', hpc_mempath)
+
+    ! check: valid model names
+    do i = 1, size(mnames_hpc)
+      if (ifind(mnames, mnames_hpc(i)) == -1) then
+        model_name = mnames_hpc(i)
+        write (errmsg, *) "HPC input error: undefined model name (", &
+          trim(model_name), ")"
+        call store_error(errmsg)
+      end if
+    end do
+    ! check: valid ranks
+    do i = 1, size(mranks_hpc)
+      target_rank = mranks_hpc(i)
+      if (target_rank < 0 .or. target_rank > nr_procs - 1) then
+        model_name = mnames_hpc(i)
+        write (errmsg, '(a,i0,2a)') "HPC input error: invalid target rank (", &
+          target_rank, ") for model ", trim(model_name)
+        call store_error(errmsg)
+      end if
+    end do
+    if (count_errors() > 0) call ustop()
+
+    ! construct rank array
+    do i = 1, size(mnames_hpc)
+      model_idx = ifind(mnames, mnames_hpc(i))
+      mranks(model_idx) = mranks_hpc(i)
+    end do
+
+    ! check: all models acquired rank
+    do i = 1, size(mranks)
+      if (mranks(i) == -1) then
+        model_name = mnames(i)
+        write (errmsg, '(2a)') "HPC input error: no target rank for model ", &
+          trim(model_name)
+        call store_error(errmsg)
+      end if
+    end do
+    if (count_errors() > 0) call ustop()
+
+    ! check: no idle ranks
+    allocate (rank_used(nr_procs))
+    rank_used = 0
+    do i = 1, size(mranks)
+      if (mranks(i) >= 0 .and. mranks(i) < nr_procs) then
+        rank_used(mranks(i) + 1) = 1
+      end if
+    end do
+    do i = 1, size(rank_used)
+      if (rank_used(i) == 0) then
+        write (errmsg, '(a,i0,a)') "HPC input error: rank ", i - 1, &
+          " has no models assigned"
+        call store_error(errmsg)
+      end if
+    end do
+    deallocate (rank_used)
+    if (count_errors() > 0) call ustop()
+
+  end subroutine get_load_balance_from_input
 
   !> @brief Distribute the models over the available
   !! processes in a parallel run. Expects an array sized

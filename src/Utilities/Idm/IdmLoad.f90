@@ -111,6 +111,7 @@ contains
     end do
     !
     ! -- deallocate input context SIM paths
+    call memorylist_remove('UTL', 'HPC', idm_context)
     call memorylist_remove('SIM', 'TDIS', idm_context)
     call memorylist_remove('SIM', 'NAM', idm_context)
     call memorylist_remove(component='SIM', context=idm_context)

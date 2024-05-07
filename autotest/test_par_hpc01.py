@@ -94,9 +94,7 @@ def get_simulation(idx, ws):
     highest_rank = rnk
     partitions = [(n, highest_rank - r) for n, r in partitions]
 
-    hpc = flopy.mf6.ModflowUtlhpc(
-        sim, filename="parutl.hpc", partitions=partitions
-    )
+    hpc = flopy.mf6.ModflowUtlhpc(sim, partitions=partitions)
 
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
@@ -263,6 +261,37 @@ def check_output(idx, test):
         hds = m.output.head().get_data().flatten()
         hds_compare = cst_head_south_west * np.ones_like(hds)
         assert np.allclose(hds, hds_compare, atol=1.0e-6, rtol=0.0)
+
+    import pathlib as pl
+
+    ncpus = ncpus_cases[idx]
+    partitions = mf6_sim.name_file.package_dict["hpc"].partitions.array
+    if ncpus > 1:
+        for name, rank in partitions:
+            model_id = mf6_sim.model_names.index(name) + 1
+            list_file = pl.Path(test.workspace, "mfsim.p{}.lst".format(rank))
+            success_msg = "GWF6 model {} will be created".format(model_id)
+            success = False
+            for line in open(list_file).readlines():
+                if success_msg in line:
+                    success = True
+                    break
+            assert success, "Model {} not created on target process {}".format(
+                model_id, rank
+            )
+    elif ncpus == 1:
+        list_file = pl.Path(test.workspace, "mfsim.lst")
+        for name, rank in partitions:
+            model_id = mf6_sim.model_names.index(name) + 1
+            success_msg = "GWF6 model {} will be created".format(model_id)
+            success = False
+            for line in open(list_file).readlines():
+                if success_msg in line:
+                    success = True
+                    break
+            assert success, "Model {} not created on target process {}".format(
+                model_id, rank
+            )
 
 
 @pytest.mark.parallel
