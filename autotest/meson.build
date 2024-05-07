@@ -9,6 +9,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'List',
     'ListIterator',
     'MathUtil',
+    'MemoryContainerIterator',
     'Message',
     'Sim',
     'SwfUtils',

@@ -116,7 +116,6 @@ contains
     !- Locals
     class(IteratorType), allocatable :: itr
     type(ListNodeType), pointer :: firstNodePtr
-    logical :: has_next
 
     !- Arrange.
     firstNodePtr => null()

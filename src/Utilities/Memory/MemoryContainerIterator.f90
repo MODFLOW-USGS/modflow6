@@ -12,6 +12,7 @@ module MemoryContainerIteratorModule
   !!
   !<
   type :: MemoryContainerIteratorType
+    private
     class(IteratorType), allocatable :: container_iterator !< the current iterator to the underlying container
   contains
     procedure :: has_next
