@@ -175,8 +175,8 @@ contains
       ! -- load optional HPC configuration file
       if (filein_fname(hpc6_filename, 'HPC6_FILENAME', mf6_input%mempath, &
                        simfile)) then
-        hpc_input = getModflowInput('HPC6', 'UTL', 'HPC', 'UTL', 'HPC', simfile)
-        call input_load(hpc6_filename, hpc_input, hpc6_filename, iout)
+        hpc_input = getModflowInput('HPC6', 'UTL', 'HPC', 'UTL', 'HPC')
+        call input_load(hpc6_filename, hpc_input, simfile, iout)
       end if
     end if
     !
