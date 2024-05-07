@@ -13,6 +13,7 @@ program tester
   use TestMathUtil, only: collect_mathutil
   use TestMemoryContainerIterator, only: collect_memorycontaineriterator
   use TestMessage, only: collect_message
+  use TestPtrHashTable, only: collect_ptrhashtable
   use TestSim, only: collect_sim
   use TestSwfUtils, only: collect_swfutils
   use TestTimeSelect, only: collect_timeselect
@@ -35,6 +36,7 @@ program tester
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("MemoryContainerIterator", collect_memorycontaineriterator), &
                new_testsuite("Message", collect_message), &
+               new_testsuite("PtrHashTable", collect_ptrhashtable), &
                new_testsuite("Sim", collect_sim), &
                new_testsuite("SwfUtils", collect_swfutils), &
                new_testsuite("TimeSelect", collect_timeselect) &

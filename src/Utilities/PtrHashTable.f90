@@ -3,6 +3,7 @@ module PtrHashTableModule
   use KindModule, only: DP, I4B, LGP
   use IteratorModule, only: IteratorType
   use PtrHashTableIteratorModule, only: PtrHashTableIteratorType
+  use SimModule, only: store_warning
 
   implicit none
   private
@@ -24,6 +25,7 @@ module PtrHashTableModule
     procedure :: iterator
     procedure :: add
     procedure :: get
+    procedure :: contains
     procedure :: count
     procedure :: clear
   end type PtrHashTableType
@@ -53,6 +55,11 @@ contains
     type(KeyValueListType), pointer :: bucket !< bucket the key points to
     integer(I4B) :: hash !< hashed value of the key
 
+    if (this%contains(key)) then
+      call store_warning( &
+        "Already existing variable being added to the HashTable -"//key)
+    end if
+
     hash = compute_hash(key)
 
     bucket => this%buckets(hash)
@@ -76,6 +83,20 @@ contains
 
     bucket => this%buckets(hash)
     val => bucket%get(key)
+
+  end function
+
+  !> @brief Boolean indicating if an item exists in the hashtable
+  !!
+  !<
+  function contains(this, key) result(res)
+    ! -- dummy
+    class(PtrHashTableType), target :: this
+    character(len=*), intent(in) :: key !< key of the item to retrieve
+    logical :: res !< item found
+
+    ! -- local
+    res = associated(this%get(key))
 
   end function
 
