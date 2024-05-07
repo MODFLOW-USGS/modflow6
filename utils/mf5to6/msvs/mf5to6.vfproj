@@ -108,6 +108,9 @@
 		<File RelativePath="..\..\..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Iterator.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueList.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueListIterator.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueNode.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\ListIterator.f90"/>
@@ -116,6 +119,8 @@
 		<File RelativePath="..\..\..\src\Utilities\MathUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\PtrHashTable.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\PtrHashTableIterator.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Table.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\TableTerm.f90"/>
