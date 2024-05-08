@@ -168,6 +168,8 @@ module NumericalSolutionModule
     procedure :: sln_calc_ptc
     procedure :: sln_underrelax
     procedure :: sln_backtracking_xupdate
+    procedure :: get_backtracking_flag
+    procedure :: apply_backtracking
 
     ! private
     procedure, private :: sln_connect
@@ -179,7 +181,7 @@ module NumericalSolutionModule
     procedure, private :: sln_calcdx
     procedure, private :: sln_calc_residual
     procedure, private :: sln_l2norm
-    procedure, private :: sln_outer_check
+    procedure, private :: sln_get_dxmax
     procedure, private :: sln_get_loc
     procedure, private :: sln_get_nodeu
     procedure, private :: allocate_scalars
@@ -1617,7 +1619,7 @@ contains
     !-------------------------------------------------------
     !
     ! -- check convergence of solution
-    call this%sln_outer_check(this%hncg(kiter), this%lrch(1, kiter))
+    call this%sln_get_dxmax(this%hncg(kiter), this%lrch(1, kiter))
     this%icnvg = 0
     if (this%sln_has_converged(this%hncg(kiter))) then
       this%icnvg = 1
@@ -1752,7 +1754,7 @@ contains
           this%icnvg = 1
           !
           ! -- reset outer dependent-variable change and location for output
-          call this%sln_outer_check(this%hncg(kiter), this%lrch(1, kiter))
+          call this%sln_get_dxmax(this%hncg(kiter), this%lrch(1, kiter))
           !
           ! -- write revised dependent-variable change data after
           !    newton under-relaxation
@@ -2790,41 +2792,65 @@ contains
   !!  update exceeds the dependent variable closure criteria.
   !!
   !<
-  subroutine sln_backtracking_xupdate(this, btflag)
+  subroutine sln_backtracking_xupdate(this, bt_flag)
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
-    integer(I4B), intent(inout) :: btflag !< backtracking flag (1) backtracking performed (0) backtracking not performed
-    ! -- local variables
+    integer(I4B), intent(inout) :: bt_flag !< backtracking flag (1) backtracking performed (0) backtracking not performed
+
+    bt_flag = this%get_backtracking_flag()
+
+    ! perform backtracking if ...
+    if (bt_flag > 0) then
+      call this%apply_backtracking()
+    end if
+
+  end subroutine sln_backtracking_xupdate
+
+  !> @brief Check if backtracking should be applied for this solution,
+  !< returns 1: yes, 0: no
+  function get_backtracking_flag(this) result(bt_flag)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B) :: bt_flag !< backtracking flag (1) backtracking performed (0) backtracking not performed
+    ! local
+    integer(I4B) :: n
+    real(DP) :: dx
+    real(DP) :: dx_abs
+    real(DP) :: dx_abs_max
+
+    ! default is off
+    bt_flag = 0
+
+    ! find max. change
+    dx_abs_max = 0.0
+    do n = 1, this%neq
+      if (this%active(n) < 1) cycle
+      dx = this%x(n) - this%xtemp(n)
+      dx_abs = abs(dx)
+      if (dx_abs > dx_abs_max) dx_abs_max = dx_abs
+    end do
+
+    ! if backtracking, set flag
+    if (this%breduc * dx_abs_max >= this%dvclose) then
+      bt_flag = 1
+    end if
+
+  end function get_backtracking_flag
+
+  !> @brief Update x with backtracking
+  !<
+  subroutine apply_backtracking(this)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    ! local
     integer(I4B) :: n
     real(DP) :: delx
-    real(DP) :: absdelx
-    real(DP) :: chmax
-    !
-    ! -- initialize dummy variables
-    btflag = 0
-    !
-    ! -- no backtracking if maximum change is less than closure so return
-    chmax = 0.0
+
     do n = 1, this%neq
       if (this%active(n) < 1) cycle
       delx = this%breduc * (this%x(n) - this%xtemp(n))
-      absdelx = abs(delx)
-      if (absdelx > chmax) chmax = absdelx
+      this%x(n) = this%xtemp(n) + delx
     end do
-    !
-    ! -- perform backtracking if free of constraints and set counter and flag
-    if (chmax >= this%dvclose) then
-      btflag = 1
-      do n = 1, this%neq
-        if (this%active(n) < 1) cycle
-        delx = this%breduc * (this%x(n) - this%xtemp(n))
-        this%x(n) = this%xtemp(n) + delx
-      end do
-    end if
-    !
-    ! -- return
-    return
-  end subroutine sln_backtracking_xupdate
+
+  end subroutine
 
   !> @ brief Calculate the solution L-2 norm for all
   !! active cells using
@@ -3116,7 +3142,7 @@ contains
   !!  Picard iteration.
   !!
   !<
-  subroutine sln_outer_check(this, hncg, lrch)
+  subroutine sln_get_dxmax(this, hncg, lrch)
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
     real(DP), intent(inout) :: hncg !< maximum dependent-variable change
@@ -3150,7 +3176,7 @@ contains
     !
     ! -- return
     return
-  end subroutine sln_outer_check
+  end subroutine sln_get_dxmax
 
   function sln_has_converged(this, max_dvc) result(has_converged)
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
