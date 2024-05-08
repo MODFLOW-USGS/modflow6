@@ -11,6 +11,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'ListIterator',
     'MathUtil',
     'MemoryContainerIterator',
+    'MemoryList',
     'Message',
     'PtrHashTable',
     'Sim',

@@ -96,7 +96,7 @@ contains
     ! -- dummy
     class(MemoryListType) :: this
 
-    call this%container%Clear()
+    call this%container%clear()
   end subroutine clear
 
 end module MemoryListModule
