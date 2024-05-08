@@ -12,7 +12,7 @@ module PetscMatrixModule
   private
 
   type, public, extends(MatrixBaseType) :: PetscMatrixType
-    Mat :: mat !< the PETSc matrix object, NOTE: update() should be called before using this, 
+    Mat :: mat !< the PETSc matrix object, NOTE: update() should be called before using this,
                !! in case the matrix CSR array has changed!!!
     integer(I4B) :: nrow !< number of rows in this portion of the global matrix
     integer(I4B) :: ncol !< number of columns in the matrix

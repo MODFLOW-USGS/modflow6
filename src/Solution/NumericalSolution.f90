@@ -2796,9 +2796,9 @@ contains
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
     integer(I4B), intent(inout) :: bt_flag !< backtracking flag (1) backtracking performed (0) backtracking not performed
-    
+
     bt_flag = this%get_backtracking_flag()
-    
+
     ! perform backtracking if ...
     if (bt_flag > 0) then
       call this%apply_backtracking()
@@ -2828,7 +2828,7 @@ contains
       dx_abs = abs(dx)
       if (dx_abs > dx_abs_max) dx_abs_max = dx_abs
     end do
-    
+
     ! if backtracking, set flag
     if (this%breduc * dx_abs_max >= this%dvclose) then
       bt_flag = 1
