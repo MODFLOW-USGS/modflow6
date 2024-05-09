@@ -140,6 +140,7 @@ contains
     call get_isize('MNAME', hpc_mempath, isize)
 
     if (isize > 0) then
+      ! HPC file present
       if (nr_procs == 1) then
         write (warnmsg, *) "Ignoring PARTITIONS block in HPC file when "// &
           "running a serial process"
@@ -152,8 +153,14 @@ contains
         call this%set_load_balance_from_input()
       end if
     else
-      ! set balance from default algorithm
-      call this%set_load_balance_default()
+      ! no HPC file present
+      if (nr_procs == 1) then
+        ! single process, everything on cpu 0:
+        this%model_ranks = 0
+      else
+        ! set balance from default algorithm
+        call this%set_load_balance_default()
+      end if
     end if
 
     mranks => this%model_ranks
