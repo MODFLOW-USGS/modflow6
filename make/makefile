@@ -426,6 +426,7 @@ $(OBJDIR)/SolutionFactory.o \
 $(OBJDIR)/exg-gwfprt.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
+$(OBJDIR)/DistributedSim.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \

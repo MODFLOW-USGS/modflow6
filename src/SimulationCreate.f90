@@ -6,10 +6,9 @@ module SimulationCreateModule
                              DZERO, LENEXCHANGENAME, LENMEMPATH, LENPACKAGETYPE
   use CharacterStringModule, only: CharacterStringType
   use SimVariablesModule, only: iout, simulation_mode, proc_id, &
-                                nr_procs, model_names, model_ranks, &
-                                model_loc_idx
-  use SimModule, only: store_error, count_errors, &
-                       store_error_filename, MaxErrors
+                                nr_procs, model_names, model_loc_idx
+  use SimModule, only: store_error, count_errors, store_error_filename, &
+                       MaxErrors, store_warning
   use VersionModule, only: write_listfile_header
   use InputOutputModule, only: getunit, urword, openfile
   use ArrayHandlersModule, only: expandarray, ifind
@@ -27,7 +26,6 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
-  public :: create_load_mask
 
 contains
 
@@ -50,10 +48,16 @@ contains
   subroutine simulation_da()
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use DistributedSimModule, only: DistributedSimType, get_dsim
     ! -- local
+    type(DistributedSimType), pointer :: ds
 ! ------------------------------------------------------------------------------
     !
     ! -- variables
+    !
+    ds => get_dsim()
+    call ds%destroy()
+    !
     deallocate (model_names)
     deallocate (model_loc_idx)
     !
@@ -210,7 +214,8 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
-    use SimVariablesModule, only: idm_context
+    use SimVariablesModule, only: idm_context, errmsg
+    use DistributedSimModule, only: DistributedSimType, get_dsim
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
     use GweModule, only: gwe_cr
@@ -224,6 +229,7 @@ contains
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- locals
+    type(DistributedSimType), pointer :: ds
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mtypes !< model types
@@ -235,8 +241,8 @@ contains
     class(NumericalModelType), pointer :: num_model
     character(len=LINELENGTH) :: model_type
     character(len=LINELENGTH) :: fname, model_name
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nr_models_glob
+    integer(I4B), dimension(:), pointer :: model_ranks => null()
     logical :: terminate = .true.
     !
     ! -- set input memory path
@@ -249,12 +255,12 @@ contains
     !
     ! -- allocate global arrays
     nr_models_glob = size(mnames)
-    call mem_allocate(model_ranks, nr_models_glob, 'MRANKS', input_mempath)
     allocate (model_names(nr_models_glob))
     allocate (model_loc_idx(nr_models_glob))
     !
-    ! -- assign models to cpu cores (in serial all to rank 0)
-    call get_load_balance(model_ranks)
+    ! -- get model-to-cpu assigment (in serial all to rank 0)
+    ds => get_dsim()
+    model_ranks => ds%get_load_balance()
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
@@ -825,270 +831,5 @@ contains
     ! -- return
     return
   end subroutine check_model_name
-
-  !> @brief Create a load mask to determine which models
-  !! should be loaded by idm on this process. This is in
-  !! sync with models create. The mask array should be
-  !! pre-allocated with size equal to the global number
-  !! of models. It is returned as (1, 1, 0, 0, ... 0)
-  !! with each entry being a load mask for the model
-  !! at the corresponding location in the 'MNAME' array
-  !< of the IDM.
-  subroutine create_load_mask(mask_array)
-    use SimVariablesModule, only: proc_id
-    integer(I4B), dimension(:) :: mask_array
-    ! local
-    integer(I4B) :: i
-
-    call get_load_balance(mask_array)
-    do i = 1, size(mask_array)
-      if (mask_array(i) == proc_id) then
-        mask_array(i) = 1
-      else
-        mask_array(i) = 0
-      end if
-    end do
-
-  end subroutine create_load_mask
-
-  !> @brief Get the model load balance for the simulation
-  !<
-  subroutine get_load_balance(mranks)
-    use SimVariablesModule, only: idm_context
-    use MemoryManagerModule, only: get_isize
-    use MemoryHelperModule, only: create_mem_path
-    integer(I4B) :: isize
-    integer(I4B), dimension(:) :: mranks
-    character(len=LENMEMPATH) :: simnam_mempath
-
-    ! TODO_MJR: this should be less obscure
-    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    call get_isize('HPC6_FILENAME', simnam_mempath, isize)
-
-    if (isize > 0) then
-      ! get balance from HPC file
-      call get_load_balance_from_input(mranks)
-    else
-      ! default
-      call create_load_balance(mranks)
-    end if
-
-  end subroutine get_load_balance
-
-  !> @brief Load load balance from the input configuration
-  !<
-  subroutine get_load_balance_from_input(mranks)
-    use SimVariablesModule, only: idm_context, nr_procs, errmsg
-    use SimModule, only: store_error, count_errors, ustop
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
-    integer(I4B), dimension(:) :: mranks !< ranks for each model
-    ! local
-    character(len=LENMEMPATH) :: simnam_mempath, hpc_mempath
-    character(len=LENMODELNAME) :: model_name
-    type(CharacterStringType), dimension(:), contiguous, pointer :: mnames !< model names (all) from the simulation nam file
-    type(CharacterStringType), dimension(:), contiguous, pointer :: mnames_hpc !< model names in the hpc file
-    integer(I4B), dimension(:), contiguous, pointer :: mranks_hpc !< rank numbers in the hpc file
-    integer(I4B) :: i, model_idx
-    integer(I4B) :: target_rank
-    integer(I4B), dimension(:), allocatable :: rank_used
-
-    ! set to uninitialized
-    mranks = -1
-
-    ! from IDM
-    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    hpc_mempath = create_mem_path('UTL', 'HPC', idm_context)
-    call mem_setptr(mnames, 'MNAME', simnam_mempath)
-    call mem_setptr(mnames_hpc, 'MNAME', hpc_mempath)
-    call mem_setptr(mranks_hpc, 'MRANK', hpc_mempath)
-
-    ! check: valid model names
-    do i = 1, size(mnames_hpc)
-      if (ifind(mnames, mnames_hpc(i)) == -1) then
-        model_name = mnames_hpc(i)
-        write (errmsg, *) "HPC input error: undefined model name (", &
-          trim(model_name), ")"
-        call store_error(errmsg)
-      end if
-    end do
-    ! check: valid ranks
-    do i = 1, size(mranks_hpc)
-      target_rank = mranks_hpc(i)
-      if (target_rank < 0 .or. target_rank > nr_procs - 1) then
-        model_name = mnames_hpc(i)
-        write (errmsg, '(a,i0,2a)') "HPC input error: invalid target rank (", &
-          target_rank, ") for model ", trim(model_name)
-        call store_error(errmsg)
-      end if
-    end do
-    if (count_errors() > 0) call ustop()
-
-    ! construct rank array
-    do i = 1, size(mnames_hpc)
-      model_idx = ifind(mnames, mnames_hpc(i))
-      mranks(model_idx) = mranks_hpc(i)
-    end do
-
-    ! check: all models acquired rank
-    do i = 1, size(mranks)
-      if (mranks(i) == -1) then
-        model_name = mnames(i)
-        write (errmsg, '(2a)') "HPC input error: no target rank for model ", &
-          trim(model_name)
-        call store_error(errmsg)
-      end if
-    end do
-    if (count_errors() > 0) call ustop()
-
-    ! check: no idle ranks
-    allocate (rank_used(nr_procs))
-    rank_used = 0
-    do i = 1, size(mranks)
-      if (mranks(i) >= 0 .and. mranks(i) < nr_procs) then
-        rank_used(mranks(i) + 1) = 1
-      end if
-    end do
-    do i = 1, size(rank_used)
-      if (rank_used(i) == 0) then
-        write (errmsg, '(a,i0,a)') "HPC input error: rank ", i - 1, &
-          " has no models assigned"
-        call store_error(errmsg)
-      end if
-    end do
-    deallocate (rank_used)
-    if (count_errors() > 0) call ustop()
-
-  end subroutine get_load_balance_from_input
-
-  !> @brief Distribute the models over the available
-  !! processes in a parallel run. Expects an array sized
-  !< to the number of models in the global simulation
-  subroutine create_load_balance(mranks)
-    use SimVariablesModule, only: idm_context
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
-    integer(I4B), dimension(:) :: mranks
-    ! local
-    integer(I4B) :: im, imm, ie, ip, cnt
-    integer(I4B) :: nr_models, nr_gwf_models
-    integer(I4B) :: nr_exchanges
-    integer(I4B) :: min_per_proc, nr_left
-    integer(I4B) :: rank
-    integer(I4B), dimension(:), allocatable :: nr_models_proc
-    character(len=LENPACKAGETYPE) :: model_type_str
-    character(len=LINELENGTH) :: errmsg
-    character(len=LENMEMPATH) :: input_mempath
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mtypes !< model types
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mnames !< model names
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: etypes !< exg types
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: emnames_a !< model a names
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: emnames_b !< model b names
-
-    mranks = 0
-    if (simulation_mode /= 'PARALLEL') return
-
-    ! load IDM data
-    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    call mem_setptr(mtypes, 'MTYPE', input_mempath)
-    call mem_setptr(mnames, 'MNAME', input_mempath)
-    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
-    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
-    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
-
-    ! count flow models
-    nr_models = size(mnames)
-    nr_gwf_models = 0
-    do im = 1, nr_models
-      if (mtypes(im) == 'GWF6') then
-        nr_gwf_models = nr_gwf_models + 1
-      end if
-
-      if (mtypes(im) == 'GWF6' .or. &
-          mtypes(im) == 'GWT6' .or. &
-          mtypes(im) == 'GWE6') then
-        cycle
-      end if
-
-      model_type_str = mtypes(im)
-      write (errmsg, *) 'Model type ', model_type_str, &
-        ' not supported in parallel mode.'
-      call store_error(errmsg, terminate=.true.)
-    end do
-
-    ! calculate nr of flow models for each rank
-    allocate (nr_models_proc(nr_procs))
-    min_per_proc = nr_gwf_models / nr_procs
-    nr_left = nr_gwf_models - nr_procs * min_per_proc
-    cnt = 1
-    do ip = 1, nr_procs
-      rank = ip - 1
-      nr_models_proc(ip) = min_per_proc
-      if (rank < nr_left) then
-        nr_models_proc(ip) = nr_models_proc(ip) + 1
-      end if
-    end do
-
-    ! assign ranks for flow models
-    rank = 0
-    do im = 1, nr_models
-      if (mtypes(im) == 'GWF6') then
-        if (nr_models_proc(rank + 1) == 0) then
-          rank = rank + 1
-        end if
-        mranks(im) = rank
-        nr_models_proc(rank + 1) = nr_models_proc(rank + 1) - 1
-      end if
-    end do
-
-    ! match other models to flow
-    nr_exchanges = size(etypes)
-    do im = 1, nr_models
-      if (mtypes(im) == 'GWT6') then
-
-        ! find match
-        do ie = 1, nr_exchanges
-          if (etypes(ie) == 'GWF6-GWT6' .and. mnames(im) == emnames_b(ie)) then
-            rank = 0
-            do imm = 1, nr_models
-              if (mnames(imm) == emnames_a(ie)) then
-                rank = mranks(imm)
-                exit
-              end if
-            end do
-            mranks(im) = rank
-            exit
-          end if
-        end do
-
-      else if (mtypes(im) == 'GWE6') then
-        do ie = 1, nr_exchanges
-          if (etypes(ie) == 'GWF6-GWE6' .and. mnames(im) == emnames_b(ie)) then
-            rank = 0
-            do imm = 1, nr_models
-              if (mnames(imm) == emnames_a(ie)) then
-                rank = mranks(imm)
-                exit
-              end if
-            end do
-            mranks(im) = rank
-            exit
-          end if
-        end do
-
-      else
-        cycle ! e.g., for a flow model
-      end if
-    end do
-
-    ! cleanup
-    deallocate (nr_models_proc)
-
-  end subroutine create_load_balance
 
 end module SimulationCreateModule

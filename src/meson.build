@@ -7,6 +7,7 @@ external_libraries = files(
 )
 
 modflow_sources = files(
+    'Distributed' / 'DistributedSim.f90',
     'Distributed' / 'IndexMap.f90',
     'Distributed' / 'InterfaceMap.f90',
     'Distributed' / 'Mapper.f90',
