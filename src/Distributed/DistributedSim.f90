@@ -41,7 +41,7 @@ contains
       call dist_sim%create()
     end if
     ds => dist_sim
-    
+
   end function get_dsim
 
   !> Create the distributed simulation object from the simulation input ctx
@@ -57,7 +57,7 @@ contains
     integer(I4B), pointer :: nmod
 
     this%memory_path = create_mem_path(component='SIM')
-    
+
     input_mempath = create_mem_path(component='SIM', context=idm_context)
     call mem_setptr(nmod, 'NUMMODELS', input_mempath)
 
@@ -71,8 +71,8 @@ contains
   !! Get a load mask to determine which models
   !! should be loaded by idm on this process. This is in
   !! sync with models create. The mask array is allocated
-  !! with its size equal to the global number of models. 
-  !! It is returned as (1, 1, 0, 0, ... 0) with each entry 
+  !! with its size equal to the global number of models.
+  !! It is returned as (1, 1, 0, 0, ... 0) with each entry
   !! being a load mask for the model at the corresponding
   !< location in the 'MNAME' array of the IDM.
   function get_load_mask(this) result(load_mask)
@@ -94,7 +94,7 @@ contains
     ! local
     integer(I4B), dimension(:), pointer :: model_ranks => null() !< the load balance
     integer(I4B) :: m_id !< model id
-    
+
     call mem_allocate(this%load_mask, this%nr_models, 'LOADMASK', &
                       this%memory_path)
     this%load_mask = 0
@@ -110,7 +110,7 @@ contains
         this%load_mask(m_id) = 0
       end if
     end do
-    
+
   end subroutine create_load_mask
 
   !> @brief Get the model load balance for the simulation
@@ -131,7 +131,7 @@ contains
       mranks => this%model_ranks
       return
     end if
-    
+
     call mem_allocate(this%model_ranks, this%nr_models, 'MODELRANKS', &
                       this%memory_path)
 
@@ -141,8 +141,8 @@ contains
 
     if (isize > 0) then
       if (nr_procs == 1) then
-        write(warnmsg, *) "Ignoring PARTITIONS block in HPC file when "// &
-                          "running a serial process"
+        write (warnmsg, *) "Ignoring PARTITIONS block in HPC file when "// &
+          "running a serial process"
         call store_warning(warnmsg)
 
         ! single process, everything on cpu 0:
@@ -150,7 +150,7 @@ contains
       else
         ! set balance from HPC file
         call this%set_load_balance_from_input()
-      end if   
+      end if
     else
       ! set balance from default algorithm
       call this%set_load_balance_default()
@@ -258,7 +258,6 @@ contains
 
   end subroutine set_load_balance_from_input
 
-  
   !> @brief Distribute the models over the available
   !! processes in a parallel run. Expects an array sized
   !< to the number of models in the global simulation
@@ -394,10 +393,10 @@ contains
     class(DistributedSimType) :: this
 
     call mem_deallocate(this%load_mask)
-    call mem_deallocate (this%model_ranks)
+    call mem_deallocate(this%model_ranks)
 
-    call mem_deallocate (this%nr_models)
-    
+    call mem_deallocate(this%nr_models)
+
     ! delete singleton instance
     if (associated(dist_sim)) deallocate (dist_sim)
 
