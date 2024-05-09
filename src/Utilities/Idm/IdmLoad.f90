@@ -221,7 +221,7 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: iout
     ! -- local
-    type(DistributedSimType), pointer :: ds   
+    type(DistributedSimType), pointer :: ds
     integer(I4B), dimension(:), pointer :: model_loadmask
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
