@@ -51,6 +51,7 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="Distributed">
+		<File RelativePath="..\src\Distributed\DistributedSim.f90"/>
 		<File RelativePath="..\src\Distributed\IndexMap.f90"/>
 		<File RelativePath="..\src\Distributed\InterfaceMap.f90"/>
 		<File RelativePath="..\src\Distributed\MappedMemory.f90"/>
