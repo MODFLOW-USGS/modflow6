@@ -258,7 +258,7 @@ contains
     allocate (model_names(nr_models_glob))
     allocate (model_loc_idx(nr_models_glob))
     !
-    ! -- get model-to-cpu assigment (in serial all to rank 0)
+    ! -- get model-to-cpu assignment (in serial all to rank 0)
     ds => get_dsim()
     model_ranks => ds%get_load_balance()
     !
