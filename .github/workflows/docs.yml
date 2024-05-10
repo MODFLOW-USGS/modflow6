@@ -27,8 +27,8 @@ jobs:
         with:
           pixi-version: v0.19.1
 
-      - name: Check documents using codespell
-        run: pixi run check-docs
+      - name: Check spelling
+        run: pixi run check-spelling
   
   rtd_build:
     name: Build ReadTheDocs

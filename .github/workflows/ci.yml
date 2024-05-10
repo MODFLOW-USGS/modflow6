@@ -54,10 +54,10 @@ jobs:
           pixi-version: v0.19.1
 
       - name: Check Fortran source formatting
-        run: pixi run fortran-format-check
+        run: pixi run check-format
 
       - name: Check MSVS project files
-        run: pixi run msvs-vfproj-check 
+        run: pixi run check-vfproj
       
       - name: Check CITATION.cff
         uses: dieghernan/cff-validator@v3

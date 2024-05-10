@@ -46,8 +46,9 @@ install = { depends_on = [
 ] }
 
 # format
-fortran-format-check = "python .github/common/fortran_format_check.py"
-msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
+check-format = "python .github/common/check_format.py"
+check-vfproj = "python .github/common/check_vfproj.py"
+check-spelling = "python .github/common/check_spelling.py"
 
 # build/test
 setup = "meson setup --prefix=$(pwd) --libdir=bin"
@@ -60,7 +61,6 @@ autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd 
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
 run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
-check-docs = "python .github/common/codespell_docs_check.py"
 build-docs = { cmd = "python build_docs.py", cwd = "distribution" }
 build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
 build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }

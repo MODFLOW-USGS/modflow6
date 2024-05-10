@@ -276,7 +276,7 @@ contains
     ! test derivative calculation for x ** 2
     x = 1.d6
     eps = get_perturbation(x)
-    v1 = ((x + eps) ** 2 - x ** 2) / eps
+    v1 = ((x + eps)**2 - x**2) / eps
     v2 = 2 * x
     call check(error, &
                is_close(v1, v2, atol=1d-1), &
