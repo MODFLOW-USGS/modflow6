@@ -36,8 +36,8 @@ module Mf6FileListInputModule
   !<
   type, abstract, extends(AsciiDynamicPkgLoadBaseType) :: ListInputBaseType
     integer(I4B) :: ts_active
-    integer(I4B) :: ibinary
-    integer(I4B) :: oc_inunit
+    !integer(I4B) :: ibinary
+    !integer(I4B) :: oc_inunit
     type(TimeSeriesManagerType), pointer :: tsmanager => null()
     type(StructArrayType), pointer :: structarray => null()
   contains
@@ -46,7 +46,6 @@ module Mf6FileListInputModule
     procedure :: df
     procedure :: ad
     procedure :: reset
-    procedure :: read_control_record
   end type ListInputBaseType
 
   !> @brief Boundary package list loader.
@@ -142,32 +141,33 @@ contains
   subroutine bndlist_rp(this, parser)
     ! -- modules
     use BlockParserModule, only: BlockParserType
+    use LoadMf6FileModule, only: read_control_record
     use StructVectorModule, only: StructVectorType
     use IdmLoggerModule, only: idm_log_header, idm_log_close
     ! -- dummy
     class(BoundListInputType), intent(inout) :: this
     type(BlockParserType), pointer, intent(inout) :: parser
     ! -- local
+    integer(I4B) :: ibinary
+    integer(I4B) :: oc_inunit
     logical(LGP) :: ts_active
     !
     call this%reset()
     !
-    call this%read_control_record(parser)
+    ibinary = read_control_record(parser, oc_inunit, this%iout)
     !
     ! -- log lst file header
     call idm_log_header(this%mf6_input%component_name, &
                         this%mf6_input%subcomponent_name, this%iout)
     !
-    if (this%ibinary == 1) then
+    if (ibinary == 1) then
       !
       this%bound_context%nbound = &
-        this%structarray%read_from_binary(this%oc_inunit, this%iout)
+        this%structarray%read_from_binary(oc_inunit, this%iout)
       !
       call parser%terminateblock()
       !
-      close (this%oc_inunit)
-      this%ibinary = 0
-      this%oc_inunit = 0
+      close (oc_inunit)
       !
     else
       !
@@ -413,8 +413,8 @@ contains
     !
     ! -- initialize
     this%ts_active = 0
-    this%ibinary = 0
-    this%oc_inunit = 0
+    !this%ibinary = 0
+    !this%oc_inunit = 0
     !
     ! -- initialize static loader
     call loader%init(parser, mf6_input, this%input_name, iout)
@@ -505,81 +505,5 @@ contains
     ! -- return
     return
   end subroutine reset
-
-  subroutine read_control_record(this, parser)
-    ! -- modules
-    use InputOutputModule, only: urword
-    use OpenSpecModule, only: form, access
-    use ConstantsModule, only: LINELENGTH
-    use BlockParserModule, only: BlockParserType
-    ! -- dummy
-    class(ListInputBaseType), intent(inout) :: this
-    type(BlockParserType), intent(inout) :: parser
-    ! -- local
-    integer(I4B) :: lloc, istart, istop, idum, inunit, itmp, ierr
-    integer(I4B) :: nunopn = 99
-    character(len=:), allocatable :: line
-    character(len=LINELENGTH) :: fname
-    logical :: exists
-    real(DP) :: r
-    ! -- formats
-    character(len=*), parameter :: fmtocne = &
-      &"('Specified OPEN/CLOSE file ',(A),' does not exist')"
-    character(len=*), parameter :: fmtobf = &
-      &"(1X,/1X,'OPENING BINARY FILE ON UNIT ',I0,':',/1X,A)"
-    !
-    inunit = parser%getunit()
-    !
-    ! -- Read to the first non-commented line
-    lloc = 1
-    call parser%line_reader%rdcom(inunit, this%iout, line, ierr)
-    call urword(line, lloc, istart, istop, 1, idum, r, this%iout, inunit)
-    !
-    if (line(istart:istop) == 'OPEN/CLOSE') then
-      !
-      ! -- get filename
-      call urword(line, lloc, istart, istop, 0, idum, r, &
-                  this%iout, inunit)
-      !
-      fname = line(istart:istop)
-      !
-      ! -- check to see if file OPEN/CLOSE file exists
-      inquire (file=fname, exist=exists)
-      !
-      if (.not. exists) then
-        write (errmsg, fmtocne) line(istart:istop)
-        call store_error(errmsg)
-        call store_error('Specified OPEN/CLOSE file does not exist')
-        call store_error_unit(inunit)
-      end if
-      !
-      ! -- Check for (BINARY) keyword
-      call urword(line, lloc, istart, istop, 1, idum, r, &
-                  this%iout, inunit)
-      !
-      if (line(istart:istop) == '(BINARY)') this%ibinary = 1
-      !
-      ! -- Open the file depending on ibinary flag
-      if (this%ibinary == 1) then
-        this%oc_inunit = nunopn
-        itmp = this%iout
-        !
-        if (this%iout > 0) then
-          itmp = 0
-          write (this%iout, fmtobf) this%oc_inunit, trim(adjustl(fname))
-        end if
-        !
-        call openfile(this%oc_inunit, itmp, fname, 'OPEN/CLOSE', &
-                      fmtarg_opt=form, accarg_opt=access)
-      end if
-    end if
-    !
-    if (this%ibinary == 0) then
-      call parser%line_reader%bkspc(parser%getunit())
-    end if
-    !
-    ! -- return
-    return
-  end subroutine read_control_record
 
 end module Mf6FileListInputModule

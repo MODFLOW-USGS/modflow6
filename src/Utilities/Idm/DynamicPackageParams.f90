@@ -30,7 +30,8 @@ module DynamicPackageParamsModule
   !<
   type :: DynamicPackageParamsType
     character(len=LINELENGTH), dimension(:), allocatable :: params !< in scope param tags
-    integer(I4B) :: naux !< number of aux variables in package
+    character(len=LINELENGTH) :: blockname !< name of block
+    integer(I4B) :: iauxiliary !< package auxiliary active, 0=inactive, active for values > 0
     integer(I4B) :: inamedbound !< package inamedbound setting
     integer(I4B) :: nparam !< number of in scope params
     type(ModflowInputType) :: mf6_input !< description of input
@@ -47,19 +48,23 @@ contains
   !> @brief initialize dynamic param filter
   !!
   !<
-  subroutine init(this, mf6_input, readasarrays, naux, inamedbound)
+  subroutine init(this, mf6_input, blockname, readasarrays, iauxiliary, &
+                  inamedbound)
     ! -- modules
     ! -- dummy
     class(DynamicPackageParamsType) :: this
     type(ModflowInputType), intent(in) :: mf6_input
+    character(len=*) :: blockname
     logical(LGP), intent(in) :: readasarrays
-    integer(I4B), intent(in) :: naux
+    integer(I4B), intent(in) :: iauxiliary
     integer(I4B), intent(in) :: inamedbound
+    !integer(I4B) :: iparam
     ! -- local
     !
     this%mf6_input = mf6_input
+    this%blockname = blockname
     this%nparam = 0
-    this%naux = naux
+    this%iauxiliary = iauxiliary
     this%inamedbound = inamedbound
     !
     ! -- determine in scope input params
@@ -112,12 +117,12 @@ contains
       ! -- assign param definition pointer
       idt => this%mf6_input%param_dfns(iparam)
       !
-      if (idt%blockname /= 'PERIOD') then
+      if (idt%blockname /= this%blockname) then
         keep = .false.
       end if
       !
       if (idt%tagname == 'AUX') then
-        if (this%naux == 0) then
+        if (this%iauxiliary == 0) then
           keep = .false.
         end if
       end if
@@ -171,7 +176,7 @@ contains
       get_aggregate_definition_type(this%mf6_input%aggregate_dfns, &
                                     this%mf6_input%component_type, &
                                     this%mf6_input%subcomponent_type, &
-                                    'PERIOD')
+                                    this%blockname)
     !
     ! -- split recarray definition
     call idt_parse_rectype(ra_idt, ra_cols, ra_ncol)
@@ -185,12 +190,12 @@ contains
       idt => get_param_definition_type(this%mf6_input%param_dfns, &
                                        this%mf6_input%component_type, &
                                        this%mf6_input%subcomponent_type, &
-                                       'PERIOD', ra_cols(icol), '')
+                                       this%blockname, ra_cols(icol), '')
       !
       if (ra_cols(icol) == 'RECARRAY') then
         ! no-op
       else if (ra_cols(icol) == 'AUX') then
-        if (this%naux > 0) then
+        if (this%iauxiliary > 0) then
           keep = .true.
         end if
       else if (ra_cols(icol) == 'BOUNDNAME') then
@@ -199,7 +204,7 @@ contains
         end if
       else
         ! -- determine if the param is scope
-        keep = pkg_param_in_scope(this%mf6_input, ra_cols(icol))
+        keep = pkg_param_in_scope(this%mf6_input, this%blockname, ra_cols(icol))
       end if
       !
       if (keep) then
@@ -331,11 +336,12 @@ contains
   !> @brief determine if input param is in scope for a package
   !!
   !<
-  function pkg_param_in_scope(mf6_input, tagname) result(in_scope)
+  function pkg_param_in_scope(mf6_input, blockname, tagname) result(in_scope)
     ! -- modules
     use MemoryManagerModule, only: get_isize, mem_setptr
     ! -- dummy
     type(ModflowInputType), intent(in) :: mf6_input
+    character(len=*), intent(in) :: blockname
     character(len=*), intent(in) :: tagname
     ! -- return
     logical(LGP) :: in_scope
@@ -350,7 +356,7 @@ contains
     idt => get_param_definition_type(mf6_input%param_dfns, &
                                      mf6_input%component_type, &
                                      mf6_input%subcomponent_type, &
-                                     'PERIOD', tagname, '')
+                                     blockname, tagname, '')
     !
     if (idt%required) then
       ! -- required params always included
@@ -376,6 +382,8 @@ contains
           end if
         end if
         !
+      case ('NAM')
+        in_scope = .true.
       case default
         errmsg = 'IDM unimplemented. DynamicPackageParamsType::pkg_param_in_scope &
                  &add case tagname='//trim(idt%tagname)

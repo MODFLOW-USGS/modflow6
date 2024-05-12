@@ -36,6 +36,7 @@ module LoadMf6FileModule
   implicit none
   private
   public :: LoadMf6FileType
+  public :: read_control_record
 
   !> @brief Static parser based input loader
   !!
@@ -49,8 +50,12 @@ module LoadMf6FileModule
     type(StructArrayType), pointer :: structarray => null() !< structarray for loading list input
     type(ModflowInputType) :: mf6_input !< description of input
     character(len=LINELENGTH) :: filename !< name of ascii input file
+    character(len=LINELENGTH), dimension(:), allocatable :: block_tags !< read block tags
     logical(LGP) :: ts_active !< is timeseries active
     logical(LGP) :: export !< is array export active
+    logical(LGP) :: readasarrays
+    integer(I4B) :: inamedbound
+    integer(I4B) :: iauxiliary
     integer(I4B) :: iout !< inunit for list log
   contains
     procedure :: load
@@ -88,6 +93,7 @@ contains
     !
     ! -- initialize static load
     call this%init(parser, mf6_input, filename, iout)
+    write (iout, '(a)') 'IDM LOAD mempath='//trim(mf6_input%mempath)
     !
     ! -- process blocks
     do iblk = 1, size(this%mf6_input%block_dfns)
@@ -129,6 +135,9 @@ contains
     this%filename = filename
     this%ts_active = .false.
     this%export = .false.
+    this%readasarrays = .false.
+    this%inamedbound = 0
+    this%iauxiliary = 0
     this%iout = iout
     !
     call get_isize('MODEL_SHAPE', mf6_input%component_mempath, isize)
@@ -167,11 +176,15 @@ contains
       call destructStructArray(this%structarray)
     end if
     !
+    allocate (this%block_tags(0))
+    !
     ! -- load the block
     call this%parse_block(iblk, .false.)
     !
     ! -- post process block
     call this%block_post_process(iblk)
+    !
+    deallocate (this%block_tags)
     !
     ! --return
     return
@@ -208,15 +221,41 @@ contains
   !<
   subroutine block_post_process(this, iblk)
     ! -- modules
-    use MemoryManagerModule, only: get_isize
+    use ConstantsModule, only: LENBOUNDNAME
+    use CharacterStringModule, only: CharacterStringType
     use SourceCommonModule, only: set_model_shape, mem_allocate_naux
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
-    integer(I4B) :: iparam, ts6_size, export_size
+    integer(I4B) :: iparam
+    integer(I4B), pointer :: intptr
+    real(DP), dimension(:, :), pointer, &
+      contiguous :: auxvar
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: boundnames !< array of bound names
     !
+    ! -- update state based on read tags
+    do iparam = 1, size(this%block_tags)
+      select case (this%mf6_input%block_dfns(iblk)%blockname)
+      case ('OPTIONS')
+        if (this%block_tags(iparam) == 'AUXILIARY') then
+          this%iauxiliary = 1
+        else if (this%block_tags(iparam) == 'BOUNDNAMES') then
+          this%inamedbound = 1
+        else if (this%block_tags(iparam) == 'READASARRAYS') then
+          this%readasarrays = .true.
+        else if (this%block_tags(iparam) == 'TS6') then
+          this%ts_active = .true.
+        else if (this%block_tags(iparam) == 'EXPORT_ARRAY_ASCII') then
+          this%export = .true.
+        end if
+      case default
+      end select
+    end do
+    !
+    ! -- update input context allocations based on dfn set and input
     select case (this%mf6_input%block_dfns(iblk)%blockname)
     case ('OPTIONS')
       ! -- allocate naux and set to 0 if not allocated
@@ -225,25 +264,13 @@ contains
         !
         if (idt%blockname == 'OPTIONS' .and. &
             idt%tagname == 'AUXILIARY') then
-          call mem_allocate_naux(this%mf6_input%mempath)
+          if (this%iauxiliary == 0) then
+            call mem_allocate(intptr, 'NAUX', this%mf6_input%mempath)
+            intptr = 0
+          end if
           exit
         end if
       end do
-      !
-      ! -- determine if TS6 files were provided in OPTIONS block
-      call get_isize('TS6_FILENAME', this%mf6_input%mempath, ts6_size)
-      !
-      if (ts6_size > 0) then
-        this%ts_active = .true.
-      end if
-      !
-      ! -- determine if EXPORT options were provided
-      call get_isize('EXPORT_ASCII', this%mf6_input%mempath, export_size)
-      !
-      if (export_size > 0) then
-        this%export = .true.
-      end if
-      !
     case ('DIMENSIONS')
       ! -- set model shape if discretization dimensions have been read
       if (this%mf6_input%pkgtype(1:3) == 'DIS') then
@@ -251,6 +278,22 @@ contains
                              this%mf6_input%component_mempath, &
                              this%mf6_input%mempath, this%mshape)
       end if
+    case ('EXCHANGEDATA')
+      do iparam = 1, size(this%mf6_input%param_dfns)
+        idt => this%mf6_input%param_dfns(iparam)
+        if (idt%blockname == 'EXCHANGEDATA') then
+          if (idt%tagname == 'BOUNDNAME') then
+            if (this%iauxiliary == 0) then
+              call mem_allocate(auxvar, 0, 0, 'AUX', this%mf6_input%mempath)
+            end if
+            if (this%inamedbound == 0) then
+              call mem_allocate(boundnames, LENBOUNDNAME, 0, &
+                                'BOUNDNAME', this%mf6_input%mempath)
+            end if
+            exit
+          end if
+        end if
+      end do
     case default
     end select
     !
@@ -434,6 +477,7 @@ contains
   !<
   recursive subroutine parse_tag(this, iblk, recursive_call)
     ! -- modules
+    use ArrayHandlersModule, only: expandarray
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
@@ -504,6 +548,10 @@ contains
       call this%parse_tag(iblk, .true.)
     end if
     !
+    !
+    call expandarray(this%block_tags)
+    this%block_tags(size(this%block_tags)) = trim(idt%tagname)
+    !
     ! -- return
     return
   end subroutine parse_tag
@@ -552,20 +600,25 @@ contains
   subroutine parse_structarray_block(this, iblk)
     ! -- modules
     use StructArrayModule, only: StructArrayType, constructStructArray
+    use DynamicPackageParamsModule, only: DynamicPackageParamsType
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
     ! -- local
+    type(DynamicPackageParamsType) :: block_params
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     type(InputParamDefinitionType), target :: blockvar_idt
-    integer(I4B) :: blocknum, iwords
+    integer(I4B) :: blocknum
     integer(I4B), pointer :: nrow
     integer(I4B) :: nrows, nrowsread
-    integer(I4B) :: icol
+    integer(I4B) :: ibinary, oc_inunit
+    integer(I4B) :: icol, iparam
     integer(I4B) :: ncol
-    integer(I4B) :: nwords
-    character(len=16), dimension(:), allocatable :: words
-    character(len=:), allocatable :: parse_str
+    !
+    ! -- initialize package params object
+    call block_params%init(this%mf6_input, &
+                           this%mf6_input%block_dfns(iblk)%blockname, &
+                           this%readasarrays, this%iauxiliary, this%inamedbound)
     !
     ! -- set input definition for this block
     idt => &
@@ -581,12 +634,10 @@ contains
       blocknum = 0
     end if
     !
-    ! -- identify variable names, ignore first RECARRAY column
-    parse_str = trim(idt%datatype)//' '
-    call parseline(parse_str, nwords, words)
-    ncol = nwords - 1
+    ! -- set ncol
+    ncol = block_params%nparam
     !
-    ! -- a column will be prepended if block is reloadable
+    ! -- add col if block is reloadable
     if (blocknum > 0) ncol = ncol + 1
     !
     ! -- use shape to set the max num of rows
@@ -619,11 +670,11 @@ contains
         end if
         !
         ! -- set indexes (where first column is blocknum)
-        iwords = icol
+        iparam = icol - 1
       else
         !
         ! -- set indexes (no blocknum column)
-        iwords = icol + 1
+        iparam = icol
       end if
       !
       ! -- set pointer to input definition for this 1d vector
@@ -632,15 +683,30 @@ contains
                                   this%mf6_input%component_type, &
                                   this%mf6_input%subcomponent_type, &
                                   this%mf6_input%block_dfns(iblk)%blockname, &
-                                  words(iwords), this%filename)
+                                  block_params%params(iparam), this%filename)
       !
       ! -- allocate variable in memory manager
       call this%structarray%mem_create_vector(icol, idt)
     end do
     !
-    ! -- read the structured array
-    nrowsread = this%structarray%read_from_parser(this%parser, this%ts_active, &
-                                                  this%iout)
+    ibinary = read_control_record(this%parser, oc_inunit, this%iout)
+    !
+    if (ibinary == 1) then
+      !
+      nrowsread = this%structarray%read_from_binary(oc_inunit, this%iout)
+      !
+      call this%parser%terminateblock()
+      !
+      close (oc_inunit)
+      !
+    else
+      !
+      nrowsread = this%structarray%read_from_parser(this%parser, this%ts_active, &
+                                                    this%iout)
+    end if
+    !
+    ! -- clean up
+    call block_params%destroy()
     !
     ! -- return
     return
@@ -1134,5 +1200,90 @@ contains
     end if
 
   end subroutine get_layered_shape
+
+  function read_control_record(parser, oc_inunit, iout) result(ibinary)
+    ! -- modules
+    use SimModule, only: store_error_unit
+    use InputOutputModule, only: urword
+    use InputOutputModule, only: openfile
+    use OpenSpecModule, only: form, access
+    use ConstantsModule, only: LINELENGTH
+    use BlockParserModule, only: BlockParserType
+    ! -- dummy
+    type(BlockParserType), intent(inout) :: parser
+    integer(I4B), intent(inout) :: oc_inunit
+    integer(I4B), intent(in) :: iout
+    ! -- return
+    integer(I4B) :: ibinary
+    ! -- local
+    integer(I4B) :: lloc, istart, istop, idum, inunit, itmp, ierr
+    integer(I4B) :: nunopn = 99
+    character(len=:), allocatable :: line
+    character(len=LINELENGTH) :: fname
+    logical :: exists
+    real(DP) :: r
+    ! -- formats
+    character(len=*), parameter :: fmtocne = &
+      &"('Specified OPEN/CLOSE file ',(A),' does not exist')"
+    character(len=*), parameter :: fmtobf = &
+      &"(1X,/1X,'OPENING BINARY FILE ON UNIT ',I0,':',/1X,A)"
+    !
+    ! -- initialize oc_inunit and ibinary
+    oc_inunit = 0
+    ibinary = 0
+    !
+    inunit = parser%getunit()
+    !
+    ! -- Read to the first non-commented line
+    lloc = 1
+    call parser%line_reader%rdcom(inunit, iout, line, ierr)
+    call urword(line, lloc, istart, istop, 1, idum, r, iout, inunit)
+    !
+    if (line(istart:istop) == 'OPEN/CLOSE') then
+      !
+      ! -- get filename
+      call urword(line, lloc, istart, istop, 0, idum, r, &
+                  iout, inunit)
+      !
+      fname = line(istart:istop)
+      !
+      ! -- check to see if file OPEN/CLOSE file exists
+      inquire (file=fname, exist=exists)
+      !
+      if (.not. exists) then
+        write (errmsg, fmtocne) line(istart:istop)
+        call store_error(errmsg)
+        call store_error('Specified OPEN/CLOSE file does not exist')
+        call store_error_unit(inunit)
+      end if
+      !
+      ! -- Check for (BINARY) keyword
+      call urword(line, lloc, istart, istop, 1, idum, r, &
+                  iout, inunit)
+      !
+      if (line(istart:istop) == '(BINARY)') ibinary = 1
+      !
+      ! -- Open the file depending on ibinary flag
+      if (ibinary == 1) then
+        oc_inunit = nunopn
+        itmp = iout
+        !
+        if (iout > 0) then
+          itmp = 0
+          write (iout, fmtobf) oc_inunit, trim(adjustl(fname))
+        end if
+        !
+        call openfile(oc_inunit, itmp, fname, 'OPEN/CLOSE', &
+                      fmtarg_opt=form, accarg_opt=access)
+      end if
+    end if
+    !
+    if (ibinary == 0) then
+      call parser%line_reader%bkspc(parser%getunit())
+    end if
+    !
+    ! -- return
+    return
+  end function read_control_record
 
 end module LoadMf6FileModule

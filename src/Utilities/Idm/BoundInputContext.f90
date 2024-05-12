@@ -133,7 +133,7 @@ contains
     end if
     !
     ! -- initialize package params object
-    call this%package_params%init(this%mf6_input, this%readasarrays, &
+    call this%package_params%init(this%mf6_input, 'PERIOD', this%readasarrays, &
                                   this%naux, this%inamedbound)
     !
     ! -- return
