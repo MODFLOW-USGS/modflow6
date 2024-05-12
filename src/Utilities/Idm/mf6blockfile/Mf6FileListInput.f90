@@ -36,8 +36,6 @@ module Mf6FileListInputModule
   !<
   type, abstract, extends(AsciiDynamicPkgLoadBaseType) :: ListInputBaseType
     integer(I4B) :: ts_active
-    !integer(I4B) :: ibinary
-    !integer(I4B) :: oc_inunit
     type(TimeSeriesManagerType), pointer :: tsmanager => null()
     type(StructArrayType), pointer :: structarray => null()
   contains
@@ -413,8 +411,6 @@ contains
     !
     ! -- initialize
     this%ts_active = 0
-    !this%ibinary = 0
-    !this%oc_inunit = 0
     !
     ! -- initialize static loader
     call loader%init(parser, mf6_input, this%input_name, iout)
