@@ -93,7 +93,6 @@ contains
     !
     ! -- initialize static load
     call this%init(parser, mf6_input, filename, iout)
-    write (iout, '(a)') 'IDM LOAD mempath='//trim(mf6_input%mempath)
     !
     ! -- process blocks
     do iblk = 1, size(this%mf6_input%block_dfns)
@@ -223,7 +222,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME
     use CharacterStringModule, only: CharacterStringType
-    use SourceCommonModule, only: set_model_shape, mem_allocate_naux
+    use SourceCommonModule, only: set_model_shape
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
@@ -282,10 +281,12 @@ contains
       do iparam = 1, size(this%mf6_input%param_dfns)
         idt => this%mf6_input%param_dfns(iparam)
         if (idt%blockname == 'EXCHANGEDATA') then
-          if (idt%tagname == 'BOUNDNAME') then
+          if (idt%tagname == 'AUX') then
             if (this%iauxiliary == 0) then
               call mem_allocate(auxvar, 0, 0, 'AUX', this%mf6_input%mempath)
             end if
+          end if
+          if (idt%tagname == 'BOUNDNAME') then
             if (this%inamedbound == 0) then
               call mem_allocate(boundnames, LENBOUNDNAME, 0, &
                                 'BOUNDNAME', this%mf6_input%mempath)
@@ -689,10 +690,12 @@ contains
       call this%structarray%mem_create_vector(icol, idt)
     end do
     !
+    ! -- read the block control record
     ibinary = read_control_record(this%parser, oc_inunit, this%iout)
     !
     if (ibinary == 1) then
       !
+      ! -- read from binary
       nrowsread = this%structarray%read_from_binary(oc_inunit, this%iout)
       !
       call this%parser%terminateblock()
@@ -701,6 +704,7 @@ contains
       !
     else
       !
+      ! -- read from ascii
       nrowsread = this%structarray%read_from_parser(this%parser, this%ts_active, &
                                                     this%iout)
     end if
