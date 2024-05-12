@@ -230,10 +230,6 @@ contains
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam
     integer(I4B), pointer :: intptr
-    real(DP), dimension(:, :), pointer, &
-      contiguous :: auxvar
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: boundnames !< array of bound names
     !
     ! -- update state based on read tags
     do iparam = 1, size(this%block_tags)
@@ -277,24 +273,6 @@ contains
                              this%mf6_input%component_mempath, &
                              this%mf6_input%mempath, this%mshape)
       end if
-    case ('EXCHANGEDATA')
-      do iparam = 1, size(this%mf6_input%param_dfns)
-        idt => this%mf6_input%param_dfns(iparam)
-        if (idt%blockname == 'EXCHANGEDATA') then
-          if (idt%tagname == 'AUX') then
-            if (this%iauxiliary == 0) then
-              call mem_allocate(auxvar, 0, 0, 'AUX', this%mf6_input%mempath)
-            end if
-          end if
-          if (idt%tagname == 'BOUNDNAME') then
-            if (this%inamedbound == 0) then
-              call mem_allocate(boundnames, LENBOUNDNAME, 0, &
-                                'BOUNDNAME', this%mf6_input%mempath)
-            end if
-            exit
-          end if
-        end if
-      end do
     case default
     end select
     !

@@ -5,7 +5,7 @@
 module DynamicPackageParamsModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, DZERO, IZERO
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, DZERO, IZERO
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use MemoryManagerModule, only: mem_allocate
@@ -103,6 +103,8 @@ contains
     ! -- local
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B), dimension(:), allocatable :: idt_idxs
+    type(CharacterStringType), dimension(:), pointer, contiguous :: boundname
+    real(DP), dimension(:, :), pointer, contiguous :: auxvar
     integer(I4B) :: keepcnt, iparam
     logical(LGP) :: keep
     !
@@ -124,6 +126,11 @@ contains
       if (idt%tagname == 'AUX') then
         if (this%iauxiliary == 0) then
           keep = .false.
+          call mem_allocate(auxvar, 0, 0, 'AUXVAR', this%mf6_input%mempath)
+        end if
+        if (this%inamedbound == 0) then
+          call mem_allocate(boundname, LENBOUNDNAME, 0, 'BOUNDNAME', &
+                            this%mf6_input%mempath)
         end if
       end if
       !
@@ -165,6 +172,8 @@ contains
     ! -- local
     type(InputParamDefinitionType), pointer :: ra_idt, idt
     character(len=LINELENGTH), dimension(:), allocatable :: ra_cols
+    type(CharacterStringType), dimension(:), pointer, contiguous :: boundname
+    real(DP), dimension(:, :), pointer, contiguous :: auxvar
     integer(I4B) :: ra_ncol, icol, keepcnt
     logical(LGP) :: keep
     !
@@ -197,10 +206,15 @@ contains
       else if (ra_cols(icol) == 'AUX') then
         if (this%iauxiliary > 0) then
           keep = .true.
+        else
+          call mem_allocate(auxvar, 0, 0, 'AUXVAR', this%mf6_input%mempath)
         end if
       else if (ra_cols(icol) == 'BOUNDNAME') then
         if (this%inamedbound /= 0) then
           keep = .true.
+        else
+          call mem_allocate(boundname, LENBOUNDNAME, 0, 'BOUNDNAME', &
+                            this%mf6_input%mempath)
         end if
       else
         ! -- determine if the param is scope

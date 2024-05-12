@@ -167,22 +167,11 @@ contains
       call mem_allocate(cellid, 0, 0, 'CELLID', this%mf6_input%mempath)
     end if
     !
-    ! -- allocate or set pointer to BOUNDNAME
-    if (this%inamedbound == 0) then
-      call mem_allocate(this%boundname_cst, LENBOUNDNAME, 0, &
-                        'BOUNDNAME', this%mf6_input%mempath)
-      !
-    else
-      call mem_setptr(this%boundname_cst, 'BOUNDNAME', this%mf6_input%mempath)
-    end if
+    ! -- set pointer to BOUNDNAME
+    call mem_setptr(this%boundname_cst, 'BOUNDNAME', this%mf6_input%mempath)
     !
-    ! -- allocate or set pointer to AUXVAR
-    if (this%naux == 0) then
-      call mem_allocate(this%auxvar, 0, 0, 'AUXVAR', this%mf6_input%mempath)
-      !
-    else
-      call mem_setptr(this%auxvar, 'AUXVAR', this%mf6_input%mempath)
-    end if
+    ! -- set pointer to AUXVAR
+    call mem_setptr(this%auxvar, 'AUXVAR', this%mf6_input%mempath)
     !
     ! -- return
     return
