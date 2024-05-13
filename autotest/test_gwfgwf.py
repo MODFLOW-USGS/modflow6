@@ -22,10 +22,12 @@ import flopy
 import numpy as np
 import pytest
 
+from conftest import project_root_path
 from framework import TestFramework
 
 cases = ["gwfgwf01", "gwfgwf01ifmod"]
 ifmod = [False, True]
+data_path = project_root_path / "autotest" / "data"
 
 
 def build_models(idx, test):
@@ -38,16 +40,16 @@ def get_sim(idx, dir):
 
     # solver data
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1.e-8, 1e-8, 0.97
+    hclose, rclose, relax = 1.0e-8, 1e-8, 0.97
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
     )
 
     tdis = flopy.mf6.ModflowTdis(
-        sim, 
-        time_units="DAYS", 
-        nper=1, 
+        sim,
+        time_units="DAYS",
+        nper=1,
         perioddata=[(1.0, 1, 1)],
     )
 
@@ -64,9 +66,45 @@ def get_sim(idx, dir):
         relaxation_factor=relax,
     )
 
-    gwf0 = add_model(sim, "gwf1", top=0., add_chd=True, add_rch=True)
-    gwf1 = add_model(sim, "gwf2", top=-1., add_chd=False, add_rch=False)
+    gwf0 = add_model(sim, "gwf1", top=0.0, add_chd=True, add_rch=True)
+    gwf1 = add_model(sim, "gwf2", top=-1.0, add_chd=False, add_rch=False)
     gwfgwf = add_gwfexchange(sim, idx)
+
+    exg_input = data_path / "gwfgwf_exg.txt"
+    exg_data = np.loadtxt(
+        exg_input,
+        dtype={
+            "names": (
+                "c11",
+                "c12",
+                "c13",
+                "c21",
+                "c22",
+                "c23",
+                "ihc",
+                "cl1",
+                "cl2",
+                "hwva",
+                "aux1",
+                "aux2",
+            ),
+            "formats": (
+                "i4",
+                "i4",
+                "i4",
+                "i4",
+                "i4",
+                "i4",
+                "i4",
+                "f8",
+                "f8",
+                "f8",
+                "f8",
+                "f8",
+            ),
+        },
+    )
+    exg_data.tofile(dir / "exg.bin")
 
     return sim
 
@@ -76,6 +114,7 @@ def add_model(sim, modelname, top, add_chd, add_rch):
     nlay, nrow, ncol = 1, 1, 3
     botm = top - 1.0
     gwf = flopy.mf6.ModflowGwf(sim, modelname=modelname, save_flows=True)
+
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -86,7 +125,7 @@ def add_model(sim, modelname, top, add_chd, add_rch):
         top=top,
         botm=botm,
     )
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
@@ -96,7 +135,7 @@ def add_model(sim, modelname, top, add_chd, add_rch):
     )
 
     if add_chd:
-        chdlist = [(0, 0, ncol-1, 0.)]
+        chdlist = [(0, 0, ncol - 1, 0.0)]
         chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist)
 
     if add_rch:
@@ -117,9 +156,9 @@ def add_model(sim, modelname, top, add_chd, add_rch):
 
 def add_gwfexchange(sim, idx):
     ncol = 3
-    delr = 1.
-    delc = 1.
-    dz = 1.
+    delr = 1.0
+    delc = 1.0
+    dz = 1.0
     angldegx = 0.0
     cdist = 1.0
     gwfgwf_data = [
@@ -135,6 +174,13 @@ def add_gwfexchange(sim, idx):
         ]
         for icol in range(ncol)
     ]
+    exgdata = {
+        "factor": 1.0,
+        "filename": "exg.bin",
+        "data": None,
+        "binary": True,
+        #"iprn": 1,
+    }
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -143,7 +189,8 @@ def add_gwfexchange(sim, idx):
         nexg=len(gwfgwf_data),
         exgmnamea="gwf1",
         exgmnameb="gwf2",
-        exchangedata=gwfgwf_data,
+        # exchangedata=gwfgwf_data,
+        exchangedata=exgdata,
         auxiliary=["ANGLDEGX", "CDIST"],
         dev_interfacemodel_on=ifmod[idx],
     )
@@ -157,13 +204,13 @@ def check_output(idx, test):
 
 
 def check_model(sim, model_number):
-    print (f"Checking model output (gwf{model_number})")
+    print(f"Checking model output (gwf{model_number})")
     gwf = sim.gwf[model_number]
     sim_ws = pl.Path(sim.sim_path)
     fpth = sim_ws / f"gwf{model_number + 1}.dis.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
-    
+
     bobj = gwf.output.budget()
     # print(bobj.list_records())
     budget_records = bobj.get_data(kstpkper=(0, 0))
@@ -177,19 +224,19 @@ def check_model(sim, model_number):
     pd = model_budget["PERCENT_DIFFERENCE"][0]
     print("percent difference: ", model_budget["PERCENT_DIFFERENCE"])
     errmsg = f"Model percent difference is too large (pd)"
-    assert pd < 1.e-6, errmsg
+    assert pd < 1.0e-6, errmsg
 
     # check residual budget term in flowja diagonal position
     fja = bobj.get_data(text="FLOW-JA-FACE")[0].flatten()
     success = True
-    atol = 1.e-7
+    atol = 1.0e-7
     for ipos in ia[:-1]:
         print(ipos, fja[ipos])
         if fja[ipos] > atol:
             success = False
     assert success, f"flowja residual larger than tolerance ({atol})"
 
-    # ensure that the constant head outflow is equal to the 
+    # ensure that the constant head outflow is equal to the
     # specified recharge
     if model_number == 0:
         chdflows = bobj.get_data(text="chd")[0]
