@@ -14,11 +14,25 @@ cases = [
     "par_gwf_spl01",
 ]
 
+nr_domains = 4
 gwf_name = "gwf"
 
 # solver data
 nouter, ninner = 100, 300
 hclose, rclose, relax = 10e-9, 1e-3, 0.97
+
+# boundary stress period data
+h_left = 1.0
+h_right = 10.0
+
+# model spatial discretization
+nlay = 1
+nrow = 10
+ncol = 10
+
+# cell spacing
+delr = 100.0
+delc = 100.0
 
 
 def get_model(idx, test):
@@ -31,24 +45,11 @@ def get_model(idx, test):
     for i in range(nper):
         tdis_rc.append((1.0, 1, 1))
 
-    # model spatial discretization
-    nlay = 1
-    nrow = 10
-    ncol = 10
-
-    # cell spacing
-    delr = 100.0
-    delc = 100.0
-
     # top/bot of the aquifer
     tops = [0.0, -10.0]
 
     # hydraulic conductivity
     k11 = 10.0
-
-    # boundary stress period data
-    h_left = 1.0
-    h_right = 10.0
 
     # initial head
     h_start = 0.0
@@ -83,7 +84,6 @@ def get_model(idx, test):
         for irow in range(nrow)
         for ilay in range(nlay)
     ]
-    chd_spd_left = {0: left_chd}
 
     # right CHD:
     right_chd = [
@@ -91,7 +91,7 @@ def get_model(idx, test):
         for irow in range(nrow)
         for ilay in range(nlay)
     ]
-    chd_spd_right = {0: right_chd}
+    chd_spd = {0: left_chd + right_chd}
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwf_name, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -112,7 +112,7 @@ def get_model(idx, test):
         icelltype=0,
         k=k11,
     )
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=f"{gwf_name}.hds",
@@ -121,13 +121,17 @@ def get_model(idx, test):
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    # split the model in two
+    # split the model in nr_domains
     mfsplit = flopy.mf6.utils.Mf6Splitter(sim)
-
-    split_array = np.zeros((nrow, ncol), dtype=int)
-    split_array[:, int(ncol / 2) : ncol] = 1
+    split_array = mfsplit.optimize_splitting_mask(nr_domains)
     split_sim = mfsplit.split_model(split_array)
     split_sim.set_sim_path(test.workspace)
+
+    # balance the load
+    partitions = []
+    for idx, model_name in enumerate(split_sim.model_names):
+        partitions.append((model_name, idx))
+    hpc = flopy.mf6.ModflowUtlhpc(split_sim, partitions=partitions)
 
     return split_sim
 
@@ -138,7 +142,35 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    pass
+    import os
+
+    # define reference result:
+    def exact(x):
+        return h_left + (h_right - h_left) * (x - 0.5 * delr) / (
+            (ncol - 1) * delr
+        )
+
+    # load the finished sim:
+    sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
+
+    # compare model heads to exact value:
+    for model_name in sim.model_names:
+        fpth = os.path.join(test.workspace, f"{model_name}.hds")
+        hds = flopy.utils.HeadFile(fpth)
+        heads = hds.get_data()
+        fpth = os.path.join(test.workspace, f"{model_name}.dis.grb")
+        grb = flopy.mf6.utils.MfGrdFile(fpth)
+        xyc = grb.modelgrid.xycenters
+        xoff = grb.modelgrid.xoffset
+
+        for ilay in range(grb.modelgrid.nlay):
+            for irow in range(grb.modelgrid.nrow):
+                for icol in range(grb.modelgrid.ncol):
+                    xc = xyc[0][icol] + xoff
+                    ref_value = exact(xc)
+                    assert heads[ilay, irow, icol] == pytest.approx(
+                        ref_value
+                    ), f"Comparing for model {model_name}, cell ({ilay},{irow},{icol}) failed"
 
 
 @pytest.mark.parallel
@@ -152,6 +184,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
-        ncpus=2,
+        ncpus=nr_domains,
     )
     test.run()
