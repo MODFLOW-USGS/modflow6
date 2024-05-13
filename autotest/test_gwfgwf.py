@@ -25,9 +25,14 @@ import pytest
 from conftest import project_root_path
 from framework import TestFramework
 
-cases = ["gwfgwf01", "gwfgwf01ifmod"]
-ifmod = [False, True]
 data_path = project_root_path / "autotest" / "data"
+cases = [
+    "gwfgwf01",
+    "gwfgwf01ifmod",
+    "gwfgwf01_binary",
+    "gwfgwf01ifmod_binary",
+]
+ifmod = [False, True, False, True]
 
 
 def build_models(idx, test):
@@ -68,43 +73,7 @@ def get_sim(idx, dir):
 
     gwf0 = add_model(sim, "gwf1", top=0.0, add_chd=True, add_rch=True)
     gwf1 = add_model(sim, "gwf2", top=-1.0, add_chd=False, add_rch=False)
-    gwfgwf = add_gwfexchange(sim, idx)
-
-    exg_input = data_path / "gwfgwf_exg.txt"
-    exg_data = np.loadtxt(
-        exg_input,
-        dtype={
-            "names": (
-                "c11",
-                "c12",
-                "c13",
-                "c21",
-                "c22",
-                "c23",
-                "ihc",
-                "cl1",
-                "cl2",
-                "hwva",
-                "aux1",
-                "aux2",
-            ),
-            "formats": (
-                "i4",
-                "i4",
-                "i4",
-                "i4",
-                "i4",
-                "i4",
-                "i4",
-                "f8",
-                "f8",
-                "f8",
-                "f8",
-                "f8",
-            ),
-        },
-    )
-    exg_data.tofile(dir / "exg.bin")
+    gwfgwf = add_gwfexchange(sim, idx, dir)
 
     return sim
 
@@ -154,7 +123,8 @@ def add_model(sim, modelname, top, add_chd, add_rch):
     return gwf
 
 
-def add_gwfexchange(sim, idx):
+def add_gwfexchange(sim, idx, ws):
+    name = cases[idx]
     ncol = 3
     delr = 1.0
     delc = 1.0
@@ -174,13 +144,51 @@ def add_gwfexchange(sim, idx):
         ]
         for icol in range(ncol)
     ]
-    exgdata = {
-        "factor": 1.0,
-        "filename": "exg.bin",
-        "data": None,
-        "binary": True,
-        #"iprn": 1,
-    }
+    if name.endswith("_binary"):
+        exchangedata = {
+            "factor": 1.0,
+            "filename": "exg.bin",
+            "data": None,
+            "binary": True,
+        }
+        exg_fpath = data_path / "gwfgwf_exg.txt"
+        exg_fdata = np.loadtxt(
+            exg_fpath,
+            dtype={
+                "names": (
+                    "c11",
+                    "c12",
+                    "c13",
+                    "c21",
+                    "c22",
+                    "c23",
+                    "ihc",
+                    "cl1",
+                    "cl2",
+                    "hwva",
+                    "aux1",
+                    "aux2",
+                ),
+                "formats": (
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                ),
+            },
+        )
+        exg_fdata.tofile(ws / "exg.bin")
+    else:
+        exchangedata = gwfgwf_data
+
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -189,8 +197,7 @@ def add_gwfexchange(sim, idx):
         nexg=len(gwfgwf_data),
         exgmnamea="gwf1",
         exgmnameb="gwf2",
-        # exchangedata=gwfgwf_data,
-        exchangedata=exgdata,
+        exchangedata=exchangedata,
         auxiliary=["ANGLDEGX", "CDIST"],
         dev_interfacemodel_on=ifmod[idx],
     )
