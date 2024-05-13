@@ -18,7 +18,6 @@ module SourceCommonModule
   public :: idm_component_type, idm_subcomponent_type, idm_subcomponent_name
   public :: set_model_shape
   public :: get_shape_from_string
-  public :: mem_allocate_naux
   public :: file_ext
   public :: ifind_charstr
   public :: filein_fname
@@ -404,26 +403,6 @@ contains
     ! -- return
     return
   end subroutine set_model_shape
-
-  subroutine mem_allocate_naux(mempath)
-    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
-    character(len=*), intent(in) :: mempath
-    integer(I4B), pointer :: naux
-    integer(I4B) :: isize
-    !
-    ! -- initialize
-    nullify (naux)
-    !
-    ! -- allocate optional input scalars locally
-    call get_isize('NAUX', mempath, isize)
-    if (isize < 0) then
-      call mem_allocate(naux, 'NAUX', mempath)
-      naux = 0
-    end if
-    !
-    ! -- return
-    return
-  end subroutine mem_allocate_naux
 
   function ifind_charstr(array, str)
     use CharacterStringModule, only: CharacterStringType

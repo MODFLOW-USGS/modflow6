@@ -291,7 +291,7 @@ contains
     call mem_setptr(cl1, 'CL1', this%input_mempath)
     call mem_setptr(cl2, 'CL2', this%input_mempath)
     call mem_setptr(hwva, 'HWVA', this%input_mempath)
-    call mem_setptr(auxvar, 'AUX', this%input_mempath)
+    call mem_setptr(auxvar, 'AUXVAR', this%input_mempath)
     call mem_setptr(boundname, 'BOUNDNAME', this%input_mempath)
     ndim1 = size(cellidm1, dim=1)
     ndim2 = size(cellidm2, dim=1)

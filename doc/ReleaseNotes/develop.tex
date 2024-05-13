@@ -8,6 +8,7 @@
 		\item A new Groundwater Energy (GWE) transport model is introduced to the code base for simulating heat transport in the subsurface.  Additional information for activating the GWE model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  New example problems have been developed for testing and demonstrating GWE capabilities (in addition to other internal tests that help verify the accuracy of GWE); however, additional changes to the code and input may be necessary in response to user needs and further testing.
 	    \item A new capability has been introduced to create parameter layer export files of user input data for packages including DIS, DISV, IC, NPF, DSP(GWT), MIP(PRT), and CND(GWE).  The number of supported packages is expected to increase in the future.  The capability can be turned on with the package EXPORT\_ARRAY\_ASCII option.  The package parameter export set is pre-defined and currently focuses on griddata.  The number of parameters per package may also increase in the future.
     	\item Add capability to vary the hydraulic conductivity of the reach streambed (RHK) by stress period in the Streamflow Routing (SFR) package. RHK can be modified by stress period using the BEDK SFRSETTING. RHK can also be defined using a timeseries string in the PACKAGEDATA or PERIOD blocks.
+        \item Extend binary input support to all list style input blocks that have a regular shape and don't contain string fields (e.g. BOUNDNAME).
 	\end{itemize}
 
 	%\underline{EXAMPLES}

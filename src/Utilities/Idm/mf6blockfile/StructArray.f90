@@ -995,8 +995,9 @@ contains
           read (inunit, iostat=ierr) this%struct_vectors(j)%dbl1d(irow)
         case (3) ! -- memtype charstring
           !
-          errmsg = 'IDM unimplemented. StructArray::read_from_binary string &
-                   &types not supported for binary inputs.'
+          errmsg = 'List style binary inputs not supported &
+                   &for text columns, tag='// &
+                   trim(this%struct_vectors(j)%idt%tagname)//'.'
           call store_error(errmsg, terminate=.TRUE.)
           !
         case (4) ! -- memtype intvector
