@@ -107,20 +107,11 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-          init-shell: >-
-            bash
-            powershell
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         if: (!(runner.os == 'Windows' && matrix.parallel))
@@ -359,12 +350,16 @@ jobs:
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.6.0
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
         uses: fortran-lang/setup-fortran@v1
@@ -518,15 +513,16 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.6.0
         with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-          init-shell: >-
-            bash
-            powershell
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
         uses: fortran-lang/setup-fortran@v1

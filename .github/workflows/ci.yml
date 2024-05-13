@@ -52,6 +52,7 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.7.0
         with:
           pixi-version: v0.19.1
+          activate-environment: true
 
       - name: Check Fortran source formatting
         run: pixi run check-format
@@ -82,6 +83,7 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.7.0
         with:
           pixi-version: v0.19.1
+          activate-environment: true
 
       - name: Meson setup
         run: pixi run setup -Dwerror=true builddir
@@ -128,6 +130,7 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
@@ -136,8 +139,8 @@ jobs:
       - name: Build test-drive
         working-directory: test-drive
         run: |
-          pixi run --manifest-path=../modflow6/pixi.toml meson setup builddir --prefix=$(pwd) --libdir=lib
-          pixi run --manifest-path=../modflow6/pixi.toml meson install -C builddir
+          meson setup builddir --prefix=$(pwd) --libdir=lib
+          meson install -C builddir
           echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build modflow6
@@ -227,6 +230,7 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
@@ -353,6 +357,7 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
@@ -444,6 +449,7 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
+          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
