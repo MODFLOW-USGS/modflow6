@@ -264,8 +264,8 @@ jobs:
         working-directory: .github/compat
         id: merge-reports
         run: |
-          python ../common/wide_compat_reports.py "long_comp.csv" "comp.csv"
-          python ../common/wide_compat_reports.py "long_test.csv" "test.csv"
+          python ../common/widen_compat_reports.py "long_comp.csv" "comp.csv"
+          python ../common/widen_compat_reports.py "long_test.csv" "test.csv"
 
       # only upload wide CSVs and Markdown tables
       - name: Upload artifacts
