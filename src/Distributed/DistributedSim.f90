@@ -149,6 +149,8 @@ contains
       else
         ! set balance from HPC file
         call this%set_load_balance_from_input()
+        ! check if valid configuration
+        call this%validate_load_balance()
       end if
     else
       ! no HPC file present
@@ -160,9 +162,6 @@ contains
         call this%set_load_balance_default()
       end if
     end if
-
-    ! check if valid configuration
-    call this%validate_load_balance()
 
     mranks => this%model_ranks
 
