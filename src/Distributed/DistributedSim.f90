@@ -1,9 +1,15 @@
 module DistributedSimModule
   use KindModule, only: I4B, LGP
+  use SimVariablesModule, only: idm_context, nr_procs, proc_id, errmsg, warnmsg
   use ConstantsModule, only: LENMEMPATH, LENMODELNAME, LINELENGTH, LENPACKAGETYPE
   use ArrayHandlersModule, only: ifind
   use CharacterStringModule, only: CharacterStringType
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use SimModule, only: store_error, store_error_filename, count_errors, &
+                       store_warning
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_setptr, &
+                                 mem_print_detailed, get_isize
+  use MemoryHelperModule, only: create_mem_path
+
   implicit none
   private
 
@@ -24,6 +30,7 @@ module DistributedSimModule
     procedure, private :: create_load_mask
     procedure, private :: set_load_balance_from_input
     procedure, private :: set_load_balance_default
+    procedure, private :: validate_load_balance
   end type
 
   ! singleton, private member
@@ -47,10 +54,6 @@ contains
   !> Create the distributed simulation object from the simulation input ctx
   !<
   subroutine create(this)
-    use ConstantsModule, only: LENMEMPATH
-    use SimVariablesModule, only: idm_context
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
     class(DistributedSimType) :: this
     ! local
     character(len=LENMEMPATH) :: input_mempath
@@ -89,7 +92,6 @@ contains
   !> @brief Create a load mask for IDM from the load balance array
   !<
   subroutine create_load_mask(this)
-    use SimVariablesModule, only: proc_id
     class(DistributedSimType) :: this
     ! local
     integer(I4B), dimension(:), pointer :: model_ranks => null() !< the load balance
@@ -116,10 +118,6 @@ contains
   !> @brief Get the model load balance for the simulation
   !<
   function get_load_balance(this) result(mranks)
-    use SimModule, only: store_warning
-    use SimVariablesModule, only: idm_context, warnmsg, nr_procs
-    use MemoryManagerModule, only: get_isize
-    use MemoryHelperModule, only: create_mem_path
     class(DistributedSimType) :: this !< this distributed sim instance
     integer(I4B), dimension(:), pointer :: mranks !< the load balance: array of ranks per model id
     ! local
@@ -163,6 +161,9 @@ contains
       end if
     end if
 
+    ! check if valid configuration
+    call this%validate_load_balance()
+
     mranks => this%model_ranks
 
   end function get_load_balance
@@ -170,10 +171,6 @@ contains
   !> @brief Load load balance from the input configuration
   !<
   subroutine set_load_balance_from_input(this)
-    use SimVariablesModule, only: idm_context, nr_procs, errmsg
-    use SimModule, only: store_error, store_error_filename, count_errors
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr, mem_print_detailed
     class(DistributedSimType) :: this !< this distributed sim instance
     ! local
     character(len=LENMEMPATH) :: simnam_mempath, hpc_mempath
@@ -269,10 +266,6 @@ contains
   !! processes in a parallel run. Expects an array sized
   !< to the number of models in the global simulation
   subroutine set_load_balance_default(this)
-    use SimModule, only: store_error
-    use SimVariablesModule, only: idm_context, nr_procs, errmsg
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
     class(DistributedSimType) :: this !< this distributed sim. instance
     ! local
     integer(I4B) :: im, imm, ie, ip, cnt
@@ -393,6 +386,70 @@ contains
     deallocate (nr_models_proc)
 
   end subroutine set_load_balance_default
+
+  !> @brief Check validity of load balance configuration
+  !<
+  subroutine validate_load_balance(this)
+    class(DistributedSimType) :: this
+    character(len=LENMEMPATH) :: input_mempath
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: etypes !< exg types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_a !< model a names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_b !< model b names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: hpc_names !< helper array to get hpc filename
+    integer(I4B) :: ie
+    integer(I4B) :: idx_a, idx_b
+    integer(I4B) :: rank_a, rank_b
+    integer(I4B) :: nr_exchanges
+    character(len=LINELENGTH) :: hpc_filename !< the HPC option file
+    character(len=LENMODELNAME) :: name_a, name_b
+    character(len=LINELENGTH) :: exg_type
+
+    ! load IDM data
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mnames, 'MNAME', input_mempath)
+    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
+    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
+    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+    call mem_setptr(hpc_names, 'HPC6_FILENAME', input_mempath)
+
+    ! FILEIN options give an array, so take the first:
+    hpc_filename = hpc_names(1)
+
+    nr_exchanges = size(etypes)
+
+    ! loop over exchanges
+    do ie = 1, nr_exchanges
+      if (etypes(ie) == 'GWF6-GWT6' .or. etypes(ie) == 'GWF6-GWE6') then
+        idx_a = ifind(mnames, emnames_a(ie))
+        idx_b = ifind(mnames, emnames_b(ie))
+        rank_a = this%model_ranks(idx_a)
+        rank_b = this%model_ranks(idx_b)
+        if (rank_a /= rank_b) then
+          name_a = emnames_a(ie)
+          name_b = emnames_b(ie)
+          exg_type = etypes(ie)
+          write (errmsg, '(7a)') "HPC input error: models ", &
+            trim(name_a), " and ", trim(name_b), " with a ", &
+            trim(exg_type), " coupling have to be assigned to the same rank"
+          call store_error(errmsg)
+        end if
+      end if
+    end do
+
+    if (count_errors() > 0) then
+      call store_error_filename(hpc_filename)
+    end if
+
+  end subroutine validate_load_balance
 
   !> @brief clean up
   !<
