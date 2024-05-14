@@ -2,7 +2,7 @@ module MathUtilModule
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use ConstantsModule, only: MAXCHARLEN, LENHUGELINE, &
-                             DZERO, DPREC, DSAME, &
+                             DZERO, DPREC, DSAME, DHALF, DONE, DTWO, DTHREE, &
                              LINELENGTH, LENHUGELINE, VSUMMARY
 
   implicit none
@@ -156,8 +156,16 @@ contains
     fc = f(c)
     t = 5d-1
 
+    ! check whether a or b is the solution
+    if (fa == DZERO) then
+      z = a
+      return
+    else if (fb == DZERO) then
+      z = b
+      return
+    end if
+
     do while (.true.)
-      ! xt = a + t*(b - a)
       xt = a - t * aminusb
       ft = f(xt)
       if (sign(ft, fa) == ft) then
@@ -183,29 +191,17 @@ contains
         xm = b
         fm = fb
       end if
-      tol = 2d0 * epsm * dabs(xm) + epsa
-      ! tl = tol/dabs(b - c)
+      tol = DTWO * epsm * dabs(xm) + epsa
       tl = tol / dabs(cminusb)
-      if ((tl > 5d-1) .or. (fm == 0d0)) then
+      if ((tl > 5d-1) .or. (fm == DZERO)) then
         z = xm
         return
       end if
-      ! xi = (a - b)/(c - b)
       xi = aminusb / cminusb
-      ! phi = (fa - fb)/(fc - fb)
       phi = faminusfb / fcminusfb
-      philo = 1d0 - dsqrt(1d0 - xi)
+      philo = DONE - dsqrt(DONE - xi)
       phihi = dsqrt(xi)
       if ((phi > philo) .and. (phi < phihi)) then
-        ! rab = fa/(fb - fa)
-        ! rab = -fa/faminusfb
-        ! rcb = fc/(fb - fc)
-        ! rcb = -fc/fcminusfb
-        ! rac = fa/(fc - fa)
-        ! rbc = fb/(fc - fb)
-        ! rbc = fb/fcminusfb
-        ! t = rab*rcb + rac*rbc*(c - a)/(b - a)
-        ! t = rab*rcb - rac*rbc*(c - a)/aminusb
         racb = fa / fcminusfb
         rcab = fc / faminusfb
         rbca = fb / (fc - fa)
@@ -213,7 +209,7 @@ contains
         if (t < tl) then
           t = tl
         else
-          tlc = 1d0 - tl
+          tlc = DONE - tl
           if (t > tlc) then
             t = tlc
           end if
@@ -221,8 +217,6 @@ contains
       else
         t = 5d-1
       end if
-      ! if (t < tl) t = tl
-      ! if (t > 1d0 - tl) t = 1d0 - tl
     end do
   end function
 
@@ -266,16 +260,24 @@ contains
     logical(LGP) :: rs
 
     eps = epsilon(ax)
-    tol1 = eps + 1.0d0
+    tol1 = eps + DONE
 
     a = ax
     b = bx
     fa = f(a)
     fb = f(b)
 
-    ! check that f(ax) and f(bx) have different signs
-    if (.not. ((fa .eq. 0.0d0 .or. fb .eq. 0.0d0) .or. &
-               (fa * (fb / dabs(fb)) .le. 0.0d0))) &
+    ! check if a or b is the solution
+    if (fa == DZERO) then
+      z = a
+      return
+    else if (fb == DZERO) then
+      z = b
+      return
+    end if
+
+    ! check that f(ax) and f(bx) have opposite sign
+    if (fa * (fb / dabs(fb)) .ge. DZERO) &
       call pstop(1, 'f(ax) and f(bx) do not have different signs,')
 
     rs = .true. ! var reset
@@ -296,9 +298,9 @@ contains
         fc = fa
       end if
 
-      tol1 = 2.0d0 * eps * dabs(b) + 0.5d0 * tol
-      xm = 0.5d0 * (c - b)
-      if ((dabs(xm) .le. tol1) .or. (fb .eq. 0.0d0)) then
+      tol1 = DTWO * eps * dabs(b) + DHALF * tol
+      xm = DHALF * (c - b)
+      if ((dabs(xm) .le. tol1) .or. (fb .eq. DZERO)) then
         z = b
         return
       end if
@@ -310,23 +312,23 @@ contains
           ! inverse quadratic interpolation
           q = fa / fc
           r = fb / fc
-          p = s * (2.0d0 * xm * q * (q - r) - (b - a) * (r - 1.0d0))
-          q = (q - 1.0d0) * (r - 1.0d0) * (s - 1.0d0)
+          p = s * (DTWO * xm * q * (q - r) - (b - a) * (r - DONE))
+          q = (q - DONE) * (r - DONE) * (s - DONE)
         else
           ! linear interpolation
-          p = 2.0d0 * xm * s
-          q = 1.0d0 - s
+          p = DTWO * xm * s
+          q = DONE - s
         end if
 
-        if (p .le. 0.0d0) then
+        if (p .le. DZERO) then
           p = -p
         else
           q = -q
         end if
         s = e
         e = d
-        if (((2.0d0 * p) .ge. (3.0d0 * xm * q - dabs(tol1 * q))) .or. &
-            (p .ge. dabs(0.5d0 * s * q))) then
+        if (((DTWO * p) .ge. (DTHREE * xm * q - dabs(tol1 * q))) .or. &
+            (p .ge. dabs(DHALF * s * q))) then
           d = xm
           e = d
         else
@@ -341,7 +343,7 @@ contains
       fa = fb
 
       if (dabs(d) .le. tol1) then
-        if (xm .le. 0.0d0) then
+        if (xm .le. DZERO) then
           b = b - tol1
         else
           b = b + tol1
@@ -351,7 +353,7 @@ contains
       end if
 
       fb = f(b)
-      rs = (fb * (fc / dabs(fc))) .gt. 0.0d0
+      rs = (fb * (fc / dabs(fc))) .gt. DZERO
     end do
   end function zero_br
 
