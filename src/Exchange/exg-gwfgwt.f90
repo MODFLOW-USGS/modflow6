@@ -328,10 +328,10 @@ contains
           ! sufficient evidence of equality
           areEqual = gwfConn%prim_exchange%nexg == gwtConn%prim_exchange%nexg
           if (areEqual) then
-          areEqual = all(gwfConn%prim_exchange%nodem1 == &
-                         gwtConn%prim_exchange%nodem1)
-          areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
-                                        gwtConn%prim_exchange%nodem2)
+            areEqual = all(gwfConn%prim_exchange%nodem1 == &
+                           gwtConn%prim_exchange%nodem1)
+            areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
+                                          gwtConn%prim_exchange%nodem2)
           end if
           if (areEqual) then
             ! same DIS, same exchange: link and go to next GWT conn.
