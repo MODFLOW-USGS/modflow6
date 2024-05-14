@@ -275,8 +275,6 @@ contains
 
   !> @brief Loads a triangular subcell from the polygonal cell
   subroutine load_subcell(this, particle, subcell)
-    ! -- modules
-    use ParticleModule, only: get_particle_id
     ! -- dummy
     class(MethodCellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -354,8 +352,7 @@ contains
           end if
         end do
         if (isc .le. 0) then
-          print *, "error -- initial triangle not found for particle ", &
-            get_particle_id(particle), " in cell ", ic
+          print *, "error -- initial triangle not found in cell ", ic
           call pstop(1)
         else
           ! subcellTri%isubcell = isc

@@ -19,6 +19,8 @@ excludedirs = [
     PROJ_ROOT / "src" / "Utilities" / "Libraries" / "sparsekit",
     PROJ_ROOT / "src" / "Utilities" / "Libraries" / "sparskit2",
     PROJ_ROOT / "utils" / "mf5to6",
+    PROJ_ROOT / "utils" / "zonebudget" / "msvs",
+    PROJ_ROOT / "msvs"
 ]
 
 # exclude these files from checks

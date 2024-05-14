@@ -84,8 +84,6 @@ contains
   !! this context and for any modifications or errors.
   !<
   subroutine track_subcell(this, subcell, particle, tmax)
-    ! modules
-    use ParticleModule, only: get_particle_id
     ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     class(SubcellRectType), intent(in) :: subcell
