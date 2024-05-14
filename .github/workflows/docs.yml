@@ -87,8 +87,8 @@ jobs:
         run: sudo ./install.sh --all-users
 
       - name: Test building files from dfn's for LaTeX
-        working-directory: modflow6/autotest
-        run: pixi run pytest -v build_mfio_tex.py
+        working-directory: modflow6/distribution
+        run: pixi run pytest -v build_docs.py::test_build_mf6io_tex_from_dfn
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
