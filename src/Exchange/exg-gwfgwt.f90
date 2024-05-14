@@ -326,10 +326,13 @@ contains
           !
           ! for now, connecting the same nodes nrs will be
           ! sufficient evidence of equality
-          areEqual = all(gwfConn%prim_exchange%nodem1 == &
-                         gwtConn%prim_exchange%nodem1)
-          areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
-                                        gwtConn%prim_exchange%nodem2)
+          areEqual = gwfConn%prim_exchange%nexg == gwtConn%prim_exchange%nexg
+          if (areEqual) then
+            areEqual = all(gwfConn%prim_exchange%nodem1 == &
+                           gwtConn%prim_exchange%nodem1)
+            areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
+                                          gwtConn%prim_exchange%nodem2)
+          end if
           if (areEqual) then
             ! same DIS, same exchange: link and go to next GWT conn.
             write (iout, '(/6a)') 'Linking exchange ', &
