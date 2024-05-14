@@ -204,17 +204,10 @@ contains
                            alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
                            vziodz, az, lbary)
 
-    ! -- Check for no exit face
+    ! -- Subcell with no exit face, terminate the particle
     if ((itopbotexit .eq. 0) .and. (itrifaceexit .eq. 0)) then
-      ! exitFace = 0
-      ! particle%iboundary(3) = exitFace
-      ! particle%istatus = 5
-      ! return
-
-      ! contact the developer situation (for now? always?)
-      print *, "Subcell with no exit face: particle", get_particle_id(particle), &
-        "cell", particle%idomain(2)
-      call pstop(1)
+      call this%save(particle, reason=9)
+      return
     end if
 
     ! -- Determine (earliest) exit face and corresponding travel time to exit

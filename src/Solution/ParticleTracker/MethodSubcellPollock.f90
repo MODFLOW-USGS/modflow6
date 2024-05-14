@@ -135,12 +135,10 @@ contains
     statusVZ = calculate_dt(subcell%vz1, subcell%vz2, subcell%dz, &
                             initialZ, vz, dvzdz, dtexitz)
 
-    ! -- Subcells should never be strong sinks, contact the developer situation
+    ! -- Subcell with no exit face, terminate the particle
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
-      print *, "Subcell with no exit face:", &
-        "particle", get_particle_id(particle), &
-        "cell", particle%idomain(2)
-      call pstop(1)
+      call this%save(particle, reason=9)
+      return
     end if
 
     ! -- Determine (earliest) exit face and corresponding travel time to exit
