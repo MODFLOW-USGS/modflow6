@@ -442,8 +442,6 @@ contains
           if (this%stoptime < particle%tstop) particle%tstop = this%stoptime
         end if
         particle%ttrack = particle%trelease
-        particle%idomain(0) = 0
-        particle%iboundary(0) = 0
         particle%idomain(1) = 0
         particle%iboundary(1) = 0
         particle%idomain(2) = ic

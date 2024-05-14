@@ -115,8 +115,6 @@ contains
     call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
     call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
     call mem_allocate(this%name, LENBOUNDNAME, np, 'PLNAME', mempath)
-    call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
-    call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
     call mem_allocate(this%icu, np, 'PLICU', mempath)
     call mem_allocate(this%ilay, np, 'PLILAY', mempath)
     call mem_allocate(this%izone, np, 'PLIZONE', mempath)
@@ -129,6 +127,8 @@ contains
     call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
+    call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
+    call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine create_particle_store
 
   !> @brief Deallocate particle arrays
@@ -140,8 +140,6 @@ contains
     call mem_deallocate(this%iprp, 'PLIPRP', mempath)
     call mem_deallocate(this%irpt, 'PLIRPT', mempath)
     call mem_deallocate(this%name, 'PLNAME', mempath)
-    call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
-    call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
     call mem_deallocate(this%icu, 'PLICU', mempath)
     call mem_deallocate(this%ilay, 'PLILAY', mempath)
     call mem_deallocate(this%izone, 'PLIZONE', mempath)
@@ -154,12 +152,12 @@ contains
     call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
+    call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
+    call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
   end subroutine destroy_store
 
   !> @brief Reallocate particle arrays
   subroutine resize_store(this, np, mempath)
-    ! -- modules
-    use ArrayHandlersModule, only: ExpandArray2D
     ! -- dummy
     class(ParticleStoreType), intent(inout) :: this !< particle store
     integer(I4B), intent(in) :: np !< number of particles
