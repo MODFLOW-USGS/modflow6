@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.10.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -87,6 +87,7 @@ OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/CharString.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \
@@ -99,10 +100,10 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/CharString.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
+$(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
@@ -159,6 +160,7 @@ $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/IdmUtlDfnSelector.o \
 $(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmPrtDfnSelector.o \
@@ -424,6 +426,7 @@ $(OBJDIR)/SolutionFactory.o \
 $(OBJDIR)/exg-gwfprt.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
+$(OBJDIR)/DistributedSim.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \

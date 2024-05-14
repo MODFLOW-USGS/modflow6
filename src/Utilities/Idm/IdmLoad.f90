@@ -111,6 +111,7 @@ contains
     end do
     !
     ! -- deallocate input context SIM paths
+    call memorylist_remove('UTL', 'HPC', idm_context)
     call memorylist_remove('SIM', 'TDIS', idm_context)
     call memorylist_remove('SIM', 'NAM', idm_context)
     call memorylist_remove(component='SIM', context=idm_context)
@@ -207,19 +208,21 @@ contains
 
   !> @brief load model namfiles and model package files
   !<
-  subroutine load_models(model_loadmask, iout)
+  subroutine load_models(iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
+    use DistributedSimModule, only: DistributedSimType, get_dsim
     use ModelPackageInputsModule, only: ModelPackageInputsType
     use SourceCommonModule, only: idm_component_type
     use SourceLoadModule, only: load_modelnam
     ! -- dummy
-    integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
     ! -- local
+    type(DistributedSimType), pointer :: ds
+    integer(I4B), dimension(:), pointer :: model_loadmask
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mtypes !< model types
@@ -231,6 +234,10 @@ contains
     character(len=LENMODELNAME) :: mname
     type(ModelPackageInputsType), allocatable :: model_pkg_inputs
     integer(I4B) :: n
+    !
+    ! -- get model mask
+    ds => get_dsim()
+    model_loadmask => ds%get_load_mask()
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -275,19 +282,21 @@ contains
 
   !> @brief load exchange files
   !<
-  subroutine load_exchanges(model_loadmask, iout)
+  subroutine load_exchanges(iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate, &
                                    mem_deallocate, get_isize
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
+    use DistributedSimModule, only: DistributedSimType, get_dsim
     use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
     use SourceLoadModule, only: create_input_loader, remote_model_ndim
     ! -- dummy
-    integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
     ! -- local
+    type(DistributedSimType), pointer :: ds
+    integer(I4B), dimension(:), pointer :: model_loadmask
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< exg types
     type(CharacterStringType), dimension(:), contiguous, &
@@ -312,6 +321,10 @@ contains
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
     integer(I4B) :: n, m1_idx, m2_idx, irem, isize
+    !
+    ! -- get model mask
+    ds => get_dsim()
+    model_loadmask => ds%get_load_mask()
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)

@@ -7,6 +7,7 @@ external_libraries = files(
 )
 
 modflow_sources = files(
+    'Distributed' / 'DistributedSim.f90',
     'Distributed' / 'IndexMap.f90',
     'Distributed' / 'InterfaceMap.f90',
     'Distributed' / 'Mapper.f90',
@@ -92,6 +93,7 @@ modflow_sources = files(
     'Idm' / 'prt-disidm.f90',
     'Idm' / 'prt-disvidm.f90',
     'Idm' / 'prt-mipidm.f90',
+    'Idm' / 'utl-hpcidm.f90',
     'Idm' / 'selector' / 'IdmDfnSelector.f90',
     'Idm' / 'selector' / 'IdmExgDfnSelector.f90',
     'Idm' / 'selector' / 'IdmGweDfnSelector.f90',
@@ -100,6 +102,7 @@ modflow_sources = files(
     'Idm' / 'selector' / 'IdmSwfDfnSelector.f90',
     'Idm' / 'selector' / 'IdmPrtDfnSelector.f90',
     'Idm' / 'selector' / 'IdmSimDfnSelector.f90',
+    'Idm' / 'selector' / 'IdmUtlDfnSelector.f90',
     'Model' / 'Connection' / 'ConnectionBuilder.f90',
     'Model' / 'Connection' / 'CellWithNbrs.f90',
     'Model' / 'Connection' / 'CsrUtils.f90',
