@@ -6,7 +6,7 @@ type integer
 reader urword
 optional true
 longname zero method
-description the root finding algorithm to solve ternary subcells.  0 euler, 1 brent, 2 chandrupatla, 3 test.
+description the root finding algorithm to solve ternary subcells.  1 brent, 2 chandrupatla.
 
 block options
 name export_array_ascii

@@ -7,7 +7,7 @@ module MathUtilModule
 
   implicit none
   private
-  public :: f1d, is_close, mod_offset, zero_ch, zero_br, zero_test, &
+  public :: f1d, is_close, mod_offset, zero_ch, zero_br, &
             get_perturbation
 
   interface mod_offset
@@ -354,86 +354,6 @@ contains
       rs = (fb * (fc / dabs(fc))) .gt. 0.0d0
     end do
   end function zero_br
-
-  !> @brief Compute a zero of f(x) in the interval (x0, x1) with a test method.
-  function zero_test(x0, x1, f, epsa) result(z)
-    ! -- dummy
-    real(DP) :: x0, x1
-    procedure(f1d), pointer, intent(in) :: f
-    real(DP) :: epsa
-    real(DP) :: z
-    ! -- local
-    real(DP) :: epsm
-    real(DP) :: ema, emb
-    real(DP) :: f0
-    real(DP) :: tol
-    real(DP) :: xa, xb, xl
-    real(DP) :: ya, yb, yl
-    logical(LGP) :: retainedxa, retainedxb
-
-    epsm = epsilon(x0)
-    f0 = f(x0)
-    if (f0 .eq. 0d0) then
-      z = x0
-      return
-    else if (f0 .lt. 0d0) then
-      ya = x0
-      yb = x1
-      xa = f0
-      xb = f(yb)
-    else
-      ya = x1
-      yb = x0
-      xa = f(ya)
-      xb = f0
-    end if
-    ema = 1d0
-    emb = 1d0
-    retainedxa = .false.
-    retainedxb = .false.
-
-    do while (.true.)
-      ! yl = ya - xa*(yb - ya)/(xb - xa)
-      yl = (ya * xb * emb - yb * xa * ema) / (xb * emb - xa * ema)
-      tol = 4d0 * epsm * dabs(yl) + epsa
-      if (dabs(yb - ya) .le. tol) then
-        z = yl
-        return
-      else
-        xl = f(yl)
-        if (xl .eq. 0d0) then
-          z = yl
-          return
-        else if (xl .gt. 0d0) then
-          if (retainedxa) then
-            ! ema = 1d0 - xl/xb
-            ! if (ema <= 0d0) ema = 5d-1
-            ema = 5d-1 ! kluge illinois
-          else
-            ema = 1d0
-          end if
-          emb = 1d0
-          yb = yl
-          xb = xl
-          retainedxa = .true.
-          retainedxb = .false.
-        else
-          if (retainedxb) then
-            ! emb = 1d0 - xl/xa
-            ! if (emb <= 0d0) emb = 5d-1
-            emb = 5d-1 ! kluge illinois
-          else
-            emb = 1d0
-          end if
-          ema = 1d0
-          ya = yl
-          xa = xl
-          retainedxa = .false.
-          retainedxb = .true.
-        end if
-      end if
-    end do
-  end function
 
   !> @brief Calculate a numerical perturbation given the value of x
   !!

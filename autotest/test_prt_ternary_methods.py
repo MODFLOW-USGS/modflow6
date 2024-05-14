@@ -40,16 +40,12 @@ from test_prt_triangle import (
 
 simname = "prtter"
 cases = [
-    f"{simname}eu",
     f"{simname}br",
     f"{simname}ch",
-    # f"{simname}test",
 ]
 methods = [
-    0,  # euler
     1,  # brent
     2,  # chandrupatla
-    # 3    # test method (doesn't always converge??)
 ]
 
 
