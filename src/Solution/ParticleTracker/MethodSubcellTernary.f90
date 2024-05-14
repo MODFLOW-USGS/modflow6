@@ -6,7 +6,7 @@ module MethodSubcellTernaryModule
   use CellModule, only: CellType
   use SubcellModule, only: SubcellType
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
-  use ParticleModule, only: ParticleType, get_particle_id
+  use ParticleModule, only: ParticleType
   use TrackModule, only: TrackFileControlType
   use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
   use PrtFmiModule, only: PrtFmiType
