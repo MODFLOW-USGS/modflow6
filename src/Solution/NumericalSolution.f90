@@ -692,6 +692,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
+            if (nr_procs > 1) then
+              call append_processor_id(fname, proc_id)
+            end if
             this%iptcout = getunit()
             call openfile(this%iptcout, iout, fname, 'PTC-OUT', &
                           filstat_opt='REPLACE')
