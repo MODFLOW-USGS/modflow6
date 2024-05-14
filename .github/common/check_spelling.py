@@ -26,12 +26,6 @@ excludedirs = [
 # exclude these files from checks
 excludefiles = []
 
-# shared state
-manager = Manager()
-failures = manager.Queue()
-checks = manager.Value("checks", 0)
-lock = manager.Lock()
-
 # commands
 codespell = "codespell --ignore-words=.codespell.ignore"
 
@@ -47,7 +41,7 @@ def excluded(path) -> bool:
     return False
 
 
-def check_spelling(path, write_changes=False, verbose=False):
+def check_spelling(path, lock, checks, failures, write_changes=False, verbose=False):
     path = Path(path)
     if verbose:
         print(f"Checking spelling: {path}")
@@ -62,7 +56,7 @@ def check_spelling(path, write_changes=False, verbose=False):
         checks.value += 1
 
 
-def report(duration: float) -> bool:
+def report(checks, failures, duration: float) -> bool:
     def pop(q):
         return q.get(block=False)
 
@@ -118,8 +112,14 @@ if __name__ == "__main__":
     write = args.write_changes
     verbose = args.verbose
 
+    # shared state
+    manager = Manager()
+    lock = manager.Lock()
+    checks = manager.Value("checks", 0)
+    failures = manager.Queue()
+
     if path.is_file():
-        check_spelling(path, write, verbose)
+        check_spelling(path, lock, checks, failures, write, verbose)
     else:
         with Pool(cpu_count()) as pool:
             files = []
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                 msg = f"Checking {len(files)} files in directory: {path}"
                 print(msg)
                 print("".join(repeat("-", len(msg))))
-            pool.starmap(check_spelling, [(f, write, verbose) for f in files])
+            pool.starmap(check_spelling, [(f, lock, checks, failures, write, verbose) for f in files])
 
     stop = timeit.default_timer()
-    sys.exit(0 if report(stop - start) else 1)
+    sys.exit(0 if report(checks, failures, stop - start) else 1)
