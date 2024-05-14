@@ -1,12 +1,13 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DONE
+  use ConstantsModule, only: DZERO, DONE, DHALF
   implicit none
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, compose
+            skew, transform, compose, &
+            area
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -362,4 +363,27 @@ contains
     if (present(invert_opt)) invert = invert_opt
   end subroutine defaults
 
+  !> @brief Calculate polygon area, with vertices given in CW or CCW order.
+  function area(xv, yv, cw) result(a)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: xv
+    real(DP), dimension(:), intent(in) :: yv
+    logical(LGP), intent(in), optional :: cw
+    ! result
+    real(DP) :: a
+    integer(I4B) :: s
+
+    if (present(cw)) then
+      if (cw) then
+        s = 1
+      else
+        s = -1
+      end if
+    else
+      s = 1
+    end if
+
+    a = -DHALF * sum(xv(:) * cshift(yv(:), s) - cshift(xv(:), s) * yv(:))
+
+  end function area
 end module GeomUtilModule
