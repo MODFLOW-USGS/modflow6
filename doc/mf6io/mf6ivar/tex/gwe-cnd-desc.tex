@@ -7,7 +7,7 @@
 
 \item \texttt{XT3D\_RHS}---add xt3d terms to right-hand side, when possible.  This option uses less memory, but may require more iterations.
 
-\item \texttt{EXPORT\_ARRAY\_ASCII}---keyword that specifies input grid arrays, which already support the layered keyword, should be written to layered ascii output files.
+\item \texttt{EXPORT\_ARRAY\_ASCII}---keyword that specifies input griddata arrays should be written to layered ascii output files.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
@@ -23,7 +23,7 @@
 
 \item \texttt{atv}---transverse dispersivity when flow is in vertical direction.  If flow is strictly vertical and directed in the z direction, then this value controls spreading in the x and y directions.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH2.
 
-\item \texttt{ktw}---thermal conductivity of the simulated fluid
+\item \texttt{ktw}---thermal conductivity of the simulated fluid.   Note that the CND Package does not account for the tortuosity of the flow paths when solving for the conductive spread of heat.  If tortuosity plays an important role in the thermal conductivity calculation, its effect should be reflected in the value specified for KTW.
 
 \item \texttt{kts}---thermal conductivity of the aquifer material
 

@@ -1,4 +1,4 @@
-\begin{thebibliography}{41}
+\begin{thebibliography}{42}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -186,6 +186,13 @@ Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022,
   Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A61, 56 p.},
   \url{https://doi.org/10.3133/tm6A61}.
+
+\bibitem[{Langevin and others(2024)Langevin, Hughes, Provost, Russcher, and
+  Panday}]{langevin2024}
+Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J., and Panday, Sorab,
+  2024, {MODFLOW} as a configurable multi-model hydrologic simulator:
+  Groundwater, v.~62, no.~1, p.~111--123,
+  \url{https://doi.org/10.1111/gwat.13351}.
 
 \bibitem[{Leake and Galloway(2007)}]{leake2007modflow}
 Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model---User guide

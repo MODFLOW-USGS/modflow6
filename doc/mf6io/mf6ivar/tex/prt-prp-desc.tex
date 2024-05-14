@@ -5,6 +5,8 @@
 \begin{description}
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of release-point cells.
 
+\item \texttt{LOCAL\_Z}---indicates that rptz defines the local z coordinate of the release point within the cell, with value between 0 and 1 (inclusive).  If the cell is unsaturated at release time, the z coordinate is computed relative to the water table rather than the top of the cell.
+
 \item \texttt{TRACK}---keyword to specify that record corresponds to track.
 
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.

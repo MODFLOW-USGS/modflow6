@@ -1,5 +1,6 @@
 BEGIN OPTIONS
   [BOUNDNAMES]
+  [LOCAL_Z]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]
   [STOPTIME <stoptime>]
