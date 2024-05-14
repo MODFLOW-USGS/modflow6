@@ -1,5 +1,7 @@
 """
 Test for splitting parallel MODFLOW GWF model
+and using the HPC input file with partitioning 
+to run the simulation on 4 domains.
 """
 
 import pathlib as pl
@@ -14,7 +16,6 @@ cases = [
     "par_gwf_spl01",
 ]
 
-nr_domains = 4
 gwf_name = "gwf"
 
 # solver data
@@ -121,9 +122,18 @@ def get_model(idx, test):
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    # split the model in nr_domains
+    # split the model in 4 domains
     mfsplit = flopy.mf6.utils.Mf6Splitter(sim)
-    split_array = mfsplit.optimize_splitting_mask(nr_domains)
+    split_array = np.zeros(shape=(nrow, ncol))
+    for irow in range(nrow):
+        for icol in range(ncol):
+            idomain = 0
+            if irow > nrow / 2:
+                idomain = idomain + 2
+            if icol > ncol / 2:
+                idomain = idomain + 1
+            split_array[irow, icol] = idomain
+    print(split_array)
     split_sim = mfsplit.split_model(split_array)
     split_sim.set_sim_path(test.workspace)
 
@@ -184,6 +194,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
-        ncpus=nr_domains,
+        ncpus=4,
     )
     test.run()

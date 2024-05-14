@@ -1,18 +1,8 @@
 """
 Test for parallel MODFLOW with the HPC input file
-
-
-   [M1ny] |  ...  |   ...  | [Mnxny]
-  -----------------------------------
-     ...  |  ...  |   ...  |   ...
-  -----------------------------------
-    [M12] |  ...  |   ...  |   ...
-  -----------------------------------
-    [M11] | [M21] |   ...  | [Mnx1]
-
-with constant head set at the lower-left corner.
-This constant head should reach all domains,
-no matter the topology of partitions
+for a 3x3 grid of models with constant head set at 
+the lower-left corner. This constant head should 
+reach all domains, no matter the topology of partitions
 
 The test is to provide a HPC input file where the
 models are distributed over available processors
