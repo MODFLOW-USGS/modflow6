@@ -2,7 +2,7 @@ module TernarySolveTrack
 
   use KindModule, only: I4B, DP, LGP
   use GeomUtilModule, only: skew
-  use MathUtilModule, only: f1d, zero_ch, zero_br, zero_test
+  use MathUtilModule, only: f1d, zero_ch, zero_br
   use ErrorUtilModule, only: pstop
 
   private
@@ -11,15 +11,12 @@ module TernarySolveTrack
   public :: get_w
   public :: solve_coefs
   public :: step_analytical
-  public :: step_euler
   public :: find_exit_bary
   public :: get_t_alpt
   public :: get_bet_outflow_bary
   public :: get_bet_soln_limits
   public :: soln_brent
   public :: soln_chand
-  public :: soln_test
-  public :: soln_euler
   public :: alpfun
 
   ! global data
@@ -41,7 +38,7 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: isolv !< solution method
     real(DP), intent(in) :: tol !< solution tolerance
-    real(DP), intent(in) :: step !< stepsize for numerical methods (e.g. euler)
+    real(DP), intent(in) :: step !< stepsize for numerical methods
     real(DP), intent(out) :: texit !< time particle exits the cell
     real(DP) :: alpexit
     real(DP) :: betexit !< alpha and beta coefficients
@@ -365,80 +362,6 @@ contains
 
   end subroutine
 
-  !> @brief Step (evaluate) numerically depending in case
-  subroutine step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
-    ! -- dummy
-    integer(I4B) :: nt
-    real(DP), intent(in) :: step
-    real(DP) :: vziodz
-    real(DP) :: az
-    real(DP) :: alpi
-    real(DP) :: beti
-    real(DP), intent(inout) :: t
-    real(DP) :: alp
-    real(DP) :: bet
-    ! -- local
-    real(DP) :: alpproj
-    real(DP) :: betproj
-    real(DP) :: valp
-    real(DP) :: vbet
-    real(DP) :: vz
-    real(DP) :: vmeasure
-    real(DP) :: delt
-    real(DP) :: thalf
-    real(DP) :: rkn1
-    real(DP) :: rln1
-    real(DP) :: rkn2
-    real(DP) :: rln2
-    real(DP) :: rkn3
-    real(DP) :: rln3
-    real(DP) :: rkn4
-    real(DP) :: rln4
-
-    if (nt .eq. 0) then
-      ! -- Initial location
-      alp = alpi
-      bet = beti
-      t = 0d0
-    else
-      ! -- Step numerically
-      valp = cv0(1) + waa * alp + wab * bet
-      vbet = cv0(2) + wba * alp + wbb * bet
-      if (step .lt. 0d0) then
-        ! -- Compute time step based on abs value of step, interpreting the latter
-        ! -- as a distance in canonical coordinates (alpha, beta, and scaled z)
-        vz = vziodz * dexp(az * t)
-        vmeasure = dsqrt(valp * valp + vbet * vbet + vz * vz)
-        delt = -step / vmeasure
-      else
-        ! -- Set time step directly to step
-        delt = step
-      end if
-      ikluge = 2 ! kluge
-      if (ikluge .eq. 1) then
-        t = t + delt
-        alp = alp + valp * delt
-        bet = bet + vbet * delt
-      else
-        rkn1 = valp
-        rln1 = vbet
-        thalf = t + 5d-1 * delt
-        call step_analytical(thalf, alpproj, betproj)
-        rkn2 = cv0(1) + waa * alpproj + wab * betproj
-        rln2 = cv0(2) + wba * alpproj + wbb * betproj
-        rkn3 = rkn2
-        rln3 = rln2
-        t = t + delt
-        call step_analytical(t, alpproj, betproj)
-        rkn4 = cv0(1) + waa * alpproj + wab * betproj
-        rln4 = cv0(2) + wba * alpproj + wbb * betproj
-        alp = alp + delt * (rkn1 + 2d0 * rkn2 + 2d0 * rkn3 + rkn4) / 6d0
-        bet = bet + delt * (rln1 + 2d0 * rln2 + 2d0 * rln3 + rln4) / 6d0
-      end if
-    end if
-
-  end subroutine
-
   !> @brief Find the exit time and location in barycentric coordinates.
   subroutine find_exit_bary(isolv, itriface, itrifaceenter, &
                             alpi, beti, &
@@ -595,11 +518,7 @@ contains
               ! -- Root not bracketed; no exit
               texit = huge(1d0)
             else
-              if (isolv .eq. 0) then
-                ! -- Use Euler integration to find exit
-                call soln_euler(itriface, alpi, beti, step, vziodz, az, &
-                                texit, alpexit, betexit)
-              else if (isolv .eq. 1) then
+              if (isolv .eq. 1) then
                 ! -- Use Brent's method with initial bounds on beta of betlo and bethi,
                 ! -- assuming they bound the root
                 call soln_brent(itriface, betlo, bethi, tol, texit, &
@@ -609,13 +528,8 @@ contains
                 ! -- assuming they bound the root
                 call soln_chand(itriface, betlo, bethi, tol, texit, &
                                 alpexit, betexit)
-              else if (isolv .eq. 3) then
-                ! -- Use a test method with initial bounds on beta of betlo and bethi,
-                ! -- assuming they bound the root
-                call soln_test(itriface, betlo, bethi, tol, texit, &
-                               alpexit, betexit)
               else
-                call pstop(1, "Invalid isolv, expected 0, 1, 2, or 3")
+                call pstop(1, "Invalid isolv, expected one of: 1, 2")
               end if
             end if
           end if
@@ -854,118 +768,6 @@ contains
       betexit = zero_ch(blo, bhi, f, tol)
     end if
     call get_t_alpt(betexit, texit, alpexit)
-
-  end subroutine
-
-  !> @brief Use a test method with initial bounds on beta of betlo and bethi
-  subroutine soln_test(itriface, betlo, bethi, tol, &
-                       texit, alpexit, betexit)
-    ! -- dummy
-    integer(I4B), intent(in) :: itriface
-    real(DP) :: betlo
-    real(DP) :: bethi
-    real(DP), intent(in) :: tol
-    real(DP) :: texit
-    real(DP) :: alpexit
-    real(DP) :: betexit
-    ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
-    real(DP) :: blo
-    real(DP) :: bhi
-    procedure(f1d), pointer :: f
-
-    ! -- assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
-    blo = betlo
-    bhi = bethi
-    if (itriface .eq. 1) then
-      f => fbary1
-      betexit = zero_test(blo, bhi, f, tol)
-    else
-      f => fbary2
-      betexit = zero_test(blo, bhi, f, tol)
-    end if
-    call get_t_alpt(betexit, texit, alpexit)
-
-  end subroutine
-
-  !> @brief Use Euler integration to find exit
-  subroutine soln_euler(itriface, alpi, beti, step, vziodz, &
-                        az, texit, alpexit, betexit)
-    ! -- dummy
-    integer(I4B), intent(in) :: itriface
-    real(DP) :: alpi
-    real(DP) :: beti
-    real(DP), intent(in) :: step
-    real(DP) :: vziodz
-    real(DP) :: az
-    real(DP) :: texit
-    real(DP) :: alpexit
-    real(DP) :: betexit
-    ! -- local
-    real(DP) :: alp
-    real(DP) :: bet
-    real(DP) :: gam
-    real(DP) :: alpold
-    real(DP) :: betold
-    real(DP) :: gamold
-    real(DP) :: wt
-    real(DP) :: omwt
-    real(DP) :: t
-    real(DP) :: told
-
-    t = 0d0
-    alp = alpi
-    bet = beti
-    if (itriface .eq. 1) gam = 1d0 - alpi - beti
-    do nt = 1, 1000000000 ! kluge hardwired
-      ! -- Save current time, alpha, and beta
-      told = t
-      alpold = alp
-      betold = bet
-      ! -- Step forward in time
-      ! t = dble(nt)*step
-      call step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
-      ! if (nt.eq.0) then
-      !   znum = zi
-      ! else
-      !   vz = vzbot + az*(znum - zbot)
-      !   znum = znum + vz*delt     ! kluge note: can be smart about checking z
-      ! end if
-      if (itriface .eq. 1) then
-        ! -- If gamma has crossed zero, interpolate linearly
-        ! -- to find crossing (exit) point
-        gamold = gam
-        gam = 1d0 - alp - bet
-        if (gam .lt. 0d0) then
-          wt = gamold / (gamold - gam)
-          omwt = 1d0 - wt
-          texit = omwt * told + wt * t
-          alpexit = omwt * alpold + wt * alp
-          betexit = omwt * betold + wt * bet
-          exit
-        end if
-      else
-        ! -- If alpha has crossed zero, interpolate linearly
-        ! -- to find crossing (exit) point
-        if (alp .lt. 0d0) then
-          wt = alpold / (alpold - alp)
-          omwt = 1d0 - wt
-          texit = omwt * told + wt * t
-          alpexit = omwt * alpold + wt * alp
-          betexit = omwt * betold + wt * bet
-          exit
-        end if
-      end if
-      ! -- End time step loop
-    end do
-    if (nt .gt. 1000000000) then ! kluge hardwired
-      ! -- Exit not found after max number of time steps
-      call pstop(1, "Didn't find exit in soln_euler")
-    end if
 
   end subroutine
 

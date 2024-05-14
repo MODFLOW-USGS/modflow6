@@ -4,7 +4,7 @@ module TestMathUtil
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use MathUtilModule, only: f1d, is_close, mod_offset, &
-                            zero_ch, zero_test, zero_br, &
+                            zero_ch, zero_br, &
                             get_perturbation
   implicit none
   private
@@ -24,8 +24,6 @@ contains
                              test_zero_ch), &
                 new_unittest("zero_br", &
                              test_zero_br), &
-                new_unittest("zero_test", &
-                             test_zero_test), &
                 new_unittest("get_perturbation", &
                              test_get_perturbation) &
                 ]
@@ -221,27 +219,6 @@ contains
     call check(error, is_close(z, pi, atol=1d-6), &
                'expected pi, got: '//to_string(z))
   end subroutine test_zero_br
-
-  subroutine test_zero_test(error)
-    type(error_type), allocatable, intent(out) :: error
-    real(DP), parameter :: pi = 4 * atan(1.0_DP)
-    real(DP) :: z
-    procedure(f1d), pointer :: f
-
-    f => sine
-
-    z = zero_test(-1.0_DP, 1.0_DP, f, 0.001_DP)
-    call check(error, is_close(z, 0.0_DP, atol=1d-6), &
-               'expected 0, got: '//to_string(z))
-
-    z = zero_test(-4.0_DP, -1.0_DP, f, 0.001_DP)
-    call check(error, is_close(z, -pi, atol=1d-6), &
-               'expected -pi, got: '//to_string(z))
-
-    z = zero_test(1.0_DP, 4.0_DP, f, 0.001_DP)
-    call check(error, is_close(z, pi, atol=1d-6), &
-               'expected pi, got: '//to_string(z))
-  end subroutine test_zero_test
 
   subroutine test_get_perturbation(error)
     type(error_type), allocatable, intent(out) :: error
