@@ -18,14 +18,19 @@ import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disu_kwargs
 
+from conftest import project_root_path
 from framework import TestFramework
 
+data_path = project_root_path / "autotest" / "data" / "par_gwf_disu_exg"
 cases = [
     "par_gwf_disu1d",
     "par_gwf_disu2d",
     "par_gwf_disu3d",
+    "par_gwf_disu1d_binary",
+    "par_gwf_disu2d_binary",
+    "par_gwf_disu3d_binary",
 ]
-dis_shape = [(1, 1, 5), (1, 1, 5), (1, 1, 5), (1, 5, 5), (5, 5, 5)]
+dis_shape = [(1, 1, 5), (1, 5, 5), (5, 5, 5), (1, 1, 5), (1, 5, 5), (5, 5, 5)]
 
 # global convenience...
 name_left = "leftmodel"
@@ -184,13 +189,50 @@ def get_model(idx, dir):
         for ilay in range(nlay)
     ]
 
+    if name.endswith("_binary"):
+        exchangedata = {
+            "factor": 1.0,
+            "filename": "exg.bin",
+            "data": None,
+            "binary": True,
+        }
+        exg_fpath = data_path / f"par_gwf_disu{idx}_exg.txt"
+        exg_fdata = np.loadtxt(
+            exg_fpath,
+            dtype={
+                "names": (
+                    "c11",
+                    "c21",
+                    "ihc",
+                    "cl1",
+                    "cl2",
+                    "hwva",
+                    "aux1",
+                    "aux2",
+                ),
+                "formats": (
+                    "i4",
+                    "i4",
+                    "i4",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                ),
+            },
+        )
+        exg_fdata.tofile(dir / "exg.bin")
+    else:
+        exchangedata = gwfgwf_data
+
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
         nexg=len(gwfgwf_data),
         exgmnamea=name_left,
         exgmnameb=name_right,
-        exchangedata=gwfgwf_data,
+        exchangedata=exchangedata,
         auxiliary=["ANGLDEGX", "CDIST"],
         print_input=True,
     )
