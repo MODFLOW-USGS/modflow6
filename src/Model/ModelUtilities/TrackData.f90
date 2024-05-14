@@ -104,7 +104,7 @@ module TrackModule
   !     6: terminated in cell with specified zone number
   !     7: terminated in inactive cell
   !     8: permanently unreleased***
-  !     9: terminated for unknown reason*
+  !     9: terminated in subcell with no exit face*****
   !
   ! PRT shares the same status enumeration as MODPATH 7. However, some
   ! don't apply to PRT; for instance, MODPATH 7 distinguishes forwards
@@ -115,6 +115,7 @@ module TrackModule
   !   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
   !   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone
   !   **** this may coincide with termination, in which case two events are reported
+  !   ***** PRT-specific status indicating a particle stopped within a cell subcell
 
 contains
 
