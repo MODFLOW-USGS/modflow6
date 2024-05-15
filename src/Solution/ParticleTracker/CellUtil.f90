@@ -129,28 +129,22 @@ contains
     ! -- west" rectangle vertex to be the local origin so that the rotation
     ! -- angle is zero if the cell already aligns with the model x and y
     ! -- coordinates.
-    quad%irvOrigin = quad%get_irectvertSW()
-    ! todo, before/after initial release: refactor without unnecessary args
-    call quad%get_rectDimensionsRotation( &
-      quad%irvOrigin, quad%xOrigin, &
-      quad%yOrigin, quad%zOrigin, &
-      quad%dx, quad%dy, &
-      quad%dz, quad%sinrot, &
-      quad%cosrot)
+    quad%irvOrigin = quad%get_rect_ivert_sw()
+    call quad%get_rect_dim_rot()
 
     ! -- Set the external and internal face flows used for subcells
     do i = 0, 3
       irv = mod_offset(i + quad%irvOrigin, 4, 1)
       isc = mod_offset(i + 3, 4, 1)
       if (.not. quad%face_is_refined(irv)) then
-        qhalf = 5d-1 * quad%get_rectflow(1, irv)
+        qhalf = 5d-1 * quad%get_rect_flow(1, irv)
         quad%qextl2(isc) = qhalf
         isc = mod_offset(isc + 1, 4, 1)
         quad%qextl1(isc) = qhalf
       else
-        quad%qextl2(isc) = quad%get_rectflow(1, irv)
+        quad%qextl2(isc) = quad%get_rect_flow(1, irv)
         isc = mod_offset(isc + 1, 4, 1)
-        quad%qextl1(isc) = quad%get_rectflow(2, irv)
+        quad%qextl1(isc) = quad%get_rect_flow(2, irv)
       end if
     end do
     qdisttopbot = 2.5d-1 * (quad%defn%get_distflow() &

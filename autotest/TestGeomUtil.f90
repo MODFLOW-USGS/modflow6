@@ -5,6 +5,7 @@ module TestGeomUtil
   use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon, &
                             skew, area, shared_face
   use ConstantsModule, only: LINELENGTH
+  use DisvGeom, only: shared_edge
   implicit none
   private
   public :: collect_geomutil
@@ -24,7 +25,9 @@ contains
                              test_point_in_polygon_irr), &
                 new_unittest("skew", test_skew), &
                 new_unittest("area", test_area), &
-                new_unittest("shared_face", test_shared_face) &
+                new_unittest("shared_face", test_shared_face), &
+                new_unittest("shared_face_large", &
+                             test_shared_face_large) &
                 ]
   end subroutine collect_geomutil
 
@@ -386,7 +389,7 @@ contains
   subroutine test_shared_face_large(error)
     type(error_type), allocatable, intent(out) :: error
     integer(I4B) :: iverts1(33), iverts2(33)
-    integer(I4B) :: exp_iface, iface, i, iv1, iv2
+    integer(I4B) :: iface, i, iv1, iv2
     real(DP) :: tstart, tstop
 
     iface = 0

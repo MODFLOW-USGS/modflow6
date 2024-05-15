@@ -5,7 +5,7 @@ module DisvGeom
   implicit none
   private
   public :: DisvGeomType
-  public :: line_unit_vector
+  public :: line_unit_vector, shared_edge
 
   type DisvGeomType
 
