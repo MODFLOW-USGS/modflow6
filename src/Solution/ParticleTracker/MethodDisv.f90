@@ -29,7 +29,6 @@ module MethodDisvModule
     procedure, public :: load_cell_defn !< loads cell definition from the grid
     procedure, public :: map_neighbor !< maps a location on the cell face to the shared face of a neighbor
     procedure, public :: pass => pass_disv !< passes the particle to the next cell
-    procedure, private :: get_npolyverts !< returns the number of polygon vertices for a cell in the grid
     procedure, private :: load_nbrs_to_defn !< loads face neighbors to a cell object
     procedure, private :: load_flags_to_defn !< loads 180-degree vertex indicator to a cell object
     procedure, private :: load_flows_to_defn !< loads flows to a cell object
@@ -268,30 +267,6 @@ contains
     call this%track(particle, 1, tmax)
   end subroutine apply_disv
 
-  !> @brief Return the number of polygon vertices for a cell in the grid
-  !! todo, after initial release: is this necessary? can we just use
-  !! size of array returned by get_polyverts()
-  function get_npolyverts(this, ic) result(npolyverts)
-    ! -- dummy
-    class(MethodDisvType), intent(inout) :: this
-    integer(I4B), intent(in) :: ic
-    ! -- local
-    integer(I4B) :: icu
-    integer(I4B) :: icu2d
-    integer(I4B) :: ncpl
-    ! -- result
-    integer(I4B) :: npolyverts
-
-    select type (dis => this%fmi%dis)
-    type is (DisvType)
-      ncpl = dis%get_ncpl()
-      icu = dis%get_nodeuser(ic)
-      icu2d = icu - ((icu - 1) / ncpl) * ncpl
-      npolyverts = dis%iavert(icu2d + 1) - dis%iavert(icu2d) - 1
-      if (npolyverts .le. 0) npolyverts = npolyverts + size(dis%javert)
-    end select
-  end function get_npolyverts
-
   !> @brief Load cell definition from the grid
   subroutine load_cell_defn(this, ic, defn)
     ! -- dummy
@@ -305,7 +280,6 @@ contains
 
     ! -- Load basic cell properties
     defn%icell = ic
-    defn%npolyverts = this%get_npolyverts(ic)
     defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
                            this%fmi%dis%get_nodeuser(ic))
     top = this%fmi%dis%top(ic)
@@ -324,6 +298,7 @@ contains
       defn%icell, &
       defn%polyvert, &
       closed=.true.)
+    defn%npolyverts = size(defn%polyvert, dim=2) - 1
 
     ! -- Load face neighbors
     call this%load_nbrs_to_defn(defn)

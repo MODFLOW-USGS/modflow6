@@ -5,6 +5,7 @@ module TestGeomUtil
   use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon, &
                             skew, area, shared_face
   use ConstantsModule, only: LINELENGTH
+  use DisvGeom, only: shared_edge
   implicit none
   private
   public :: collect_geomutil
@@ -24,7 +25,9 @@ contains
                              test_point_in_polygon_irr), &
                 new_unittest("skew", test_skew), &
                 new_unittest("area", test_area), &
-                new_unittest("shared_face", test_shared_face) &
+                new_unittest("shared_face", test_shared_face), &
+                new_unittest("shared_face_large", &
+                             test_shared_face_large) &
                 ]
   end subroutine collect_geomutil
 
@@ -370,8 +373,58 @@ contains
 
     call shared_face(iverts1, iverts2, iface)
     call check(error, iface == 2)
-
     if (allocated(error)) return
+
+  end subroutine
+
+  function rand_int(a, b) result(i)
+    integer(I4B) :: a, b, i
+    real(DP) :: u
+
+    call random_number(u)
+    i = a + floor((b + 1 - a) * u)
+
+  end function
+
+  subroutine test_shared_face_large(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer(I4B) :: iverts1(33), iverts2(33)
+    integer(I4B) :: iface, i, iv1, iv2
+    real(DP) :: tstart, tstop
+
+    iface = 0
+    iverts1 = (/1, 2, 3, 4, 10, 14, 18, &
+                22, 33, 36, 40, 44, 48, &
+                52, 58, 57, 56, 55, 51, &
+                47, 43, 39, 35, 32, 30, &
+                28, 26, 24, 21, 17, 13, &
+                9, 1/)
+    iverts2 = (/5, 6, 7, 8, 12, 16, 20, &
+                23, 25, 27, 29, 31, 34, &
+                38, 42, 46, 50, 54, 62, &
+                61, 60, 59, 53, 49, 45, &
+                41, 37, 33, 22, 19, 15, &
+                11, 5/)
+
+    call shared_face(iverts1, iverts2, iface)
+    call check(error, iface == 8, to_string(iface))
+    if (allocated(error)) return
+
+    call cpu_time(tstart)
+    do i = 1, 1000
+      iverts1 = cshift(iverts1, shift=rand_int(0, 32))
+      call shared_face(iverts1, iverts2, iface)
+    end do
+    call cpu_time(tstop)
+    print *, 'shared_face took: ', tstop - tstart
+
+    call cpu_time(tstart)
+    do i = 1, 1000
+      iverts1 = cshift(iverts1, shift=rand_int(0, 32))
+      call shared_edge(iverts1, iverts2, iv1, iv2)
+    end do
+    call cpu_time(tstop)
+    print *, 'shared_edge took: ', tstop - tstart
 
   end subroutine
 
