@@ -365,8 +365,8 @@ contains
     integer(I4B) :: iface
 
     iface = 0
-    iverts1 = (/ 1, 2, 5, 4, 1 /)
-    iverts2 = (/ 2, 3, 6, 5, 2 /)
+    iverts1 = (/1, 2, 5, 4, 1/)
+    iverts2 = (/2, 3, 6, 5, 2/)
 
     call shared_face(iverts1, iverts2, iface)
     call check(error, iface == 2)
