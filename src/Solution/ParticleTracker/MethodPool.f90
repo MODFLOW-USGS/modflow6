@@ -21,9 +21,9 @@ contains
 
   !> @brief Destroy the method pool
   subroutine destroy_method_pool()
-    call method_dis%destroy()
+    call method_dis%deallocate()
     deallocate (method_dis)
-    call method_disv%destroy()
+    call method_disv%deallocate()
     deallocate (method_disv)
   end subroutine destroy_method_pool
 

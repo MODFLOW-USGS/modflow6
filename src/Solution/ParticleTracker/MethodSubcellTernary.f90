@@ -23,13 +23,13 @@ module MethodSubcellTernaryModule
     integer(I4B), public, pointer :: zeromethod
   contains
     procedure, public :: apply => apply_mst
-    procedure, public :: destroy
+    procedure, public :: deallocate
     procedure, private :: track_subcell
   end type MethodSubcellTernaryType
 
 contains
 
-  !> @brief Create a new ternary subcell-method object
+  !> @brief Create a new ternary subcell method
   subroutine create_method_subcell_ternary(method)
     ! -- dummy
     type(MethodSubcellTernaryType), pointer :: method
@@ -45,11 +45,11 @@ contains
     method%zeromethod = 0
   end subroutine create_method_subcell_ternary
 
-  !> @brief Destructor for a ternary subcell-method object
-  subroutine destroy(this)
+  !> @brief Deallocate the ternary subcell method
+  subroutine deallocate (this)
     class(MethodSubcellTernaryType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy
+  end subroutine deallocate
 
   !> @brief Apply the ternary subcell method
   subroutine apply_mst(this, particle, tmax)

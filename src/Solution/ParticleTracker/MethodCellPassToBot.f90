@@ -20,12 +20,12 @@ module MethodCellPassToBotModule
     type(CellDefnType), pointer :: defn
   contains
     procedure, public :: apply => apply_ptb
-    procedure, public :: destroy
+    procedure, public :: deallocate
   end type MethodCellPassToBotType
 
 contains
 
-  !> @brief Create a new tracking method
+  !> @brief Create a new pass-to-bottom tracking method
   subroutine create_method_cell_ptb(method)
     type(MethodCellPassToBotType), pointer :: method
     allocate (method)
@@ -35,11 +35,11 @@ contains
     call create_defn(method%defn)
   end subroutine create_method_cell_ptb
 
-  !> @brief Destroy the tracking method
-  subroutine destroy(this)
+  !> @brief Deallocate the pass-to-bottom tracking method
+  subroutine deallocate (this)
     class(MethodCellPassToBotType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy
+  end subroutine deallocate
 
   !> @brief Pass particle vertically and instantaneously to the cell bottom
   subroutine apply_ptb(this, particle, tmax)

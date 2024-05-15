@@ -27,13 +27,13 @@ module MethodModule
   !! depending on cell geometry (implementing the strategy pattern).
   !<
   type, abstract :: MethodType
-    character(len=40), pointer, public :: type ! method name
-    logical(LGP), public :: delegates ! whether the method delegates
+    character(len=40), pointer, public :: type !< method name
+    logical(LGP), public :: delegates !< whether the method delegates
     type(PrtFmiType), pointer, public :: fmi => null() !< ptr to fmi
-    class(CellType), pointer, public :: cell => null() ! ptr to a cell
-    class(SubcellType), pointer, public :: subcell => null() ! ptr to a subcell
-    type(TrackFileControlType), pointer, public :: trackfilectl => null() ! ptr to track file control
-    type(TimeSelectType), pointer, public :: tracktimes => null() ! ptr to user-defined tracking times
+    class(CellType), pointer, public :: cell => null() !< ptr to the current cell
+    class(SubcellType), pointer, public :: subcell => null() !< ptr to the current subcell
+    type(TrackFileControlType), pointer, public :: trackfilectl => null() !< ptr to track file control
+    type(TimeSelectType), pointer, public :: tracktimes => null() !< ptr to user-defined tracking times
     integer(I4B), dimension(:), pointer, contiguous, public :: izone => null() !< pointer to zone numbers
     real(DP), dimension(:), pointer, contiguous, public :: flowja => null() !< pointer to intercell flows
     real(DP), dimension(:), pointer, contiguous, public :: porosity => null() !< pointer to aquifer porosity
@@ -41,7 +41,7 @@ module MethodModule
   contains
     ! Implemented in all subtypes
     procedure(apply), deferred :: apply
-    procedure(destroy), deferred :: destroy
+    procedure(deallocate), deferred :: deallocate
     ! Overridden in subtypes that delegate
     procedure :: pass
     procedure :: load
@@ -62,10 +62,10 @@ module MethodModule
       type(ParticleType), pointer, intent(inout) :: particle
       real(DP), intent(in) :: tmax
     end subroutine apply
-    subroutine destroy(this)
+    subroutine deallocate (this)
       import MethodType
       class(MethodType), intent(inout) :: this
-    end subroutine destroy
+    end subroutine deallocate
   end interface
 
 contains
