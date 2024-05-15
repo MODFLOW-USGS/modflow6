@@ -421,7 +421,7 @@ To run tests in parallel:
 
 ```shell
 pytest -v -n auto  # from autotest/
-pixi run autotest -v <file>  # from project root
+pixi run autotest  # from project root
 ```
 
 The Pixi `autotest` task includes options to run tests in parallel, show test runtimes, and save failed test results in `autotest/.failed/`.
