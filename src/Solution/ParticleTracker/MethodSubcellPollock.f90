@@ -21,13 +21,13 @@ module MethodSubcellPollockModule
     real(DP), allocatable, public :: qextl1(:), qextl2(:), qintl(:) !< external and internal subcell flows
   contains
     procedure, public :: apply => apply_msp
-    procedure, public :: destroy => destroy_msp
+    procedure, public :: deallocate
     procedure, private :: track_subcell
   end type MethodSubcellPollockType
 
 contains
 
-  !> @brief Create a new Pollock's subcell-method object
+  !> @brief Create a new Pollock's subcell method
   subroutine create_method_subcell_pollock(method)
     ! -- dummy
     type(MethodSubcellPollockType), pointer :: method
@@ -41,11 +41,11 @@ contains
     method%delegates = .false.
   end subroutine create_method_subcell_pollock
 
-  !> @brief Destructor for a Pollock's subcell-method object
-  subroutine destroy_msp(this)
+  !> @brief Deallocate the Pollock's subcell method
+  subroutine deallocate (this)
     class(MethodSubcellPollockType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy_msp
+  end subroutine deallocate
 
   !> @brief Apply Pollock's method to a rectangular subcell
   subroutine apply_msp(this, particle, tmax)

@@ -19,7 +19,7 @@ module MethodCellPollockQuadModule
   type, extends(MethodType) :: MethodCellPollockQuadType
   contains
     procedure, public :: apply => apply_mcpq
-    procedure, public :: destroy
+    procedure, public :: deallocate
     procedure, public :: load => load_mcpq
     procedure, public :: load_subcell
     procedure, public :: pass => pass_mcpq
@@ -27,7 +27,7 @@ module MethodCellPollockQuadModule
 
 contains
 
-  !> @brief Create a new tracking method
+  !> @brief Create a new Pollock quad-refined cell method
   subroutine create_method_cell_quad(method)
     ! -- dummy
     type(MethodCellPollockQuadType), pointer :: method
@@ -44,11 +44,11 @@ contains
     method%subcell => subcell
   end subroutine create_method_cell_quad
 
-  !> @brief Destroy the tracking method
-  subroutine destroy(this)
+  !> @brief Deallocate the Pollock quad-refined cell method
+  subroutine deallocate (this)
     class(MethodCellPollockQuadType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy
+  end subroutine deallocate
 
   !> @brief Load subcell into tracking method
   subroutine load_mcpq(this, particle, next_level, submethod)

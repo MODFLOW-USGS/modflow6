@@ -28,13 +28,13 @@ contains
 
   !> @brief Destroy the cell method pool
   subroutine destroy_method_cell_pool()
-    call method_cell_plck%destroy()
+    call method_cell_plck%deallocate()
     deallocate (method_cell_plck)
-    call method_cell_quad%destroy()
+    call method_cell_quad%deallocate()
     deallocate (method_cell_quad)
-    call method_cell_tern%destroy()
+    call method_cell_tern%deallocate()
     deallocate (method_cell_tern)
-    call method_cell_ptb%destroy()
+    call method_cell_ptb%deallocate()
     deallocate (method_cell_ptb)
   end subroutine destroy_method_cell_pool
 

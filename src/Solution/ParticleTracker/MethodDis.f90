@@ -21,16 +21,18 @@ module MethodDisModule
   type, extends(MethodType) :: MethodDisType
   contains
     procedure, public :: apply => apply_dis !< apply the method
-    procedure, public :: destroy !< destructor for the method
+    procedure, public :: deallocate !< deallocate arrays and scalars
     procedure, public :: load => load_dis !< load the method
     procedure, public :: pass => pass_dis !< pass the particle to the next domain
     procedure, private :: get_top !< get cell top elevation
-    procedure, private :: load_cell_props !< load cell properties
-    procedure, private :: load_nbrs_to_defn !< load face neighbors
-    procedure, private :: load_flows_to_defn !< loads face flows
-    procedure, private :: load_boundary_flows_to_defn !< loads BoundaryFlows
-    procedure :: load_cell_defn !< load cell definition from the grid
-    procedure :: load_cell !< load cell geometry and flows
+    procedure, private :: update_flowja !< load intercell mass flows
+    procedure, private :: load_particle !< load particle properties
+    procedure, private :: load_properties !< load cell properties
+    procedure, private :: load_neighbors !< load face neighbors
+    procedure, private :: load_faceflows !< load face flows
+    procedure, private :: load_boundary_flows !< load boundary flows
+    procedure, private :: load_celldefn !< load cell definition from the grid
+    procedure, private :: load_cell !< load cell geometry and flows
   end type MethodDisType
 
 contains
@@ -51,10 +53,10 @@ contains
   end subroutine create_method_dis
 
   !> @brief Destructor the tracking method
-  subroutine destroy(this)
+  subroutine deallocate (this)
     class(MethodDisType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy
+  end subroutine deallocate
 
   subroutine load_cell(this, ic, cell)
     ! dummy
@@ -123,7 +125,7 @@ contains
     type is (CellRectType)
       ! -- Load cell definition and geometry
       ic = particle%idomain(next_level)
-      call this%load_cell_defn(ic, cell%defn)
+      call this%load_celldefn(ic, cell%defn)
       call this%load_cell(ic, cell)
 
       ! -- If cell is active but dry, Initialize instant pass-to-bottom method
@@ -144,21 +146,23 @@ contains
     end select
   end subroutine load_dis
 
-  !> @brief Pass a particle to the next cell, if there is one
-  subroutine pass_dis(this, particle)
-    ! -- dummy
+  !> @brief Load cell properties into the particle, including
+  ! the z coordinate, entry face, and node and layer numbers.
+  subroutine load_particle(this, cell, particle)
+    ! dummy
     class(MethodDisType), intent(inout) :: this
+    type(CellRectType), pointer, intent(inout) :: cell
     type(ParticleType), pointer, intent(inout) :: particle
-    ! -- local
-    integer(I4B) :: inface
-    integer(I4B) :: ipos
+    ! local
     integer(I4B) :: ic
     integer(I4B) :: icu
-    integer(I4B) :: inbr
-    integer(I4B) :: idiag
     integer(I4B) :: ilay
     integer(I4B) :: irow
     integer(I4B) :: icol
+    integer(I4B) :: inface
+    integer(I4B) :: idiag
+    integer(I4B) :: inbr
+    integer(I4B) :: ipos
     real(DP) :: z
     real(DP) :: zrel
     real(DP) :: topfrom
@@ -167,73 +171,101 @@ contains
     real(DP) :: bot
     real(DP) :: sat
 
+    select type (dis => this%fmi%dis)
+    type is (DisType)
+      ! compute and set reduced/user node numbers and layer
+      inface = particle%iboundary(2)
+      inbr = cell%defn%facenbr(inface)
+      idiag = this%fmi%dis%con%ia(cell%defn%icell)
+      ipos = idiag + inbr
+      ic = dis%con%ja(ipos)
+      icu = dis%get_nodeuser(ic)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
+                   irow, icol, ilay)
+      particle%idomain(2) = ic
+      particle%icu = icu
+      particle%ilay = ilay
+
+      ! map/set particle entry face
+      if (inface .eq. 1) then
+        inface = 3
+      else if (inface .eq. 2) then
+        inface = 4
+      else if (inface .eq. 3) then
+        inface = 1
+      else if (inface .eq. 4) then
+        inface = 2
+      else if (inface .eq. 6) then
+        inface = 7
+      else if (inface .eq. 7) then
+        inface = 6
+      end if
+      particle%iboundary(2) = inface
+
+      ! map z between cells
+      z = particle%z
+      if (inface < 5) then
+        topfrom = cell%defn%top
+        botfrom = cell%defn%bot
+        zrel = (z - botfrom) / (topfrom - botfrom)
+        top = dis%top(ic)
+        bot = dis%bot(ic)
+        sat = this%fmi%gwfsat(ic)
+        z = bot + zrel * sat * (top - bot)
+      end if
+      particle%z = z
+    end select
+
+  end subroutine load_particle
+
+  !> @brief Update cell-cell flows of particle mass.
+  !! Every particle is currently assigned unit mass.
+  subroutine update_flowja(this, cell, particle)
+    ! dummy
+    class(MethodDisType), intent(inout) :: this
+    type(CellRectType), pointer, intent(inout) :: cell
+    type(ParticleType), pointer, intent(inout) :: particle
+    ! local
+    integer(I4B) :: idiag
+    integer(I4B) :: inbr
+    integer(I4B) :: inface
+    integer(I4B) :: ipos
+
     inface = particle%iboundary(2)
+    inbr = cell%defn%facenbr(inface)
+    idiag = this%fmi%dis%con%ia(cell%defn%icell)
+    ipos = idiag + inbr
+
+    ! -- leaving old cell
+    this%flowja(ipos) = this%flowja(ipos) - DONE
+
+    ! -- entering new cell
+    this%flowja(this%fmi%dis%con%isym(ipos)) &
+      = this%flowja(this%fmi%dis%con%isym(ipos)) + DONE
+
+  end subroutine update_flowja
+
+  !> @brief Pass a particle to the next cell, if there is one
+  subroutine pass_dis(this, particle)
+    ! dummy
+    class(MethodDisType), intent(inout) :: this
+    type(ParticleType), pointer, intent(inout) :: particle
 
     select type (cell => this%cell)
     type is (CellRectType)
-      select type (dis => this%fmi%dis)
-      type is (DisType)
-        inbr = cell%defn%facenbr(inface)
-        if (inbr .eq. 0) then
-          ! -- Exterior face, no neighbor to map to, terminate particle
-          ! todo AMP: consider when multiple models allowed
-          particle%istatus = 2
-          particle%advancing = .false.
-          call this%save(particle, reason=3)
-        else
-          ! compute and set reduced/user node numbers and layer
-          ! todo: factor out routine
-          idiag = dis%con%ia(cell%defn%icell)
-          ipos = idiag + inbr
-          ic = dis%con%ja(ipos)
-          icu = dis%get_nodeuser(ic)
-          call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
-                       irow, icol, ilay)
-          particle%idomain(2) = ic
-          particle%icu = icu
-          particle%ilay = ilay
-
-          ! map/set particle entry face
-          ! todo: factor out routine
-          if (inface .eq. 1) then
-            inface = 3
-          else if (inface .eq. 2) then
-            inface = 4
-          else if (inface .eq. 3) then
-            inface = 1
-          else if (inface .eq. 4) then
-            inface = 2
-          else if (inface .eq. 6) then
-            inface = 7
-          else if (inface .eq. 7) then
-            inface = 6
-          end if
-          particle%iboundary(2) = inface
-
-          ! -- Map z between cells
-          ! todo: factor out routine
-          z = particle%z
-          if (inface < 5) then
-            topfrom = cell%defn%top
-            botfrom = cell%defn%bot
-            zrel = (z - botfrom) / (topfrom - botfrom)
-            top = dis%top(ic)
-            bot = dis%bot(ic)
-            sat = this%fmi%gwfsat(ic)
-            z = bot + zrel * sat * (top - bot)
-          end if
-          particle%z = z
-
-          ! -- Update cell-cell flows of particle mass.
-          !    Every particle is currently assigned unit mass.
-          ! todo: factor out routine
-          ! -- leaving old cell
-          this%flowja(ipos) = this%flowja(ipos) - DONE
-          ! -- entering new cell
-          this%flowja(dis%con%isym(ipos)) &
-            = this%flowja(dis%con%isym(ipos)) + DONE
-        end if
-      end select
+      ! If the entry face has no neighbors it's a
+      ! boundary face, so terminate the particle.
+      ! todo AMP: reconsider when multiple models supported
+      if (cell%defn%facenbr(particle%iboundary(2)) .eq. 0) then
+        particle%istatus = 2
+        particle%advancing = .false.
+        call this%save(particle, reason=3)
+      else
+        ! Otherwise, load cell properties into the
+        ! particle and update intercell mass flows
+        call this%load_particle(cell, particle)
+        call this%update_flowja(cell, particle)
+      end if
     end select
   end subroutine pass_dis
 
@@ -260,14 +292,14 @@ contains
   end function get_top
 
   !> @brief Loads cell definition from the grid
-  subroutine load_cell_defn(this, ic, defn)
+  subroutine load_celldefn(this, ic, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
 
     ! -- Load basic cell properties
-    call this%load_cell_props(ic, defn)
+    call this%load_properties(ic, defn)
 
     ! -- Load cell polygon vertices
     call this%fmi%dis%get_polyverts( &
@@ -275,18 +307,18 @@ contains
       defn%polyvert, &
       closed=.true.)
 
-    ! -- Load face neighbors
-    call this%load_nbrs_to_defn(defn)
+    ! -- Load cell face neighbors
+    call this%load_neighbors(defn)
 
     ! -- Load 180 degree face indicators
     defn%ispv180(1:defn%npolyverts + 1) = .false.
 
-    ! -- Load flows (assumes face neighbors already loaded)
-    call this%load_flows_to_defn(defn)
+    ! -- Load face flows (assumes face neighbors already loaded)
+    call this%load_faceflows(defn)
 
-  end subroutine load_cell_defn
+  end subroutine load_celldefn
 
-  subroutine load_cell_props(this, ic, defn)
+  subroutine load_properties(this, ic, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
@@ -307,11 +339,11 @@ contains
     defn%can_be_rect = .true.
     defn%can_be_quad = .false.
 
-  end subroutine load_cell_props
+  end subroutine load_properties
 
   !> @brief Loads face neighbors to cell definition from the grid.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_nbrs_to_defn(this, defn)
+  subroutine load_neighbors(this, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), pointer, intent(inout) :: defn
@@ -375,12 +407,12 @@ contains
     end select
     ! -- List of edge (polygon) faces wraps around
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
-  end subroutine load_nbrs_to_defn
+  end subroutine load_neighbors
 
   !> @brief Load flows into the cell definition.
   !! These include face flows and net distributed flows.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_flows_to_defn(this, defn)
+  subroutine load_faceflows(this, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
@@ -395,7 +427,7 @@ contains
     !    If there is no flow through any face, set a no-exit-face flag.
     defn%faceflow = DZERO
     defn%inoexitface = 1
-    call this%load_boundary_flows_to_defn(defn)
+    call this%load_boundary_flows(defn)
     do m = 1, defn%npolyverts + 3
       n = defn%facenbr(m)
       if (n > 0) then
@@ -417,11 +449,11 @@ contains
       defn%iweaksink = 0
     end if
 
-  end subroutine load_flows_to_defn
+  end subroutine load_faceflows
 
   !> @brief Add boundary flows to the cell definition faceflow array.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_boundary_flows_to_defn(this, defn)
+  subroutine load_boundary_flows(this, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
@@ -442,6 +474,6 @@ contains
                        this%fmi%BoundaryFlows(ioffset + 9)
     defn%faceflow(7) = defn%faceflow(7) + &
                        this%fmi%BoundaryFlows(ioffset + 10)
-  end subroutine load_boundary_flows_to_defn
+  end subroutine load_boundary_flows
 
 end module MethodDisModule

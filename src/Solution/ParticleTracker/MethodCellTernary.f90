@@ -42,7 +42,7 @@ module MethodCellTernaryModule
     integer(I4B), public, pointer :: zeromethod
   contains
     procedure, public :: apply => apply_mct
-    procedure, public :: destroy => destroy_mct
+    procedure, public :: deallocate => destroy_mct
     procedure, public :: load => load_mct
     procedure, public :: load_subcell
     procedure, public :: pass => pass_mct

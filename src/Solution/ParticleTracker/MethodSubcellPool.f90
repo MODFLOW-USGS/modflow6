@@ -22,9 +22,9 @@ contains
 
   !> @brief Destroy the subcell method pool
   subroutine destroy_method_subcell_pool()
-    call method_subcell_plck%destroy()
+    call method_subcell_plck%deallocate()
     deallocate (method_subcell_plck)
-    call method_subcell_tern%destroy()
+    call method_subcell_tern%deallocate()
     deallocate (method_subcell_tern)
   end subroutine destroy_method_subcell_pool
 

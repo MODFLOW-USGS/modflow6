@@ -18,7 +18,7 @@ module MethodCellPollockModule
   type, extends(MethodType) :: MethodCellPollockType
   contains
     procedure, public :: apply => apply_mcp
-    procedure, public :: destroy => destroy_mcp
+    procedure, public :: deallocate => destroy_mcp
     procedure, public :: load => load_mcp
     procedure, public :: load_subcell
     procedure, public :: pass => pass_mcp
