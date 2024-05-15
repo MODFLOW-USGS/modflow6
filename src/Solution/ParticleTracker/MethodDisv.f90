@@ -409,44 +409,41 @@ contains
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
     ! -- local
-    integer(I4B) :: ic
-    integer(I4B) :: npolyverts
+    integer(I4B) :: nfaces
+    integer(I4B) :: nslots
     integer(I4B) :: m
     integer(I4B) :: n
+    real(DP) :: q
 
-    ic = defn%icell
-    npolyverts = defn%npolyverts
+    nfaces = defn%npolyverts + 3
+    nslots = size(defn%faceflow)
 
     ! -- expand faceflow array if needed
-    if (size(defn%faceflow) < npolyverts + 3) &
-      call ExpandArray(defn%faceflow, npolyverts + 3)
+    if (nslots < nfaces) call ExpandArray(defn%faceflow, nfaces - nslots)
 
-    ! -- Load face flows. Note that the faceflow array
-    ! -- does not get reallocated if it is already allocated
-    ! -- to a size greater than or equal to npolyverts+3.
+    ! -- Load face flows, including boundary flows. As with cell verts,
+    !    the face flow array wraps around. Top and bottom flows make up
+    !    the last two elements, respectively, for size npolyverts + 3.
+    !    If there is no flow through any face, set a no-exit-face flag.
     defn%faceflow = DZERO
-
-    ! -- As with polygon nbrs, polygon face flows wrap around for
-    ! -- convenience at position npolyverts+1, and bot and top flows
-    ! -- are tacked on the end of the list
-    do m = 1, npolyverts + 3
-      n = defn%facenbr(m)
-      if (n > 0) &
-        defn%faceflow(m) = this%fmi%gwfflowja(this%fmi%dis%con%ia(ic) + n)
-    end do
-    call this%load_boundary_flows_to_defn_poly(defn)
-    ! -- Set inoexitface flag
     defn%inoexitface = 1
-    do m = 1, npolyverts + 3
+    call this%load_boundary_flows_to_defn_poly(defn)
+    do m = 1, nfaces
+      n = defn%facenbr(m)
+      if (n > 0) then
+        q = this%fmi%gwfflowja(this%fmi%dis%con%ia(defn%icell) + n)
+        defn%faceflow(m) = q
+      end if
       if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
     end do
 
     ! -- Add up net distributed flow
-    defn%distflow = this%fmi%SourceFlows(ic) + this%fmi%SinkFlows(ic) + &
-                    this%fmi%StorageFlows(ic)
+    defn%distflow = this%fmi%SourceFlows(defn%icell) + &
+                    this%fmi%SinkFlows(defn%icell) + &
+                    this%fmi%StorageFlows(defn%icell)
 
     ! -- Set weak sink flag
-    if (this%fmi%SinkFlows(ic) .ne. DZERO) then
+    if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
       defn%iweaksink = 1
     else
       defn%iweaksink = 0

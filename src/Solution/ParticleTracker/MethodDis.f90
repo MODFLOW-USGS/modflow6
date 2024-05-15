@@ -385,39 +385,33 @@ contains
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
     ! -- local
-    integer(I4B) :: ic
     integer(I4B) :: m
     integer(I4B) :: n
-    integer(I4B) :: npolyverts
+    real(DP) :: q
 
-    ic = defn%icell
-    npolyverts = defn%npolyverts
-
-    ! -- Load face flows.
+    ! -- Load face flows, including boundary flows. As with cell verts,
+    !    the face flow array wraps around. Top and bottom flows make up
+    !    the last two elements, respectively, for size npolyverts + 3.
+    !    If there is no flow through any face, set a no-exit-face flag.
     defn%faceflow = DZERO
-    ! -- As with polygon nbrs, polygon face flows wrap around for
-    ! -- convenience at position npolyverts+1, and bot and top flows
-    ! -- are tacked on the end of the list
-    do m = 1, npolyverts + 3
-      n = defn%facenbr(m)
-      if (n > 0) &
-        defn%faceflow(m) = this%fmi%gwfflowja(this%fmi%dis%con%ia(ic) + n)
-    end do
-
-    ! -- Add BoundaryFlows to face flows
-    call this%load_boundary_flows_to_defn(defn)
-    ! -- Set inoexitface flag
     defn%inoexitface = 1
-    do m = 1, npolyverts + 3
+    call this%load_boundary_flows_to_defn(defn)
+    do m = 1, defn%npolyverts + 3
+      n = defn%facenbr(m)
+      if (n > 0) then
+        q = this%fmi%gwfflowja(this%fmi%dis%con%ia(defn%icell) + n)
+        defn%faceflow(m) = q
+      end if
       if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
     end do
 
     ! -- Add up net distributed flow
-    defn%distflow = this%fmi%SourceFlows(ic) + this%fmi%SinkFlows(ic) + &
-                    this%fmi%StorageFlows(ic)
+    defn%distflow = this%fmi%SourceFlows(defn%icell) + &
+                    this%fmi%SinkFlows(defn%icell) + &
+                    this%fmi%StorageFlows(defn%icell)
 
     ! -- Set weak sink flag
-    if (this%fmi%SinkFlows(ic) .ne. DZERO) then
+    if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
       defn%iweaksink = 1
     else
       defn%iweaksink = 0
@@ -432,11 +426,9 @@ contains
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
     ! -- local
-    integer(I4B) :: ic
     integer(I4B) :: ioffset
 
-    ic = defn%icell
-    ioffset = (ic - 1) * MAX_POLY_CELLS
+    ioffset = (defn%icell - 1) * MAX_POLY_CELLS
     defn%faceflow(1) = defn%faceflow(1) + &
                        this%fmi%BoundaryFlows(ioffset + 1)
     defn%faceflow(2) = defn%faceflow(2) + &
