@@ -331,7 +331,7 @@ contains
     call run_ctrl%at_stage(STG_AFT_EXG_DF)
     !
     ! -- when needed, this is where the interface models are
-    ! created and added to the numerical solutions
+    !     created and added to the numerical solutions
     call connections_cr()
     !
     ! -- synchronize
