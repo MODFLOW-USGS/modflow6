@@ -1,5 +1,5 @@
 module CellUtilModule
-
+  use KindModule, only: I4B, DP
   implicit none
 
   private
@@ -8,7 +8,8 @@ module CellUtilModule
 
 contains
 
-  !> @brief Convert CellPoly representation to CellRect if possible
+  !> @brief Convert CellPoly representation to CellRect.
+  !! Assumes the conversion is possible.
   subroutine cell_poly_to_rect(poly, rect)
     use ConstantsModule, only: DONE
     use CellRectModule, only: CellRectType, create_cell_rect
@@ -19,17 +20,15 @@ contains
     type(CellRectType), intent(inout), pointer :: rect
     ! -- local
     type(CellDefnType), pointer :: defn
-    integer :: ipv, ipv1, ipv2, ipv3, ipv4
-    integer, dimension(4) :: ipvnxt = (/2, 3, 4, 1/)
-    double precision :: x1, y1, x2, y2, x4, y4
-    double precision :: dx2, dy2, dx4, dy4, areax, areay, areaz
-    double precision :: xOrigin, yOrigin, zOrigin, dx, dy, dz, sinrot, cosrot
-    double precision :: factor, term
+    integer(I4B) :: ipv, ipv1, ipv2, ipv3, ipv4
+    integer(I4B), dimension(4) :: ipvnxt = (/2, 3, 4, 1/)
+    real(DP) :: x1, y1, x2, y2, x4, y4
+    real(DP) :: dx2, dy2, dx4, dy4, areax, areay, areaz
+    real(DP) :: xOrigin, yOrigin, zOrigin, dx, dy, dz, sinrot, cosrot
+    real(DP) :: factor, term
 
     call create_cell_rect(rect)
     defn => poly%defn
-    ! -- kluge note: no check whether conversion is possible; assumes it is
-
     ! -- Translate and rotate the rectangular cell into local coordinates
     ! -- with x varying from 0 to dx and y varying from 0 to dy. Choose the
     ! -- "south-west" vertex to be the local origin so that the rotation
@@ -80,7 +79,7 @@ contains
     dy4 = y4 - yOrigin
     dx = dsqrt(dx4 * dx4 + dy4 * dy4)
     dy = dsqrt(dx2 * dx2 + dy2 * dy2)
-    dz = defn%top - zOrigin ! todo: need to account for partial saturation
+    dz = defn%top - zOrigin
     sinrot = dy4 / dx
     cosrot = dx4 / dx
     rect%defn = poly%defn
@@ -110,7 +109,8 @@ contains
     rect%vz2 = -defn%faceflow(7) * term
   end subroutine cell_poly_to_rect
 
-  !> @brief Convert CellPoly representation to CellRectQuad if possible
+  !> @brief Convert CellPoly representation to CellRectQuad.
+  !! Assumes the conversion is possible.
   subroutine cell_poly_to_quad(poly, quad)
     use CellRectQuadModule, only: CellRectQuadType, create_cell_rect_quad
     use CellPolyModule, only: CellPolyType
@@ -119,18 +119,18 @@ contains
     type(CellPolyType), intent(in), pointer :: poly
     type(CellRectQuadType), intent(inout), pointer :: quad
     ! -- local
-    integer :: i, irv, isc
-    double precision :: qhalf, qdisttopbot, q1, q2, q4
+    integer(I4B) :: i, irv, isc
+    real(DP) :: qhalf, qdisttopbot, q1, q2, q4
 
     call create_cell_rect_quad(quad)
     call quad%init_from(poly%defn)
-    ! kluge note: no check whether conversion is possible; assumes it is
     ! -- Translate and rotate the rect-quad cell into local coordinates with
     ! -- x varying from 0 to dx and y varying from 0 to dy. Choose the "south-
     ! -- west" rectangle vertex to be the local origin so that the rotation
     ! -- angle is zero if the cell already aligns with the model x and y
     ! -- coordinates.
-    quad%irvOrigin = quad%get_irectvertSW() ! kluge note: no need to pass all that stuff in call below -- set internally in CellRectQuad
+    quad%irvOrigin = quad%get_irectvertSW()
+    ! todo, before/after initial release: refactor without unnecessary args
     call quad%get_rectDimensionsRotation( &
       quad%irvOrigin, quad%xOrigin, &
       quad%yOrigin, quad%zOrigin, &

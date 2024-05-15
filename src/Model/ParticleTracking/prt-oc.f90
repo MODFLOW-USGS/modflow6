@@ -150,7 +150,7 @@ contains
     ! -- local
     integer(I4B) :: i
 
-    call this%tracktimes%destroy()
+    call this%tracktimes%deallocate()
 
     do i = 1, size(this%ocdobj)
       call this%ocdobj(i)%ocd_da()

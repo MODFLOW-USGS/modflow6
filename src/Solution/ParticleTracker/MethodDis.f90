@@ -2,8 +2,9 @@ module MethodDisModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO
-  use MethodModule, only: MethodType, get_iatop
+  use MethodModule, only: MethodType
   use MethodCellPoolModule
+  use CellModule
   use CellDefnModule
   use CellRectModule
   use ParticleModule
@@ -19,15 +20,16 @@ module MethodDisModule
 
   type, extends(MethodType) :: MethodDisType
   contains
-    procedure, public :: apply => apply_dis ! apply the method
+    procedure, public :: apply => apply_dis !< apply the method
     procedure, public :: destroy !< destructor for the method
-    procedure, public :: load => load_dis ! load the method
-    procedure :: load_cell_defn !< load cell definition from the grid
+    procedure, public :: load => load_dis !< load the method
     procedure, public :: pass => pass_dis !< pass the particle to the next domain
-    procedure, private :: get_top ! get cell top elevation
-    procedure, private :: load_nbrs_to_defn ! load face neighbors
-    procedure, private :: load_flows_to_defn ! loads face flows
-    procedure, private :: load_boundary_flows_to_defn ! loads BoundaryFlows
+    procedure, private :: get_top !< get cell top elevation
+    procedure, private :: load_nbrs_to_defn !< load face neighbors
+    procedure, private :: load_flows_to_defn !< loads face flows
+    procedure, private :: load_boundary_flows_to_defn !< loads BoundaryFlows
+    procedure :: load_cell_defn !< load cell definition from the grid
+    procedure :: load_cell !< load cell geometry and flows
   end type MethodDisType
 
 contains
@@ -53,15 +55,12 @@ contains
     deallocate (this%type)
   end subroutine destroy
 
-  !> @brief Load the cell geometry and method (tracking strategy)
-  subroutine load_dis(this, particle, next_level, submethod)
-    ! -- dummy
+  subroutine load_cell(this, ic, cell)
+    ! dummy
     class(MethodDisType), intent(inout) :: this
-    type(ParticleType), pointer, intent(inout) :: particle
-    integer(I4B), intent(in) :: next_level
-    class(MethodType), pointer, intent(inout) :: submethod
-    ! -- local
-    integer(I4B) :: ic
+    integer(I4B), intent(in) :: ic
+    type(CellRectType), intent(inout) :: cell
+    ! local
     integer(I4B) :: icu
     integer(I4B) :: irow
     integer(I4B) :: jcol
@@ -75,61 +74,72 @@ contains
     real(DP) :: factor
     real(DP) :: term
 
+    select type (dis => this%fmi%dis)
+    type is (DisType)
+      icu = dis%get_nodeuser(ic)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
+                   irow, jcol, klay)
+      dx = dis%delr(jcol)
+      dy = dis%delc(irow)
+      dz = cell%defn%top - cell%defn%bot
+      cell%dx = dx
+      cell%dy = dy
+      cell%dz = dz
+      cell%sinrot = DZERO
+      cell%cosrot = DONE
+      cell%xOrigin = cell%defn%polyvert(1, 1)
+      cell%yOrigin = cell%defn%polyvert(2, 1)
+      cell%zOrigin = cell%defn%bot
+      cell%ipvOrigin = 1
+      areax = dy * dz
+      areay = dx * dz
+      areaz = dx * dy
+      factor = DONE / cell%defn%retfactor
+      factor = factor / cell%defn%porosity
+      term = factor / areax
+      cell%vx1 = cell%defn%faceflow(1) * term
+      cell%vx2 = -cell%defn%faceflow(3) * term
+      term = factor / areay
+      cell%vy1 = cell%defn%faceflow(4) * term
+      cell%vy2 = -cell%defn%faceflow(2) * term
+      term = factor / areaz
+      cell%vz1 = cell%defn%faceflow(6) * term
+      cell%vz2 = -cell%defn%faceflow(7) * term
+    end select
+  end subroutine load_cell
+
+  !> @brief Load the cell geometry and tracking method
+  subroutine load_dis(this, particle, next_level, submethod)
+    ! -- dummy
+    class(MethodDisType), intent(inout) :: this
+    type(ParticleType), pointer, intent(inout) :: particle
+    integer(I4B), intent(in) :: next_level
+    class(MethodType), pointer, intent(inout) :: submethod
+    ! -- local
+    integer(I4B) :: ic
+
     select type (cell => this%cell)
     type is (CellRectType)
-      select type (dis => this%fmi%dis)
-      type is (DisType)
-        ic = particle%idomain(next_level)
-        call this%load_cell_defn(ic, cell%defn)
+      ! -- Load cell definition and geometry
+      ic = particle%idomain(next_level)
+      call this%load_cell_defn(ic, cell%defn)
+      call this%load_cell(ic, cell)
 
-        ! -- If cell is active but dry, select and initialize
-        ! -- pass-to-bottom method and set cell method pointer
-        if (this%fmi%ibdgwfsat0(ic) == 0) then ! kluge note: use cellDefn%sat == DZERO here instead?
-          call method_cell_ptb%init( &
-            cell=this%cell, &
-            trackfilectl=this%trackfilectl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_ptb
-        else
-          ! -- load rectangular cell (todo: refactor into separate routine)
-          icu = dis%get_nodeuser(ic)
-          call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
-                       irow, jcol, klay)
-          dx = dis%delr(jcol)
-          dy = dis%delc(irow)
-          dz = cell%defn%top - cell%defn%bot
-          cell%dx = dx
-          cell%dy = dy
-          cell%dz = dz
-          cell%sinrot = DZERO
-          cell%cosrot = DONE
-          cell%xOrigin = cell%defn%polyvert(1, 1) ! kluge note: could avoid using polyvert here
-          cell%yOrigin = cell%defn%polyvert(2, 1)
-          cell%zOrigin = cell%defn%bot
-          cell%ipvOrigin = 1
-          areax = dy * dz
-          areay = dx * dz
-          areaz = dx * dy
-          factor = DONE / cell%defn%retfactor
-          factor = factor / cell%defn%porosity
-          term = factor / areax
-          cell%vx1 = cell%defn%faceflow(1) * term
-          cell%vx2 = -cell%defn%faceflow(3) * term
-          term = factor / areay
-          cell%vy1 = cell%defn%faceflow(4) * term
-          cell%vy2 = -cell%defn%faceflow(2) * term
-          term = factor / areaz
-          cell%vz1 = cell%defn%faceflow(6) * term
-          cell%vz2 = -cell%defn%faceflow(7) * term
-
-          ! -- Select and initialize Pollock's method and set method pointer
-          call method_cell_plck%init( &
-            cell=this%cell, &
-            trackfilectl=this%trackfilectl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_plck
-        end if
-      end select
+      ! -- If cell is active but dry, Initialize instant pass-to-bottom method
+      if (this%fmi%ibdgwfsat0(ic) == 0) then
+        call method_cell_ptb%init( &
+          cell=this%cell, &
+          trackfilectl=this%trackfilectl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_ptb
+      else
+        ! -- Otherwise initialize Pollock's method
+        call method_cell_plck%init( &
+          cell=this%cell, &
+          trackfilectl=this%trackfilectl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_plck
+      end if
     end select
   end subroutine load_dis
 
@@ -166,18 +176,14 @@ contains
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
           ! -- Exterior face; no neighbor to map to
-          ! particle%idomain(1) = 0
-          ! particle%idomain(2) = 0      ! kluge note: set a "has_exited" attribute instead???
-          ! particle%idomain(1) = -abs(particle%idomain(1))   ! kluge???
-          ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
-          particle%istatus = 2 ! kluge note: use -2 to allow check for transfer to another model???
+          ! todo AMP: consider when multiple models allowed
+          particle%istatus = 2
           particle%advancing = .false.
           call this%save(particle, reason=3) ! reason=3: termination
-          ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
           ipos = idiag + inbr
-          ic = dis%con%ja(ipos) ! kluge note: use PRT model's DIS instead of fmi's???
+          ic = dis%con%ja(ipos)
           particle%idomain(2) = ic
 
           ! compute and set user node number and layer on particle
@@ -187,7 +193,6 @@ contains
           particle%icu = icu
           particle%ilay = ilay
 
-          ! call this%mapToNbrCell(cellRect%cellDefn,inface,z)
           if (inface .eq. 1) then
             inface = 3
           else if (inface .eq. 2) then
@@ -207,7 +212,7 @@ contains
             topfrom = cell%defn%top
             botfrom = cell%defn%bot
             zrel = (z - botfrom) / (topfrom - botfrom)
-            top = dis%top(ic) ! kluge note: use PRT model's DIS instead of fmi's???
+            top = dis%top(ic)
             bot = dis%bot(ic)
             sat = this%fmi%gwfsat(ic)
             z = bot + zrel * sat * (top - bot)
@@ -231,7 +236,7 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
 
-    call this%track(particle, 1, tmax) ! kluge, hardwired to level 1
+    call this%track(particle, 1, tmax)
   end subroutine apply_dis
 
   !> @brief Returns a top elevation based on index iatop
@@ -321,7 +326,8 @@ contains
       call get_jk(icu1, dis%get_ncpl(), dis%nlay, j1, klay1)
       do iloc = 1, dis%con%ia(ic1 + 1) - dis%con%ia(ic1) - 1
         ipos = dis%con%ia(ic1) + iloc
-        if (dis%con%mask(ipos) == 0) cycle ! kluge note: need mask here???
+        ! mask could become relevant if PRT uses interface model
+        if (dis%con%mask(ipos) == 0) cycle
         ic2 = dis%con%ja(ipos)
         icu2 = dis%get_nodeuser(ic2)
         call get_ijk(icu2, dis%nrow, dis%ncol, dis%nlay, &
@@ -330,7 +336,7 @@ contains
           ! -- Edge (polygon) face neighbor
           if (irow2 > irow1) then
             ! Neighbor to the S
-            iedgeface = 4 ! kluge note: make sure this numbering is consistent with numbering in cell method
+            iedgeface = 4
           else if (jcol2 > jcol1) then
             ! Neighbor to the E
             iedgeface = 3
@@ -352,7 +358,6 @@ contains
       end do
     end select
     ! -- List of edge (polygon) faces wraps around
-    !    todo: why need to wrap around? no analog to "closing" a polygon?
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
   end subroutine load_nbrs_to_defn
 
@@ -373,7 +378,7 @@ contains
     npolyverts = defn%npolyverts
 
     ! -- Load face flows.
-    defn%faceflow = 0d0 ! kluge note: eventually use DZERO for 0d0 throughout
+    defn%faceflow = DZERO
     ! -- As with polygon nbrs, polygon face flows wrap around for
     ! -- convenience at position npolyverts+1, and bot and top flows
     ! -- are tacked on the end of the list
@@ -387,8 +392,8 @@ contains
     call this%load_boundary_flows_to_defn(defn)
     ! -- Set inoexitface flag
     defn%inoexitface = 1
-    do m = 1, npolyverts + 3 ! kluge note: can be streamlined with above code
-      if (defn%faceflow(m) < 0d0) defn%inoexitface = 0
+    do m = 1, npolyverts + 3
+      if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
     end do
 
     ! -- Add up net distributed flow
@@ -396,7 +401,7 @@ contains
                     this%fmi%StorageFlows(ic)
 
     ! -- Set weak sink flag
-    if (this%fmi%SinkFlows(ic) .ne. 0d0) then
+    if (this%fmi%SinkFlows(ic) .ne. DZERO) then
       defn%iweaksink = 1
     else
       defn%iweaksink = 0
@@ -415,9 +420,9 @@ contains
     integer(I4B) :: ioffset
 
     ic = defn%icell
-    ioffset = (ic - 1) * 10
+    ioffset = (ic - 1) * MAX_POLY_CELLS
     defn%faceflow(1) = defn%faceflow(1) + &
-                       this%fmi%BoundaryFlows(ioffset + 1) ! kluge note: should these be additive (seems so)???
+                       this%fmi%BoundaryFlows(ioffset + 1)
     defn%faceflow(2) = defn%faceflow(2) + &
                        this%fmi%BoundaryFlows(ioffset + 2)
     defn%faceflow(3) = defn%faceflow(3) + &

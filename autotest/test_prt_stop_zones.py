@@ -32,9 +32,8 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-from matplotlib.collections import LineCollection
-
 from framework import TestFramework
+from matplotlib.collections import LineCollection
 from prt_test_utils import (
     FlopyReadmeCase,
     check_budget_data,
@@ -55,9 +54,7 @@ def create_izone(nlay, nrow, ncol):
 
 
 def build_gwf_sim(name, ws, mf6):
-    gwf_sim = FlopyReadmeCase.get_gwf_sim(
-        name, ws, mf6
-    )
+    gwf_sim = FlopyReadmeCase.get_gwf_sim(name, ws, mf6)
     gwf = gwf_sim.get_model()
     dis = gwf.get_package("DIS")
     nlay = int(name[-1])

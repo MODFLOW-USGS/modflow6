@@ -7,11 +7,6 @@ https://flopy.readthedocs.io/en/latest/Notebooks/dis_voronoi_example.html
 Particles are released from the center of the plume
 (i.e. the constant concentration cell) used in the
 transport model.
-
-TODO: support parallel adjacent cell faces,
-duplicated vertices as flopy.utils.voronoi
-can produce via scipy/Qhull (for now flopy
-filters these but mf6 probably should too)
 """
 
 from pathlib import Path
@@ -26,10 +21,9 @@ from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
-from shapely.geometry import LineString, Point
-
 from framework import TestFramework
 from prt_test_utils import get_model_name
+from shapely.geometry import LineString, Point
 from test_prt_voronoi1 import build_gwf_sim, get_grid
 
 simname = "prtvor2"

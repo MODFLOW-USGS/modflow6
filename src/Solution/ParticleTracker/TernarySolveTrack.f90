@@ -2,6 +2,7 @@ module TernarySolveTrack
 
   use KindModule, only: I4B, DP, LGP
   use GeomUtilModule, only: skew
+  use ConstantsModule, only: DPREC, DZERO, DONE
   use MathUtilModule, only: f1d, zero_ch, zero_br
   use ErrorUtilModule, only: pstop
 
@@ -33,8 +34,7 @@ contains
                                itrifaceenter, itrifaceexit, &
                                rxx, rxy, ryx, ryy, &
                                alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                               vziodz, az, &
-                               bary)
+                               vziodz, az)
     ! -- dummy
     integer(I4B), intent(in) :: isolv !< solution method
     real(DP), intent(in) :: tol !< solution tolerance
@@ -58,7 +58,6 @@ contains
     real(DP) :: beti !< alpha and beta coefficients
     real(DP) :: vziodz
     real(DP) :: az
-    logical(LGP), intent(in) :: bary !< whether to use barycentric coordinates
     ! -- local
     real(DP) :: texit0
     real(DP) :: alpexit0
@@ -71,7 +70,7 @@ contains
     real(DP) :: betexit2
 
     ! -- Compute elements of matrix W
-    call get_w(alp1, bet1, alp2, bet2, waa, wab, wba, wbb, bary)
+    call get_w(alp1, bet1, alp2, bet2, waa, wab, wba, wbb)
 
     ! -- Determine alpha and beta analytically as functions of time
     call solve_coefs(alpi, beti)
@@ -116,8 +115,7 @@ contains
                        xi, yi, &
                        rxx, rxy, ryx, ryy, &
                        sxx, sxy, syy, &
-                       alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                       bary)
+                       alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti)
     ! -- dummy
     real(DP) :: x0
     real(DP) :: y0
@@ -146,7 +144,6 @@ contains
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti !< alpha and beta coefficients
-    logical(LGP), intent(in) :: bary !< whether to use barycentric coordinates
     ! -- local
     real(DP) :: baselen
     real(DP) :: oobaselen
@@ -166,17 +163,17 @@ contains
     x2diff = x2 - x0
     y2diff = y2 - y0
     baselen = dsqrt(x1diff * x1diff + y1diff * y1diff)
-    oobaselen = 1d0 / baselen
+    oobaselen = DONE / baselen
     cosomega = x1diff * oobaselen
     sinomega = y1diff * oobaselen
     rxx = cosomega
     rxy = sinomega
     ryx = -sinomega
     ryy = cosomega
-    alp0 = 0d0
-    bet0 = 0d0
+    alp0 = DZERO
+    bet0 = DZERO
     alp1 = baselen
-    bet1 = 0d0
+    bet1 = DZERO
 
     rot = reshape((/rxx, ryx, rxy, ryy/), shape(rot))
     res = matmul(rot, (/x2diff, y2diff/))
@@ -193,29 +190,26 @@ contains
     alpi = res(1)
     beti = res(2)
 
-    if (bary) then
-      sxx = 1d0 / alp1
-      syy = 1d0 / bet2
-      sxy = -alp2 * sxx * syy
-      alp1 = 1d0
-      alp2 = 0d0
-      bet2 = 1d0
-      cv0 = skew(cv0, (/sxx, sxy, syy/))
-      cv1 = skew(cv1, (/sxx, sxy, syy/))
-      cv2 = skew(cv2, (/sxx, sxy, syy/))
-      res = (/alpi, beti/)
-      res = skew(res, (/sxx, sxy, syy/))
-      alpi = res(1)
-      beti = res(2)
-    end if
+    sxx = DONE / alp1
+    syy = DONE / bet2
+    sxy = -alp2 * sxx * syy
+    alp1 = DONE
+    alp2 = DZERO
+    bet2 = DONE
+    cv0 = skew(cv0, (/sxx, sxy, syy/))
+    cv1 = skew(cv1, (/sxx, sxy, syy/))
+    cv2 = skew(cv2, (/sxx, sxy, syy/))
+    res = (/alpi, beti/)
+    res = skew(res, (/sxx, sxy, syy/))
+    alpi = res(1)
+    beti = res(2)
 
   end subroutine
 
   !> @brief Compute elements of W matrix
   subroutine get_w( &
     alp1, bet1, alp2, bet2, &
-    waa, wab, wba, wbb, &
-    bary)
+    waa, wab, wba, wbb)
     ! -- dummy
     real(DP) :: alp1
     real(DP) :: bet1
@@ -225,41 +219,20 @@ contains
     real(DP) :: wab
     real(DP) :: wba
     real(DP) :: wbb !< w matrix
-    logical(LGP), intent(in), optional :: bary !< barycentric coordinates
     ! -- local
-    logical(LGP) :: lbary
     real(DP) :: v1alpdiff
     real(DP) :: v2alpdiff
     real(DP) :: v2betdiff
-    real(DP) :: ooalp1
-    real(DP) :: oobet2
-    real(DP) :: vterm
-
-    if (present(bary)) then
-      lbary = bary
-    else
-      lbary = .true.
-    end if
 
     ! -- Note: wab is the "alpha,beta" entry in matrix W
     !    and the alpha component of the w^(beta) vector
     v1alpdiff = cv1(1) - cv0(1)
     v2alpdiff = cv2(1) - cv0(1)
     v2betdiff = cv2(2) - cv0(2)
-    if (bary) then
-      waa = v1alpdiff
-      wab = v2alpdiff
-      wba = 0d0
-      wbb = v2betdiff
-    else
-      ooalp1 = 1d0 / alp1
-      oobet2 = 1d0 / bet2
-      vterm = v1alpdiff * ooalp1
-      waa = vterm
-      wab = (v2alpdiff - alp2 * vterm) * oobet2
-      wba = 0d0
-      wbb = v2betdiff * oobet2
-    end if
+    waa = v1alpdiff
+    wab = v2alpdiff
+    wba = DZERO
+    wbb = v2betdiff
 
   end subroutine
 
@@ -278,7 +251,7 @@ contains
     real(DP) :: vfact
     real(DP) :: oowaa
 
-    zerotol = 1d-10 ! kluge
+    zerotol = 1d-10 ! todo AMP: consider tolerance
     if (dabs(wbb) .gt. zerotol) then
       wratv = (wab / wbb) * cv0(2)
       acoef = cv0(1) - wratv
@@ -395,7 +368,6 @@ contains
     real(DP) :: v1n
     real(DP) :: v2n
     real(DP) :: vbeti
-    real(DP) :: zerotol
     real(DP) :: betlo
     real(DP) :: bethi
     real(DP) :: betsollo
@@ -403,9 +375,11 @@ contains
     real(DP) :: betoutlo
     real(DP) :: betouthi
     integer(I4B) :: ibettrend
+    real(DP) :: zerotol
+
+    zerotol = 1d-10 ! todo AMP: consider tolerance
 
     ! -- Use iterative scheme or numerical integration indicated by isolv.
-    zerotol = 1d-10 ! kluge
     if (itriface .eq. 0) then
       ! -- Checking for exit on canonical face 0 (beta = 0)
       if (itrifaceenter .eq. 0) then
@@ -414,28 +388,28 @@ contains
         texit = huge(1d0)
       else
         ! -- Not the entrance face, so check for outflow
-        if (cv0(2) .ge. 0d0) then
+        if (cv0(2) .ge. DZERO) then ! check beta velocity along beta=0 face
           ! -- Inflow or no flow, so no exit
-          texit = huge(1d0)
+          texit = huge(DONE)
         else
           ! -- Outflow, so check beta-velocity at the initial location,
           ! -- recognizing that it will never change sign along the
           ! -- trajectory (and will not be blocked from zero by an asymptote)
           vbeti = cv0(2) + wbb * beti
-          if (vbeti .ge. 0d0) then
+          if (vbeti .ge. DZERO) then
             ! -- Can't exit along beta = 0
-            texit = huge(1d0)
+            texit = huge(DONE)
           else
             ! -- get alpt and check it
-            call get_t_alpt(0d0, t, alpt)
-            if ((alpt .ge. 0d0) .and. (alpt .le. 1d0)) then
+            call get_t_alpt(DZERO, t, alpt)
+            if ((alpt .ge. DZERO) .and. (alpt .le. DONE)) then
               ! -- alpt within the edge, so exit found
               texit = t
               alpexit = alpt
-              betexit = 0d0
+              betexit = DZERO
             else
               ! -- alpt not within the edge, so not an exit
-              texit = huge(1d0)
+              texit = huge(DONE)
             end if
           end if
         end if
@@ -452,9 +426,9 @@ contains
         v1n = cv0(1)
         v2n = cv2(1)
       end if
-      if ((v1n .ge. 0d0) .and. (v2n .ge. 0d0)) then
+      if ((v1n .ge. DZERO) .and. (v2n .ge. DZERO)) then
         ! -- No outflow at vn1 and vn2 corners; no outflow interval, so no exit.
-        texit = huge(1d0)
+        texit = huge(DONE)
       else
         ! -- Find outflow interval
         call get_bet_outflow_bary(v1n, v2n, betoutlo, betouthi)
@@ -473,21 +447,21 @@ contains
             ! -- in this special case
             v0alpstar = cv0(1) + wab * beti
             valpi = v0alpstar + waa * alpi
-            if ((itriface .eq. 1) .and. (valpi .le. 0d0)) then
+            if ((itriface .eq. 1) .and. (valpi .le. DZERO)) then
               ! -- Can't exit along gamma = 0.
-              texit = huge(1d0)
-            else if ((itriface .eq. 2) .and. (valpi .ge. 0d0)) then
+              texit = huge(DONE)
+            else if ((itriface .eq. 2) .and. (valpi .ge. DZERO)) then
               ! -- Can't exit along alpha = 0.
-              texit = huge(1d0)
+              texit = huge(DONE)
             else
               ! -- get exit
               if (itriface .eq. 1) then
-                alpexit = 1d0 - beti
+                alpexit = DONE - beti
               else
-                alpexit = 0d0
-              end if ! kluge note: seems like in this case (beta=const) this
-              betexit = beti !   must be the ONLY exit; no need to check other edges??
-              if (waa .ne. 0d0) then
+                alpexit = DZERO
+              end if
+              betexit = beti
+              if (dabs(waa) > zerotol) then
                 alplim = -v0alpstar / waa
                 texit = dlog(alpexit - alplim / (alpi - alplim)) / waa
               else
@@ -500,23 +474,23 @@ contains
           ! -- Beta varies along trajectory; combine outflow and soln limits on beta
           bethi = min(betouthi, betsolhi)
           betlo = max(betoutlo, betsollo)
-          if (betlo .ge. bethi) then
+          if (betlo .gt. bethi) then
             ! -- If bounds on bet leave no feasible interval, no exit
-            texit = huge(1d0)
+            texit = huge(DONE)
           else
             ! -- Check sign of function value at beta bounds
             call get_t_alpt(bethi, thi, alphi)
             call get_t_alpt(betlo, tlo, alplo)
             if (itriface .eq. 1) then
-              fax = 1d0 - betlo - alplo
-              fbx = 1d0 - bethi - alphi
+              fax = DONE - betlo - alplo
+              fbx = DONE - bethi - alphi
             else
               fax = alplo
               fbx = alphi
             end if
-            if (fax * fbx .gt. 0d0) then
+            if (fax * fbx .gt. DZERO) then
               ! -- Root not bracketed; no exit
-              texit = huge(1d0)
+              texit = huge(DONE)
             else
               if (isolv .eq. 1) then
                 ! -- Use Brent's method with initial bounds on beta of betlo and bethi,
@@ -539,8 +513,9 @@ contains
       ! -- End canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
     end if
 
-    if (texit .ne. huge(1d0) .and. texit .lt. 0d0) &
+    if (texit .ne. huge(DONE) .and. texit .lt. DZERO) then
       call pstop(1, "texit is negative (unexpected)") ! shouldn't get here
+    end if
 
   end subroutine
 
@@ -555,7 +530,7 @@ contains
 
     ! -- Evaluate gamma{t{beta}} = 1. - alpha{t{beta}} - beta
     call get_t_alpt(bet, t, alpt)
-    fb = 1d0 - alpt - bet
+    fb = DONE - alpt - bet
   end function
 
   !> @brief Brent's method applied to canonical face 2 (alpha = 0)
@@ -581,25 +556,48 @@ contains
     ! -- local
     real(DP) :: term
     real(DP) :: zerotol
+    real(DP) :: waat
+    real(DP) :: coef
+    real(DP) :: waatlim
+    real(DP) :: ewaatlim
 
-    ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
-    zerotol = 1d-10 ! kluge
+    ! assumes cb2<>0, wbb<>0
+    zerotol = 1d-10 ! todo AMP: consider tolerance
     term = (bet - cb1) / cb2
+    waatlim = 50.0_DP
+    ewaatlim = 5d+21 ! approx. e^waatlim
+
     if (icase .eq. 1) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + ca2 * dexp(waa * t) + ca3 * dexp(wbb * t)
+      waat = waa * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, ca2)
+      else
+        alp = ca1 + ca2 * dexp(waat) + ca3 * term
+      end if
     else if (icase .eq. -1) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + (ca2 + ca3 * t) * dexp(waa * t)
+      waat = waa * t
+      coef = ca2 + ca3 * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, coef)
+      else
+        alp = ca1 + coef * dexp(waat)
+      end if
     else if (icase .eq. 2) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + ca2 * t + ca3 * dexp(wbb * t)
+      alp = ca1 + ca2 * t + ca3 * term
     else if (icase .eq. 3) then
       t = term
-      alp = ca1 + ca2 * t + ca3 * dexp(waa * t)
+      waat = waa * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, ca3)
+      else
+        alp = ca1 + ca2 * t + ca3 * dexp(waat)
+      end if
     else if (icase .eq. 4) then
       t = term
       alp = ca1 + (ca2 + ca3 * t) * t
@@ -618,22 +616,22 @@ contains
     real(DP) :: vndiff
 
     vndiff = vn2 - vn1
-    if (vn1 .lt. 0d0) then
+    if (vn1 .lt. DZERO) then
       ! -- Outflow at vn1 corner
-      betoutlo = 0d0
-      if (vn2 .le. 0d0) then
+      betoutlo = DZERO
+      if (vn2 .le. DZERO) then
         ! -- Outflow along entire edge (except possibly no-flow right at vn2 corner)
-        betouthi = 1d0
+        betouthi = DONE
       else
         ! -- Outflow along part of edge
         betouthi = -vn1 / vndiff
       end if
     else
       ! -- Outflow at vn2 corner
-      betouthi = 1d0
-      if (vn1 .le. 0d0) then
+      betouthi = DONE
+      if (vn1 .le. DZERO) then
         ! -- Outflow along entire edge (except possibly no-flow right at vn1 corner)
-        betoutlo = 0d0
+        betoutlo = DZERO
       else
         ! -- Outflow along part of edge
         betoutlo = -vn1 / vndiff
@@ -652,22 +650,36 @@ contains
     ! -- local
     real(DP) :: betlim
 
-    if (wbb .gt. 0d0) then
-      betlim = -cv0(2) / wbb
-      if (beti .gt. betlim) then
-        betsolhi = huge(1d0)
+    if (icase > 2) then
+      if (cv0(2) .gt. DZERO) then
+        betsolhi = huge(DONE)
         betsollo = beti
         ibettrend = 1
-      else if (beti .lt. betlim) then
+      else if (cv0(2) .lt. DZERO) then
         betsolhi = beti
-        betsollo = -huge(1d0)
+        betsollo = -huge(DONE)
         ibettrend = -1
       else
         betsolhi = beti
         betsollo = beti
         ibettrend = 0
       end if
-    else if (wbb .lt. 0d0) then
+    else if (wbb .gt. DZERO) then
+      betlim = -cv0(2) / wbb
+      if (beti .gt. betlim) then
+        betsolhi = huge(DONE)
+        betsollo = beti
+        ibettrend = 1
+      else if (beti .lt. betlim) then
+        betsolhi = beti
+        betsollo = -huge(DONE)
+        ibettrend = -1
+      else
+        betsolhi = beti
+        betsollo = beti
+        ibettrend = 0
+      end if
+    else if (wbb .lt. DZERO) then
       betlim = -cv0(2) / wbb
       if (beti .gt. betlim) then
         betsolhi = beti
@@ -677,20 +689,6 @@ contains
         betsolhi = betlim
         betsollo = beti
         ibettrend = 1
-      else
-        betsolhi = beti
-        betsollo = beti
-        ibettrend = 0
-      end if
-    else ! kluge note: use zerotol and elsewhere?
-      if (cv0(2) .gt. 0d0) then
-        betsolhi = huge(1d0)
-        betsollo = beti
-        ibettrend = 1
-      else if (cv0(2) .lt. 0d0) then
-        betsolhi = beti
-        betsollo = -huge(1d0)
-        ibettrend = -1
       else
         betsolhi = beti
         betsollo = beti
@@ -712,17 +710,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- assuming betlo and bethi bracket the root
-    ! --
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -748,16 +740,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- note: assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then

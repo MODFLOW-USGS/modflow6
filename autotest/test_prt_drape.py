@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.utils.binaryfile import HeadFile
-
 from framework import TestFramework
 from prt_test_utils import all_equal, check_track_data, get_model_name
 

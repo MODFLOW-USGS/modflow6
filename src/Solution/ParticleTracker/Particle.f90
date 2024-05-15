@@ -8,7 +8,7 @@ module ParticleModule
 
   private
   public :: ParticleType, ParticleStoreType, &
-            create_particle, create_particle_store
+            create_particle, allocate_particle_store
 
   ! tracking levels (1: model, 2: cell, 3: subcell)
   integer, parameter, public :: levelmax = 4
@@ -59,6 +59,7 @@ module ParticleModule
     real(DP), public :: cosrot !< cosine of rotation angle for coordinate transformation from model to local
     logical(LGP), public :: transformed !< whether coordinates have been transformed from model to local
     logical(LGP), public :: advancing !< whether particle is still being tracked for current time step
+    integer(I4B), public :: ifrctrn !< whether to force solving the particle with the ternary method
   contains
     procedure, public :: get_model_coords
     procedure, public :: load_from_store
@@ -88,8 +89,9 @@ module ParticleModule
     real(DP), dimension(:), pointer, contiguous :: trelease !< particle release time
     real(DP), dimension(:), pointer, contiguous :: tstop !< particle stop time
     real(DP), dimension(:), pointer, contiguous :: ttrack !< current tracking time
+    integer(I4B), dimension(:), pointer, contiguous :: ifrctrn !< force ternary method
   contains
-    procedure, public :: destroy => destroy_store
+    procedure, public :: deallocate => deallocate_particle_store
     procedure, public :: resize => resize_store
     procedure, public :: load_from_particle
   end type ParticleStoreType
@@ -105,7 +107,7 @@ contains
   end subroutine create_particle
 
   !> @brief Create a new particle store
-  subroutine create_particle_store(this, np, mempath)
+  subroutine allocate_particle_store(this, np, mempath)
     type(ParticleStoreType), pointer :: this !< store
     integer(I4B), intent(in) :: np !< number of particles
     character(*), intent(in) :: mempath !< path to memory
@@ -127,12 +129,13 @@ contains
     call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
+    call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
-  end subroutine create_particle_store
+  end subroutine allocate_particle_store
 
   !> @brief Deallocate particle arrays
-  subroutine destroy_store(this, mempath)
+  subroutine deallocate_particle_store(this, mempath)
     class(ParticleStoreType), intent(inout) :: this !< store
     character(*), intent(in) :: mempath !< path to memory
 
@@ -152,9 +155,10 @@ contains
     call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
+    call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
-  end subroutine destroy_store
+  end subroutine deallocate_particle_store
 
   !> @brief Reallocate particle arrays
   subroutine resize_store(this, np, mempath)
@@ -163,7 +167,7 @@ contains
     integer(I4B), intent(in) :: np !< number of particles
     character(*), intent(in) :: mempath !< path to memory
 
-    ! resize 1D arrays
+    ! resize arrays
     call mem_reallocate(this%imdl, np, 'PLIMDL', mempath)
     call mem_reallocate(this%iprp, np, 'PLIPRP', mempath)
     call mem_reallocate(this%irpt, np, 'PLIRPT', mempath)
@@ -180,6 +184,7 @@ contains
     call mem_reallocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
+    call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine resize_store
@@ -221,6 +226,7 @@ contains
     this%idomain(1) = imdl
     this%iboundary(1:levelmax) = &
       store%iboundary(ip, 1:levelmax)
+    this%ifrctrn = store%ifrctrn(ip)
   end subroutine load_from_store
 
   !> @brief Update particle store from particle
@@ -253,6 +259,7 @@ contains
       ip, &
       1:levelmax) = &
       particle%iboundary(1:levelmax)
+    this%ifrctrn = particle%ifrctrn
   end subroutine load_from_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.
@@ -268,7 +275,7 @@ contains
     logical(LGP), intent(in), optional :: invert !< whether to invert
     logical(LGP), intent(in), optional :: reset !< whether to reset
 
-    ! -- reset if requested
+    ! Reset if requested
     if (present(reset)) then
       if (reset) then
         this%xorigin = DZERO
@@ -282,24 +289,24 @@ contains
       end if
     end if
 
-    ! -- Otherwise, transform coordinates
+    ! Otherwise, transform coordinates
     call transform(this%x, this%y, this%z, &
                    this%x, this%y, this%z, &
                    xorigin, yorigin, zorigin, &
                    sinrot, cosrot, invert)
 
-    ! -- Modify transformation from model coordinates to particle's new
-    ! -- local coordinates by incorporating this latest transformation
+    ! Modify transformation from model coordinates to particle's new
+    ! local coordinates by incorporating this latest transformation
     call compose(this%xorigin, this%yorigin, this%zorigin, &
                  this%sinrot, this%cosrot, &
                  xorigin, yorigin, zorigin, &
                  sinrot, cosrot, invert)
 
-    ! -- Set isTransformed flag to true. Note that there is no check
-    ! -- to see whether the modification brings the coordinates back
-    ! -- to model coordinates (in which case the origin would be very
-    ! -- close to zero and sinrot and cosrot would be very close to 0.
-    ! -- and 1., respectively, allowing for roundoff error).
+    ! Set isTransformed flag to true. Note that there is no check
+    ! to see whether the modification brings the coordinates back
+    ! to model coordinates (in which case the origin would be very
+    ! close to zero and sinrot and cosrot would be very close to 0.
+    ! and 1., respectively, allowing for roundoff error).
     this%transformed = .true.
   end subroutine transform_coords
 
@@ -312,12 +319,12 @@ contains
     real(DP), intent(out) :: z !< z coordinate
 
     if (this%transformed) then
-      ! -- Transform back from local to model coordinates
+      ! Transform back from local to model coordinates
       call transform(this%x, this%y, this%z, x, y, z, &
                      this%xorigin, this%yorigin, this%zorigin, &
                      this%sinrot, this%cosrot, .true.)
     else
-      ! -- Already in model coordinates
+      ! Already in model coordinates
       x = this%x
       y = this%y
       z = this%z
