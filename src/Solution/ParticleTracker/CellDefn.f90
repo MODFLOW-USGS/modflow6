@@ -27,7 +27,6 @@ module CellDefnModule
     real(DP), allocatable, public :: faceflow(:) !< flows that correspond to faces(/vertices)
     real(DP), public :: distflow !< net distributed flow into cell
   contains
-    procedure, public :: get_npolyverts !< returns the number of polygon vertices
     procedure, public :: get_ispv180 !< returns 180-degree indicator for a vertex
     procedure, public :: get_botflow !< returns bottom flow
     procedure, public :: get_topflow !< returns top flow
@@ -60,13 +59,6 @@ contains
       iatop = 1
     end if
   end function get_iatop
-
-  !> @brief Return the number of polygon vertices
-  function get_npolyverts(this) result(npolyverts)
-    class(CellDefnType), intent(inout) :: this
-    integer(I4B) :: npolyverts
-    npolyverts = this%npolyverts
-  end function get_npolyverts
 
   !> @brief Return 180-degree indicator for a vertex
   function get_ispv180(this, m) result(ispv180)

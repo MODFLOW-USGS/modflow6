@@ -78,12 +78,10 @@ contains
     ! -- dummy
     class(CellRectQuadType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: npolyverts, n, m
-
-    npolyverts = this%defn%get_npolyverts()
+    integer(I4B) :: n, m
 
     n = 0
-    do m = 1, npolyverts
+    do m = 1, this%defn%npolyverts
       if (.not. this%defn%get_ispv180(m)) then
         n = n + 1
         this%irectvert(n) = m
