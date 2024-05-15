@@ -871,7 +871,7 @@ contains
     select case (filtyp)
     case ('PRP6')
       call prp_create(packobj, ipakid, ipaknum, inunit, iout, &
-                      this%name, pakname, mempath, this%fmi)
+                      this%name, pakname, this%fmi)
     case ('API6')
       call api_create(packobj, ipakid, ipaknum, inunit, iout, &
                       this%name, pakname)

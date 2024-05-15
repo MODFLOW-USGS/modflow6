@@ -168,6 +168,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
             if "tls" in name
             else None
         ),
+        print_input=True,
     )
 
     # create output control package
@@ -330,6 +331,22 @@ def check_output(idx, test, fraction, snapshot):
     # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
     assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # check list file for logged release configuration
+    list_file = prt_ws / f"{prt_name}.lst"
+    assert list_file.is_file()
+    lines = open(list_file).readlines()
+    lines = [l.strip() for l in lines]
+    if "sgl" in name or "dbl" in name or "tls" in name:
+        assert (
+            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
+            in lines
+        )
+    elif "stps" in name:
+        assert (
+            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.500"
+            in lines
+        )
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
