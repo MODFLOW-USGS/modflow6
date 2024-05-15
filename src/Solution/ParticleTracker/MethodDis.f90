@@ -250,9 +250,12 @@ contains
     ! dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
+    ! local
+    type(CellRectType), pointer :: cell
 
-    select type (cell => this%cell)
+    select type (c => this%cell)
     type is (CellRectType)
+      cell => c
       ! If the entry face has no neighbors it's a
       ! boundary face, so terminate the particle.
       ! todo AMP: reconsider when multiple models supported
