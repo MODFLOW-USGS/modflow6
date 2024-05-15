@@ -82,9 +82,7 @@ Some additional, optional tools are also discussed below.
 
 ### Fortran compiler
 
-The GNU Fortran compiler `gfortran` or the Intel Fortran Classic compiler `ifort` can be used to compile MODFLOW 6.
-
-**Note:** the next-generation Intel Fortran compiler `ifx` is not yet compatible with MODFLOW 6.
+GNU Fortran or Intel Fortran compilers can be used to build MODFLOW 6. It may be possible to build MODFLOW 6 with other compilers, but this cannot be guaranteed.
 
 #### GNU Fortran
 
@@ -140,9 +138,9 @@ While the current development version of MODFLOW 6 is broadly compatible with `i
 
 ##### Windows
 
-On Windows, [Visual Studio](https://visualstudio.microsoft.com) and a number of libraries must be installed for `ifort` to work. The required libraries can be installed by ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer's Workloads tab. 
+On Windows, [Visual Studio](https://visualstudio.microsoft.com) and a number of libraries must be installed for `ifort` and `ifx` to work. The required libraries can be installed by ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer's Workloads tab. 
 
-**Note:** Invoking the `setvars.bat` scripts from a Powershell session will *not* put `ifort` on the path, since [batch script environments are local to their process](https://stackoverflow.com/a/49028002/6514033). To relaunch PowerShell with oneAPI variables configured:
+**Note:** Invoking the `setvars.bat` scripts from a Powershell session will *not* put `ifort` or `ifx` on the path, since [batch script environments are local to their process](https://stackoverflow.com/a/49028002/6514033). To relaunch PowerShell with oneAPI variables configured:
 
 ```
 cmd.exe "/K" '"C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat" && "C:\Program Files (x86)\Intel\oneAPI\compiler\latest\env\vars.bat" && powershell'
@@ -268,24 +266,24 @@ Meson build configuration files are provided for MODFLOW 6, for the ZONEBUDGET a
 - `utils/mf5to6/meson.build`
 - `autotest/meson.build`
 
-To build MODFLOW 6, first configure the build directory.
-Depending on which task you use, meson will configure a debug or release build.
+Building MODFLOW 6 requires two steps:
 
-Setup a debug build:
+- configure the build directory
+- build the project
+
+To configure the build directory:
 
 ```shell
-pixi run setup -Ddebug=true -Doptimization=0 builddir
+meson setup -Ddebug=true -Doptimization=0 builddir
+meson setup builddir  # for an optimized release build
+pixi run setup builddir  # alternatively, with pixi task
 ```
 
-Or alternatively, setup a release build
-```shell
-pixi run setup builddir
-```
-
-Compile MODFLOW 6 and install binaries to the `bin` folder by executing:
+To build MODFLOW 6 and install binaries to `<project root>/bin/`:
 
 ```shell
-pixi run build builddir
+meson install -C builddir
+pixi run build builddir  # alternatively, with pixi
 ```
 
 **Note:** If using Visual Studio Code, you can use tasks as described [here](.vscode/README.md) to automate the above.
@@ -351,6 +349,12 @@ Tests require the latest official MODFLOW 6 release to be compiled in develop mo
 pixi run get-exes
 ```
 
+Alternatively, from the `autotest/` directory:
+
+```shell
+pytest get_exes.py
+```
+
 As above, binaries are placed in the `bin` subdirectory of the project root, with nested `bin/downloaded` and `bin/rebuilt` subdirectories containing the rebuilt latest release and downloaded binaries, respectively.
 
 ##### Updating FloPy packages
@@ -362,9 +366,11 @@ FloPy packages should be regenerated from DFN files before running tests for the
 There is a single optional argument, the path to the folder containing definition files. By default DFN files are assumed to live in `doc/mf6io/mf6ivar/dfn`, making the following functionally identical:
 
 ```shell
-pixi run update-flopy
+pixi run update-flopy  # uses default dfn path
 pixi run update-flopy doc/mf6io/mf6ivar/dfn
 ```
+
+Alternatively, run `python update_flopy.py` directly from `autotest/`.
 
 ##### Updating Fortran definitions
 
@@ -394,33 +400,33 @@ MODFLOW 6 has two kinds of tests: Fortran unit tests, driven with Meson, and Pyt
 Unit tests must be run from the project root. To run unit tests in verbose mode:
 
 ```shell
-pixi run test builddir
+meson test -C builddir
+pixi run test builddir  # alternatively, with pixi
 ```
-
 
 Unit tests can be selected by module name (as listed in `autotest/tester.f90`). For instance, to test the `ArrayHandlersModule`:
 
 ```shell
-pixi run test builddir --verbose ArrayHandlers
+meson test -C builddir --verbose ArrayHandlers
+pixi run test builddir --verbose ArrayHandlers  # alternatively, with pixi
 ```
 
 To run a test module in the `gdb` debugger, just add the `--gdb` flag to the test command.
 
 #### Running integration tests
 
-Integration tests must be run from the `autotest/` folder. To run tests in a particular file, showing verbose output, use:
+Integration tests must be run from the `autotest/` folder if invoked with `pytest` directly &mdash; the Pixi `autotest` task can be invoked from the project root.
+
+To run tests in parallel:
 
 ```shell
-pixi shell
-pytest -v <file>
+pytest -v -n auto  # from autotest/
+pixi run autotest -v <file>  # from project root
 ```
 
-Tests can be run in parallel with the `-n` option, which accepts an integer argument for the number of parallel processes. If the value `auto` is provided, `pytest-xdist` will use one worker per available processor.
+The Pixi `autotest` task includes options to run tests in parallel, show test runtimes, and save failed test results in `autotest/.failed/`.
 
-```shell
-pixi shell
-pytest -v -n auto
-```
+**Note:** The `-n` option accepts an integer argument for the number of parallel processes. If the value `auto` is provided, `pytest-xdist` will use one worker per available processor.
 
 ##### Selecting tests with markers
 
@@ -434,14 +440,12 @@ Markers can be used to select subsets of tests. Markers provided in `pytest.ini`
 Markers can be used with the `-m <marker>` option, and can be applied in boolean combinations with `and`, `or` and `not`. For instance, to run fast tests in parallel, excluding regression tests:
 
 ```shell
-pixi shell
 pytest -v -n auto -m "not slow and not regression"
 ```
 
 The `--smoke` (short `-S`) flag, provided by `modflow-devtools` is an alias for the above:
 
 ```shell
-pixi shell
 pytest -v -n auto -S
 ```
 
@@ -450,14 +454,12 @@ pytest -v -n auto -S
 Tests using models from external repositories can be selected with the `repo` marker:
 
 ```shell
-pixi shell
 pytest -v -n auto -m "repo"
 ```
 
 The `large` marker is a subset of the `repo` marker. To test models excluded from commit-triggered CI and only run on GitHub Actions nightly:
 
 ```shell
-pixi shell
 pytest -v -n auto -m "large"
 ```
 
@@ -593,7 +595,8 @@ After running the reference and comparison models, the framework will try to fin
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
 
 ```shell
-pixi run build-makefiles
+pixi run build-makefiles   # from project root
+python build_makefiles.py  # alternatively, from distribution/
 ```
 
 ### Updating extra and excluded files
@@ -607,7 +610,6 @@ Module dependencies for features still under development should be added to `exc
 Makefile generation and usage can be tested from the `distribution` directory by running the `build_makefiles.py` script with Pytest:
 
 ```shell
-pixi shell
 pytest -v build_makefiles.py
 ```
 
