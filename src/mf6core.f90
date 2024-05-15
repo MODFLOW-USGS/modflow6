@@ -330,7 +330,7 @@ contains
     ! -- synchronize
     call run_ctrl%at_stage(STG_AFT_EXG_DF)
     !
-    ! -- when needed, this is were the interface models are
+    ! -- when needed, this is where the interface models are
     ! created and added to the numerical solutions
     call connections_cr()
     !
@@ -362,7 +362,7 @@ contains
 
   !> @brief Simulation allocate and read
     !!
-    !! This subroutine allocates and read static data for the simulation.
+    !! This subroutine allocates and reads static data for the simulation.
     !! Steps include:
     !!   - allocate and read for each model
     !!   - allocate and read for each exchange
