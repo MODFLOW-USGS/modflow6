@@ -3,7 +3,7 @@ module TestGeomUtil
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon, &
-                            skew, area
+                            skew, area, shared_face
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -23,7 +23,8 @@ contains
                 new_unittest("point_in_polygon_irr", &
                              test_point_in_polygon_irr), &
                 new_unittest("skew", test_skew), &
-                new_unittest("area", test_area) &
+                new_unittest("area", test_area), &
+                new_unittest("shared_face", test_shared_face) &
                 ]
   end subroutine collect_geomutil
 
@@ -355,6 +356,22 @@ contains
     if (allocated(error)) return
 
     deallocate (poly)
+
+  end subroutine
+
+  subroutine test_shared_face(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer(I4B) :: iverts1(5), iverts2(5)
+    integer(I4B) :: iface
+
+    iface = 0
+    iverts1 = (/ 1, 2, 5, 4, 1 /)
+    iverts2 = (/ 2, 3, 6, 5, 2 /)
+
+    call shared_face(iverts1, iverts2, iface)
+    call check(error, iface == 2)
+
+    if (allocated(error)) return
 
   end subroutine
 

@@ -13,7 +13,7 @@ module MethodDisvModule
   use DisvModule, only: DisvType
   use ArrayHandlersModule, only: ExpandArray
   use TrackModule, only: TrackFileControlType
-  use GeomUtilModule, only: get_jk
+  use GeomUtilModule, only: get_jk, shared_face
   implicit none
 
   private
@@ -411,70 +411,6 @@ contains
     defn%facenbr(npolyverts + 1) = defn%facenbr(1)
 
   end subroutine load_nbrs_to_defn
-
-  !> @brief Find the lateral face shared by two cells.
-  !!
-  !! Find the lateral (horizontal) face shared by the given cells.
-  !! The iface return argument will be 0 if they share no such face.
-  !!
-  !! Note: assumes the cells are convex and share at most 2 vertices.
-  !<
-  subroutine shared_face(iverts1, iverts2, iface)
-    integer(I4B), dimension(:) :: iverts1
-    integer(I4B), dimension(:) :: iverts2
-    integer(I4B), intent(out) :: iface
-    integer(I4B) :: nv1
-    integer(I4B) :: nv2
-    integer(I4B) :: il1, iil1
-    integer(I4B) :: il2, iil2
-    logical(LGP) :: found
-    logical(LGP) :: wrapped
-
-    iface = 0
-    found = .false.
-    nv1 = size(iverts1)
-    nv2 = size(iverts2)
-    wrapped = iverts1(1) == iverts1(nv1)
-
-    ! Find a vertex shared by the cells, then check the adjacent faces.
-    ! If the cells share a face, it must be one of these.
-    outerloop: do il1 = 1, nv1 - 1
-      do il2 = 1, nv2 - 1
-        if (iverts1(il1) == iverts2(il2)) then
-
-          ! cw face wrt cell 1
-          iil1 = il1 + 1
-          if (il2 == 1) then
-            iil2 = nv2
-            if (wrapped) iil2 = iil2 - 1
-          else
-            iil2 = il2 - 1
-          end if
-          if (iverts1(iil1) == iverts2(iil2)) then
-            found = .true.
-            iface = il1
-            exit outerloop
-          end if
-
-          ! ccw face wrt cell 1
-          iil2 = il2 + 1
-          if (il1 == 1) then
-            iil1 = nv1
-            if (wrapped) iil1 = iil1 - 1
-          else
-            iil1 = il1 - 1
-          end if
-          if (iverts1(iil1) == iverts2(iil2)) then
-            found = .true.
-            iface = iil1
-            exit outerloop
-          end if
-
-        end if
-      end do
-      if (found) exit
-    end do outerloop
-  end subroutine shared_face
 
   !> @brief Load flows into the cell definition.
   !! These include face flows and net distributed flows.
