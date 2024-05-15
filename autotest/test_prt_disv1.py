@@ -21,6 +21,10 @@ Several cases are provided:
             time steps. PRT and MP7 should both assign the datum to the prior time step.
     - trtf: Same as trts, except tracking times are provided to PRT in a separate file,
             rather than inline in the OC input file.
+
+This test case also exercises the `print_input`
+option which enables logging for the package's
+particle release settings to the listing file.
 """
 
 from pathlib import Path
@@ -225,6 +229,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         stop_at_weak_sink=False,
         boundnames=True,
+        print_input=True,
     )
 
     # create output control package
@@ -365,6 +370,16 @@ def check_output(idx, test):
     # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
     assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # check list file for logged release configuration
+    list_file = prt_ws / f"{prt_name}.lst"
+    assert list_file.is_file()
+    lines = open(list_file).readlines()
+    lines = [l.strip() for l in lines]
+    assert (
+        "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
+        in lines
+    )
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)

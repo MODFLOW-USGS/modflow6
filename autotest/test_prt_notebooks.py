@@ -82,6 +82,11 @@ def test_notebooks(notebook, function_tmpdir, targets):
 
     # check results
     example_name = notebook.stem.replace("ex-prt-", "")
-    pathlines_file = function_tmpdir / example_name / "prt" / (example_name + "-prt.trk.csv")
+    pathlines_file = (
+        function_tmpdir
+        / example_name
+        / "prt"
+        / (example_name + "-prt.trk.csv")
+    )
     pathlines = pd.read_csv(pathlines_file).round(3).to_records(index=False)
     assert any(pathlines)

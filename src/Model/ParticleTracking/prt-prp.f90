@@ -86,7 +86,7 @@ contains
 
   !> @brief Create a new particle release point package
   subroutine prp_create(packobj, id, ibcnum, inunit, iout, namemodel, &
-                        pakname, mempath, fmi)
+                        pakname, fmi)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -95,21 +95,20 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    character(len=*), intent(in) :: mempath
     type(PrtFmiType), pointer :: fmi
     ! -- local
     type(PrtPrpType), pointer :: prpobj
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'PRP -- PARTICLE RELEASE POINT PACKAGE', &
-       &' INPUT READ FROM MEMPATH: ', A, /)"
+       &' INPUT READ FROM UNIT ', i0, /)"
 
     ! -- allocate the object and assign values to object variables
     allocate (prpobj)
     packobj => prpobj
 
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     prpobj%text = text
 
     ! -- allocate scalars
@@ -129,7 +128,7 @@ contains
     prpobj%fmi => fmi
 
     ! -- if prp is enabled, print a message identifying it
-    if (inunit > 0) write (iout, fmtheader) mempath
+    if (inunit > 0) write (iout, fmtheader) inunit
   end subroutine prp_create
 
   !> @brief Deallocate memory
@@ -598,22 +597,24 @@ contains
     end if
 
     ! -- write settings to list file
-    if (.not. any(this%rlskstp > 0)) then
-      write (this%iout, "(1x,/1x,a)") 'NO PARTICLE RELEASES IN THIS STRESS '// &
-        'PERIOD'
-    else if (use_last) then
-      write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
-        'FROM LAST STRESS PERIOD'
-    else
-      ! -- write particle release setting
-      write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE:'
-      if (any(this%rlskstp > 0)) then
-        n = size(this%rlskstp)
-        if (n > 0) write (this%iout, fmt_steps, advance='no') this%rlskstp
+    if (this%iprpak > 0) then
+      if (.not. any(this%rlskstp > 0)) then
+        write (this%iout, "(1x,/1x,a)") 'NO PARTICLE RELEASES IN THIS STRESS '// &
+          'PERIOD'
+      else if (use_last) then
+        write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
+          'FROM LAST STRESS PERIOD'
+      else
+        ! -- write particle release setting
+        write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE:'
+        if (any(this%rlskstp > 0)) then
+          n = size(this%rlskstp)
+          if (n > 0) write (this%iout, fmt_steps, advance='no') this%rlskstp
+        end if
+        write (this%iout, "(1x,a)", advance='no') 'AT OFFSET'
+        write (this%iout, fmt_fracs) (/this%offset/)
+        write (this%iout, '(A)')
       end if
-      write (this%iout, "(1x,a)", advance='no') 'AT OFFSET'
-      write (this%iout, fmt_fracs) (/this%offset/)
-      write (this%iout, '(A)')
     end if
   end subroutine prp_rp
 
