@@ -25,6 +25,7 @@ module MethodDisModule
     procedure, public :: load => load_dis !< load the method
     procedure, public :: pass => pass_dis !< pass the particle to the next domain
     procedure, private :: get_top !< get cell top elevation
+    procedure, private :: load_cell_props !< load cell properties
     procedure, private :: load_nbrs_to_defn !< load face neighbors
     procedure, private :: load_flows_to_defn !< loads face flows
     procedure, private :: load_boundary_flows_to_defn !< loads BoundaryFlows
@@ -167,7 +168,6 @@ contains
     real(DP) :: sat
 
     inface = particle%iboundary(2)
-    z = particle%z
 
     select type (cell => this%cell)
     type is (CellRectType)
@@ -175,24 +175,26 @@ contains
       type is (DisType)
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
-          ! -- Exterior face; no neighbor to map to
+          ! -- Exterior face, no neighbor to map to, terminate particle
           ! todo AMP: consider when multiple models allowed
           particle%istatus = 2
           particle%advancing = .false.
-          call this%save(particle, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3)
         else
+          ! compute and set reduced/user node numbers and layer
+          ! todo: factor out routine
           idiag = dis%con%ia(cell%defn%icell)
           ipos = idiag + inbr
           ic = dis%con%ja(ipos)
-          particle%idomain(2) = ic
-
-          ! compute and set user node number and layer on particle
           icu = dis%get_nodeuser(ic)
           call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
                        irow, icol, ilay)
+          particle%idomain(2) = ic
           particle%icu = icu
           particle%ilay = ilay
 
+          ! map/set particle entry face
+          ! todo: factor out routine
           if (inface .eq. 1) then
             inface = 3
           else if (inface .eq. 2) then
@@ -207,8 +209,11 @@ contains
             inface = 6
           end if
           particle%iboundary(2) = inface
+
+          ! -- Map z between cells
+          ! todo: factor out routine
+          z = particle%z
           if (inface < 5) then
-            ! -- Map z between cells
             topfrom = cell%defn%top
             botfrom = cell%defn%bot
             zrel = (z - botfrom) / (topfrom - botfrom)
@@ -218,8 +223,10 @@ contains
             z = bot + zrel * sat * (top - bot)
           end if
           particle%z = z
+
           ! -- Update cell-cell flows of particle mass.
           !    Every particle is currently assigned unit mass.
+          ! todo: factor out routine
           ! -- leaving old cell
           this%flowja(ipos) = this%flowja(ipos) - DONE
           ! -- entering new cell
@@ -259,39 +266,48 @@ contains
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
 
-    select type (dis => this%fmi%dis)
-    type is (DisType)
-      ! -- Set basic cell properties
-      defn%icell = ic
-      defn%npolyverts = 4 ! rectangular cell always has 4 vertices
-      defn%iatop = get_iatop(dis%get_ncpl(), &
-                             dis%get_nodeuser(ic))
-      defn%top = dis%bot(ic) + &
-                 this%fmi%gwfsat(ic) * (dis%top(ic) - dis%bot(ic))
-      defn%bot = dis%bot(ic)
-      defn%sat = this%fmi%gwfsat(ic)
-      defn%porosity = this%porosity(ic)
-      defn%retfactor = this%retfactor(ic)
-      defn%izone = this%izone(ic)
-      defn%can_be_rect = .true.
-      defn%can_be_quad = .false.
+    ! -- Load basic cell properties
+    call this%load_cell_props(ic, defn)
 
-      ! -- Load cell polygon vertices
-      call dis%get_polyverts( &
-        defn%icell, &
-        defn%polyvert, &
-        closed=.true.)
+    ! -- Load cell polygon vertices
+    call this%fmi%dis%get_polyverts( &
+      defn%icell, &
+      defn%polyvert, &
+      closed=.true.)
 
-      ! -- Load face neighbors
-      call this%load_nbrs_to_defn(defn)
+    ! -- Load face neighbors
+    call this%load_nbrs_to_defn(defn)
 
-      ! -- Load 180 degree face indicators
-      defn%ispv180(1:defn%npolyverts + 1) = .false.
+    ! -- Load 180 degree face indicators
+    defn%ispv180(1:defn%npolyverts + 1) = .false.
 
-      ! -- Load flows (assumes face neighbors already loaded)
-      call this%load_flows_to_defn(defn)
-    end select
+    ! -- Load flows (assumes face neighbors already loaded)
+    call this%load_flows_to_defn(defn)
+
   end subroutine load_cell_defn
+
+  subroutine load_cell_props(this, ic, defn)
+    ! -- dummy
+    class(MethodDisType), intent(inout) :: this
+    integer(I4B), intent(in) :: ic
+    type(CellDefnType), pointer, intent(inout) :: defn
+
+    defn%icell = ic
+    defn%npolyverts = 4 ! rectangular cell always has 4 vertices
+    defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
+                           this%fmi%dis%get_nodeuser(ic))
+    defn%top = this%fmi%dis%bot(ic) + &
+               this%fmi%gwfsat(ic) * &
+               (this%fmi%dis%top(ic) - this%fmi%dis%bot(ic))
+    defn%bot = this%fmi%dis%bot(ic)
+    defn%sat = this%fmi%gwfsat(ic)
+    defn%porosity = this%porosity(ic)
+    defn%retfactor = this%retfactor(ic)
+    defn%izone = this%izone(ic)
+    defn%can_be_rect = .true.
+    defn%can_be_quad = .false.
+
+  end subroutine load_cell_props
 
   !> @brief Loads face neighbors to cell definition from the grid.
   !! Assumes cell index and number of vertices are already loaded.

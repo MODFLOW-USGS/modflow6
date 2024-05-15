@@ -29,6 +29,7 @@ module MethodDisvModule
     procedure, public :: load_cell_defn !< loads cell definition from the grid
     procedure, public :: map_neighbor !< maps a location on the cell face to the shared face of a neighbor
     procedure, public :: pass => pass_disv !< passes the particle to the next cell
+    procedure, private :: load_cell_props !< loads cell properties to a cell object
     procedure, private :: load_nbrs_to_defn !< loads face neighbors to a cell object
     procedure, private :: load_flags_to_defn !< loads 180-degree vertex indicator to a cell object
     procedure, private :: load_flows_to_defn !< loads flows to a cell object
@@ -148,7 +149,6 @@ contains
     real(DP) :: z
 
     inface = particle%iboundary(2)
-    z = particle%z
 
     select type (cell => this%cell)
     type is (CellPolyType)
@@ -156,30 +156,34 @@ contains
       type is (DisvType)
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
-          ! -- Exterior face; no neighbor to map to
+          ! -- Exterior face, no neighbor to map to, terminate particle
           ! todo, later on: reconsider when multiple models are allowed
           particle%istatus = 2
           particle%advancing = .false.
-          call this%save(particle, reason=3) ! reason=3: termination
+          call this%save(particle, reason=3)
         else
+          ! compute and set reduced/user node numbers and layer
+          ! todo: factor out routine
           idiag = dis%con%ia(cell%defn%icell)
           ipos = idiag + inbr
           ic = dis%con%ja(ipos)
-          particle%idomain(2) = ic
-
-          ! compute and set user node number and layer on particle
           icu = dis%get_nodeuser(ic)
           call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+          particle%idomain(2) = ic
           particle%icu = icu
           particle%ilay = ilay
 
+          ! map/set particle entry face and z coordinate
+          z = particle%z
           call this%map_neighbor(cell%defn, inface, z)
           particle%iboundary(2) = inface
           particle%idomain(3:) = 0
           particle%iboundary(3:) = 0
           particle%z = z
+
           ! -- Update cell-cell flows of particle mass.
           !    Every particle is currently assigned unit mass.
+          ! todo: factor out routine
           ! -- leaving old cell
           this%flowja(ipos) = this%flowja(ipos) - DONE
           ! -- entering new cell
@@ -273,25 +277,9 @@ contains
     class(MethodDisvType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
-    ! -- local
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: sat
 
     ! -- Load basic cell properties
-    defn%icell = ic
-    defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
-                           this%fmi%dis%get_nodeuser(ic))
-    top = this%fmi%dis%top(ic)
-    bot = this%fmi%dis%bot(ic)
-    sat = this%fmi%gwfsat(ic)
-    top = bot + sat * (top - bot)
-    defn%top = top
-    defn%bot = bot
-    defn%sat = sat
-    defn%porosity = this%porosity(ic)
-    defn%retfactor = this%retfactor(ic)
-    defn%izone = this%izone(ic)
+    call this%load_cell_props(ic, defn)
 
     ! -- Load polygon vertices
     call this%fmi%dis%get_polyverts( &
@@ -309,6 +297,33 @@ contains
     ! -- Load flows (assumes face neighbors already loaded)
     call this%load_flows_to_defn(defn)
   end subroutine load_cell_defn
+
+  !> @brief Loads cell properties to cell definition from the grid.
+  subroutine load_cell_props(this, ic, defn)
+    ! dummy
+    class(MethodDisvType), intent(inout) :: this
+    integer(I4B), intent(in) :: ic
+    type(CellDefnType), pointer, intent(inout) :: defn
+    ! -- local
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: sat
+
+    defn%icell = ic
+    defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
+                           this%fmi%dis%get_nodeuser(ic))
+    top = this%fmi%dis%top(ic)
+    bot = this%fmi%dis%bot(ic)
+    sat = this%fmi%gwfsat(ic)
+    top = bot + sat * (top - bot)
+    defn%top = top
+    defn%bot = bot
+    defn%sat = sat
+    defn%porosity = this%porosity(ic)
+    defn%retfactor = this%retfactor(ic)
+    defn%izone = this%izone(ic)
+
+  end subroutine load_cell_props
 
   !> @brief Loads face neighbors to cell definition from the grid
   !! Assumes cell index and number of vertices are already loaded.
@@ -366,7 +381,6 @@ contains
                          dis%javert(istart2:istop2), &
                          isharedface)
         if (isharedface /= 0) then
-
           ! -- Edge (polygon) face neighbor
           defn%facenbr(isharedface) = int(iloc, 1)
         else
