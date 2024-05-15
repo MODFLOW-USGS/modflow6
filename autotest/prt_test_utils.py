@@ -229,18 +229,19 @@ def check_track_data(
         # https://stackoverflow.com/a/24943993/6514033
         data_csv = np.array([data_csv])
 
+    # check shape
     assert (
         data_bin.shape == data_csv.shape
     ), f"Binary and CSV track data shapes do not match: {data_bin.shape} != {data_csv.shape}"
 
-    # check each column separately to avoid
-    # TypeError: The DType <class 'numpy._FloatAbstractDType'> could not be promoted by <class 'numpy.dtype[void]'>
+    # check each column separately to avoid TypeError:
+    # The DType <class 'numpy._FloatAbstractDType'> could not be promoted by <class 'numpy.dtype[void]'>
     for k in data_bin.dtype.names:
         if k == "name":
             continue
         assert np.allclose(data_bin[k], data_csv[k], equal_nan=True)
 
-    # make sure columns all have values in the expected range
+    # make sure columns have values in the expected range
     assert all(data_bin["iprp"] >= 1)
     assert all(data_bin["irpt"] >= 1)
     assert all(data_bin["kper"] >= 1)
@@ -268,15 +269,11 @@ def check_budget_data(lst: os.PathLike, perlen=1, nper=1, nstp=1):
     # entries should be a subset of names
     assert all(e in names for e in entries)
 
-    # todo what other record names should we expect?
     expected_entries = [
         "PRP_IN",
         "PRP_OUT",
     ]
     assert all(en in names for en in expected_entries)
-
-    # import pdb
-    # pdb.set_trace()
 
 
 def get_model_name(name, mdl):
@@ -313,7 +310,7 @@ def get_ireason_code(output_event):
                     else 4 if output_event == "WEAKSINK" else -1
                 )
             )
-        )  # default
+        )
     )
 
 

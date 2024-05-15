@@ -51,6 +51,7 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="Distributed">
+		<File RelativePath="..\src\Distributed\DistributedSim.f90"/>
 		<File RelativePath="..\src\Distributed\IndexMap.f90"/>
 		<File RelativePath="..\src\Distributed\InterfaceMap.f90"/>
 		<File RelativePath="..\src\Distributed\MappedMemory.f90"/>
@@ -131,7 +132,8 @@
 		<File RelativePath="..\src\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmPrtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmSimDfnSelector.f90"/>
-		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/>
+		<File RelativePath="..\src\Idm\selector\IdmUtlDfnSelector.f90"/></Filter>
 		<File RelativePath="..\src\Idm\exg-gwegweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgwfidm.f90"/>
@@ -185,7 +187,8 @@
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
-		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/></Filter>
+		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
+		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>

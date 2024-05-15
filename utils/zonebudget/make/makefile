@@ -17,6 +17,7 @@ OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/CharString.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \

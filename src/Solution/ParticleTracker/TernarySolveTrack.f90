@@ -2,7 +2,8 @@ module TernarySolveTrack
 
   use KindModule, only: I4B, DP, LGP
   use GeomUtilModule, only: skew
-  use MathUtilModule, only: f1d, zero_ch, zero_br, zero_test
+  use ConstantsModule, only: DPREC, DZERO, DONE
+  use MathUtilModule, only: f1d, zero_ch, zero_br
   use ErrorUtilModule, only: pstop
 
   private
@@ -11,15 +12,12 @@ module TernarySolveTrack
   public :: get_w
   public :: solve_coefs
   public :: step_analytical
-  public :: step_euler
   public :: find_exit_bary
   public :: get_t_alpt
   public :: get_bet_outflow_bary
   public :: get_bet_soln_limits
   public :: soln_brent
   public :: soln_chand
-  public :: soln_test
-  public :: soln_euler
   public :: alpfun
 
   ! global data
@@ -36,12 +34,11 @@ contains
                                itrifaceenter, itrifaceexit, &
                                rxx, rxy, ryx, ryy, &
                                alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                               vziodz, az, &
-                               bary)
+                               vziodz, az)
     ! -- dummy
     integer(I4B), intent(in) :: isolv !< solution method
     real(DP), intent(in) :: tol !< solution tolerance
-    real(DP), intent(in) :: step !< stepsize for numerical methods (e.g. euler)
+    real(DP), intent(in) :: step !< stepsize for numerical methods
     real(DP), intent(out) :: texit !< time particle exits the cell
     real(DP) :: alpexit
     real(DP) :: betexit !< alpha and beta coefficients
@@ -61,7 +58,6 @@ contains
     real(DP) :: beti !< alpha and beta coefficients
     real(DP) :: vziodz
     real(DP) :: az
-    logical(LGP), intent(in) :: bary !< whether to use barycentric coordinates
     ! -- local
     real(DP) :: texit0
     real(DP) :: alpexit0
@@ -74,7 +70,7 @@ contains
     real(DP) :: betexit2
 
     ! -- Compute elements of matrix W
-    call get_w(alp1, bet1, alp2, bet2, waa, wab, wba, wbb, bary)
+    call get_w(alp1, bet1, alp2, bet2, waa, wab, wba, wbb)
 
     ! -- Determine alpha and beta analytically as functions of time
     call solve_coefs(alpi, beti)
@@ -119,8 +115,7 @@ contains
                        xi, yi, &
                        rxx, rxy, ryx, ryy, &
                        sxx, sxy, syy, &
-                       alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                       bary)
+                       alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti)
     ! -- dummy
     real(DP) :: x0
     real(DP) :: y0
@@ -149,7 +144,6 @@ contains
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti !< alpha and beta coefficients
-    logical(LGP), intent(in) :: bary !< whether to use barycentric coordinates
     ! -- local
     real(DP) :: baselen
     real(DP) :: oobaselen
@@ -169,17 +163,17 @@ contains
     x2diff = x2 - x0
     y2diff = y2 - y0
     baselen = dsqrt(x1diff * x1diff + y1diff * y1diff)
-    oobaselen = 1d0 / baselen
+    oobaselen = DONE / baselen
     cosomega = x1diff * oobaselen
     sinomega = y1diff * oobaselen
     rxx = cosomega
     rxy = sinomega
     ryx = -sinomega
     ryy = cosomega
-    alp0 = 0d0
-    bet0 = 0d0
+    alp0 = DZERO
+    bet0 = DZERO
     alp1 = baselen
-    bet1 = 0d0
+    bet1 = DZERO
 
     rot = reshape((/rxx, ryx, rxy, ryy/), shape(rot))
     res = matmul(rot, (/x2diff, y2diff/))
@@ -196,29 +190,26 @@ contains
     alpi = res(1)
     beti = res(2)
 
-    if (bary) then
-      sxx = 1d0 / alp1
-      syy = 1d0 / bet2
-      sxy = -alp2 * sxx * syy
-      alp1 = 1d0
-      alp2 = 0d0
-      bet2 = 1d0
-      cv0 = skew(cv0, (/sxx, sxy, syy/))
-      cv1 = skew(cv1, (/sxx, sxy, syy/))
-      cv2 = skew(cv2, (/sxx, sxy, syy/))
-      res = (/alpi, beti/)
-      res = skew(res, (/sxx, sxy, syy/))
-      alpi = res(1)
-      beti = res(2)
-    end if
+    sxx = DONE / alp1
+    syy = DONE / bet2
+    sxy = -alp2 * sxx * syy
+    alp1 = DONE
+    alp2 = DZERO
+    bet2 = DONE
+    cv0 = skew(cv0, (/sxx, sxy, syy/))
+    cv1 = skew(cv1, (/sxx, sxy, syy/))
+    cv2 = skew(cv2, (/sxx, sxy, syy/))
+    res = (/alpi, beti/)
+    res = skew(res, (/sxx, sxy, syy/))
+    alpi = res(1)
+    beti = res(2)
 
   end subroutine
 
   !> @brief Compute elements of W matrix
   subroutine get_w( &
     alp1, bet1, alp2, bet2, &
-    waa, wab, wba, wbb, &
-    bary)
+    waa, wab, wba, wbb)
     ! -- dummy
     real(DP) :: alp1
     real(DP) :: bet1
@@ -228,41 +219,20 @@ contains
     real(DP) :: wab
     real(DP) :: wba
     real(DP) :: wbb !< w matrix
-    logical(LGP), intent(in), optional :: bary !< barycentric coordinates
     ! -- local
-    logical(LGP) :: lbary
     real(DP) :: v1alpdiff
     real(DP) :: v2alpdiff
     real(DP) :: v2betdiff
-    real(DP) :: ooalp1
-    real(DP) :: oobet2
-    real(DP) :: vterm
-
-    if (present(bary)) then
-      lbary = bary
-    else
-      lbary = .true.
-    end if
 
     ! -- Note: wab is the "alpha,beta" entry in matrix W
     !    and the alpha component of the w^(beta) vector
     v1alpdiff = cv1(1) - cv0(1)
     v2alpdiff = cv2(1) - cv0(1)
     v2betdiff = cv2(2) - cv0(2)
-    if (bary) then
-      waa = v1alpdiff
-      wab = v2alpdiff
-      wba = 0d0
-      wbb = v2betdiff
-    else
-      ooalp1 = 1d0 / alp1
-      oobet2 = 1d0 / bet2
-      vterm = v1alpdiff * ooalp1
-      waa = vterm
-      wab = (v2alpdiff - alp2 * vterm) * oobet2
-      wba = 0d0
-      wbb = v2betdiff * oobet2
-    end if
+    waa = v1alpdiff
+    wab = v2alpdiff
+    wba = DZERO
+    wbb = v2betdiff
 
   end subroutine
 
@@ -281,7 +251,7 @@ contains
     real(DP) :: vfact
     real(DP) :: oowaa
 
-    zerotol = 1d-10 ! kluge
+    zerotol = 1d-10 ! todo AMP: consider tolerance
     if (dabs(wbb) .gt. zerotol) then
       wratv = (wab / wbb) * cv0(2)
       acoef = cv0(1) - wratv
@@ -365,80 +335,6 @@ contains
 
   end subroutine
 
-  !> @brief Step (evaluate) numerically depending in case
-  subroutine step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
-    ! -- dummy
-    integer(I4B) :: nt
-    real(DP), intent(in) :: step
-    real(DP) :: vziodz
-    real(DP) :: az
-    real(DP) :: alpi
-    real(DP) :: beti
-    real(DP), intent(inout) :: t
-    real(DP) :: alp
-    real(DP) :: bet
-    ! -- local
-    real(DP) :: alpproj
-    real(DP) :: betproj
-    real(DP) :: valp
-    real(DP) :: vbet
-    real(DP) :: vz
-    real(DP) :: vmeasure
-    real(DP) :: delt
-    real(DP) :: thalf
-    real(DP) :: rkn1
-    real(DP) :: rln1
-    real(DP) :: rkn2
-    real(DP) :: rln2
-    real(DP) :: rkn3
-    real(DP) :: rln3
-    real(DP) :: rkn4
-    real(DP) :: rln4
-
-    if (nt .eq. 0) then
-      ! -- Initial location
-      alp = alpi
-      bet = beti
-      t = 0d0
-    else
-      ! -- Step numerically
-      valp = cv0(1) + waa * alp + wab * bet
-      vbet = cv0(2) + wba * alp + wbb * bet
-      if (step .lt. 0d0) then
-        ! -- Compute time step based on abs value of step, interpreting the latter
-        ! -- as a distance in canonical coordinates (alpha, beta, and scaled z)
-        vz = vziodz * dexp(az * t)
-        vmeasure = dsqrt(valp * valp + vbet * vbet + vz * vz)
-        delt = -step / vmeasure
-      else
-        ! -- Set time step directly to step
-        delt = step
-      end if
-      ikluge = 2 ! kluge
-      if (ikluge .eq. 1) then
-        t = t + delt
-        alp = alp + valp * delt
-        bet = bet + vbet * delt
-      else
-        rkn1 = valp
-        rln1 = vbet
-        thalf = t + 5d-1 * delt
-        call step_analytical(thalf, alpproj, betproj)
-        rkn2 = cv0(1) + waa * alpproj + wab * betproj
-        rln2 = cv0(2) + wba * alpproj + wbb * betproj
-        rkn3 = rkn2
-        rln3 = rln2
-        t = t + delt
-        call step_analytical(t, alpproj, betproj)
-        rkn4 = cv0(1) + waa * alpproj + wab * betproj
-        rln4 = cv0(2) + wba * alpproj + wbb * betproj
-        alp = alp + delt * (rkn1 + 2d0 * rkn2 + 2d0 * rkn3 + rkn4) / 6d0
-        bet = bet + delt * (rln1 + 2d0 * rln2 + 2d0 * rln3 + rln4) / 6d0
-      end if
-    end if
-
-  end subroutine
-
   !> @brief Find the exit time and location in barycentric coordinates.
   subroutine find_exit_bary(isolv, itriface, itrifaceenter, &
                             alpi, beti, &
@@ -472,7 +368,6 @@ contains
     real(DP) :: v1n
     real(DP) :: v2n
     real(DP) :: vbeti
-    real(DP) :: zerotol
     real(DP) :: betlo
     real(DP) :: bethi
     real(DP) :: betsollo
@@ -480,9 +375,11 @@ contains
     real(DP) :: betoutlo
     real(DP) :: betouthi
     integer(I4B) :: ibettrend
+    real(DP) :: zerotol
+
+    zerotol = 1d-10 ! todo AMP: consider tolerance
 
     ! -- Use iterative scheme or numerical integration indicated by isolv.
-    zerotol = 1d-10 ! kluge
     if (itriface .eq. 0) then
       ! -- Checking for exit on canonical face 0 (beta = 0)
       if (itrifaceenter .eq. 0) then
@@ -491,28 +388,28 @@ contains
         texit = huge(1d0)
       else
         ! -- Not the entrance face, so check for outflow
-        if (cv0(2) .ge. 0d0) then
+        if (cv0(2) .ge. DZERO) then ! check beta velocity along beta=0 face
           ! -- Inflow or no flow, so no exit
-          texit = huge(1d0)
+          texit = huge(DONE)
         else
           ! -- Outflow, so check beta-velocity at the initial location,
           ! -- recognizing that it will never change sign along the
           ! -- trajectory (and will not be blocked from zero by an asymptote)
           vbeti = cv0(2) + wbb * beti
-          if (vbeti .ge. 0d0) then
+          if (vbeti .ge. DZERO) then
             ! -- Can't exit along beta = 0
-            texit = huge(1d0)
+            texit = huge(DONE)
           else
             ! -- get alpt and check it
-            call get_t_alpt(0d0, t, alpt)
-            if ((alpt .ge. 0d0) .and. (alpt .le. 1d0)) then
+            call get_t_alpt(DZERO, t, alpt)
+            if ((alpt .ge. DZERO) .and. (alpt .le. DONE)) then
               ! -- alpt within the edge, so exit found
               texit = t
               alpexit = alpt
-              betexit = 0d0
+              betexit = DZERO
             else
               ! -- alpt not within the edge, so not an exit
-              texit = huge(1d0)
+              texit = huge(DONE)
             end if
           end if
         end if
@@ -529,9 +426,9 @@ contains
         v1n = cv0(1)
         v2n = cv2(1)
       end if
-      if ((v1n .ge. 0d0) .and. (v2n .ge. 0d0)) then
+      if ((v1n .ge. DZERO) .and. (v2n .ge. DZERO)) then
         ! -- No outflow at vn1 and vn2 corners; no outflow interval, so no exit.
-        texit = huge(1d0)
+        texit = huge(DONE)
       else
         ! -- Find outflow interval
         call get_bet_outflow_bary(v1n, v2n, betoutlo, betouthi)
@@ -550,21 +447,21 @@ contains
             ! -- in this special case
             v0alpstar = cv0(1) + wab * beti
             valpi = v0alpstar + waa * alpi
-            if ((itriface .eq. 1) .and. (valpi .le. 0d0)) then
+            if ((itriface .eq. 1) .and. (valpi .le. DZERO)) then
               ! -- Can't exit along gamma = 0.
-              texit = huge(1d0)
-            else if ((itriface .eq. 2) .and. (valpi .ge. 0d0)) then
+              texit = huge(DONE)
+            else if ((itriface .eq. 2) .and. (valpi .ge. DZERO)) then
               ! -- Can't exit along alpha = 0.
-              texit = huge(1d0)
+              texit = huge(DONE)
             else
               ! -- get exit
               if (itriface .eq. 1) then
-                alpexit = 1d0 - beti
+                alpexit = DONE - beti
               else
-                alpexit = 0d0
-              end if ! kluge note: seems like in this case (beta=const) this
-              betexit = beti !   must be the ONLY exit; no need to check other edges??
-              if (waa .ne. 0d0) then
+                alpexit = DZERO
+              end if
+              betexit = beti
+              if (dabs(waa) > zerotol) then
                 alplim = -v0alpstar / waa
                 texit = dlog(alpexit - alplim / (alpi - alplim)) / waa
               else
@@ -577,29 +474,25 @@ contains
           ! -- Beta varies along trajectory; combine outflow and soln limits on beta
           bethi = min(betouthi, betsolhi)
           betlo = max(betoutlo, betsollo)
-          if (betlo .ge. bethi) then
+          if (betlo .gt. bethi) then
             ! -- If bounds on bet leave no feasible interval, no exit
-            texit = huge(1d0)
+            texit = huge(DONE)
           else
             ! -- Check sign of function value at beta bounds
             call get_t_alpt(bethi, thi, alphi)
             call get_t_alpt(betlo, tlo, alplo)
             if (itriface .eq. 1) then
-              fax = 1d0 - betlo - alplo
-              fbx = 1d0 - bethi - alphi
+              fax = DONE - betlo - alplo
+              fbx = DONE - bethi - alphi
             else
               fax = alplo
               fbx = alphi
             end if
-            if (fax * fbx .gt. 0d0) then
+            if (fax * fbx .gt. DZERO) then
               ! -- Root not bracketed; no exit
-              texit = huge(1d0)
+              texit = huge(DONE)
             else
-              if (isolv .eq. 0) then
-                ! -- Use Euler integration to find exit
-                call soln_euler(itriface, alpi, beti, step, vziodz, az, &
-                                texit, alpexit, betexit)
-              else if (isolv .eq. 1) then
+              if (isolv .eq. 1) then
                 ! -- Use Brent's method with initial bounds on beta of betlo and bethi,
                 ! -- assuming they bound the root
                 call soln_brent(itriface, betlo, bethi, tol, texit, &
@@ -609,13 +502,8 @@ contains
                 ! -- assuming they bound the root
                 call soln_chand(itriface, betlo, bethi, tol, texit, &
                                 alpexit, betexit)
-              else if (isolv .eq. 3) then
-                ! -- Use a test method with initial bounds on beta of betlo and bethi,
-                ! -- assuming they bound the root
-                call soln_test(itriface, betlo, bethi, tol, texit, &
-                               alpexit, betexit)
               else
-                call pstop(1, "Invalid isolv, expected 0, 1, 2, or 3")
+                call pstop(1, "Invalid isolv, expected one of: 1, 2")
               end if
             end if
           end if
@@ -625,8 +513,9 @@ contains
       ! -- End canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
     end if
 
-    if (texit .ne. huge(1d0) .and. texit .lt. 0d0) &
+    if (texit .ne. huge(DONE) .and. texit .lt. DZERO) then
       call pstop(1, "texit is negative (unexpected)") ! shouldn't get here
+    end if
 
   end subroutine
 
@@ -641,7 +530,7 @@ contains
 
     ! -- Evaluate gamma{t{beta}} = 1. - alpha{t{beta}} - beta
     call get_t_alpt(bet, t, alpt)
-    fb = 1d0 - alpt - bet
+    fb = DONE - alpt - bet
   end function
 
   !> @brief Brent's method applied to canonical face 2 (alpha = 0)
@@ -667,25 +556,48 @@ contains
     ! -- local
     real(DP) :: term
     real(DP) :: zerotol
+    real(DP) :: waat
+    real(DP) :: coef
+    real(DP) :: waatlim
+    real(DP) :: ewaatlim
 
-    ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
-    zerotol = 1d-10 ! kluge
+    ! assumes cb2<>0, wbb<>0
+    zerotol = 1d-10 ! todo AMP: consider tolerance
     term = (bet - cb1) / cb2
+    waatlim = 50.0_DP
+    ewaatlim = 5d+21 ! approx. e^waatlim
+
     if (icase .eq. 1) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + ca2 * dexp(waa * t) + ca3 * dexp(wbb * t)
+      waat = waa * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, ca2)
+      else
+        alp = ca1 + ca2 * dexp(waat) + ca3 * term
+      end if
     else if (icase .eq. -1) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + (ca2 + ca3 * t) * dexp(waa * t)
+      waat = waa * t
+      coef = ca2 + ca3 * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, coef)
+      else
+        alp = ca1 + coef * dexp(waat)
+      end if
     else if (icase .eq. 2) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
-      alp = ca1 + ca2 * t + ca3 * dexp(wbb * t)
+      alp = ca1 + ca2 * t + ca3 * term
     else if (icase .eq. 3) then
       t = term
-      alp = ca1 + ca2 * t + ca3 * dexp(waa * t)
+      waat = waa * t
+      if (waat > waatlim) then
+        alp = sign(ewaatlim, ca3)
+      else
+        alp = ca1 + ca2 * t + ca3 * dexp(waat)
+      end if
     else if (icase .eq. 4) then
       t = term
       alp = ca1 + (ca2 + ca3 * t) * t
@@ -704,22 +616,22 @@ contains
     real(DP) :: vndiff
 
     vndiff = vn2 - vn1
-    if (vn1 .lt. 0d0) then
+    if (vn1 .lt. DZERO) then
       ! -- Outflow at vn1 corner
-      betoutlo = 0d0
-      if (vn2 .le. 0d0) then
+      betoutlo = DZERO
+      if (vn2 .le. DZERO) then
         ! -- Outflow along entire edge (except possibly no-flow right at vn2 corner)
-        betouthi = 1d0
+        betouthi = DONE
       else
         ! -- Outflow along part of edge
         betouthi = -vn1 / vndiff
       end if
     else
       ! -- Outflow at vn2 corner
-      betouthi = 1d0
-      if (vn1 .le. 0d0) then
+      betouthi = DONE
+      if (vn1 .le. DZERO) then
         ! -- Outflow along entire edge (except possibly no-flow right at vn1 corner)
-        betoutlo = 0d0
+        betoutlo = DZERO
       else
         ! -- Outflow along part of edge
         betoutlo = -vn1 / vndiff
@@ -738,22 +650,36 @@ contains
     ! -- local
     real(DP) :: betlim
 
-    if (wbb .gt. 0d0) then
-      betlim = -cv0(2) / wbb
-      if (beti .gt. betlim) then
-        betsolhi = huge(1d0)
+    if (icase > 2) then
+      if (cv0(2) .gt. DZERO) then
+        betsolhi = huge(DONE)
         betsollo = beti
         ibettrend = 1
-      else if (beti .lt. betlim) then
+      else if (cv0(2) .lt. DZERO) then
         betsolhi = beti
-        betsollo = -huge(1d0)
+        betsollo = -huge(DONE)
         ibettrend = -1
       else
         betsolhi = beti
         betsollo = beti
         ibettrend = 0
       end if
-    else if (wbb .lt. 0d0) then
+    else if (wbb .gt. DZERO) then
+      betlim = -cv0(2) / wbb
+      if (beti .gt. betlim) then
+        betsolhi = huge(DONE)
+        betsollo = beti
+        ibettrend = 1
+      else if (beti .lt. betlim) then
+        betsolhi = beti
+        betsollo = -huge(DONE)
+        ibettrend = -1
+      else
+        betsolhi = beti
+        betsollo = beti
+        ibettrend = 0
+      end if
+    else if (wbb .lt. DZERO) then
       betlim = -cv0(2) / wbb
       if (beti .gt. betlim) then
         betsolhi = beti
@@ -763,20 +689,6 @@ contains
         betsolhi = betlim
         betsollo = beti
         ibettrend = 1
-      else
-        betsolhi = beti
-        betsollo = beti
-        ibettrend = 0
-      end if
-    else ! kluge note: use zerotol and elsewhere?
-      if (cv0(2) .gt. 0d0) then
-        betsolhi = huge(1d0)
-        betsollo = beti
-        ibettrend = 1
-      else if (cv0(2) .lt. 0d0) then
-        betsolhi = beti
-        betsollo = -huge(1d0)
-        ibettrend = -1
       else
         betsolhi = beti
         betsollo = beti
@@ -798,17 +710,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- assuming betlo and bethi bracket the root
-    ! --
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -834,16 +740,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- note: assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -854,118 +755,6 @@ contains
       betexit = zero_ch(blo, bhi, f, tol)
     end if
     call get_t_alpt(betexit, texit, alpexit)
-
-  end subroutine
-
-  !> @brief Use a test method with initial bounds on beta of betlo and bethi
-  subroutine soln_test(itriface, betlo, bethi, tol, &
-                       texit, alpexit, betexit)
-    ! -- dummy
-    integer(I4B), intent(in) :: itriface
-    real(DP) :: betlo
-    real(DP) :: bethi
-    real(DP), intent(in) :: tol
-    real(DP) :: texit
-    real(DP) :: alpexit
-    real(DP) :: betexit
-    ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
-    real(DP) :: blo
-    real(DP) :: bhi
-    procedure(f1d), pointer :: f
-
-    ! -- assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
-    blo = betlo
-    bhi = bethi
-    if (itriface .eq. 1) then
-      f => fbary1
-      betexit = zero_test(blo, bhi, f, tol)
-    else
-      f => fbary2
-      betexit = zero_test(blo, bhi, f, tol)
-    end if
-    call get_t_alpt(betexit, texit, alpexit)
-
-  end subroutine
-
-  !> @brief Use Euler integration to find exit
-  subroutine soln_euler(itriface, alpi, beti, step, vziodz, &
-                        az, texit, alpexit, betexit)
-    ! -- dummy
-    integer(I4B), intent(in) :: itriface
-    real(DP) :: alpi
-    real(DP) :: beti
-    real(DP), intent(in) :: step
-    real(DP) :: vziodz
-    real(DP) :: az
-    real(DP) :: texit
-    real(DP) :: alpexit
-    real(DP) :: betexit
-    ! -- local
-    real(DP) :: alp
-    real(DP) :: bet
-    real(DP) :: gam
-    real(DP) :: alpold
-    real(DP) :: betold
-    real(DP) :: gamold
-    real(DP) :: wt
-    real(DP) :: omwt
-    real(DP) :: t
-    real(DP) :: told
-
-    t = 0d0
-    alp = alpi
-    bet = beti
-    if (itriface .eq. 1) gam = 1d0 - alpi - beti
-    do nt = 1, 1000000000 ! kluge hardwired
-      ! -- Save current time, alpha, and beta
-      told = t
-      alpold = alp
-      betold = bet
-      ! -- Step forward in time
-      ! t = dble(nt)*step
-      call step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
-      ! if (nt.eq.0) then
-      !   znum = zi
-      ! else
-      !   vz = vzbot + az*(znum - zbot)
-      !   znum = znum + vz*delt     ! kluge note: can be smart about checking z
-      ! end if
-      if (itriface .eq. 1) then
-        ! -- If gamma has crossed zero, interpolate linearly
-        ! -- to find crossing (exit) point
-        gamold = gam
-        gam = 1d0 - alp - bet
-        if (gam .lt. 0d0) then
-          wt = gamold / (gamold - gam)
-          omwt = 1d0 - wt
-          texit = omwt * told + wt * t
-          alpexit = omwt * alpold + wt * alp
-          betexit = omwt * betold + wt * bet
-          exit
-        end if
-      else
-        ! -- If alpha has crossed zero, interpolate linearly
-        ! -- to find crossing (exit) point
-        if (alp .lt. 0d0) then
-          wt = alpold / (alpold - alp)
-          omwt = 1d0 - wt
-          texit = omwt * told + wt * t
-          alpexit = omwt * alpold + wt * alp
-          betexit = omwt * betold + wt * bet
-          exit
-        end if
-      end if
-      ! -- End time step loop
-    end do
-    if (nt .gt. 1000000000) then ! kluge hardwired
-      ! -- Exit not found after max number of time steps
-      call pstop(1, "Didn't find exit in soln_euler")
-    end if
 
   end subroutine
 

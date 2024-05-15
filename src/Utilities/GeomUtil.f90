@@ -1,12 +1,13 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DONE
+  use ConstantsModule, only: DZERO, DONE, DHALF
   implicit none
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, compose
+            skew, transform, compose, &
+            area, shared_face
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -361,5 +362,97 @@ contains
     invert = .false.
     if (present(invert_opt)) invert = invert_opt
   end subroutine defaults
+
+  !> @brief Calculate polygon area, with vertices given in CW or CCW order.
+  function area(xv, yv, cw) result(a)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: xv
+    real(DP), dimension(:), intent(in) :: yv
+    logical(LGP), intent(in), optional :: cw
+    ! result
+    real(DP) :: a
+    integer(I4B) :: s
+
+    if (present(cw)) then
+      if (cw) then
+        s = 1
+      else
+        s = -1
+      end if
+    else
+      s = 1
+    end if
+
+    a = -DHALF * sum(xv(:) * cshift(yv(:), s) - cshift(xv(:), s) * yv(:))
+
+  end function area
+
+  !> @brief Find the lateral face shared by two cells.
+  !!
+  !! Find the lateral (horizontal) face shared by the given cells.
+  !! The iface return argument will be 0 if they share no such face,
+  !! otherwise the index of the shared face in cell 1's vertex array,
+  !! where face N connects vertex N to vertex N + 1 going clockwise.
+  !!
+  !! Note: assumes the cells are convex and share at most 2 vertices
+  !! and that both vertex arrays are oriented clockwise.
+  !<
+  subroutine shared_face(iverts1, iverts2, iface)
+    integer(I4B), dimension(:) :: iverts1
+    integer(I4B), dimension(:) :: iverts2
+    integer(I4B), intent(out) :: iface
+    integer(I4B) :: nv1
+    integer(I4B) :: nv2
+    integer(I4B) :: il1, iil1
+    integer(I4B) :: il2, iil2
+    logical(LGP) :: found
+    logical(LGP) :: wrapped
+
+    iface = 0
+    found = .false.
+    nv1 = size(iverts1)
+    nv2 = size(iverts2)
+    wrapped = iverts1(1) == iverts1(nv1)
+
+    ! Find a vertex shared by the cells, then check the adjacent faces.
+    ! If the cells share a face, it must be one of these. When looking
+    ! forward in the 1st cell's vertices, look backwards in the 2nd's,
+    ! and vice versa, since a clockwise face in cell 1 must correspond
+    ! to a counter-clockwise face in cell 2.
+    outerloop: do il1 = 1, nv1 - 1
+      do il2 = 1, nv2 - 1
+        if (iverts1(il1) == iverts2(il2)) then
+
+          iil1 = il1 + 1
+          if (il2 == 1) then
+            iil2 = nv2
+            if (wrapped) iil2 = iil2 - 1
+          else
+            iil2 = il2 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = il1
+            exit outerloop
+          end if
+
+          iil2 = il2 + 1
+          if (il1 == 1) then
+            iil1 = nv1
+            if (wrapped) iil1 = iil1 - 1
+          else
+            iil1 = il1 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = iil1
+            exit outerloop
+          end if
+
+        end if
+      end do
+      if (found) exit
+    end do outerloop
+  end subroutine shared_face
 
 end module GeomUtilModule

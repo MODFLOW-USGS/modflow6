@@ -4,7 +4,7 @@ module CellDefnModule
 
   private
   public :: CellDefnType
-  public :: create_defn
+  public :: create_defn, get_iatop
 
   !> @brief Base grid cell definition.
   type CellDefnType
@@ -48,47 +48,60 @@ contains
     allocate (cellDefn%faceflow(7))
   end subroutine create_defn
 
+  !> @brief Get the index corresponding to top elevation of a cell in the grid.
+  !! This is -1 if the cell is in the top layer and 1 otherwise.
+  function get_iatop(ncpl, icu) result(iatop)
+    integer(I4B), intent(in) :: ncpl, icu
+    integer(I4B) :: iatop
+
+    if (icu .le. ncpl) then
+      iatop = -1
+    else
+      iatop = 1
+    end if
+  end function get_iatop
+
   !> @brief Return the number of polygon vertices
   function get_npolyverts(this) result(npolyverts)
     class(CellDefnType), intent(inout) :: this
-    integer :: npolyverts
+    integer(I4B) :: npolyverts
     npolyverts = this%npolyverts
   end function get_npolyverts
 
   !> @brief Return 180-degree indicator for a vertex
   function get_ispv180(this, m) result(ispv180)
     class(CellDefnType), intent(inout) :: this
-    integer :: m
-    logical :: ispv180
+    integer(I4B) :: m
+    logical(LGP) :: ispv180
     ispv180 = this%ispv180(m)
   end function get_ispv180
 
   !> @brief Return the bottom flow
   function get_botflow(this) result(botflow)
     class(CellDefnType), intent(inout) :: this
-    double precision :: botflow
+    real(DP) :: botflow
     botflow = this%faceflow(this%npolyverts + 2)
   end function get_botflow
 
   !> @brief Return the top flow
   function get_topflow(this) result(topflow)
     class(CellDefnType), intent(inout) :: this
-    double precision :: topflow
+    real(DP) :: topflow
     topflow = this%faceflow(this%npolyverts + 3)
   end function get_topflow
 
   !> @brief Return the distributed flow
   function get_distflow(this) result(distflow)
     class(CellDefnType), intent(inout) :: this
-    double precision :: distflow
+    real(DP) :: distflow
     distflow = this%distflow
   end function get_distflow
 
   !> @brief Return a face flow
   function get_faceflow(this, m) result(faceflow)
     class(CellDefnType), intent(inout) :: this
-    integer :: m
-    double precision :: faceflow
+    integer(I4B) :: m
+    real(DP) :: faceflow
     faceflow = this%faceflow(m)
   end function get_faceflow
 

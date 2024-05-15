@@ -6,41 +6,41 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/SurfaceWaterFlow
-SOURCEDIR4=../src/Model/TransportModel
-SOURCEDIR5=../src/Model/GroundWaterFlow
-SOURCEDIR6=../src/Model/GroundWaterEnergy
-SOURCEDIR7=../src/Model/Geometry
-SOURCEDIR8=../src/Model/ParticleTracking
-SOURCEDIR9=../src/Model/Discretization
-SOURCEDIR10=../src/Model/ModelUtilities
-SOURCEDIR11=../src/Model/GroundWaterTransport
-SOURCEDIR12=../src/Model/Connection
-SOURCEDIR13=../src/Idm
-SOURCEDIR14=../src/Idm/selector
-SOURCEDIR15=../src/Distributed
-SOURCEDIR16=../src/Utilities
-SOURCEDIR17=../src/Utilities/Idm
-SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR19=../src/Utilities/Vector
-SOURCEDIR20=../src/Utilities/Matrix
-SOURCEDIR21=../src/Utilities/Observation
-SOURCEDIR22=../src/Utilities/ArrayRead
-SOURCEDIR23=../src/Utilities/OutputControl
-SOURCEDIR24=../src/Utilities/Libraries
-SOURCEDIR25=../src/Utilities/Libraries/blas
+SOURCEDIR3=../src/Model/Geometry
+SOURCEDIR4=../src/Model/GroundWaterFlow
+SOURCEDIR5=../src/Model/TransportModel
+SOURCEDIR6=../src/Model/GroundWaterTransport
+SOURCEDIR7=../src/Model/Connection
+SOURCEDIR8=../src/Model/Discretization
+SOURCEDIR9=../src/Model/ParticleTracking
+SOURCEDIR10=../src/Model/SurfaceWaterFlow
+SOURCEDIR11=../src/Model/ModelUtilities
+SOURCEDIR12=../src/Model/GroundWaterEnergy
+SOURCEDIR13=../src/Timing
+SOURCEDIR14=../src/Distributed
+SOURCEDIR15=../src/Exchange
+SOURCEDIR16=../src/Solution
+SOURCEDIR17=../src/Solution/ParticleTracker
+SOURCEDIR18=../src/Solution/LinearMethods
+SOURCEDIR19=../src/Solution/PETSc
+SOURCEDIR20=../src/Utilities
+SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR22=../src/Utilities/Matrix
+SOURCEDIR23=../src/Utilities/ArrayRead
+SOURCEDIR24=../src/Utilities/TimeSeries
+SOURCEDIR25=../src/Utilities/Libraries
 SOURCEDIR26=../src/Utilities/Libraries/rcm
-SOURCEDIR27=../src/Utilities/Libraries/sparsekit
-SOURCEDIR28=../src/Utilities/Libraries/sparskit2
+SOURCEDIR27=../src/Utilities/Libraries/blas
+SOURCEDIR28=../src/Utilities/Libraries/sparsekit
 SOURCEDIR29=../src/Utilities/Libraries/daglib
-SOURCEDIR30=../src/Utilities/Memory
-SOURCEDIR31=../src/Utilities/TimeSeries
-SOURCEDIR32=../src/Timing
-SOURCEDIR33=../src/Solution
-SOURCEDIR34=../src/Solution/ParticleTracker
-SOURCEDIR35=../src/Solution/PETSc
-SOURCEDIR36=../src/Solution/LinearMethods
-SOURCEDIR37=../src/Exchange
+SOURCEDIR30=../src/Utilities/Libraries/sparskit2
+SOURCEDIR31=../src/Utilities/Idm
+SOURCEDIR32=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR33=../src/Utilities/Vector
+SOURCEDIR34=../src/Utilities/OutputControl
+SOURCEDIR35=../src/Utilities/Observation
+SOURCEDIR36=../src/Idm
+SOURCEDIR37=../src/Idm/selector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -87,6 +87,7 @@ OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/CharString.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \
@@ -99,10 +100,10 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/CharString.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
+$(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
@@ -159,6 +160,7 @@ $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/IdmUtlDfnSelector.o \
 $(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmPrtDfnSelector.o \
@@ -212,11 +214,11 @@ $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/CellDefn.o \
 $(OBJDIR)/Particle.o \
 $(OBJDIR)/FlowModelInterface.o \
+$(OBJDIR)/Cell.o \
 $(OBJDIR)/Subcell.o \
 $(OBJDIR)/TrackData.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
-$(OBJDIR)/Cell.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/TernarySolveTrack.o \
@@ -424,6 +426,7 @@ $(OBJDIR)/SolutionFactory.o \
 $(OBJDIR)/exg-gwfprt.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
+$(OBJDIR)/DistributedSim.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \

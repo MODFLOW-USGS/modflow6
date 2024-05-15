@@ -3,7 +3,7 @@ module TestGeomUtil
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use GeomUtilModule, only: get_node, get_ijk, get_jk, point_in_polygon, &
-                            skew
+                            skew, area, shared_face
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
@@ -22,7 +22,9 @@ contains
                              test_point_in_polygon_tri), &
                 new_unittest("point_in_polygon_irr", &
                              test_point_in_polygon_irr), &
-                new_unittest("skew", test_skew) &
+                new_unittest("skew", test_skew), &
+                new_unittest("area", test_area), &
+                new_unittest("shared_face", test_shared_face) &
                 ]
   end subroutine collect_geomutil
 
@@ -300,24 +302,77 @@ contains
     v = (/1.0_DP, 1.0_DP/)
     v = skew(v, (/1.0_DP, 1.0_DP, 1.0_DP/))
     call check(error, v(1) == 2.0_DP .and. v(2) == 1.0_DP)
+    if (allocated(error)) return
+
     v = (/2.0_DP, 2.0_DP/)
     v = skew(v, (/1.0_DP, 0.5_DP, 1.0_DP/))
     call check(error, v(1) == 3.0_DP .and. v(2) == 2.0_DP)
+    if (allocated(error)) return
 
     ! collapse x dim
     v = (/2.0_DP, 2.0_DP/)
     v = skew(v, (/0.0_DP, 0.5_DP, 1.0_DP/))
     call check(error, v(1) == 1.0_DP .and. v(2) == 2.0_DP, to_string(v(1)))
+    if (allocated(error)) return
 
     ! mirror over x axis
     v = (/2.0_DP, 2.0_DP/)
     v = skew(v, (/-1.0_DP, 0.0_DP, 1.0_DP/))
     call check(error, v(1) == -2.0_DP .and. v(2) == 2.0_DP, to_string(v(1)))
+    if (allocated(error)) return
 
     ! mirror over x and y axis
     v = (/2.0_DP, 2.0_DP/)
     v = skew(v, (/-1.0_DP, 0.0_DP, -1.0_DP/))
     call check(error, v(1) == -2.0_DP .and. v(2) == -2.0_DP, to_string(v(1)))
+    if (allocated(error)) return
   end subroutine test_skew
+
+  subroutine test_area(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable :: poly(:, :)
+    real(DP) :: a
+
+    allocate (poly(2, 5))
+
+    poly(:, 1) = (/0.0_DP, 0.0_DP/)
+    poly(:, 2) = (/1.0_DP, 1.0_DP/)
+    poly(:, 3) = (/1.0_DP, 2.0_DP/)
+    poly(:, 4) = (/2.0_DP, 2.0_DP/)
+    poly(:, 5) = (/2.0_DP, 0.0_DP/)
+
+    a = area(poly(1, :), poly(2, :))
+    call check(error, a == 2.5_DP, to_string(a))
+    if (allocated(error)) return
+
+    poly(:, 5) = (/0.0_DP, 0.0_DP/)
+    poly(:, 4) = (/1.0_DP, 1.0_DP/)
+    poly(:, 3) = (/1.0_DP, 2.0_DP/)
+    poly(:, 2) = (/2.0_DP, 2.0_DP/)
+    poly(:, 1) = (/2.0_DP, 0.0_DP/)
+
+    a = area(poly(1, :), poly(2, :), cw=.false.)
+    call check(error, a == 2.5_DP, to_string(a))
+    if (allocated(error)) return
+
+    deallocate (poly)
+
+  end subroutine
+
+  subroutine test_shared_face(error)
+    type(error_type), allocatable, intent(out) :: error
+    integer(I4B) :: iverts1(5), iverts2(5)
+    integer(I4B) :: iface
+
+    iface = 0
+    iverts1 = (/1, 2, 5, 4, 1/)
+    iverts2 = (/2, 3, 6, 5, 2/)
+
+    call shared_face(iverts1, iverts2, iface)
+    call check(error, iface == 2)
+
+    if (allocated(error)) return
+
+  end subroutine
 
 end module TestGeomUtil

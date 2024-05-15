@@ -24,10 +24,9 @@ import pytest
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
-from shapely.geometry import LineString
-
 from framework import TestFramework
 from prt_test_utils import get_model_name
+from shapely.geometry import LineString
 from test_prt_triangle import (
     active_domain,
     botm,
@@ -40,16 +39,12 @@ from test_prt_triangle import (
 
 simname = "prtter"
 cases = [
-    f"{simname}eu",
     f"{simname}br",
     f"{simname}ch",
-    # f"{simname}test",
 ]
 methods = [
-    0,  # euler
     1,  # brent
     2,  # chandrupatla
-    # 3    # test method (doesn't always converge??)
 ]
 
 

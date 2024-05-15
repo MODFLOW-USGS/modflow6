@@ -21,10 +21,12 @@ import pytest
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
+from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
+from prt_test_utils import get_model_name
 from shapely.geometry import LineString
 
-from framework import TestFramework
-from prt_test_utils import get_model_name
+pytest_plugins = ["modflow_devtools.snapshots"]
 
 simname = "prttri"
 cases = [f"{simname}r2l", f"{simname}diag"]
@@ -174,20 +176,22 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         (0, (0, 88), 95, 92, 0.5),
         (1, (0, 86), 96, 86, 0.5),
     ]
-    prp_track_file = f"{prtname}.prp.trk"
-    prp_track_csv_file = f"{prtname}.prp.trk.csv"
-    flopy.mf6.ModflowPrtprp(
-        prt,
-        pname="prp1",
-        filename=f"{prtname}_1.prp",
-        nreleasepts=len(prpdata),
-        packagedata=prpdata,
-        perioddata={0: ["FIRST"]},
-        track_filerecord=[prp_track_file],
-        trackcsv_filerecord=[prp_track_csv_file],
-        boundnames=True,
-        stop_at_weak_sink=True,  # currently required for this problem
-    )
+    # set up 2 PRPs, identical except for the dev
+    # option toggling new vs old vertex velocity
+    # calculation. we expect both approaches to
+    # return approximately identical results.
+    for i in range(2):
+        flopy.mf6.ModflowPrtprp(
+            prt,
+            pname=f"prp{i}",
+            filename=f"{prtname}_{i}.prp",
+            nreleasepts=len(prpdata),
+            packagedata=prpdata,
+            perioddata={0: ["FIRST"]},
+            boundnames=True,
+            stop_at_weak_sink=True,  # currently required for this problem
+            dev_forceternary=i == 1,  # temp dev option, todo: remove later
+        )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"
     flopy.mf6.ModflowPrtoc(
@@ -231,7 +235,35 @@ def build_models(idx, test):
     return gwf_sim, prt_sim
 
 
-def check_output(idx, test):
+def plot_output(name, grid, head, spdis, pls):
+    fig = plt.figure(figsize=(10, 10))
+    ax = plt.subplot(1, 1, 1, aspect="equal")
+    pmv = flopy.plot.PlotMapView(model=grid, ax=ax)
+    pmv.plot_grid()
+    pmv.plot_array(head, cmap="Blues", alpha=0.25)
+    pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
+    mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title=f"MF6 pathlines ({name})",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax,
+            legend=False,
+            color="red" if iprp == 1 else "blue",
+        )
+    xc, yc = grid.get_xcellcenters_for_layer(
+        0
+    ), grid.get_ycellcenters_for_layer(0)
+    for i in range(grid.ncpl):
+        x, y = xc[i], yc[i]
+        ax.plot(x, y, "o", color="grey", alpha=0.25, ms=2)
+        ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
+    plt.show()
+
+
+def check_output(idx, test, snapshot):
     name = test.name
     prt_ws = test.workspace / "prt"
     gwf_name = get_model_name(name, "gwf")
@@ -244,49 +276,23 @@ def check_output(idx, test):
     head = gwf.output.head().get_data()
     bdobj = gwf.output.budget()
     spdis = bdobj.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # get prt output
     prt_name = get_model_name(name, "prt")
-    prt_track_csv_file = f"{prt_name}.prp.trk.csv"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-    endpts = (
-        pls.sort_values("t")
-        .groupby(["imdl", "iprp", "irpt", "trelease"])
-        .tail(1)
-    )
+    endpts = pls[pls.ireason == 3]  # termination
+
+    # check termination points against snapshot
+    assert snapshot == endpts.round(3).to_records(index=False)
 
     plot_debug = False
     if plot_debug:
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot(1, 1, 1, aspect="equal")
-        pmv = flopy.plot.PlotMapView(model=gwf, ax=ax)
-        pmv.plot_grid()
-        pmv.plot_array(head, cmap="Blues", alpha=0.25)
-        pmv.plot_vector(qx, qy, normalize=True, alpha=0.25)
-        mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title=f"MF6 pathlines ({name})",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax,
-                legend=False,
-                color="blue",
-            )
-        grid = gwf.modelgrid
-        xc, yc = grid.get_xcellcenters_for_layer(
-            0
-        ), grid.get_ycellcenters_for_layer(0)
-        for i in range(grid.ncpl):
-            x, y = xc[i], yc[i]
-            ax.plot(x, y, "o", color="grey", alpha=0.25, ms=2)
-            ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
-        plt.show()
+        plot_output(name, gwf.modelgrid, head, (qx, qy), pls)
 
     if "r2l" in name:
-        assert pls.shape == (82, 16)
+        assert pls.shape == (164, 16)
         assert (pls.z == 0.5).all()
         rtol = 1e-6
         assert isclose(min(pls.x), 0, rel_tol=rtol)
@@ -297,18 +303,30 @@ def check_output(idx, test):
         assert isclose(max(pls[pls.irpt == 2].y), 86, rel_tol=rtol)
         assert set(endpts.icell) == {130, 136}
     elif "diag" in name:
-        assert pls.shape == (116, 16)
-        assert endpts.shape == (2, 16)
+        assert pls.shape == (232, 16)
+        assert endpts.shape == (4, 16)
         assert set(endpts.icell) == {111, 112}
+
+    # pathlines should be (very nearly) identical for both
+    # vertex velocity calculation approaches
+    pls_prp1 = pls[pls.iprp == 1].drop(["iprp", "name"], axis=1).round(8)
+    pls_prp2 = (
+        pls[pls.iprp == 2]
+        .drop(["iprp", "name"], axis=1)
+        .round(8)
+        .reset_index(drop=True)
+    )
+    diff = pls_prp1.compare(pls_prp2)
+    assert not any(diff), diff
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, array_snapshot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, array_snapshot),
         targets=targets,
         compare=None,
     )

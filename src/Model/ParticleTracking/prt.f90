@@ -438,14 +438,13 @@ contains
       this%masssto(n) = DZERO
       this%ratesto(n) = DZERO
     end do
-    do ip = 1, this%bndlist%Count() ! kluge note: could accumulate masssto on the fly in prt_solve instead
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       select type (packobj)
       type is (PrtPrpType)
         do np = 1, packobj%nparticles
           istatus = packobj%particles%istatus(np)
-          ! refine these conditions as necessary
-          ! (status 8 is permanently unreleased)
+          ! this may need to change if istatus flags change
           if ((istatus > 0) .and. (istatus /= 8)) then
             n = packobj%particles%idomain(np, 2)
             ! -- Each particle currently assigned unit mass
@@ -454,7 +453,7 @@ contains
         end do
       end select
     end do
-    do n = 1, this%dis%nodes ! kluge note: set rate to zero and skip inactive nodes?
+    do n = 1, this%dis%nodes
       rate = -(this%masssto(n) - this%massstoold(n)) * tled
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
@@ -771,7 +770,6 @@ contains
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
-    call mem_deallocate(this%nprp)
 
     ! -- Arrays
     call mem_deallocate(this%masssto)
@@ -804,7 +802,6 @@ contains
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
-    call mem_allocate(this%nprp, 'NPRP', this%memoryPath) ! kluge?
 
     this%infmi = 0
     this%inmip = 0
@@ -815,7 +812,6 @@ contains
     this%inssm = 0
     this%inoc = 0
     this%inobs = 0
-    this%nprp = 0
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays
@@ -874,7 +870,6 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('PRP6')
-      this%nprp = this%nprp + 1
       call prp_create(packobj, ipakid, ipaknum, inunit, iout, &
                       this%name, pakname, mempath, this%fmi)
     case ('API6')
@@ -999,8 +994,7 @@ contains
       end select
     end do
 
-    ! -- Destroy particle
-    call particle%destroy()
+    ! -- Deallocate particle
     deallocate (particle)
   end subroutine prt_solve
 

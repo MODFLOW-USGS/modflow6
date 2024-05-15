@@ -143,7 +143,9 @@ contains
       &' input read from unit ', i0, //)"
     !
     ! --print a message identifying the buoyancy package.
-    write (this%iout, fmtbuy) this%inunit
+    if (.not. present(buy_input)) then
+      write (this%iout, fmtbuy) this%inunit
+    end if
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
