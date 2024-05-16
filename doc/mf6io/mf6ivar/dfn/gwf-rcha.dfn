@@ -9,7 +9,7 @@ shape
 reader urword
 optional false
 longname use array-based input
-description indicates that array-based input will be used for the Recharge Package.  This keyword must be specified to use array-based input.
+description indicates that array-based input will be used for the Recharge Package.  This keyword must be specified to use array-based input.  When READASARRAYS is specified, 
 default_value True
 
 block options
