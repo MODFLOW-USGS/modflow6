@@ -1,5 +1,6 @@
 BEGIN OPTIONS
   [BOUNDNAMES]
+  [PRINT_INPUT]
   [LOCAL_Z]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]
