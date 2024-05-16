@@ -9,9 +9,10 @@ import numpy as np
 import pandas as pd
 import pytest
 from conftest import project_root_path
-from flopy.mf6 import MFSimulation
-from flopy.utils import PathlineFile
 from modflow_devtools.misc import run_cmd, set_env
+from modflow_devtools.markers import requires_pkg
+
+pytest_plugins = ["modflow_devtools.snapshots"]
 
 
 def get_notebook_scripts(pattern=None, exclude=None):
@@ -33,12 +34,13 @@ def get_notebook_scripts(pattern=None, exclude=None):
     )
 
 
+@requires_pkg("syrupy")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "notebook",
-    get_notebook_scripts(pattern="ex-prt", exclude=["ex-prt-mp7-p03"]),
+    get_notebook_scripts(pattern="ex-prt"),
 )
-def test_notebooks(notebook, function_tmpdir, targets):
+def test_notebooks(notebook, function_tmpdir, targets, array_snapshot):
     notebook = Path(notebook)
 
     # temporarily add testing binaries to PATH
@@ -88,5 +90,9 @@ def test_notebooks(notebook, function_tmpdir, targets):
         / "prt"
         / (example_name + "-prt.trk.csv")
     )
-    pathlines = pd.read_csv(pathlines_file).round(3).to_records(index=False)
+    pathlines = pd.read_csv(pathlines_file)
     assert any(pathlines)
+
+    # check endpoints against snapshot
+    endpoints = pathlines[pathlines.ireason == 3]
+    assert array_snapshot == endpoints.round(3).to_records(index=False)
