@@ -21,7 +21,7 @@ gdelr = 1.0
 nouter, ninner = 100, 20
 hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
-number_of_models = 5
+number_of_models = 5  # this variable is also used to run the parallel test
 concentration = 17.0
 
 
