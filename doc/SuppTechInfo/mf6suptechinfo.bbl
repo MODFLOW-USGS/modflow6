@@ -1,15 +1,21 @@
-\begin{thebibliography}{16}
+\begin{thebibliography}{21}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
-  \providecommand{\doiagency}[1]{doi:\discretionary{}{}{}#1}\else
-  \providecommand{\doiagency}{doi:\discretionary{}{}{}\begingroup
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
 
+\bibitem[{Campbell and others(1994)Campbell, Jungbauer, Bidlake, and
+  Hungerford}]{campbell1994}
+Campbell, G.S., Jungbauer, J.D., Bidlake, W.R., and Hungerford, R.D., 1994,
+  Predicting the effect of temperature on soil thermal conductivity: Soil
+  Science, v. 158, no.~5, p.~307--313.
+
 \bibitem[{Guo and Langevin(2002)}]{langevin2002seawat}
-Guo, W., and Langevin, C.D., 2002, User's Guide to SEAWAT: A Computer Program
-  for Simulation of Three-Dimensional Variable-Density Ground-Water Flow: {U.S.
-  Geological Survey Techniques of Water-Resources Investigations book 6,
-  Chapter A7, 77 p.}, accessed July 25, 2019, at
+Guo, Weixing, and Langevin, C.D., 2002, User's Guide to SEAWAT: A Computer
+  Program for Simulation of Three-Dimensional Variable-Density Ground-Water
+  Flow: {U.S. Geological Survey Techniques of Water-Resources Investigations
+  book 6, Chapter A7, 77 p.}, accessed July 25, 2019, at
   \url{https://pubs.er.usgs.gov/publication/ofr03426}.
 
 \bibitem[{Harbaugh(2005)}]{modflow2005}
@@ -26,6 +32,13 @@ Healy, R.W., and Ronan, A.D., 1996, Documentation of Computer Program VS2DH for
   accessed September 27, 2022, at \url{https://doi.org/10.3133/wri964230}, at
   \url{https://pubs.usgs.gov/wri/1996/4230/report.pdf}.
 
+\bibitem[{Hecht-Mendez and others(2010)Hecht-Mendez, Molina-Giraldo, Blum, and
+  Bayer}]{hechtmendez}
+Hecht-Mendez, J., Molina-Giraldo, N., Blum, P., and Bayer, P., 2010, Evaluating
+  mt3dms for heat transport simulation of closed geothermal systems:
+  Groundwater, v.~48, no.~5, p.~741--756,
+  \url{https://doi.org/10.1111/j.1745-6584.2010.00678.x}.
+
 \bibitem[{Hughes and Sanford(2004)}]{hughes2004}
 Hughes, J.D., and Sanford, W.E., 2004, SUTRA-MS: A version of SUTRA modified to
   simulate heat and multiple-solute transport: {U.S. Geological Survey Open
@@ -40,8 +53,8 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
   chap. A57, 36 p.}, \url{https://doi.org/10.3133/tm6A57}.
 
 \bibitem[{Kavetski and Kuczera(2007)}]{doi:10.1029/2006WR005195}
-Kavetski, D., and Kuczera, G., 2007, Model smoothing strategies to remove
-  microscale discontinuities and spurious secondary optima in objective
+Kavetski, Dmitri, and Kuczera, George, 2007, Model smoothing strategies to
+  remove microscale discontinuities and spurious secondary optima in objective
   functions in hydrological calibration: Water Resources Research, v.~43,
   no.~3, \url{https://doi.org/10.1029/2006WR005195},
   \url{https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2006WR005195}.
@@ -54,8 +67,8 @@ Kipp, K.L., 1987, HST3D: A Computer Code for Simulation of Heat and Solute
 
 \bibitem[{Langevin and others(2008)Langevin, Thorne~Jr, Dausman, Sukop, and
   Guo}]{langevin2008seawat}
-Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, W., 2008,
-  {SEAWAT} Version 4---A computer program for simulation of multi-species
+Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, Weixing,
+  2008, {SEAWAT} Version 4---A computer program for simulation of multi-species
   solute and heat transport: {U.S. Geological Survey Techniques and Methods,
   book 6, chap. A22, 39 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/tm6A22}.
@@ -63,25 +76,38 @@ Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, W., 2008,
 \bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
   and Panday}]{modflow6gwf}
 Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
-  Panday, S., 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
+  Panday, Sorab, 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
   Model: {U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197
   p.}, \url{https://doi.org/10.3133/tm6A55}.
 
 \bibitem[{Langevin and others(2022)Langevin, Provost, Panday, and
   Hughes}]{modflow6gwt}
-Langevin, C.D., Provost, A.M., Panday, S., and Hughes, J.D., 2022,
+Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022,
   Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A61, 56 p.},
   \url{https://doi.org/10.3133/tm6A61}.
 
+\bibitem[{Ma and Zheng(2010)}]{mazheng2010}
+Ma, Rui, and Zheng, Chunmiao, 2010, Effects of density and viscosity in
+  modeling heat as a groundwater tracer: Groundwater, v.~48, no.~3,
+  p.~380--389, \url{https://doi.org/10.1111/j.1745-6584.2009.00660.x}.
+
 \bibitem[{Maidment(1993)}]{maidment1993}
 Maidment, D.R., 1993, Handbook of Hydrology: New York, USA, McGraw-Hill.
 
+\bibitem[{Markle and others(2006)Markle, Schincariol, Sass, and
+  Molson}]{markle2006}
+Markle, J.M., Schincariol, R.A., Sass, J.H., and Molson, J.W., 2006,
+  Characterizing the two-dimensional thermal conductivity distribution in a
+  sand and gravel aquifer: Soil Science Society of America Journal, v.~70,
+  no.~4, p.~1281--1294,
+  \url{https://doi.org/https://doi.org/10.2136/sssaj2005.0293}.
+
 \bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
   Hughes}]{modflowusg}
-Panday, S., Langevin, C.D., Niswonger, R.G., Ibaraki, M., and Hughes, J.D.,
-  2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW for
-  simulating groundwater flow and tightly coupled processes using a control
+Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
+  J.D., 2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW
+  for simulating groundwater flow and tightly coupled processes using a control
   volume finite-difference formulation: {U.S. Geological Survey Techniques and
   Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/tm/06/a45/}.
@@ -92,6 +118,12 @@ Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
   Geological Survey Techniques and Methods, book 6, chap. A56, 46 p.},
   \url{https://doi.org/10.3133/tm6A56}.
 
+\bibitem[{Thorne and others(2006)Thorne, Langevin, and Sukop}]{thorne2006}
+Thorne, Danny, Langevin, C.D., and Sukop, M.C., 2006, Addition of simultaneous
+  heat and solute transport and variable fluid viscosity to seawat: Computers
+  and Geosciences, v.~32, no.~10, p.~1758--1768,
+  \url{https://doi.org/https://doi.org/10.1016/j.cageo.2006.04.005}.
+
 \bibitem[{Voss(1984)}]{voss1984sutra}
 Voss, C.I., 1984, SUTRA---A finite-element simulation model for
   saturated-unsaturated fluid-density-dependent ground-water flow with energy
@@ -99,11 +131,11 @@ Voss, C.I., 1984, SUTRA---A finite-element simulation model for
   Geological Survey Water-Resources Investigations Report 84--4369, 409 p.}
 
 \bibitem[{Zheng(2010)}]{zheng2010supplemental}
-Zheng, C., 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical Report
-  Prepared for the U.S. Army Corps of Engineers, 51 p.}
+Zheng, Chunmiao, 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical
+  Report Prepared for the U.S. Army Corps of Engineers, 51 p.}
 
 \bibitem[{Zheng and Wang(1999)}]{zheng1999mt3dms}
-Zheng, C., and Wang, P.P., 1999, MT3DMS---A modular three-dimensional
+Zheng, Chunmiao, and Wang, P.P., 1999, MT3DMS---A modular three-dimensional
   multi-species transport model for simulation of advection, dispersion and
   chemical reactions of contaminants in groundwater systems; Documentation and
   user's guide: {Contract report SERDP--99--1: Vicksburg, Miss., U.S. Army
