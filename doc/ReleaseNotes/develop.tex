@@ -69,8 +69,8 @@
 
 	\underline{PARALLEL}
 	\begin{itemize}
-		\item Several issues were fixed for parallel simualtions that used the Buoyancy Package for the GWF model.  When a simulation was run with the Buoyancy Package, irrelevant messages could be written to the screen.  In some cases, the Buoyancy Package produced  strange results at the interface between two models.  These issues have been corrected.
+		\item Several issues were fixed for parallel simulations that used the Buoyancy Package for the GWF model.  When a simulation was run with the Buoyancy Package, irrelevant messages could be written to the screen.  In some cases, the Buoyancy Package produced  strange results at the interface between two models.  These issues have been corrected.
 		\item For parallel simulations, calculation of the residual norm used for pseudo-transient continuation (PTC) and backtracking was incorrect.  The program was fixed to calculate the correct residual norm.
 		\item Enabling XT3D on exchanges in a parallel simulation caused the program to hang for certain configurations. This issue has been corrected.
-		\item GNC is not supported on flow exchanges when running in parallel or when the XT3D option is enabled on the exchange. The program terminates with an error if the user attemps to use GNC in these cases.
+		\item GNC is not supported on flow exchanges when running in parallel or when the XT3D option is enabled on the exchange. The program terminates with an error if the user attempts to use GNC in these cases.
 	\end{itemize}
