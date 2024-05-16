@@ -342,17 +342,17 @@ contains
     real(DP) :: jac
     real(DP), allocatable, dimension(:) :: wk1
     real(DP), allocatable, dimension(:) :: wk2
-    real(DP), allocatable, dimension(:) :: unixnext
-    real(DP), allocatable, dimension(:) :: uniynext
+    real(DP), allocatable, dimension(:) :: eunxnext
+    real(DP), allocatable, dimension(:) :: eunynext
     real(DP), allocatable, dimension(:) :: le
-    real(DP), allocatable, dimension(:) :: unex
-    real(DP), allocatable, dimension(:) :: uney
+    real(DP), allocatable, dimension(:) :: eunx
+    real(DP), allocatable, dimension(:) :: euny
     real(DP) :: areacell
     real(DP), allocatable, dimension(:) :: areasub
     real(DP) :: divcell
     real(DP), allocatable, dimension(:) :: li
-    real(DP), allocatable, dimension(:) :: unix
-    real(DP), allocatable, dimension(:) :: uniy
+    real(DP), allocatable, dimension(:) :: iunx
+    real(DP), allocatable, dimension(:) :: iuny
     real(DP), allocatable, dimension(:) :: xmid
     real(DP), allocatable, dimension(:) :: ymid
     real(DP), allocatable, dimension(:) :: lm
@@ -370,12 +370,12 @@ contains
 
       ! Allocate local arrays
       allocate (le(this%nverts)) ! lengths of exterior (cell) edges
-      allocate (unex(this%nverts)) ! x components of unit normals to exterior edges
-      allocate (uney(this%nverts)) ! y components of unit normals to exterior edges
+      allocate (eunx(this%nverts)) ! x components of unit normals to exterior edges
+      allocate (euny(this%nverts)) ! y components of unit normals to exterior edges
       allocate (areasub(this%nverts)) ! subcell areas
       allocate (li(this%nverts)) ! lengths of interior edges ("spokes")
-      allocate (unix(this%nverts)) ! x components of unit normals to interior edges
-      allocate (uniy(this%nverts)) ! y components of unit normals to interior edges
+      allocate (iunx(this%nverts)) ! x components of unit normals to interior edges
+      allocate (iuny(this%nverts)) ! y components of unit normals to interior edges
       allocate (xmid(this%nverts)) ! x coordinates of midpoints
       allocate (ymid(this%nverts)) ! y coordinates of midpoints
       allocate (lm(this%nverts)) ! lengths of midpoint connectors
@@ -387,8 +387,8 @@ contains
       allocate (vm0y(this%nverts)) ! y component of vm0
       allocate (vm1x(this%nverts)) ! x component of vm1
       allocate (vm1y(this%nverts)) ! y component of vm1
-      allocate (unixnext(this%nverts)) ! vector of "next" interior unit-normal x coordinates defined for convenience
-      allocate (uniynext(this%nverts)) ! vector of "next" interior unit-normal y coordinates defined for convenience
+      allocate (eunxnext(this%nverts)) ! vector of "next" interior unit-normal x coordinates defined for convenience
+      allocate (eunynext(this%nverts)) ! vector of "next" interior unit-normal y coordinates defined for convenience
       allocate (wk1(this%nverts))
       allocate (wk2(this%nverts))
       allocate (xvals(3))
@@ -398,8 +398,8 @@ contains
       wk1 = this%xvertnext - this%xvert
       wk2 = this%yvertnext - this%yvert
       le = dsqrt(wk1 * wk1 + wk2 * wk2)
-      unex = -wk2 / le
-      uney = wk1 / le
+      eunx = -wk2 / le
+      euny = wk1 / le
 
       ! Cell area
       areacell = area(this%xvert, this%yvert)
@@ -434,11 +434,11 @@ contains
       wk1 = this%xvert - this%xctr
       wk2 = this%yvert - this%yctr
       li = dsqrt(wk1 * wk1 + wk2 * wk2)
-      unix = wk2 / li
-      uniy = -wk1 / li
+      iunx = wk2 / li
+      iuny = -wk1 / li
       ! Shifted arrays for convenience
-      unixnext = cshift(unix, 1)
-      uniynext = cshift(uniy, 1)
+      eunxnext = cshift(iunx, 1)
+      eunynext = cshift(iuny, 1)
 
       ! Midpoints of interior edges
       xmid = 5.d-1 * (this%xvert + this%xctr)
@@ -465,18 +465,18 @@ contains
       ! Calculations at base value
       vm0i0 = 0.d0
       call this%calc_thru_hcsum(vm0i0, divcell, le, li, lm, areasub, areacell, &
-                                unix, uniy, unex, uney, unixnext, uniynext, &
+                                iunx, iuny, eunx, euny, eunxnext, eunynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum0)
       ! Calculations at perturbed value
       vm0ival = vm0i0 + perturb
       call this%calc_thru_hcsum(vm0ival, divcell, le, li, lm, areasub, areacell, &
-                                unix, uniy, unex, uney, unixnext, uniynext, &
+                                iunx, iuny, eunx, euny, eunxnext, eunynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
       ! Calculations at root value
       jac = (hcsum - hcsum0) / perturb
       vm0ival = vm0i0 - hcsum0 / jac
       call this%calc_thru_hcsum(vm0ival, divcell, le, li, lm, areasub, areacell, &
-                                unix, uniy, unex, uney, unixnext, uniynext, &
+                                iunx, iuny, eunx, euny, eunxnext, eunynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
 
       ! Project linearly to get corner (vertex) velocities. Note that velocity
@@ -494,12 +494,12 @@ contains
 
       ! Deallocate local arrays
       deallocate (le)
-      deallocate (unex)
-      deallocate (uney)
+      deallocate (eunx)
+      deallocate (euny)
       deallocate (areasub)
       deallocate (li)
-      deallocate (unix)
-      deallocate (uniy)
+      deallocate (iunx)
+      deallocate (iuny)
       deallocate (xmid)
       deallocate (ymid)
       deallocate (lm)
@@ -511,8 +511,8 @@ contains
       deallocate (vm0y)
       deallocate (vm1x)
       deallocate (vm1y)
-      deallocate (unixnext)
-      deallocate (uniynext)
+      deallocate (eunxnext)
+      deallocate (eunynext)
       deallocate (wk1)
       deallocate (wk2)
       deallocate (xvals)
@@ -523,7 +523,7 @@ contains
 
   subroutine calc_thru_hcsum(this, vm0ival, divcell, &
                              le, li, lm, areasub, areacell, &
-                             unix, uniy, unex, uney, unixnext, uniynext, &
+                             iunx, iuny, eunx, euny, iunxnext, iunynext, &
                              kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
     ! dummy
     class(MethodCellTernaryType), intent(inout) :: this
@@ -535,12 +535,12 @@ contains
     real(DP), dimension(:) :: lm
     real(DP), dimension(:) :: areasub
     real(DP) :: areacell
-    real(DP), dimension(:) :: unix
-    real(DP), dimension(:) :: uniy
-    real(DP), dimension(:) :: unex
-    real(DP), dimension(:) :: uney
-    real(DP), dimension(:) :: unixnext
-    real(DP), dimension(:) :: uniynext
+    real(DP), dimension(:) :: iunx
+    real(DP), dimension(:) :: iuny
+    real(DP), dimension(:) :: eunx
+    real(DP), dimension(:) :: euny
+    real(DP), dimension(:) :: iunxnext
+    real(DP), dimension(:) :: iunynext
     real(DP), dimension(:) :: kappax
     real(DP), dimension(:) :: kappay
     real(DP), dimension(:) :: vm0x
@@ -608,25 +608,25 @@ contains
     vm1i = cshift(vm0i, 1)
 
     ! Get centroid velocity by setting up and solving 2x2 linear system
-    uprod = unix * unex + uniy * uney
+    uprod = iunx * eunx + iuny * euny
     det = DONE - uprod * uprod
-    bi0x = (unix - unex * uprod) / det
-    be0x = (unex - unix * uprod) / det
-    bi0y = (uniy - uney * uprod) / det
-    be0y = (uney - uniy * uprod) / det
-    uprod = unixnext * unex + uniynext * uney
+    bi0x = (iunx - eunx * uprod) / det
+    be0x = (eunx - iunx * uprod) / det
+    bi0y = (iuny - euny * uprod) / det
+    be0y = (euny - iuny * uprod) / det
+    uprod = iunxnext * eunx + iunynext * euny
     det = DONE - uprod * uprod
-    bi1x = (unixnext - unex * uprod) / det
-    be1x = (unex - unixnext * uprod) / det
-    bi1y = (uniynext - uney * uprod) / det
-    be1y = (uney - uniynext * uprod) / det
+    bi1x = (iunxnext - eunx * uprod) / det
+    be1x = (eunx - iunxnext * uprod) / det
+    bi1y = (iunynext - euny * uprod) / det
+    be1y = (euny - iunynext * uprod) / det
     be01x = 5.d-1 * (be0x + be1x)
     be01y = 5.d-1 * (be0y + be1y)
     wt = areasub / areacell
-    emxx = DTWO - sum(wt * be01x * unex)
-    emxy = -sum(wt * be01x * uney)
-    emyx = -sum(wt * be01y * unex)
-    emyy = DTWO - sum(wt * be01y * uney)
+    emxx = DTWO - sum(wt * be01x * eunx)
+    emxy = -sum(wt * be01x * euny)
+    emyx = -sum(wt * be01y * eunx)
+    emyy = DTWO - sum(wt * be01y * euny)
     rx = sum(wt * (bi0x * vm0i + bi1x * vm1i + be01x * this%vne))
     ry = sum(wt * (bi0y * vm0i + bi1y * vm1i + be01y * this%vne))
     emdet = emxx * emyy - emxy * emyx
@@ -634,7 +634,7 @@ contains
     this%vctry = (emxx * ry - emyx * rx) / emdet
 
     ! Get vm0e's using "known" conditions
-    vm0e = 5.d-1 * (this%vne + unex * this%vctrx + uney * this%vctry)
+    vm0e = 5.d-1 * (this%vne + eunx * this%vctrx + euny * this%vctry)
 
     ! Get vm1e's from uniformity along exterior edges
     vm1e = vm0e
@@ -667,8 +667,6 @@ contains
     deallocate (be1y)
     deallocate (be01x)
     deallocate (be01y)
-
-    return
 
   end subroutine calc_thru_hcsum
 
