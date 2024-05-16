@@ -22,7 +22,7 @@ module MethodDisvModule
 
   type, extends(MethodType) :: MethodDisvType
     integer(I4B), pointer :: zeromethod !< root-finding method
-    class(CellDefnType), pointer :: neighbor => null() !< ptr to a neighbor defn
+    type(CellDefnType), pointer :: neighbor => null() !< ptr to a neighbor defn
   contains
     procedure, public :: apply => apply_disv !< apply the DISV-grid method
     procedure, public :: deallocate !< deallocate arrays and scalars
