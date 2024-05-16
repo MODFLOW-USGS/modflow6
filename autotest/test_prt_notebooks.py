@@ -83,12 +83,11 @@ def test_notebooks(notebook, function_tmpdir, targets, array_snapshot):
     assert returncode == 0, f"could not run {notebook}"
 
     # check results
-    example_name = notebook.stem.replace("ex-prt-", "")
     pathlines_file = (
         function_tmpdir
-        / example_name
+        / notebook.stem
         / "prt"
-        / (example_name + "-prt.trk.csv")
+        / (notebook.stem.replace("ex-prt-", "") + "-prt.trk.csv")
     )
     pathlines = pd.read_csv(pathlines_file)
     assert any(pathlines)
