@@ -21,7 +21,8 @@ module MethodDisvModule
   public :: create_method_disv
 
   type, extends(MethodType) :: MethodDisvType
-    integer(I4B), pointer :: zeromethod
+    integer(I4B), pointer :: zeromethod !< root-finding method
+    type(CellDefnType), pointer :: neighbor => null() !< ptr to a neighbor defn
   contains
     procedure, public :: apply => apply_disv !< apply the DISV-grid method
     procedure, public :: deallocate !< deallocate arrays and scalars
@@ -58,6 +59,7 @@ contains
     method%type = "disv"
     method%delegates = .true.
     method%zeromethod = 0
+    call create_defn(method%neighbor)
   end subroutine create_method_disv
 
   !> @brief Destroy the tracking method
@@ -248,7 +250,6 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: sat
-    type(CellDefnType), pointer :: cd
 
     ! -- Map to shared cell face of neighbor
     inbr = defn%facenbr(inface)
@@ -261,11 +262,10 @@ contains
       icin = defn%icell
       j = this%fmi%dis%con%ia(icin)
       ic = this%fmi%dis%con%ja(j + inbr)
-      call create_defn(cd)
-      call this%load_cell_defn(ic, cd)
+      call this%load_cell_defn(ic, this%neighbor)
 
       npolyvertsin = defn%npolyverts
-      npolyverts = cd%npolyverts
+      npolyverts = this%neighbor%npolyverts
       if (inface .eq. npolyvertsin + 2) then
         ! -- Exits through bot, enters through top
         inface = npolyverts + 3
@@ -276,7 +276,7 @@ contains
         ! -- Exits and enters through shared polygon face
         j = this%fmi%dis%con%ia(ic)
         do m = 1, npolyverts + 3
-          inbrnbr = cd%facenbr(m)
+          inbrnbr = this%neighbor%facenbr(m)
           if (this%fmi%dis%con%ja(j + inbrnbr) .eq. icin) then
             inface = m
             exit
@@ -291,7 +291,6 @@ contains
         sat = this%fmi%gwfsat(ic)
         z = bot + zrel * sat * (top - bot)
       end if
-      deallocate (cd)
     end if
   end subroutine map_neighbor
 
