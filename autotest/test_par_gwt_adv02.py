@@ -13,8 +13,9 @@ cases = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    from test_gwt_adv01_gwtgwt import build_models
-    from test_gwt_adv01_gwtgwt import check_output
+    from test_gwt_adv02_gwtgwt import build_models
+    from test_gwt_adv02_gwtgwt import check_output
+    from test_gwt_adv02_gwtgwt import number_of_models
 
     test = TestFramework(
         name=name,
@@ -24,6 +25,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         check=lambda t: check_output(idx, t),
         compare=None,
         parallel=True,
-        ncpus=2,
+        ncpus=number_of_models,
     )
     test.run()
