@@ -3,7 +3,6 @@ from os import environ
 from pathlib import Path
 from platform import system
 from pprint import pprint
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -13,13 +12,14 @@ from modflow_devtools.misc import run_cmd, set_env
 from modflow_devtools.markers import requires_pkg
 
 pytest_plugins = ["modflow_devtools.snapshots"]
+repos_path = environ.get("REPOS_PATH", None)
+if repos_path is None:
+    repos_path = project_root_path.parent
+repo_path = Path(repos_path) / "modflow6-examples"
+scripts_path = repo_path / "scripts"
 
 
 def get_notebook_scripts(pattern=None, exclude=None):
-    repos_path = environ.get("REPOS_PATH", None)
-    if repos_path is None:
-        repos_path = project_root_path.parent
-    repo_path = Path(repos_path) / "modflow6-examples"
     if not repo_path.is_dir():
         return []
     nbpaths = [
@@ -30,7 +30,11 @@ def get_notebook_scripts(pattern=None, exclude=None):
 
     # sort for pytest-xdist: workers must collect tests in the same order
     return sorted(
-        [p for p in nbpaths if not exclude or not any(e in p for e in exclude)]
+        [
+            Path(p).name
+            for p in nbpaths
+            if not exclude or not any(e in p for e in exclude)
+        ]
     )
 
 
@@ -41,7 +45,7 @@ def get_notebook_scripts(pattern=None, exclude=None):
     get_notebook_scripts(pattern="ex-prt"),
 )
 def test_notebooks(notebook, function_tmpdir, targets, array_snapshot):
-    notebook = Path(notebook)
+    notebook = scripts_path / notebook
 
     # temporarily add testing binaries to PATH
     delim = ";" if system() == "Windows" else ":"
