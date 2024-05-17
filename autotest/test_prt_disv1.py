@@ -542,6 +542,7 @@ def check_output(idx, test):
     compare_output(name, mf6_pls, mp7_pls, mp7_eps)
 
 
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
