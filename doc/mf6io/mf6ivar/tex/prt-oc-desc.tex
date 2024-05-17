@@ -13,41 +13,27 @@
 
 \item \texttt{budgetcsvfile}---name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation.
 
-\item \texttt{CONCENTRATION}---keyword to specify that record corresponds to concentration.
-
-\item \texttt{concentrationfile}---name of the output file to write conc information.
-
-\item \texttt{PRINT\_FORMAT}---keyword to specify format for printing to the listing file.
-
-\item \texttt{columns}---number of columns for writing data.
-
-\item \texttt{width}---width for writing each number.
-
-\item \texttt{digits}---number of digits to use for writing a number.
-
-\item \texttt{format}---write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
-
-\item \texttt{TRACK}---keyword to specify that record corresponds to pathlines.
+\item \texttt{TRACK}---keyword to specify that record corresponds to a binary track file.
 
 \item \texttt{trackfile}---name of the output file to write tracking information.
 
-\item \texttt{TRACKCSV}---keyword to specify that record corresponds to the track CSV.
+\item \texttt{TRACKCSV}---keyword to specify that record corresponds to a CSV track file.
 
 \item \texttt{trackcsvfile}---name of the comma-separated value (CSV) file to write tracking information.
 
-\item \texttt{TRACK\_ALL}---whether to track all particle events
+\item \texttt{TRACK\_ALL}---keyword to indicate that ...
 
-\item \texttt{TRACK\_RELEASE}---whether to track particle release events
+\item \texttt{TRACK\_RELEASE}---keyword to indicate that particle tracking output is to be written when a particle is released
 
-\item \texttt{TRACK\_TRANSIT}---whether to track cell-to-cell transitions
+\item \texttt{TRACK\_TRANSIT}---keyword to indicate that particle tracking output is to be written when a particle exits a cell
 
-\item \texttt{TRACK\_TIMESTEP}---whether to track transitions between timesteps
+\item \texttt{TRACK\_TIMESTEP}---keyword to indicate that particle tracking output is to be written at the end of each time step
 
-\item \texttt{TRACK\_TERMINATE}---whether to track particle termination events
+\item \texttt{TRACK\_TERMINATE}---keyword to indicate that particle tracking output is to be written when a particle terminates for any reason
 
-\item \texttt{TRACK\_WEAKSINK}---whether to track occasions when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells)
+\item \texttt{TRACK\_WEAKSINK}---keyword to indicate that particle tracking output is to be written when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells)
 
-\item \texttt{TRACK\_USERTIME}---whether to track user-specified times, provided as double precision values to the TRACK\_TIMES or TRACK\_TIMESFILE options
+\item \texttt{TRACK\_USERTIME}---keyword to indicate that particle tracking output is to be written at user-specified times, provided as double precision values to the TRACK\_TIMES or TRACK\_TIMESFILE options
 
 \item \texttt{TRACK\_TIMES}---keyword indicating tracking times will follow
 
@@ -67,7 +53,7 @@
 
 \item \texttt{PRINT}---keyword to indicate that information will be printed this stress period.
 
-\item \texttt{rtype}---type of information to save or print.  Can be BUDGET or CONCENTRATION.
+\item \texttt{rtype}---type of information to save or print.  Can only be BUDGET.
 
 \item \texttt{ocsetting}---specifies the steps for which the data will be saved.
 

@@ -105,10 +105,9 @@ contains
   end subroutine prt_oc_allocate_scalars
 
   !> @ brief Setup output control variables.
-  subroutine oc_ar(this, mass, dis, dnodata)
+  subroutine oc_ar(this, dis, dnodata)
     ! -- dummy
     class(PrtOcType) :: this !< PrtOcType object
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: mass !< particle mass
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
     real(DP), intent(in) :: dnodata !< no data value
     ! -- local
@@ -120,17 +119,13 @@ contains
     allocate (this%tracktimes)
     call this%tracktimes%init()
     inodata = 0
-    nocdobj = 2
+    nocdobj = 1
     allocate (this%ocdobj(nocdobj))
     do i = 1, nocdobj
       call ocd_cr(ocdobjptr)
       select case (i)
       case (1)
         call ocdobjptr%init_dbl('BUDGET', nullvec, dis, 'PRINT LAST ', &
-                                'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
-                                this%iout, dnodata)
-      case (2)
-        call ocdobjptr%init_dbl('MASS', mass, dis, 'PRINT LAST ', &
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select

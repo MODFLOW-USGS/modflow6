@@ -29,35 +29,24 @@ module TernarySolveTrack
 contains
 
   !> @brief Traverse triangular cell
-  subroutine traverse_triangle(isolv, tol, step, texit, &
+  subroutine traverse_triangle(isolv, tol, texit, &
                                alpexit, betexit, &
                                itrifaceenter, itrifaceexit, &
-                               rxx, rxy, ryx, ryy, &
-                               alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                               vziodz, az)
+                               alp1, bet1, alp2, bet2, alpi, beti)
     ! -- dummy
     integer(I4B), intent(in) :: isolv !< solution method
     real(DP), intent(in) :: tol !< solution tolerance
-    real(DP), intent(in) :: step !< stepsize for numerical methods
     real(DP), intent(out) :: texit !< time particle exits the cell
     real(DP) :: alpexit
     real(DP) :: betexit !< alpha and beta coefficients
     integer(I4B) :: itrifaceenter
     integer(I4B) :: itrifaceexit !< entry and exit faces
-    real(DP) :: rxx
-    real(DP) :: rxy
-    real(DP) :: ryx
-    real(DP) :: ryy !< rotation matrix
-    real(DP) :: alp0
-    real(DP) :: bet0
     real(DP) :: alp1
     real(DP) :: bet1
     real(DP) :: alp2
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti !< alpha and beta coefficients
-    real(DP) :: vziodz
-    real(DP) :: az
     ! -- local
     real(DP) :: texit0
     real(DP) :: alpexit0
@@ -77,16 +66,13 @@ contains
 
     ! -- Compute exit time (travel time to exit) and exit location
     call find_exit_bary(isolv, 0, itrifaceenter, &
-                        alpi, beti, &
-                        tol, step, vziodz, az, &
+                        alpi, beti, tol, &
                         texit0, alpexit0, betexit0)
     call find_exit_bary(isolv, 1, itrifaceenter, &
-                        alpi, beti, &
-                        tol, step, vziodz, az, &
+                        alpi, beti, tol, &
                         texit1, alpexit1, betexit1)
     call find_exit_bary(isolv, 2, itrifaceenter, &
-                        alpi, beti, &
-                        tol, step, vziodz, az, &
+                        alpi, beti, tol, &
                         texit2, alpexit2, betexit2)
     texit = min(texit0, texit1, texit2)
 
@@ -337,8 +323,7 @@ contains
 
   !> @brief Find the exit time and location in barycentric coordinates.
   subroutine find_exit_bary(isolv, itriface, itrifaceenter, &
-                            alpi, beti, &
-                            tol, step, vziodz, az, &
+                            alpi, beti, tol, &
                             texit, alpexit, betexit)
     ! -- dummy
     integer(I4B) :: isolv
@@ -347,9 +332,6 @@ contains
     real(DP) :: alpi
     real(DP) :: beti
     real(DP) :: tol
-    real(DP) :: step
-    real(DP) :: vziodz
-    real(DP) :: az
     real(DP) :: texit
     real(DP) :: alpexit
     real(DP) :: betexit

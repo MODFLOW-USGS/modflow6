@@ -298,7 +298,6 @@
 		<Filter Name="ParticleTracking">
 		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
-		<File RelativePath="..\src\Model\ParticleTracking\prt-obs.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-oc.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-prp.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt.f90"/></Filter>

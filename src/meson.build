@@ -183,7 +183,6 @@ modflow_sources = files(
     'Model' / 'ParticleTracking' / 'prt.f90',
     'Model' / 'ParticleTracking' / 'prt-fmi.f90',
     'Model' / 'ParticleTracking' / 'prt-mip.f90',
-    'Model' / 'ParticleTracking' / 'prt-obs.f90',
     'Model' / 'ParticleTracking' / 'prt-oc.f90',
     'Model' / 'ParticleTracking' / 'prt-prp.f90',
     'Model' / 'ModelUtilities' / 'BoundaryPackage.f90',

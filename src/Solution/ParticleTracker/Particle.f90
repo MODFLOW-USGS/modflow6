@@ -60,6 +60,8 @@ module ParticleModule
     logical(LGP), public :: transformed !< whether coordinates have been transformed from model to local
     logical(LGP), public :: advancing !< whether particle is still being tracked for current time step
     integer(I4B), public :: ifrctrn !< whether to force solving the particle with the ternary method
+    integer(I4B), public :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), public :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
     procedure, public :: get_model_coords
     procedure, public :: load_from_store
@@ -90,6 +92,8 @@ module ParticleModule
     real(DP), dimension(:), pointer, contiguous :: tstop !< particle stop time
     real(DP), dimension(:), pointer, contiguous :: ttrack !< current tracking time
     integer(I4B), dimension(:), pointer, contiguous :: ifrctrn !< force ternary method
+    integer(I4B), dimension(:), pointer, contiguous :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), dimension(:), pointer, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
     procedure, public :: deallocate => deallocate_particle_store
     procedure, public :: resize => resize_store
@@ -130,6 +134,8 @@ contains
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
     call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
+    call mem_allocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
+    call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
     call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine allocate_particle_store
@@ -156,6 +162,8 @@ contains
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
     call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
+    call mem_deallocate(this%iexmethod, 'PLIEXMETHOD', mempath)
+    call mem_deallocate(this%extol, 'PLEXTOL', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
   end subroutine deallocate_particle_store
@@ -185,6 +193,8 @@ contains
     call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
     call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
+    call mem_reallocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
+    call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
     call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine resize_store
@@ -227,6 +237,8 @@ contains
     this%iboundary(1:levelmax) = &
       store%iboundary(ip, 1:levelmax)
     this%ifrctrn = store%ifrctrn(ip)
+    this%iexmethod = store%iexmethod(ip)
+    this%extol = store%extol(ip)
   end subroutine load_from_store
 
   !> @brief Update particle store from particle
@@ -260,6 +272,8 @@ contains
       1:levelmax) = &
       particle%iboundary(1:levelmax)
     this%ifrctrn = particle%ifrctrn
+    this%iexmethod = particle%iexmethod
+    this%extol = particle%extol
   end subroutine load_from_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.

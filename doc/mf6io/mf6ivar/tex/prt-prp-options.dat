@@ -1,6 +1,7 @@
 BEGIN OPTIONS
   [BOUNDNAMES]
   [PRINT_INPUT]
+  EXIT_SOLVE_TOLERANCE <exit_solve_tolerance>
   [LOCAL_Z]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]

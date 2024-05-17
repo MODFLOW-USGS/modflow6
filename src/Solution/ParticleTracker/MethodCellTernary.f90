@@ -61,14 +61,12 @@ contains
     type(SubcellTriType), pointer :: subcell
 
     allocate (method)
-    allocate (method%zeromethod)
     call create_cell_poly(cell)
     method%cell => cell
     method%type => method%cell%type
     method%delegates = .true.
     call create_subcell_tri(subcell)
     method%subcell => subcell
-    method%zeromethod = 0
   end subroutine create_method_cell_ternary
 
   !> @brief Destroy the tracking method
@@ -95,7 +93,6 @@ contains
       trackfilectl=this%trackfilectl, &
       tracktimes=this%tracktimes)
     submethod => method_subcell_tern
-    method_subcell_tern%zeromethod = this%zeromethod
   end subroutine load_mct
 
   !> @brief Pass particle to next subcell if there is one, or to the cell face
@@ -465,18 +462,21 @@ contains
       ! Calculations at base value
       vm0i0 = 0.d0
       call this%calc_thru_hcsum(vm0i0, divcell, le, li, lm, areasub, areacell, &
-                                unintx, uninty, unextx, unexty, unextxnext, unextynext, &
+                                unintx, uninty, unextx, unexty, &
+                                unextxnext, unextynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum0)
       ! Calculations at perturbed value
       vm0ival = vm0i0 + perturb
       call this%calc_thru_hcsum(vm0ival, divcell, le, li, lm, areasub, areacell, &
-                                unintx, uninty, unextx, unexty, unextxnext, unextynext, &
+                                unintx, uninty, unextx, unexty, &
+                                unextxnext, unextynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
       ! Calculations at root value
       jac = (hcsum - hcsum0) / perturb
       vm0ival = vm0i0 - hcsum0 / jac
       call this%calc_thru_hcsum(vm0ival, divcell, le, li, lm, areasub, areacell, &
-                                unintx, uninty, unextx, unexty, unextxnext, unextynext, &
+                                unintx, uninty, unextx, unexty, &
+                                unextxnext, unextynext, &
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
 
       ! Project linearly to get corner (vertex) velocities. Note that velocity
@@ -523,7 +523,8 @@ contains
 
   subroutine calc_thru_hcsum(this, vm0ival, divcell, &
                              le, li, lm, areasub, areacell, &
-                             unintx, uninty, unextx, unexty, unintxnext, unintynext, &
+                             unintx, uninty, unextx, unexty, &
+                             unintxnext, unintynext, &
                              kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
     ! dummy
     class(MethodCellTernaryType), intent(inout) :: this

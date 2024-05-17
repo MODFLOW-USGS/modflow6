@@ -37,12 +37,10 @@ contains
     type(SubcellTriType), pointer :: subcell
 
     allocate (method)
-    allocate (method%zeromethod)
     call create_subcell_tri(subcell)
     method%subcell => subcell
     method%type => method%subcell%type
     method%delegates = .false.
-    method%zeromethod = 0
   end subroutine create_method_subcell_ternary
 
   !> @brief Deallocate the ternary subcell method
@@ -212,12 +210,10 @@ contains
     integer(I4B) :: izstatus
     integer(I4B) :: itopbotexit
     integer(I4B) :: ntmax
-    integer(I4B) :: nsave
     integer(I4B) :: isolv
     integer(I4B) :: itrifaceenter
     integer(I4B) :: itrifaceexit
     real(DP) :: tol
-    real(DP) :: step
     real(DP) :: dtexit
     real(DP) :: alpexit
     real(DP) :: betexit
@@ -226,10 +222,8 @@ contains
     integer(I4B) :: tslice(2)
 
     ntmax = 10000
-    nsave = 1 ! needed???
-    isolv = this%zeromethod
-    tol = 1d-7
-    step = 1e-3 ! needed only for euler
+    isolv = particle%iexmethod
+    tol = particle%extol
     reason = -1
 
     ! -- Set some local variables for convenience
@@ -277,12 +271,10 @@ contains
     ! -- Traverse triangular subcell
     itrifaceenter = particle%iboundary(3) - 1
     if (itrifaceenter .eq. -1) itrifaceenter = 999
-    call traverse_triangle(isolv, tol, step, &
+    call traverse_triangle(isolv, tol, &
                            dtexitxy, alpexit, betexit, &
                            itrifaceenter, itrifaceexit, &
-                           rxx, rxy, ryx, ryy, &
-                           alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
-                           vziodz, az)
+                           alp1, bet1, alp2, bet2, alpi, beti)
 
     ! -- Subcell has no exit face, terminate the particle
     !    todo: after initial release, consider ramifications

@@ -390,7 +390,6 @@ $(OBJDIR)/Disv2d.o \
 $(OBJDIR)/Dis2d.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
-$(OBJDIR)/prt-obs.o \
 $(OBJDIR)/prt-mip.o \
 $(OBJDIR)/MethodPool.o \
 $(OBJDIR)/SpatialModelConnection.o \

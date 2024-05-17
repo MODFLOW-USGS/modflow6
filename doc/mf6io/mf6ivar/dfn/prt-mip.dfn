@@ -1,14 +1,6 @@
 # --------------------- prt mip options ---------------------
 
 block options
-name zero_method
-type integer
-reader urword
-optional true
-longname zero method
-description the root finding algorithm to solve ternary subcells.  1 brent, 2 chandrupatla.
-
-block options
 name export_array_ascii
 type keyword
 reader urword

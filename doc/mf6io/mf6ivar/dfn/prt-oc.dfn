@@ -78,114 +78,6 @@ longname file keyword
 description name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation.
 
 block options
-name concentration_filerecord
-type record concentration fileout concentrationfile
-shape
-reader urword
-tagged true
-optional true
-longname
-description
-
-block options
-name concentration
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname concentration keyword
-description keyword to specify that record corresponds to concentration.
-
-block options
-name concentrationfile
-type string
-preserve_case true
-shape
-in_record true
-reader urword
-tagged false
-optional false
-longname file keyword
-description name of the output file to write conc information.
-
-block options
-name concentrationprintrecord
-type record concentration print_format formatrecord
-shape
-reader urword
-optional true
-longname
-description
-
-block options
-name print_format
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname keyword to indicate that a print format follows
-description keyword to specify format for printing to the listing file.
-
-block options
-name formatrecord
-type record columns width digits format
-shape
-in_record true
-reader urword
-tagged
-optional false
-longname
-description
-
-block options
-name columns
-type integer
-shape
-in_record true
-reader urword
-tagged true
-optional
-longname number of columns
-description number of columns for writing data.
-
-block options
-name width
-type integer
-shape
-in_record true
-reader urword
-tagged true
-optional
-longname width for each number
-description width for writing each number.
-
-block options
-name digits
-type integer
-shape
-in_record true
-reader urword
-tagged true
-optional
-longname number of digits
-description number of digits to use for writing a number.
-
-block options
-name format
-type string
-shape
-in_record true
-reader urword
-tagged false
-optional false
-longname write format
-description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
-
-block options
 name track_filerecord
 type record track fileout trackfile
 shape
@@ -204,7 +96,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to pathlines.
+description keyword to specify that record corresponds to a binary track file.
 
 block options
 name trackfile
@@ -237,7 +129,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to the track CSV.
+description keyword to specify that record corresponds to a CSV track file.
 
 block options
 name trackcsvfile
@@ -257,7 +149,7 @@ type keyword
 reader urword
 optional true
 longname track all events
-description whether to track all particle events
+description keyword to indicate that ...
 
 block options
 name track_release
@@ -265,7 +157,7 @@ type keyword
 reader urword
 optional true
 longname track release
-description whether to track particle release events
+description keyword to indicate that particle tracking output is to be written when a particle is released
 
 block options
 name track_transit
@@ -273,7 +165,7 @@ type keyword
 reader urword
 optional true
 longname track transitions
-description whether to track cell-to-cell transitions
+description keyword to indicate that particle tracking output is to be written when a particle exits a cell
 
 block options
 name track_timestep
@@ -281,7 +173,7 @@ type keyword
 reader urword
 optional true
 longname track timestep ends
-description whether to track transitions between timesteps
+description keyword to indicate that particle tracking output is to be written at the end of each time step
 
 block options
 name track_terminate
@@ -289,7 +181,7 @@ type keyword
 reader urword
 optional true
 longname track termination
-description whether to track particle termination events
+description keyword to indicate that particle tracking output is to be written when a particle terminates for any reason
 
 block options
 name track_weaksink
@@ -297,15 +189,15 @@ type keyword
 reader urword
 optional true
 longname track weaksink exits
-description whether to track occasions when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells)
+description keyword to indicate that particle tracking output is to be written when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells)
 
 block options
 name track_usertime
 type keyword
 reader urword
 optional true
-longname track termination
-description whether to track user-specified times, provided as double precision values to the TRACK\_TIMES or TRACK\_TIMESFILE options
+longname track usertime
+description keyword to indicate that particle tracking output is to be written at user-specified times, provided as double precision values to the TRACK\_TIMES or TRACK\_TIMESFILE options
 
 block options
 name track_timesrecord
@@ -436,7 +328,7 @@ reader urword
 tagged false
 optional false
 longname record type
-description type of information to save or print.  Can be BUDGET or CONCENTRATION.
+description type of information to save or print.  Can only be BUDGET.
 
 block period
 name ocsetting

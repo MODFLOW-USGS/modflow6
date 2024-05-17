@@ -176,10 +176,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         (0, (0, 88), 95, 92, 0.5),
         (1, (0, 86), 96, 86, 0.5),
     ]
-    # set up 2 PRPs, identical except for the dev
-    # option toggling new vs old vertex velocity
-    # calculation. we expect both approaches to
-    # return approximately identical results.
     for i in range(2):
         flopy.mf6.ModflowPrtprp(
             prt,
@@ -190,7 +186,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
             perioddata={0: ["FIRST"]},
             boundnames=True,
             stop_at_weak_sink=True,  # currently required for this problem
-            dev_forceternary=i == 1,  # temp dev option, todo: remove later
         )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"

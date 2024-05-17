@@ -246,6 +246,11 @@ contains
   !!     this function subprogram is a slightly  modified  translation  of
   !! the algol 60 procedure  zero  given in  richard brent, algorithms for
   !! minimization without derivatives, prentice-hall, inc. (1973).
+  !!
+  !! This subroutine was obtained by the authors of MODFLOW 6 from
+  !! netlib.org with the understanding that it is freely available. It
+  !! has subsequently undergone minor modification to suit the current
+  !! application.
   !<
   function zero_br(ax, bx, f, tol) result(z)
     ! -- dummy

@@ -1,4 +1,4 @@
-\begin{thebibliography}{42}
+\begin{thebibliography}{43}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -249,6 +249,11 @@ Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
   volume finite-difference formulation: {U.S. Geological Survey Techniques and
   Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/tm/06/a45/}.
+
+\bibitem[{Pollock(2016)}]{pollock2016modpath7}
+Pollock, D.W., 2016, User guide for MODPATH Version 7---A particle-tracking
+  model for MODFLOW: {U.S. Geological Survey Open-File Report 2016--1086, 35
+  p.}, accessed June 27, 2017, at \url{https://doi.org/10.3133/ofr20161086}.
 
 \bibitem[{Provost and others(2017)Provost, Langevin, and Hughes}]{modflow6xt3d}
 Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
