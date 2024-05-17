@@ -1,4 +1,3 @@
-
 !> @brief Stream Network Flow (SWF) Module
 !!
 !! This module contains the SWF Model
@@ -52,7 +51,7 @@ module SwfModule
     integer(I4B), pointer :: inic => null() ! unit number IC
     integer(I4B), pointer :: indfw => null() !< unit number DFW
     integer(I4B), pointer :: incxs => null() !< unit number CXS
-    integer(I4B), pointer :: insto => null() !< unit number STO
+    integer(I4B), pointer :: insto => null() !< STO enabled flag
     integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: inoc => null() !< unit number OC
     integer(I4B), pointer :: iss => null() ! steady state flag
@@ -1150,6 +1149,7 @@ contains
     character(len=LENMEMPATH) :: mempathic = ''
     character(len=LENMEMPATH) :: mempathdfw = ''
     character(len=LENMEMPATH) :: mempathcxs = ''
+    character(len=LENMEMPATH) :: mempathsto = ''
     !
     ! -- set input model memory path
     model_mempath = create_mem_path(component=this%name, context=idm_context)
@@ -1186,7 +1186,8 @@ contains
         this%incxs = 1
         mempathcxs = mempath
       case ('STO6')
-        this%insto = inunit
+        this%insto = 1
+        mempathsto = mempath
       case ('IC6')
         this%inic = 1
         mempathic = mempath
@@ -1214,7 +1215,8 @@ contains
                   this%cxs)
     end if
     if (this%insto > 0) then
-      call sto_cr(this%sto, this%name, this%insto, this%iout, this%cxs)
+      call sto_cr(this%sto, this%name, mempathsto, this%insto, this%iout, &
+                  this%cxs)
     end if
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call swf_obs_cr(this%obs, this%inobs)
