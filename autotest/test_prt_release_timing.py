@@ -42,6 +42,7 @@ from prt_test_utils import (
     check_track_data,
     get_model_name,
     get_partdata,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 pytest_plugins = ["modflow_devtools.snapshots"]
@@ -169,6 +170,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
             else None
         ),
         print_input=True,
+        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
     )
 
     # create output control package

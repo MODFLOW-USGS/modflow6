@@ -39,6 +39,7 @@ from prt_test_utils import (
     check_budget_data,
     check_track_data,
     get_model_name,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtevnt"
@@ -141,6 +142,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
             nreleasepts=len(releasepts_prt[grp]),
             packagedata=releasepts_prt[grp],
             perioddata={0: ["FIRST"]},
+            exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         )
         for grp in ["a", "b"]
     ]

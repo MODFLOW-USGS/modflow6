@@ -45,6 +45,7 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
     has_default_boundnames,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtfmi01"
@@ -121,6 +122,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         stop_at_weak_sink="saws" in prt_name,
         boundnames=True,
+        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
     )
 
     # create output control package

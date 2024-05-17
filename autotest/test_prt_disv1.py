@@ -235,6 +235,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
             boundnames=True,
             print_input=True,
             dev_forceternary=i == 1,
+            exit_solve_tolerance=1e-10,
         )
 
     # create output control package
