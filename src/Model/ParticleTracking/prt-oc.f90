@@ -24,7 +24,7 @@ module PrtOcModule
     integer(I4B), pointer :: itrkcsv => null() !< CSV output file
     integer(I4B), pointer :: itrktls => null() !< track time list input file
     logical(LGP), pointer :: trackrelease => null() !< whether to track release events
-    logical(LGP), pointer :: tracktransit => null() !< whether to track cell transition events
+    logical(LGP), pointer :: trackexit => null() !< whether to track cell transition events
     logical(LGP), pointer :: tracktimestep => null() !< whether to track timestep events
     logical(LGP), pointer :: trackterminate => null() !< whether to track termination events
     logical(LGP), pointer :: trackweaksink => null() !< whether to track weak sink exit events
@@ -79,7 +79,7 @@ contains
     call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     call mem_allocate(this%itrktls, 'ITRKTLS', this%memoryPath)
     call mem_allocate(this%trackrelease, 'ITRACKRLS', this%memoryPath)
-    call mem_allocate(this%tracktransit, 'ITRACKTRS', this%memoryPath)
+    call mem_allocate(this%trackexit, 'ITRACKTRS', this%memoryPath)
     call mem_allocate(this%tracktimestep, 'ITRACKTST', this%memoryPath)
     call mem_allocate(this%trackterminate, 'ITRACKTER', this%memoryPath)
     call mem_allocate(this%trackweaksink, 'ITRACKWSK', this%memoryPath)
@@ -96,7 +96,7 @@ contains
     this%itrkcsv = 0
     this%itrktls = 0
     this%trackrelease = .false.
-    this%tracktransit = .false.
+    this%trackexit = .false.
     this%tracktimestep = .false.
     this%trackterminate = .false.
     this%trackweaksink = .false.
@@ -163,7 +163,7 @@ contains
     call mem_deallocate(this%itrkcsv)
     call mem_deallocate(this%itrktls)
     call mem_deallocate(this%trackrelease)
-    call mem_deallocate(this%tracktransit)
+    call mem_deallocate(this%trackexit)
     call mem_deallocate(this%tracktimestep)
     call mem_deallocate(this%trackterminate)
     call mem_deallocate(this%trackweaksink)
@@ -188,7 +188,7 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: i, ierr, ipos, ios, nlines
     real(DP) :: dval
-    logical(LGP) :: isfound, found, endOfBlock, eventFound, success
+    logical(LGP) :: isfound, found, endOfBlock, event_found, success
     type(OutputControlDataType), pointer :: ocdobjptr
     ! -- formats
     character(len=*), parameter :: fmttrkbin = &
@@ -205,7 +205,7 @@ contains
     ! -- parse options block if detected
     if (isfound) then
       write (this%iout, '(/,1x,a,/)') 'PROCESSING OC OPTIONS'
-      eventFound = .false.
+      event_found = .false.
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -264,31 +264,31 @@ contains
           end if
           found = .true.
         case ('TRACK_ALL')
-          eventFound = .false. ! defaults set below
+          event_found = .false. ! defaults set below
           found = .true.
         case ('TRACK_RELEASE')
           this%trackrelease = .true.
-          eventFound = .true.
+          event_found = .true.
           found = .true.
-        case ('TRACK_TRANSIT')
-          this%tracktransit = .true.
-          eventFound = .true.
+        case ('TRACK_EXIT')
+          this%trackexit = .true.
+          event_found = .true.
           found = .true.
         case ('TRACK_TIMESTEP')
           this%tracktimestep = .true.
-          eventFound = .true.
+          event_found = .true.
           found = .true.
         case ('TRACK_TERMINATE')
           this%trackterminate = .true.
-          eventFound = .true.
+          event_found = .true.
           found = .true.
         case ('TRACK_WEAKSINK')
           this%trackweaksink = .true.
-          eventFound = .true.
+          event_found = .true.
           found = .true.
         case ('TRACK_USERTIME')
           this%trackusertime = .true.
-          eventFound = .true.
+          event_found = .true.
           found = .true.
         case ('TRACK_TIMES')
           ttloop: do
@@ -353,9 +353,9 @@ contains
       end do
 
       ! -- default to all events
-      if (.not. eventFound) then
+      if (.not. event_found) then
         this%trackrelease = .true.
-        this%tracktransit = .true.
+        this%trackexit = .true.
         this%tracktimestep = .true.
         this%trackterminate = .true.
         this%trackweaksink = .true.

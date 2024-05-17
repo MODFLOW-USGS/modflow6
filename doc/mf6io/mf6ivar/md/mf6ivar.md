@@ -1593,7 +1593,7 @@
 | PRT | OC | OPTIONS | TRACKCSVFILE | STRING | name of the comma-separated value (CSV) file to write tracking information. |
 | PRT | OC | OPTIONS | TRACK_ALL | KEYWORD | keyword to indicate that ... |
 | PRT | OC | OPTIONS | TRACK_RELEASE | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle is released |
-| PRT | OC | OPTIONS | TRACK_TRANSIT | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a cell |
+| PRT | OC | OPTIONS | TRACK_EXIT | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a cell |
 | PRT | OC | OPTIONS | TRACK_TIMESTEP | KEYWORD | keyword to indicate that particle tracking output is to be written at the end of each time step |
 | PRT | OC | OPTIONS | TRACK_TERMINATE | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle terminates for any reason |
 | PRT | OC | OPTIONS | TRACK_WEAKSINK | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells) |

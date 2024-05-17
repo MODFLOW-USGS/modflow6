@@ -248,7 +248,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
             trackcsv_filerecord=[prt_track_csv_file],
             track_release=True,
             track_terminate=True,
-            track_transit=True,
+            track_exit=True,
             track_usertime=True,
             track_timesrecord=tracktimes if "trts" in name else None,
             track_timesfilerecord=(

@@ -160,7 +160,7 @@ longname track release
 description keyword to indicate that particle tracking output is to be written when a particle is released
 
 block options
-name track_transit
+name track_exit
 type keyword
 reader urword
 optional true

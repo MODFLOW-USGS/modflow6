@@ -286,7 +286,7 @@ contains
       call this%trackfilectl%init_track_file(this%oc%itrkcsv, csv=.true.)
     call this%trackfilectl%set_track_events( &
       this%oc%trackrelease, &
-      this%oc%tracktransit, &
+      this%oc%trackexit, &
       this%oc%tracktimestep, &
       this%oc%trackterminate, &
       this%oc%trackweaksink, &

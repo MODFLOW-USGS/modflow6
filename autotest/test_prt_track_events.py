@@ -170,7 +170,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 pname="oc",
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
-                track_transit=True,
+                track_exit=True,
             )
         elif "tstp" in name:
             return flopy.mf6.ModflowPrtoc(
