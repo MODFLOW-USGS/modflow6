@@ -654,6 +654,28 @@ For each stress period, time step, and data type that is saved to the LKT, MWT, 
 
 
 \newpage
+\subsubsection{Budget File Contents for the PRT Model}
+
+The type of information that is written to the budget file depends on whether or not the save flags are set.  Table \ref{table:prtbud} contains a list of the types of information that may be contained in a PRT Model budget file.  In all cases, the flows in table \ref{table:prtbud} are particle mass flows (in mass per time) to or from a PRT Model cell.  Intercell flows are written as FLOW-JA-FACE using IMETH=1.
+
+The remaining flow terms in table \ref{table:prtbud} are all written using IMETH=6.  When IMETH=6 is used, the records contain additional text descriptors and two identifying numbers.  For all records in the PRT Model budget file, TXT1ID1 is the name of the PRT Model and TXT2ID1 is also the name of the PRT Model.  These text identifiers describe what is contained in ID1.  For the PRT Model budget file, ID1 is the cell or node number in the PRT Model grid.  The second set of text identifiers refer to the information in ID2.  Unless noted otherwise in the description in table \ref{table:prtbud}, TXT1ID2 is the name of the PRT Model, TXT2ID2 is the name of the package, and ID2 is the bound number in the package.
+
+\begin{longtable}{p{3.5cm} p{2cm} p{9cm}}
+\caption{Types of information that may be contained in the PRT Model budget file.  All terms represent particle mass flows in dimensions of mass per time} 
+\tabularnewline
+\hline
+\textbf{Flow Type (TEXT)} & \textbf{Method Code (IMETH)} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\endfoot
+\texttt{FLOW-JA-FACE} & 1 & intercell particle mass flow; array of size (NJA) \\
+\texttt{PRP} & 6 & particle mass flow for particle releases \\
+\label{table:prtbud}
+\end{longtable}
+
+
+\newpage
 \subsection{Observation Output File}
 
 When the BINARY option is used to open an observation output file (see section ``Observation (OBS) Utility''), the output file has the following form. Record 1 has a length of 100 bytes.
@@ -681,3 +703,37 @@ When the BINARY option is used to open an observation output file (see section `
 \item \texttt{TIME} (floating-point) is the simulation time; and
 \item \texttt{SIMVALUE} (floating-point) is the simulated value.
 \end{description}
+
+
+\newpage
+\subsection{Particle Track File}
+
+The binary particle track file for the PRT Model contains particle track output data.  The file
+contains raw binary data and does not contain headers.  The information needed to parse the binary
+file is contained in a separate header file, which is a text file of the same name as the binary
+file, with the extra extension ``.hdr''.  The header file lists column headings that define the
+tabular data format to be used in parsing the binary data.
+
+Each record in the binary data file consists of the following fields, which are defined in the
+Particle Track Output subsection of the Particle Tracking (PRT) Model Input and Output section:
+
+\vspace{5mm}
+\noindent Field 0: \texttt{`KPER'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 1: \texttt{`KSTP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 2: \texttt{`IMDL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 3: \texttt{`IPRP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 4: \texttt{`IRPT'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 5: \texttt{`ILAY'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 6: \texttt{`ICELL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 7: \texttt{`IZONE'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 8: \texttt{`ISTATUS'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 9: \texttt{`IREASON'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Field 10: \texttt{`TRELEASE'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Field 11: \texttt{`T'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Field 12: \texttt{`X'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Field 13: \texttt{`Y'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Field 14: \texttt{`Z'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Field 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=LENTXT)}} \\
+
+\vspace{4mm}
+\noindent The ``NAME'' field may be empty.

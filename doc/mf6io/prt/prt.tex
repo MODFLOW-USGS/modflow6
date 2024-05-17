@@ -11,12 +11,85 @@ For the PRT Model, ``flows'' (unless stated otherwise) represent particle mass `
 \subsection{Units of Length and Time}
 The PRT Model formulates the particle trajectory equations without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
 
-\subsection{Particle Mass Budget}
-A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
-
 \subsection{Time Stepping}
 In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and particle-tracking model run in the same simulation, the time step length specified in TDIS is used for both models.  If the PRT Model runs in a separate simulation, the time discretization may differ.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and PRT configurations are in the Flow Model Interface section.  
 
+\subsection{Particle Mass Budget}
+A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
+
+\subsection{Particle Track Output}
+
+The PRT Model supports both binary and CSV particle track output files. A particle track CSV file contains the output data in tabular format. The first line of the CSV file contains column names. Each subsequent line in the file contains a row of data for a single particle track record, with the following fields:
+
+\vspace{5mm}
+\noindent Column 0: \texttt{`KPER'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 1: \texttt{`KSTP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 2: \texttt{`IMDL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 3: \texttt{`IPRP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 4: \texttt{`IRPT'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 5: \texttt{`ILAY'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 6: \texttt{`ICELL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 7: \texttt{`IZONE'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 8: \texttt{`ISTATUS'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 9: \texttt{`IREASON'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 10: \texttt{`TRELEASE'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 11: \texttt{`T'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 12: \texttt{`X'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 13: \texttt{`Y'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 14: \texttt{`Z'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=LENTXT)}} \\
+
+\vspace{2mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{KPER} is the stress period number
+\item \texttt{KSTP} is the time step number
+\item \texttt{IMDL} is the number of the model the particle originated in
+\item \texttt{IPRP} is the number of the particle release point (PRP) package the particle originated in
+\item \texttt{IRPT} is the release point number
+\item \texttt{ILAY} is the layer number
+\item \texttt{ICELL} is the cell number
+\item \texttt{IZONE} is the zone number
+\item \texttt{ISTATUS} is the particle status code
+\item \texttt{IREASON} is the reporting reason code
+\item \texttt{TRELEASE} is the particle release time
+\item \texttt{T} is the particle tracking time
+\item \texttt{X} is the particle x coordinate
+\item \texttt{Y} is the particle y coordinate
+\item \texttt{Z} is the particle z coordinate
+\item \texttt{NAME} is the name of the particle release point
+\end{description}
+
+The ISTATUS field indicates the status of the particle:
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{0}: particle was released
+\item \texttt{1}: particle is being actively tracked
+\item \texttt{2}: particle terminated at a boundary face
+\item \texttt{3}: particle terminated in a weak sink cell
+\item \texttt{4}: \textit{unused}
+\item \texttt{5}: particle terminated in a cell with no exit face
+\item \texttt{6}: particle terminated in a stop zone
+\item \texttt{7}: particle terminated in an inactive cell
+\item \texttt{8}: particle terminated immediately upon release into a dry cell
+\item \texttt{9}: particle terminated in a subcell with no exit face
+\end{description}
+
+The IREASON field indicates the reason the particle track record was saved:
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{0}: particle was released
+\item \texttt{1}: particle exited a cell
+\item \texttt{2}: time step ended
+\item \texttt{3}: particle terminated
+\item \texttt{4}: particle exited a weak sink cell
+\item \texttt{5}: user-specified tracking time
+\end{description}
+
+By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
+
+The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
 
 
 \newpage
