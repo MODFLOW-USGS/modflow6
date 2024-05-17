@@ -66,6 +66,7 @@ module PrtPrpModule
     integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
     integer(I4B), pointer :: iexmethod => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    logical(LGP), pointer :: found_tol => null() !< whether tolerance option was found
 
   contains
     procedure :: prp_allocate_arrays
@@ -160,6 +161,7 @@ contains
     call mem_deallocate(this%ifrctrn)
     call mem_deallocate(this%iexmethod)
     call mem_deallocate(this%extol)
+    call mem_deallocate(this%found_tol)
 
     ! -- deallocate arrays
     call mem_deallocate(this%rptx)
@@ -259,6 +261,7 @@ contains
     call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
     call mem_allocate(this%iexmethod, 'IEXMETHOD', this%memoryPath)
     call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
+    call mem_allocate(this%found_tol, 'FOUNDTOL', this%memoryPath)
 
     ! -- Set values
     this%rlsall = .false.
@@ -280,6 +283,7 @@ contains
     this%ifrctrn = 0
     this%iexmethod = 1
     this%extol = DZERO
+    this%found_tol = .false. ! exit_solve_tolerance is a required option
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -698,7 +702,7 @@ contains
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
+    logical(LGP), intent(inout) :: found
     ! -- locals
     real(DP) :: dval
     integer(I4B) :: i, ios, nlines
@@ -818,20 +822,20 @@ contains
       found = .true.
     case ('DEV_EXIT_SOLVE_METHOD')
       this%iexmethod = this%parser%GetInteger()
-      if (this%iexmethod /= 1 .and. this%iexmethod /= 2) then
+      if (.not. (this%iexmethod /= 1 .or. this%iexmethod /= 2)) &
         call store_error('DEV_EXIT_SOLVE_METHOD MUST BE &
           &1 (BRENT) OR 2 (CHANDRUPATLA)')
-      end if
       found = .true.
     case ('EXIT_SOLVE_TOLERANCE')
       this%extol = this%parser%GetDouble()
-      if (this%extol <= DZERO) then
-        call store_error('EXIT_SOLVE_TOLERANCE MUST BE STRICTLY POSITIVE')
-      end if
+      if (this%extol <= DZERO) &
+        call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
       found = .true.
+      this%found_tol = .true.
     case default
       found = .false.
     end select
+
   end subroutine prp_options
 
   !> @brief Read the packagedata for this package
@@ -982,6 +986,10 @@ contains
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+
+    if (index(this%fmi%dis%input_mempath, 'DISV') > 0 &
+        .and. .not. this%found_tol) &
+      call store_error('EXIT_SOLVE_TOLERANCE MISSING, VALUE REQUIRED')
 
     ! -- get dimension block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &

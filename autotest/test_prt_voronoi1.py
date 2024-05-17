@@ -334,7 +334,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
     prpdata = [
         # index, (layer, cell index), x, y, z
         (i, (0, vgrid.intersect(p[0], p[1])), p[0], p[1], p[2])
-        for i, p in enumerate(rpts)  # first release point crashes
+        for i, p in enumerate(rpts)
     ]
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
@@ -349,6 +349,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         trackcsv_filerecord=[prp_track_csv_file],
         boundnames=True,
         stop_at_weak_sink=True,
+        exit_solve_tolerance=1e-10
     )
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
