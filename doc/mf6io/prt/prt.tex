@@ -1,28 +1,18 @@
-The PRT Model performs three-dimensional particle tracking in flowing groundwater.
+The PRT Model calculates three-dimensional, advective particle trajectories in flowing groundwater. The PRT Model is designed to work with the Groundwater Flow (GWF) Model \citep{modflow6gwf} and uses the same spatial discretization, which may be represented using either a structured (DIS) or an unstructured (DISV) grid. The PRT Model replicates much of the functionality of MODPATH 7 \citep{pollock2016modpath7} and offers support for a much broader class of unstructured grids. The PRT Model can be run in the same simulation as the associated GWF Model or in a separate simulation that reads previously calculated flows from a binary budget file. The version of the PRT Model documented here does not support grids of DISU type, tracking of particles through advanced stress package features such as lakes or streams reaches, or exchange of particles between PRT models.
 
-This section describes the data files for a \mf Particle Tracking (PRT) Model.  A PRT Model is added to the simulation by including a PRT entry in the MODELS block of the simulation name file.  There are currently two types of spatial discretization approaches that can be used with the PRT Model: DIS and DISV.  The input instructions for these three packages are not described here in this section on PRT Model input; input instructions for these three packages are described in the section on GWF Model input.
+This section describes the data files for a \mf Particle Tracking (PRT) Model.  A PRT Model is added to the simulation by including a PRT entry in the MODELS block of the simulation name file.  There are currently two types of spatial discretization approaches that can be used with the PRT Model: DIS and DISV.  The input instructions for these three packages are not described here in this section on PRT Model input; input instructions for these three packages are described in the section on GWF Model input.  Note that for a PRT Model, the maximum number of vertices for a cell in a DISV grid is limited to 8.
 
 The PRT Model is designed to permit input to be gathered, as it is needed, from many different files.  Likewise, results from the model calculations can be written to a number of output files. Details about the files used by each package are provided in this section on the PRT Model Instructions.
 
 The PRT Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
 
-For the PRT Model, ``flows'' (unless stated otherwise) represent particle mass ``flow'' in mass per time, rather than groundwater flow.  Each particle is currently assigned unit mass (configurable mass is planned but not yet implemented), and the numerical value of the flow can be interpreted as particles per time.
-
-\begin{enumerate}
-
-\item The PRT Model simulates particle trajectories through flowing groundwater, and requires simulated groundwater flows as input. Flows can be routed to a PRT Model from a GWF Model in the same simulation via a GWF-PRT Exchange.  Alternatively, a PRT Model can read binary flow and head files saved by a previously run GWF Model via Flow Model Interface.
-
-\item Particle tracking is not yet supported for the advanced stress packages or the Water Mover Package.
-
-\item A PRT-PRT Exchange is planned but has not yet been developed. This exchange will connect multiple particle-tracking models, e.g. for nested grid configurations.
-
-\end{enumerate}
+For the PRT Model, ``flows'' (unless stated otherwise) represent particle mass ``flow'' in mass per time, rather than groundwater flow.  Each particle is currently assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
 
 \subsection{Units of Length and Time}
-The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
+The PRT Model formulates the particle trajectory equations without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
 
 \subsection{Particle Mass Budget}
-A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  \mf calculates a mass budget for the overall model as a check on the acceptability of the solution, and to provide a summary of the sources and sinks of mass to the flow system.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
+A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
 
 \subsection{Time Stepping}
 In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and particle-tracking model run in the same simulation, the time step length specified in TDIS is used for both models.  If the PRT Model runs in a separate simulation, the time discretization may differ.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and PRT configurations are in the Flow Model Interface section.  
@@ -50,16 +40,12 @@ In \mf time step lengths are controlled by the user and specified in the Tempora
 \input{prt/mip}
 
 \newpage
-\subsection{Particle Release Point Conditions (PRP) Package}
+\subsection{Particle Release Point (PRP) Package}
 \input{prt/prp}
 
 \newpage
 \subsection{Output Control (OC) Option}
 \input{prt/oc}
-
-\newpage
-\subsection{Observation (OBS) Utility for a PRT Model}
-\input{prt/prt-obs}
 
 \newpage
 \subsection{Flow Model Interface (FMI) Package}

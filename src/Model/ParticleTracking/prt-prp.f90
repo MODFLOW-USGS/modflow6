@@ -62,8 +62,10 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: locz(:) => null() !< release point local z coordinates
     real(DP), pointer, contiguous :: rptmass(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
-    type(TimeSelectType), pointer :: releasetimes
-    integer(I4B), pointer :: ifrctrn => NULL()
+    type(TimeSelectType), pointer :: releasetimes !< user-specified particle release times
+    integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
+    integer(I4B), pointer :: iexmethod => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
 
   contains
     procedure :: prp_allocate_arrays
@@ -156,6 +158,8 @@ contains
     call mem_deallocate(this%itrkcsv)
     call mem_deallocate(this%irlstls)
     call mem_deallocate(this%ifrctrn)
+    call mem_deallocate(this%iexmethod)
+    call mem_deallocate(this%extol)
 
     ! -- deallocate arrays
     call mem_deallocate(this%rptx)
@@ -253,6 +257,8 @@ contains
     call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
     call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
+    call mem_allocate(this%iexmethod, 'IEXMETHOD', this%memoryPath)
+    call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
 
     ! -- Set values
     this%rlsall = .false.
@@ -272,6 +278,8 @@ contains
     this%itrkcsv = 0
     this%irlstls = 0
     this%ifrctrn = 0
+    this%iexmethod = 1
+    this%extol = DZERO
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -455,6 +463,8 @@ contains
         particle%idomain(3) = 0
         particle%iboundary(3) = 0
         particle%ifrctrn = this%ifrctrn
+        particle%iexmethod = this%iexmethod
+        particle%extol = this%extol
 
         call this%particles%load_from_particle(particle, np)
 
@@ -805,6 +815,19 @@ contains
       this%ifrctrn = 1
       write (this%iout, '(4x,a)') &
         'TRACKING WILL BE DONE USING THE TERNARY METHOD REGARDLESS OF CELL TYPE'
+      found = .true.
+    case ('DEV_EXIT_SOLVE_METHOD')
+      this%iexmethod = this%parser%GetInteger()
+      if (this%iexmethod /= 1 .and. this%iexmethod /= 2) then
+        call store_error('DEV_EXIT_SOLVE_METHOD MUST BE &
+          &1 (BRENT) OR 2 (CHANDRUPATLA)')
+      end if
+      found = .true.
+    case ('EXIT_SOLVE_TOLERANCE')
+      this%extol = this%parser%GetDouble()
+      if (this%extol <= DZERO) then
+        call store_error('EXIT_SOLVE_TOLERANCE MUST BE STRICTLY POSITIVE')
+      end if
       found = .true.
     case default
       found = .false.

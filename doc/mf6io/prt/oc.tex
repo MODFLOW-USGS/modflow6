@@ -1,8 +1,8 @@
-Input to the Output Control Option of the Particle Tracking Model is read from the file that is specified as type ``OC6'' in the Name File. If no ``OC6'' file is specified, default output control is used. The Output Control Option determines how and when concentrations are printed to the listing file and/or written to a separate binary output file.  Under the default, concentration and overall transport budget are written to the Listing File at the end of every stress period. The default printout format for concentrations is 10G11.4.  The concentrations and overall transport budget are also written to the list file if the simulation terminates prematurely due to failed convergence.
+Input to the Output Control Option of the Particle Tracking Model is read from the file that is specified as type ``OC6'' in the Name File. If no ``OC6'' file is specified, default output control is used. The Output Control Option determines how and when particle mass budgets are printed to the listing file and/or written to a separate binary output file.  Under the default settings, the particle mass budget is written to the Listing File at the end of every stress period.  The particle mass budget is also written to the list file if the simulation terminates prematurely due to failed convergence.
 
 Output Control data must be specified using words.  The numeric codes supported in earlier MODFLOW versions can no longer be used.
 
-For the PRINT and SAVE options of concentration, there is no option to specify individual layers.  Whenever the concentration array is printed or saved, all layers are printed or saved.
+For the PRINT and SAVE options, there is no option to specify individual layers.  Whenever the budget array is printed or saved, all layers are printed or saved.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}

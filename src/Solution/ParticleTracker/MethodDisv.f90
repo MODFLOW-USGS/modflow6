@@ -21,7 +21,6 @@ module MethodDisvModule
   public :: create_method_disv
 
   type, extends(MethodType) :: MethodDisvType
-    integer(I4B), pointer :: zeromethod !< root-finding method
     type(CellDefnType), pointer :: neighbor => null() !< ptr to a neighbor defn
   contains
     procedure, public :: apply => apply_disv !< apply the DISV-grid method
@@ -53,12 +52,10 @@ contains
 
     allocate (method)
     allocate (method%type)
-    allocate (method%zeromethod)
     call create_cell_poly(cell)
     method%cell => cell
     method%type = "disv"
     method%delegates = .true.
-    method%zeromethod = 0
     call create_defn(method%neighbor)
   end subroutine create_method_disv
 
@@ -106,7 +103,6 @@ contains
             trackfilectl=this%trackfilectl, &
             tracktimes=this%tracktimes)
           submethod => method_cell_tern
-          method_cell_tern%zeromethod = this%zeromethod
         else if (cell%defn%can_be_rect) then
           call cell_poly_to_rect(cell, rect)
           base => rect
@@ -129,7 +125,6 @@ contains
             trackfilectl=this%trackfilectl, &
             tracktimes=this%tracktimes)
           submethod => method_cell_tern
-          method_cell_tern%zeromethod = this%zeromethod
         end if
       end if
     end select
@@ -654,7 +649,7 @@ contains
     defn%ispv180(1:npolyverts + 1) = .false.
     defn%can_be_rect = .false.
     defn%can_be_quad = .false.
-    epsang = 1d-3 ! todo AMP: consider tolerance
+    epsang = 1d-5
     num90 = 0
     num180 = 0
     last180 = .false.

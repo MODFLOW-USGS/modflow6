@@ -11,7 +11,6 @@ module PrtMipInputModule
   public prt_mip_multi_package
 
   type PrtMipParamFoundType
-    logical :: zero_method = .false.
     logical :: export_ascii = .false.
     logical :: porosity = .false.
     logical :: retfactor = .false.
@@ -19,23 +18,6 @@ module PrtMipInputModule
   end type PrtMipParamFoundType
 
   logical :: prt_mip_multi_package = .false.
-
-  type(InputParamDefinitionType), parameter :: &
-    prtmip_zero_method = InputParamDefinitionType &
-    ( &
-    'PRT', & ! component
-    'MIP', & ! subcomponent
-    'OPTIONS', & ! block
-    'ZERO_METHOD', & ! tag name
-    'ZERO_METHOD', & ! fortran variable
-    'INTEGER', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
 
   type(InputParamDefinitionType), parameter :: &
     prtmip_export_ascii = InputParamDefinitionType &
@@ -108,7 +90,6 @@ module PrtMipInputModule
   type(InputParamDefinitionType), parameter :: &
     prt_mip_param_definitions(*) = &
     [ &
-    prtmip_zero_method, &
     prtmip_export_ascii, &
     prtmip_porosity, &
     prtmip_retfactor, &

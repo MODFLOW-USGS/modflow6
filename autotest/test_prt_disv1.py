@@ -27,6 +27,7 @@ option which enables logging for the package's
 particle release settings to the listing file.
 """
 
+from math import cos, pi, sin
 from pathlib import Path
 
 import flopy
@@ -35,9 +36,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.utils import PathlineFile
+from flopy.plot.plotutil import to_mp7_pathlines
+from flopy.utils import EndpointFile, PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils.gridutil import get_disv_kwargs
+
 from framework import TestFramework
 from prt_test_utils import (
     all_equal,
@@ -216,21 +219,23 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
         releasepts[0] = (0, (0, 1), 0.5, 9.5, 22.5)
 
     # create prp package
-    prp_track_file = f"{prt_name}.prp.trk"
-    prp_track_csv_file = f"{prt_name}.prp.trk.csv"
-    flopy.mf6.ModflowPrtprp(
-        prt,
-        pname="prp1",
-        filename=f"{prt_name}_1.prp",
-        nreleasepts=len(releasepts),
-        packagedata=releasepts,
-        perioddata={0: ["FIRST"]},
-        track_filerecord=[prp_track_file],
-        trackcsv_filerecord=[prp_track_csv_file],
-        stop_at_weak_sink=False,
-        boundnames=True,
-        print_input=True,
-    )
+    for i in range(2):
+        prp_track_file = f"{prt_name}{i}.prp.trk"
+        prp_track_csv_file = f"{prt_name}{i}.prp.trk.csv"
+        flopy.mf6.ModflowPrtprp(
+            prt,
+            pname=f"prp{i}",
+            filename=f"{prt_name}{i}.prp",
+            nreleasepts=len(releasepts),
+            packagedata=releasepts,
+            perioddata={0: ["FIRST"]},
+            track_filerecord=[prp_track_file],
+            trackcsv_filerecord=[prp_track_csv_file],
+            stop_at_weak_sink=False,
+            boundnames=True,
+            print_input=True,
+            dev_forceternary=i == 1,
+        )
 
     # create output control package
     prt_track_file = f"{prt_name}.trk"
@@ -243,7 +248,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
             trackcsv_filerecord=[prt_track_csv_file],
             track_release=True,
             track_terminate=True,
-            track_transit=True,
+            track_exit=True,
             track_usertime=True,
             track_timesrecord=tracktimes if "trts" in name else None,
             track_timesfilerecord=(
@@ -331,9 +336,99 @@ def build_models(idx, test):
     return gwf_sim, prt_sim, mp7_sim
 
 
-def check_output(idx, test):
-    from flopy.plot.plotutil import to_mp7_pathlines
+def plot_output(name, gwf, head, spdis, mf6_pls, mp7_pls, fpath):
+    # setup plot
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
 
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=gwf.modelgrid, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.2)
+    pmv.plot_vector(*spdis, normalize=True, color="white")
+
+    # plot labeled nodes and vertices
+    plot_nodes_and_vertices(
+        gwf, gwf.modelgrid, None, gwf.modelgrid.ncpl, ax[0]
+    )
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            linestyle="None" if "trst" in name else "--",
+            marker="o",
+            markersize=2,
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=gwf.modelgrid, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.2)
+    pmv.plot_vector(*spdis, normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
+
+    # view/save plot
+    plt.show()
+    plt.savefig(fpath)
+
+
+def compare_output(name, mf6_pls, mp7_pls, mp7_eps):
+    mf6_eps = mf6_pls[mf6_pls.ireason == 3]  # get prt endpoints
+    mp7_eps = to_mp7_pathlines(mp7_eps)  # convert mp7 pathlines to mp7 format
+    mf6_pls = to_mp7_pathlines(mf6_pls)  # convert mf6 pathlines to mp7 format
+    mf6_eps = to_mp7_pathlines(mf6_eps)  # convert mf6 endpoints to mp7 format
+
+    # sort both dataframes by particleid and time
+    mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
+    mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
+
+    # drop columns for which there is no direct correspondence between mf6 and mp7
+    del mf6_pls["sequencenumber"]
+    del mf6_pls["particleidloc"]
+    del mf6_pls["xloc"]
+    del mf6_pls["yloc"]
+    del mf6_pls["zloc"]
+    del mf6_pls["node"]  # node numbers reversed in y direction in mp7
+    del mp7_pls["sequencenumber"]
+    del mp7_pls["particleidloc"]
+    del mp7_pls["xloc"]
+    del mp7_pls["yloc"]
+    del mp7_pls["zloc"]
+    del mp7_pls["node"]
+
+    if "bprp" not in name:
+        # pollock's method should be (nearly) identical
+        mf6_pls_plck = mf6_pls[mf6_pls.particlegroup == 1]
+        # import pdb; pdb.set_trace()
+        assert mf6_pls_plck.shape == mp7_pls.shape
+        assert np.allclose(mf6_pls_plck, mp7_pls, atol=1e-3)
+
+        # ternary method will have extra path points
+        # due to nudging, so just compare endpoints
+        mf6_eps_tern = mf6_eps[mf6_eps.particlegroup == 2]
+        mf6_eps_tern = mf6_eps_tern[["x", "y", "z", "time"]]
+        mp7_eps = mp7_eps[["x", "y", "z", "time"]]
+        assert mf6_eps_tern.shape == mp7_eps.shape
+        assert np.allclose(mf6_eps_tern, mp7_eps, atol=1e-3)
+
+
+def check_output(idx, test):
     name = test.name
     gwf_ws = test.workspace
     prt_ws = test.workspace / "prt"
@@ -358,18 +453,21 @@ def check_output(idx, test):
     gwf_head_file = f"{gwf_name}.hds"
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
-    prp_track_file = f"{prt_name}.prp.trk"
-    prp_track_csv_file = f"{prt_name}.prp.trk.csv"
     assert (gwf_ws / gwf_budget_file).is_file()
     assert (gwf_ws / gwf_head_file).is_file()
     assert (prt_ws / prt_track_file).is_file()
     assert (prt_ws / prt_track_csv_file).is_file()
-    assert (prt_ws / prp_track_file).is_file()
-    assert (prt_ws / prp_track_csv_file).is_file()
+    for i in range(2):
+        prp_track_file = f"{prt_name}{i}.prp.trk"
+        prp_track_csv_file = f"{prt_name}{i}.prp.trk.csv"
+        assert (prt_ws / prp_track_file).is_file()
+        assert (prt_ws / prp_track_csv_file).is_file()
 
     # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
+    mp7_endpoint_file = f"{mp7_name}.mpend"
     assert (mp7_ws / mp7_pathline_file).is_file()
+    assert (mp7_ws / mp7_endpoint_file).is_file()
 
     # check list file for logged release configuration
     list_file = prt_ws / f"{prt_name}.lst"
@@ -391,6 +489,14 @@ def check_output(idx, test):
     mp7_pls["node"] = mp7_pls["node"] + 1
     mp7_pls["k"] = mp7_pls["k"] + 1
 
+    # load mp7 endpoint results
+    epf = EndpointFile(mp7_ws / mp7_endpoint_file)
+    mp7_eps = pd.DataFrame(epf.get_destination_endpoint_data(range(mg.nnodes)))
+    # convert zero-based to one-based indexing in mp7 results
+    mp7_eps["particlegroup"] = mp7_eps["particlegroup"] + 1
+    mp7_eps["node"] = mp7_eps["node"] + 1
+    mp7_eps["k"] = mp7_eps["k"] + 1
+
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
 
@@ -398,112 +504,41 @@ def check_output(idx, test):
     assert "name" in mf6_pls
     assert has_default_boundnames(mf6_pls)
 
-    # make sure all mf6 pathline data have correct model and PRP index (1)
+    # make sure all mf6 pathline data have correct model index
     assert all_equal(mf6_pls["imdl"], 1)
-    assert all_equal(mf6_pls["iprp"], 1)
 
     # check budget data were written to mf6 prt list file
-    # check_budget_data(prt_ws / f"{name}_prt.lst", perlen, nper, nstp)
+    check_budget_data(prt_ws / f"{name}_prt.lst", perlen, nper, nstp)
 
     # check mf6 prt particle track data were written to binary/CSV files
     # and that different formats are equal
-    for track_bin, track_csv in zip(
-        [prt_ws / prt_track_file, prt_ws / prp_track_file],
-        [prt_ws / prt_track_csv_file, prt_ws / prp_track_csv_file],
-    ):
-        check_track_data(
-            track_bin=track_bin,
-            track_hdr=str(track_bin).replace(".trk", ".trk.hdr"),
-            track_csv=track_csv,
-        )
+    check_track_data(
+        track_bin=prt_ws / prt_track_file,
+        track_hdr=str(prt_ws / prt_track_file).replace(".trk", ".trk.hdr"),
+        track_csv=prt_ws / prt_track_csv_file,
+    )
 
     # extract head, budget, and specific discharge results from GWF model
-    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    head = HeadFile(gwf_ws / gwf_head_file).get_data()
     bud = gwf.output.budget()
     spdis = bud.get_data(text="DATA-SPDIS")[0]
     qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
+    # plot results if enabled
     plot = False
     if "bprp" not in name and plot:
-        # setup plot
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-        for a in ax:
-            a.set_aspect("equal")
+        plot_output(
+            name,
+            gwf,
+            head,
+            (qx, qy),
+            mf6_pls,
+            mp7_pls,
+            gwf_ws / f"test_{simname}.png",
+        )
 
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.2)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        # set zoom area
-        # xmin, xmax = 2050, 4800
-        # ymin, ymax = 5200, 7550
-        # plot labeled nodes and vertices
-        plot_nodes_and_vertices(gwf, mg, None, mg.ncpl, ax[0])
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title="MF6 pathlines",
-                linestyle="None" if "trst" in name else "--",
-                marker="o",
-                markersize=2,
-                x="x",
-                y="y",
-                ax=ax[0],
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
-
-        # plot mp7 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.2)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mp7_plines = mp7_pls.groupby(["particleid"])
-        for ipl, (pid, pl) in enumerate(mp7_plines):
-            pl.plot(
-                title="MP7 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[1],
-                legend=False,
-                color=cm.plasma(ipl / len(mp7_plines)),
-            )
-
-        # view/save plot
-        plt.show()
-        plt.savefig(gwf_ws / f"test_{simname}.png")
-
-    # convert mf6 pathlines to mp7 format
-    mf6_pls = to_mp7_pathlines(mf6_pls)
-
-    # sort both dataframes by particleid and time
-    mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
-    mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
-
-    # drop columns for which there is no direct correspondence between mf6 and mp7
-    del mf6_pls["sequencenumber"]
-    del mf6_pls["particleidloc"]
-    del mf6_pls["xloc"]
-    del mf6_pls["yloc"]
-    del mf6_pls["zloc"]
-    del mf6_pls["node"]  # node numbers reversed in y direction in mp7
-    del mp7_pls["sequencenumber"]
-    del mp7_pls["particleidloc"]
-    del mp7_pls["xloc"]
-    del mp7_pls["yloc"]
-    del mp7_pls["zloc"]
-    del mp7_pls["node"]
-
-    # compare mf6 / mp7 pathline data
-    if "bprp" in name:
-        pass
-    else:
-        pass
-        # todo: no longer same shape since prt has extra path points due to nudging
-        # assert mf6_pls.shape == mp7_pls.shape
-        # assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
+    # compare prt and mp7 results
+    compare_output(name, mf6_pls, mp7_pls, mp7_eps)
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

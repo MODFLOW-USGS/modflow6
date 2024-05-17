@@ -40,7 +40,7 @@ module TrackModule
     type(TrackFileType), public, allocatable :: trackfiles(:) !< output files
     integer(I4B), public :: ntrackfiles !< number of output files
     logical(LGP), public :: trackrelease !< track release events
-    logical(LGP), public :: tracktransit !< track cell-to-cell transitions
+    logical(LGP), public :: trackexit !< track cell-to-cell transitions
     logical(LGP), public :: tracktimestep !< track timestep ends
     logical(LGP), public :: trackterminate !< track termination events
     logical(LGP), public :: trackweaksink !< track weak sink exit events
@@ -265,7 +265,7 @@ contains
 
     ! -- Only save if reporting is enabled for specified event.
     if (.not. ((this%trackrelease .and. reason == 0) .or. &
-               (this%tracktransit .and. reason == 1) .or. &
+               (this%trackexit .and. reason == 1) .or. &
                (this%tracktimestep .and. reason == 2) .or. &
                (this%trackterminate .and. reason == 3) .or. &
                (this%trackweaksink .and. reason == 4) .or. &
@@ -300,20 +300,20 @@ contains
   !<
   subroutine set_track_events(this, &
                               release, &
-                              transit, &
+                              cellexit, &
                               timestep, &
                               terminate, &
                               weaksink, &
                               usertime)
     class(TrackFileControlType) :: this
     logical(LGP), intent(in) :: release
-    logical(LGP), intent(in) :: transit
+    logical(LGP), intent(in) :: cellexit
     logical(LGP), intent(in) :: timestep
     logical(LGP), intent(in) :: terminate
     logical(LGP), intent(in) :: weaksink
     logical(LGP), intent(in) :: usertime
     this%trackrelease = release
-    this%tracktransit = transit
+    this%trackexit = cellexit
     this%tracktimestep = timestep
     this%trackterminate = terminate
     this%trackweaksink = weaksink

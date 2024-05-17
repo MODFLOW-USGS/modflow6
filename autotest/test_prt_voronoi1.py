@@ -358,11 +358,11 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         track_filerecord=[prt_track_file],
         trackcsv_filerecord=[prt_track_csv_file],
         track_all=not times[idx],
-        track_transit=True,
+        track_exit=True,
         track_release=True,
         track_terminate=True,
-        # track_usertime=times[idx],
-        # track_timesrecord=tracktimes if times[idx] else None,
+        track_usertime=times[idx],
+        track_timesrecord=tracktimes if times[idx] else None,
     )
     gwf_budget_file = gwf_ws / f"{gwf_name}.bud"
     gwf_head_file = gwf_ws / f"{gwf_name}.hds"

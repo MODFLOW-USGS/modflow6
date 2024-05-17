@@ -521,10 +521,12 @@ def build_documentation(
         )
 
         # download example docs
-        latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
-        assets = latest["assets"]
-        asset = next(iter([a for a in assets if a["name"] == "mf6examples.pdf"]), None)
-        download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
+        expdf_name = "mf6examples.pdf"
+        if overwrite or not (output_path / expdf_name).is_file():
+            latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
+            assets = latest["assets"]
+            asset = next(iter([a for a in assets if a["name"] == expdf_name]), None)
+            download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
 
         # download publications
         for url in _publication_urls:
