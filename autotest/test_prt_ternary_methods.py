@@ -51,7 +51,9 @@ methods = [
 ]
 
 
-def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5):
+def build_prt_sim(
+    idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5
+):
     prt_ws = Path(prt_ws)
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
@@ -79,9 +81,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5)
         vertices=vertices,
         cell2d=cell2d,
     )
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
     prpdata = [
         # particle index, (layer, cell index), x, y, z
         (0, (0, 88), 95, 92, 0.5),
@@ -101,7 +101,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5)
         boundnames=True,
         stop_at_weak_sink=True,  # currently required for this problem
         dev_exit_solve_method=methods[idx],
-        exit_solve_tolerance=exit_solve_tolerance
+        exit_solve_tolerance=exit_solve_tolerance,
     )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"
@@ -134,7 +134,12 @@ def build_models(idx, test, exit_solve_tolerance=1e-7):
         test.name, test.workspace, test.targets, ["left", "botm"]
     )
     prt_sim = build_prt_sim(
-        idx, test.name, test.workspace, test.workspace / "prt", test.targets, exit_solve_tolerance
+        idx,
+        test.name,
+        test.workspace,
+        test.workspace / "prt",
+        test.targets,
+        exit_solve_tolerance,
     )
     return gwf_sim, prt_sim
 
@@ -258,7 +263,9 @@ def check_output(idx, test, snapshot):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot):
+def test_mf6model(
+    idx, name, function_tmpdir, targets, benchmark, array_snapshot
+):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,

@@ -39,6 +39,7 @@ from prt_test_utils import (
     check_budget_data,
     check_track_data,
     get_model_name,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtfmi03"
@@ -129,6 +130,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         packagedata=FlopyReadmeCase.releasepts_prt,
         perioddata={0: ["FIRST"]},
         istopzone=1,
+        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
     )
 
     # create output control package

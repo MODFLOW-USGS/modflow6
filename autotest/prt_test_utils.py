@@ -1,10 +1,11 @@
 import os
-from types import SimpleNamespace
-from typing import Tuple
 
 import flopy
 import matplotlib as mpl
 import numpy as np
+
+
+DEFAULT_EXIT_SOLVE_TOL = 1e-5
 
 
 def all_equal(series, val):
