@@ -3,7 +3,6 @@ BEGIN OPTIONS
   [BUDGETCSV FILEOUT <budgetcsvfile>]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]
-  [TRACK_ALL]
   [TRACK_RELEASE]
   [TRACK_EXIT]
   [TRACK_TIMESTEP]

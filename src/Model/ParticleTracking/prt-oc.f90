@@ -263,9 +263,6 @@ contains
               &FOLLOWED BY FILEOUT')
           end if
           found = .true.
-        case ('TRACK_ALL')
-          event_found = .false. ! defaults set below
-          found = .true.
         case ('TRACK_RELEASE')
           this%trackrelease = .true.
           event_found = .true.

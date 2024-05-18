@@ -156,7 +156,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 pname="oc",
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
-                track_all=True,
             )
         elif "rel" in name:
             return flopy.mf6.ModflowPrtoc(

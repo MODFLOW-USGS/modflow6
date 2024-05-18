@@ -563,7 +563,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         pname="oc",
         track_filerecord=[prt_track_file],
         trackcsv_filerecord=[prt_track_csv_file],
-        track_all=not times[idx],
         track_exit=True,
         track_release=True,
         track_terminate=True,

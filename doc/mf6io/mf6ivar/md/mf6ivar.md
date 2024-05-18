@@ -1591,7 +1591,6 @@
 | PRT | OC | OPTIONS | TRACKFILE | STRING | name of the output file to write tracking information. |
 | PRT | OC | OPTIONS | TRACKCSV | KEYWORD | keyword to specify that record corresponds to a CSV track file. |
 | PRT | OC | OPTIONS | TRACKCSVFILE | STRING | name of the comma-separated value (CSV) file to write tracking information. |
-| PRT | OC | OPTIONS | TRACK_ALL | KEYWORD | keyword to indicate that ... |
 | PRT | OC | OPTIONS | TRACK_RELEASE | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle is released |
 | PRT | OC | OPTIONS | TRACK_EXIT | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a cell |
 | PRT | OC | OPTIONS | TRACK_TIMESTEP | KEYWORD | keyword to indicate that particle tracking output is to be written at the end of each time step |

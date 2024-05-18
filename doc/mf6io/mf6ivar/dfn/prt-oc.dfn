@@ -144,14 +144,6 @@ longname file keyword
 description name of the comma-separated value (CSV) file to write tracking information.
 
 block options
-name track_all
-type keyword
-reader urword
-optional true
-longname track all events
-description keyword to indicate that ...
-
-block options
 name track_release
 type keyword
 reader urword
