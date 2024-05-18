@@ -99,7 +99,7 @@ jobs:
         run: pixi run update-flopy
 
       - name: Run tests
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         run: pixi run autotest test_largetestmodels.py
       
       - name: Upload failed test output
