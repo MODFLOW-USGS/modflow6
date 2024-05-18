@@ -39,7 +39,6 @@ module SwfStoModule
     ! -- input context pointers for read and prepare
     integer(I4B), pointer :: iper => null() !< input context loaded period
     character(len=:), pointer :: storage !< input context storage string
-
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -152,7 +151,6 @@ contains
   subroutine sto_rp(this)
     ! -- modules
     use TdisModule, only: kper
-    use MemoryManagerModule, only: mem_setptr
     implicit none
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
@@ -161,7 +159,6 @@ contains
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
-! ------------------------------------------------------------------------------
     !
     ! -- confirm package is active
     if (this%inunit <= 0) return
@@ -552,7 +549,7 @@ contains
   !<
   subroutine allocate_scalars(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
     !

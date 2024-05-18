@@ -1,46 +1,46 @@
-# makefile created by pymake (version 1.2.10.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/Geometry
-SOURCEDIR4=../src/Model/GroundWaterFlow
-SOURCEDIR5=../src/Model/TransportModel
-SOURCEDIR6=../src/Model/GroundWaterTransport
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Idm
+SOURCEDIR4=../src/Idm/selector
+SOURCEDIR5=../src/Timing
+SOURCEDIR6=../src/Model
 SOURCEDIR7=../src/Model/Connection
 SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ParticleTracking
-SOURCEDIR10=../src/Model/SurfaceWaterFlow
-SOURCEDIR11=../src/Model/ModelUtilities
-SOURCEDIR12=../src/Model/GroundWaterEnergy
-SOURCEDIR13=../src/Timing
-SOURCEDIR14=../src/Distributed
-SOURCEDIR15=../src/Exchange
-SOURCEDIR16=../src/Solution
-SOURCEDIR17=../src/Solution/ParticleTracker
-SOURCEDIR18=../src/Solution/LinearMethods
-SOURCEDIR19=../src/Solution/PETSc
-SOURCEDIR20=../src/Utilities
-SOURCEDIR21=../src/Utilities/Memory
-SOURCEDIR22=../src/Utilities/Matrix
-SOURCEDIR23=../src/Utilities/ArrayRead
-SOURCEDIR24=../src/Utilities/TimeSeries
-SOURCEDIR25=../src/Utilities/Libraries
-SOURCEDIR26=../src/Utilities/Libraries/rcm
-SOURCEDIR27=../src/Utilities/Libraries/blas
-SOURCEDIR28=../src/Utilities/Libraries/sparsekit
-SOURCEDIR29=../src/Utilities/Libraries/daglib
-SOURCEDIR30=../src/Utilities/Libraries/sparskit2
-SOURCEDIR31=../src/Utilities/Idm
-SOURCEDIR32=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR33=../src/Utilities/Vector
-SOURCEDIR34=../src/Utilities/OutputControl
-SOURCEDIR35=../src/Utilities/Observation
-SOURCEDIR36=../src/Idm
-SOURCEDIR37=../src/Idm/selector
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/GroundWaterFlow
+SOURCEDIR11=../src/Model/Geometry
+SOURCEDIR12=../src/Model/TransportModel
+SOURCEDIR13=../src/Model/GroundWaterTransport
+SOURCEDIR14=../src/Model/SurfaceWaterFlow
+SOURCEDIR15=../src/Model/ParticleTracking
+SOURCEDIR16=../src/Model/GroundWaterEnergy
+SOURCEDIR17=../src/Solution
+SOURCEDIR18=../src/Solution/ParticleTracker
+SOURCEDIR19=../src/Solution/LinearMethods
+SOURCEDIR20=../src/Solution/PETSc
+SOURCEDIR21=../src/Distributed
+SOURCEDIR22=../src/Utilities
+SOURCEDIR23=../src/Utilities/TimeSeries
+SOURCEDIR24=../src/Utilities/Idm
+SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR26=../src/Utilities/ArrayRead
+SOURCEDIR27=../src/Utilities/Memory
+SOURCEDIR28=../src/Utilities/Matrix
+SOURCEDIR29=../src/Utilities/Vector
+SOURCEDIR30=../src/Utilities/Observation
+SOURCEDIR31=../src/Utilities/OutputControl
+SOURCEDIR32=../src/Utilities/Libraries
+SOURCEDIR33=../src/Utilities/Libraries/rcm
+SOURCEDIR34=../src/Utilities/Libraries/sparskit2
+SOURCEDIR35=../src/Utilities/Libraries/sparsekit
+SOURCEDIR36=../src/Utilities/Libraries/blas
+SOURCEDIR37=../src/Utilities/Libraries/daglib
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -105,6 +105,7 @@ $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
+$(OBJDIR)/swf-stoidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
@@ -129,6 +130,7 @@ $(OBJDIR)/gwt-disuidm.o \
 $(OBJDIR)/gwt-disidm.o \
 $(OBJDIR)/gwt-cncidm.o \
 $(OBJDIR)/gwf-welidm.o \
+$(OBJDIR)/gwf-stoidm.o \
 $(OBJDIR)/gwf-rividm.o \
 $(OBJDIR)/gwf-rchidm.o \
 $(OBJDIR)/gwf-rchaidm.o \
@@ -377,8 +379,8 @@ $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/LoadMf6File.o \
-$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
+$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/swf-zdg.o \
 $(OBJDIR)/swf-sto.o \
 $(OBJDIR)/swf-oc.o \
@@ -402,6 +404,7 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+$(OBJDIR)/Mf6FileStoInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
 $(OBJDIR)/swf.o \

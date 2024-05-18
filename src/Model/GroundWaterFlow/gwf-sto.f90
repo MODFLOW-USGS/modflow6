@@ -157,7 +157,6 @@ contains
   subroutine sto_rp(this)
     ! -- modules
     use TdisModule, only: kper
-    use MemoryManagerModule, only: mem_setptr
     implicit none
     ! -- dummy variables
     class(GwfStoType) :: this !< GwfStoType object
@@ -730,7 +729,7 @@ contains
   !<
   subroutine allocate_scalars(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(GwfStoType) :: this !< GwfStoType object
     !

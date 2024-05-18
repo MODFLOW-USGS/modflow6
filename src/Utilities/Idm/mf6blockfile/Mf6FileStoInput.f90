@@ -75,12 +75,16 @@ contains
     type(InputParamDefinitionType), pointer :: idt
     logical(LGP) :: endOfBlock
     !
-    ! -- read tag name
+    ! -- read next line
     call parser%GetNextLine(endOfBlock)
+    !
+    ! -- return if no input
     if (endOfBlock) return
+    !
+    ! -- read the tag
     call parser%GetStringCaps(tagname)
     !
-    ! -- find keyword in input definition
+    ! -- verify tag is supported
     idt => get_param_definition_type(this%mf6_input%param_dfns, &
                                      this%mf6_input%component_type, &
                                      this%mf6_input%subcomponent_type, &
@@ -88,7 +92,7 @@ contains
     ! -- set storage
     this%storage = idt%tagname
     !
-    ! -- only one input line is expected
+    ! -- only one input line is expected, terminate block
     call parser%terminateblock()
     !
     ! -- log lst file header
@@ -106,7 +110,10 @@ contains
   end subroutine sto_rp
 
   subroutine sto_destroy(this)
+    use MemoryManagerModule, only: mem_deallocate
     class(StoInputType), intent(inout) :: this
+    call mem_deallocate(this%storage, 'STORAGE', this%mf6_input%mempath)
+    call this%DynamicPkgLoadType%destroy()
   end subroutine sto_destroy
 
 end module Mf6FileStoInputModule
