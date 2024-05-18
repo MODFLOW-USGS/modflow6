@@ -142,7 +142,6 @@ jobs:
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
-          activate-environment: true
 
       - name: Custom pixi install
         working-directory: modflow6
