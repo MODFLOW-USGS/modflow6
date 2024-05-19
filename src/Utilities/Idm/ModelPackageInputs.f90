@@ -413,14 +413,14 @@ contains
       fname = fnames(n)
       call inlen_check(pnames(n), pname, LENPACKAGENAME, 'PACKAGENAME')
       !
-      ! -- terminate if errors were detected
-      if (count_errors() > 0) then
-        call store_error_filename(this%modelfname)
-      end if
-      !
       ! -- add this instance to package list
       call this%add(ftype, fname, pname)
     end do
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call store_error_filename(this%modelfname)
+    end if
     !
     ! --
     return
