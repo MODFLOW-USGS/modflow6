@@ -71,22 +71,27 @@ jobs:
           - os: ${{ inputs.linux_version }}
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            optimization: 2
             parallel: false
           - os: macos-13
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            optimization: 2
             parallel: false
           - os: macos-14
             compiler: gcc
             version: 13
+            optimization: 1
             parallel: false
           - os: windows-2022
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
+            optimization: 2
             parallel: false
           - os: windows-2022
             compiler: intel-classic
             version: "2021.7"
+            optimization: 2
             parallel: true
     defaults:
       run:
@@ -185,7 +190,7 @@ jobs:
         if: (!(runner.os == 'Windows' && matrix.parallel))
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson setup builddir --prefix=$(pwd) --libdir=bin -Doptimization=${{ matrix.optimization }}
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 

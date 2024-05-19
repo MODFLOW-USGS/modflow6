@@ -244,7 +244,11 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          pixi run setup builddir
+          setupargs=""
+          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            setupargs="-Doptimization=1"
+          fi
+          pixi run setup builddir $setupargs
           pixi run build builddir
 
       - name: Show build log
