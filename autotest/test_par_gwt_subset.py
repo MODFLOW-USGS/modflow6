@@ -28,6 +28,7 @@ def build_models(idx, test):
 
 
 @pytest.mark.parallel
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     from test_gwt_subset import check_output
