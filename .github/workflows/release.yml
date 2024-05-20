@@ -208,8 +208,14 @@ jobs:
         uses: ./modflow6/.github/actions/build-par-win
 
       - name: Build and test binaries (Windows)
-        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests
+        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests && inputs.developmode
         uses: ./modflow6/.github/actions/test-par-win
+
+      - name: Build and test binaries (Windows)
+        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests && !inputs.developmode
+        uses: ./modflow6/.github/actions/test-par-win
+        env:
+          MARKERS: not developmode
 
       - name: Copy deps to bin dir
         if: runner.os == 'Windows' && matrix.parallel
