@@ -172,7 +172,8 @@ contains
       ts_active = (this%ts_active /= 0)
       !
       this%bound_context%nbound = &
-        this%structarray%read_from_parser(parser, ts_active, this%iout)
+        this%structarray%read_from_parser(parser, ts_active, this%input_name, &
+                                          this%iout)
     end if
     !
     ! update ts links

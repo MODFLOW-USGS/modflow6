@@ -478,7 +478,7 @@ description is the exponent used in the Brooks-Corey function.  The Brooks-Corey
 block packagedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

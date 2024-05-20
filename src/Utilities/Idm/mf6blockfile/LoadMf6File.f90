@@ -684,7 +684,7 @@ contains
       !
       ! -- read from ascii
       nrowsread = this%structarray%read_from_parser(this%parser, this%ts_active, &
-                                                    this%iout)
+                                                    this%filename, this%iout)
     end if
     !
     ! -- clean up

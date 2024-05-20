@@ -196,7 +196,7 @@ description REPLACE aux {'{#1}': 'energy source'}
 block period
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

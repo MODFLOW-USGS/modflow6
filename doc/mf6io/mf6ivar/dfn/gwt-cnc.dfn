@@ -204,7 +204,7 @@ mf6internal auxvar
 block period
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

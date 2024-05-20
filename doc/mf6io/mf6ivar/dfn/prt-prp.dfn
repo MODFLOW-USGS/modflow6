@@ -307,7 +307,7 @@ description real value that defines the z coordinate of the release point in mod
 block packagedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

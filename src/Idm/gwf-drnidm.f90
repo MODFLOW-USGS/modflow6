@@ -403,7 +403,7 @@ module GwfDrnInputModule
     'BOUNDNAME', & ! tag name
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
-    '', & ! shape
+    'LENBOUNDNAME', & ! shape
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case

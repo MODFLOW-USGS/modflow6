@@ -488,7 +488,7 @@ description REPLACE aux {'{#1}': 'stream reach'}
 block packagedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

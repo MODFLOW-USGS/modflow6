@@ -685,7 +685,7 @@ description is the initial offset from the head in cell cellid or the initial he
 block packagedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

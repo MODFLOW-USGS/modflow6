@@ -198,7 +198,7 @@ description REPLACE aux {'{#1}': 'inflow'}
 block period
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

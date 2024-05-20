@@ -272,7 +272,7 @@ mf6internal auxvar
 block exchangedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword

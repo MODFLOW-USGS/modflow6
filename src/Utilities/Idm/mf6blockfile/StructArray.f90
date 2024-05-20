@@ -11,7 +11,7 @@ module StructArrayModule
   use ConstantsModule, only: DZERO, IZERO, DNODATA, &
                              LINELENGTH, LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error
+  use SimModule, only: store_error, store_error_filename
   use StructVectorModule, only: StructVectorType
   use InputDefinitionModule, only: InputParamDefinitionType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr
@@ -844,7 +844,7 @@ contains
       !
     case (3) ! -- memtype charstring
       !
-      if (this%struct_vectors(sv_col)%idt%shape /= '') then
+      if (this%struct_vectors(sv_col)%idt%shape == ':') then
         ! -- if last column with any shape, store rest of line
         if (sv_col == this%ncol) then
           call parser%GetRemainingLine(line)
@@ -899,10 +899,11 @@ contains
 
   !> @brief read from the block parser to fill the StructArrayType
   !<
-  function read_from_parser(this, parser, timeseries, iout) result(irow)
+  function read_from_parser(this, parser, timeseries, filename, iout) result(irow)
     class(StructArrayType) :: this !< StructArrayType
     type(BlockParserType) :: parser !< block parser to read from
     logical(LGP), intent(in) :: timeseries
+    character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: irow, j
     logical(LGP) :: endOfBlock
@@ -955,13 +956,16 @@ contains
   !> @brief read from binary input to fill the StructArrayType
   !<
   function read_from_binary(this, inunit, iout) result(irow)
+    use ConstantsModule, only: LENBOUNDNAME
+    use InputOutputModule, only: upcase
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: inunit !< unit number for binary input
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: irow, ierr
-    integer(I4B) :: j, k
+    integer(I4B) :: j, k, n
     integer(I4B) :: intval, numval
     character(len=LINELENGTH) :: fname
+    character(len=LENBOUNDNAME) :: boundname, readbound
     character(len=*), parameter :: fmtlsterronly = &
       "('Error reading LIST from file: ',&
       &1x,a,1x,' on UNIT: ',I0)"
@@ -974,6 +978,9 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
       !
     end if
+    !
+    ! -- set filename
+    inquire (unit=inunit, name=fname)
     !
     ! -- initialize
     irow = 0
@@ -995,10 +1002,27 @@ contains
           read (inunit, iostat=ierr) this%struct_vectors(j)%dbl1d(irow)
         case (3) ! -- memtype charstring
           !
-          errmsg = 'List style binary inputs not supported &
-                   &for text columns, tag='// &
-                   trim(this%struct_vectors(j)%idt%tagname)//'.'
-          call store_error(errmsg, terminate=.TRUE.)
+          select case (this%struct_vectors(j)%idt%shape)
+          case ('LENBOUNDNAME')
+            !character(len=:), allocatable :: readstr
+            !allocate (character(LENBOUNDNAME) :: readstr)
+            boundname = ''
+            read (inunit, iostat=ierr) readbound
+            do n = 1, LENBOUNDNAME
+              if (iachar(readbound(n:n)) > 0) then
+                boundname(n:n) = readbound(n:n)
+              else
+                exit
+              end if
+            end do
+            call upcase(boundname)
+            this%struct_vectors(j)%charstr1d(irow) = trim(boundname)
+          case default
+            errmsg = 'Invalid string shape for binary read, tag='// &
+                     trim(this%struct_vectors(j)%idt%tagname)//'.'
+            call store_error(errmsg)
+            call store_error_filename(fname)
+          end select
           !
         case (4) ! -- memtype intvector
           !
@@ -1043,9 +1067,9 @@ contains
         case (1:)
           !
           ! -- Error
-          inquire (unit=inunit, name=fname)
           write (errmsg, fmtlsterronly) trim(adjustl(fname)), inunit
-          call store_error(errmsg, terminate=.TRUE.)
+          call store_error(errmsg)
+          call store_error_filename(fname)
           !
         case default
         end select

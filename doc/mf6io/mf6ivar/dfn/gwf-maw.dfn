@@ -417,7 +417,7 @@ description REPLACE aux {'{#1}': 'multi-aquifer well'}
 block packagedata
 name boundname
 type string
-shape
+shape lenboundname
 tagged false
 in_record true
 reader urword
