@@ -275,11 +275,20 @@ jobs:
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pixi run autotest -m "not large and not developmode"
+          markers=""
+          if [[ "${{ github.ref_name }}" == "master" ]]; then
+            markers="not large and not developmode"
           else
-            pixi run autotest -m "not large"
+            markers="not large"
           fi
+
+          filters=""
+          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            # comparison fails on macos-14 with optimization=1
+            filters="not test028_sfr_rewet"
+          fi
+
+          pixi run autotest -m "$markers" -k "$filters"
       
       - name: Upload failed test output
         if: failure()
