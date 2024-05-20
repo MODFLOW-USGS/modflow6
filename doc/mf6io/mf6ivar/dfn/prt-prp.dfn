@@ -62,7 +62,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to a binary track output file.
+description keyword to specify that record corresponds to a binary track output file.  Each PRP Package may have a distinct binary track output file.
 
 block options
 name fileout
@@ -85,7 +85,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the output file to write tracking information.
+description name of the binary output file to write tracking information.
 
 block options
 name trackcsv_filerecord
@@ -106,7 +106,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to a CSV track output file.
+description keyword to specify that record corresponds to a CSV track output file.  Each PRP Package may have a distinct CSV track output file.
 
 block options
 name trackcsvfile
@@ -126,7 +126,7 @@ type double precision
 reader urword
 optional true
 longname stop time
-description real value defining the maximum simulation time to which particles in the package can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when simulation time STOPTIME is reached.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the simulation time to which particles can be tracked.
+description real value defining the maximum simulation time to which particles in the package can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when simulation time STOPTIME is reached.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the simulation time to which particles can be tracked.  If STOPTIME and STOPTRAVELTIME are both provided, particles will be stopped if either is reached.
 
 block options
 name stoptraveltime
@@ -134,7 +134,7 @@ type double precision
 reader urword
 optional true
 longname stop travel time
-description real value defining the maximum travel time over which particles in the model can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when their travel time reaches STOPTRAVELTIME.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTRAVELTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the travel time over which particles can be tracked.
+description real value defining the maximum travel time over which particles in the model can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when their travel time reaches STOPTRAVELTIME.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTRAVELTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the travel time over which particles can be tracked.  If STOPTIME and STOPTRAVELTIME are both provided, particles will be stopped if either is reached.
 
 block options
 name stop_at_weak_sink
@@ -189,7 +189,7 @@ in_record true
 tagged false
 repeating true
 longname release times
-description times to release, relative to the beginning of the simulation.
+description times to release, relative to the beginning of the simulation.  RELEASE_TIMES and RELEASE_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
 
 block options
 name release_timesfilerecord
@@ -221,7 +221,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the release times file
+description name of the release times file.  RELEASE_TIMES and RELEASE_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
 
 block options
 name dev_forceternary
@@ -229,7 +229,7 @@ type keyword
 reader urword
 optional false
 longname force ternary tracking method
-description force use of the ternary tracking method regardless of cell type in disv grid
+description force use of the ternary tracking method regardless of cell type in DISV grids.
 mf6internal ifrctrn
 
 

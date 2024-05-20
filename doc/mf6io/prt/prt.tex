@@ -37,7 +37,7 @@ The PRT Model supports both binary and CSV particle track output files. A partic
 \noindent Column 12: \texttt{`X'} {\color{red} \footnotesize{DOUBLE}} \\
 \noindent Column 13: \texttt{`Y'} {\color{red} \footnotesize{DOUBLE}} \\
 \noindent Column 14: \texttt{`Z'} {\color{red} \footnotesize{DOUBLE}} \\
-\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=LENTXT)}} \\
+\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=40)}} \\
 
 \vspace{2mm}
 \noindent where
@@ -90,6 +90,10 @@ The IREASON field indicates the reason the particle track record was saved:
 By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
 
 The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
+
+\subsection{Cell Face Flows}
+
+By default, flows associated with stress packages are assumed to be distributed uniformly over the volume of a cell. Distributed external inflows and outflows are reflected in the cell-cell flows calculated by the GWF Model, but they are not directly involved in determining the normal face velocities used to track a particle through the cell. The user can optionally assign a flow associated with a stress package to any face of the cell. Assignment of external flows is done by setting the value of an auxiliary package variable called IFLOWFACE to a value that corresponds to one of the cell faces. To accommodate non-rectangular cells, the face numbering scheme in the PRT Model is based on clockwise ordering of the cell faces, beginning with the upper-left-most face.
 
 
 \newpage

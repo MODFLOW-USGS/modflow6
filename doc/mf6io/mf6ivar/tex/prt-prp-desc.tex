@@ -11,19 +11,19 @@
 
 \item \texttt{LOCAL\_Z}---indicates that ``zrpt'' defines the local z coordinate of the release point within the cell, with value of 0 at the bottom and 1 at the top of the cell.  If the cell is partially saturated at release time, the top of the cell is considered to be the water table elevation (the head in the cell) rather than the top defined by the user.
 
-\item \texttt{TRACK}---keyword to specify that record corresponds to a binary track output file.
+\item \texttt{TRACK}---keyword to specify that record corresponds to a binary track output file.  Each PRP Package may have a distinct binary track output file.
 
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
 
-\item \texttt{trackfile}---name of the output file to write tracking information.
+\item \texttt{trackfile}---name of the binary output file to write tracking information.
 
-\item \texttt{TRACKCSV}---keyword to specify that record corresponds to a CSV track output file.
+\item \texttt{TRACKCSV}---keyword to specify that record corresponds to a CSV track output file.  Each PRP Package may have a distinct CSV track output file.
 
 \item \texttt{trackcsvfile}---name of the comma-separated value (CSV) file to write tracking information.
 
-\item \texttt{stoptime}---real value defining the maximum simulation time to which particles in the package can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when simulation time STOPTIME is reached.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the simulation time to which particles can be tracked.
+\item \texttt{stoptime}---real value defining the maximum simulation time to which particles in the package can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when simulation time STOPTIME is reached.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the simulation time to which particles can be tracked.  If STOPTIME and STOPTRAVELTIME are both provided, particles will be stopped if either is reached.
 
-\item \texttt{stoptraveltime}---real value defining the maximum travel time over which particles in the model can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when their travel time reaches STOPTRAVELTIME.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTRAVELTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the travel time over which particles can be tracked.
+\item \texttt{stoptraveltime}---real value defining the maximum travel time over which particles in the model can be tracked.  Particles that have not terminated earlier due to another termination condition will terminate when their travel time reaches STOPTRAVELTIME.  If the last stress period in the simulation consists of more than one time step, particles will not be tracked past the ending time of the last stress period, regardless of STOPTRAVELTIME.  If the last stress period in the simulation consists of a single time step, it is assumed to be a steady-state stress period, and its ending time will not limit the travel time over which particles can be tracked.  If STOPTIME and STOPTRAVELTIME are both provided, particles will be stopped if either is reached.
 
 \item \texttt{STOP\_AT\_WEAK\_SINK}---is a text keyword to indicate that a particle is to terminate when it enters a cell that is a weak sink.  By default, particles are allowed to pass though cells that are weak sinks.
 
@@ -33,11 +33,11 @@
 
 \item \texttt{RELEASE\_TIMES}---keyword indicating release times will follow
 
-\item \texttt{times}---times to release, relative to the beginning of the simulation.
+\item \texttt{times}---times to release, relative to the beginning of the simulation.  RELEASE_TIMES and RELEASE_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
 
 \item \texttt{RELEASE\_TIMESFILE}---keyword indicating release times file name will follow
 
-\item \texttt{timesfile}---name of the release times file
+\item \texttt{timesfile}---name of the release times file.  RELEASE_TIMES and RELEASE_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
 
 \end{description}
 \item \textbf{Block: DIMENSIONS}

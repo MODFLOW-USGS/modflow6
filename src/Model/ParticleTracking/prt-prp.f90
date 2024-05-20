@@ -735,6 +735,11 @@ contains
       this%idrape = 1
       found = .true.
     case ('RELEASE_TIMES')
+      if (this%rlstimelist) then
+        errmsg = "RELEASE TIMES ALREADY SPECIFIED"
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit(terminate=.true.)
+      end if
       rtloop: do
         success = .false.
         call this%parser%TryGetDouble(dval, success)
@@ -750,6 +755,11 @@ contains
       this%rlstimelist = .true.
       found = .true.
     case ('RELEASE_TIMESFILE')
+      if (this%rlstimelist) then
+        errmsg = "RELEASE TIMES ALREADY SPECIFIED"
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit(terminate=.true.)
+      end if
       call this%parser%GetString(fname)
       call openfile(this%irlstls, this%iout, fname, 'TLS')
       nlines = 0
