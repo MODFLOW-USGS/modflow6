@@ -220,7 +220,7 @@ in_record true
 tagged false
 reader urword
 longname type of solution
-description is the type of solution.  The Integrated Model Solution (IMS6) is the only supported option in this version.
+description is the type of solution.  The Integrated Model Solution (IMS6) and Explicit Model Solution (EMS6) are the only supported options in this version.
 
 block solutiongroup
 name slnfname

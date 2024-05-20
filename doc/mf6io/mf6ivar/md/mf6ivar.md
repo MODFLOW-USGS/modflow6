@@ -20,7 +20,7 @@
 | SIM | NAM | EXCHANGES | EXGMNAMEB | STRING | is the name of the second model that is part of this exchange. |
 | SIM | NAM | SOLUTIONGROUP | GROUP_NUM | INTEGER | is the group number of the solution group.  Solution groups must be numbered sequentially, starting with group number one. |
 | SIM | NAM | SOLUTIONGROUP | MXITER | INTEGER | is the maximum number of outer iterations for this solution group.  The default value is 1.  If there is only one solution in the solution group, then MXITER must be 1. |
-| SIM | NAM | SOLUTIONGROUP | SLNTYPE | STRING | is the type of solution.  The Integrated Model Solution (IMS6) is the only supported option in this version. |
+| SIM | NAM | SOLUTIONGROUP | SLNTYPE | STRING | is the type of solution.  The Integrated Model Solution (IMS6) and Explicit Model Solution (EMS6) are the only supported options in this version. |
 | SIM | NAM | SOLUTIONGROUP | SLNFNAME | STRING | name of file containing solution input. |
 | SIM | NAM | SOLUTIONGROUP | SLNMNAMES | STRING (:) | is the array of model names to add to this solution.  The number of model names is determined by the number of model names the user provides on this line. |
 | SIM | TDIS | OPTIONS | TIME_UNITS | STRING | is the time units of the simulation.  This is a text string that is used as a label within model output files.  Values for time\_units may be ``unknown'',  ``seconds'', ``minutes'', ``hours'', ``days'', or ``years''.  The default time unit is ``unknown''. |
@@ -386,7 +386,7 @@
 | GWE | OC | OPTIONS | BUDGETCSV | KEYWORD | keyword to specify that record corresponds to the budget CSV. |
 | GWE | OC | OPTIONS | BUDGETCSVFILE | STRING | name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation. |
 | GWE | OC | OPTIONS | TEMPERATURE | KEYWORD | keyword to specify that record corresponds to temperature. |
-| GWE | OC | OPTIONS | TEMPERATUREFILE | STRING | name of the output file to write conc information. |
+| GWE | OC | OPTIONS | TEMPERATUREFILE | STRING | name of the output file to write temperature information. |
 | GWE | OC | OPTIONS | PRINT_FORMAT | KEYWORD | keyword to specify format for printing to the listing file. |
 | GWE | OC | OPTIONS | COLUMNS | INTEGER | number of columns for writing data. |
 | GWE | OC | OPTIONS | WIDTH | INTEGER | width for writing each number. |
