@@ -127,8 +127,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
-    ! -- local
-    ! -- formats
     !
     ! -- Return
     return
@@ -147,13 +145,12 @@ contains
     class(DisBaseType), pointer, intent(in) :: dis !< discretization package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm = &
       "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
     !
-    ! --print a message identifying the storage package.
+    ! -- print a message identifying the storage package.
     write (this%iout, fmtssm) this%inunit
     !
     ! -- store pointers to arguments that were passed in
@@ -197,7 +194,6 @@ contains
   !! are read.
   !<
   subroutine ssm_rp(this)
-    ! -- modules
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
@@ -227,7 +223,6 @@ contains
   !! then ssm concenrations must be interpolated for the time step.
   !<
   subroutine ssm_ad(this)
-    ! -- modules
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
@@ -235,7 +230,6 @@ contains
     type(GwtSpcType), pointer :: ssmiptr
     integer(I4B) :: i
     integer(I4B) :: node
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate total number of existing flow boundaries. It is possible
     !    that a node may equal zero.  In this case, the bound should be
@@ -315,23 +309,24 @@ contains
         !
         ! -- If qbnd is positive, then concentration represents the inflow
         !    concentration.  If qbnd is negative, then the outflow concentration
-        !    is set equal to the simulated cell concentration
+        !    (or temperature) is set equal to the simulated cell's concentration
+        !    (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs
         else
           ctmp = this%cnew(n)
           omega = DONE ! lhs
           if (ctmp < DZERO) then
-            omega = DZERO ! concentration is negative, so set mass flux to zero
+            omega = DZERO ! concentration/temperature is negative, so set mass flux to zero
           end if
         end if
       else
         !
         ! -- lauxmixed value indicates that this is a mixed sink type where
-        !    the concentration value represents the injected concentration if
-        !    qbnd is positive. If qbnd is negative, then the withdrawn water
-        !    is equal to the minimum of the aux concentration and the cell
-        !    concentration.
+        !    the concentration value represents the injected concentration (or
+        !    temperature) if qbnd is positive. If qbnd is negative, then the
+        !    withdrawn water is equal to the minimum of the aux concentration
+        !    (or temperature) and the cell concentration (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs (ctmp is aux value)
         else
@@ -386,11 +381,11 @@ contains
     ! -- local
     integer(I4B) :: isrctype
     integer(I4B) :: iauxpos
-
+    !
     conc = DZERO
     lauxmixed = .false.
     isrctype = this%isrctype(ipackage)
-
+    !
     select case (isrctype)
     case (1, 2)
       iauxpos = this%iauxpak(ipackage)
@@ -411,7 +406,6 @@ contains
   !! updating the a matrix and right-hand side vector.
   !<
   subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
-    ! -- modules
     ! -- dummy
     class(TspSsmType) :: this
     class(MatrixBaseType), pointer :: matrix_sln
@@ -453,11 +447,10 @@ contains
   !> @ brief Calculate flow
   !!
   !! Calculate the resulting mass flow between the boundary and the connected
-  !! GWT model cell.  Update the diagonal position of the flowja array so that
-  !! it ultimately contains the solute balance residual.
+  !! GWT/GWE model cell.  Update the diagonal position of the flowja array so
+  !! that it ultimately contains the solute balance residual.
   !<
   subroutine ssm_cq(this, flowja)
-    ! -- modules
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow across each face in the model grid
@@ -735,7 +728,6 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
-    ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -786,7 +778,6 @@ contains
   !! Read and set the SSM Package options
   !<
   subroutine read_options(this)
-    ! -- modules
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
@@ -868,8 +859,6 @@ contains
     logical :: isfound, endOfBlock
     logical :: pakfound
     logical :: lauxmixed
-    ! -- formats
-    ! -- data
     !
     ! -- initialize
     isfound = .false.
@@ -971,8 +960,6 @@ contains
     logical :: isfound, endOfBlock
     logical :: pakfound
     logical :: lauxmixed
-    ! -- formats
-    ! -- data
     !
     ! -- initialize
     isfound = .false.
@@ -1052,7 +1039,7 @@ contains
         !
         ! -- Store the source type (3 or 4)
         this%isrctype(ip) = isrctype
-
+        !
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING FILEINPUT'
     else
@@ -1135,12 +1122,12 @@ contains
     call this%parser%GetString(filename)
     inunit = getunit()
     call openfile(inunit, this%iout, filename, 'SPC', filstat_opt='OLD')
-
+    !
     ! -- Create the SPC file object
     ssmiptr => this%ssmivec(ip)
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
                             trim(packname))
-
+    !
     write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
       trim(filename), ' TO SET ', trim(this%depvartype), &
       'S FOR PACKAGE ', trim(packname)
