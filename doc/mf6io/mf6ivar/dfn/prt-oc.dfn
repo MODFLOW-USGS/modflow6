@@ -96,7 +96,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to a binary track file.
+description keyword to specify that record corresponds to a binary track file.  Each PRT Model's OC Package may have only one binary track output file.
 
 block options
 name trackfile
@@ -108,7 +108,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the output file to write tracking information.
+description name of the binary output file to write tracking information.
 
 block options
 name trackcsv_filerecord
@@ -129,7 +129,7 @@ reader urword
 tagged true
 optional false
 longname track keyword
-description keyword to specify that record corresponds to a CSV track file.
+description keyword to specify that record corresponds to a CSV track file.  Each PRT Model's OC Package may have only one CSV track file.
 
 block options
 name trackcsvfile

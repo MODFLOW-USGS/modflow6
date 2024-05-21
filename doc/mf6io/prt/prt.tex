@@ -14,6 +14,10 @@ The PRT Model formulates the particle trajectory equations without using prescri
 \subsection{Time Stepping}
 In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and particle-tracking model run in the same simulation, the time step length specified in TDIS is used for both models.  If the PRT Model runs in a separate simulation, the time discretization may differ.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and PRT configurations are in the Flow Model Interface section.  
 
+\subsection{Specifying Cell Face Flows using IFLOWFACE}
+
+By default, flows associated with stress packages are assumed to be distributed uniformly over the volume of a cell. Distributed external inflows and outflows are reflected in the cell-cell flows calculated by the GWF Model, but they are not directly involved in determining the normal face velocities used to track a particle through the cell. The user can optionally assign a flow associated with a stress package to any face of the cell. Assignment of external flows is done by setting the value of an auxiliary package variable called IFLOWFACE to a value that corresponds to one of the cell faces. To accommodate non-rectangular cells, the face numbering scheme in the PRT Model is based on clockwise ordering of the cell faces. For a DIS-grid cell, face 1 is the ``western'' face, i.e., the face parallel to the y axis that has the lesser x coordinate. For a DISV-grid cell, face 1 is the face that extends in the clockwise direction from the first vertex listed for that cell in the CELL2D input block.
+
 \subsection{Particle Mass Budget}
 A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
 
@@ -37,7 +41,7 @@ The PRT Model supports both binary and CSV particle track output files. A partic
 \noindent Column 12: \texttt{`X'} {\color{red} \footnotesize{DOUBLE}} \\
 \noindent Column 13: \texttt{`Y'} {\color{red} \footnotesize{DOUBLE}} \\
 \noindent Column 14: \texttt{`Z'} {\color{red} \footnotesize{DOUBLE}} \\
-\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=LENTXT)}} \\
+\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=40)}} \\
 
 \vspace{2mm}
 \noindent where
@@ -90,6 +94,9 @@ The IREASON field indicates the reason the particle track record was saved:
 By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
 
 The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
+
+
+
 
 
 \newpage

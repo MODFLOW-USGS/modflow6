@@ -38,4 +38,4 @@ reader readarray
 layered true
 optional true
 longname zone number
-description is an integer zone number assigned to each cell.  IZONE may be positive, negative, or zero.  The current cell's zone number is recorded with each particle track datum.  If the ISTOPZONE option is set to any value other than zero in a PRP Package, particles released by that PRP Package terminate if they enter a cell whose IZONE value matches ISTOPZONE.  If ISTOPZONE is not specified or is set to zero in a PRP Package, IZONE has no effect on the termination of particles released by that PRP Package.
+description is an integer zone number assigned to each cell.  IZONE may be positive, negative, or zero.  The current cell's zone number is recorded with each particle track datum.  If a PRP package's ISTOPZONE option is set to any value other than zero, particles released by that PRP Package terminate if they enter a cell whose IZONE value matches ISTOPZONE.  If ISTOPZONE is not specified or is set to zero in a PRP Package, IZONE has no effect on the termination of particles released by that PRP Package.  Each PRP Package may configure a single ISTOPZONE value.
