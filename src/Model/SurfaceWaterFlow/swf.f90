@@ -3,36 +3,14 @@
 !!
 !! This module contains the SWF Model
 !!
-!! Status and remaining tasks
-!!   ONGOING -- Implement SWF infrastructure
-!!   DONE -- Implement Explicit Model Solution (EMS6) to handle explicit models
-!!   DONE -- Implement DISV1D Package
-!!   DONE -- Implement FLW Package to handle lateral and point inflows
-!!   DONE -- Transfer results into the flowja vector
-!!   DONE -- Implement strategy for storing outflow terms and getting them into budget
-!!   DONE -- Implement SWF and FLW advance routines to handle transient problems
-!!   DONE -- Implement storage terms and getting them into budget
-!!   DONE -- Observations
-!!   DONE -- Initial conditions?
-!!   DONE -- Rework the Iterative Model Solution (IMS6) to handle both implicit and explicit models
-!!   DONE -- Implement output control
-!!   DONE -- Add outflow as a dependent variable that can be written and printed (qoutflow)
-!!   DONE -- Revaluate explicit model solution and consider implementing ExplicitModelType?
-!!   DONE -- Add test of the binary outflow
-!!   DONE -- Rename Stream Network Flow (SWF) to Surface Water Flow (SWF) Model
-!!   DONE -- Rename segment to reach
-!!   Look into mass conservative MC method (https://hess.copernicus.org/articles/11/1645/2007/hess-11-1645-2007.pdf)
+!! Remaining tasks
 !!   Implement IDOMAIN support
-!!   Use dag_module to calculate iseg_order (if iseg_order not specified by user)
-!!   We may need subcells and subtiming to improve accuracy
-!!   Add support for nonlinear Muskingum Cunge
-!!   Deal with the timestep and subtiming issues
 !!   Flopy support for DISV1D and DISV1D binary grid file
 !!   Flopy support for .output() method for SWF
 !!   Mover support?
 !!   SWF-SWF Exchange
 !!   SWF-SWF Exchange in parallel
-!!   Create QGW package for leakage into or out of groundwater
+!!   GHB-like package for aquifer exchange as a stress package
 !!
 !<
 module SwfModule
