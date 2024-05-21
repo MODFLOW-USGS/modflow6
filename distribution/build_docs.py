@@ -303,33 +303,6 @@ def test_build_mf6io_tex_from_dfn(overwrite):
             os.system(f"git restore {p}")
 
 
-def build_tex_folder_structure(overwrite: bool = False):
-    path = _release_notes_path / "folder_struct.tex"
-
-    if overwrite:
-        path.unlink(missing_ok=True)
-    elif path.is_file():
-        print(f"Folder structure file already exists: {path}")
-        return
-
-    with set_dir(_release_notes_path):
-        out, err, ret = run_cmd(
-            sys.executable, "mk_folder_struct.py", "-dp", _project_root_path
-        )
-        assert not ret, out + err
-
-    assert path.is_file(), f"Failed to create {path}"
-
-
-@no_parallel
-def test_build_tex_folder_structure():
-    path = _project_root_path / "doc" / "ReleaseNotes" / "folder_struct.tex"
-    try:
-        build_tex_folder_structure()
-    finally:
-        os.system(f"git restore {path}")
-
-
 def build_mf6io_tex_example(
     workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike
 ):

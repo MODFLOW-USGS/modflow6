@@ -447,26 +447,6 @@ jobs:
           models="${{ inputs.models }}"
           pytest -v -n auto test_scripts.py --init -k "${models//,/ or }"
       
-      - name: Create folder structure
-        if: inputs.full == true
-        run: |
-          # Create empty folder structure for the <distname>/docs subdirectory
-          distname=${{ needs.build.outputs.distname }}
-          mkdir -p "$distname/doc"
-          mkdir "$distname/make"
-          mkdir "$distname/msvs"
-          mkdir "$distname/srcbmi"
-          cp modflow6/code.json "$distname/code.json"
-          cp modflow6/meson.build "$distname/meson.build"
-          cp -r modflow6-examples/examples "$distname"
-          cp -r modflow6/src "$distname"
-          cp -r modflow6/utils/mf5to6 "$distname/utils/mf5to6"
-          cp -r modflow6/utils/zonebudget "$distname/utils/zonebudget"
-          
-          # create LaTeX file describing the folder structure
-          cd modflow6/doc/ReleaseNotes
-          python mk_folder_struct.py -dp "${{ github.workspace }}/$distname"
-
       - name: Collect deprecations
         working-directory: modflow6/doc/mf6io/mf6ivar
         run: |
