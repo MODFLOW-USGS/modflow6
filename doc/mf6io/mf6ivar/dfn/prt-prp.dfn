@@ -189,7 +189,7 @@ in_record true
 tagged false
 repeating true
 longname release times
-description times to release, relative to the beginning of the simulation.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
+description times to release, relative to the beginning of the simulation.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
 
 block options
 name release_timesfilerecord
@@ -221,7 +221,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the release times file.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.  Explicit release times and release settings configured in the period block are additive and can be mixed and matched.
+description name of the release times file.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
 
 block options
 name dev_forceternary
