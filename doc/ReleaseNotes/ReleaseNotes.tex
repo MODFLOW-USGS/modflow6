@@ -202,7 +202,7 @@ This section describes known issues with this release of MODFLOW~6.
 \begin{enumerate}
 
 \item
-The READARRAY utility is used by some packages to read arrays of numeric values provided by the user.  The READARRAY utility has an IPRN option (as described in the MODFLOW 6 Description of Input and Output), which will cause the array to be written to the model listing file.  Support for the IPRN option has been removed for some packages and will ultimately be removed for all packages.  An alternative for IPRN functionality is presently under development.
+The READARRAY utility is used by some packages to read arrays of numeric values provided by the user.  The READARRAY utility has an IPRN option (as described in the MODFLOW 6 Description of Input and Output), which will cause the array to be written to the model listing file.  Support for the IPRN option has been removed for some packages and will ultimately be removed for all packages.  A new option, called ``EXPORT\_ARRAY\_ASCII'' has been implemented for some packages to support writing of gridded data to external text files.  This option has been implemented to replace the IPRN functionality.
 
 \item
 The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and streams has not been implemented.
@@ -235,10 +235,7 @@ In addition to the issues shown here, a comprehensive and up-to-date list is ava
 
 % -------------------------------------------------
 \section{Distribution File}
-The following distribution file is for use on personal computers: \texttt{\modflowversion\_[ostag].zip}.  The distribution file is a compressed zip file. The following directory structure is incorporated in the zip file:
-
-% folder structured created by python script
-\input{folder_struct.tex}
+The distribution is provided in the form of a compressed zip file.  Distributions are available for several different operating systems, including Windows, Mac, and Linux.  Distributions are marked with an operating system tag, called ``ostag''.  Values for ``ostag'' include ``win64'', ``mac'', and ``linux'', for example.  Distribution files for this release are labeled as \texttt{\modflowversion\_[ostag].zip}.  Thus, the distribution file for Windows for this release is  \texttt{\modflowversion\_win64.zip}.
 
 It is recommended that no user files are kept in the release directory.  If you do plan to put your own files in the release directory, do so only by creating additional subdirectories.
 
