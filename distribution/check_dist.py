@@ -3,10 +3,12 @@ import subprocess
 from os import environ
 from pathlib import Path
 from pprint import pprint
+from random import shuffle
 
 import pytest
 
 from modflow_devtools.markers import no_parallel
+from modflow_devtools.misc import run_cmd
 
 
 # OS-specific extensions
@@ -183,13 +185,26 @@ def test_examples(dist_dir_path, full):
     example_paths = [
         p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
     ]
+    assert any(example_paths)
     print(f"{len(example_paths)} example models found:")
     pprint(example_paths)
 
-    # check examples script and give it a test run
+    # pick some examples at random to test run individually
+    n = 3
+    shuffle(example_paths)
+    script_paths = [next(iter(p.rglob(f"*run{_scext}"))) for p in example_paths[:n]]
+    print(f"Testing {n} randomly selected example model scripts:")
+    pprint(script_paths)
+    for script_path in script_paths:
+        out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
+        assert not ret, out + err
+
+    # check comprehensive examples script and give it a test run
     script_path = examples_path / f"runall{_scext}"
+    print(f"Testing comprehensive examples script: {script_path}")
     assert script_path.is_file()
-    pprint(subprocess.check_output([str(script_path)], cwd=examples_path).decode())
+    out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
+    assert not ret, out + err
 
 
 @no_parallel
