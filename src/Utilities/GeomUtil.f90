@@ -389,7 +389,7 @@ contains
 
   !> @brief Find the lateral face shared by two cells.
   !!
-  !! Find the lateral (horizontal) face shared by the given cells.
+  !! Find the lateral (x-y plane) face shared by the given cells.
   !! The iface return argument will be 0 if they share no such face,
   !! otherwise the index of the shared face in cell 1's vertex array,
   !! where face N connects vertex N to vertex N + 1 going clockwise.
