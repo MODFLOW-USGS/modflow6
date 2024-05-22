@@ -175,20 +175,21 @@ def test_examples(dist_dir_path, full):
     if not full:
         pytest.skip(reason="examples not included in minimal distribution")
 
+    # check examples directory
     examples_path = dist_dir_path / "examples"
     assert examples_path.is_dir()
-    assert (examples_path / f"runall{_scext}").is_file()
+
+    # print examples found
     example_paths = [
         p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
     ]
     print(f"{len(example_paths)} example models found:")
     pprint(example_paths)
-    for p in example_paths:
-        script_path = p / f"run{_scext}"
-        if not script_path.is_file():
-            continue
-        pprint(subprocess.check_output([str(script_path)], cwd=p).decode().split())
-        break
+
+    # check examples script and give it a test run
+    script_path = examples_path / f"runall{_scext}"
+    assert script_path.is_file()
+    pprint(subprocess.check_output([str(script_path)], cwd=examples_path).decode())
 
 
 @no_parallel
