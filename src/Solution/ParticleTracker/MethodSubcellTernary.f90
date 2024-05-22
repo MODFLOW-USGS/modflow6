@@ -1,6 +1,6 @@
 module MethodSubcellTernaryModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DSAME, DHALF, DONE, DTWO
+  use ConstantsModule, only: DZERO, DSAME, DHALF, DONE, DTWO, DONETHIRD
   use ErrorUtilModule, only: pstop
   use GeomUtilModule, only: skew
   use MethodModule, only: MethodType
@@ -61,49 +61,62 @@ contains
     end select
   end subroutine apply_mst
 
-  !> @brief Nudge barycentric coordinates such that none is less
-  !! than distance DSAME from any edge of the canonical subcell.
+  !> @brief Nudge barycentric coordinates into the interior of
+  !! the canonical subcell such that the point is at least the
+  !! minimal distance tol from any face.
   !!
   !! Assumes 1 = alpha + beta + gamma, and 0 <= alpha <= 1 (and
   !! likewise for beta and gamma). The latter is not strictly
   !! required but it should be established that a particle is
-  !! _roughly_ in a given subcell before calling this routine.
+  !! roughly in a given subcell before calling this routine.
   !<
-  subroutine nudge(alpi, beti, gami)
+  subroutine nudge(alpha, beta, gamma, tol)
     ! dummy
-    real(DP), intent(inout) :: alpi
-    real(DP), intent(inout) :: beti
-    real(DP), intent(out) :: gami
+    real(DP), intent(inout) :: alpha
+    real(DP), intent(inout) :: beta
+    real(DP), intent(out) :: gamma
+    real(DP), intent(in), optional :: tol
     ! local
     real(DP) :: lolimit
     real(DP) :: hilimit
     real(DP) :: delta
+    real(DP) :: ltol
 
-    gami = DONE - alpi - beti
-    lolimit = DSAME
-    hilimit = DONE - DTWO * DSAME
+    if (present(tol)) then
+      ltol = tol
+      if (tol < DZERO .or. tol > DONETHIRD) then
+        print *, "error -- tolerance must be between 0 and 1/3, inclusive"
+        call pstop(1)
+      end if
+    else
+      ltol = DSAME
+    end if
+
+    gamma = DONE - alpha - beta
+    lolimit = ltol
+    hilimit = DONE - DTWO * ltol
     ! Check alpha coordinate against lower limit
-    if (alpi < lolimit) then
+    if (alpha < lolimit) then
       ! Alpha is too low, so nudge alpha to lower limit; this is a move
       ! parallel to the "alpha axis," which also changes gamma
-      alpi = lolimit
-      gami = DONE - alpi - beti
+      alpha = lolimit
+      gamma = DONE - alpha - beta
       ! Check beta coordinate against lower limit (which in this
       ! case is equivalent to checking gamma coordinate against
       ! upper limit)
-      if (beti < lolimit) then
+      if (beta < lolimit) then
         ! Beta is too low (gamma is too high), so nudge beta to lower limit;
         ! this is a move parallel to the "beta axis," which also changes gamma
-        beti = lolimit
-        gami = hilimit
+        beta = lolimit
+        gamma = hilimit
         ! Check beta coordinate against upper limit (which in this
         ! case is equivalent to checking gamma coordinate against
         ! lower limit)
-      else if (beti > hilimit) then
+      else if (beta > hilimit) then
         ! Beta is too high (gamma is too low), so nudge beta to lower limit;
         ! this is a move parallel to the "beta axis," which also changes gamma
-        beti = hilimit
-        gami = lolimit
+        beta = hilimit
+        gamma = lolimit
       end if
     end if
     ! Check beta coordinate against lower limit. (If alpha coordinate
@@ -111,27 +124,27 @@ contains
     ! been adjusted as necessary to place particle within subcell, and
     ! subsequent checks on beta and gamma will evaluate to false, and
     ! no further adjustments will be made.)
-    if (beti < lolimit) then
+    if (beta < lolimit) then
       ! Beta is too low, so nudge beta to lower limit; this is a move
       ! parallel to the "beta axis," which also changes gamma
-      beti = lolimit
-      gami = DONE - alpi - beti
+      beta = lolimit
+      gamma = DONE - alpha - beta
       ! Check alpha coordinate against lower limit (which in this
       ! case is equivalent to checking gamma coordinate against
       ! upper limit)
-      if (alpi < lolimit) then
+      if (alpha < lolimit) then
         ! Alpha is too low (gamma is too high), so nudge alpha to lower limit;
         ! this is a move parallel to the "alpha axis," which also changes gamma
-        alpi = lolimit
-        gami = hilimit
+        alpha = lolimit
+        gamma = hilimit
         ! Check alpha coordinate against upper limit (which in this
         ! case is equivalent to checking gamma coordinate against
         ! lower limit)
-      else if (alpi > hilimit) then
+      else if (alpha > hilimit) then
         ! Alpha is too high (gamma is too low), so nudge alpha to lower limit;
         ! this is a move parallel to the "alpha axis," which also changes gamma
-        alpi = hilimit
-        gami = lolimit
+        alpha = hilimit
+        gamma = lolimit
       end if
     end if
     ! Check gamma coordinate against lower limit.(If alpha and/or beta
@@ -139,13 +152,13 @@ contains
     ! been adjusted as necessary to place particle within subcell, and
     ! subsequent check on gamma will evaluate to false, and no further
     ! adjustment will be made.)
-    if (gami < lolimit) then
+    if (gamma < lolimit) then
       ! Gamma is too low, so nudge gamma to lower limit; this is a move
       ! parallel to the "gamma axis," which also changes alpha and beta
-      delta = DHALF * (lolimit - gami)
-      gami = DSAME
-      alpi = alpi - delta
-      beti = beti - delta
+      delta = DHALF * (lolimit - gamma)
+      gamma = ltol
+      alpha = alpha - delta
+      beta = beta - delta
     end if
   end subroutine nudge
 
