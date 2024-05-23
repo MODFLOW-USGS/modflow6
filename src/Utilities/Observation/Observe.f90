@@ -59,7 +59,7 @@ module ObserveModule
     integer(I4B), allocatable, dimension(:), public :: indxbnds !< node numbers for observations when using boundname
     !
     ! -- Set FormattedOutput false if output unit is opened for unformatted i/o
-    logical, public :: FormattedOutput = .true. !< logical indicating if obervation output is formatted
+    logical, public :: FormattedOutput = .true. !< logical indicating if observation output is formatted
     logical, public :: BndFound = .false. !< logical indicating if a boundname was found
     real(DP), public :: CurrentTimeStepEndValue = DZERO !< observation value
     real(DP), public :: CurrentTimeStepEndTime = DZERO !< observation time

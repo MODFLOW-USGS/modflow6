@@ -44,6 +44,9 @@ import yaml
 
 from utils import get_modified_time
 
+from modflow_devtools.markers import no_parallel
+
+
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
 version_file_path = project_root_path / "version.txt"
@@ -121,6 +124,49 @@ def get_disclaimer(approved: bool = False, formatted: bool = False) -> str:
         return _approved_fmtdisclaimer if formatted else _approved_disclaimer
     else:
         return _preliminary_fmtdisclaimer if formatted else _preliminary_disclaimer
+
+
+def get_software_citation(
+    timestamp: datetime, version: Version, approved: bool = False
+) -> str:
+    # get data Software/Code citation for FloPy
+    citation = yaml.safe_load((project_root_path / "CITATION.cff").read_text())
+
+    sb = ""
+    if not approved:
+        sb = f" (preliminary)"
+    # format author names
+    authors = []
+    for author in citation["authors"]:
+        tauthor = author["family-names"] + ", "
+        gnames = author["given-names"].split()
+        if len(gnames) > 1:
+            for gname in gnames:
+                tauthor += gname[0]
+                if len(gname) > 1:
+                    tauthor += "."
+                # tauthor += " "
+        else:
+            tauthor += author["given-names"]
+        authors.append(tauthor.rstrip())
+
+    line = ""
+    for ipos, tauthor in enumerate(authors):
+        if ipos > 0:
+            line += ", "
+        if ipos == len(authors) - 1:
+            line += "and "
+        # add formatted author name to line
+        line += tauthor
+
+    # add the rest of the citation
+    line += (
+        f", {timestamp.year}, MODFLOW 6 Modular Hydrologic Model version {version}{sb}: "
+        f"U.S. Geological Survey Software Release, {timestamp:%-d %B %Y}, "
+        "https://doi.org/10.5066/P9FL1JCC"
+    )
+
+    return line
 
 
 def log_update(path, version: Version):
@@ -273,6 +319,28 @@ def update_codejson(version: Version, timestamp: datetime, approved: bool = Fals
     log_update(path, version)
 
 
+def update_doxyfile(version: Version):
+    path = project_root_path / ".build_rtd_docs" / "Doxyfile"
+    lines = open(path, "r").readlines()
+    tag = "PROJECT_NUMBER"
+    with open(path, "w") as fp:
+        for line in lines:
+            if tag in line:
+                line = f'{tag}         = "version {version}"\n'
+            fp.write(line)
+
+
+def update_pixi(version: Version):
+    path = project_root_path / "pixi.toml"
+    lines = open(path, "r").readlines()
+    tag = "version ="
+    with open(path, "w") as fp:
+        for line in lines:
+            if line.startswith(tag):
+                line = f'{tag} "{version}"\n'
+            fp.write(line)
+
+
 def update_version(
     version: Version = None,
     timestamp: datetime = datetime.now(),
@@ -292,11 +360,7 @@ def update_version(
     try:
         lock = FileLock(lock_path)
         previous = Version(version_file_path.read_text().strip())
-        version = (
-            version
-            if version
-            else previous
-        )
+        version = version if version else previous
 
         with lock:
             update_version_txt_and_py(version, timestamp)
@@ -306,6 +370,8 @@ def update_version(
             update_readme_and_disclaimer(version, approved)
             update_citation_cff(version, timestamp)
             update_codejson(version, timestamp, approved)
+            update_doxyfile(version)
+            update_pixi(version)
     finally:
         lock_path.unlink(missing_ok=True)
 
@@ -314,13 +380,16 @@ _initial_version = Version("0.0.1")
 _current_version = Version(version_file_path.read_text().strip())
 
 
-@pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
+@no_parallel
+@pytest.mark.skip(reason="reverts repo files on cleanup, treat carefully")
 @pytest.mark.parametrize(
     "version",
     [
         None,
         _initial_version,
-        Version(f"{_initial_version.major}.{_initial_version.minor}.dev{_initial_version.micro}"),
+        Version(
+            f"{_initial_version.major}.{_initial_version.minor}.dev{_initial_version.micro}"
+        ),
     ],
 )
 @pytest.mark.parametrize("approved", [True, False])
@@ -417,17 +486,32 @@ if __name__ == "__main__":
         action="store_true",
         help="Get the current version number, don't update anything (defaults to false)",
     )
+    parser.add_argument(
+        "-c",
+        "--citation",
+        required=False,
+        action="store_true",
+        help="Show the citation, don't update anything (defaults to False)",
+    )
     args = parser.parse_args()
+    approved = args.approved
+    releasemode = args.releasemode
+    version = Version(args.version) if args.version else _current_version
     if args.get:
         print(Version((project_root_path / "version.txt").read_text().strip()))
+    elif args.citation:
+        print(
+            get_software_citation(
+                timestamp=datetime.now(), version=version, approved=approved
+            )
+        )
     else:
-        print(f"Updating to version {args.version} with options")
-        print(f"    releasemode: {args.releasemode}")
-        print(f"    approved: {args.approved}")
-        version = Version(args.version) if args.version else _current_version
+        print(f"Updating to version {version} with options")
+        print(f"    approved: {approved}")
+        print(f"    releasemode: {releasemode}")
         update_version(
             version=version,
             timestamp=datetime.now(),
-            approved=args.approved,
-            developmode=not args.releasemode,
+            approved=approved,
+            developmode=not releasemode,
         )

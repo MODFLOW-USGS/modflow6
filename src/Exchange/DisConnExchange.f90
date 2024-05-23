@@ -28,7 +28,7 @@ module DisConnExchangeModule
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
     class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
     logical(LGP) :: is_datacopy !< when true, this exchange is just a data copy on another process and
-                                !! not responsible for controlling movers, observations, ... TODO_MJR: refactor this with the new mover!!!
+                                !! not responsible for controlling movers, observations, ...
 
     integer(I4B), pointer :: nexg => null() !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1
@@ -291,7 +291,7 @@ contains
     call mem_setptr(cl1, 'CL1', this%input_mempath)
     call mem_setptr(cl2, 'CL2', this%input_mempath)
     call mem_setptr(hwva, 'HWVA', this%input_mempath)
-    call mem_setptr(auxvar, 'AUX', this%input_mempath)
+    call mem_setptr(auxvar, 'AUXVAR', this%input_mempath)
     call mem_setptr(boundname, 'BOUNDNAME', this%input_mempath)
     ndim1 = size(cellidm1, dim=1)
     ndim2 = size(cellidm2, dim=1)

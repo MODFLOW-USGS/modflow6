@@ -828,7 +828,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
 
 
 def add_parent_sfr(gwf, gwfname, conns):
-    # Instatiate a scenario-specific sfr package
+    # Instantiate a scenario-specific sfr package
     pkdat = generate_parentmod_sfr_input(conns)
     sfrspd = {0: [[0, "INFLOW", 40.0]]}
     sfr = flopy.mf6.ModflowGwfsfr(

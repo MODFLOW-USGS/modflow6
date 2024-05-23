@@ -82,6 +82,7 @@ module BaseDisModule
     procedure :: connection_normal
     procedure :: connection_vector
     procedure :: get_dis_type
+    procedure :: get_dis_enum
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -110,6 +111,7 @@ module BaseDisModule
     procedure, public :: highest_active
     procedure, public :: get_area
     procedure, public :: get_area_factor
+    procedure, public :: get_flow_width
 
   end type DisBaseType
 
@@ -375,6 +377,17 @@ contains
     call store_error('Programmer error: get_dis_type must be overridden', &
                      terminate=.true.)
   end subroutine get_dis_type
+
+  !> @brief Get the discretization type enumeration
+  function get_dis_enum(this) result(dis_enum)
+    use ConstantsModule, only: DISUNDEF
+    class(DisBaseType), intent(in) :: this
+    integer(I4B) :: dis_enum
+
+    dis_enum = DISUNDEF
+    call store_error('Programmer error: get_dis_enum must be overridden', &
+                     terminate=.true.)
+  end function get_dis_enum
 
   !> @brief Allocate and initialize scalar variables
   subroutine allocate_scalars(this, name_model, input_mempath)
@@ -1119,5 +1132,30 @@ contains
     ! -- return the cell area factor
     area_factor = area_conn / area_node
   end function get_area_factor
+
+  !> @ brief Calculate the flow width between two cells
+  !!
+  !! This should only be called for connections with IHC > 0.
+  !! Routine is needed, so it can be overridden by the linear
+  !! network discretization, which allows for a separate flow
+  !< width for each cell.
+  !<
+  subroutine get_flow_width(this, n, m, idx_conn, width_n, width_m)
+    ! dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: n !< cell node number
+    integer(I4B), intent(in) :: m !< cell node number
+    integer(I4B), intent(in) :: idx_conn !< connection index
+    real(DP), intent(out) :: width_n !< flow width for cell n
+    real(DP), intent(out) :: width_m !< flow width for cell m
+    ! local
+    integer(I4B) :: isympos
+
+    ! For general case, width_n = width_m
+    isympos = this%con%jas(idx_conn)
+    width_n = this%con%hwva(isympos)
+    width_m = width_n
+
+  end subroutine get_flow_width
 
 end module BaseDisModule

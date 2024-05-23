@@ -3,8 +3,12 @@ import subprocess
 from os import environ
 from pathlib import Path
 from pprint import pprint
+from random import shuffle
 
 import pytest
+
+from modflow_devtools.markers import no_parallel
+from modflow_devtools.misc import run_cmd
 
 
 # OS-specific extensions
@@ -66,11 +70,13 @@ def dist_dir_path(request):
     return path
 
 
+@no_parallel
 def test_directories(dist_dir_path, full):
     for dir_path in _included_dir_paths["full" if full else "minimal"]:
         assert (dist_dir_path / dir_path).is_dir()
 
 
+@no_parallel
 def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
@@ -102,6 +108,7 @@ def test_sources(dist_dir_path, releasemode, full):
     assert not (dist_dir_path / "utils" / "idmloader").is_dir()
 
 
+@no_parallel
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
 def test_makefiles(dist_dir_path, full):
     if not full:
@@ -129,6 +136,7 @@ def test_makefiles(dist_dir_path, full):
         )
 
 
+@no_parallel
 def test_msvs(dist_dir_path, full):
     if not full:
         pytest.skip(reason="MSVS files not included in minimal distribution")
@@ -140,6 +148,7 @@ def test_msvs(dist_dir_path, full):
     assert (dist_dir_path / "msvs" / "mf6core.vfproj").is_file()
 
 
+@no_parallel
 def test_docs(dist_dir_path, full):
     # mf6io should always be included
     assert (dist_dir_path / "doc" / "mf6io.pdf").is_file()
@@ -163,26 +172,41 @@ def test_docs(dist_dir_path, full):
             assert (dist_dir_path / "doc" / f"{pub}.pdf").is_file()
 
 
+@no_parallel
 def test_examples(dist_dir_path, full):
     if not full:
         pytest.skip(reason="examples not included in minimal distribution")
 
+    # check examples directory
     examples_path = dist_dir_path / "examples"
     assert examples_path.is_dir()
-    assert (examples_path / f"runall{_scext}").is_file()
+
+    # print examples found
     example_paths = [
         p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
     ]
+    assert any(example_paths)
     print(f"{len(example_paths)} example models found:")
     pprint(example_paths)
-    for p in example_paths:
-        script_path = p / f"run{_scext}"
-        if not script_path.is_file():
-            continue
-        pprint(subprocess.check_output([str(script_path)], cwd=p).decode().split())
-        break
+
+    # todo: check individual scripts? toggle via release workflow input?
+    # model_paths = get_model_paths(examples_path)
+    # script_paths = [mp / f"run{_scext}" for mp in model_paths]
+    # for script_path in script_paths:
+    #     print(f"Testing example script: {script_path}")
+    #     assert script_path.is_file()
+    #     out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
+    #     assert not ret, out + err
+
+    # check comprehensive examples script and give it a test run
+    script_path = examples_path / f"runall{_scext}"
+    print(f"Testing comprehensive examples script: {script_path}")
+    assert script_path.is_file()
+    out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
+    assert not ret, out + err
 
 
+@no_parallel
 def test_binaries(dist_dir_path, approved):
     bin_path = dist_dir_path / "bin"
     assert (bin_path / f"mf6{_eext}").is_file()

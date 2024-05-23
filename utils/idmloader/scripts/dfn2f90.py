@@ -1,20 +1,23 @@
+import argparse
 import sys
+import textwrap
+import yaml
 from pathlib import Path
+from pprint import pprint
 
 MF6_LENVARNAME = 16
 F90_LINELEN = 82
-PROJ_ROOT = Path(__file__).parents[3]
-DFN_PATH = PROJ_ROOT / "doc" / "mf6io" / "mf6ivar" / "dfn"
-SRC_PATH = PROJ_ROOT / "src"
+PROJ_ROOT_PATH = Path(__file__).parents[3]
+DEFAULT_DFNS_PATH = Path(__file__).parents[1] / "dfns.txt"
+DFN_PATH = PROJ_ROOT_PATH / "doc" / "mf6io" / "mf6ivar" / "dfn"
+SRC_PATH = PROJ_ROOT_PATH / "src"
+IDM_PATH = SRC_PATH / "Idm"
 
 
 class Dfn2F90:
     """generate idm f90 file from dfn file"""
 
-    def __init__(
-        self,
-        dfnfspec: str = None,
-    ):
+    def __init__(self, dfnfspec: str = None, verbose: bool = False):
         """Dfn290 init"""
 
         self._dfnfspec = dfnfspec
@@ -28,8 +31,11 @@ class Dfn2F90:
         self._aggregate_varnames = []
         self._warnings = []
         self._multi_package = False
+        self._verbose = verbose
 
-        self.component, self.subcomponent = self._dfnfspec.stem.upper().split("-")
+        self.component, self.subcomponent = self._dfnfspec.stem.upper().split(
+            "-"
+        )
 
         print(f"\nprocessing dfn => {self._dfnfspec}")
         self._set_var_d()
@@ -47,7 +53,9 @@ class Dfn2F90:
     def write_f90(self, ofspec=None):
         with open(ofspec, "w") as f:
             # file header
-            f.write(self._source_file_header(self.component, self.subcomponent))
+            f.write(
+                self._source_file_header(self.component, self.subcomponent)
+            )
 
             # found type
             f.write(
@@ -76,44 +84,73 @@ class Dfn2F90:
             # params
             if len(self._param_varnames):
                 f.write(self._param_str)
-                f.write(self._source_params_header(self.component, self.subcomponent))
-                f.write("    " + ", &\n    ".join(self._param_varnames) + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                    self._source_params_header(
+                        self.component, self.subcomponent
+                    )
+                )
+                f.write(
+                    "    " + ", &\n    ".join(self._param_varnames) + " &\n"
+                )
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent)
+                    + "\n"
                 )
             else:
-                f.write(self._source_params_header(self.component, self.subcomponent))
+                f.write(
+                    self._source_params_header(
+                        self.component, self.subcomponent
+                    )
+                )
                 f.write(self._param_str.rsplit(",", 1)[0] + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                    self._source_list_footer(self.component, self.subcomponent)
+                    + "\n"
                 )
 
             # aggregate types
             if len(self._aggregate_varnames):
                 f.write(self._aggregate_str)
                 f.write(
-                    self._source_aggregates_header(self.component, self.subcomponent)
+                    self._source_aggregates_header(
+                        self.component, self.subcomponent
+                    )
                 )
-                f.write("    " + ", &\n    ".join(self._aggregate_varnames) + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                    "    "
+                    + ", &\n    ".join(self._aggregate_varnames)
+                    + " &\n"
+                )
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent)
+                    + "\n"
                 )
             else:
                 f.write(
-                    self._source_aggregates_header(self.component, self.subcomponent)
+                    self._source_aggregates_header(
+                        self.component, self.subcomponent
+                    )
                 )
                 f.write(self._aggregate_str.rsplit(",", 1)[0] + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                    self._source_list_footer(self.component, self.subcomponent)
+                    + "\n"
                 )
 
             # blocks
-            f.write(self._source_blocks_header(self.component, self.subcomponent))
+            f.write(
+                self._source_blocks_header(self.component, self.subcomponent)
+            )
             f.write(self._block_str.rsplit(",", 1)[0] + " &\n")
-            f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+            f.write(
+                self._source_list_footer(self.component, self.subcomponent)
+                + "\n"
+            )
 
             # file footer
-            f.write(self._source_file_footer(self.component, self.subcomponent))
+            f.write(
+                self._source_file_footer(self.component, self.subcomponent)
+            )
 
     def get_blocknames(self):
         blocknames = []
@@ -167,7 +204,9 @@ class Dfn2F90:
                 istart = line.index(" ")
                 v = line[istart:].strip()
                 if k in vd:
-                    raise Exception("Attribute already exists in dictionary: " + k)
+                    raise Exception(
+                        "Attribute already exists in dictionary: " + k
+                    )
                 vd[k] = v
 
         if len(vd) > 0:
@@ -178,7 +217,9 @@ class Dfn2F90:
             else:
                 key = name
             if name in vardict:
-                raise Exception("Variable already exists in dictionary: " + name)
+                raise Exception(
+                    "Variable already exists in dictionary: " + name
+                )
             vardict[key] = vd
 
         self._var_d = vardict
@@ -285,7 +326,8 @@ class Dfn2F90:
             self._block_str += "    ), &\n"
 
     def _set_blk_param_strs(self, blockname, component, subcomponent):
-        print("  processing block params => ", blockname)
+        if self._verbose:
+            print("  Processing block params => ", blockname)
 
         required_l = None
         required_l = []
@@ -354,7 +396,11 @@ class Dfn2F90:
 
             if t == "DOUBLE PRECISION":
                 t = "DOUBLE"
-            if shape != "" and not aggregate_t and (t == "DOUBLE" or t == "INTEGER"):
+            if (
+                shape != ""
+                and not aggregate_t
+                and (t == "DOUBLE" or t == "INTEGER")
+            ):
                 t = f"{t}{ndim}D"
 
             inrec = ".false."
@@ -535,7 +581,7 @@ class IdmDfnSelector:
         self._write_master()
 
     def _write_master(self):
-        ofspec = SRC_PATH / "Utilities" / "Idm" / "selector" / "IdmDfnSelector.f90"
+        ofspec = SRC_PATH / "Idm" / "selector" / "IdmDfnSelector.f90"
         with open(ofspec, "w") as fh:
             self._write_master_decl(fh)
             self._write_master_defn(fh, defn="param", dtype="param")
@@ -548,27 +594,35 @@ class IdmDfnSelector:
 
     def _write_selectors(self):
         for c in self._d:
-            ofspec = (
-                SRC_PATH
-                / "Utilities"
-                / "Idm"
-                / "selector"
-                / f"Idm{c.title()}DfnSelector.f90"
-            )
+            ofspec = SRC_PATH / "Idm" / "selector" / f"Idm{c.title()}DfnSelector.f90"
             with open(ofspec, "w") as fh:
                 self._write_selector_decl(fh, component=c, sc_list=self._d[c])
                 self._write_selector_helpers(fh)
                 self._write_selector_defn(
-                    fh, component=c, sc_list=self._d[c], defn="param", dtype="param"
+                    fh,
+                    component=c,
+                    sc_list=self._d[c],
+                    defn="param",
+                    dtype="param",
                 )
                 self._write_selector_defn(
-                    fh, component=c, sc_list=self._d[c], defn="aggregate", dtype="param"
+                    fh,
+                    component=c,
+                    sc_list=self._d[c],
+                    defn="aggregate",
+                    dtype="param",
                 )
                 self._write_selector_defn(
-                    fh, component=c, sc_list=self._d[c], defn="block", dtype="block"
+                    fh,
+                    component=c,
+                    sc_list=self._d[c],
+                    defn="block",
+                    dtype="block",
                 )
                 self._write_selector_multi(fh, component=c, sc_list=self._d[c])
-                self._write_selector_integration(fh, component=c, sc_list=self._d[c])
+                self._write_selector_integration(
+                    fh, component=c, sc_list=self._d[c]
+                )
                 fh.write(f"end module Idm{c.title()}DfnSelectorModule\n")
 
     def _write_selector_decl(self, fh=None, component=None, sc_list=None):
@@ -690,7 +744,9 @@ class IdmDfnSelector:
 
         fh.write(s)
 
-    def _write_selector_integration(self, fh=None, component=None, sc_list=None):
+    def _write_selector_integration(
+        self, fh=None, component=None, sc_list=None
+    ):
         c = component
 
         s = (
@@ -855,122 +911,77 @@ class IdmDfnSelector:
 
 
 if __name__ == "__main__":
-    dfns = [
-        # ** Add a new dfn parameter set to MODFLOW 6 by adding a new entry to this list **
-        # [relative path of input dnf, relative path of output f90 definition file]
-        [
-            DFN_PATH / "gwf-chd.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3chd8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-dis.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3dis8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-disu.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disu8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-disv.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disv8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-drn.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3drn8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-evt.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evt8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-evta.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evta8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-ghb.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ghb8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-ic.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ic8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-npf.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3npf8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-rch.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rch8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-rcha.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rcha8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-riv.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3riv8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-wel.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3wel8idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-dis.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dis1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-disu.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disu1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-disv.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disv1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-dsp.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dsp1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-cnc.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1cnc1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-ic.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1ic1idm.f90",
-        ],
-        [
-            DFN_PATH / "gwf-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3idm.f90",
-        ],
-        [
-            DFN_PATH / "gwt-nam.dfn",
-            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
-        ],
-        [
-            DFN_PATH / "exg-gwfgwf.dfn",
-            SRC_PATH / "Exchange" / "gwfgwfidm.f90",
-        ],
-        [
-            DFN_PATH / "exg-gwfgwt.dfn",
-            SRC_PATH / "Exchange" / "gwfgwtidm.f90",
-        ],
-        [
-            DFN_PATH / "exg-gwtgwt.dfn",
-            SRC_PATH / "Exchange" / "gwtgwtidm.f90",
-        ],
-        [
-            DFN_PATH / "sim-nam.dfn",
-            SRC_PATH / "simnamidm.f90",
-        ],
-    ]
+    parser = argparse.ArgumentParser(
+        prog="Convert DFN files to Fortran source files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent(
+            """\
+            Generate Fortran source code from DFN files. This script
+            converts definition (DFN) files to Fortran source files,
+            each representing a parameter set for a particular input
+            definition. Fortran files generated by this tool provide
+            support for simulations, models or packages described by
+            the given DFN files. Each DFN file is transformed into a
+            corresponding Fortran file with "idm" and the same stem:
+            e.g. gwf-ic.dfn becomes gwf-icidm.f90.
+            """
+        ),
+    )
+    parser.add_argument(
+        "-d",
+        "--dfn",
+        required=False,
+        default=DEFAULT_DFNS_PATH,
+        help="Path to a DFN file, or to a text or YAML file listing DFN files (one per line)",
+    )
+    parser.add_argument(
+        "-o",
+        "--outdir",
+        required=False,
+        default=IDM_PATH,
+        help="The directory to write Fortran source files",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Whether to show verbose output",
+    )
+    args = parser.parse_args()
+    dfn = Path(args.dfn)
+    outdir = Path(args.outdir) if args.outdir else Path.cwd()
+    verbose = args.verbose
+
+    if dfn.suffix.lower() in [".txt"]:
+        dfns = open(dfn, "r").readlines()
+        dfns = [l.strip() for l in dfns]
+        dfns = [l for l in dfns if not l.startswith("#") and l.lower().endswith(".dfn")]
+        if dfn == DEFAULT_DFNS_PATH:
+            dfns = [DFN_PATH / p for p in dfns]
+    elif dfn.suffix.lower() in [".yml", ".yaml"]:
+        dfns = yaml.safe_load(open(dfn, "r"))
+    elif dfn.suffix.lower() in [".dfn"]:
+        dfns = [dfn]
+
+    assert all(
+        p.is_file() for p in dfns
+    ), f"DFNs not found: {[p for p in dfns if not p.is_file()]}"
+
+    if verbose:
+        print("Converting DFNs:")
+        pprint(dfns)
 
     dfn_d = {}
     for dfn in dfns:
-        converter = Dfn2F90(dfnfspec=dfn[0])
-        converter.write_f90(ofspec=dfn[1])
+        converter = Dfn2F90(dfnfspec=dfn, verbose=verbose)
+        converter.write_f90(ofspec=outdir / f"{dfn.stem}idm.f90")
         converter.warn()
         converter.add_dfn_entry(dfn_d=dfn_d)
 
     selectors = IdmDfnSelector(dfn_d=dfn_d)
     selectors.write()
-    print("\n...done.")
+
+    if verbose:
+        print("...done.")

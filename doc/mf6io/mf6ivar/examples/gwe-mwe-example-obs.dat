@@ -1,0 +1,44 @@
+BEGIN options
+  DIGITS  12
+  PRINT_INPUT
+END options
+
+BEGIN continuous  FILEOUT  gwe_mwe_02.mwe.obs.csv
+# obsname            obstype         id1        id2
+  mwe1mwe            MWE             1          1
+  mwe2mwe            MWE             2          1
+  mwe3mwe            MWE             3          1
+  mwe4mwe            MWE             4          1
+  mwe1temp           TEMPERATURE     1
+  mwe2temp           TEMPERATURE     2
+  mwe3temp           TEMPERATURE     3
+  mwe4temp           TEMPERATURE     4
+  mwe1stor           STORAGE         1
+  mwe2stor           STORAGE         2
+  mwe3stor           STORAGE         3
+  mwe4stor           STORAGE         4
+  mwe1cnst           CONSTANT        1
+  mwe2cnst           CONSTANT        2
+  mwe3cnst           CONSTANT        3
+  mwe4cnst           CONSTANT        4
+  mwe1fmvr           FROM-MVR        1
+  mwe2fmvr           FROM-MVR        2
+  mwe3fmvr           FROM-MVR        3
+  mwe4fmvr           FROM-MVR        4
+  mwe1rate           RATE            1
+  mwe2rate           RATE            2
+  mwe3rate           RATE            3
+  mwe4rate           RATE            4
+  mwe1rtmv           RATE-TO-MVR     1
+  mwe2rtmv           RATE-TO-MVR     2
+  mwe3rtmv           RATE-TO-MVR     3
+  mwe4rtmv           RATE-TO-MVR     4
+  mwe1fwrt           FW-RATE         1
+  mwe2fwrt           FW-RATE         2
+  mwe3fwrt           FW-RATE         3
+  mwe4fwrt           FW-RATE         4
+  mwe1frtm           FW-RATE-TO-MVR  1
+  mwe2frtm           FW-RATE-TO-MVR  2
+  mwe3frtm           FW-RATE-TO-MVR  3
+  mwe4frtm           FW-RATE-TO-MVR  4
+END continuous  FILEOUT  gwe_mwe_02.mwe.obs.csv

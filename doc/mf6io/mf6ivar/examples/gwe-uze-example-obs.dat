@@ -1,0 +1,13 @@
+BEGIN options
+  DIGITS  7
+  PRINT_INPUT
+END options
+
+BEGIN continuous  FILEOUT  gwe_02.uze.obs.csv
+# obsname            obstype        id1        id2
+  mwe-1-temp         TEMPERATURE    1
+  mwe-1-stor         STORAGE        1
+  mwe-1-gwe1         UZE            1
+  mwe-1-gwe2         UZE            2
+  mwe-2-gwe1         UZE            3
+END continuous

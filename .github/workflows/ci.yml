@@ -35,80 +35,76 @@ on:
       - 'doc/**.sh'
       - 'doc/**.xlsx'
       - '.hpc/**'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  PIXI_BETA_WARNING_OFF: true
 jobs:
   lint:
     name: Check format
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
     steps:
 
       - name: Checkout modflow6
         uses: actions/checkout@v4
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.7.0
         with:
-          environment-file: environment.yml
-          cache-environment: true
-          cache-downloads: true
+          pixi-version: v0.19.1
 
       - name: Check Fortran source formatting
-        run: python .github/common/fortran_format_check.py
+        run: pixi run check-format
 
-      - name: Check msvs project files
-        run: python .github/common/msvs_vfproj_check.py
+      - name: Check MSVS project files
+        run: pixi run check-vfproj
+      
+      - name: Check CITATION.cff
+        uses: dieghernan/cff-validator@v3
 
   build:
     name: Build
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 13
+      FC_V: 13
     steps:
 
       - name: Checkout modflow6
         uses: actions/checkout@v4
       
-      - name: Setup gfortran ${{ env.GCC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.FC_V }}
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.7.0
         with:
-          environment-file: environment.yml
-          cache-environment: true
-          cache-downloads: true
+          pixi-version: v0.19.1
 
       - name: Meson setup
-        run: meson setup builddir -Ddebug=false -Dwerror=true
+        run: pixi run setup -Dwerror=true builddir
 
       - name: Meson compile
-        run: meson compile -C builddir
+        run: pixi run build builddir
 
       - name: Show build log
         if: failure()
         run: cat builddir/meson-logs/meson-log.txt
 
       - name: Meson test
-        run: meson test --verbose --no-rebuild -C builddir
+        run: pixi run test builddir
 
   smoke_test:
     name: Smoke test
     runs-on: ubuntu-22.04
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash
     env:
       FC: gfortran
-      GCC: 13
+      FC_V: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -121,31 +117,34 @@ jobs:
           repository: fortran-lang/test-drive
           path: test-drive
 
-      - name: Setup GNU Fortran ${{ env.GCC }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC }}
+          version: ${{ env.FC_V }}
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.7.0
         with:
-          environment-file: modflow6/environment.yml
-          cache-environment: true
-          cache-downloads: true
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Build test-drive
         working-directory: test-drive
         run: |
-          meson setup builddir --prefix=$(pwd) --libdir=lib
-          meson install -C builddir
+          pixi run --manifest-path=../modflow6/pixi.toml meson setup builddir --prefix=$(pwd) --libdir=lib
+          pixi run --manifest-path=../modflow6/pixi.toml meson install -C builddir
           echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -154,26 +153,33 @@ jobs:
     
       - name: Unit test programs
         working-directory: modflow6
-        run: meson test --verbose --no-rebuild -C builddir
+        run: pixi run test builddir
 
       - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Get executables
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Test programs
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode"
+            pixi run autotest -m "not slow and not regression and not developmode"
           else
-            pytest -v -n auto --durations 0 -S
+            pixi run autotest --smoke
           fi
+
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-smoke-${{ runner.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
 
   test_gfortran:
     name: Test gnu fortran
@@ -185,13 +191,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+        os: [ ubuntu-22.04, macos-12, macos-14, windows-2022 ]
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash
     env:
       FC: gfortran
-      GCC: 13
+      FC_V: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -210,27 +216,40 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup GNU Fortran ${{ env.GCC }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC }}
+          version: ${{ env.FC_V }}
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.7.0
         with:
-          environment-file: modflow6/environment.yml
-          init-shell: >-
-            bash
-            powershell
-          cache-environment: true
-          cache-downloads: true
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
+
+      - name: Set LDFLAGS (macOS)
+        if: matrix.os == 'macos-14'
+        run: |
+          os_ver=$(sw_vers -productVersion | cut -d'.' -f1)
+          if (( "$os_ver" > 12 )); then
+            ldflags="$LDFLAGS -Wl,-ld_classic"
+            echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
+          fi
 
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
+          setupargs=""
+          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            setupargs="-Doptimization=1"
+          fi
+          pixi run setup builddir $setupargs
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -239,29 +258,44 @@ jobs:
       
       - name: Unit test programs
         working-directory: modflow6
-        run: meson test --verbose --no-rebuild -C builddir
+        run: pixi run test builddir
 
       - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Get executables
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Test modflow6
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
+          markers=""
+          if [[ "${{ github.ref_name }}" == "master" ]]; then
+            markers="not large and not developmode"
           else
-            pytest -v -n auto --durations 0 -m "not large"
+            markers="not large"
           fi
+
+          filters=""
+          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            # comparison fails on macos-14 with optimization=1
+            filters="not test028_sfr_rewet"
+          fi
+
+          pixi run autotest -m "$markers" -k "$filters"
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
       
       - name: Checkout usgslatex
         if: runner.os == 'Linux'
@@ -286,10 +320,10 @@ jobs:
         run: sudo ./install.sh --all-users
      
       - name: Test distribution scripts
-        working-directory: modflow6/distribution
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
+        run: pixi run test-dist-scripts
 
   test_intel_fortran:
     name: Test intel fortran
@@ -298,17 +332,16 @@ jobs:
       - build
       - smoke_test
     runs-on: ${{ matrix.os }}
+    env:
+      FC: intel-classic
+      FC_V: "2021.7"
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7}
-          - {os: macos-12, compiler: intel-classic, version: 2021.7}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.7}
-
+        os: [ubuntu-22.04, macos-12, windows-2022]
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash
     steps:
 
       - name: Checkout modflow6
@@ -321,32 +354,38 @@ jobs:
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+      
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v4
         with:
-          environment-file: modflow6/environment.yml
-          init-shell: >-
-            bash
-            powershell
-          cache-environment: true
-          cache-downloads: true
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
 
-      - name: Setup Intel Fortran
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.7.0
+        with:
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
+
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
-          compiler: ${{ matrix.compiler }}
-          version: ${{ matrix.version }}
+          compiler: ${{ env.FC }}
+          version: ${{ env.FC_V }}
 
       - name: Update version files
-        working-directory: modflow6/distribution
-        run: python update_version.py
+        working-directory: modflow6
+        run: pixi run update-version
 
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
+          pixi run setup builddir
+          pixi run build builddir
 
       - name: Show build log
         if: failure()
@@ -355,34 +394,41 @@ jobs:
 
       - name: Unit test programs
         working-directory: modflow6
-        run: meson test --verbose --no-rebuild -C builddir
+        run: pixi run test builddir
 
       - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+        working-directory: modflow6
+        run: pixi run update-flopy
 
       - name: Get executables
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+        run: pixi run get-exes
 
       - name: Test programs
-        working-directory: modflow6/autotest
+        working-directory: modflow6
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
+            pixi run autotest -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0 -m "not large"
+            pixi run autotest -m "not large"
           fi
+      
+      - name: Upload failed test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}-${{ env.FC }}-${{ env.FC_V }}
+          path: modflow6/autotest/.failed
 
       - name: Test scripts
-        working-directory: modflow6/distribution
+        working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
+        run: pixi run test-dist-scripts
         
   parallel_test:
     name: Parallel testing
@@ -394,13 +440,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
+        os: [ ubuntu-22.04, macos-12, windows-2022 ]
     defaults:
       run:
-        shell: bash -l {0}
-    env:
-      FC: gfortran
-      GCC_V: 12
+        shell: bash
+    
     steps:
 
       - name: Checkout modflow6
@@ -408,127 +452,27 @@ jobs:
         with:
           path: modflow6
 
-      - name: Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.7.0
         with:
-          update: true
-          install: |
-            git
-            make
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-python-pytest
+          pixi-version: v0.19.1
+          manifest-path: "modflow6/pixi.toml"
 
-      - name: Setup MPI
-        if: runner.os == 'Windows'
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: msmpi
-
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: fortran-lang/setup-fortran@v1
-        with:
-          compiler: gcc
-          version: ${{ env.GCC_V }}
-
-      - name: Cache PETSc
-        id: cache-petsc
-        uses: actions/cache@v4
-        with:
-          path: petsc
-          key: ${{ runner.os }}-petsc
-
-      - name: Clone PETSc
-        if: runner.os != 'Windows' && steps.cache-petsc.outputs.cache-hit != 'true'
-        run: git clone -b release https://gitlab.com/petsc/petsc.git petsc
-
-      - name: Download PETSc
-        if: runner.os == 'Windows'
-        run: |
-          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.4.tar.gz -O -J
-          mkdir petsc
-          tar -xzf petsc-3.18.4.tar.gz -C petsc --strip-components=1
-
-      - name: Configure environment
-        if: runner.os == 'Linux'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
-
-      - name: Configure environment
-        if: runner.os == 'macOS'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
-
-      - name: Configure PETSc
-        if: runner.os == 'Linux'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
-          sudo make all
-
-      - name: Configure PETSc
-        if: runner.os == 'macOS'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
-          sudo make all
-
-      - name: Configure PETSc
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        working-directory: petsc
-        run: |
-          pacman -Syu
-          pacman -Sy --noconfirm autoconf automake-wrapper bison bsdcpio make git \
-            mingw-w64-x86_64-toolchain patch python flex \
-            pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
-            mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq
-          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
-          make all
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          init-shell: >-
-            bash
-            powershell
-          cache-environment: true
-          cache-downloads: true
-
-      - name: Build modflow6
+      - name: Custom pixi install
         working-directory: modflow6
-        run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+        run: pixi run install
 
-      - name: Show Meson logs
+      - name: Test parallel MF6
+        if: runner.os != 'Windows'
+        uses: ./modflow6/.github/actions/test-par
+
+      - name: Test parallel MF6 (Windows)
+        if: runner.os == 'Windows'
+        uses: ./modflow6/.github/actions/test-par-win
+
+      - name: Upload failed test output
         if: failure()
-        working-directory: modflow6
-        run: cat builddir/meson-logs/meson-log.txt
-
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
-      - name: Get executables
-        working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-
-      - name: Test programs (parallel)
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          branch="${{ github.ref_name }}"
-          marker="not large"
-          markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
-          pytest -v -n auto --parallel --durations 0 -m "$markers"
-          
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ matrix.os }}
+          path: modflow6/autotest/.failed

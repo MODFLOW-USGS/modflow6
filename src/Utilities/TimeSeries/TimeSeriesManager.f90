@@ -541,10 +541,16 @@ contains
   ! -- Non-type-bound procedures
 
   !> @brief Call this subroutine if the time-series link is available or needed
+  !!
+  !! This routine assumes that there is not an existing link for the
+  !! specified package and array row and column.  For the standard
+  !! boundary package, all links are removed by calling the tsmanager%reset()
+  !! method.  For advanced packages, there is a separate routine called
+  !! read_value_or_time_series_adv, which should be used instead of this one.
   !<
   subroutine read_value_or_time_series(textInput, ii, jj, bndElem, pkgName, &
                                        auxOrBnd, tsManager, iprpak, tsLink)
-    ! -- dummy
+    ! dummy
     character(len=*), intent(in) :: textInput
     integer(I4B), intent(in) :: ii
     integer(I4B), intent(in) :: jj
@@ -554,62 +560,43 @@ contains
     type(TimeSeriesManagerType), intent(inout) :: tsManager
     integer(I4B), intent(in) :: iprpak
     type(TimeSeriesLinkType), pointer, intent(inout) :: tsLink
-    ! -- local
+    ! local
     type(TimeSeriesType), pointer :: timeseries => null()
-    type(TimeSeriesLinkType), pointer :: tslTemp => null()
-    integer(I4B) :: i, istat, nlinks
+    integer(I4B) :: istat
     real(DP) :: r
     character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
-    logical :: found
-    !
+
     read (textInput, *, iostat=istat) r
     if (istat == 0) then
       bndElem = r
     else
+
+      ! Check to see if this is a time series name
       tsNameTemp = textInput
       call UPCASE(tsNameTemp)
-      ! -- If text is a time-series name, get value
-      !    from time series.
       timeseries => tsManager%get_time_series(tsNameTemp)
-      ! -- Create a time series link and add it to the package
-      !    list of time series links used by the array.
+
+      ! If this is a time series, then create a link between
+      ! the time series and the row and column position of
+      ! bndElem
       if (associated(timeseries)) then
         ! -- Assign value from time series to current
         !    array element
         r = timeseries%GetValue(totimsav, totim, &
                                 tsManager%extendTsToEndOfSimulation)
         bndElem = r
-        ! Look to see if this array element already has a time series
-        ! linked to it.  If not, make a link to it.
-        nlinks = tsManager%CountLinks(auxOrBnd)
-        found = .false.
-        searchlinks: do i = 1, nlinks
-          tslTemp => tsManager%GetLink(auxOrBnd, i)
-          if (tslTemp%PackageName == pkgName) then
-            ! -- Check ii, jj against iRow, jCol stored in link
-            if (tslTemp%IRow == ii .and. tslTemp%JCol == jj) then
-              ! -- This array element is already linked to a time series.
-              tsLink => tslTemp
-              found = .true.
-              exit searchlinks
-            end if
-          end if
-        end do searchlinks
-        if (.not. found) then
-          ! -- Link was not found. Make one and add it to the list.
-          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
-                                   ii, jj, iprpak, tsLink, '', '')
-        end if
+        ! Make a new link between the time series and the row and
+        ! column position in the array
+        call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
+                                 ii, jj, iprpak, tsLink, '', '')
       else
         errmsg = 'Error in list input. Expected numeric value or '// &
                  "time-series name, but found '"//trim(textInput)//"'."
         call store_error(errmsg)
       end if
     end if
-    !
-    ! -- Return
-    return
+
   end subroutine read_value_or_time_series
 
   !> @brief Call this subroutine from advanced packages to define timeseries

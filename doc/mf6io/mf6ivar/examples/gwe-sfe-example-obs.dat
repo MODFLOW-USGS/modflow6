@@ -1,0 +1,25 @@
+BEGIN options
+  DIGITS  7
+  PRINT_INPUT
+END options
+
+BEGIN continuous  FILEOUT  gwe_sfe02.sfe.obs.csv
+# obsname            obstype        id1        id2
+  sfe-1-temp         TEMPERATURE    1
+  sfe-1-extinflow    EXT-INFLOW     1
+  sfe-1-rain         RAINFALL       1
+  sfe-1-roff         RUNOFF         1
+  sfe-1-stor         STORAGE        1
+  sfe-1-const        CONSTANT       1
+  sfe-1-gwe1         SFE            1          1
+  sfe-1-gwe2         SFE            1          2
+  sfe-2-gwe1         SFE            2          1
+  sfe-1-mylake1      SFE            MYREACHES
+  sfe-1-fjf          FLOW-JA-FACE   1          2
+  sfe-2-fjf          FLOW-JA-FACE   2          1
+  sfe-3-fjf          FLOW-JA-FACE   2          3
+  sfe-4-fjf          FLOW-JA-FACE   3          2
+  sfe-5-fjf          FLOW-JA-FACE   MYREACH1
+  sfe-6-fjf          FLOW-JA-FACE   MYREACH2
+  sfe-7-fjf          FLOW-JA-FACE   MYREACH3
+END continuous

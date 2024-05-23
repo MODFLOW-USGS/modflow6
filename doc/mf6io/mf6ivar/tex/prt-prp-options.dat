@@ -1,0 +1,15 @@
+BEGIN OPTIONS
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  EXIT_SOLVE_TOLERANCE <exit_solve_tolerance>
+  [LOCAL_Z]
+  [TRACK FILEOUT <trackfile>]
+  [TRACKCSV FILEOUT <trackcsvfile>]
+  [STOPTIME <stoptime>]
+  [STOPTRAVELTIME <stoptraveltime>]
+  [STOP_AT_WEAK_SINK]
+  [ISTOPZONE <istopzone>]
+  [DRAPE]
+  [RELEASE_TIMES <times(unknown)>]
+  [RELEASE_TIMESFILE <timesfile>]
+END OPTIONS

@@ -1,0 +1,10 @@
+#The OPTIONS block is optional
+BEGIN OPTIONS
+END OPTIONS
+
+#The GRIDDATA block is required
+BEGIN GRIDDATA
+  POROSITY
+    CONSTANT 1.
+END GRIDDATA
+

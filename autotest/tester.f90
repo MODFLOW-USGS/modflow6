@@ -11,6 +11,8 @@ program tester
   use TestMathUtil, only: collect_mathutil
   use TestMessage, only: collect_message
   use TestSim, only: collect_sim
+  use TestSwfUtils, only: collect_swfutils
+  use TestTimeSelect, only: collect_timeselect
   implicit none
   integer :: stat, is
   character(len=:), allocatable :: suite_name, test_name
@@ -27,7 +29,9 @@ program tester
                new_testsuite("List", collect_list), &
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("Message", collect_message), &
-               new_testsuite("Sim", collect_sim) &
+               new_testsuite("Sim", collect_sim), &
+               new_testsuite("SwfUtils", collect_swfutils), &
+               new_testsuite("TimeSelect", collect_timeselect) &
                ]
 
   call get_argument(1, suite_name)

@@ -1,0 +1,100 @@
+
+The Particle Tracking (PRT) Model for \mf calculates three-dimensional, advective particle trajectories in flowing groundwater. The PRT Model is designed to work with the Groundwater Flow (GWF) Model \citep{modflow6gwf} for \mf, which simulates transient, three-dimensional groundwater flow. The PRT Model replicates much of the functionality of MODPATH 7 \citep{pollock2016modpath7} and offers support for a much broader class of unstructured grids. The PRT model uses the same spatial discretization used by the GWF Model, which may be represented using either a structured (DIS) or an unstructured (DISV) grid. The PRT Model can be run in the same simulation as the associated GWF Model or in a separate simulation that reads previously calculated flows from a binary budget file. The version of the PRT Model documented here does not support grids of DISU type, tracking of particles through advanced stress package features such as lakes or streams reaches, or exchange of particles between PRT models.  The PRT Model simulates the forward tracking of particles; however, backward particle tracking is possible using a procedure described here for reversing simulated flows from a previous GWF simulation and using those flows as input to PRT. 
+
+\subsection{Tracking Approach} \label{sec:trackingapproach}
+
+The Particle Tracking Model (PRT) Model solves for advective particle trajectories based on cell-cell flows calculated by the Groundwater Flow (GWF) Model. The overall approach to tracking a particle through a model cell is similar to that in MODPATH 7.
+
+\begin{itemize}
+\item On each time step of the simulation, convert cell-cell flows on the faces of the cell that contains the particle to normal velocities (velocity components normal to the cell faces). The normal velocity is assumed to be uniform along each cell face.
+\item Interpolate the normal-velocity information to enable calculation of a particle velocity at any point within the cell.
+\item Solve analytically or semi-analytically for the particle trajectory through the cell.
+\item Continue tracking the particle from cell to cell as necessary until the end of the time step or until the particle exits the model or terminates for another reason.
+\end{itemize}
+
+The interpolation and solution method used by the PRT Model in a given cell depends on the geometry of the cell in plan view.
+
+\begin{itemize}
+\item For rectangular cells, Pollock's method \citep{pollock2016modpath7} is used.
+\item For cells adjacent to quad-refined cells subject to the constraints described in \citep{pollock2016modpath7}, Pollock's subcell method for quad refinement \citep{pollock2015} is used.
+\item For all other \mf cells, a generalization of Pollock's method is used. The generalized method is described below. For rectangular cells, it is mathematically equivalent to Pollock's original method.
+\end{itemize}
+
+\noindent On DISV grids, which can contain a mix of rectangular, quad-refined, and non-rectangular cells, the PRT Model identifies the geometry of each cell and applies the most efficient tracking method possible. Rectagular cells do not need to be aligned with the model coordinate axes to be recognized as rectangular. Because measures of the cell geometry are compared with numerical tolerances, it is recommended that the cell vertex coordinates be written to double precision in the model input for a DISV grid.
+
+By default, flows associated with stress packages are assumed to be distributed uniformly over the volume of a cell, as in MODPATH 7. Distributed external inflows and outflows are reflected in the cell-cell flows calculated by the GWF Model, but they are not directly involved in determining the normal face velocities used to track a particle through the cell. The user can optionally assign a flow associated with a stress package to any face of the cell. In MODPATH 7, this is done by setting the value of an input parameter called IFACE to a value that corresponds to one of the six faces of a rectangular cell (left, right, front, back, bottom, and top). In the PRT Model, assignment of external flows is done by setting the value of an input parameter called IFLOWFACE to a value that corresponds to one of the cell faces. To accommodate non-rectangular cells, the face numbering scheme in the PRT Model is different from that in MODPATH 7 and is based on clockwise ordering of the cell faces, as described in the \mf input instructions.
+
+\subsection{Generalized Pollock's Method For Non-Rectangular Cells} \label{sec:genpollockmethod}
+
+\cite{zhang2012} review particle tracking methods that ``extend the widely used velocity interpolation algorithms, such as Pollock's algorithm, to more complex geometries." They classify methods according to (1) whether the method refines a cell into subcells, (2) the basis functions used to interpolate velocity, (3) whether the interpolated velocity is continuous throughout a cell, (4) and whether the method is locally conservative. The generalization of Pollock's method used in the PRT Model is new as of this writing, but it is related to the methods reviewed by \cite{zhang2012} and fits into their classification as described below:
+
+\begin{itemize}
+\item The new method used in the PRT Model subdivides a polygonal cell (in plan view) radially into triangular subcells. Each subcell has one edge that coincides with a cell edge and two edges that are internal to the cell. The number of subcells equals the number of faces of the polygonal cell, and all subcells share a vertex at the centroid of cell. The cell centroid calculated by PRT is not necessarily identical to the cell center specified by the user for a DISV grid.
+\item Cell-face normal velocities are used to calculate a velocity vector at each vertex of each subcell, including the shared cell-centroid vertex. The basis functions used to interpolate velocity within a subcell are relatively ``low-order" in that they are linear, and the normal velocity is assumed to be constant along the subcell edge that coincides with a cell edge. However, they allow the normal velocity to vary along subcell edges that are internal to the cell, making them more flexible than the lowest-order (``RT\textsubscript{0} space") functions described by \cite{zhang2012}.
+\item Interpolated velocity vectors are discontinuous across boundaries between subcells in the sense that the component along the subcell boundary can be different on each side of the boundary. However, the normal component of velocity is continuous across subcell boundaries, as required by continuity of flow. The interpolated velocity is also continuous in the sense used by \cite{zhang2012}, which is that the subcells share a single cell-centroid velocity. Based on their testing of related methods, \cite{zhang2012} note that ``velocity continuity is not as important as local conservation for the purpose of streamline applications," i.e., particle tracking.
+\item The new method is locally conservative. In mathematical terms, this means that the divergence of the velocity field is uniform through each subcell and the same in all subcells, thereby honoring the divergence for the cell as a whole. In practical terms, it means that subcells will not appear to contain external sources or sinks of water or storage effects if the cell as a whole does not contain external sources, sinks, or storage effects. This helps avoid artificial convergence or spreading apart of closely adjacent particle tracks.
+\end{itemize}
+
+As in MODPATH 7, movement of a particle in the $z$ (vertical) direction is calculated independently from its movement in the $(x, y)$ (horizontal) plane \citep{pollock2016modpath7} . Therefore, the discussions of vertex velocities and the trajectory solution below focus on two-dimensional motion within the horizontal plane.
+
+\subsubsection{Calculation of vertex velocities}
+
+A single velocity vector ($x$ and $y$ velocity components) could be calculated at each cell vertex such that each vertex velocity respects the uniform normal velocity along each cell faces. A centroid velocity could then be calculated by averaging the vertex velocities. However, this approach would not be locally conservative. The additional degrees of freedom (velocity components to be calculated) that are needed to allow local conservation can be introduced by using higher-order basis functions, but that approach typically requires expensive numerical integration of the particle trajectory \citep{zhang2012}. An alternative is to introduce the requisite additional degrees of freedom by allowing each subcell to have its own distinct velocity vector at the cell centroid, but that has the obvious disadvantage that the velocity is discontinuous at the cell centroid. The method used in the PRT Model is novel in that it uses relatively low-order basis functions that allow for semi-analytical solution of the particle trajectory, together with two velocities at each cell vertex (one for each of the two subcells that share the vertex) and a single cell-centroid velocity to provide sufficient degrees of freedom for local conservation. This approach can also accommodate the discontinuity in cell-face normal velocity that occurs when two cell faces meet at a $180^\circ$ angle, as occurs in quad-refined grids.
+
+For a cell with $N$ polygon faces, the degrees of freedom are $4N$ cell-vertex velocity components and $2$ cell-centroid velocity components, for a total of $4N + 2$ degrees of freedom. The constraints are $2N$ known cell-face normal velocities, $N$ continuity conditions (equality of normal components) along boundaries between subcells, $N - 1$ independent local conservation conditions (equality of divergences), $2$ constraints from setting the cell-centroid velocity to a weighted average of the cell-vertex velocities, and $1$ ``closure constraint," for a total of $4N + 2$ constraints, which matches the number of degrees of freedom.
+
+The closure constraint corresponds to Option 1 described by \cite{zhang2012} and is conceptually equivalent to the closure constraint used in Pollock's subcell method for quad refinement \citep{pollock2015}. It assumes that the velocity field in the cell is irrotational. This is a rigorous assumption provided the porosity and hydraulic conductivity are homogeneous throughout the cell, the hydraulic conductivity is isotropic, and density is uniform. In \mf, the porosity and hydraulic conductivity are homogeneous throughout a cell, but the hydraulic conductivity can be anisotropic and density can be allowed to vary. Strictly speaking it is the head gradient, and not the velocity, that is irrotational in the general case. With 10:1 anisotropy, tests by \cite{zhang2012} of a low-order, locally conservative method with quadrilateral subcells showed ``negligible differences between the different closure constraints" they describe, which represent varying degrees of mathematical rigor. It is possible to incorporate a more mathematically rigorous closure constraint such as Option 2 presented by \cite{zhang2012}, which is due to \cite{cordes1992}, into the calculation of vertex velocities, but that has not been done in the version of the PRT Model described here.
+
+\subsubsection{Velocity Interpolation and Solution of the Particle Trajectory}
+
+As in Pollock's method \citep{pollock2016modpath7} for a rectangular cell, the velocity is assumed to vary linearly in space within a triangular subcell:
+
+\begin{equation}
+v_{\tilde{x}} = \frac{d \tilde{x}}{dt} = v_{\tilde{x}}^{(0)} + w_{\tilde{x} \tilde{x}} \tilde{x} + + w_{\tilde{x} \tilde{y}} \tilde{y}
+\label{eqn:vxlinear}
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+v_{\tilde{y}} = \frac{d \tilde{y}}{dt} = v_{\tilde{y}}^{(0)} + w_{\tilde{y} \tilde{x}} \tilde{x} + + w_{\tilde{y} \tilde{y}} \tilde{y} ,
+\label{eqn:vylinear}
+\end{equation}
+
+\noindent where $t$ is time ($T$), subscripted $v$ indicates a velocity component ($L/T$) in the $\tilde{x}$ or $\tilde{y}$ direction, and subscripted $w$ indicates the constant rate ($1/T$) at which a velocity component changes with $\tilde{x}$ or $\tilde{y}$. The coordinates $\tilde{x}$ and $\tilde{y}$ are Cartesian coordinates ($L$) with their origin at one of the subcell vertices that corresponds to a cell vertex, and rotated such that the $\tilde{y} = 0$ axis coincides with the cell face. Because the normal velocity is assumed to be uniform along the cell face, the coefficient $w_{\tilde{y} \tilde{x}}$ in equation \ref{eqn:vylinear} is zero, eliminating the dependence of equation \ref{eqn:vylinear} on $\tilde{x}$ and allowing it to be integrated analytically, independently of equation \ref{eqn:vxlinear}. The resulting expression for $\tilde{y}$ as a function of time can then be substituted into equation \ref{eqn:vxlinear} to yield an equation that can, once again, be integrated analytically to yield an expression for $\tilde{x}$ as a function of time. The particular forms of the analytical expressions depend on the values of and relationships between the coefficients in equations \ref{eqn:vxlinear} and \ref{eqn:vylinear}, and there are a number of special cases to consider. In any case, equipped with the appropriate expressions, one could guess a value of $t$, analytically calculate the corresponding values of $\tilde{x}$ and $\tilde{y}$, and continue updating one's guesses for $t$ until the point ($\tilde{x}$, $\tilde{y}$) landed on a subcell boundary, at which point the exit time and location of the particle would be known.
+
+To facilitate the identification of possible exit faces and bounding of possible solutions, and to streamline the solution procedure, the generalized Pollock's method transforms equations \ref{eqn:vxlinear} and \ref{eqn:vylinear} into nonorthogonal coordinates $\alpha$ and $\beta$ that correspond to barycentric coordinates on the triangular subcell. The coordinate transformation is linear and results in a pair of ordinary differential equations of the same general form as equations \ref{eqn:vxlinear} and \ref{eqn:vylinear}, with $\alpha$ and $\beta$ taking the places of $\tilde{x}$ and $\tilde{y}$, respectively. The equation for $\beta$ is effectively decoupled from the equation for $\alpha$, which ultimately allows $\alpha$ and $\beta$ to be expressed explicitly as functions of time.
+
+Because of its relatively simple form, the expression for $\beta$ can be inverted to yield an expression for $t$ as a function of $\beta$. Evaluating the subcell face that corresponds to $\beta = 0$ (the cell face) as a possible exit face for the particle is then simply a matter of calculating the exit time by substituting $\beta = 0$ into the expression for $t$. (A negative exit time indicates that that is not an exit face.) Evaluating the subcell face that corresponds to $\alpha = 0$ (one of the subcell faces internal to the cell) is essentially a one-dimensional root-finding exercise: for a given value of $\beta$, one evaluates $t$ and then $\alpha$, and iteration on $\beta$ continues until $\alpha = 0$ is solved. Evaluating the second subcell face internal to the cell as a possible exit face can be formulated as a similar root-finding problem. Because finding the root involves numerical iteration, the method is considered semi-analytical.
+
+\subsection{Packages} \label{sec:packages}
+
+The Model Input (MIP) Package is used to specify properties of the model cells: porosity and, optionally, a retardation factor that modifies particle velocities and a zone number that can be used to define particle termination criteria.
+
+Particles are released into the model using the Particle Release Point (PRP) Package. Multiple PRP packages can be defined for a given PRT model. Each PRP package, which corresponds roughly to a ``particle group" in MODPATH 7 \citep{pollock2016modpath7}, specifies tracking parameters and release locations and times for the particles it releases.
+
+The Flow Model Interface (FMI) Package provides groundwater-flow information to the PRT Model. If a PRT model is run in the same simulation as the corresponding GWF model, the FMI Package provides updated flow information from the GWF model to the PRT model on each time step. If the PRT model is run is a separate simulation, the FMI Package reads flow information from the binary budget and head files written during the flow simulation.
+
+\subsection{Exchanges} \label{sec:exchanges}
+
+The GWF-PRT Exchange establishes the link between a PRT model and its corresponding GWF model when the two models are run in the same simulation. As the version of the PRT Model described here does not support exchange of particles from one model to another, a PRT-PRT Exchange has not been implemented.
+
+\subsection{Backward Tracking} \label{sec:backwardtracking}
+
+Unlike MODPATH 7, the PRT Model does not include an option for ``backward tracking," i.e., tracking of particles backward in time. However, backward tracking can be performed by running a GWF Model flow simulation, reversing the order of the flow budget and head information written to the binary budget and head files, and then running a PRT Model simulation based on the reversed budget and head files. To facilitate the process, FloPy \citep{bakker2016flopy, hughes2023flopy, flopysoftware}, a collection of python scripts that offers full support for preprocessing and postpostcessing \mf simulations, offers a utility to reverse binary budget and head files.
+
+\subsection{Summary of Main Assumptions and Limitations}
+
+The following is a list of the main assumptions and limitations of the PRT Model for \mf documented here:
+
+\begin{itemize}
+\item Particle tracks calculated by the PRT Model take into account advective motion only. Diffusive or dispersive transport of particles is not simulated.
+\item The PRT Model uses the same spatial discretization used by the GWF Model, which may be represented using either a structured (DIS) or an unstructured (DISV) grid. Grids of DISU type are not supported.
+\item Tracking of particles through advanced stress package features such as lakes and streams reaches and exchange of particles between PRT models is not supported.
+\item ``Backward tracking" is not supported explicitly. However, backward tracking can be performed by preprocessing the binary budget and head files to reverse the chronological order of the flow and head information. FloPy \citep{bakker2016flopy, hughes2023flopy, flopysoftware} provides utilities for this.
+\item For non-rectagular cells, a generalization of Pollock's method is used. This method is based on refinement of a polygon cell (in plan view) into triangular subcells, with a linear variation of velocity within each subcell that honors the cell-face normal flows generated by the associated GWF Model. Exit location and time are generally solved using an iterative, one-dimensional root-finding procedure, making the method semi-analytical.
+\item Cell-face normal velocities are assumed to be uniform along each cell face, as in Pollock's original method. This ``low-order" approximation has the advantage of preventing particles from crossing no-flow faces at the outer boundary of a model.
+\item As in the methods described by \cite{zhang2012}, variations in fluid density are not accounted for when enforcing local conservation.
+\item The ``closure constraint" used in calculating cell-vertex velocities is approximate in the case of anisotropic hydraulic conductivity and/or variable density. It is conceptually equivalent to the closure closure constraint used in Pollock's subcell method for quad refinement \citep{pollock2015}.
+\item For a triangular cell, the generalized Pollock's method could be used to calculate the particle trajectory without refinement into triangular subcells. This would improve computational efficiency for triangular cells and will likely be programmed in a future version of the PRT Model.
+\end{itemize}

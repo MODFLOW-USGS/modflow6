@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: If you use this software, please cite the software itself.
 type: software
 title: MODFLOW 6 Modular Hydrologic Model
-version: 6.4.4
-date-released: '2024-02-13'
+version: 6.5.0
+date-released: '2024-05-23'
 doi: 10.5066/F76Q1VQV
 abstract: MODFLOW 6 is an object-oriented program and framework developed to provide
   a platform for supporting multiple models and multiple types of models within the
@@ -29,7 +29,7 @@ authors:
   affiliation: U.S. Geological Survey
   orcid: https://orcid.org/0000-0002-4443-1107
 - family-names: Russcher
-  given-names: Martijn
+  given-names: Martijn J.
   alias: mjr-deltares
   affiliation: Deltares
   orcid: https://orcid.org/0000-0001-8799-6514
@@ -55,7 +55,7 @@ authors:
   alias: mjreno
 - family-names: Bonelli
   given-names: Wesley P.
-  alias: w-bonelli
+  alias: wpbonelli
   affiliation: U.S. Geological Survey
   orcid: https://orcid.org/0000-0002-2665-5078
 - family-names: Boyce

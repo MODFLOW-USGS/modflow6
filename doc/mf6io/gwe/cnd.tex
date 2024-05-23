@@ -1,0 +1,17 @@
+Conduction and Dispersion (CND) Package information is read from the file that is specified by ``CND6'' as the file type.  Only one CND Package can be specified for a GWE model.  By default, the CND Package uses the mathematical formulation presented for the XT3D option of the NPF Package to represent full three-dimensional anisotropy in groundwater flow.  XT3D can be computationally expensive and can be turned off to use a simplified and approximate form of the dispersion equations that also account for conduction in a heat transport model.  For most problems, however, XT3D will be required to accurately represent conduction and dispersion.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-cnd-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-cnd-griddata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwe-cnd-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwe-cnd-example.dat}
+

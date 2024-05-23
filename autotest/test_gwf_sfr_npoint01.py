@@ -33,7 +33,7 @@ xsect_types = (
     "w",
     "v_invalid",
     "|/",
-    "\|",
+    r"\|",
 )
 
 # spatial discretization data

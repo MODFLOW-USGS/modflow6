@@ -123,7 +123,7 @@ contains
     character(len=16) :: labeltitle
     character(len=20) :: bdzone
     !
-    ! -- set values
+    ! -- Set values
     this%ncv = ncv
     this%nbudterm = nbudterm
     this%iflowja = iflowja
@@ -288,7 +288,7 @@ contains
     use TdisModule, only: delt
     ! -- dummy
     class(BudgetObjectType) :: this
-    ! -- dummy
+    ! -- local
     character(len=LENBUDTXT) :: flowtype
     integer(I4B) :: i
     real(DP) :: ratin, ratout
@@ -413,9 +413,15 @@ contains
               exit colterm
             end if
           else
-            if (id1 /= icv) cycle colterm
+            if (id1 /= icv) then
+              cycle colterm
+            end if
           end if
-          v = this%budterm(idx)%get_flow(i)
+          if (id1 /= icv) then
+            v = DZERO
+          else
+            v = this%budterm(idx)%get_flow(i)
+          end if
           if (trim(adjustl(flowtype)) == 'FLOW-JA-FACE') then
             if (v < DZERO) then
               qoutflow = qoutflow + v
@@ -459,7 +465,7 @@ contains
 
   !> @brief Write the budget table
   !<
-  subroutine write_budtable(this, kstp, kper, iout, ibudfl, totim)
+  subroutine write_budtable(this, kstp, kper, iout, ibudfl, totim, delt)
     ! -- dummy
     class(BudgetObjectType) :: this
     integer(I4B), intent(in) :: kstp
@@ -467,8 +473,10 @@ contains
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ibudfl
     real(DP), intent(in) :: totim
+    real(DP), intent(in) :: delt
     !
     ! -- Write the table
+    call this%budtable%finalize_step(delt)
     if (ibudfl /= 0) then
       call this%budtable%budget_ot(kstp, kper, iout)
     end if
@@ -505,7 +513,7 @@ contains
     return
   end subroutine save_flows
 
-  !> @brief Read froms from a binary file into this BudgetObjectType
+  !> @brief Read from a binary file into this BudgetObjectType
   !<
   subroutine read_flows(this, dis, ibinun)
     ! -- dummy
@@ -518,7 +526,6 @@ contains
     real(DP) :: delt
     real(DP) :: pertim
     real(DP) :: totim
-    ! -- dummy
     integer(I4B) :: i
     !
     ! -- Read flows for each budget term
@@ -536,7 +543,7 @@ contains
   subroutine budgetobject_da(this)
     ! -- dummy
     class(BudgetObjectType) :: this
-    ! -- dummy
+    ! -- local
     integer(I4B) :: i
     !
     ! -- Save flows for each budget term
@@ -650,8 +657,9 @@ contains
     class(BudgetObjectType) :: this
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: iout
-    ! -- dummy
+    ! -- local
     logical :: readnext
+    ! -- formats
     character(len=*), parameter :: fmtkstpkper = &
       &"(1x,/1x, a, ' READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
     character(len=*), parameter :: fmtbudkstpkper = &
@@ -700,7 +708,7 @@ contains
     class(BudgetObjectType) :: this
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: iout
-    ! -- dummy
+    ! -- local
     integer(I4B) :: i
     logical :: success
     !

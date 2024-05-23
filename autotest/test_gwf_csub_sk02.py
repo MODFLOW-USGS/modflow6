@@ -339,7 +339,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    # comparision total compaction results
+    # comparison total compaction results
     cpth = cmppths[idx]
     fpth = os.path.join(test.workspace, cpth, "csub_obs.csv")
     try:

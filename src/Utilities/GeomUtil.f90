@@ -1,13 +1,13 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DONE
+  use ConstantsModule, only: DZERO, DONE, DHALF
   implicit none
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, &
-            compose
+            skew, transform, compose, &
+            area, shared_face
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -17,8 +17,10 @@ contains
   end function between
 
   !> @brief Check if a point is within a polygon.
-  !! Vertices and edge points are considered in.
-  !! Reference: https://stackoverflow.com/a/63436180/6514033
+  !!
+  !! Vertices and edge points are considered in the polygon.
+  !! Adapted from https://stackoverflow.com/a/63436180/6514033,
+  !<
   logical function point_in_polygon(x, y, poly)
     ! dummy
     real(DP), intent(in) :: x !< x point coordinate
@@ -38,23 +40,27 @@ contains
       xb = poly(1, ii)
       yb = poly(2, ii)
 
-      if ((x == xa .and. y == ya) .or. (x == xb .and. y == yb)) then
+      if ((x == xa .and. y == ya) .or. &
+          (x == xb .and. y == yb)) then
         ! on vertex
         point_in_polygon = .true.
         exit
-      else if (ya == yb .and. y == ya .and. between(x, xa, xb)) then
+      else if (ya == yb .and. &
+               y == ya .and. &
+               between(x, xa, xb)) then
         ! on horizontal edge
         point_in_polygon = .true.
         exit
       else if (between(y, ya, yb)) then
-        if ((y == ya .and. yb >= ya) .or. (y == yb .and. ya >= yb)) then
+        if ((y == ya .and. yb >= ya) .or. &
+            (y == yb .and. ya >= yb)) then
           xa = xb
           ya = yb
           cycle
         end if
         ! cross product
         c = (xa - x) * (yb - y) - (xb - x) * (ya - y)
-        if (c == 0) then
+        if (c == 0.0_DP) then
           ! on edge
           point_in_polygon = .true.
           exit
@@ -295,7 +301,7 @@ contains
       if (lrotate) then
         ! -- Calculate modified rotation matrix (represented by sinrot
         ! -- and cosrot) as R_add^T R, where R and R_add^T are the existing
-        ! -- rotation matirx and the transpose of the additional rotation
+        ! -- rotation matrix and the transpose of the additional rotation
         ! -- matrix, respectively
         sinrot = cosrot_add * s0 - sinrot_add * c0
         cosrot = cosrot_add * c0 + sinrot_add * s0
@@ -356,5 +362,97 @@ contains
     invert = .false.
     if (present(invert_opt)) invert = invert_opt
   end subroutine defaults
+
+  !> @brief Calculate polygon area, with vertices given in CW or CCW order.
+  function area(xv, yv, cw) result(a)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: xv
+    real(DP), dimension(:), intent(in) :: yv
+    logical(LGP), intent(in), optional :: cw
+    ! result
+    real(DP) :: a
+    integer(I4B) :: s
+
+    if (present(cw)) then
+      if (cw) then
+        s = 1
+      else
+        s = -1
+      end if
+    else
+      s = 1
+    end if
+
+    a = -DHALF * sum(xv(:) * cshift(yv(:), s) - cshift(xv(:), s) * yv(:))
+
+  end function area
+
+  !> @brief Find the lateral face shared by two cells.
+  !!
+  !! Find the lateral (x-y plane) face shared by the given cells.
+  !! The iface return argument will be 0 if they share no such face,
+  !! otherwise the index of the shared face in cell 1's vertex array,
+  !! where face N connects vertex N to vertex N + 1 going clockwise.
+  !!
+  !! Note: assumes the cells are convex and share at most 2 vertices
+  !! and that both vertex arrays are oriented clockwise.
+  !<
+  subroutine shared_face(iverts1, iverts2, iface)
+    integer(I4B), dimension(:) :: iverts1
+    integer(I4B), dimension(:) :: iverts2
+    integer(I4B), intent(out) :: iface
+    integer(I4B) :: nv1
+    integer(I4B) :: nv2
+    integer(I4B) :: il1, iil1
+    integer(I4B) :: il2, iil2
+    logical(LGP) :: found
+    logical(LGP) :: wrapped
+
+    iface = 0
+    found = .false.
+    nv1 = size(iverts1)
+    nv2 = size(iverts2)
+    wrapped = iverts1(1) == iverts1(nv1)
+
+    ! Find a vertex shared by the cells, then check the adjacent faces.
+    ! If the cells share a face, it must be one of these. When looking
+    ! forward in the 1st cell's vertices, look backwards in the 2nd's,
+    ! and vice versa, since a clockwise face in cell 1 must correspond
+    ! to a counter-clockwise face in cell 2.
+    outerloop: do il1 = 1, nv1 - 1
+      do il2 = 1, nv2 - 1
+        if (iverts1(il1) == iverts2(il2)) then
+
+          iil1 = il1 + 1
+          if (il2 == 1) then
+            iil2 = nv2
+            if (wrapped) iil2 = iil2 - 1
+          else
+            iil2 = il2 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = il1
+            exit outerloop
+          end if
+
+          iil2 = il2 + 1
+          if (il1 == 1) then
+            iil1 = nv1
+            if (wrapped) iil1 = iil1 - 1
+          else
+            iil1 = il1 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = iil1
+            exit outerloop
+          end if
+
+        end if
+      end do
+      if (found) exit
+    end do outerloop
+  end subroutine shared_face
 
 end module GeomUtilModule

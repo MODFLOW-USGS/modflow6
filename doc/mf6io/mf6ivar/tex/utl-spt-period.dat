@@ -1,0 +1,5 @@
+BEGIN PERIOD <iper>
+  <bndno> <sptsetting>
+  <bndno> <sptsetting>
+  ...
+END PERIOD

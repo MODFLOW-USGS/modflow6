@@ -1,5 +1,6 @@
 module ImsLinearSolverModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: LENSOLUTIONNAME
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -17,7 +18,6 @@ module ImsLinearSolverModule
     procedure :: initialize => ims_initialize
     procedure :: print_summary => ims_print_summary
     procedure :: solve => ims_solve
-    procedure :: get_result => ims_get_result
     procedure :: destroy => ims_destroy
 
     procedure :: create_matrix => ims_create_matrix
@@ -25,13 +25,15 @@ module ImsLinearSolverModule
 
 contains
 
-  function create_ims_solver() result(solver)
+  function create_ims_solver(sln_name) result(solver)
     class(LinearSolverBaseType), pointer :: solver
+    character(len=LENSOLUTIONNAME) :: sln_name
     ! local
     class(ImsLinearSolverType), pointer :: ims_solver
 
     allocate (ims_solver)
     solver => ims_solver
+    solver%name = sln_name
 
   end function create_ims_solver
 
@@ -53,10 +55,6 @@ contains
     class(VectorBaseType), pointer :: x
     type(ConvergenceSummaryType) :: cnvg_summary
   end subroutine ims_solve
-
-  subroutine ims_get_result(this)
-    class(ImsLinearSolverType) :: this
-  end subroutine ims_get_result
 
   subroutine ims_destroy(this)
     class(ImsLinearSolverType) :: this

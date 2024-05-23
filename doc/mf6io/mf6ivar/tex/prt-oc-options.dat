@@ -1,0 +1,14 @@
+BEGIN OPTIONS
+  [BUDGET FILEOUT <budgetfile>]
+  [BUDGETCSV FILEOUT <budgetcsvfile>]
+  [TRACK FILEOUT <trackfile>]
+  [TRACKCSV FILEOUT <trackcsvfile>]
+  [TRACK_RELEASE]
+  [TRACK_EXIT]
+  [TRACK_TIMESTEP]
+  [TRACK_TERMINATE]
+  [TRACK_WEAKSINK]
+  [TRACK_USERTIME]
+  [TRACK_TIMES <times(unknown)>]
+  [TRACK_TIMESFILE <timesfile>]
+END OPTIONS

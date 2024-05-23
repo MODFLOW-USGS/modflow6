@@ -1,0 +1,72 @@
+[project]
+name = "modflow6"
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
+version = "6.5.0"
+
+[dependencies]
+appdirs = "*"
+codespell = "*"
+filelock = "*"
+flaky = "*"
+fortran-language-server = "*"
+fprettify = "*"
+gitpython = "*"
+jupytext = "*"
+matplotlib = "*"
+meson = "1.3.0"
+networkx = "*"
+ninja = "*"
+numpy = "*"
+pandas = "*"
+pip = "*"
+pydotplus = "*"
+pyshp = "*"
+pytest = "!=8.1.0"
+pytest-benchmark = "*"
+pytest-dotenv = "*"
+pytest-order = "*"
+pytest-xdist = "*"
+python = "3.9.*"
+requests = "*"
+scipy = "*"
+shapely = "*"
+syrupy = "*"
+xmipy = "*"
+
+[tasks]
+# install
+install-flopy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/flopy.git"
+install-pymake = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/pymake.git"
+install-modflowapi = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflowapi.git"
+install-modflow-devtools = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflow-devtools.git"
+install = { depends_on = [
+    "install-flopy",
+    "install-pymake",
+    "install-modflowapi",
+    "install-modflow-devtools",
+] }
+
+# format
+check-format = "python .github/common/check_format.py"
+check-vfproj = "python .github/common/check_vfproj.py"
+check-spelling = "python .github/common/check_spelling.py"
+
+# build/test
+setup = "meson setup --prefix=$(pwd) --libdir=bin"
+build = "meson install -C"
+test = "meson test --verbose --no-rebuild -C"
+update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
+get-exes = { cmd = "pytest -v --durations 0 get_exes.py", cwd = "autotest" }
+autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd = "autotest" }
+
+# dist/docs
+benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
+run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
+build-docs = { cmd = "python build_docs.py", cwd = "distribution" }
+build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
+build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
+test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
+update-version = { cmd = "python update_version.py", cwd = "distribution" }
+deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
+sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }

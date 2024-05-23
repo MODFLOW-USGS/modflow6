@@ -510,10 +510,10 @@ def setup_model(namefile, dst, remove_existing=True, extrafiles=None):
     dst : str
         destination path for comparison model or file(s)
     remove_existing : bool
-        boolean indicating if an existing comparision model or file(s) should
+        boolean indicating if an existing comparison model or file(s) should
         be replaced (default is True)
     extrafiles : str or list of str
-        list of extra files to include in the comparision
+        list of extra files to include in the comparison
 
     """
     # Construct src pth from namefile or lgr file

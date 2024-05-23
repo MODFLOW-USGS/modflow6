@@ -178,6 +178,7 @@ A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes 
 6.4.2 & June 28, 2023 & \url{https://doi.org/10.5066/P9FL1JCC} \\
 6.4.3 & February 7, 2024 & \url{https://doi.org/10.5066/P9FL1JCC} \\
 6.4.4 & February 13, 2024 & \url{https://doi.org/10.5066/P9FL1JCC} \\
+6.5.0 & May 23, 2024 & \url{https://doi.org/10.5066/P13COJJM} \\
 \hline
 \label{tab:releases}
 \end{tabular*}
@@ -201,7 +202,7 @@ This section describes known issues with this release of MODFLOW~6.
 \begin{enumerate}
 
 \item
-The READARRAY utility is used by some packages to read arrays of numeric values provided by the user.  The READARRAY utility has an IPRN option (as described in the MODFLOW 6 Description of Input and Output), which will cause the array to be written to the model listing file.  Support for the IPRN option has been removed for some packages and will ultimately be removed for all packages.  An alternative for IPRN functionality is presently under development.
+The READARRAY utility is used by some packages to read arrays of numeric values provided by the user.  The READARRAY utility has an IPRN option (as described in the MODFLOW 6 Description of Input and Output), which will cause the array to be written to the model listing file.  Support for the IPRN option has been removed for some packages and will ultimately be removed for all packages.  A new option, called ``EXPORT\_ARRAY\_ASCII'' has been implemented for some packages to support writing of gridded data to external text files.  This option has been implemented to replace the IPRN functionality.
 
 \item
 The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and streams has not been implemented.
@@ -227,6 +228,9 @@ The Time-Variable Hydraulic Conductivity (TVK) Package is incompatible with the 
 \item
 If a GWF-GWF Exchange is active, then neither of the connected GWF Models can have an active Viscosity (VSC) Package.
 
+\item 
+If a GWT-GWT Exchange is active, then constant concentration conditions cannot be assigned on the interface between the two connected models.  
+
 \end{enumerate}
 
 In addition to the issues shown here, a comprehensive and up-to-date list is available under the issues tab at \url{https://github.com/MODFLOW-USGS/modflow6}.
@@ -234,10 +238,7 @@ In addition to the issues shown here, a comprehensive and up-to-date list is ava
 
 % -------------------------------------------------
 \section{Distribution File}
-The following distribution file is for use on personal computers: \texttt{\modflowversion\_[ostag].zip}.  The distribution file is a compressed zip file. The following directory structure is incorporated in the zip file:
-
-% folder structured created by python script
-\input{folder_struct.tex}
+The MODFLOW~6 distribution is provided in the form of a compressed zip file.  Distributions are available for several different operating systems, including Windows, Mac, and Linux.  Distributions are marked with an operating system tag, called ``ostag''.  Values for ``ostag'' include ``win64'', ``mac'', and ``linux'', for example.  Distribution files for the current release are labeled as \texttt{\modflowversion\_[ostag].zip}.  Thus, the distribution file for Windows for the current release is \texttt{\modflowversion\_win64.zip}.
 
 It is recommended that no user files are kept in the release directory.  If you do plan to put your own files in the release directory, do so only by creating additional subdirectories.
 
@@ -247,23 +248,31 @@ There is no installation of MODFLOW~6 other than the requirement that \texttt{\m
 
 To make the executable versions of MODFLOW~6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW~6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
 
-As an alternative, the executable file, named ``\texttt{mf6.exe}'' on Windows, in the \modflowversion\_[ostag]/bin directory can be copied into a directory already included in the PATH environment variable.
+As an alternative, the executable file (named ``\texttt{mf6.exe}'' on Windows or ``\texttt{mf6}'' on Mac and Linux) in the \modflowversion\_[ostag]/bin directory can be copied into a directory already included in the PATH environment variable.
 
-To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
+To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for a file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
 
 % -------------------------------------------------
 \section{Compiling MODFLOW~6}
-MODFLOW~6 has been compiled using Intel Fortran and GNU Fortran on Windows, macOS, and several Linux operating systems. All MODFLOW~6 distributions are currently compiled with Intel Fortran. Because the program uses relatively new Fortran functionality, recent versions of the compilers may be required for successful compilation. MODFLOW~6 is not yet compatible with the latest versions of the Intel toolchain, however.
+MODFLOW~6 has been compiled using Intel Fortran and GNU Fortran on Windows, macOS, and several Linux operating systems. All MODFLOW~6 distributions are currently compiled with Intel Fortran. Because the program uses relatively new Fortran functionality, recent versions of the compilers may be required for successful compilation. MODFLOW~6 has been successfully compiled with the latest versions of the Intel toolchain.
 
-MODFLOW~6 is currently tested with gfortran 7-12 on Linux and gfortran 12 on macOS and Windows. The gfortran version can be queried with ``\verb|gfortran --version|''.  Intel Fortran Compiler Classic version 2022.3.0 is currently tested on all three platforms. Some 2021 versions have also been reported compatible. At this time, MODFLOW~6 is not compatible with the next-generation Intel Fortran Compiler `ifx`.
+MODFLOW~6 is currently tested with gfortran 11-13 on Linux, macOS, and Windows. The gfortran version can be queried with ``\verb|gfortran --version|''.  Intel Fortran Compiler Classic version 2022.3.0 is currently tested on all three platforms. Some 2021 versions have also been reported compatible. MODFLOW~6 is also compatible with the next-generation Intel Fortran Compiler `ifx`; however, additional testing is underway.
 
-Meson is the recommended build tool for MODFLOW~6.  For more detailed compilation instructions, please refer to \url{https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#building}.
+Instructions for compiling the parallel version of MODFLOW~6 are available through a dedicated page on the \href{https://github.com/MODFLOW-USGS/modflow6/wiki/Parallel-MODFLOW-User-Guide}{MODFLOW~6 repository}.
 
-This distribution contains the Microsoft Visual Studio solution and project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler Classic.  The files have been used successfully with recent versions of Microsoft Visual Studio Community 2019 and the Intel Fortran Compiler Classic.
+There are several options for building MODFLOW, as described below.
 
-This distribution also includes a makefile for compiling MODFLOW~6 with \texttt{gfortran}.  The makefile is contained in the \texttt{make} folder.
+\begin{itemize}
 
-For those familiar with Python, the pymake package can also be used to compile MODFLOW~6.  Additional information on the Python pymake utility can be found at: \url{https://github.com/modflowpy/pymake}.
+\item Meson is the recommended build tool for MODFLOW~6.  Refer to the \href{https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#building}{detailed compilation instructions} for more information.
+
+\item The distribution includes Microsoft Visual Studio solution and project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler Classic.  The files have been used successfully with recent versions of Microsoft Visual Studio Community 2019 and the Intel Fortran Compiler Classic.
+
+\item This distribution also includes a makefile for compiling MODFLOW~6 with \texttt{gfortran}.  The makefile is contained in the \texttt{make} folder.
+
+\item For those familiar with Python, the \href{https://github.com/modflowpy/pymake}{pymake package} can also be used to compile MODFLOW~6.
+
+\end{itemize}
 
 % -------------------------------------------------
 \section{System Requirements}
@@ -294,6 +303,8 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \item \bibentry{modflow6gwt}
 
 \item \bibentry{modflow6csub}
+
+\item \bibentry{langevin2024}
 
 \end{itemize}
  

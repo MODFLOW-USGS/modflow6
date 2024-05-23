@@ -635,14 +635,16 @@ contains
 
     vdc => null()
     if (header%container_type == VDC_GWFMODEL_TYPE .or. &
-        header%container_type == VDC_GWTMODEL_TYPE) then
+        header%container_type == VDC_GWTMODEL_TYPE .or. &
+        header%container_type == VDC_GWEMODEL_TYPE) then
       do i = 1, size(this%vdc_models)
         vdc => this%vdc_models(i)%ptr
         if (vdc%id == header%id) return
         vdc => null()
       end do
     else if (header%container_type == VDC_GWFEXG_TYPE .or. &
-             header%container_type == VDC_GWTEXG_TYPE) then
+             header%container_type == VDC_GWTEXG_TYPE .or. &
+             header%container_type == VDC_GWEEXG_TYPE) then
       do i = 1, size(this%vdc_exchanges)
         vdc => this%vdc_exchanges(i)%ptr
         if (vdc%id == header%id) return

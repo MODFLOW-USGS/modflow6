@@ -1,0 +1,8 @@
+BEGIN GRIDDATA
+  POROSITY [LAYERED]
+    <porosity(nodes)> -- READARRAY
+  [RETFACTOR [LAYERED]
+    <retfactor(nodes)> -- READARRAY]
+  [IZONE [LAYERED]
+    <izone(nodes)> -- READARRAY]
+END GRIDDATA

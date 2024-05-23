@@ -18,7 +18,7 @@ module SourceLoadModule
   private
   public :: create_input_loader
   public :: open_source_file
-  public :: load_modelnam, load_simnam
+  public :: load_modelnam, load_simnam, load_simtdis
   public :: remote_model_ndim
 
 contains
@@ -147,9 +147,12 @@ contains
 
   subroutine load_simnam()
     use SimVariablesModule, only: simfile, iout
+    use MemoryManagerModule, only: mem_setptr, mem_print_detailed
     use MessageModule, only: write_message
     use IdmMf6FileModule, only: input_load
-    type(ModflowInputType) :: mf6_input
+    use SourceCommonModule, only: filein_fname
+    type(ModflowInputType) :: mf6_input, hpc_input
+    character(len=LINELENGTH) :: hpc6_filename
     character(len=LINELENGTH) :: line
     logical :: lexist
     !
@@ -168,11 +171,75 @@ contains
       !
       ! -- open namfile and load to input context
       call input_load(simfile, mf6_input, simfile, iout)
+      !
+      ! -- load optional HPC configuration file
+      if (filein_fname(hpc6_filename, 'HPC6_FILENAME', mf6_input%mempath, &
+                       simfile)) then
+        hpc_input = getModflowInput('HPC6', 'UTL', 'HPC', 'UTL', 'HPC')
+        call input_load(hpc6_filename, hpc_input, simfile, iout)
+      end if
     end if
     !
     ! -- return
     return
   end subroutine load_simnam
+
+  subroutine load_simtdis()
+    ! -- modules
+    use SimVariablesModule, only: simfile, iout
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use SimVariablesModule, only: idm_context
+    use SourceCommonModule, only: package_source_type
+    use IdmMf6FileModule, only: input_load
+    ! -- dummy
+    ! -- locals
+    character(len=LENMEMPATH) :: input_mempath
+    type(ModflowInputType) :: mf6_input
+    character(len=LENPACKAGENAME) :: source_type
+    character(len=:), pointer :: tdis6
+    logical :: lexist
+    !
+    ! -- set input memory path
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    !
+    ! -- set pointers to input context timing params
+    call mem_setptr(tdis6, 'TDIS6', input_mempath)
+    !
+    ! -- create timing
+    if (tdis6 /= '') then
+      !
+      ! -- set source type
+      source_type = package_source_type(tdis6)
+      !
+      select case (source_type)
+      case ('MF6FILE')
+        !
+        inquire (file=trim(adjustl(tdis6)), exist=lexist)
+        !
+        if (lexist) then
+          !
+          ! -- create description of input
+          mf6_input = getModflowInput('TDIS6', 'SIM', 'TDIS', &
+                                      'SIM', 'TDIS', simfile)
+          !
+          ! -- open namfile and load to input context
+          call input_load(tdis6, mf6_input, simfile, iout)
+          !
+        else
+          write (errmsg, '(a)') &
+            'Simulation TIMING input file "'//trim(tdis6)// &
+            '" does not exist.'
+          call store_error(errmsg)
+          call store_error_filename(simfile)
+        end if
+      case default
+      end select
+    end if
+    !
+    ! -- return
+    return
+  end subroutine load_simtdis
 
   function remote_model_ndim(mtype, mfname) result(ncelldim)
     use SourceCommonModule, only: package_source_type
@@ -231,6 +298,9 @@ contains
           case ('DIS6')
             ncelldim = 3
             exit
+          case ('DIS2D6')
+            ncelldim = 2
+            exit
           case ('DISV6')
             ncelldim = 2
             exit
@@ -238,6 +308,10 @@ contains
             ncelldim = 1
             exit
           case default
+            write (errmsg, '(a)') &
+              'Unknown discretization type "'//trim(ptype)// &
+              '" not currently supported.'
+            call store_error(errmsg, .true.)
           end select
         end do
       end if

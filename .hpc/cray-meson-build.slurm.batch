@@ -34,7 +34,7 @@ TESTDIR=$MODFLOW6ROOT/.mf6minsim
 PREFIX=/home/software/denali/contrib/impd/apps/modflow/$VERSION/$PE_ENV/19.1.0.166
 
 # build MODFLOW 6
-CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup $BUILDDIR --prefix=$PREFIX --bindir=bin --libdir=lib -Dcray=true -Ddebug=false
+CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup $BUILDDIR --prefix=$PREFIX --bindir=bin --libdir=lib -Dcray=true -Ddebug=false --wipe
 meson compile -C $BUILDDIR
 
 # install MODFLOW 6

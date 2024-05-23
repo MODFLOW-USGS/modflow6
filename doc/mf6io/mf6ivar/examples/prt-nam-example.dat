@@ -1,0 +1,11 @@
+# This block is optional
+BEGIN OPTIONS
+END OPTIONS
+
+BEGIN PACKAGES
+  DIS6       parttrack.dis
+  MIP6       parttrack.mip
+  PRP6       parttrack.prp
+  OC6        parttrack.oc
+END PACKAGES
+

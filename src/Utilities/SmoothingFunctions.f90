@@ -280,7 +280,7 @@ contains
   !!
   !! Nonlinear quadratic saturation function returns value between 0-1
   !<
-  function sQuadraticSaturation(top, bot, x, eps, bmin) result(y)
+  function sQuadraticSaturation(top, bot, x, eps) result(y)
     ! -- return
     real(DP) :: y
     ! -- dummy variables
@@ -288,10 +288,8 @@ contains
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
     real(DP), optional, intent(in) :: eps
-    real(DP), optional, intent(in) :: bmin
     ! -- local
     real(DP) :: teps
-    real(DP) :: tbmin
     real(DP) :: b
     real(DP) :: br
     real(DP) :: bri
@@ -302,11 +300,6 @@ contains
       teps = eps
     else
       teps = DEM6
-    end if
-    if (present(bmin)) then
-      tbmin = bmin
-    else
-      tbmin = DZERO
     end if
     b = top - bot
     if (b > DZERO) then
@@ -319,9 +312,6 @@ contains
       end if
       av = DONE / (DONE - teps)
       bri = DONE - br
-      if (br < tbmin) then
-        br = tbmin
-      end if
       if (br < teps) then
         y = av * DHALF * (br * br) / teps
       elseif (br < (DONE - teps)) then
@@ -381,7 +371,7 @@ contains
   !!
   !! Derivative of nonlinear smoothing function returns value between 0-1;
   !<
-  function sQuadraticSaturationDerivative(top, bot, x, eps, bmin) result(y)
+  function sQuadraticSaturationDerivative(top, bot, x, eps) result(y)
     ! -- return
     real(DP) :: y
     ! -- dummy variables
@@ -389,10 +379,8 @@ contains
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
     real(DP), optional, intent(in) :: eps
-    real(DP), optional, intent(in) :: bmin
     ! -- local
     real(DP) :: teps
-    real(DP) :: tbmin
     real(DP) :: b
     real(DP) :: br
     real(DP) :: bri
@@ -404,11 +392,6 @@ contains
     else
       teps = DEM6
     end if
-    if (present(bmin)) then
-      tbmin = bmin
-    else
-      tbmin = DZERO
-    end if
     b = top - bot
     if (x < bot) then
       br = DZERO
@@ -419,9 +402,6 @@ contains
     end if
     av = DONE / (DONE - teps)
     bri = DONE - br
-    if (br < tbmin) then
-      br = tbmin
-    end if
     if (br < teps) then
       y = av * br / teps
     elseif (br < (DONE - teps)) then
@@ -469,7 +449,7 @@ contains
       cof2 = DTHREE
     end if
     !
-    ! -- calculate head diference from bottom (w),
+    ! -- calculate head difference from bottom (w),
     !    calculate range (b), and
     !    calculate normalized head difference from bottom (s)
     w = x - bot
@@ -527,7 +507,7 @@ contains
       cof2 = DTHREE
     end if
     !
-    ! -- calculate head diference from bottom (w),
+    ! -- calculate head difference from bottom (w),
     !    calculate range (b), and
     !    calculate normalized head difference from bottom (s)
     w = x - bot

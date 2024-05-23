@@ -16,7 +16,9 @@ module SolutionGroupModule
     integer(I4B), pointer :: mxiter
     integer(I4B), pointer :: nsolutions
     integer(I4B), dimension(:), allocatable :: idsolutions !array of solution ids in basesolutionlist
+
   contains
+
     procedure :: sgp_ca
     procedure :: sgp_da
     procedure, private :: allocate_scalars
@@ -25,16 +27,12 @@ module SolutionGroupModule
 
 contains
 
+  !> @brief Create a new solution group
+  !<
   subroutine solutiongroup_create(sgp, id)
-! ******************************************************************************
-! solutiongroup_create -- Create a new solution group
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     type(SolutionGroupType), pointer :: sgp
     integer(I4B), intent(in) :: id
-! ------------------------------------------------------------------------------
     !
     allocate (sgp)
     call sgp%allocate_scalars()
@@ -44,16 +42,13 @@ contains
     return
   end subroutine solutiongroup_create
 
+  !> @brief Calculate the solution group
+  !!
+  !! Solve each solution group and each solution.  Start with converge
+  !! flag equal true and reset to zero if any non-convergence triggers
+  !! are encountered.
+  !<
   subroutine sgp_ca(this)
-! ******************************************************************************
-! sgp_ca -- Calculate the solution group
-!    Solve each solution group and each solution.  Start with converge
-!    flag equal true and reset to zero if any non-convergence triggers
-!    are encountered.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: iout, isimcnvg, lastStepFailed
@@ -68,7 +63,6 @@ contains
     character(len=*), parameter :: fmtnocnvg = &
       "(1X,'Solution Group ', i0, ' did not converge for stress period ', i0, &
        &' and time step ', i0)"
-! ------------------------------------------------------------------------------
     !
     ! -- Suppress output during picard iterations
     if (this%mxiter > 1) then
@@ -117,15 +111,11 @@ contains
     return
   end subroutine sgp_ca
 
+  !> @brief Deallocate
+  !<
   subroutine sgp_da(this)
-! ******************************************************************************
-! deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(SolutionGroupType) :: this
-! ------------------------------------------------------------------------------
     !
     deallocate (this%id)
     deallocate (this%mxiter)
@@ -136,15 +126,11 @@ contains
     return
   end subroutine sgp_da
 
+  !> @brief Allocate scalars
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(SolutionGroupType) :: this
-! ------------------------------------------------------------------------------
     !
     allocate (this%id)
     allocate (this%mxiter)
@@ -157,13 +143,9 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Add solution
+  !<
   subroutine add_solution(this, isoln, sp)
-! ******************************************************************************
-! add_solution
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
@@ -172,7 +154,6 @@ contains
     class(BaseSolutionType), pointer, intent(in) :: sp
     ! -- local
     integer(I4B) :: ipos
-! ------------------------------------------------------------------------------
     !
     call ExpandArray(this%idsolutions)
     ipos = size(this%idsolutions)
@@ -185,7 +166,9 @@ contains
 
   function CastAsSolutionGroupClass(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(SolutionGroupType), pointer :: res
     !
     res => null()

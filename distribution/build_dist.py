@@ -6,26 +6,27 @@ import textwrap
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
-from shutil import copy, copyfile, copytree, ignore_patterns
+from shutil import copy, copyfile, copytree, ignore_patterns, rmtree
+from typing import List, Optional
 
 import pytest
-from modflow_devtools.build import meson_build
-from modflow_devtools.download import download_and_unzip, get_release
-from modflow_devtools.markers import requires_exe
-from modflow_devtools.misc import get_model_paths
-
 from build_docs import build_documentation
 from build_makefiles import (
     build_mf5to6_makefile,
     build_mf6_makefile,
     build_zbud6_makefile,
 )
-from utils import get_project_root_path, run_command
+from modflow_devtools.build import meson_build
+from modflow_devtools.download import download_and_unzip, get_release
+from modflow_devtools.markers import no_parallel, requires_exe
+from modflow_devtools.misc import get_model_paths
+
+from utils import get_project_root_path
 
 # default paths
 _project_root_path = get_project_root_path()
-_examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _build_path = _project_root_path / "builddir"
+_default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
 
 # OS-specific extensions
 _system = platform.system()
@@ -84,6 +85,7 @@ def copy_sources(output_path: PathLike):
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
 
+@no_parallel
 def test_copy_sources(tmp_path):
     copy_sources(tmp_path)
 
@@ -103,53 +105,27 @@ def test_copy_sources(tmp_path):
     assert (tmp_path / "utils" / "mf5to6" / "pymake").is_dir()
     assert (tmp_path / "utils" / "zonebudget" / "pymake").is_dir()
     assert not (tmp_path / "utils" / "idmloader").is_dir()
-    
-
-
-def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
-
-    # create examples, but don't run them
-    examples_path = examples_repo_path / "examples"
-    examples_path.mkdir(parents=True, exist_ok=True)
-    if not overwrite and any(get_model_paths(examples_path)):
-        print(f"Examples already built")
-    else:
-        print(f"Building examples")
-        scripts_folder = examples_repo_path / "scripts"
-        exclude_list = ["ex-gwf-capture.py"]
-        scripts = [
-            fname
-            for fname in scripts_folder.glob("*")
-            if fname.suffix == ".py"
-            and fname.stem.startswith("ex-")
-            and fname.stem not in exclude_list
-        ]
-        for script in scripts:
-            argv = [
-                sys.executable,
-                script,
-                "--no_run",
-                "--no_plot",
-                "--destination",
-                examples_path,
-            ]
-            print(f"running {argv} in {scripts_folder}")
-            run_command(argv, scripts_folder)
 
 
 def setup_examples(
-    bin_path: PathLike, examples_path: PathLike, overwrite: bool = False
+    bin_path: PathLike,
+    examples_path: PathLike,
+    overwrite: bool = False,
+    models: Optional[List[str]] = None,
 ):
     examples_path = Path(examples_path).expanduser().absolute()
-
-    # download example models zip asset
     latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
     assets = latest["assets"]
     asset = next(
         iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None
     )
+    # download example models zip asset
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
+
+    # filter examples for models selected for release
+    for p in examples_path.glob("*"):
+        if not any(m in p.stem for m in models):
+            rmtree(p)
 
     # list folders with mfsim.nam (recursively)
     # and add run.sh/bat script to each folder
@@ -235,6 +211,7 @@ def build_programs_meson(
         print(f"Execute permission set for {target}")
 
 
+@no_parallel
 def test_build_programs_meson(tmp_path):
     build_programs_meson(tmp_path / "builddir", tmp_path / "bin")
 
@@ -278,6 +255,7 @@ def build_makefiles(output_path: PathLike):
     )
 
 
+@no_parallel
 def test_build_makefiles(tmp_path):
     build_makefiles(tmp_path)
 
@@ -296,15 +274,14 @@ def test_build_makefiles(tmp_path):
 def build_distribution(
     build_path: PathLike,
     output_path: PathLike,
-    examples_repo_path: PathLike,
     full: bool = False,
     overwrite: bool = False,
+    models: Optional[List[str]] = None,
 ):
     print(f"Building {'full' if full else 'minimal'} distribution")
 
     build_path = Path(build_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
-    examples_repo_path = Path(examples_repo_path).expanduser().absolute()
 
     # binaries
     build_programs_meson(
@@ -318,11 +295,12 @@ def build_distribution(
     if not full:
         return
 
-    # examples
+    # download and setup example models
     setup_examples(
         bin_path=output_path / "bin",
         examples_path=output_path / "examples",
         overwrite=overwrite,
+        models=models,
     )
 
     # copy source code files
@@ -331,7 +309,7 @@ def build_distribution(
     # build and copy makefiles
     build_makefiles(output_path=output_path)
 
-    # docs
+    # build docs
     build_documentation(
         bin_path=output_path / "bin",
         full=full,
@@ -340,6 +318,7 @@ def build_distribution(
     )
 
 
+@no_parallel
 @requires_exe("pdflatex")
 @pytest.mark.skip(reason="manual testing")
 @pytest.mark.parametrize("full", [True, False])
@@ -348,7 +327,6 @@ def test_build_distribution(tmp_path, full):
     build_distribution(
         build_path=tmp_path / "builddir",
         output_path=output_path,
-        examples_repo_path=_examples_repo_path,
         full=full,
         overwrite=True,
     )
@@ -407,11 +385,11 @@ if __name__ == "__main__":
         help="Path to create distribution artifacts",
     )
     parser.add_argument(
-        "-e",
-        "--examples-repo-path",
+        "-m",
+        "--model",
         required=False,
-        default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models",
+        action="append",
+        help="Filter models to include",
     )
     parser.add_argument(
         "--full",
@@ -431,20 +409,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     build_path = Path(args.build_path)
     out_path = Path(args.output_path)
-    examples_repo_path = (
-        Path(args.examples_repo_path)
-        if args.examples_repo_path
-        else _examples_repo_path
-    )
-    assert (
-        examples_repo_path.is_dir()
-    ), f"Examples repo not found at path: {examples_repo_path}"
     out_path.mkdir(parents=True, exist_ok=True)
+    models = args.model if args.model else _default_models
 
     build_distribution(
         build_path=build_path,
         output_path=out_path,
-        examples_repo_path=examples_repo_path,
         full=args.full,
         overwrite=args.force,
+        models=models,
     )

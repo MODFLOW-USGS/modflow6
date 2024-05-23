@@ -27,7 +27,11 @@ _markdown_file_name = "run-time-comparison.md"
 _is_windows = sys.platform.lower() == "win32"
 _app_ext = ".exe" if _is_windows else ""
 _soext = ".dll" if _is_windows else ".so"
-_ostag = "win64" if _is_windows else "linux" if sys.platform.lower().startswith("linux") else "mac"
+_ostag = (
+    "win64"
+    if _is_windows
+    else "linux" if sys.platform.lower().startswith("linux") else "mac"
+)
 
 
 def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:

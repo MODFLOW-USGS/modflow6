@@ -117,6 +117,7 @@ module ConstantsModule
   real(DP), parameter :: DEM30 = 1.0e-30_DP !< real constant 1e-30
 
   real(DP), parameter :: DPREC = EPSILON(1.0_DP) !< real constant machine precision
+  real(DP), parameter :: DPRECSQRT = SQRT(DPREC)
   real(DP), parameter :: DSAME = DHUNDRED * DPREC !< real constant for values that are considered
                                                   !! the same based on machine precision
 
@@ -136,57 +137,90 @@ module ConstantsModule
      '     LAYER', '    CELL2D', '          ', &
      '     LAYER', '       ROW', '       COL'], [3, 3]) !< cellid labels for DIS, DISV, and DISU discretizations
 
-  ! -- enumerator used with TimeSeriesType
+  !> @brief enumerator used with TimeSeriesType
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: UNDEFINED = 0 !< 0
-    ENUMERATOR :: STEPWISE = 1 !< 1
-    ENUMERATOR :: LINEAR = 2 !< 2
-    ENUMERATOR :: LINEAREND = 3 !< 3
+    ENUMERATOR :: UNDEFINED = 0 !< undefined interpolation
+    ENUMERATOR :: STEPWISE = 1 !< stepwise interpolation
+    ENUMERATOR :: LINEAR = 2 !< linear interpolation
+    ENUMERATOR :: LINEAREND = 3 !< linear end interpolation
   END ENUM
 
-  ! -- enumerator used with table objects
+  !> @brief enumerator associated with Discretization types
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: TABLEFT = 0 !< 0
-    ENUMERATOR :: TABCENTER = 1 !< 1
-    ENUMERATOR :: TABRIGHT = 2 !< 2
+    ENUMERATOR :: DISUNDEF = 0 !< undefined discretization
+    ! -- 3D (base) discretizations
+    ENUMERATOR :: DIS = 1 !< DIS6 discretization
+    ENUMERATOR :: DISV = 2 !< DISU6 discretization
+    ENUMERATOR :: DISU = 3 !< DISV6 discretization
+    ! -- 1D discretizations
+    ENUMERATOR :: DIS1D = 101 !< DIS1D6 discretization
+    ENUMERATOR :: DISV1D = 102 !< DISV1D6 discretization
+    ENUMERATOR :: DISU1D = 103 !< DISU1D6 discretization
+    ! -- 2D discretizations
+    ENUMERATOR :: DIS2D = 201 !< DIS2D6 discretization
+    ENUMERATOR :: DISV2D = 202 !< DISV2D6 discretization
+    ENUMERATOR :: DISU2D = 203 !< DISU2D6 discretization
   END ENUM
 
-  ! -- enumerator used to define table column data type
+  !> @brief enumerator used with table objects
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: TABSTRING = 0 !< 0
-    ENUMERATOR :: TABUCSTRING = 1 !< 1
-    ENUMERATOR :: TABINTEGER = 2 !< 2
-    ENUMERATOR :: TABREAL = 3 !< 3
+    ENUMERATOR :: TABLEFT = 0 !< left justified table column
+    ENUMERATOR :: TABCENTER = 1 !< centered table column
+    ENUMERATOR :: TABRIGHT = 2 !< right justified table column
   END ENUM
 
-  ! -- enumerator used to define output option
+  !> @brief enumerator used to define table column data type
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: VSUMMARY = 0 !< 0
-    ENUMERATOR :: VALL = 1 !< 1
-    ENUMERATOR :: VDEBUG = 2 !< 2
+    ENUMERATOR :: TABSTRING = 0 !< string table data
+    ENUMERATOR :: TABUCSTRING = 1 !< upper case string table data
+    ENUMERATOR :: TABINTEGER = 2 !< integer table data
+    ENUMERATOR :: TABREAL = 3 !< real table data
   END ENUM
 
-  ! -- enumerator that defines the operating system
+  !> @brief enumerator used to define output option
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: OSUNDEF = 0 !< 0
-    ENUMERATOR :: OSLINUX = 1 !< 1
-    ENUMERATOR :: OSMAC = 2 !< 2
-    ENUMERATOR :: OSWIN = 3 !< 3
+    ENUMERATOR :: VSUMMARY = 0 !< write summary output
+    ENUMERATOR :: VALL = 1 !< write all simulation notes and warnings
+    ENUMERATOR :: VDEBUG = 2 !< write debug output
   END ENUM
 
-  ! -- enumerator that defines the simulation mode
+  !> @brief enumerator that defines the operating system
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: MVALIDATE = 0 !< 0
-    ENUMERATOR :: MNORMAL = 1 !< 1
-    ENUMERATOR :: MRUN = 2 !< 2
+    ENUMERATOR :: OSUNDEF = 0 !< unknown operating system
+    ENUMERATOR :: OSLINUX = 1 !< Linux operating system
+    ENUMERATOR :: OSMAC = 2 !< MacOS operating system
+    ENUMERATOR :: OSWIN = 3 !< Windows operating system
   END ENUM
 
-  ! -- enumerator that defines the compiler
+  !> @brief enumerator that defines the simulation mode
+  !<
   ENUM, BIND(C)
-    ENUMERATOR :: CUNKNOWN = 0 !< 0
-    ENUMERATOR :: CGFORTRAN = 1 !< 1
-    ENUMERATOR :: CINTEL = 3 !< 2
-    ENUMERATOR :: CCRAYFTN = 3 !< 3
+    ENUMERATOR :: MVALIDATE = 0 !< validation mode - do not run time steps
+    ENUMERATOR :: MNORMAL = 1 !< normal output mode
+    ENUMERATOR :: MRUN = 2 !< run output mode
+  END ENUM
+
+  !> @brief enumerator that defines the compiler
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: CUNKNOWN = 0 !< unknown compiler
+    ENUMERATOR :: CGFORTRAN = 1 !< gfortran compiler
+    ENUMERATOR :: CINTEL = 3 !< intel ifort compiler
+    ENUMERATOR :: CCRAYFTN = 3 !< cray fortran compiler
+  END ENUM
+
+  !> @brief enumerator that defines the cell connection type
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: C3D_VERTICAL = 0 !< vertical connection
+    ENUMERATOR :: C3D_HORIZONTAL = 1 !< horizontal connection
+    ENUMERATOR :: C3D_STAGGERED = 2 !< horizontal connection for a vertically staggered grid
   END ENUM
 
 end module ConstantsModule

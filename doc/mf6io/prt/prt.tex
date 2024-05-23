@@ -1,0 +1,132 @@
+The PRT Model calculates three-dimensional, advective particle trajectories in flowing groundwater. The PRT Model is designed to work with the Groundwater Flow (GWF) Model \citep{modflow6gwf} and uses the same spatial discretization, which may be represented using either a structured (DIS) or an unstructured (DISV) grid. The PRT Model replicates much of the functionality of MODPATH 7 \citep{pollock2016modpath7} and offers support for a much broader class of unstructured grids. The PRT Model can be run in the same simulation as the associated GWF Model or in a separate simulation that reads previously calculated flows from a binary budget file. The version of the PRT Model documented here does not support grids of DISU type, tracking of particles through advanced stress package features such as lakes or streams reaches, or exchange of particles between PRT models.
+
+This section describes the data files for a \mf Particle Tracking (PRT) Model.  A PRT Model is added to the simulation by including a PRT entry in the MODELS block of the simulation name file.  There are currently two types of spatial discretization approaches that can be used with the PRT Model: DIS and DISV.  The input instructions for these three packages are not described here in this section on PRT Model input; input instructions for these three packages are described in the section on GWF Model input.  Note that for a PRT Model, the maximum number of vertices for a cell in a DISV grid is limited to 8.
+
+The PRT Model is designed to permit input to be gathered, as it is needed, from many different files.  Likewise, results from the model calculations can be written to a number of output files. Details about the files used by each package are provided in this section on the PRT Model Instructions.
+
+The PRT Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
+
+For the PRT Model, ``flows'' (unless stated otherwise) represent particle mass ``flow'' in mass per time, rather than groundwater flow.  Each particle is currently assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
+
+\subsection{Units of Length and Time}
+The PRT Model formulates the particle trajectory equations without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
+
+\subsection{Time Stepping}
+In \mf time step lengths are controlled by the user and specified in the Temporal Discretization (TDIS) input file.  When the flow model and particle-tracking model run in the same simulation, the time step length specified in TDIS is used for both models.  If the PRT Model runs in a separate simulation, the time discretization may differ.  Instructions for specifying time steps are described in the TDIS section of this user guide; additional information on GWF and PRT configurations are in the Flow Model Interface section.  
+
+\subsection{Specifying Cell Face Flows using IFLOWFACE}
+
+By default, flows associated with stress packages are assumed to be distributed uniformly over the volume of a cell. Distributed external inflows and outflows are reflected in the cell-cell flows calculated by the GWF Model, but they are not directly involved in determining the normal face velocities used to track a particle through the cell. The user can optionally assign a flow associated with a stress package to any face of the cell. Assignment of external flows is done by setting the value of an auxiliary package variable called IFLOWFACE to a value that corresponds to one of the cell faces. To accommodate non-rectangular cells, the face numbering scheme in the PRT Model is based on clockwise ordering of the cell faces. For a DIS-grid cell, face 1 is the ``western'' face, i.e., the face parallel to the y axis that has the lesser x coordinate. For a DISV-grid cell, face 1 is the face that extends in the clockwise direction from the first vertex listed for that cell in the CELL2D input block.
+
+\subsection{Particle Mass Budget}
+A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
+
+\subsection{Particle Track Output}
+
+The PRT Model supports both binary and CSV particle track output files. A particle track CSV file contains the output data in tabular format. The first line of the CSV file contains column names. Each subsequent line in the file contains a row of data for a single particle track record, with the following fields:
+
+\vspace{5mm}
+\noindent Column 0: \texttt{`KPER'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 1: \texttt{`KSTP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 2: \texttt{`IMDL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 3: \texttt{`IPRP'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 4: \texttt{`IRPT'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 5: \texttt{`ILAY'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 6: \texttt{`ICELL'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 7: \texttt{`IZONE'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 8: \texttt{`ISTATUS'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 9: \texttt{`IREASON'} {\color{red} \footnotesize{INTEGER}} \\
+\noindent Column 10: \texttt{`TRELEASE'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 11: \texttt{`T'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 12: \texttt{`X'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 13: \texttt{`Y'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 14: \texttt{`Z'} {\color{red} \footnotesize{DOUBLE}} \\
+\noindent Column 15: \texttt{`NAME'} {\color{red} \footnotesize{CHARACTER(LEN=LENBOUNDNAME)}} \\
+
+\vspace{2mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{KPER} is the stress period number
+\item \texttt{KSTP} is the time step number
+\item \texttt{IMDL} is the number of the model the particle originated in
+\item \texttt{IPRP} is the number of the particle release point (PRP) package the particle originated in
+\item \texttt{IRPT} is the release point number
+\item \texttt{ILAY} is the layer number
+\item \texttt{ICELL} is the cell number
+\item \texttt{IZONE} is the zone number
+\item \texttt{ISTATUS} is the particle status code
+\item \texttt{IREASON} is the reporting reason code
+\item \texttt{TRELEASE} is the particle release time
+\item \texttt{T} is the particle tracking time
+\item \texttt{X} is the particle x coordinate
+\item \texttt{Y} is the particle y coordinate
+\item \texttt{Z} is the particle z coordinate
+\item \texttt{NAME} is the name of the particle release point
+\end{description}
+
+The ISTATUS field indicates the status of the particle:
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{0}: particle was released
+\item \texttt{1}: particle is being actively tracked
+\item \texttt{2}: particle terminated at a boundary face
+\item \texttt{3}: particle terminated in a weak sink cell
+\item \texttt{4}: \textit{unused}
+\item \texttt{5}: particle terminated in a cell with no exit face
+\item \texttt{6}: particle terminated in a stop zone
+\item \texttt{7}: particle terminated in an inactive cell
+\item \texttt{8}: particle terminated immediately upon release into a dry cell
+\item \texttt{9}: particle terminated in a subcell with no exit face
+\end{description}
+
+The IREASON field indicates the reason the particle track record was saved:
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{0}: particle was released
+\item \texttt{1}: particle exited a cell
+\item \texttt{2}: time step ended
+\item \texttt{3}: particle terminated
+\item \texttt{4}: particle exited a weak sink cell
+\item \texttt{5}: user-specified tracking time
+\end{description}
+
+By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
+
+The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
+
+
+
+
+
+\newpage
+\subsection{PRT Model Name File}
+\input{prt/namefile.tex}
+
+%\newpage
+%\subsection{Structured Discretization (DIS) Input File}
+%\input{gwf/dis}
+
+%\newpage
+%\subsection{Discretization with Vertices (DISV) Input File}
+%\input{gwf/disv}
+
+%\newpage
+%\subsection{Unstructured Discretization (DISU) Input File}
+%\input{gwf/disu}
+
+\newpage
+\subsection{Model Input (MIP) Package}
+\input{prt/mip}
+
+\newpage
+\subsection{Particle Release Point (PRP) Package}
+\input{prt/prp}
+
+\newpage
+\subsection{Output Control (OC) Option}
+\input{prt/oc}
+
+\newpage
+\subsection{Flow Model Interface (FMI) Package}
+\input{prt/fmi}

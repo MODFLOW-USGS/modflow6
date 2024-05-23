@@ -5,7 +5,7 @@ a smaller time step.
 """
 
 import os
-
+import pathlib as pl
 import flopy
 import numpy as np
 import pytest
@@ -212,6 +212,7 @@ def build_models(idx, test):
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         budget_filerecord=f"{gwfname}.cbc",
+        budgetcsv_filerecord=f"{gwfname}.bud.csv",
         head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -288,6 +289,64 @@ def get_kij_from_node(node, nrow, ncol):
     i = int(ij / ncol)
     j = ij - i * ncol
     return k, i, j
+
+
+def budcsv_to_cumulative(fpth):
+    budcsv = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
+    nrow = budcsv.shape[0]
+    budcsv_cumulative = np.zeros((nrow + 1), dtype=budcsv.dtype)
+    budcsv_cumulative["time"][1:] = budcsv["time"][:]
+    for name in budcsv.dtype.names[1:]:
+        for i in range(nrow):
+            dt = budcsv_cumulative["time"][i + 1] - budcsv_cumulative["time"][i]
+            budcsv_cumulative[name][i + 1] = budcsv_cumulative[name][i] + budcsv[name][i] * dt
+    return budcsv_cumulative
+
+
+def listfile_to_cumulative(listfile):
+    import flopy
+    mflist = flopy.utils.Mf6ListBudget(listfile)
+    return mflist.get_cumulative()
+
+
+def compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol):
+    """Read a budgetcsv file, convert it to a cumulative budget
+    and then compare it with the cumulative budget in a list file"""
+    
+    if verbose:
+        print(f"Comparing {listfile} with {budcsvfile}")
+
+    # get a cumulative budget from the budcsv file
+    budcsvcum = budcsv_to_cumulative(budcsvfile)
+
+    # get the cumulative budget from the list file
+    budlstcum = listfile_to_cumulative(listfile)
+
+    # if print budget is not active for every time step, then the list file
+    # budget may not be complete and comparable to budcsvfile
+    assert budcsvcum.shape[0] - 1 == budlstcum.shape[0], "File sizes are different."
+
+    allclose_list = []
+    for name1 in budlstcum.dtype.names[3:]:
+        nl = name1.split("_")
+        if len(nl) > 1:            
+            for name2 in budcsvcum.dtype.names:
+                if nl[0] in name2 and nl[1] in name2:
+                    # print(f"Found match: {name1} and {name2}")
+                    diff = budcsvcum[name2][1:] - budlstcum[name1]
+                    mindiff = diff.min()
+                    maxdiff = diff.max()
+                    allclose = np.allclose(budcsvcum[name2][1:], budlstcum[name1], atol=atol)
+                    msg = f"{name2} is same: {allclose}.  Min diff: {mindiff} Max diff {maxdiff}"
+                    if verbose:
+                        print(msg)
+                    allclose_list.append((allclose, name1, mindiff, maxdiff, msg))
+
+    if check:
+        for rec in allclose_list:
+            assert rec[0], rec[-1]
+
+    return allclose_list
 
 
 def check_output(idx, test):
@@ -406,6 +465,13 @@ def check_output(idx, test):
 
     # make_plot(sim, times, head, stage)
     # make_plot_xsect(sim, head, stage)
+
+    listfile = pl.Path(test.workspace) / f"{test.name}.lst"
+    budcsvfile = pl.Path(test.workspace) / f"{test.name}.bud.csv"
+    verbose = True
+    check = True
+    atol = 0.001
+    compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol)
 
 
 @pytest.mark.slow

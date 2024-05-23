@@ -1,0 +1,26 @@
+BEGIN options
+  DIGITS  7
+  PRINT_INPUT
+END options
+
+BEGIN continuous  FILEOUT  gwe_lke02.lke.obs.csv
+# obsname            obstype        id1        id2
+  lke-1-temp         TEMPERATURE    1
+  lke-1-extinflow    EXT-INFLOW     1
+  lke-1-rain         RAINFALL       1
+  lke-1-roff         RUNOFF         1
+  lke-1-wdrl         WITHDRAWAL     1
+  lke-1-stor         STORAGE        1
+  lke-1-const        CONSTANT       1
+  lke-1-gwe1         LKE            1          1
+  lke-1-gwe2         LKE            1          2
+  lke-2-gwe1         LKE            2          1
+  lke-1-mylake1      LKE            MYLAKE1
+  lke-1-fjf          FLOW-JA-FACE   1          2
+  lke-2-fjf          FLOW-JA-FACE   2          1
+  lke-3-fjf          FLOW-JA-FACE   2          3
+  lke-4-fjf          FLOW-JA-FACE   3          2
+  lke-5-fjf          FLOW-JA-FACE   MYLAKE1
+  lke-6-fjf          FLOW-JA-FACE   MYLAKE2
+  lke-7-fjf          FLOW-JA-FACE   MYLAKE3
+END continuous

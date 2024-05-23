@@ -1,0 +1,77 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{BUDGET}---keyword to specify that record corresponds to the budget.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{budgetfile}---name of the output file to write budget information.
+
+\item \texttt{BUDGETCSV}---keyword to specify that record corresponds to the budget CSV.
+
+\item \texttt{budgetcsvfile}---name of the comma-separated value (CSV) output file to write budget summary information.  A budget summary record will be written to this file for each time step of the simulation.
+
+\item \texttt{TRACK}---keyword to specify that record corresponds to a binary track file.  Each PRT Model's OC Package may have only one binary track output file.
+
+\item \texttt{trackfile}---name of the binary output file to write tracking information.
+
+\item \texttt{TRACKCSV}---keyword to specify that record corresponds to a CSV track file.  Each PRT Model's OC Package may have only one CSV track file.
+
+\item \texttt{trackcsvfile}---name of the comma-separated value (CSV) file to write tracking information.
+
+\item \texttt{TRACK\_RELEASE}---keyword to indicate that particle tracking output is to be written when a particle is released
+
+\item \texttt{TRACK\_EXIT}---keyword to indicate that particle tracking output is to be written when a particle exits a cell
+
+\item \texttt{TRACK\_TIMESTEP}---keyword to indicate that particle tracking output is to be written at the end of each time step
+
+\item \texttt{TRACK\_TERMINATE}---keyword to indicate that particle tracking output is to be written when a particle terminates for any reason
+
+\item \texttt{TRACK\_WEAKSINK}---keyword to indicate that particle tracking output is to be written when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells)
+
+\item \texttt{TRACK\_USERTIME}---keyword to indicate that particle tracking output is to be written at user-specified times, provided as double precision values to the TRACK\_TIMES or TRACK\_TIMESFILE options
+
+\item \texttt{TRACK\_TIMES}---keyword indicating tracking times will follow
+
+\item \texttt{times}---times to track, relative to the beginning of the simulation.
+
+\item \texttt{TRACK\_TIMESFILE}---keyword indicating tracking times file name will follow
+
+\item \texttt{timesfile}---name of the tracking times file
+
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+
+\item \texttt{SAVE}---keyword to indicate that information will be saved this stress period.
+
+\item \texttt{PRINT}---keyword to indicate that information will be printed this stress period.
+
+\item \texttt{rtype}---type of information to save or print.  Can only be BUDGET.
+
+\item \texttt{ocsetting}---specifies the steps for which the data will be saved.
+
+\begin{lstlisting}[style=blockdefinition]
+ALL
+FIRST
+LAST
+FREQUENCY <frequency>
+STEPS <steps(<nstp)>
+\end{lstlisting}
+
+\item \texttt{ALL}---keyword to indicate save for all time steps in period.
+
+\item \texttt{FIRST}---keyword to indicate save for first step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps.
+
+\item \texttt{LAST}---keyword to indicate save for last step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps.
+
+\item \texttt{frequency}---save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps.
+
+\item \texttt{steps}---save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps.
+
+\end{description}
+

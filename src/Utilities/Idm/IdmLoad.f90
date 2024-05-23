@@ -10,7 +10,7 @@ module IdmLoadModule
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, &
                              LENEXCHANGENAME, LENCOMPONENTNAME
-  use SimModule, only: store_error, store_error_filename
+  use SimModule, only: store_error, count_errors, store_error_filename
   use ListModule, only: ListType
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, &
                                  DynamicPkgLoadBaseType, &
@@ -21,6 +21,7 @@ module IdmLoadModule
   implicit none
   private
   public :: simnam_load
+  public :: simtdis_load
   public :: load_models
   public :: load_exchanges
   public :: idm_df
@@ -109,6 +110,12 @@ contains
       end if
     end do
     !
+    ! -- deallocate input context SIM paths
+    call memorylist_remove('UTL', 'HPC', idm_context)
+    call memorylist_remove('SIM', 'TDIS', idm_context)
+    call memorylist_remove('SIM', 'NAM', idm_context)
+    call memorylist_remove(component='SIM', context=idm_context)
+    !
     ! -- return
     return
   end subroutine idm_da
@@ -124,7 +131,10 @@ contains
     integer(I4B), intent(in) :: iout
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
-    class(ModelDynamicPkgsType), pointer :: dynamic_pkgs => null()
+    class(ModelDynamicPkgsType), pointer :: dynamic_pkgs
+    !
+    ! -- initialize
+    nullify (dynamic_pkgs)
     !
     ! -- create model package loader
     static_loader => &
@@ -198,19 +208,21 @@ contains
 
   !> @brief load model namfiles and model package files
   !<
-  subroutine load_models(model_loadmask, iout)
+  subroutine load_models(iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use CharacterStringModule, only: CharacterStringType
-    use SimVariablesModule, only: idm_context
+    use DistributedSimModule, only: DistributedSimType, get_dsim
+    use SimVariablesModule, only: idm_context, simfile
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceCommonModule, only: idm_component_type
+    use SourceCommonModule, only: idm_component_type, inlen_check
     use SourceLoadModule, only: load_modelnam
     ! -- dummy
-    integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
-    ! -- locals
+    ! -- local
+    type(DistributedSimType), pointer :: ds
+    integer(I4B), dimension(:), pointer :: model_loadmask
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mtypes !< model types
@@ -222,6 +234,10 @@ contains
     character(len=LENMODELNAME) :: mname
     type(ModelPackageInputsType), allocatable :: model_pkg_inputs
     integer(I4B) :: n
+    !
+    ! -- get model mask
+    ds => get_dsim()
+    model_loadmask => ds%get_load_mask()
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -236,7 +252,12 @@ contains
       ! -- attributes for this model
       mtype = mtypes(n)
       mfname = mfnames(n)
-      mname = mnames(n)
+      call inlen_check(mnames(n), mname, LENMODELNAME, 'MODELNAME')
+      !
+      ! -- terminate if errors were detected
+      if (count_errors() > 0) then
+        call store_error_filename(simfile)
+      end if
       !
       ! -- load specified model inputs
       if (model_loadmask(n) > 0) then
@@ -266,19 +287,22 @@ contains
 
   !> @brief load exchange files
   !<
-  subroutine load_exchanges(model_loadmask, iout)
+  subroutine load_exchanges(iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate, &
                                    mem_deallocate, get_isize
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
-    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
+    use DistributedSimModule, only: DistributedSimType, get_dsim
+    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr, &
+                                  inlen_check
     use SourceLoadModule, only: create_input_loader, remote_model_ndim
     ! -- dummy
-    integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout
-    ! -- locals
+    ! -- local
+    type(DistributedSimType), pointer :: ds
+    integer(I4B), dimension(:), pointer :: model_loadmask
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< exg types
     type(CharacterStringType), dimension(:), contiguous, &
@@ -304,6 +328,10 @@ contains
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
     integer(I4B) :: n, m1_idx, m2_idx, irem, isize
     !
+    ! -- get model mask
+    ds => get_dsim()
+    model_loadmask => ds%get_load_mask()
+    !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
     !
@@ -326,8 +354,8 @@ contains
       ! -- attributes for this exchange
       exgtype = etypes(n)
       efname = efiles(n)
-      mname1 = emnames_a(n)
-      mname2 = emnames_b(n)
+      call inlen_check(emnames_a(n), mname1, LENMODELNAME, 'MODELNAME')
+      call inlen_check(emnames_b(n), mname2, LENMODELNAME, 'MODELNAME')
       !
       ! initialize mempath as no path
       emempaths(n) = ''
@@ -342,6 +370,10 @@ contains
         if (m1_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname1)
         if (m2_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname2)
         call store_error(errmsg)
+      end if
+      !
+      ! -- terminate if errors were detected
+      if (count_errors() > 0) then
         call store_error_filename(simfile)
       end if
       !
@@ -442,6 +474,18 @@ contains
     return
   end subroutine simnam_load
 
+  !> @brief MODFLOW 6 tdis input load routine
+  !<
+  subroutine simtdis_load()
+    use SourceLoadModule, only: load_simtdis
+    !
+    ! -- load sim tdis file
+    call load_simtdis()
+    !
+    ! --return
+    return
+  end subroutine simtdis_load
+
   !> @brief retrieve list of model dynamic loaders
   !<
   function dynamic_model_pkgs(modelname, modelfname, iout) &
@@ -529,8 +573,12 @@ contains
       pointer :: mtypes !< model types
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< model types
-    integer(I4B), pointer :: nummodels => null()
-    integer(I4B), pointer :: numexchanges => null()
+    integer(I4B), pointer :: nummodels
+    integer(I4B), pointer :: numexchanges
+    !
+    ! -- initialize
+    nullify (nummodels)
+    nullify (numexchanges)
     !
     ! -- set memory paths
     sim_mempath = create_mem_path(component='SIM', context=idm_context)
@@ -559,7 +607,7 @@ contains
     use SimVariablesModule, only: isimcontinue, isimcheck, simfile
     character(len=LENMEMPATH), intent(in) :: input_mempath
     type(InputParamDefinitionType), pointer, intent(in) :: idt
-    integer(I4B), pointer :: intvar => null()
+    integer(I4B), pointer :: intvar
     !
     ! -- allocate and set default
     call mem_allocate(intvar, idt%mf6varname, input_mempath)
@@ -577,7 +625,7 @@ contains
       intvar = 0
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. Idm SIMNAM Load default value setting '&
+        'Idm SIMNAM Load default value setting '&
         &'is unhandled for this variable: ', &
         trim(idt%mf6varname)
       call store_error(errmsg)
@@ -594,19 +642,24 @@ contains
     use SimVariablesModule, only: simfile
     use MemoryManagerModule, only: mem_allocate
     use CharacterStringModule, only: CharacterStringType
+    use DefinitionSelectModule, only: idt_datatype
     character(len=LENMEMPATH), intent(in) :: input_mempath
     type(InputParamDefinitionType), pointer, intent(in) :: idt
-    character(len=LINELENGTH), pointer :: cstr => null()
+    character(len=LINELENGTH), pointer :: cstr
     type(CharacterStringType), dimension(:), &
-      pointer, contiguous :: acharstr1d => null()
+      pointer, contiguous :: acharstr1d
     !
     ! -- initialize
     !
-    select case (idt%datatype)
+    select case (idt_datatype(idt))
     case ('KEYWORD', 'INTEGER')
       !
-      ! -- allocate and set default
-      call allocate_simnam_int(input_mempath, idt)
+      if (idt%in_record) then
+        ! -- no-op
+      else
+        ! -- allocate and set default
+        call allocate_simnam_int(input_mempath, idt)
+      end if
       !
     case ('STRING')
       !
@@ -622,9 +675,11 @@ contains
         call mem_allocate(cstr, LINELENGTH, idt%mf6varname, input_mempath)
         cstr = ''
       end if
+    case ('RECORD')
+      ! -- no-op
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. IdmLoad unhandled datatype: ', &
+        'IdmLoad allocate simnam param unhandled datatype: ', &
         trim(idt%datatype)
       call store_error(errmsg)
       call store_error_filename(simfile)

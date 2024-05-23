@@ -6,8 +6,7 @@ module TdisModule
 
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: iout, isim_level
-  use BlockParserModule, only: BlockParserType
-  use ConstantsModule, only: LINELENGTH, LENDATETIME, VALL
+  use ConstantsModule, only: LINELENGTH, LENDATETIME, LENMEMPATH, VALL
   !
   implicit none
   !
@@ -40,55 +39,46 @@ module TdisModule
   integer(I4B), public, dimension(:), pointer, contiguous :: nstp => null() !< number of time steps in each stress period
   real(DP), public, dimension(:), pointer, contiguous :: tsmult => null() !< time step multiplier for each stress period
   character(len=LENDATETIME), pointer :: datetime0 => null() !< starting date and time for the simulation
+  character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath for tdis
+  character(len=LINELENGTH), pointer :: input_fname => null() !< input filename for tdis
   !
-  type(BlockParserType), private :: parser
-
 contains
 
   !> @brief Create temporal discretization
   !<
-  subroutine tdis_cr(fname)
+  subroutine tdis_cr(fname, inmempath)
     ! -- modules
     use InputOutputModule, only: getunit, openfile
     use ConstantsModule, only: LINELENGTH, DZERO
     use AdaptiveTimeStepModule, only: ats_cr
     ! -- dummy
     character(len=*), intent(in) :: fname
+    character(len=*), intent(in) :: inmempath
     ! -- local
-    integer(I4B) :: inunit
     ! -- formats
     character(len=*), parameter :: fmtheader = &
      "(1X,/1X,'TDIS -- TEMPORAL DISCRETIZATION PACKAGE,',   /                  &
-      &' VERSION 1 : 11/13/2014 - INPUT READ FROM UNIT ',I4)"
+      &' VERSION 1 : 11/13/2014 - INPUT READ FROM MEMPATH: ', A)"
     !
     ! -- Allocate the scalar variables
     call tdis_allocate_scalars()
     !
-    ! -- Get a unit number for tdis and open the file if it is not opened
-    inquire (file=fname, number=inunit)
-    if (inunit < 0) then
-      inunit = getunit()
-      call openfile(inunit, iout, fname, 'TDIS')
-    end if
+    ! -- set input context and fname
+    input_fname = fname
+    input_mempath = inmempath
     !
     ! -- Identify package
-    write (iout, fmtheader) inunit
+    write (iout, fmtheader) input_mempath
     !
-    ! -- Initialize block parser
-    call parser%Initialize(inunit, iout)
+    ! -- Source options
+    call tdis_source_options()
     !
-    ! -- Read options
-    call tdis_read_options()
-    !
-    ! -- Read dimensions and then allocate arrays
-    call tdis_read_dimensions()
+    ! -- Source dimensions and then allocate arrays
+    call tdis_source_dimensions()
     call tdis_allocate_arrays()
     !
-    ! -- Read timing
-    call tdis_read_timing()
-    !
-    ! -- Close the file
-    call parser%Clear()
+    ! -- Source timing
+    call tdis_source_timing()
     !
     if (inats > 0) then
       call ats_cr(inats, nper)
@@ -458,6 +448,8 @@ contains
     !
     ! -- strings
     deallocate (datetime0)
+    deallocate (input_mempath)
+    deallocate (input_fname)
     !
     ! -- Arrays
     call mem_deallocate(perlen)
@@ -468,104 +460,83 @@ contains
     return
   end subroutine tdis_da
 
-  !> @brief Read the timing discretization options
+  !> @brief Source the timing discretization options
   !<
-  subroutine tdis_read_options()
+  subroutine tdis_source_options()
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
     use InputOutputModule, only: GetUnit, openfile
+    use MemoryManagerExtModule, only: mem_set_value
+    use SourceCommonModule, only: filein_fname
+    use SimTdisInputModule, only: SimTdisParamFoundType
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, fname
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    logical :: undspec
+    type(SimTdisParamFoundType) :: found
+    character(len=LINELENGTH), dimension(6) :: time_units = &
+      &[character(len=LINELENGTH) :: 'UNDEFINED', 'SECONDS', 'MINUTES', 'HOURS', &
+                                     'DAYS', 'YEARS']
+    character(len=LINELENGTH) :: fname
     ! -- formats
     character(len=*), parameter :: fmtitmuni = &
       &"(4x,'SIMULATION TIME UNIT IS ',A)"
     character(len=*), parameter :: fmtdatetime0 = &
       &"(4x,'SIMULATION STARTING DATE AND TIME IS ',A)"
-    !data
     !
-    ! -- set variables
+    ! -- initialize time unit to undefined
     itmuni = 0
-    undspec = .false.
     !
-    ! -- get options block
-    call parser%GetBlock('OPTIONS', isfound, ierr, &
-                         supportOpenClose=.true., blockRequired=.false.)
+    ! -- source options from input context
+    call mem_set_value(itmuni, 'TIME_UNITS', input_mempath, time_units, &
+                       found%time_units)
+    call mem_set_value(datetime0, 'START_DATE_TIME', input_mempath, &
+                       found%start_date_time)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (iout, '(1x,a)') 'PROCESSING TDIS OPTIONS'
-      do
-        call parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('TIME_UNITS')
-          call parser%GetStringCaps(keyword)
-          select case (keyword)
-          case ('UNDEFINED')
-            itmuni = 0
-            write (iout, fmtitmuni) 'UNDEFINED'
-            undspec = .true.
-          case ('SECONDS')
-            itmuni = 1
-            write (iout, fmtitmuni) 'SECONDS'
-          case ('MINUTES')
-            itmuni = 2
-            write (iout, fmtitmuni) 'MINUTES'
-          case ('HOURS')
-            itmuni = 3
-            write (iout, fmtitmuni) 'HOURS'
-          case ('DAYS')
-            itmuni = 4
-            write (iout, fmtitmuni) 'DAYS'
-          case ('YEARS')
-            itmuni = 5
-            write (iout, fmtitmuni) 'YEARS'
-          case default
-            write (errmsg, '(a,a)') 'Unknown TIME_UNITS: ', &
-              trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
-          end select
-        case ('START_DATE_TIME')
-          call parser%GetString(datetime0)
-          write (iout, fmtdatetime0) datetime0
-        case ('ATS6')
-          call parser%GetStringCaps(keyword)
-          if (trim(adjustl(keyword)) /= 'FILEIN') then
-            errmsg = 'ATS6 keyword must be followed by "FILEIN" '// &
-                     'then by filename.'
-            call store_error(errmsg)
-          end if
-          call parser%GetString(fname)
-          inats = GetUnit()
-          call openfile(inats, iout, fname, 'ATS')
-        case default
-          write (errmsg, '(a,a)') 'Unknown TDIS option: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call parser%StoreErrorUnit()
-        end select
-      end do
-      write (iout, '(1x,a)') 'END OF TDIS OPTIONS'
+    if (found%time_units) then
+      !
+      ! -- adjust to 0-based indexing for itmuni
+      itmuni = itmuni - 1
     end if
     !
-    ! -- Set to itmuni to undefined if not specified
-    if (itmuni == 0) then
-      if (.not. undspec) then
+    ! -- enforce 0 or 1 ATS6_FILENAME entries in option block
+    if (filein_fname(fname, 'ATS6_FILENAME', input_mempath, &
+                     input_fname)) then
+      inats = GetUnit()
+      call openfile(inats, iout, fname, 'ATS')
+    end if
+    !
+    ! -- log values to list file
+    write (iout, '(1x,a)') 'PROCESSING TDIS OPTIONS'
+    !
+    if (found%time_units) then
+      select case (itmuni)
+      case (0)
         write (iout, fmtitmuni) 'UNDEFINED'
-      end if
+      case (1)
+        write (iout, fmtitmuni) 'SECONDS'
+      case (2)
+        write (iout, fmtitmuni) 'MINUTES'
+      case (3)
+        write (iout, fmtitmuni) 'HOURS'
+      case (4)
+        write (iout, fmtitmuni) 'DAYS'
+      case (5)
+        write (iout, fmtitmuni) 'YEARS'
+      case default
+      end select
+    else
+      write (iout, fmtitmuni) 'UNDEFINED'
     end if
+    !
+    if (found%start_date_time) then
+      write (iout, fmtdatetime0) datetime0
+    end if
+    !
+    write (iout, '(1x,a)') 'END OF TDIS OPTIONS'
     !
     ! -- Return
     return
-  end subroutine tdis_read_options
+  end subroutine tdis_source_options
 
-  !> @brief Read dimension NPER
+  !> @brief Allocate tdis scalars
   !<
   subroutine tdis_allocate_scalars()
     ! -- modules
@@ -593,6 +564,8 @@ contains
     !
     ! -- strings
     allocate (datetime0)
+    allocate (input_mempath)
+    allocate (input_fname)
     !
     ! -- Initialize variables
     nper = 0
@@ -632,64 +605,48 @@ contains
     return
   end subroutine tdis_allocate_arrays
 
-  !> @brief Read dimension NPER
+  !> @brief Source dimension NPER
   !<
-  subroutine tdis_read_dimensions()
+  subroutine tdis_source_dimensions()
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
+    use MemoryManagerExtModule, only: mem_set_value
+    use SourceCommonModule, only: filein_fname
+    use SimTdisInputModule, only: SimTdisParamFoundType
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    type(SimTdisParamFoundType) :: found
     ! -- formats
     character(len=*), parameter :: fmtnper = &
                                    "(1X,I4,' STRESS PERIOD(S) IN SIMULATION')"
     !
-    ! -- get DIMENSIONS block
-    call parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                         supportOpenClose=.true.)
+    ! -- source dimensions from input context
+    call mem_set_value(nper, 'NPER', input_mempath, found%nper)
     !
-    ! -- parse block if detected
-    if (isfound) then
-      write (iout, '(1x,a)') 'PROCESSING TDIS DIMENSIONS'
-      do
-        call parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('NPER')
-          nper = parser%GetInteger()
-          write (iout, fmtnper) nper
-        case default
-          write (errmsg, '(a,a)') 'Unknown TDIS dimension: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call parser%StoreErrorUnit()
-        end select
-      end do
-      write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
-    else
-      write (errmsg, '(a)') 'Required DIMENSIONS block not found.'
-      call store_error(errmsg)
-      call parser%StoreErrorUnit()
+    ! -- log values to list file
+    write (iout, '(1x,a)') 'PROCESSING TDIS DIMENSIONS'
+    !
+    if (found%nper) then
+      write (iout, fmtnper) nper
     end if
+    !
+    write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
     !
     ! -- Return
     return
-  end subroutine tdis_read_dimensions
+  end subroutine tdis_source_dimensions
 
-  !> @brief Read timing information
+  !> @brief Source timing information
   !<
-  subroutine tdis_read_timing()
+  subroutine tdis_source_timing()
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error_filename, count_errors
+    use MemoryManagerExtModule, only: mem_set_value
+    use SourceCommonModule, only: filein_fname
+    use SimTdisInputModule, only: SimTdisParamFoundType
     ! -- local
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: ierr
+    type(SimTdisParamFoundType) :: found
     integer(I4B) :: n
-    logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1X,//1X,'STRESS PERIOD     LENGTH       TIME STEPS', &
@@ -697,41 +654,33 @@ contains
     character(len=*), parameter :: fmtrow = &
                                    "(1X,I8,1PG21.7,I7,0PF25.3)"
     !
-    ! -- get PERIODDATA block
-    call parser%GetBlock('PERIODDATA', isfound, ierr, &
-                         supportOpenClose=.true.)
+    ! -- source perioddata from input context
+    call mem_set_value(perlen, 'PERLEN', input_mempath, found%perlen)
+    call mem_set_value(nstp, 'NSTP', input_mempath, found%nstp)
+    call mem_set_value(tsmult, 'TSMULT', input_mempath, found%tsmult)
     !
-    ! -- parse block if detected
-    if (isfound) then
-      write (iout, '(1x,a)') 'PROCESSING TDIS PERIODDATA'
-      write (iout, fmtheader)
-      do n = 1, nper
-        call parser%GetNextLine(endOfBlock)
-        perlen(n) = parser%GetDouble()
-        nstp(n) = parser%GetInteger()
-        tsmult(n) = parser%GetDouble()
-        write (iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
-        totalsimtime = totalsimtime + perlen(n)
-      end do
-      !
-      ! -- Check timing information
-      call check_tdis_timing(nper, perlen, nstp, tsmult)
-      call parser%terminateblock()
-      !
-      ! -- Check for errors
-      if (count_errors() > 0) then
-        call parser%StoreErrorUnit()
-      end if
-      write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
-    else
-      write (errmsg, '(a)') 'Required PERIODDATA block not found.'
-      call store_error(errmsg)
-      call parser%StoreErrorUnit()
+    ! -- Check timing information
+    call check_tdis_timing(nper, perlen, nstp, tsmult)
+    !
+    ! -- Check for errors
+    if (count_errors() > 0) then
+      call store_error_filename(input_fname)
     end if
+    !
+    ! -- log timing
+    write (iout, '(1x,a)') 'PROCESSING TDIS PERIODDATA'
+    write (iout, fmtheader)
+    !
+    do n = 1, size(perlen)
+      write (iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
+      totalsimtime = totalsimtime + perlen(n)
+    end do
+    !
+    write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
     !
     ! -- Return
     return
-  end subroutine tdis_read_timing
+  end subroutine tdis_source_timing
 
   !> @brief Check the tdis timing information
   !!
@@ -742,7 +691,7 @@ contains
   subroutine check_tdis_timing(nper, perlen, nstp, tsmult)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error
     ! -- dummy
     integer(I4B), intent(in) :: nper
     real(DP), dimension(:), contiguous, intent(in) :: perlen

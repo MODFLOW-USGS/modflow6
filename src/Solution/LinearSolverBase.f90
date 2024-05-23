@@ -1,5 +1,6 @@
 module LinearSolverBaseModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: LENSOLUTIONNAME
   use MatrixBaseModule
   use VectorBaseModule
   use ImsLinearSettingsModule
@@ -14,6 +15,7 @@ module LinearSolverBaseModule
   !! sequential, parallel, petsc, block solver, ...
   !<
   type, public, abstract :: LinearSolverBaseType
+    character(len=LENSOLUTIONNAME) :: name
     integer(I4B) :: nitermax
     integer(I4B) :: iteration_number
     integer(I4B) :: is_converged
@@ -21,7 +23,6 @@ module LinearSolverBaseModule
     procedure(initialize_if), deferred :: initialize
     procedure(print_summary_if), deferred :: print_summary
     procedure(solve_if), deferred :: solve
-    procedure(get_result_if), deferred :: get_result
     procedure(destroy_if), deferred :: destroy
 
     procedure(create_matrix_if), deferred :: create_matrix
@@ -47,10 +48,6 @@ module LinearSolverBaseModule
       class(VectorBaseType), pointer :: rhs
       class(VectorBaseType), pointer :: x
       type(ConvergenceSummaryType) :: cnvg_summary
-    end subroutine
-    subroutine get_result_if(this)
-      import LinearSolverBaseType
-      class(LinearSolverBaseType) :: this
     end subroutine
     subroutine destroy_if(this)
       import LinearSolverBaseType

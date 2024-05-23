@@ -1,8 +1,8 @@
-\begin{thebibliography}{35}
+\begin{thebibliography}{43}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
-  \providecommand{\doiagency}[1]{doi:\discretionary{}{}{}#1}\else
-  \providecommand{\doiagency}{doi:\discretionary{}{}{}\begingroup
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
 
 \bibitem[{Anderman and Hill(2000)}]{anderman2000modflow}
@@ -19,10 +19,10 @@ Anderman, E.R., and Hill, M.C., 2003, MODFLOW-2000, the U.S. Geological Survey
 
 \bibitem[{Bakker and others(2013)Bakker, Schaars, Hughes, Langevin, and
   Dausman}]{bakker2013documentation}
-Bakker, M., Schaars, F., Hughes, J.D., Langevin, C.D., and Dausman, A.M., 2013,
-  Documentation of the seawater intrusion (SWI2) package for MODFLOW: {U.S.
-  Geological Survey Techniques and Methods, book 6, chap. A46, 47 p.}, accessed
-  June 27, 2017, at \url{https://pubs.er.usgs.gov/publication/tm6A46}.
+Bakker, Mark, Schaars, Frans, Hughes, J.D., Langevin, C.D., and Dausman, A.M.,
+  2013, Documentation of the seawater intrusion (SWI2) package for MODFLOW:
+  {U.S. Geological Survey Techniques and Methods, book 6, chap. A46, 47 p.},
+  accessed June 27, 2017, at \url{https://pubs.er.usgs.gov/publication/tm6A46}.
 
 \bibitem[{Banta(2000)}]{modflowdrtpack}
 Banta, E.R., 2000, MODFLOW-2000, the U.S. Geological Survey Modular
@@ -35,6 +35,14 @@ Banta, E.R., 2011, MODFLOW-CDSS, a version of MODFLOW-2005 with modifications
   for Colorado Decision Support Systems: {U.S. Geological Survey Open-File
   Report 2011--1213, 19 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/ofr20111213}.
+
+\bibitem[{Bedekar and others(2016)Bedekar, Morway, Langevin, and
+  Tonkin}]{mt3dusgs}
+Bedekar, Vivek, Morway, E.D., Langevin, C.D., and Tonkin, M.J., 2016, MT3D-USGS
+  version 1: A U.S. Geological Survey release of MT3DMS updated with new and
+  expanded transport capabilities for use with MODFLOW: {U.S. Geological Survey
+  Techniques and Methods, book 6, chap. A53, 69 p.},
+  \url{https://doi.org/10.3133/tm6a53}, \url{http://dx.doi.org/10.3133/tm6A53}.
 
 \bibitem[{Fenske and others(1996)Fenske, Leake, and
   Prudic}]{fenske1996documentation}
@@ -64,6 +72,21 @@ Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
   Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
   27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
 
+\bibitem[{Healy and Ronan(1996)}]{healy1996}
+Healy, R.W., and Ronan, A.D., 1996, Documentation of Computer Program VS2DH for
+  Simulation of Energy Transport in Variably Saturated Porous Media:
+  Modification of the U.S. Geological Survey's Computer Program VS2DT: {U.S.
+  Geological Survey Water-Resources Investigation Report 96-4230, 36 p.},
+  accessed September 27, 2022, at \url{https://doi.org/10.3133/wri964230}, at
+  \url{https://pubs.usgs.gov/wri/1996/4230/report.pdf}.
+
+\bibitem[{Hecht-Mendez and others(2010)Hecht-Mendez, Molina-Giraldo, Blum, and
+  Bayer}]{hechtmendez}
+Hecht-Mendez, J., Molina-Giraldo, N., Blum, P., and Bayer, P., 2010, Evaluating
+  mt3dms for heat transport simulation of closed geothermal systems:
+  Groundwater, v.~48, no.~5, p.~741--756,
+  \url{https://doi.org/10.1111/j.1745-6584.2010.00678.x}.
+
 \bibitem[{Hill(1990)}]{hill1990preconditioned}
 Hill, M.C., 1990, Preconditioned Conjugate-Gradient 2 (PCG2), a computer
   program for solving ground-water flow equations: {U.S. Geological Survey
@@ -80,10 +103,10 @@ Hill, M.C., Banta, E.R., Harbaugh, A.W., and Anderman, E.R., 2000,
 
 \bibitem[{Hoffmann and others(2003)Hoffmann, Leake, Galloway, and
   Wilson}]{hoffmann2003modflow}
-Hoffmann, J., Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003, MODFLOW-2000
-  Ground-Water Model---User Guide to the Subsidence and Aquifer-System
-  Compaction (SUB) Package: {U.S. Geological Survey Open-File Report 03--233,
-  44 p.}, accessed June 27, 2017, at
+Hoffmann, J{\"o}rn, Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003,
+  MODFLOW-2000 Ground-Water Model---User Guide to the Subsidence and
+  Aquifer-System Compaction (SUB) Package: {U.S. Geological Survey Open-File
+  Report 03--233, 44 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/of/2003/ofr03-233/}.
 
 \bibitem[{Hsieh and Freckleton(1993)}]{hsieh1993hfb}
@@ -113,7 +136,7 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
 Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R.,
   2022{\natexlab{a}}, The {MODFLOW Application Programming Interface} for
   simulation control and software interoperability: Environmental Modelling \&
-  Software, v. 148, article 105257,
+  Software, v. 148, 105257,
   \url{https://doi.org/10.1016/j.envsoft.2021.105257}.
 
 \bibitem[{Hughes and others(2022{\natexlab{b}})Hughes, Leake, Galloway, and
@@ -122,6 +145,12 @@ Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022{\natexlab{b}},
   Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB)
   Package of MODFLOW 6: {U.S. Geological Survey Techniques and Methods, book 6,
   chap. A62, 57 p.}, \url{https://doi.org/10.3133/tm6A62}.
+
+\bibitem[{Kipp(1987)}]{kipp1987}
+Kipp, K.L., 1987, HST3D: A Computer Code for Simulation of Heat and Solute
+  Transport in Three-Dimensional Ground-Water Flow Systems: {U.S. Geological
+  Survey Water-Resources Investigation Report 86-4095, 517 p.}, accessed
+  September 27, 2022, at \url{https://pubs.usgs.gov/wri/1986/4095/report.pdf}.
 
 \bibitem[{Konikow and others(2009)Konikow, Hornberger, Halford, and
   Hanson}]{konikow2009}
@@ -132,8 +161,8 @@ Konikow, L.F., Hornberger, G.Z., Halford, K.J., and Hanson, R.T., 2009, Revised
 
 \bibitem[{Langevin and others(2008)Langevin, Thorne~Jr, Dausman, Sukop, and
   Guo}]{langevin2008seawat}
-Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, W., 2008,
-  {SEAWAT} Version 4---A computer program for simulation of multi-species
+Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, Weixing,
+  2008, {SEAWAT} Version 4---A computer program for simulation of multi-species
   solute and heat transport: {U.S. Geological Survey Techniques and Methods,
   book 6, chap. A22, 39 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/tm6A22}.
@@ -141,22 +170,29 @@ Langevin, C.D., Thorne~Jr, D.T., Dausman, A.M., Sukop, M.C., and Guo, W., 2008,
 \bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
   and Panday}]{modflow6gwf}
 Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
-  Panday, S., 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
+  Panday, Sorab, 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
   Model: {U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197
   p.}, \url{https://doi.org/10.3133/tm6A55}.
 
 \bibitem[{Langevin and others(2020)Langevin, Panday, and
   Provost}]{langevin2020hydraulic}
-Langevin, C.D., Panday, S., and Provost, A.M., 2020, Hydraulic-head formulation
-  for density-dependent flow and transport: Groundwater, v.~58, no.~3,
-  p.~349--362.
+Langevin, C.D., Panday, Sorab, and Provost, A.M., 2020, Hydraulic-head
+  formulation for density-dependent flow and transport: Groundwater, v.~58,
+  no.~3, p.~349--362.
 
 \bibitem[{Langevin and others(2022)Langevin, Provost, Panday, and
   Hughes}]{modflow6gwt}
-Langevin, C.D., Provost, A.M., Panday, S., and Hughes, J.D., 2022,
+Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022,
   Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A61, 56 p.},
   \url{https://doi.org/10.3133/tm6A61}.
+
+\bibitem[{Langevin and others(2024)Langevin, Hughes, Provost, Russcher, and
+  Panday}]{langevin2024}
+Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J., and Panday, Sorab,
+  2024, {MODFLOW} as a configurable multi-model hydrologic simulator:
+  Groundwater, v.~62, no.~1, p.~111--123,
+  \url{https://doi.org/10.1111/gwat.13351}.
 
 \bibitem[{Leake and Galloway(2007)}]{leake2007modflow}
 Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model---User guide
@@ -172,12 +208,17 @@ Leake, S.A., and Lilly, M.R., 1997, Documentation of computer program (FHB1)
   (MODFLOW): {U.S. Geological Survey Open-File Report 97--571, 50 p.}, accessed
   June 27, 2017, at \url{https://pubs.er.usgs.gov/publication/ofr97571}.
 
+\bibitem[{Ma and Zheng(2010)}]{mazheng2010}
+Ma, Rui, and Zheng, Chunmiao, 2010, Effects of density and viscosity in
+  modeling heat as a groundwater tracer: Groundwater, v.~48, no.~3,
+  p.~380--389, \url{https://doi.org/10.1111/j.1745-6584.2009.00660.x}.
+
 \bibitem[{Maddock and others(2012)Maddock, Baird, Hanson, Schmid, and
   Ajami}]{modflowripetpack}
-Maddock, Thomas, I., Baird, K.J., Hanson, R.T., Schmid, W., and Ajami, H.,
-  2012, RIP-ET---A Riparian Evapotranspiration Package for MODFLOW-2005: {U.S.
-  Geological Survey Techniques and Methods, book 6, chap. A39, 76 p.}, accessed
-  June 27, 2017, at \url{https://pubs.usgs.gov/tm/tm6a39/}.
+Maddock, Thomas, III, Baird, K.J., Hanson, R.T., Schmid, Wolfgang, and Ajami,
+  Hoori, 2012, RIP-ET---A Riparian Evapotranspiration Package for MODFLOW-2005:
+  {U.S. Geological Survey Techniques and Methods, book 6, chap. A39, 76 p.},
+  accessed June 27, 2017, at \url{https://pubs.usgs.gov/tm/tm6a39/}.
 
 \bibitem[{Merritt and Konikow(2000)}]{modflowlak3pack}
 Merritt, M.L., and Konikow, L.F., 2000, Documentation of a computer program to
@@ -202,12 +243,17 @@ Niswonger, R.G., Prudic, D.E., and Regan, R.S., 2006, Documentation of the
 
 \bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
   Hughes}]{modflowusg}
-Panday, S., Langevin, C.D., Niswonger, R.G., Ibaraki, M., and Hughes, J.D.,
-  2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW for
-  simulating groundwater flow and tightly coupled processes using a control
+Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
+  J.D., 2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW
+  for simulating groundwater flow and tightly coupled processes using a control
   volume finite-difference formulation: {U.S. Geological Survey Techniques and
   Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/tm/06/a45/}.
+
+\bibitem[{Pollock(2016)}]{pollock2016modpath7}
+Pollock, D.W., 2016, User guide for MODPATH Version 7---A particle-tracking
+  model for MODFLOW: {U.S. Geological Survey Open-File Report 2016--1086, 35
+  p.}, accessed June 27, 2017, at \url{https://doi.org/10.3133/ofr20161086}.
 
 \bibitem[{Provost and others(2017)Provost, Langevin, and Hughes}]{modflow6xt3d}
 Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
@@ -235,14 +281,21 @@ Voss, C.I., 1984, SUTRA---A finite-element simulation model for
   Geological Survey Water-Resources Investigations Report 84--4369, 409 p.}
 
 \bibitem[{Zheng(2010)}]{zheng2010supplemental}
-Zheng, C., 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical Report
-  Prepared for the U.S. Army Corps of Engineers, 51 p.}
+Zheng, Chunmiao, 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical
+  Report Prepared for the U.S. Army Corps of Engineers, 51 p.}
+
+\bibitem[{Zheng and Wang(1999)}]{zheng1999mt3dms}
+Zheng, Chunmiao, and Wang, P.P., 1999, MT3DMS---A modular three-dimensional
+  multi-species transport model for simulation of advection, dispersion and
+  chemical reactions of contaminants in groundwater systems; Documentation and
+  user's guide: {Contract report SERDP--99--1: Vicksburg, Miss., U.S. Army
+  Engineer Research and Development Center, 169 p.}
 
 \bibitem[{Zheng and others(2001)Zheng, Hill, and Hsieh}]{zheng2001modflow}
-Zheng, C., Hill, M.C., and Hsieh, P.A., 2001, MODFLOW-2000, the U.S. Geological
-  Survey Modular Ground-Water Model---User guide to the LMT6 package, the
-  linkage with MT3DMS for multi-species mass transport modeling: {U.S.
-  Geological Survey Open-File Report 01--82, 43 p.}, accessed June 27, 2017, at
-  \url{https://pubs.er.usgs.gov/publication/ofr0182}.
+Zheng, Chunmiao, Hill, M.C., and Hsieh, P.A., 2001, MODFLOW-2000, the U.S.
+  Geological Survey Modular Ground-Water Model---User guide to the LMT6
+  package, the linkage with MT3DMS for multi-species mass transport modeling:
+  {U.S. Geological Survey Open-File Report 01--82, 43 p.}, accessed June 27,
+  2017, at \url{https://pubs.er.usgs.gov/publication/ofr0182}.
 
 \end{thebibliography}

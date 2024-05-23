@@ -53,6 +53,7 @@ def test_rebuild_release(rebuilt_bin_path: Path):
         )
 
     with TemporaryDirectory() as td:
+        # download the release
         download_path = Path(td)
         download_and_unzip(
             asset["browser_download_url"],
@@ -76,30 +77,18 @@ def test_rebuild_release(rebuilt_bin_path: Path):
                 f.write(f"{line}\n")
 
         # rebuild with Meson
-        def rebuild():
-            meson_build(
-                project_path=source_files_path.parent,
-                build_path=download_path / "builddir",
-                bin_path=rebuilt_bin_path,
-            )
-
-        # temp workaround until next release,
-        # ifx fails to build 6.4.2 on Windows
-        # most likely due to backspace issues
-        if system() == "Windows" and environ.get("FC") == "ifx":
-            with set_env(FC="ifort", CC="icl"):
-                rebuild()
-        else:
-            rebuild()
+        meson_build(
+            project_path=source_files_path.parent,
+            build_path=download_path / "builddir",
+            bin_path=rebuilt_bin_path,
+        )
 
 
 @flaky(max_runs=3)
 def test_get_executables(downloaded_bin_path: Path):
     print(f"Installing MODFLOW-related executables to: {downloaded_bin_path}")
     downloaded_bin_path.mkdir(exist_ok=True, parents=True)
-    # todo: remove release_id workaround when double-precision comparison issues fixed
-    # https://github.com/MODFLOW-USGS/modflow6/pull/1612
-    flopy.utils.get_modflow(str(downloaded_bin_path), release_id="14.0")
+    flopy.utils.get_modflow(str(downloaded_bin_path))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{print\_option}---is a flag that controls printing of convergence information from the solver.  NONE means print nothing. SUMMARY means print only the total number of iterations and nonlinear residual reduction summaries. ALL means print linear matrix solver convergence information to the solution listing file and model specific linear matrix solver convergence information to each model listing file in addition to SUMMARY information. NONE is default if PRINT\_OPTION is not specified.
+
+\item \texttt{complexity}---is an optional keyword that defines default non-linear and linear solver parameters.  SIMPLE - indicates that default solver input values will be defined that work well for nearly linear models. This would be used for models that do not include nonlinear stress packages and models that are either confined or consist of a single unconfined layer that is thick enough to contain the water table within a single layer. MODERATE - indicates that default solver input values will be defined that work well for moderately nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers. The MODERATE option should be used when the SIMPLE option does not result in successful convergence.  COMPLEX - indicates that default solver input values will be defined that work well for highly nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers representing complex geology and surface-water/groundwater interaction. The COMPLEX option should be used when the MODERATE option does not result in successful convergence.  Non-linear and linear solver parameters assigned using a specified complexity can be modified in the NONLINEAR and LINEAR blocks. If the COMPLEXITY option is not specified, NONLINEAR and LINEAR variables will be assigned the simple complexity values.
+
+\item \texttt{CSV\_OUTER\_OUTPUT}---keyword to specify that the record corresponds to the comma separated values outer iteration convergence output.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{outer\_csvfile}---name of the ascii comma separated values output file to write maximum dependent-variable (for example, head) change convergence information at the end of each outer iteration for each time step.
+
+\item \texttt{CSV\_INNER\_OUTPUT}---keyword to specify that the record corresponds to the comma separated values solver convergence output.
+
+\item \texttt{inner\_csvfile}---name of the ascii comma separated values output file to write solver convergence information. Comma separated values output includes maximum dependent-variable (for example, head) change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration.
+
+\item \texttt{NO\_PTC}---is a flag that is used to disable pseudo-transient continuation (PTC). Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then the NO\_PTC FIRST option should be used to deactivate PTC for the first stress period.  The NO\_PTC ALL option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6.
+
+\item \texttt{no\_ptc\_option}---is an optional keyword that is used to define options for disabling pseudo-transient continuation (PTC). FIRST is an optional keyword to disable PTC for the first stress period, if steady-state and one or more model is using the Newton-Raphson formulation. ALL is an optional keyword to disable PTC for all steady-state stress periods for models using the Newton-Raphson formulation. If NO\_PTC\_OPTION is not specified, the NO\_PTC ALL option is used.
+
+\item \texttt{ats\_outer\_maximum\_fraction}---real value defining the fraction of the maximum allowable outer iterations used with the Adaptive Time Step (ATS) capability if it is active.  If this value is set to zero by the user, then this solution will have no effect on ATS behavior.  This value must be greater than or equal to zero and less than or equal to 0.5 or the program will terminate with an error.  If it is not specified by the user, then it is assigned a default value of one third.  When the number of outer iterations for this solution is less than the product of this value and the maximum allowable outer iterations, then ATS will increase the time step length by a factor of DTADJ in the ATS input file.  When the number of outer iterations for this solution is greater than the maximum allowable outer iterations minus the product of this value and the maximum allowable outer iterations, then the ATS (if active) will decrease the time step length by a factor of 1 / DTADJ.
+
+\end{description}
+\item \textbf{Block: NONLINEAR}
+
+\begin{description}
+\item \texttt{outer\_maximum}---integer value defining the maximum number of outer (nonlinear) iterations -- that is, calls to the solution routine. For a linear problem OUTER\_MAXIMUM should be 1.
+
+\end{description}
+

@@ -49,6 +49,8 @@ module SparseMatrixModule
 
 contains
 
+  !> @brief Initialize sparse matrix from passed
+  !< sparsity structure
   subroutine spm_init(this, sparse, mem_path)
     class(SparseMatrixType) :: this
     type(sparsematrix) :: sparse

@@ -11,15 +11,18 @@ module VirtualDataContainerModule
   private
 
   public :: get_vdc_from_list
-  public VDC_TYPE_TO_STR
+  public :: VDC_TYPE_TO_STR
 
   integer(I4B), public, parameter :: VDC_UNKNOWN_TYPE = 0
   integer(I4B), public, parameter :: VDC_GWFMODEL_TYPE = 1
   integer(I4B), public, parameter :: VDC_GWTMODEL_TYPE = 2
-  integer(I4B), public, parameter :: VDC_GWFEXG_TYPE = 3
-  integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 4
-  integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
-  integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
+  integer(I4B), public, parameter :: VDC_GWEMODEL_TYPE = 3
+  integer(I4B), public, parameter :: VDC_GWFEXG_TYPE = 4
+  integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 5
+  integer(I4B), public, parameter :: VDC_GWEEXG_TYPE = 6
+  integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 7
+  integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 8
+  integer(I4B), public, parameter :: VDC_GWEMVE_TYPE = 9
 
   !> @brief Wrapper for virtual data containers
   !!
@@ -56,6 +59,8 @@ module VirtualDataContainerModule
                              !! some of its variables can still be remote
     logical(LGP) :: is_active !< when true, this container is being synchronized
     integer(I4B) :: orig_rank !< the global rank of the process which holds the physical data for this container
+    type(STLVecInt) :: rcv_ranks !< the ranks of processes, other than orig_rank, having this container active
+    !< (only guaranteed to be complete after synchronization)
 
     type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
     type(VdcElementMapType), dimension(NR_VDC_ELEMENT_MAPS) :: element_maps !< a list with all element maps
@@ -111,6 +116,8 @@ contains
       this%element_luts(i)%max_remote_idx = 0
       this%element_luts(i)%remote_to_virtual => null()
     end do
+
+    call this%rcv_ranks%init()
 
   end subroutine vdc_create
 
@@ -391,6 +398,8 @@ contains
     integer(I4B) :: i
     class(*), pointer :: obj
 
+    call this%rcv_ranks%destroy()
+
     do i = 1, size(this%element_maps)
       if (associated(this%element_maps(i)%remote_elem_shift)) then
         deallocate (this%element_maps(i)%remote_elem_shift)
@@ -449,10 +458,13 @@ contains
     if (cntr_type == VDC_UNKNOWN_TYPE) then; cntr_str = "unknown"
     else if (cntr_type == VDC_GWFMODEL_TYPE) then; cntr_str = "GWF Model"
     else if (cntr_type == VDC_GWTMODEL_TYPE) then; cntr_str = "GWT Model"
+    else if (cntr_type == VDC_GWEMODEL_TYPE) then; cntr_str = "GWE Model"
     else if (cntr_type == VDC_GWFEXG_TYPE) then; cntr_str = "GWF Exchange"
     else if (cntr_type == VDC_GWTEXG_TYPE) then; cntr_str = "GWT Exchange"
+    else if (cntr_type == VDC_GWEEXG_TYPE) then; cntr_str = "GWE Exchange"
     else if (cntr_type == VDC_GWFMVR_TYPE) then; cntr_str = "GWF Mover"
     else if (cntr_type == VDC_GWTMVT_TYPE) then; cntr_str = "GWT Mover"
+    else if (cntr_type == VDC_GWEMVE_TYPE) then; cntr_str = "GWE Mover"
     else; cntr_str = "Undefined"
     end if
 

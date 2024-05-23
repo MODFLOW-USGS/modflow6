@@ -5,7 +5,7 @@ module GwtInterfaceModelModule
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
-  use GwfDisuModule, only: disu_cr, CastAsDisuType
+  use DisuModule, only: disu_cr, CastAsDisuType
   use TspFmiModule, only: fmi_cr, TspFmiType
   use TspAdvModule, only: adv_cr, TspAdvType
   use TspAdvOptionsModule, only: TspAdvOptionsType
@@ -18,10 +18,11 @@ module GwtInterfaceModelModule
   implicit none
   private
 
-  !> The GWT Interface Model is a utility to calculate the solution's
-  !! exchange coefficients from the interface between a GWT model and
-  !! its GWT neighbors. The interface model itself will not be part
-  !! of the solution, it is not being solved.
+  !> The GWT Interface Model is a utility to calculate the solution's exchange
+  !! coefficients from the interface between a GWT model and its GWT neighbors.
+  !! The interface model itself will not be part of the solution, it is not
+  !! being solved.
+  !<
   type, public, extends(GwtModelType) :: GwtInterfaceModelType
 
     integer(i4B), pointer :: iAdvScheme => null() !< the advection scheme: 0 = up, 1 = central, 2 = tvd
@@ -46,6 +47,7 @@ contains
   !> @brief Create the interface model, analogously to what
   !< happens in gwt_cr
   subroutine gwtifmod_cr(this, name, iout, gridConn)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     character(len=*), intent(in) :: name !< the interface model's name
     integer(I4B), intent(in) :: iout !< the output unit
@@ -54,20 +56,20 @@ contains
     class(*), pointer :: modelPtr
     integer(I4B), target :: inobs
     integer(I4B) :: adv_unit, dsp_unit
-
+    !
     this%memoryPath = create_mem_path(name)
     call this%allocate_scalars(name)
-
+    !
     ! defaults
     this%iAdvScheme = 0
     this%ixt3d = 0
     this%ieqnsclfac = DONE
-
+    !
     this%iout = iout
     this%gridConnection => gridConn
     modelPtr => gridConn%model
     this%owner => CastAsGwtModel(modelPtr)
-
+    !
     inobs = 0
     adv_unit = 0
     dsp_unit = 0
@@ -79,7 +81,7 @@ contains
       this%indsp = huge(1_I4B)
       dsp_unit = huge(1_I4B)
     end if
-
+    !
     ! create dis and packages
     call disu_cr(this%dis, this%name, '', -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout, this%ieqnsclfac, &
@@ -88,24 +90,34 @@ contains
                 this%ieqnsclfac)
     call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi)
     call tsp_obs_cr(this%obs, inobs)
-
+    !
+    ! -- Return
+    return
   end subroutine gwtifmod_cr
 
+  !> @brief Allocate scalars associated with the interface model object
+  !<
   subroutine allocate_scalars(this, modelname)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     character(len=*), intent(in) :: modelname !< the model name
-
+    !
     call this%GwtModelType%allocate_scalars(modelname)
-
+    !
     call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%ieqnsclfac, 'IEQNSCLFAC', this%memoryPath)
-
+    !
+    ! -- Return
+    return
   end subroutine allocate_scalars
 
+  !> @brief Allocate a Flow Model Interface (FMI) object for the interface model
+  !<
   subroutine allocate_fmi(this)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
-
+    !
     call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', &
                       this%fmi%memoryPath)
     call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', &
@@ -114,27 +126,30 @@ contains
                       this%fmi%memoryPath)
     call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', &
                       this%fmi%memoryPath)
-
+    !
+    ! -- Return
+    return
   end subroutine allocate_fmi
 
   !> @brief Define the GWT interface model
   !<
   subroutine gwtifmod_df(this)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
-    ! local
+    ! -- local
     class(*), pointer :: disPtr
     type(TspAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
-
+    !
     this%moffset = 0
     adv_options%iAdvScheme = this%iAdvScheme
     dsp_options%ixt3d = this%ixt3d
-
+    !
     ! define DISU
     disPtr => this%dis
     call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
-    call this%fmi%fmi_df(this%dis)
-
+    call this%fmi%fmi_df(this%dis, 1)
+    !
     if (this%inadv > 0) then
       call this%adv%adv_df(adv_options)
     end if
@@ -162,7 +177,7 @@ contains
       call mem_allocate(this%mst%thetam, this%dis%nodes, &
                         'THETAM', create_mem_path(this%name, 'MST'))
     end if
-
+    !
     ! assign or point model members to dis members
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
@@ -171,15 +186,18 @@ contains
     !
     ! allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-
+    !
+    ! -- Return
+    return
   end subroutine gwtifmod_df
 
-  !> @brief Override allocate and read the GWT interface model and its
-  !! packages so that we can create stuff from memory instead of input
-  !< files
+  !> @brief Override allocate and read the GWT interface model and its packages
+  !! so that we can create stuff from memory instead of input files
+  !<
   subroutine gwtifmod_ar(this)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
-
+    !
     call this%fmi%fmi_ar(this%ibound)
     if (this%inadv > 0) then
       call this%adv%adv_ar(this%dis, this%ibound)
@@ -187,35 +205,39 @@ contains
     if (this%indsp > 0) then
       call this%dsp%dsp_ar(this%ibound, this%mst%thetam)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine gwtifmod_ar
 
   !> @brief Clean up resources
   !<
   subroutine gwtifmod_da(this)
+    ! -- dummy
     class(GwtInterfaceModelType) :: this !< the GWT interface model
+    !
 
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%ieqnsclfac)
-
+    !
     ! gwt packages
     call this%dis%dis_da()
     call this%fmi%fmi_da()
     call this%adv%adv_da()
     call this%dsp%dsp_da()
-
+    !
     deallocate (this%dis)
     deallocate (this%fmi)
     deallocate (this%adv)
     deallocate (this%dsp)
-
+    !
     if (associated(this%mst)) then
       call mem_deallocate(this%mst%thetam)
       deallocate (this%mst)
     end if
-
+    !
     ! gwt scalars
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
@@ -227,10 +249,12 @@ contains
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%eqnsclfac)
-
+    !
     ! base
     call this%NumericalModelType%model_da()
-
+    !
+    ! -- Return
+    return
   end subroutine gwtifmod_da
 
 end module GwtInterfaceModelModule

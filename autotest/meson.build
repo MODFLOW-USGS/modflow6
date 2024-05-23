@@ -9,7 +9,9 @@ if test_drive.found() and not fc_id.contains('intel')
     'List',
     'MathUtil',
     'Message',
-    'Sim'
+    'Sim',
+    'SwfUtils',
+    'TimeSelect'
   ]
 
   test_srcs = files(

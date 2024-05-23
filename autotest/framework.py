@@ -10,6 +10,7 @@ from warnings import warn
 
 import flopy
 import numpy as np
+import pytest
 from common_regression import (
     COMPARE_PROGRAMS,
     adjust_htol,
@@ -91,9 +92,14 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
     buff = []
 
     # parallel commands
-    mpiexec_cmd = (
-        ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
-    )
+    if get_ostag() in ["win64"]:
+        mpiexec_cmd = (
+        ["mpiexec", "-np", str(ncpus), target, "-p"]
+        )
+    else:
+        mpiexec_cmd = (
+            ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
+        )
 
     proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=workspace)
 
@@ -298,10 +304,17 @@ class TestFramework:
                     else:
                         files2.append(None)
 
-            if self.cmp_namefile is None:
+            # todo: clean up namfile path detection?
+            nf = next(iter(get_namefiles(cpth)), None)
+            cmp_namefile = (
+                None
+                if "mf6" in self.compare or "libmf6" in self.compare
+                else os.path.basename(nf) if nf else None
+            )
+            if cmp_namefile is None:
                 pth = None
             else:
-                pth = os.path.join(cpth, self.cmp_namefile)
+                pth = os.path.join(cpth, cmp_namefile)
 
             for i in range(len(files1)):
                 file1 = files1[i]
@@ -509,26 +522,44 @@ class TestFramework:
         fcmp.close()
         return success
 
-    # public
+    def _compare_output(self, compare):
+        """
+        Compare the main simulation's output with that of another simulation or model.
 
-    def setup(self, src, dst):
-        print("Setting up MF6 test", self.name)
-        print("  Source:", src)
-        print("  Destination:", dst)
-        self.workspace = dst
+        compare : str
+            The comparison executable name: mf6, mf6_regression, libmf6, mf2005,
+            mfnwt, mflgr, or mfusg.
+        """
 
-        # setup workspace and expected output files
-        _, self.outp = setup_mf6(src=src, dst=dst)
-        print("waiting...")
-        time.sleep(0.5)
+        if compare not in COMPARE_PROGRAMS:
+            raise ValueError(f"Unsupported comparison program: {compare}")
 
-        if self.compare == "mf6_regression":
-            shutil.copytree(self.workspace, self.workspace / self.compare)
+        if self.verbose:
+            print("Comparison test", self.name)
+
+        # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
+        htol = adjust_htol(self.workspace, self.htol)
+        rclose = get_rclose(self.workspace)
+        cmp_path = self.workspace / compare
+        if "mf6_regression" in compare:
+            assert self._compare_heads(
+                extensions=HDS_EXT, htol=htol
+            ), "head comparison failed"
+            assert self._compare_budgets(
+                extensions=CBC_EXT, rclose=rclose
+            ), "budget comparison failed"
+            assert self._compare_concentrations(
+                htol=htol
+            ), "concentration comparison failed"
         else:
-            self.compare = get_mf6_comparison(src)  # detect comparison
-            setup_mf6_comparison(src, dst, self.compare, overwrite=True)
+            assert self._compare_heads(
+                cpth=cmp_path,
+                extensions=HDS_EXT,
+                mf6="mf6" in compare,
+                htol=htol,
+            ), "head comparison failed"
 
-    def run_sim_or_model(
+    def _run_sim_or_model(
         self,
         workspace: Union[str, os.PathLike],
         target: Union[str, os.PathLike],
@@ -567,9 +598,7 @@ class TestFramework:
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(nf)
-            if nf
-            else None
+            else os.path.basename(nf) if nf else None
         )
 
         # run the model
@@ -598,7 +627,7 @@ class TestFramework:
                     try:
                         success, buff = flopy.run_model(
                             target,
-                            self.workspace / "mfsim.nam",
+                            workspace / "mfsim.nam",
                             model_ws=workspace,
                             report=True,
                         )
@@ -612,8 +641,13 @@ class TestFramework:
             else:
                 # non-MF6 model
                 try:
+                    nf_ext = ".mpsim" if "mp7" in target.name else ".nam"
+                    namefile = next(iter(workspace.glob(f"*{nf_ext}")), None)
+                    assert (
+                        namefile
+                    ), f"Control file with extension {nf_ext} not found"
                     success, buff = flopy.run_model(
-                        target, self.cmp_namefile, workspace, report=True
+                        target, namefile, workspace, report=True
                     )
                 except Exception:
                     warn(f"{target} model failed:\n{format_exc()}")
@@ -626,16 +660,6 @@ class TestFramework:
                 else:
                     success = True
 
-            lst_file_path = Path(workspace) / "mfsim.lst"
-            if (
-                "mf6" in target.name
-                and not success
-                and lst_file_path.is_file()
-            ):
-                warn(
-                    "MODFLOW 6 listing file ended with: \n"
-                    + get_mfsim_lst_tail(lst_file_path)
-                )
         except Exception:
             success = False
             warn(
@@ -644,42 +668,7 @@ class TestFramework:
 
         return success, buff
 
-    def compare_output(self, compare):
-        """
-        Compare the main simulation's output with that of another simulation or model.
-
-        compare : str
-            The comparison executable name: mf6, mf6_regression, libmf6, mf2005,
-            mfnwt, mflgr, or mfusg.
-        """
-
-        if compare not in COMPARE_PROGRAMS:
-            raise ValueError(f"Unsupported comparison program: {compare}")
-
-        if self.verbose:
-            print("Comparison test", self.name)
-
-        # adjust htol if < IMS outer_dvclose, and rclose for budget comparisons
-        htol = adjust_htol(self.workspace, self.htol)
-        rclose = get_rclose(self.workspace)
-        cmp_path = self.workspace / compare
-        if "mf6_regression" in compare:
-            assert self._compare_heads(
-                extensions=HDS_EXT, htol=htol
-            ), "head comparison failed"
-            assert self._compare_budgets(
-                extensions=CBC_EXT, rclose=rclose
-            ), "budget comparison failed"
-            assert self._compare_concentrations(
-                htol=htol
-            ), "concentration comparison failed"
-        else:
-            assert self._compare_heads(
-                cpth=cmp_path,
-                extensions=HDS_EXT,
-                mf6="mf6" in compare,
-                htol=htol,
-            ), "head comparison failed"
+    # public
 
     def run(self):
         """
@@ -737,7 +726,7 @@ class TestFramework:
             )
             xfail = self.xfail[i]
             ncpus = self.ncpus[i]
-            success, buff = self.run_sim_or_model(
+            success, buff = self._run_sim_or_model(
                 workspace, target, xfail, ncpus
             )
             self.buffs[i] = buff  # store model output for assertions later
@@ -746,13 +735,13 @@ class TestFramework:
                 f"{'should have failed' if xfail else 'failed'}: {workspace}"
             )
 
-        # get expected output files from main simulation
-        _, self.outp = get_mf6_files(
-            self.workspace / "mfsim.nam", self.verbose
-        )
-
         # setup and run comparison model(s), if enabled
         if self.compare:
+            # get expected output files from main simulation
+            _, self.outp = get_mf6_files(
+                self.workspace / "mfsim.nam", self.verbose
+            )
+
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
                 if self.verbose:
@@ -777,19 +766,26 @@ class TestFramework:
 
                 # run comparison simulation if libmf6 or mf6 regression
                 if self.compare in ["mf6_regression", "libmf6"]:
-                    # todo: don't hardcode workspace or assume agreement with test case
-                    # simulation workspace, set & access simulation workspaces directly
-                    workspace = self.workspace / self.compare
-                    success, _ = self.run_sim_or_model(
-                        workspace,
-                        self.targets.get(self.compare, self.targets["mf6"]),
-                    )
-                    assert success, f"Comparison model failed: {workspace}"
+                    if self.compare not in self.targets:
+                        warn(
+                            f"Couldn't find comparison program '{self.compare}', skipping comparison"
+                        )
+                    else:
+                        # todo: don't hardcode workspace or assume agreement with test case
+                        # simulation workspace, set & access simulation workspaces directly
+                        workspace = self.workspace / self.compare
+                        success, _ = self._run_sim_or_model(
+                            workspace,
+                            self.targets.get(
+                                self.compare, self.targets["mf6"]
+                            ),
+                        )
+                        assert success, f"Comparison model failed: {workspace}"
 
                 # compare model results, if enabled
-                if self.verbose:
+                if self.verbose and self.compare in self.targets:
                     print("Comparing outputs")
-                self.compare_output(self.compare)
+                self._compare_output(self.compare)
 
         # check results, if enabled
         if self.check:

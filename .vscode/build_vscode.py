@@ -1,6 +1,7 @@
 import subprocess
 import os
 import argparse
+import platform
 import shutil
 import shlex
 
@@ -11,7 +12,7 @@ parser.add_argument("action")
 args = parser.parse_args()
 
 os.environ["FC"] = args.compiler
-builddir = f"builddir_{args.compiler}_{args.buildtype}"
+builddir = f"builddir_{platform.system()}_{args.compiler}_{args.buildtype}"
 
 arg_parallel = "-Dparallel=false"
 if os.getenv("BUILD_PARALLEL_MF6") is not None:

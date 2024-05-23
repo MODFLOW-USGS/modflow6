@@ -1,0 +1,253 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
+module SwfNamInputModule
+  use ConstantsModule, only: LENVARNAME
+  use InputDefinitionModule, only: InputParamDefinitionType, &
+                                   InputBlockDefinitionType
+  private
+  public swf_nam_param_definitions
+  public swf_nam_aggregate_definitions
+  public swf_nam_block_definitions
+  public SwfNamParamFoundType
+  public swf_nam_multi_package
+
+  type SwfNamParamFoundType
+    logical :: list = .false.
+    logical :: print_input = .false.
+    logical :: print_flows = .false.
+    logical :: save_flows = .false.
+    logical :: newtonoptions = .false.
+    logical :: newton = .false.
+    logical :: under_relaxation = .false.
+    logical :: ftype = .false.
+    logical :: fname = .false.
+    logical :: pname = .false.
+  end type SwfNamParamFoundType
+
+  logical :: swf_nam_multi_package = .false.
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_list = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'LIST', & ! tag name
+    'LIST', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_print_input = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'PRINT_INPUT', & ! tag name
+    'PRINT_INPUT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_print_flows = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'PRINT_FLOWS', & ! tag name
+    'PRINT_FLOWS', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_save_flows = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'SAVE_FLOWS', & ! tag name
+    'SAVE_FLOWS', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_newtonoptions = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NEWTONOPTIONS', & ! tag name
+    'NEWTONOPTIONS', & ! fortran variable
+    'RECORD NEWTON UNDER_RELAXATION', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_newton = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NEWTON', & ! tag name
+    'NEWTON', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_under_relaxation = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'UNDER_RELAXATION', & ! tag name
+    'UNDER_RELAXATION', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_ftype = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'PACKAGES', & ! block
+    'FTYPE', & ! tag name
+    'FTYPE', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_fname = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'PACKAGES', & ! block
+    'FNAME', & ! tag name
+    'FNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_pname = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'PACKAGES', & ! block
+    'PNAME', & ! tag name
+    'PNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    .false., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swf_nam_param_definitions(*) = &
+    [ &
+    swfnam_list, &
+    swfnam_print_input, &
+    swfnam_print_flows, &
+    swfnam_save_flows, &
+    swfnam_newtonoptions, &
+    swfnam_newton, &
+    swfnam_under_relaxation, &
+    swfnam_ftype, &
+    swfnam_fname, &
+    swfnam_pname &
+    ]
+
+  type(InputParamDefinitionType), parameter :: &
+    swfnam_packages = InputParamDefinitionType &
+    ( &
+    'SWF', & ! component
+    'NAM', & ! subcomponent
+    'PACKAGES', & ! block
+    'PACKAGES', & ! tag name
+    'PACKAGES', & ! fortran variable
+    'RECARRAY FTYPE FNAME PNAME', & ! type
+    '', & ! shape
+    .true., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    swf_nam_aggregate_definitions(*) = &
+    [ &
+    swfnam_packages &
+    ]
+
+  type(InputBlockDefinitionType), parameter :: &
+    swf_nam_block_definitions(*) = &
+    [ &
+    InputBlockDefinitionType( &
+    'OPTIONS', & ! blockname
+    .false., & ! required
+    .false., & ! aggregate
+    .false. & ! block_variable
+    ), &
+    InputBlockDefinitionType( &
+    'PACKAGES', & ! blockname
+    .true., & ! required
+    .true., & ! aggregate
+    .false. & ! block_variable
+    ) &
+    ]
+
+end module SwfNamInputModule

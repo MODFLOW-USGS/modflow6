@@ -1,0 +1,31 @@
+name: Pixi auto update
+on:
+  schedule:
+  # At 03:00 on day 3 of the month
+    - cron: "0 3 3 * *"
+  # on demand
+  workflow_dispatch:
+env:
+  PIXI_BETA_WARNING_OFF: true
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.7.0
+        with:
+          pixi-version: v0.19.1
+          cache: false
+
+      - name: Update pixi lock file
+        run: |
+          rm pixi.lock
+          pixi install
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update/pixi-lock
+          title: Update pixi lock file
+          commit-message: "Update `pixi.lock`"
+          body: Update pixi dependencies to the latest version.
+          author: "GitHub <noreply@github.com>"

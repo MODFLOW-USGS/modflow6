@@ -18,3 +18,6 @@
 *.inc linguist-language=Fortran
 .build_rtd_docs/** linguist-documentation
 .doc/** linguist-documentation
+# GitHub syntax highlighting
+pixi.lock linguist-language=YAML
+

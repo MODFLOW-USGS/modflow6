@@ -66,12 +66,18 @@ def targets() -> Dict[str, Path]:
         # require development binaries
         assert v.is_file(), f"Couldn't find binary '{k}' expected at: {v}"
         d[k] = v
-    for k, v in _binaries["downloaded"] + _binaries["rebuilt"]:
-        # downloaded/rebuilt binaries are optional
+    for k, v in _binaries["downloaded"]:
+        # downloaded binaries are optional
         if v.is_file():
             d[k] = v
         else:
-            warn(f"Couldn't find binary '{k}' expected at: {v}")
+            warn(f"Couldn't find downloaded binary '{k}' expected at: {v}")
+    for k, v in _binaries["rebuilt"]:
+        # rebuilt binaries are optional
+        if v.is_file():
+            d[k] = v
+        else:
+            warn(f"Couldn't find rebuilt binary '{k}' expected at: {v}")
     return d
 
 

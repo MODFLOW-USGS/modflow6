@@ -29,6 +29,7 @@ module FlowModelInterfaceModule
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
     integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
+    integer(I4B), pointer :: idryinactive => null() !< mark cells with an additional flag to exclude from deactivation (gwe will simulate conduction through dry cells)
     real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
     integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
@@ -72,12 +73,13 @@ contains
 
   !> @brief Define the flow model interface
   !<
-  subroutine fmi_df(this, dis)
+  subroutine fmi_df(this, dis, idryinactive)
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
     class(FlowModelInterfaceType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), intent(in) :: idryinactive
     ! -- formats
     character(len=*), parameter :: fmtfmi = &
       "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 2, 8/17/2023',            &
@@ -85,7 +87,7 @@ contains
     character(len=*), parameter :: fmtfmi0 = &
                     "(1x,/1x,'FMI -- FLOW MODEL INTERFACE,'&
                     &' VERSION 2, 8/17/2023')"
-
+    !
     ! --print a message identifying the FMI package.
     if (this%iout > 0) then
       if (this%inunit /= 0) then
@@ -119,6 +121,11 @@ contains
     if (.not. this%flows_from_file) then
       call this%initialize_gwfterms_from_gwfbndlist()
     end if
+    !
+    ! -- Set flag that stops dry flows from being deactivated in a GWE
+    !    transport model since conduction will still be simulated.
+    !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
+    this%idryinactive = idryinactive
     !
     ! -- Return
     return
@@ -181,6 +188,7 @@ contains
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
     call mem_deallocate(this%nflowpack)
+    call mem_deallocate(this%idryinactive)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -210,6 +218,7 @@ contains
     call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
     call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
+    call mem_allocate(this%idryinactive, "IDRYINACTIVE", this%memoryPath)
     !
     ! !
     ! -- Initialize
@@ -221,6 +230,7 @@ contains
     this%iuhds = 0
     this%iumvr = 0
     this%nflowpack = 0
+    this%idryinactive = 1
     !
     ! -- Return
     return
@@ -415,7 +425,7 @@ contains
           call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, &
                         ACCESS, 'UNKNOWN')
           this%iumvr = inunit
-          call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, & ! kluge note: MVT?
+          call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, &
                                    this%iout)
           call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
         case default
@@ -527,7 +537,7 @@ contains
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
           write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
             &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-           &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
             &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
             &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
@@ -729,7 +739,7 @@ contains
 
   !> @brief Initialize gwf terms from budget file
   !!
-  !! initalize terms and figure out how many
+  !! initialize terms and figure out how many
   !! different terms and packages are contained within the file
   !!
   !<

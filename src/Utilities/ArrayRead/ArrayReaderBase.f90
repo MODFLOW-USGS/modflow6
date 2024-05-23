@@ -29,14 +29,14 @@ module ArrayReaderBaseModule
     procedure :: read_array
     procedure :: reset_reader
     procedure :: read_control_record
-    procedure :: set_constant ! must be overriden
-    procedure :: fill_constant ! must be overriden
+    procedure :: set_constant ! must be overridden
+    procedure :: fill_constant ! must be overridden
     procedure :: fill_internal
     procedure :: fill_open_close
-    procedure :: read_ascii ! must be overriden
-    procedure :: read_binary ! must be overriden
-    procedure :: set_factor ! must be overriden
-    procedure :: apply_factor ! must be overriden
+    procedure :: read_ascii ! must be overridden
+    procedure :: read_binary ! must be overridden
+    procedure :: set_factor ! must be overridden
+    procedure :: apply_factor ! must be overridden
     procedure :: open_file
 
   end type ArrayReaderBaseType

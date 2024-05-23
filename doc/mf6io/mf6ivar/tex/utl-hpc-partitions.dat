@@ -1,0 +1,5 @@
+BEGIN PARTITIONS
+  <mname> <mrank>
+  <mname> <mrank>
+  ...
+END PARTITIONS
