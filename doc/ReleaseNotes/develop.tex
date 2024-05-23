@@ -5,7 +5,7 @@
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item A new Groundwater Energy (GWE) transport model is introduced to the code base for simulating heat transport in the subsurface.  GWE Models can be coupled together using a new GWE-GWE Exchange.  Additional information for activating the GWE model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  Technical details about the GWE Model are given in the supplemental technical information document (mf6suptechinfo) provided with the release.  New example problems have been developed for testing and demonstrating GWE capabilities (in addition to other internal tests that help verify the accuracy of GWE); however, additional changes to the code and input may be necessary in response to user needs and further testing.
+		\item A new Groundwater Energy (GWE) transport model was added to simulate heat transport in the subsurface.  GWE Models can be coupled together using a new GWE-GWE Exchange.  Additional information for activating the GWE model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  Technical details about the GWE Model are given in the supplemental technical information document (mf6suptechinfo) provided with the release.  New example problems have been developed for testing and demonstrating GWE capabilities (in addition to other internal tests that help verify the accuracy of GWE); however, additional changes to the code and input may be necessary in response to user needs and further testing.
 		\item A new Particle Tracking (PRT) Model was added to simulate forward tracking of particles for Groundwater Flow (GWF) Models.  Additional information for activating the PRT model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  Technical details about the PRT Model are given in the supplemental technical information document (mf6suptechinfo) provided with the release. New example problems have been developed for testing and demonstrating PRT capabilities (in addition to other internal tests that help verify the accuracy of PRT); however, additional changes to the code and input may be necessary in response to user needs and further testing.
 		\item A new capability has been introduced to optionally write user-provided input arrays to external ASCII files.  In some cases, such as when the user provides binary files as input, it can be useful to inspect the text representation of that input.  Exporting to external ASCII files can be turned on for supported packages by specifying the EXPORT\_ARRAY\_ASCII option.  When activated supported variables will be written to files that are named based on the model, package, variable, and layer.  Only those arrays specified for the model grid can be exported.
 		\item Added capability to vary the hydraulic conductivity of the reach streambed (RHK) by stress period in the Streamflow Routing (SFR) package. RHK can be modified by stress period using the BEDK SFRSETTING. RHK can also be defined using a timeseries string in the PACKAGEDATA or PERIOD blocks.
@@ -15,8 +15,8 @@
 
 	\underline{EXAMPLES}
 	\begin{itemize}
-		\item New examples were added to demonstrate the new Groundwater Energy (GWE) Model.  These examples include: danckwerts, geotherm, gwe-prt, and gwe-radial.
-		\item New examples were added to demonstrate the new Particle Tracking (PRT) Model.  These examples include four of the test problems used to demonstrate MODPATH Version 7.
+		\item Examples were added to demonstrate the new Groundwater Energy (GWE) Model.  These examples include: danckwerts, geotherm, gwe-prt, and gwe-radial.
+		\item Examples were added to demonstrate the new Particle Tracking (PRT) Model.  These examples include two of the test problems used to demonstrate MODPATH Version 7.
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\

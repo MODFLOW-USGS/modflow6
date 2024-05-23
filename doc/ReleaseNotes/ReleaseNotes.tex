@@ -228,6 +228,9 @@ The Time-Variable Hydraulic Conductivity (TVK) Package is incompatible with the 
 \item
 If a GWF-GWF Exchange is active, then neither of the connected GWF Models can have an active Viscosity (VSC) Package.
 
+\item 
+If a GWT-GWT Exchange is active, then constant concentration conditions cannot be assigned on the interface between the two connected models.  
+
 \end{enumerate}
 
 In addition to the issues shown here, a comprehensive and up-to-date list is available under the issues tab at \url{https://github.com/MODFLOW-USGS/modflow6}.
@@ -235,7 +238,7 @@ In addition to the issues shown here, a comprehensive and up-to-date list is ava
 
 % -------------------------------------------------
 \section{Distribution File}
-The distribution is provided in the form of a compressed zip file.  Distributions are available for several different operating systems, including Windows, Mac, and Linux.  Distributions are marked with an operating system tag, called ``ostag''.  Values for ``ostag'' include ``win64'', ``mac'', and ``linux'', for example.  Distribution files for this release are labeled as \texttt{\modflowversion\_[ostag].zip}.  Thus, the distribution file for Windows for this release is  \texttt{\modflowversion\_win64.zip}.
+The MODFLOW~6 distribution is provided in the form of a compressed zip file.  Distributions are available for several different operating systems, including Windows, Mac, and Linux.  Distributions are marked with an operating system tag, called ``ostag''.  Values for ``ostag'' include ``win64'', ``mac'', and ``linux'', for example.  Distribution files for the current release are labeled as \texttt{\modflowversion\_[ostag].zip}.  Thus, the distribution file for Windows for the current release is \texttt{\modflowversion\_win64.zip}.
 
 It is recommended that no user files are kept in the release directory.  If you do plan to put your own files in the release directory, do so only by creating additional subdirectories.
 
@@ -245,9 +248,9 @@ There is no installation of MODFLOW~6 other than the requirement that \texttt{\m
 
 To make the executable versions of MODFLOW~6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW~6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
 
-As an alternative, the executable file, named ``\texttt{mf6.exe}'' on Windows, in the \modflowversion\_[ostag]/bin directory can be copied into a directory already included in the PATH environment variable.
+As an alternative, the executable file (named ``\texttt{mf6.exe}'' on Windows or ``\texttt{mf6}'' on Mac and Linux) in the \modflowversion\_[ostag]/bin directory can be copied into a directory already included in the PATH environment variable.
 
-To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
+To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for a file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
 
 % -------------------------------------------------
 \section{Compiling MODFLOW~6}
