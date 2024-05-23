@@ -10,7 +10,7 @@ module IdmLoadModule
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, &
                              LENEXCHANGENAME, LENCOMPONENTNAME
-  use SimModule, only: store_error, store_error_filename
+  use SimModule, only: store_error, count_errors, store_error_filename
   use ListModule, only: ListType
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, &
                                  DynamicPkgLoadBaseType, &
@@ -213,10 +213,10 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use CharacterStringModule, only: CharacterStringType
-    use SimVariablesModule, only: idm_context
     use DistributedSimModule, only: DistributedSimType, get_dsim
+    use SimVariablesModule, only: idm_context, simfile
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceCommonModule, only: idm_component_type
+    use SourceCommonModule, only: idm_component_type, inlen_check
     use SourceLoadModule, only: load_modelnam
     ! -- dummy
     integer(I4B), intent(in) :: iout
@@ -252,7 +252,12 @@ contains
       ! -- attributes for this model
       mtype = mtypes(n)
       mfname = mfnames(n)
-      mname = mnames(n)
+      call inlen_check(mnames(n), mname, LENMODELNAME, 'MODELNAME')
+      !
+      ! -- terminate if errors were detected
+      if (count_errors() > 0) then
+        call store_error_filename(simfile)
+      end if
       !
       ! -- load specified model inputs
       if (model_loadmask(n) > 0) then
@@ -290,7 +295,8 @@ contains
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context, simfile
     use DistributedSimModule, only: DistributedSimType, get_dsim
-    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr
+    use SourceCommonModule, only: idm_subcomponent_type, ifind_charstr, &
+                                  inlen_check
     use SourceLoadModule, only: create_input_loader, remote_model_ndim
     ! -- dummy
     integer(I4B), intent(in) :: iout
@@ -348,8 +354,8 @@ contains
       ! -- attributes for this exchange
       exgtype = etypes(n)
       efname = efiles(n)
-      mname1 = emnames_a(n)
-      mname2 = emnames_b(n)
+      call inlen_check(emnames_a(n), mname1, LENMODELNAME, 'MODELNAME')
+      call inlen_check(emnames_b(n), mname2, LENMODELNAME, 'MODELNAME')
       !
       ! initialize mempath as no path
       emempaths(n) = ''
@@ -364,6 +370,10 @@ contains
         if (m1_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname1)
         if (m2_idx <= 0) errmsg = trim(errmsg)//' '//trim(mname2)
         call store_error(errmsg)
+      end if
+      !
+      ! -- terminate if errors were detected
+      if (count_errors() > 0) then
         call store_error_filename(simfile)
       end if
       !
