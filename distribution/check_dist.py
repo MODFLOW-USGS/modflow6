@@ -189,15 +189,14 @@ def test_examples(dist_dir_path, full):
     print(f"{len(example_paths)} example models found:")
     pprint(example_paths)
 
-    # pick some examples at random to test run individually
-    n = 3
-    shuffle(example_paths)
-    script_paths = [next(iter(p.rglob(f"*run{_scext}"))) for p in example_paths[:n]]
-    print(f"Testing {n} randomly selected example model scripts:")
-    pprint(script_paths)
-    for script_path in script_paths:
-        out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
-        assert not ret, out + err
+    # todo: check individual scripts? toggle via release workflow input?
+    # model_paths = get_model_paths(examples_path)
+    # script_paths = [mp / f"run{_scext}" for mp in model_paths]
+    # for script_path in script_paths:
+    #     print(f"Testing example script: {script_path}")
+    #     assert script_path.is_file()
+    #     out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
+    #     assert not ret, out + err
 
     # check comprehensive examples script and give it a test run
     script_path = examples_path / f"runall{_scext}"
