@@ -24,7 +24,7 @@ runs:
       shell: bash
       if: steps.oneapi-cache.outputs.cache-hit != 'true'
       run: |
-        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/5cb30fb9-21e9-47e8-82da-a91e00191670/w_BaseKit_p_2024.0.1.45_offline.exe"
+        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe"
         cmp="intel.oneapi.win.mkl.devel"
         "$GITHUB_WORKSPACE/modflow6/.github/common/install_intel_windows.bat" $url $cmp
         rm -rf $TEMP/webimage.exe
@@ -34,7 +34,7 @@ runs:
       shell: bash
       if: steps.oneapi-cache.outputs.cache-hit != 'true'
       run: |
-        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7a6db8a1-a8b9-4043-8e8e-ca54b56c34e4/w_HPCKit_p_2024.0.1.35_offline.exe"
+        url="https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe"
         cmp="intel.oneapi.win.cpp-dpcpp-common:intel.oneapi.win.ifort-compiler:intel.oneapi.win.mpi.devel"
         "$GITHUB_WORKSPACE/modflow6/.github/common/install_intel_windows.bat" $url $cmp
         rm -rf $TEMP/webimage.exe
