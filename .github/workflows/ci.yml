@@ -49,7 +49,7 @@ jobs:
       - name: Checkout modflow6
         uses: actions/checkout@v4
 
-      - uses: prefix-dev/setup-pixi@v0.8.0
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
 
@@ -79,7 +79,7 @@ jobs:
           compiler: gcc
           version: ${{ env.FC_V }}
 
-      - uses: prefix-dev/setup-pixi@v0.8.0
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
 
@@ -124,7 +124,7 @@ jobs:
           version: ${{ env.FC_V }}
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.8.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
@@ -223,7 +223,7 @@ jobs:
           version: ${{ env.FC_V }}
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.8.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
@@ -362,7 +362,7 @@ jobs:
           path: modflow6-examples
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.8.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
@@ -453,7 +453,7 @@ jobs:
           path: modflow6
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.8.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
