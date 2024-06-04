@@ -14,6 +14,9 @@ on:
       - '.hpc/**'
 env:
   PIXI_BETA_WARNING_OFF: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     name: Check format
