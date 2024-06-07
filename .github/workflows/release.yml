@@ -127,13 +127,13 @@ jobs:
             bash
             powershell
 
-      - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+      - name: Setup ${{ matrix.compiler }} ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || matrix.version }}
         if: (!(runner.os == 'Windows' && matrix.parallel))
         id: setup-fortran
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
-          version: ${{ matrix.version }}
+          version: ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || matrix.version }}
       
       - name: Set version number
         id: set_version
