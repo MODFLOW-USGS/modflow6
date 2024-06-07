@@ -7,12 +7,7 @@
 module Mf6FileListInputModule
 
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENMEMPATH, LENVARNAME, &
-                             LENTIMESERIESNAME, LENAUXNAME, LENBOUNDNAME, &
-                             LENCOMPONENTNAME
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, count_errors, store_error_unit
-  use InputOutputModule, only: openfile, getunit
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME
   use InputDefinitionModule, only: InputParamDefinitionType
   use MemoryManagerModule, only: mem_setptr
   use CharacterStringModule, only: CharacterStringType
@@ -22,29 +17,10 @@ module Mf6FileListInputModule
                                destructStructArray
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
   use BoundInputContextModule, only: BoundInputContextType
-  use StructVectorModule, only: StructVectorType, TSStringLocType
 
   implicit none
   private
   public :: BoundListInputType
-
-  !> @brief Abstract base class for ascii list loaders
-  !!
-  !! Abstract class with types and routines common to Ascii list
-  !! based loaders.
-  !!
-  !<
-  type, abstract, extends(AsciiDynamicPkgLoadBaseType) :: ListInputBaseType
-    integer(I4B) :: ts_active
-    type(TimeSeriesManagerType), pointer :: tsmanager => null()
-    type(StructArrayType), pointer :: structarray => null()
-  contains
-    procedure :: base_init
-    procedure :: base_destroy
-    procedure :: df
-    procedure :: ad
-    procedure :: reset
-  end type ListInputBaseType
 
   !> @brief Boundary package list loader.
   !!
@@ -53,11 +29,17 @@ module Mf6FileListInputModule
   !! read and prepare (RP) routines.
   !!
   !<
-  type, extends(ListInputBaseType) :: BoundListInputType
-    integer(I4B) :: iboundname
+  type, extends(AsciiDynamicPkgLoadBaseType) :: BoundListInputType
+    type(TimeSeriesManagerType), pointer :: tsmanager => null()
+    type(StructArrayType), pointer :: structarray => null()
     type(BoundInputContextType) :: bound_context
+    integer(I4B) :: ts_active
+    integer(I4B) :: iboundname
   contains
     procedure :: ainit => bndlist_init
+    procedure :: df => bndlist_df
+    procedure :: ad => bndlist_ad
+    procedure :: reset => bndlist_reset
     procedure :: rp => bndlist_rp
     procedure :: destroy => bndlist_destroy
     procedure :: ts_link_bnd => bndlist_ts_link_bnd
@@ -71,6 +53,8 @@ contains
 
   subroutine bndlist_init(this, mf6_input, component_name, component_input_name, &
                           input_name, iperblock, parser, iout)
+    use InputOutputModule, only: getunit
+    use MemoryManagerModule, only: get_isize
     use BlockParserModule, only: BlockParserType
     use LoadMf6FileModule, only: LoadMf6FileType
     class(BoundListInputType), intent(inout) :: this
@@ -82,45 +66,43 @@ contains
     type(BlockParserType), pointer, intent(inout) :: parser
     integer(I4B), intent(in) :: iout
     type(LoadMf6FileType) :: loader
-    character(len=LINELENGTH) :: blockname
-    integer(I4B) :: iblk
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: ts_fnames
+    character(len=LINELENGTH) :: fname
+    integer(I4B) :: ts6_size, n
     !
+    ! -- init loader
+    call this%DynamicPkgLoadType%init(mf6_input, component_name, &
+                                      component_input_name, input_name, &
+                                      iperblock, iout)
     ! -- initialize scalars
     this%iboundname = 0
+    this%ts_active = 0
     !
-    ! -- initialize base class
-    call this%base_init(mf6_input, component_name, component_input_name, &
-                        input_name, iperblock, parser, loader, iout)
+    ! -- load static input
+    call loader%load(parser, mf6_input, this%input_name, iout)
+    !
+    ! -- create tsmanager
+    allocate (this%tsmanager)
+    call tsmanager_cr(this%tsmanager, iout)
+    !
+    ! -- determine if TS6 files were provided in OPTIONS block
+    call get_isize('TS6_FILENAME', this%mf6_input%mempath, ts6_size)
+    !
+    if (ts6_size > 0) then
+      !
+      this%ts_active = 1
+      call mem_setptr(ts_fnames, 'TS6_FILENAME', this%mf6_input%mempath)
+      !
+      do n = 1, size(ts_fnames)
+        fname = ts_fnames(n)
+        call this%tsmanager%add_tsfile(fname, GetUnit())
+      end do
+      !
+    end if
     !
     ! -- initialize package input context
     call this%bound_context%create(mf6_input, this%readasarrays)
-    !
-    ! -- load blocks after OPTIONS and DIMENSIONS
-    do iblk = 1, size(this%mf6_input%block_dfns)
-      !
-      ! -- log block header via loader or directly here?
-      !
-      ! -- set blockname
-      blockname = this%mf6_input%block_dfns(iblk)%blockname
-      !
-      ! -- base_init loads OPTIONS and DIMENSIONS blocks if defined
-      if (blockname == 'OPTIONS' .or. blockname == 'DIMENSIONS') cycle
-      if (blockname == 'PERIOD') exit
-      !
-      ! -- load block
-      call loader%load_block(iblk)
-      !
-      if (this%mf6_input%block_dfns(iblk)%aggregate) then
-        if (this%mf6_input%block_dfns(iblk)%timeseries) then
-          if (this%ts_active > 0) then
-            call this%ts_update(loader%structarray)
-          end if
-        end if
-      end if
-      !
-    end do
-    !
-    call loader%finalize()
     !
     ! -- store in scope SA cols for list input
     call this%bound_context%bound_params(this%param_names, this%nparam, &
@@ -135,6 +117,40 @@ contains
     ! -- return
     return
   end subroutine bndlist_init
+
+  subroutine bndlist_df(this)
+    ! -- modules
+    ! -- dummy
+    class(BoundListInputType), intent(inout) :: this !< ListInputType
+    !
+    ! -- define tsmanager
+    call this%tsmanager%tsmanager_df()
+    !
+    ! -- return
+    return
+  end subroutine bndlist_df
+
+  subroutine bndlist_ad(this)
+    ! -- modules
+    class(BoundListInputType), intent(inout) :: this !< ListInputType
+    !
+    ! -- advance timeseries
+    call this%tsmanager%ad()
+    !
+    ! -- return
+    return
+  end subroutine bndlist_ad
+
+  subroutine bndlist_reset(this)
+    ! -- modules
+    class(BoundListInputType), intent(inout) :: this !< ListInputType
+    !
+    ! -- reset tsmanager
+    call this%tsmanager%reset(this%mf6_input%subcomponent_name)
+    !
+    ! -- return
+    return
+  end subroutine bndlist_reset
 
   subroutine bndlist_rp(this, parser)
     ! -- modules
@@ -192,7 +208,11 @@ contains
     ! -- modules
     class(BoundListInputType), intent(inout) :: this !< BoundListInputType
     !
-    call this%base_destroy()
+    deallocate (this%tsmanager)
+    !
+    ! -- deallocate StructArray
+    call destructStructArray(this%structarray)
+    !
     call this%bound_context%destroy()
     !
     ! -- return
@@ -380,126 +400,5 @@ contains
     ! -- return
     return
   end subroutine bndlist_create_structarray
-
-  subroutine base_init(this, mf6_input, component_name, component_input_name, &
-                       input_name, iperblock, parser, loader, iout)
-    use ConstantsModule, only: LENCOMPONENTNAME
-    use BlockParserModule, only: BlockParserType
-    use LoadMf6FileModule, only: LoadMf6FileType
-    use MemoryManagerModule, only: get_isize
-    use IdmLoggerModule, only: idm_log_header
-    class(ListInputBaseType), intent(inout) :: this
-    type(ModflowInputType), intent(in) :: mf6_input
-    character(len=*), intent(in) :: component_name
-    character(len=*), intent(in) :: component_input_name
-    character(len=*), intent(in) :: input_name
-    integer(I4B), intent(in) :: iperblock
-    type(BlockParserType), intent(inout) :: parser
-    type(LoadMf6FileType), intent(inout) :: loader
-    integer(I4B), intent(in) :: iout
-    type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: ts_fnames
-    character(len=LINELENGTH) :: fname
-    integer(I4B) :: ts6_size, n
-    character(len=LINELENGTH) :: blockname
-    integer(I4B) :: iblk
-    !
-    ! -- init loader
-    call this%DynamicPkgLoadType%init(mf6_input, component_name, &
-                                      component_input_name, input_name, &
-                                      iperblock, iout)
-    !
-    ! -- initialize
-    this%ts_active = 0
-    !
-    ! -- initialize static loader
-    call loader%init(parser, mf6_input, this%input_name, iout)
-    !
-    ! -- load OPTIONS and DIMENSIONS blocks
-    do iblk = 1, size(this%mf6_input%block_dfns)
-      !
-      ! -- set blockname
-      blockname = this%mf6_input%block_dfns(iblk)%blockname
-      !
-      ! -- step 1 loads OPTIONS and DIMENSIONS blocks if defined
-      if (blockname /= 'OPTIONS' .and. blockname /= 'DIMENSIONS') exit
-      !
-      ! -- load block
-      call loader%load_block(iblk)
-      !
-    end do
-    !
-    ! -- create tsmanager
-    allocate (this%tsmanager)
-    call tsmanager_cr(this%tsmanager, iout)
-    !
-    ! -- determine if TS6 files were provided in OPTIONS block
-    call get_isize('TS6_FILENAME', this%mf6_input%mempath, ts6_size)
-    !
-    if (ts6_size > 0) then
-      !
-      this%ts_active = 1
-      call mem_setptr(ts_fnames, 'TS6_FILENAME', this%mf6_input%mempath)
-      !
-      do n = 1, size(ts_fnames)
-        fname = ts_fnames(n)
-        call this%tsmanager%add_tsfile(fname, GetUnit())
-      end do
-      !
-    end if
-    !
-    ! -- define TS manager
-    call this%tsmanager%tsmanager_df()
-    !
-    ! -- return
-    return
-  end subroutine base_init
-
-  subroutine base_destroy(this)
-    ! -- modules
-    class(ListInputBaseType), intent(inout) :: this !< ListInputType
-    !
-    deallocate (this%tsmanager)
-    !
-    ! -- deallocate StructArray
-    call destructStructArray(this%structarray)
-    !
-    ! -- return
-    return
-  end subroutine base_destroy
-
-  subroutine df(this)
-    ! -- modules
-    ! -- dummy
-    class(ListInputBaseType), intent(inout) :: this !< ListInputType
-    !
-    ! -- define tsmanager
-    !call this%tsmanager%tsmanager_df()
-    !
-    ! -- return
-    return
-  end subroutine df
-
-  subroutine ad(this)
-    ! -- modules
-    class(ListInputBaseType), intent(inout) :: this !< ListInputType
-    !
-    ! -- advance timeseries
-    call this%tsmanager%ad()
-    !
-    ! -- return
-    return
-  end subroutine ad
-
-  subroutine reset(this)
-    ! -- modules
-    class(ListInputBaseType), intent(inout) :: this !< ListInputType
-    !
-    ! -- reset tsmanager
-    call this%tsmanager%reset(this%mf6_input%subcomponent_name)
-    !
-    ! -- return
-    return
-  end subroutine reset
 
 end module Mf6FileListInputModule
