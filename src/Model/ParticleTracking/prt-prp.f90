@@ -379,11 +379,20 @@ contains
         np = this%nparticles + 1
         this%nparticles = np
 
-        ! -- Check release point is within the specified cell
-        !    and not above/below grid top/bottom respectively
+        ! -- Particle release point. Calculate global from local z if needed.
         x = this%rptx(nps)
         y = this%rpty(nps)
-        z = this%rptz(nps)
+        if (this%localz) then
+          top = this%fmi%dis%top(ic)
+          bot = this%fmi%dis%bot(ic)
+          hds = this%fmi%gwfhead(ic)
+          z = bot + this%rptz(nps) * (hds - bot)
+        else
+          z = this%rptz(nps)
+        end if
+
+        ! -- Check release point is within the specified cell
+        !    and not above/below grid top/bottom respectively
         call this%dis%get_polyverts(ic, polyverts)
         if (.not. point_in_polygon(x, y, polyverts)) then
           write (errmsg, '(a,g0,a,g0,a,i0)') &
@@ -443,14 +452,7 @@ contains
         end if
         particle%x = x
         particle%y = y
-        if (this%localz) then
-          top = this%fmi%dis%top(ic)
-          bot = this%fmi%dis%bot(ic)
-          hds = this%fmi%gwfhead(ic)
-          particle%z = bot + this%rptz(nps) * (hds - bot)
-        else
-          particle%z = this%rptz(nps)
-        end if
+        particle%z = z
         particle%trelease = trelease
         ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
         if (this%stoptraveltime == huge(1d0)) then
@@ -470,7 +472,8 @@ contains
         particle%iexmethod = this%iexmethod
         particle%extol = this%extol
 
-        call this%particles%load_from_particle(particle, np)
+        ! -- Persist particle to particle store
+        call this%particles%save_particle(particle, np)
 
         ! -- Accumulate mass release from this point
         this%rptmass(nps) = this%rptmass(nps) + DONE

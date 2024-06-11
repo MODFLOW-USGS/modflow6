@@ -64,7 +64,7 @@ module ParticleModule
     real(DP), public :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
     procedure, public :: get_model_coords
-    procedure, public :: load_from_store
+    procedure, public :: load_particle
     procedure, public :: transform => transform_coords
   end type ParticleType
 
@@ -95,9 +95,9 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, contiguous :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), dimension(:), pointer, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
-    procedure, public :: deallocate => deallocate_particle_store
-    procedure, public :: resize => resize_store
-    procedure, public :: load_from_particle
+    procedure, public :: deallocate
+    procedure, public :: resize
+    procedure, public :: save_particle
   end type ParticleStoreType
 
 contains
@@ -141,7 +141,7 @@ contains
   end subroutine allocate_particle_store
 
   !> @brief Deallocate particle arrays
-  subroutine deallocate_particle_store(this, mempath)
+  subroutine deallocate (this, mempath)
     class(ParticleStoreType), intent(inout) :: this !< store
     character(*), intent(in) :: mempath !< path to memory
 
@@ -166,10 +166,10 @@ contains
     call mem_deallocate(this%extol, 'PLEXTOL', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
-  end subroutine deallocate_particle_store
+  end subroutine deallocate
 
   !> @brief Reallocate particle arrays
-  subroutine resize_store(this, np, mempath)
+  subroutine resize(this, np, mempath)
     ! -- dummy
     class(ParticleStoreType), intent(inout) :: this !< particle store
     integer(I4B), intent(in) :: np !< number of particles
@@ -197,15 +197,14 @@ contains
     call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
     call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
-  end subroutine resize_store
+  end subroutine resize
 
-  !> @brief Initialize particle from particle list.
+  !> @brief Load a particle from the particle store.
   !!
-  !! This routine is used to initialize a particle from the list
-  !! so it can be tracked by prt_solve. The particle's advancing
-  !! flag is set and local coordinate transformations are reset.
+  !! This routine is used to initialize a particle for tracking.
+  !! The advancing flag and coordinate transformation are reset.
   !<
-  subroutine load_from_store(this, store, imdl, iprp, ip)
+  subroutine load_particle(this, store, imdl, iprp, ip)
     class(ParticleType), intent(inout) :: this !< particle
     type(ParticleStoreType), intent(in) :: store !< particle storage
     integer(I4B), intent(in) :: imdl !< index of model particle originated in
@@ -239,10 +238,10 @@ contains
     this%ifrctrn = store%ifrctrn(ip)
     this%iexmethod = store%iexmethod(ip)
     this%extol = store%extol(ip)
-  end subroutine load_from_store
+  end subroutine load_particle
 
-  !> @brief Update particle store from particle
-  subroutine load_from_particle(this, particle, ip)
+  !> @brief Save a particle's state to the particle store
+  subroutine save_particle(this, particle, ip)
     class(ParticleStoreType), intent(inout) :: this !< particle storage
     type(ParticleType), intent(in) :: particle !< particle
     integer(I4B), intent(in) :: ip !< particle index
@@ -274,7 +273,7 @@ contains
     this%ifrctrn = particle%ifrctrn
     this%iexmethod = particle%iexmethod
     this%extol = particle%extol
-  end subroutine load_from_particle
+  end subroutine save_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.
   subroutine transform_coords(this, xorigin, yorigin, zorigin, &
