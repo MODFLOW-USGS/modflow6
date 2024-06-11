@@ -62,9 +62,9 @@ def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
     if "sgl" in name or "dbl" in name or "tls" in name:
         return None
 
-    # For cases using FRACTION below we need to
-    # use a single-value tuple so flopy writes
-    # separate lines in the period block e.g.
+    # Flopy expects each period block setting
+    # value as a separate tuple to be written
+    # to separate lines in period block e.g.
     #
     # BEGIN period  1
     #   ALL
