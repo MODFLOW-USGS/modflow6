@@ -926,8 +926,8 @@ contains
         ! -- Loop over particles in package
         do np = 1, packobj%nparticles
           ! -- Load particle from storage
-          call particle%load_from_store(packobj%particles, &
-                                        this%id, iprp, np)
+          call particle%load_particle(packobj%particles, &
+                                      this%id, iprp, np)
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
@@ -952,7 +952,7 @@ contains
           call this%method%apply(particle, tmax)
 
           ! -- Update particle storage
-          call packobj%particles%load_from_particle(particle, np)
+          call packobj%particles%save_particle(particle, np)
         end do
       end select
     end do
