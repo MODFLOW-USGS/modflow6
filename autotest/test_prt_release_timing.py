@@ -1,18 +1,7 @@
 """
-Test cases exercising release timing, 1st via
-package-level RELEASETIME option, & then with
-period-block config STEPS 1 and FRACTION 0.5.
-The model is setup to release halfway through
-the first and only time step of the first and
-only stress period, with duration 1 time unit,
-so the same value of 0.5 can be used for both
-RELEASETIME and FRACTION. A third test case
-checks that multiple values can be provided
-for RELEASETIME.
-
-Period-block FRACTION should work with FIRST
-and ALL, but flopy hangs with either option.
-Todo: debug and enable corresponding cases.
+Test cases exercising release timing option.
+including package-level RELEASETIME options,
+as well as period-block release settings.
 
 The grid is a 10x10 square with a single layer,
 the same flow system shown on the FloPy readme.
@@ -57,6 +46,7 @@ cases = [
     # f"{simname}all",  # ALL FRACTION 0.5      # todo debug flopy hanging
     # f"{simname}frst", # FIRST FRACTION 0.5    # todo debug flopy hanging
     f"{simname}stps",  # STEPS 1 FRACTION 0.5
+    f"{simname}freq",  # FREQUENCY 1
 ]
 
 
@@ -71,21 +61,24 @@ def releasetimes_file(path, rtimes) -> Path:
 def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
     if "sgl" in name or "dbl" in name or "tls" in name:
         return None
-    opt = [
-        (
-            "FIRST"
-            if "frst" in name
-            else (
-                "ALL"
-                if "all" in name
-                else ("STEPS", 1) if "stps" in name else None
-            )
-        )
-    ]
+
+    if "frst" in name:
+        opt = "FIRST"
+    elif "all" in name:
+        opt = "ALL"
+    elif "stps" in name:
+        opt = ("STEPS", 1)
+    elif "freq" in name:
+        opt = ("FREQUENCY", 1)
+    else:
+        opt = None
+    opt = [opt]
+
     if opt[0] is None:
         raise ValueError(f"Invalid period option: {name}")
     if fraction is not None:
         opt.append(("FRACTION", fraction))
+
     return {i: opt for i in range(periods)}
 
 
@@ -344,7 +337,7 @@ def check_output(idx, test, fraction, snapshot):
             "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
             in lines
         )
-    elif "stps" in name:
+    elif "stps" in name or "freq" in name:
         assert (
             "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.500"
             in lines
