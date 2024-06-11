@@ -265,6 +265,12 @@ def check_output(idx, test, snapshot):
                 color=cm.plasma(ipl / len(mf6_plines)),
             )
 
+        # plot nodes
+        xc, yc = mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0)
+        for i in range(mg.ncpl):
+            x, y = xc[i], yc[i]
+            ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
+
         # view/save plot
         plt.show()
         plt.savefig(gwf_ws / f"test_{name}.png")
