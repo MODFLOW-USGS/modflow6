@@ -1938,6 +1938,8 @@ contains
     character(len=buffer_len) :: buffer
     character(len=:), allocatable :: linetemp
     integer(I4B) :: size_read, linesize
+    character(len=1), parameter  :: cr = CHAR(13)
+    character(len=1), parameter  :: lf = CHAR(10)
     !
     ! -- initialize
     line = ''
@@ -1972,6 +1974,25 @@ contains
         exit
       end if
     end do
+    !
+    ! -- look for undetected end-of-record with isolated CR or LF
+    linesize = len(line)
+    crlfcheck: do i=1,linesize
+      if(line(i:i).eq.cr .or. line(i:i).eq.lf) then
+        if(line(i:i).eq.cr) then
+          write (errmsg, '(a)') &
+            'get_line: Found an isolated Carriage Return.'
+        endif
+        if(line(i:i).eq.lf) then
+          write (errmsg, '(a)') &
+            'get_line: Found an isolated Line Feed.'
+        endif
+        write(errmsg,'(a,1x,a)') trim(errmsg),'Replace with Carriage Return and Line Feed to read as two separate lines.'
+        write(errmsg,'(a,1x,5a)') trim(errmsg),'Line: "',line(1:i-1),'|',line(i+1:linesize),'"'
+        call store_error(errmsg, terminate=.FALSE.)
+        call store_error_unit(lun, terminate=.TRUE.)
+      endif
+    end do crlfcheck
   end subroutine get_line
 
 end module InputOutputModule
