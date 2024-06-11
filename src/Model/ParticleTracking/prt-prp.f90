@@ -587,6 +587,7 @@ contains
             call store_error(errmsg)
             call this%parser%StoreErrorUnit(terminate=.true.)
           end if
+          call mem_reallocate(this%rlskstp, 0, 'RLSKSTP', this%memoryPath)
           do i = 1, nstp(this%ionper)
             if (mod(i, ival) == 0) then
               n = size(this%rlskstp)
