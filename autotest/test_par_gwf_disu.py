@@ -193,36 +193,9 @@ def get_model(idx, dir):
         exchangedata = {
             "factor": 1.0,
             "filename": "exg.bin",
-            "data": None,
+            "data": gwfgwf_data,
             "binary": True,
         }
-        exg_fpath = data_path / f"par_gwf_disu{idx}_exg.txt"
-        exg_fdata = np.loadtxt(
-            exg_fpath,
-            dtype={
-                "names": (
-                    "c11",
-                    "c21",
-                    "ihc",
-                    "cl1",
-                    "cl2",
-                    "hwva",
-                    "aux1",
-                    "aux2",
-                ),
-                "formats": (
-                    "i4",
-                    "i4",
-                    "i4",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                ),
-            },
-        )
-        exg_fdata.tofile(dir / "exg.bin")
     else:
         exchangedata = gwfgwf_data
 
