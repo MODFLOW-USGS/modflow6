@@ -43,8 +43,8 @@ cases = [
     f"{simname}dbl",  # RELEASE_TIMES 0.5 0.6
     f"{simname}tls",  # RELEASE_TIMESFILE <filename>
     # period block options
-    # f"{simname}all",  # ALL FRACTION 0.5      # todo debug flopy hanging
-    # f"{simname}frst", # FIRST FRACTION 0.5    # todo debug flopy hanging
+    f"{simname}all",  # ALL FRACTION 0.5
+    f"{simname}frst",  # FIRST FRACTION 0.5
     f"{simname}stps",  # STEPS 1 FRACTION 0.5
     f"{simname}freq",  # FREQUENCY 1
 ]
@@ -62,22 +62,37 @@ def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
     if "sgl" in name or "dbl" in name or "tls" in name:
         return None
 
+    # For cases using FRACTION below we need to
+    # use a single-value tuple so flopy writes
+    # separate lines in the period block e.g.
+    #
+    # BEGIN period  1
+    #   ALL
+    #   FRACTION       0.50000000
+    # END period  1
+    #
+    # MF6 is fine with the two settings sharing
+    # the same line but when a keystring option
+    # may take multiple values flopy wants them
+    # on separate lines.
+
+    opt = []
     if "frst" in name:
-        opt = "FIRST"
+        opt.append(("FIRST",))
     elif "all" in name:
-        opt = "ALL"
+        opt.append(("ALL",))
     elif "stps" in name:
-        opt = ("STEPS", 1)
+        opt.append(("STEPS", 1))
     elif "freq" in name:
-        opt = ("FREQUENCY", 1)
+        opt.append(("FREQUENCY", 1))
     else:
-        opt = None
-    opt = [opt]
+        opt.append(None)
+
+    if fraction is not None:
+        opt.append(("FRACTION", fraction))
 
     if opt[0] is None:
         raise ValueError(f"Invalid period option: {name}")
-    if fraction is not None:
-        opt.append(("FRACTION", fraction))
 
     return {i: opt for i in range(periods)}
 
@@ -337,7 +352,7 @@ def check_output(idx, test, fraction, snapshot):
             "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
             in lines
         )
-    elif "stps" in name or "freq" in name:
+    elif "frst" in name or "all" in name or "stps" in name or "freq" in name:
         assert (
             "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.500"
             in lines
