@@ -8,7 +8,9 @@ program tester
   use TestHashTable, only: collect_hashtable
   use TestInputOutput, only: collect_inputoutput
   use TestList, only: collect_list
+  use TestListIterator, only: collect_listiterator
   use TestMathUtil, only: collect_mathutil
+  use TestMemoryContainerIterator, only: collect_memorycontaineriterator
   use TestMessage, only: collect_message
   use TestSim, only: collect_sim
   use TestSwfUtils, only: collect_swfutils
@@ -27,7 +29,10 @@ program tester
                new_testsuite("HashTable", collect_hashtable), &
                new_testsuite("InputOutput", collect_inputoutput), &
                new_testsuite("List", collect_list), &
+               new_testsuite("ListIterator", collect_listiterator), &
                new_testsuite("MathUtil", collect_mathutil), &
+               new_testsuite("MemoryContainerIterator", &
+                             collect_memorycontaineriterator), &
                new_testsuite("Message", collect_message), &
                new_testsuite("Sim", collect_sim), &
                new_testsuite("SwfUtils", collect_swfutils), &

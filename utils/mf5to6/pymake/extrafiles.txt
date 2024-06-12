@@ -1,3 +1,4 @@
+../../../src/Utilities/Memory/MemoryContainerIterator.f90
 ../../../src/Utilities/Memory/MemoryList.f90
 ../../../src/Utilities/Memory/MemoryManager.f90
 ../../../src/Utilities/Memory/MemoryHelper.f90
@@ -13,8 +14,11 @@
 ../../../src/Utilities/ErrorUtil.f90
 ../../../src/Utilities/GeomUtil.f90
 ../../../src/Utilities/InputOutput.f90
+../../../src/Utilities/Iterator.f90
 ../../../src/Utilities/kind.f90
 ../../../src/Utilities/List.f90
+../../../src/Utilities/ListIterator.f90
+../../../src/Utilities/ListNode.f90
 ../../../src/Utilities/LongLineReader.f90
 ../../../src/Utilities/MathUtil.f90
 ../../../src/Utilities/OpenSpec.f90

@@ -453,6 +453,7 @@
 		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
@@ -522,9 +523,12 @@
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\HGeoUtil.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\src\Utilities\Iterator.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
+		<File RelativePath="..\src\Utilities\ListIterator.f90"/>
+		<File RelativePath="..\src\Utilities\ListNode.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
 		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
 		<File RelativePath="..\src\Utilities\MathUtil.f90"/>

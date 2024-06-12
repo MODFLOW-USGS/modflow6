@@ -2,9 +2,13 @@ module ListModule
   use KindModule, only: DP, I4B
   use ErrorUtilModule, only: pstop
   use ConstantsModule, only: LINELENGTH
+  use IteratorModule, only: IteratorType
+  use ListIteratorModule, only: ListIteratorType
+  use ListNodeModule, only: ListNodeType
+
   implicit none
   private
-  public :: ListType, ListNodeType, isEqualIface
+  public :: ListType, isEqualIface
 
   !> @brief A generic heterogeneous doubly-linked list.
   type :: ListType
@@ -18,6 +22,7 @@ module ListModule
     integer(I4B), private :: nodeCount = 0
   contains
     ! -- Public procedures
+    procedure, public :: Iterator
     procedure, public :: Add
     procedure, public :: Clear
     procedure, public :: Count
@@ -29,8 +34,8 @@ module ListModule
     generic, public :: GetItem => get_item_by_index, get_current_item
     procedure, public :: InsertAfter
     procedure, public :: InsertBefore
-    procedure, public :: Next
-    procedure, public :: Previous
+    procedure, private :: Next
+    procedure, private :: Previous
     procedure, public :: Reset
     generic, public :: RemoveNode => remove_node_by_index, remove_this_node
     ! -- Private procedures
@@ -43,19 +48,6 @@ module ListModule
     !final :: clear_list
   end type ListType
 
-  type :: ListNodeType
-    ! -- Public members
-    type(ListNodeType), pointer, public :: nextNode => null()
-    type(ListNodeType), pointer, public :: prevNode => null()
-    ! -- Private members
-    class(*), pointer, private :: Value => null()
-  contains
-    ! -- Public procedure
-    procedure, public :: GetItem
-    ! -- Private procedures
-    procedure, private :: DeallocValue
-  end type ListNodeType
-
   interface
     function isEqualIface(obj1, obj2) result(isEqual)
       class(*), pointer :: obj1, obj2
@@ -64,6 +56,13 @@ module ListModule
   end interface
 
 contains
+
+  function iterator(this) result(itr)
+    class(ListType) :: this
+    class(IteratorType), allocatable :: itr
+
+    itr = ListIteratorType(this%firstNode)
+  end function
 
   !> @brief Append the given item to the list
   subroutine Add(this, objptr)
@@ -523,29 +522,5 @@ contains
       end if
     end do
   end function get_node_by_index
-
-  ! -- Type-bound procedures for ListNodeType
-
-  !> @brief Return a pointer to this node's value.
-  function GetItem(this) result(valueObject)
-    class(ListNodeType), intent(inout) :: this
-    class(*), pointer :: valueObject
-    valueObject => this%Value
-  end function GetItem
-
-  !> @brief Nullify (optionally deallocating) this node's value.
-  subroutine DeallocValue(this, destroy)
-    class(ListNodeType), intent(inout) :: this
-    logical, intent(in), optional :: destroy
-
-    if (associated(this%Value)) then
-      if (present(destroy)) then
-        if (destroy) then
-          deallocate (this%Value)
-        end if
-      end if
-      nullify (this%Value)
-    end if
-  end subroutine DeallocValue
 
 end module ListModule

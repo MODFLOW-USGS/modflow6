@@ -5,42 +5,42 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Idm
-SOURCEDIR4=../src/Idm/selector
-SOURCEDIR5=../src/Timing
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Idm
+SOURCEDIR5=../src/Idm/selector
 SOURCEDIR6=../src/Model
 SOURCEDIR7=../src/Model/Connection
 SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Model/GroundWaterFlow
-SOURCEDIR11=../src/Model/Geometry
-SOURCEDIR12=../src/Model/TransportModel
-SOURCEDIR13=../src/Model/GroundWaterTransport
-SOURCEDIR14=../src/Model/SurfaceWaterFlow
-SOURCEDIR15=../src/Model/ParticleTracking
-SOURCEDIR16=../src/Model/GroundWaterEnergy
+SOURCEDIR9=../src/Model/Geometry
+SOURCEDIR10=../src/Model/GroundWaterEnergy
+SOURCEDIR11=../src/Model/GroundWaterFlow
+SOURCEDIR12=../src/Model/GroundWaterTransport
+SOURCEDIR13=../src/Model/ModelUtilities
+SOURCEDIR14=../src/Model/ParticleTracking
+SOURCEDIR15=../src/Model/SurfaceWaterFlow
+SOURCEDIR16=../src/Model/TransportModel
 SOURCEDIR17=../src/Solution
-SOURCEDIR18=../src/Solution/ParticleTracker
-SOURCEDIR19=../src/Solution/LinearMethods
+SOURCEDIR18=../src/Solution/LinearMethods
+SOURCEDIR19=../src/Solution/ParticleTracker
 SOURCEDIR20=../src/Solution/PETSc
-SOURCEDIR21=../src/Distributed
+SOURCEDIR21=../src/Timing
 SOURCEDIR22=../src/Utilities
-SOURCEDIR23=../src/Utilities/TimeSeries
+SOURCEDIR23=../src/Utilities/ArrayRead
 SOURCEDIR24=../src/Utilities/Idm
 SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR26=../src/Utilities/ArrayRead
-SOURCEDIR27=../src/Utilities/Memory
-SOURCEDIR28=../src/Utilities/Matrix
-SOURCEDIR29=../src/Utilities/Vector
-SOURCEDIR30=../src/Utilities/Observation
-SOURCEDIR31=../src/Utilities/OutputControl
-SOURCEDIR32=../src/Utilities/Libraries
-SOURCEDIR33=../src/Utilities/Libraries/rcm
-SOURCEDIR34=../src/Utilities/Libraries/sparskit2
-SOURCEDIR35=../src/Utilities/Libraries/sparsekit
-SOURCEDIR36=../src/Utilities/Libraries/blas
-SOURCEDIR37=../src/Utilities/Libraries/daglib
+SOURCEDIR26=../src/Utilities/Libraries
+SOURCEDIR27=../src/Utilities/Libraries/blas
+SOURCEDIR28=../src/Utilities/Libraries/daglib
+SOURCEDIR29=../src/Utilities/Libraries/rcm
+SOURCEDIR30=../src/Utilities/Libraries/sparsekit
+SOURCEDIR31=../src/Utilities/Libraries/sparskit2
+SOURCEDIR32=../src/Utilities/Matrix
+SOURCEDIR33=../src/Utilities/Memory
+SOURCEDIR34=../src/Utilities/Observation
+SOURCEDIR35=../src/Utilities/OutputControl
+SOURCEDIR36=../src/Utilities/TimeSeries
+SOURCEDIR37=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -100,8 +100,12 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ListNode.o \
+$(OBJDIR)/Iterator.o \
 $(OBJDIR)/Memory.o \
+$(OBJDIR)/ListIterator.o \
+$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/MemoryContainerIterator.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \

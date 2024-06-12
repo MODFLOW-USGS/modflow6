@@ -43,8 +43,12 @@ $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
-$(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/ListNode.o \
+$(OBJDIR)/Iterator.o \
 $(OBJDIR)/Memory.o \
+$(OBJDIR)/ListIterator.o \
+$(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/MemoryContainerIterator.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
 $(OBJDIR)/LongLineReader.o \
