@@ -31,7 +31,8 @@ program tester
                new_testsuite("List", collect_list), &
                new_testsuite("ListIterator", collect_listiterator), &
                new_testsuite("MathUtil", collect_mathutil), &
-               new_testsuite("MemoryContainerIterator", collect_memorycontaineriterator), &
+               new_testsuite("MemoryContainerIterator", &
+                             collect_memorycontaineriterator), &
                new_testsuite("Message", collect_message), &
                new_testsuite("Sim", collect_sim), &
                new_testsuite("SwfUtils", collect_swfutils), &

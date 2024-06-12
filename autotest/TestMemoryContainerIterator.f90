@@ -10,7 +10,8 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
-                  new_unittest("iterate_through_container", test_iterate_through_container) &
+                new_unittest("iterate_through_container", &
+                             test_iterate_through_container) &
                 ]
   end subroutine collect_memorycontaineriterator
 
@@ -21,7 +22,7 @@ contains
   !!
   !! Because the order of the iterator doesn't have to match the order in which
   !! the MemoryTypes have been added an 'iterated' array is used.  A flag in the
-  !! array is set to true and at the end it is validated that the entire array 
+  !! array is set to true and at the end it is validated that the entire array
   !! is set to to true (indicating that all memory types have been reached)
   !<
   subroutine test_iterate_through_container(error)
@@ -52,23 +53,23 @@ contains
 
     current_mt => mt3
     call memory_container%add(current_mt)
-    
+
     itr = memory_container%iterator()
 
     !- Act.
     current_mt => null()
     do while (itr%has_next())
-        call itr%next()
-        current_mt => itr%value()
-        
-        read(current_mt%name(len_trim(current_mt%name):),'(i1)') mt_index
-        iterated(mt_index) = .true.
+      call itr%next()
+      current_mt => itr%value()
+
+      read (current_mt%name(len_trim(current_mt%name):), '(i1)') mt_index
+      iterated(mt_index) = .true.
     end do
 
     !- Assert.
     call check(error, all(iterated .eqv. .true.))
     if (allocated(error)) return
-    
+
   end subroutine test_iterate_through_container
 
 end module TestMemoryContainerIterator
