@@ -32,6 +32,8 @@ requests = "*"
 scipy = "*"
 shapely = "*"
 syrupy = "*"
+xarray = "*"
+xugrid = "*"
 xmipy = "*"
 
 [feature.rtd.dependencies]

@@ -1,0 +1,104 @@
+name: Test Extended MF6
+description: Build and test Extended MODFLOW 6
+runs:
+  using: "composite"
+  steps:
+
+    - name: Setup GNU Fortran
+      uses: fortran-lang/setup-fortran@v1
+      with:
+        compiler: gcc
+        version: 13
+
+    - name: Checkout PETSc
+      uses: actions/checkout@v4
+      with:
+        repository: petsc/petsc
+        path: petsc
+        ref: release
+
+    - name: Configure environment
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
+
+    - name: Configure environment
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/bin" >> $GITHUB_PATH
+
+    - name: Configure PETSc
+      if: runner.os == 'Linux'
+      shell: bash
+      working-directory: petsc
+      run: |
+        sudo wget -P $GITHUB_WORKSPACE/petsc https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.2.tar.gz
+        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz
+        sudo make all
+
+    - name: Configure PETSc
+      if: runner.os == 'macOS'
+      shell: bash
+      working-directory: petsc
+      run: |
+        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
+        sudo make all
+
+    - name: Install netcdf
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install build-essential \
+          libnetcdf-dev \
+          libnetcdff-dev \
+          netcdf-bin
+        nc-config --all
+        nf-config --all
+
+    - name: Install netcdf
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        brew install netcdf-fortran
+        brew install gcc
+        nc-config --all
+        nf-config
+
+    - name: Build modflow6
+      shell: bash
+      working-directory: modflow6
+      run: |
+        pixi run setup -Dparallel=true builddir
+        pixi run build builddir
+        pixi run test builddir
+
+    - name: Show Meson logs
+      if: failure()
+      shell: bash
+      working-directory: modflow6
+      run: cat builddir/meson-logs/meson-log.txt
+
+    - name: Update flopy
+      shell: bash
+      working-directory: modflow6
+      run: pixi run update-flopy
+
+    - name: Get executables
+      shell: bash
+      working-directory: modflow6
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: pixi run get-exes
+
+    - name: Test programs
+      shell: bash
+      working-directory: modflow6
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: pixi run autotest --parallel --netcdf -k "test_par or test_netcdf"
