@@ -1376,7 +1376,7 @@ contains
         end if
       end if
       ! -- check for more than one model - ims only
-      if (this%convnmod > 1) then
+      if (this%convnmod > 1 .or. simulation_mode == "PARALLEL") then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -2175,7 +2175,7 @@ contains
       end if
       !
       ! -- write information for each model
-      if (this%convnmod > 1) then
+      if (this%convnmod > 1 .or. simulation_mode == "PARALLEL") then
         do j = 1, this%cnvg_summary%convnmod
           loc_dvmax = this%cnvg_summary%convlocdv(j, kpos)
           dvmax = this%cnvg_summary%convdvmax(j, kpos)
