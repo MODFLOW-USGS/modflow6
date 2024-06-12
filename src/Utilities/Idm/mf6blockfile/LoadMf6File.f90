@@ -711,20 +711,30 @@ contains
   !> @brief load type string
   !<
   subroutine load_string_type(parser, idt, memoryPath, iout)
+    use ConstantsModule, only: LENBIGLINE
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
     integer(I4B), intent(in) :: iout !< unit number for output
     character(len=LINELENGTH), pointer :: cstr
+    character(len=LENBIGLINE), pointer :: bigcstr
     integer(I4B) :: ilen
-    ilen = LINELENGTH
-    call mem_allocate(cstr, ilen, idt%mf6varname, memoryPath)
-    call parser%GetString(cstr, (.not. idt%preserve_case))
-    call idm_log_var(cstr, idt%tagname, memoryPath, iout)
+    select case (idt%shape)
+    case ('LENBIGLINE')
+      ilen = LENBIGLINE
+      call mem_allocate(bigcstr, ilen, idt%mf6varname, memoryPath)
+      call parser%GetString(bigcstr, (.not. idt%preserve_case))
+      call idm_log_var(bigcstr, idt%tagname, memoryPath, iout)
+    case default
+      ilen = LINELENGTH
+      call mem_allocate(cstr, ilen, idt%mf6varname, memoryPath)
+      call parser%GetString(cstr, (.not. idt%preserve_case))
+      call idm_log_var(cstr, idt%tagname, memoryPath, iout)
+    end select
     return
   end subroutine load_string_type
 
-  !> @brief load type string
+  !> @brief load io tag
   !<
   subroutine load_io_tag(parser, idt, memoryPath, which, iout)
     use MemoryManagerModule, only: mem_allocate, mem_reallocate, &

@@ -96,6 +96,7 @@ modflow_sources = files(
     'Idm' / 'prt-disvidm.f90',
     'Idm' / 'prt-mipidm.f90',
     'Idm' / 'utl-hpcidm.f90',
+    'Idm' / 'utl-ncfidm.f90',
     'Idm' / 'selector' / 'IdmDfnSelector.f90',
     'Idm' / 'selector' / 'IdmExgDfnSelector.f90',
     'Idm' / 'selector' / 'IdmGweDfnSelector.f90',
@@ -277,6 +278,8 @@ modflow_sources = files(
     'Utilities' / 'ArrayRead' / 'Integer1dReader.f90',
     'Utilities' / 'ArrayRead' / 'Integer2dReader.f90',
     'Utilities' / 'ArrayRead' / 'LayeredArrayReader.f90',
+    'Utilities' / 'Export' / 'ModelExport.f90',
+    'Utilities' / 'Export' / 'NCModel.f90',
     'Utilities' / 'Idm' / 'BoundInputContext.f90',
     'Utilities' / 'Idm' / 'DefinitionSelect.f90',
     'Utilities' / 'Idm' / 'DynamicPackageParams.f90',
@@ -399,12 +402,23 @@ modflow_mpi_sources = files(
   'Solution' / 'ParallelSolution.f90'
 )
 
+modflow_netcdf_sources = files(
+  'Utilities' / 'Export' / 'DisNCMesh.f90',
+  'Utilities' / 'Export' / 'DisvNCMesh.f90',
+  'Utilities' / 'Export' / 'MeshNCModel.f90',
+  'Utilities' / 'Export' / 'NCExportCreate.f90'
+)
+
 if with_petsc
   modflow_sources += modflow_petsc_sources  
 endif
 
 if with_mpi
   modflow_sources += modflow_mpi_sources
+endif
+
+if with_netcdf
+  modflow_sources += modflow_netcdf_sources
 endif
 
 mf6_external = static_library('mf6_external', external_libraries)
