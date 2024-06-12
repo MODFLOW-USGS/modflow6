@@ -17,13 +17,11 @@
 	%	\item xxx
 	%\end{itemize}
 
-	%\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
-	%\underline{BASIC FUNCTIONALITY}
-	%\begin{itemize}
-	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item With the LOCAL_Z option enabled, the PRT model's PRP package attempted to check that a particle release point's z coordinate fell within the grid's vertical extent before converting the coordinate from local (normalized on the unit interval) to a global (model) coordinate. This bug was fixed by converting coordinates before conducting checks.
+	\end{itemize}
 
 	%\underline{INTERNAL FLOW PACKAGES}
 	%\begin{itemize}
