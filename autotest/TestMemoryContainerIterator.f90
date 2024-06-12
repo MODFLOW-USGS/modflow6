@@ -16,7 +16,7 @@ contains
 
   !> @brief Iterate through a MemoryContainer
   !!
-  !! This test creates an iterator for a container containg 3 MemoryTypes.
+  !! This test creates an iterator for a container containing 3 MemoryTypes.
   !! It iterates though the container and validates that each type is reached.
   !!
   !! Because the order of the iterator doesn't have to match the order in which

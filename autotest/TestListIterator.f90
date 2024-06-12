@@ -15,13 +15,13 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
-                  new_unittest("constructor", test_constructor), &
-                  new_unittest("iterate_through_list", test_iterate_through_list), &
-                  new_unittest("empty_list", test_empty_list) &
+                new_unittest("constructor", test_constructor), &
+                new_unittest("iterate_through_list", test_iterate_through_list), &
+                new_unittest("empty_list", test_empty_list) &
                 ]
   end subroutine collect_listiterator
 
-  !> @brief Test the intial state of the iterator
+  !> @brief Test the initial state of the iterator
   !!
   !! When the iterator is created with a non-empty list:
   !! - it should indicate that it has a next value
@@ -36,12 +36,12 @@ contains
 
     !- Arrange.
     firstNodePtr => firstNode
-    
+
     !- Act.
     itr = ListIteratorType(firstNodePtr)
-    
+
     !- Assert.
-    call check(error, .not. associated(itr%value()))
+    call check(error,.not. associated(itr%value()))
     if (allocated(error)) return
 
     call check(error, itr%has_next())
@@ -62,7 +62,7 @@ contains
     type(ListNodeType), target :: firstNode
     type(ListNodeType), target :: secondNode
     type(ListNodeType), target :: thirdNode
-    
+
     integer(I4B), target :: expected_value1 = 2
     integer(I4B), target :: expected_value2 = 6
     integer(I4B), target :: expected_value3 = 567
@@ -88,21 +88,21 @@ contains
 
     !- Act.
     do while (itr%has_next())
-        call itr%next()
-        itr_count = itr_count + 1
-        !- Assert.
-        select type (val => itr%value())
-        type is (integer(I4B))
-            value_ptr => val
+      call itr%next()
+      itr_count = itr_count + 1
+      !- Assert.
+      select type (val => itr%value())
+      type is (integer(I4B))
+        value_ptr => val
 
-            call check(error, value_ptr == expected_values(itr_count))
-            if (allocated(error)) return
-        end select
+        call check(error, value_ptr == expected_values(itr_count))
+        if (allocated(error)) return
+      end select
     end do
-    
+
   end subroutine test_iterate_through_list
 
-  !> @brief Test the intial state of the iterator with an empty list
+  !> @brief Test the initial state of the iterator with an empty list
   !!
   !! When the iterator is created it with an empty list:
   !! - It should indicate that it has no next value
@@ -121,10 +121,10 @@ contains
     itr = ListIteratorType(firstNodePtr)
 
     !- Assert.
-    call check(error, .not. itr%has_next())
+    call check(error,.not. itr%has_next())
     if (allocated(error)) return
 
-    call check(error, .not. associated(itr%value()))
+    call check(error,.not. associated(itr%value()))
     if (allocated(error)) return
 
   end subroutine test_empty_list
