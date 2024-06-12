@@ -19,6 +19,7 @@ module IdmGweDfnSelectorModule
   public :: gwe_aggregate_definitions
   public :: gwe_block_definitions
   public :: gwe_idm_multi_package
+  public :: gwe_idm_subpackages
   public :: gwe_idm_integrated
 
 contains
@@ -34,6 +35,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function gwe_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -132,6 +139,29 @@ contains
     end select
     return
   end function gwe_idm_multi_package
+
+  function gwe_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('NAM')
+      call set_subpkg_pointer(subpackages, gwe_nam_subpackages)
+    case ('IC')
+      call set_subpkg_pointer(subpackages, gwe_ic_subpackages)
+    case ('CTP')
+      call set_subpkg_pointer(subpackages, gwe_ctp_subpackages)
+    case ('CND')
+      call set_subpkg_pointer(subpackages, gwe_cnd_subpackages)
+    case ('DISV')
+      call set_subpkg_pointer(subpackages, gwe_disv_subpackages)
+    case ('DISU')
+      call set_subpkg_pointer(subpackages, gwe_disu_subpackages)
+    case ('DIS')
+      call set_subpkg_pointer(subpackages, gwe_dis_subpackages)
+    case default
+    end select
+    return
+  end function gwe_idm_subpackages
 
   function gwe_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

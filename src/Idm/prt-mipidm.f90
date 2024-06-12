@@ -9,6 +9,7 @@ module PrtMipInputModule
   public prt_mip_block_definitions
   public PrtMipParamFoundType
   public prt_mip_multi_package
+  public prt_mip_subpackages
 
   type PrtMipParamFoundType
     logical :: export_ascii = .false.
@@ -18,6 +19,12 @@ module PrtMipInputModule
   end type PrtMipParamFoundType
 
   logical :: prt_mip_multi_package = .false.
+
+  character(len=16), parameter :: &
+    prt_mip_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     prtmip_export_ascii = InputParamDefinitionType &
@@ -29,6 +36,7 @@ module PrtMipInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -46,6 +54,7 @@ module PrtMipInputModule
     'POROSITY', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'porosity', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -63,6 +72,7 @@ module PrtMipInputModule
     'RETFACTOR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'retardation factor', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -80,6 +90,7 @@ module PrtMipInputModule
     'IZONE', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'zone number', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -108,6 +119,7 @@ module PrtMipInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

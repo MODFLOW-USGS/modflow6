@@ -9,6 +9,7 @@ module GwfNpfInputModule
   public gwf_npf_block_definitions
   public GwfNpfParamFoundType
   public gwf_npf_multi_package
+  public gwf_npf_subpackages
 
   type GwfNpfParamFoundType
     logical :: ipakcb = .false.
@@ -36,6 +37,7 @@ module GwfNpfInputModule
     logical :: filein = .false.
     logical :: tvk6_filename = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: inewton = .false.
     logical :: satomega = .false.
     logical :: icelltype = .false.
@@ -50,6 +52,12 @@ module GwfNpfInputModule
 
   logical :: gwf_npf_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwf_npf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfnpf_ipakcb = InputParamDefinitionType &
     ( &
@@ -60,6 +68,7 @@ module GwfNpfInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save NPF flows', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -77,6 +86,7 @@ module GwfNpfInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print NPF flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -94,6 +104,7 @@ module GwfNpfInputModule
     'CELLAVG', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'conductance weighting option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -111,6 +122,7 @@ module GwfNpfInputModule
     'ITHICKSTRT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate THICKSTRT option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -128,6 +140,7 @@ module GwfNpfInputModule
     'CVOPTIONS', & ! fortran variable
     'RECORD VARIABLECV DEWATERED', & ! type
     '', & ! shape
+    'vertical conductance options', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -145,6 +158,7 @@ module GwfNpfInputModule
     'IVARCV', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate VARIABLECV option', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -162,6 +176,7 @@ module GwfNpfInputModule
     'IDEWATCV', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate DEWATERED option', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -179,6 +194,7 @@ module GwfNpfInputModule
     'IPERCHED', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate PERCHED option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -196,6 +212,7 @@ module GwfNpfInputModule
     'REWET_RECORD', & ! fortran variable
     'RECORD REWET WETFCT IWETIT IHDWET', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -213,6 +230,7 @@ module GwfNpfInputModule
     'IREWET', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate rewetting', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -230,6 +248,7 @@ module GwfNpfInputModule
     'WETFCT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'wetting factor to use for rewetting', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -247,6 +266,7 @@ module GwfNpfInputModule
     'IWETIT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'interval to use for rewetting', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -264,6 +284,7 @@ module GwfNpfInputModule
     'IHDWET', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'flag to determine wetting equation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -281,6 +302,7 @@ module GwfNpfInputModule
     'XT3DOPTIONS', & ! fortran variable
     'RECORD XT3D RHS', & ! type
     '', & ! shape
+    'keyword to activate XT3D', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +320,7 @@ module GwfNpfInputModule
     'IXT3D', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate XT3D', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -315,6 +338,7 @@ module GwfNpfInputModule
     'IXT3DRHS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to XT3D on right hand side', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -332,6 +356,7 @@ module GwfNpfInputModule
     'ISAVSPDIS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save specific discharge', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -349,6 +374,7 @@ module GwfNpfInputModule
     'ISAVSAT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save saturation', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -366,6 +392,7 @@ module GwfNpfInputModule
     'IK22OVERK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to indicate that specified K22 is a ratio', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -383,6 +410,7 @@ module GwfNpfInputModule
     'IK33OVERK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to indicate that specified K33 is a ratio', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -400,6 +428,7 @@ module GwfNpfInputModule
     'TVK_FILERECORD', & ! fortran variable
     'RECORD TVK6 FILEIN TVK6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -417,6 +446,7 @@ module GwfNpfInputModule
     'TVK6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'tvk keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -434,6 +464,7 @@ module GwfNpfInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -451,6 +482,7 @@ module GwfNpfInputModule
     'TVK6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of TVK information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -468,6 +500,25 @@ module GwfNpfInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnpf_export_nc = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NPF', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -485,6 +536,7 @@ module GwfNpfInputModule
     'INEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'turn off Newton for unconfined cells', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -502,6 +554,7 @@ module GwfNpfInputModule
     'SATOMEGA', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'set saturation omega value', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -519,6 +572,7 @@ module GwfNpfInputModule
     'ICELLTYPE', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'confined or convertible indicator', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -536,6 +590,7 @@ module GwfNpfInputModule
     'K', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'hydraulic conductivity (L/T)', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -553,6 +608,7 @@ module GwfNpfInputModule
     'K22', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'hydraulic conductivity of second ellipsoid axis', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -570,6 +626,7 @@ module GwfNpfInputModule
     'K33', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'hydraulic conductivity of third ellipsoid axis (L/T)', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -587,6 +644,7 @@ module GwfNpfInputModule
     'ANGLE1', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'first anisotropy rotation angle (degrees)', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -604,6 +662,7 @@ module GwfNpfInputModule
     'ANGLE2', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'second anisotropy rotation angle (degrees)', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -621,6 +680,7 @@ module GwfNpfInputModule
     'ANGLE3', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'third anisotropy rotation angle (degrees)', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -638,6 +698,7 @@ module GwfNpfInputModule
     'WETDRY', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'wetdry threshold and factor', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -673,6 +734,7 @@ module GwfNpfInputModule
     gwfnpf_filein, &
     gwfnpf_tvk6_filename, &
     gwfnpf_export_ascii, &
+    gwfnpf_export_nc, &
     gwfnpf_inewton, &
     gwfnpf_satomega, &
     gwfnpf_icelltype, &
@@ -697,6 +759,7 @@ module GwfNpfInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

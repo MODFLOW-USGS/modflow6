@@ -9,6 +9,7 @@ module GwtCncInputModule
   public gwt_cnc_block_definitions
   public GwtCncParamFoundType
   public gwt_cnc_multi_package
+  public gwt_cnc_subpackages
 
   type GwtCncParamFoundType
     logical :: auxiliary = .false.
@@ -33,6 +34,12 @@ module GwtCncInputModule
 
   logical :: gwt_cnc_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwt_cnc_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwtcnc_auxiliary = InputParamDefinitionType &
     ( &
@@ -43,6 +50,7 @@ module GwtCncInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -60,6 +68,7 @@ module GwtCncInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -77,6 +86,7 @@ module GwtCncInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -94,6 +104,7 @@ module GwtCncInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -111,6 +122,7 @@ module GwtCncInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -128,6 +140,7 @@ module GwtCncInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save constant concentration flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -145,6 +158,7 @@ module GwtCncInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -162,6 +176,7 @@ module GwtCncInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'time series keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -179,6 +194,7 @@ module GwtCncInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -196,6 +212,7 @@ module GwtCncInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -213,6 +230,7 @@ module GwtCncInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -230,6 +248,7 @@ module GwtCncInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -247,6 +266,7 @@ module GwtCncInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -264,6 +284,7 @@ module GwtCncInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of constant concentrations', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -281,6 +302,7 @@ module GwtCncInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +320,7 @@ module GwtCncInputModule
     'TSPVAR', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'constant concentration value', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -315,6 +338,7 @@ module GwtCncInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -332,6 +356,7 @@ module GwtCncInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'constant concentration name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -372,6 +397,7 @@ module GwtCncInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID CONC AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

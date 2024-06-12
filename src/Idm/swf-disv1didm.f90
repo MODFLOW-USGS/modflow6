@@ -9,6 +9,7 @@ module SwfDisv1DInputModule
   public swf_disv1d_block_definitions
   public SwfDisv1dParamFoundType
   public swf_disv1d_multi_package
+  public swf_disv1d_subpackages
 
   type SwfDisv1dParamFoundType
     logical :: length_units = .false.
@@ -34,6 +35,12 @@ module SwfDisv1DInputModule
 
   logical :: swf_disv1d_multi_package = .false.
 
+  character(len=16), parameter :: &
+    swf_disv1d_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfdisv1d_length_units = InputParamDefinitionType &
     ( &
@@ -44,6 +51,7 @@ module SwfDisv1DInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -61,6 +69,7 @@ module SwfDisv1DInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -78,6 +87,7 @@ module SwfDisv1DInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -95,6 +105,7 @@ module SwfDisv1DInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -112,6 +123,7 @@ module SwfDisv1DInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -129,6 +141,7 @@ module SwfDisv1DInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -146,6 +159,7 @@ module SwfDisv1DInputModule
     'NODES', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of linear features', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -163,6 +177,7 @@ module SwfDisv1DInputModule
     'NVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -180,6 +195,7 @@ module SwfDisv1DInputModule
     'LENGTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'length', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -197,6 +213,7 @@ module SwfDisv1DInputModule
     'WIDTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'width', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -214,6 +231,7 @@ module SwfDisv1DInputModule
     'BOTTOM', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'bottom elevation for the one-dimensional cell', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -231,6 +249,7 @@ module SwfDisv1DInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -248,6 +267,7 @@ module SwfDisv1DInputModule
     'IV', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'vertex number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -265,6 +285,7 @@ module SwfDisv1DInputModule
     'XV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -282,6 +303,7 @@ module SwfDisv1DInputModule
     'YV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -299,6 +321,7 @@ module SwfDisv1DInputModule
     'ICELL2D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cell2d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -316,6 +339,7 @@ module SwfDisv1DInputModule
     'FDC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'fractional distance to the cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -333,6 +357,7 @@ module SwfDisv1DInputModule
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -350,6 +375,7 @@ module SwfDisv1DInputModule
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCVERT', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -391,6 +417,7 @@ module SwfDisv1DInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
+    'vertices data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -408,6 +435,7 @@ module SwfDisv1DInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D FDC NCVERT ICVERT', & ! type
     'NODES', & ! shape
+    'cell2d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

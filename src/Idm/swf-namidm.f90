@@ -9,6 +9,7 @@ module SwfNamInputModule
   public swf_nam_block_definitions
   public SwfNamParamFoundType
   public swf_nam_multi_package
+  public swf_nam_subpackages
 
   type SwfNamParamFoundType
     logical :: list = .false.
@@ -25,6 +26,12 @@ module SwfNamInputModule
 
   logical :: swf_nam_multi_package = .false.
 
+  character(len=16), parameter :: &
+    swf_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfnam_list = InputParamDefinitionType &
     ( &
@@ -35,6 +42,7 @@ module SwfNamInputModule
     'LIST', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
@@ -52,6 +60,7 @@ module SwfNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +78,7 @@ module SwfNamInputModule
     'PRINT_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +96,7 @@ module SwfNamInputModule
     'SAVE_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows for all packages to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +114,7 @@ module SwfNamInputModule
     'NEWTONOPTIONS', & ! fortran variable
     'RECORD NEWTON UNDER_RELAXATION', & ! type
     '', & ! shape
+    'newton keyword and options', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +132,7 @@ module SwfNamInputModule
     'NEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson formulation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -137,6 +150,7 @@ module SwfNamInputModule
     'UNDER_RELAXATION', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson UNDER_RELAXATION option', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -154,6 +168,7 @@ module SwfNamInputModule
     'FTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'package type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +186,7 @@ module SwfNamInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -188,6 +204,7 @@ module SwfNamInputModule
     'PNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'user name for package', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -220,6 +237,7 @@ module SwfNamInputModule
     'PACKAGES', & ! fortran variable
     'RECARRAY FTYPE FNAME PNAME', & ! type
     '', & ! shape
+    'package list', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

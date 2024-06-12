@@ -9,6 +9,7 @@ module PrtNamInputModule
   public prt_nam_block_definitions
   public PrtNamParamFoundType
   public prt_nam_multi_package
+  public prt_nam_subpackages
 
   type PrtNamParamFoundType
     logical :: list = .false.
@@ -22,6 +23,12 @@ module PrtNamInputModule
 
   logical :: prt_nam_multi_package = .false.
 
+  character(len=16), parameter :: &
+    prt_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     prtnam_list = InputParamDefinitionType &
     ( &
@@ -32,6 +39,7 @@ module PrtNamInputModule
     'LIST', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -49,6 +57,7 @@ module PrtNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -66,6 +75,7 @@ module PrtNamInputModule
     'PRINT_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -83,6 +93,7 @@ module PrtNamInputModule
     'SAVE_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows for all packages to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -100,6 +111,7 @@ module PrtNamInputModule
     'FTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'package type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -117,6 +129,7 @@ module PrtNamInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -134,6 +147,7 @@ module PrtNamInputModule
     'PNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'user name for package', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -163,6 +177,7 @@ module PrtNamInputModule
     'PACKAGES', & ! fortran variable
     'RECARRAY FTYPE FNAME PNAME', & ! type
     '', & ! shape
+    'package list', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

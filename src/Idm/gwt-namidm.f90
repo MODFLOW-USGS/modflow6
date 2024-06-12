@@ -9,18 +9,26 @@ module GwtNamInputModule
   public gwt_nam_block_definitions
   public GwtNamParamFoundType
   public gwt_nam_multi_package
+  public gwt_nam_subpackages
 
   type GwtNamParamFoundType
     logical :: list = .false.
     logical :: print_input = .false.
     logical :: print_flows = .false.
     logical :: save_flows = .false.
+    logical :: export_netcdf = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
   end type GwtNamParamFoundType
 
   logical :: gwt_nam_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwt_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtnam_list = InputParamDefinitionType &
@@ -32,6 +40,7 @@ module GwtNamInputModule
     'LIST', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
@@ -49,6 +58,7 @@ module GwtNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -66,6 +76,7 @@ module GwtNamInputModule
     'PRINT_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -83,6 +94,25 @@ module GwtNamInputModule
     'SAVE_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows for all packages to budget file', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtnam_export_netcdf = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_NETCDF', & ! tag name
+    'EXPORT_NETCDF', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'export model output netcdf file.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -100,6 +130,7 @@ module GwtNamInputModule
     'FTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'package type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -117,6 +148,7 @@ module GwtNamInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -134,6 +166,7 @@ module GwtNamInputModule
     'PNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'user name for package', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -148,6 +181,7 @@ module GwtNamInputModule
     gwtnam_print_input, &
     gwtnam_print_flows, &
     gwtnam_save_flows, &
+    gwtnam_export_netcdf, &
     gwtnam_ftype, &
     gwtnam_fname, &
     gwtnam_pname &
@@ -163,6 +197,7 @@ module GwtNamInputModule
     'PACKAGES', & ! fortran variable
     'RECARRAY FTYPE FNAME PNAME', & ! type
     '', & ! shape
+    'package list', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

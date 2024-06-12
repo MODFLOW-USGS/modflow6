@@ -9,6 +9,7 @@ module GwfGhbInputModule
   public gwf_ghb_block_definitions
   public GwfGhbParamFoundType
   public gwf_ghb_multi_package
+  public gwf_ghb_subpackages
 
   type GwfGhbParamFoundType
     logical :: auxiliary = .false.
@@ -35,6 +36,12 @@ module GwfGhbInputModule
 
   logical :: gwf_ghb_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_ghb_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfghb_auxiliary = InputParamDefinitionType &
     ( &
@@ -45,6 +52,7 @@ module GwfGhbInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -62,6 +70,7 @@ module GwfGhbInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -79,6 +88,7 @@ module GwfGhbInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -96,6 +106,7 @@ module GwfGhbInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -113,6 +124,7 @@ module GwfGhbInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -130,6 +142,7 @@ module GwfGhbInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -147,6 +160,7 @@ module GwfGhbInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -164,6 +178,7 @@ module GwfGhbInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -181,6 +196,7 @@ module GwfGhbInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -198,6 +214,7 @@ module GwfGhbInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -215,6 +232,7 @@ module GwfGhbInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -232,6 +250,7 @@ module GwfGhbInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -249,6 +268,7 @@ module GwfGhbInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -266,6 +286,7 @@ module GwfGhbInputModule
     'MOVER', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -283,6 +304,7 @@ module GwfGhbInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of general-head boundaries', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -300,6 +322,7 @@ module GwfGhbInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -317,6 +340,7 @@ module GwfGhbInputModule
     'BHEAD', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'boundary head', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,6 +358,7 @@ module GwfGhbInputModule
     'COND', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'boundary conductance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -351,6 +376,7 @@ module GwfGhbInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -368,6 +394,7 @@ module GwfGhbInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'general-head boundary name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -410,6 +437,7 @@ module GwfGhbInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID BHEAD COND AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

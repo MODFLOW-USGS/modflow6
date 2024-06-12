@@ -9,6 +9,7 @@ module SimNamInputModule
   public sim_nam_block_definitions
   public SimNamParamFoundType
   public sim_nam_multi_package
+  public sim_nam_subpackages
 
   type SimNamParamFoundType
     logical :: continue = .false.
@@ -36,6 +37,12 @@ module SimNamInputModule
 
   logical :: sim_nam_multi_package = .false.
 
+  character(len=16), parameter :: &
+    sim_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     simnam_continue = InputParamDefinitionType &
     ( &
@@ -46,6 +53,7 @@ module SimNamInputModule
     'CONTINUE', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'continue if not converged', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -63,6 +71,7 @@ module SimNamInputModule
     'NOCHECK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'turn off checking', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -80,6 +89,7 @@ module SimNamInputModule
     'PRMEM', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'memory print option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -97,6 +107,7 @@ module SimNamInputModule
     'MAXERRORS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of errors', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -114,6 +125,7 @@ module SimNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -131,6 +143,7 @@ module SimNamInputModule
     'HPC_FILERECORD', & ! fortran variable
     'RECORD HPC6 FILEIN HPC6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -148,6 +161,7 @@ module SimNamInputModule
     'HPC6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -165,6 +179,7 @@ module SimNamInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -182,6 +197,7 @@ module SimNamInputModule
     'HPC6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -199,6 +215,7 @@ module SimNamInputModule
     'TDIS6', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of tdis input file', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
@@ -216,6 +233,7 @@ module SimNamInputModule
     'MTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -233,6 +251,7 @@ module SimNamInputModule
     'MFNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name for model name file', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -250,6 +269,7 @@ module SimNamInputModule
     'MNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of model', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -267,6 +287,7 @@ module SimNamInputModule
     'EXGTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'exchange type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -284,6 +305,7 @@ module SimNamInputModule
     'EXGFILE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'input file for exchange', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -301,6 +323,7 @@ module SimNamInputModule
     'EXGMNAMEA', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of model A', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -318,6 +341,7 @@ module SimNamInputModule
     'EXGMNAMEB', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of model B', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -335,6 +359,7 @@ module SimNamInputModule
     'MXITER', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum solution group iterations', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -352,6 +377,7 @@ module SimNamInputModule
     'SLNTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'type of solution', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -369,6 +395,7 @@ module SimNamInputModule
     'SLNFNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name for solution input', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -386,6 +413,7 @@ module SimNamInputModule
     'SLNMNAMES', & ! fortran variable
     'STRING', & ! type
     ':', & ! shape
+    'array of model names in this solution', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -429,6 +457,7 @@ module SimNamInputModule
     'MODELS', & ! fortran variable
     'RECARRAY MTYPE MFNAME MNAME', & ! type
     '', & ! shape
+    'list of models', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -446,6 +475,7 @@ module SimNamInputModule
     'EXCHANGES', & ! fortran variable
     'RECARRAY EXGTYPE EXGFILE EXGMNAMEA EXGMNAMEB', & ! type
     '', & ! shape
+    'list of exchanges', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -463,6 +493,7 @@ module SimNamInputModule
     'SOLUTIONGROUP', & ! fortran variable
     'RECARRAY SLNTYPE SLNFNAME SLNMNAMES', & ! type
     '', & ! shape
+    'solution type and models in the solution', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

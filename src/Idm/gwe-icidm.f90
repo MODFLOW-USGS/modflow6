@@ -9,13 +9,21 @@ module GweIcInputModule
   public gwe_ic_block_definitions
   public GweIcParamFoundType
   public gwe_ic_multi_package
+  public gwe_ic_subpackages
 
   type GweIcParamFoundType
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: strt = .false.
   end type GweIcParamFoundType
 
   logical :: gwe_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwe_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gweic_export_ascii = InputParamDefinitionType &
@@ -27,6 +35,25 @@ module GweIcInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gweic_export_nc = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'IC', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -44,6 +71,7 @@ module GweIcInputModule
     'STRT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'starting temperature', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -55,6 +83,7 @@ module GweIcInputModule
     gwe_ic_param_definitions(*) = &
     [ &
     gweic_export_ascii, &
+    gweic_export_nc, &
     gweic_strt &
     ]
 
@@ -70,6 +99,7 @@ module GweIcInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

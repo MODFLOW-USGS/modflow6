@@ -9,6 +9,7 @@ module PrtDisvInputModule
   public prt_disv_block_definitions
   public PrtDisvParamFoundType
   public prt_disv_multi_package
+  public prt_disv_subpackages
 
   type PrtDisvParamFoundType
     logical :: length_units = .false.
@@ -35,6 +36,12 @@ module PrtDisvInputModule
 
   logical :: prt_disv_multi_package = .false.
 
+  character(len=16), parameter :: &
+    prt_disv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     prtdisv_length_units = InputParamDefinitionType &
     ( &
@@ -45,6 +52,7 @@ module PrtDisvInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -62,6 +70,7 @@ module PrtDisvInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -79,6 +88,7 @@ module PrtDisvInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -96,6 +106,7 @@ module PrtDisvInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -113,6 +124,7 @@ module PrtDisvInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -130,6 +142,7 @@ module PrtDisvInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -147,6 +160,7 @@ module PrtDisvInputModule
     'NLAY', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of layers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -164,6 +178,7 @@ module PrtDisvInputModule
     'NCPL', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cells per layer', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -181,6 +196,7 @@ module PrtDisvInputModule
     'NVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -198,6 +214,7 @@ module PrtDisvInputModule
     'TOP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'model top elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -215,6 +232,7 @@ module PrtDisvInputModule
     'BOTM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCPL NLAY', & ! shape
+    'model bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -232,6 +250,7 @@ module PrtDisvInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER2D', & ! type
     'NCPL NLAY', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -249,6 +268,7 @@ module PrtDisvInputModule
     'IV', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'vertex number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -266,6 +286,7 @@ module PrtDisvInputModule
     'XV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -283,6 +304,7 @@ module PrtDisvInputModule
     'YV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -300,6 +322,7 @@ module PrtDisvInputModule
     'ICELL2D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cell2d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -317,6 +340,7 @@ module PrtDisvInputModule
     'XC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,6 +358,7 @@ module PrtDisvInputModule
     'YC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -351,6 +376,7 @@ module PrtDisvInputModule
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -368,6 +394,7 @@ module PrtDisvInputModule
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCVERT', & ! shape
+    'array of vertex numbers', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -410,6 +437,7 @@ module PrtDisvInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
+    'vertices data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -427,6 +455,7 @@ module PrtDisvInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D XC YC NCVERT ICVERT', & ! type
     'NCPL', & ! shape
+    'cell2d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

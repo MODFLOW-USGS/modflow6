@@ -9,6 +9,7 @@ module GwfRivInputModule
   public gwf_riv_block_definitions
   public GwfRivParamFoundType
   public gwf_riv_multi_package
+  public gwf_riv_subpackages
 
   type GwfRivParamFoundType
     logical :: auxiliary = .false.
@@ -36,6 +37,12 @@ module GwfRivInputModule
 
   logical :: gwf_riv_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_riv_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfriv_auxiliary = InputParamDefinitionType &
     ( &
@@ -46,6 +53,7 @@ module GwfRivInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -63,6 +71,7 @@ module GwfRivInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -80,6 +89,7 @@ module GwfRivInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -97,6 +107,7 @@ module GwfRivInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -114,6 +125,7 @@ module GwfRivInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -131,6 +143,7 @@ module GwfRivInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -148,6 +161,7 @@ module GwfRivInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -165,6 +179,7 @@ module GwfRivInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -182,6 +197,7 @@ module GwfRivInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -199,6 +215,7 @@ module GwfRivInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -216,6 +233,7 @@ module GwfRivInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -233,6 +251,7 @@ module GwfRivInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -250,6 +269,7 @@ module GwfRivInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -267,6 +287,7 @@ module GwfRivInputModule
     'MOVER', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -284,6 +305,7 @@ module GwfRivInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of rivers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -301,6 +323,7 @@ module GwfRivInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -318,6 +341,7 @@ module GwfRivInputModule
     'STAGE', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'river stage', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -335,6 +359,7 @@ module GwfRivInputModule
     'COND', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'river conductance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -352,6 +377,7 @@ module GwfRivInputModule
     'RBOT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'river bottom elevation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -369,6 +395,7 @@ module GwfRivInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -386,6 +413,7 @@ module GwfRivInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'drain name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -429,6 +457,7 @@ module GwfRivInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID STAGE COND RBOT AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

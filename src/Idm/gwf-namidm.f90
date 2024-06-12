@@ -9,6 +9,7 @@ module GwfNamInputModule
   public gwf_nam_block_definitions
   public GwfNamParamFoundType
   public gwf_nam_multi_package
+  public gwf_nam_subpackages
 
   type GwfNamParamFoundType
     logical :: list = .false.
@@ -18,12 +19,19 @@ module GwfNamInputModule
     logical :: newtonoptions = .false.
     logical :: newton = .false.
     logical :: under_relaxation = .false.
+    logical :: export_netcdf = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
   end type GwfNamParamFoundType
 
   logical :: gwf_nam_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfnam_list = InputParamDefinitionType &
@@ -35,6 +43,7 @@ module GwfNamInputModule
     'LIST', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
@@ -52,6 +61,7 @@ module GwfNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +79,7 @@ module GwfNamInputModule
     'PRINT_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +97,7 @@ module GwfNamInputModule
     'SAVE_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows for all packages to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +115,7 @@ module GwfNamInputModule
     'NEWTONOPTIONS', & ! fortran variable
     'RECORD NEWTON UNDER_RELAXATION', & ! type
     '', & ! shape
+    'newton keyword and options', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +133,7 @@ module GwfNamInputModule
     'NEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson formulation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -137,8 +151,27 @@ module GwfNamInputModule
     'UNDER_RELAXATION', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson UNDER_RELAXATION option', & ! longname
     .false., & ! required
     .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_export_netcdf = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_NETCDF', & ! tag name
+    'EXPORT_NETCDF', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'export model output netcdf file.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -154,6 +187,7 @@ module GwfNamInputModule
     'FTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'package type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +205,7 @@ module GwfNamInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -188,6 +223,7 @@ module GwfNamInputModule
     'PNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'user name for package', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -205,6 +241,7 @@ module GwfNamInputModule
     gwfnam_newtonoptions, &
     gwfnam_newton, &
     gwfnam_under_relaxation, &
+    gwfnam_export_netcdf, &
     gwfnam_ftype, &
     gwfnam_fname, &
     gwfnam_pname &
@@ -220,6 +257,7 @@ module GwfNamInputModule
     'PACKAGES', & ! fortran variable
     'RECARRAY FTYPE FNAME PNAME', & ! type
     '', & ! shape
+    'package list', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -1,50 +1,54 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module ExgGwfgweInputModule
+module UtlNcfInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public exg_gwfgwe_param_definitions
-  public exg_gwfgwe_aggregate_definitions
-  public exg_gwfgwe_block_definitions
-  public ExgGwfgweParamFoundType
-  public exg_gwfgwe_multi_package
-  public exg_gwfgwe_subpackages
+  public utl_ncf_param_definitions
+  public utl_ncf_aggregate_definitions
+  public utl_ncf_block_definitions
+  public UtlNcfParamFoundType
+  public utl_ncf_multi_package
+  public utl_ncf_subpackages
 
-  type ExgGwfgweParamFoundType
-  end type ExgGwfgweParamFoundType
+  type UtlNcfParamFoundType
+    logical :: ogc_wkt = .false.
+  end type UtlNcfParamFoundType
 
-  logical :: exg_gwfgwe_multi_package = .false.
+  logical :: utl_ncf_multi_package = .false.
 
   character(len=16), parameter :: &
-    exg_gwfgwe_subpackages(*) = &
+    utl_ncf_subpackages(*) = &
     [ &
     '                ' &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    exg_gwfgwe_param_definitions(*) = &
-    [ &
-    InputParamDefinitionType &
+    utlncf_ogc_wkt = InputParamDefinitionType &
     ( &
-    '', & ! component
-    '', & ! subcomponent
-    '', & ! block
-    '', & ! tag name
-    '', & ! fortran variable
-    '', & ! type
-    '', & ! shape
-    '', & ! longname
+    'UTL', & ! component
+    'NCF', & ! subcomponent
+    'OPTIONS', & ! block
+    'OGC_WKT', & ! tag name
+    'OGC_WKT', & ! fortran variable
+    'STRING', & ! type
+    'LENBIGLINE', & ! shape
+    'CRS well-known text (WKT) string', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
-    ) &
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    utl_ncf_param_definitions(*) = &
+    [ &
+    utlncf_ogc_wkt &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    exg_gwfgwe_aggregate_definitions(*) = &
+    utl_ncf_aggregate_definitions(*) = &
     [ &
     InputParamDefinitionType &
     ( &
@@ -65,15 +69,14 @@ module ExgGwfgweInputModule
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    exg_gwfgwe_block_definitions(*) = &
+    utl_ncf_block_definitions(*) = &
     [ &
-    InputBlockDefinitionType &
-    ( &
-    '', & ! blockname
+    InputBlockDefinitionType( &
+    'OPTIONS', & ! blockname
     .false., & ! required
     .false., & ! aggregate
-    .false. & ! block_varaible
+    .false. & ! block_variable
     ) &
     ]
 
-end module ExgGwfgweInputModule
+end module UtlNcfInputModule

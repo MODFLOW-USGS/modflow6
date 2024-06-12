@@ -9,6 +9,7 @@ module SwfStoInputModule
   public swf_sto_block_definitions
   public SwfStoParamFoundType
   public swf_sto_multi_package
+  public swf_sto_subpackages
 
   type SwfStoParamFoundType
     logical :: ipakcb = .false.
@@ -18,6 +19,12 @@ module SwfStoInputModule
   end type SwfStoParamFoundType
 
   logical :: swf_sto_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_sto_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfsto_ipakcb = InputParamDefinitionType &
@@ -29,6 +36,7 @@ module SwfStoInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save NPF flows', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -46,6 +54,7 @@ module SwfStoInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -63,6 +72,7 @@ module SwfStoInputModule
     'STEADY_STATE', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'steady state indicator', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -80,6 +90,7 @@ module SwfStoInputModule
     'TRANSIENT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'transient indicator', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -108,6 +119,7 @@ module SwfStoInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

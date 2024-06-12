@@ -20,6 +20,7 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
+  public :: idm_subpackages
   public :: idm_integrated
   public :: idm_component
 
@@ -134,6 +135,35 @@ contains
     end select
     return
   end function idm_multi_package
+
+  function idm_subpackages(component, subcomponent) result(subpackages)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (component)
+    case ('SIM')
+      subpackages => sim_idm_subpackages(subcomponent)
+    case ('GWF')
+      subpackages => gwf_idm_subpackages(subcomponent)
+    case ('GWT')
+      subpackages => gwt_idm_subpackages(subcomponent)
+    case ('GWE')
+      subpackages => gwe_idm_subpackages(subcomponent)
+    case ('SWF')
+      subpackages => swf_idm_subpackages(subcomponent)
+    case ('PRT')
+      subpackages => prt_idm_subpackages(subcomponent)
+    case ('EXG')
+      subpackages => exg_idm_subpackages(subcomponent)
+    case ('UTL')
+      subpackages => utl_idm_subpackages(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_subpackages
 
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component

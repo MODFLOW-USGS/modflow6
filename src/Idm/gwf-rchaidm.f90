@@ -9,6 +9,7 @@ module GwfRchaInputModule
   public gwf_rcha_block_definitions
   public GwfRchaParamFoundType
   public gwf_rcha_multi_package
+  public gwf_rcha_subpackages
 
   type GwfRchaParamFoundType
     logical :: readasarrays = .false.
@@ -32,6 +33,12 @@ module GwfRchaInputModule
 
   logical :: gwf_rcha_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_rcha_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfrcha_readasarrays = InputParamDefinitionType &
     ( &
@@ -42,6 +49,7 @@ module GwfRchaInputModule
     'READASARRAYS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'use array-based input', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -59,6 +67,7 @@ module GwfRchaInputModule
     'FIXED_CELL', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'if cell is dry do not apply recharge to underlying cell', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -76,6 +85,7 @@ module GwfRchaInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -93,6 +103,7 @@ module GwfRchaInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -110,6 +121,7 @@ module GwfRchaInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -127,6 +139,7 @@ module GwfRchaInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print recharge rates to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -144,6 +157,7 @@ module GwfRchaInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -161,6 +175,7 @@ module GwfRchaInputModule
     'TAS_FILERECORD', & ! fortran variable
     'RECORD TAS6 FILEIN TAS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -178,6 +193,7 @@ module GwfRchaInputModule
     'TAS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -195,6 +211,7 @@ module GwfRchaInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -212,6 +229,7 @@ module GwfRchaInputModule
     'TAS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -229,6 +247,7 @@ module GwfRchaInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -246,6 +265,7 @@ module GwfRchaInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -263,6 +283,7 @@ module GwfRchaInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -280,6 +301,7 @@ module GwfRchaInputModule
     'IRCH', & ! fortran variable
     'INTEGER1D', & ! type
     'NCPL', & ! shape
+    'layer number for recharge', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -297,6 +319,7 @@ module GwfRchaInputModule
     'RECHARGE', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'recharge rate', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -314,6 +337,7 @@ module GwfRchaInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE2D', & ! type
     'NAUX NCPL', & ! shape
+    'auxiliary variable iaux', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -355,6 +379,7 @@ module GwfRchaInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

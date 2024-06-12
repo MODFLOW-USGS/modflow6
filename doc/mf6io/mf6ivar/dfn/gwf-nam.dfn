@@ -58,6 +58,15 @@ optional true
 longname keyword to activate Newton-Raphson UNDER_RELAXATION option
 description keyword that indicates whether the groundwater head in a cell will be under-relaxed when water levels fall below the bottom of the model below any given cell. By default, Newton-Raphson UNDER\_RELAXATION is not applied.
 
+block options
+name export_netcdf
+type string
+reader urword
+optional true
+mf6internal export_netcdf
+longname export model output netcdf file.
+description keyword that specifies timeseries data for the dependent variable should be written to a model output netcdf file.  No value or ``UGRID'' (ugrid based export) values are supported.
+
 # --------------------- gwf nam packages ---------------------
 
 block packages

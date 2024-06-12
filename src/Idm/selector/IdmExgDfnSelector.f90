@@ -19,6 +19,7 @@ module IdmExgDfnSelectorModule
   public :: exg_aggregate_definitions
   public :: exg_block_definitions
   public :: exg_idm_multi_package
+  public :: exg_idm_subpackages
   public :: exg_idm_integrated
 
 contains
@@ -34,6 +35,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function exg_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -132,6 +139,29 @@ contains
     end select
     return
   end function exg_idm_multi_package
+
+  function exg_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('GWFGWF')
+      call set_subpkg_pointer(subpackages, exg_gwfgwf_subpackages)
+    case ('GWFGWT')
+      call set_subpkg_pointer(subpackages, exg_gwfgwt_subpackages)
+    case ('GWTGWT')
+      call set_subpkg_pointer(subpackages, exg_gwtgwt_subpackages)
+    case ('GWFGWE')
+      call set_subpkg_pointer(subpackages, exg_gwfgwe_subpackages)
+    case ('GWEGWE')
+      call set_subpkg_pointer(subpackages, exg_gwegwe_subpackages)
+    case ('SWFGWF')
+      call set_subpkg_pointer(subpackages, exg_swfgwf_subpackages)
+    case ('GWFPRT')
+      call set_subpkg_pointer(subpackages, exg_gwfprt_subpackages)
+    case default
+    end select
+    return
+  end function exg_idm_subpackages
 
   function exg_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

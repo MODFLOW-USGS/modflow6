@@ -9,6 +9,7 @@ module GweDisvInputModule
   public gwe_disv_block_definitions
   public GweDisvParamFoundType
   public gwe_disv_multi_package
+  public gwe_disv_subpackages
 
   type GweDisvParamFoundType
     logical :: length_units = .false.
@@ -17,6 +18,11 @@ module GweDisvInputModule
     logical :: yorigin = .false.
     logical :: angrot = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
+    logical :: ncf_filerecord = .false.
+    logical :: ncf6 = .false.
+    logical :: filein = .false.
+    logical :: ncf6_filename = .false.
     logical :: nlay = .false.
     logical :: ncpl = .false.
     logical :: nvert = .false.
@@ -35,6 +41,12 @@ module GweDisvInputModule
 
   logical :: gwe_disv_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwe_disv_subpackages(*) = &
+    [ &
+    'UTL-NCF         ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwedisv_length_units = InputParamDefinitionType &
     ( &
@@ -45,6 +57,7 @@ module GweDisvInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -62,6 +75,7 @@ module GweDisvInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -79,6 +93,7 @@ module GweDisvInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -96,6 +111,7 @@ module GweDisvInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -113,6 +129,7 @@ module GweDisvInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -130,9 +147,100 @@ module GweDisvInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedisv_export_nc = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedisv_ncf_filerecord = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF_FILERECORD', & ! tag name
+    'NCF_FILERECORD', & ! fortran variable
+    'RECORD NCF6 FILEIN NCF6_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedisv_ncf6 = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6', & ! tag name
+    'NCF6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'ncf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedisv_filein = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedisv_ncf6_filename = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DISV', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6_FILENAME', & ! tag name
+    'NCF6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file name of NCF information', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -147,6 +255,7 @@ module GweDisvInputModule
     'NLAY', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of layers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -164,6 +273,7 @@ module GweDisvInputModule
     'NCPL', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cells per layer', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -181,6 +291,7 @@ module GweDisvInputModule
     'NVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -198,6 +309,7 @@ module GweDisvInputModule
     'TOP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'model top elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -215,6 +327,7 @@ module GweDisvInputModule
     'BOTM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCPL NLAY', & ! shape
+    'model bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -232,6 +345,7 @@ module GweDisvInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER2D', & ! type
     'NCPL NLAY', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -249,6 +363,7 @@ module GweDisvInputModule
     'IV', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'vertex number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -266,6 +381,7 @@ module GweDisvInputModule
     'XV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -283,6 +399,7 @@ module GweDisvInputModule
     'YV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -300,6 +417,7 @@ module GweDisvInputModule
     'ICELL2D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cell2d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -317,6 +435,7 @@ module GweDisvInputModule
     'XC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,6 +453,7 @@ module GweDisvInputModule
     'YC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -351,6 +471,7 @@ module GweDisvInputModule
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -368,6 +489,7 @@ module GweDisvInputModule
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCVERT', & ! shape
+    'array of vertex numbers', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -384,6 +506,11 @@ module GweDisvInputModule
     gwedisv_yorigin, &
     gwedisv_angrot, &
     gwedisv_export_ascii, &
+    gwedisv_export_nc, &
+    gwedisv_ncf_filerecord, &
+    gwedisv_ncf6, &
+    gwedisv_filein, &
+    gwedisv_ncf6_filename, &
     gwedisv_nlay, &
     gwedisv_ncpl, &
     gwedisv_nvert, &
@@ -410,6 +537,7 @@ module GweDisvInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
+    'vertices data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -427,6 +555,7 @@ module GweDisvInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D XC YC NCVERT ICVERT', & ! type
     'NCPL', & ! shape
+    'cell2d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

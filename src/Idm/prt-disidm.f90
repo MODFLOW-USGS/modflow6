@@ -9,6 +9,7 @@ module PrtDisInputModule
   public prt_dis_block_definitions
   public PrtDisParamFoundType
   public prt_dis_multi_package
+  public prt_dis_subpackages
 
   type PrtDisParamFoundType
     logical :: length_units = .false.
@@ -29,6 +30,12 @@ module PrtDisInputModule
 
   logical :: prt_dis_multi_package = .false.
 
+  character(len=16), parameter :: &
+    prt_dis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     prtdis_length_units = InputParamDefinitionType &
     ( &
@@ -39,6 +46,7 @@ module PrtDisInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -56,6 +64,7 @@ module PrtDisInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -73,6 +82,7 @@ module PrtDisInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -90,6 +100,7 @@ module PrtDisInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -107,6 +118,7 @@ module PrtDisInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -124,6 +136,7 @@ module PrtDisInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -141,6 +154,7 @@ module PrtDisInputModule
     'NLAY', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of layers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -158,6 +172,7 @@ module PrtDisInputModule
     'NROW', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of rows', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -175,6 +190,7 @@ module PrtDisInputModule
     'NCOL', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -192,6 +208,7 @@ module PrtDisInputModule
     'DELR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCOL', & ! shape
+    'spacing along a row', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -209,6 +226,7 @@ module PrtDisInputModule
     'DELC', & ! fortran variable
     'DOUBLE1D', & ! type
     'NROW', & ! shape
+    'spacing along a column', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -226,6 +244,7 @@ module PrtDisInputModule
     'TOP', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
+    'cell top elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -243,6 +262,7 @@ module PrtDisInputModule
     'BOTM', & ! fortran variable
     'DOUBLE3D', & ! type
     'NCOL NROW NLAY', & ! shape
+    'cell bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -260,6 +280,7 @@ module PrtDisInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER3D', & ! type
     'NCOL NROW NLAY', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +319,7 @@ module PrtDisInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

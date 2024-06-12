@@ -9,6 +9,7 @@ module SwfDisv2DInputModule
   public swf_disv2d_block_definitions
   public SwfDisv2dParamFoundType
   public swf_disv2d_multi_package
+  public swf_disv2d_subpackages
 
   type SwfDisv2dParamFoundType
     logical :: length_units = .false.
@@ -33,6 +34,12 @@ module SwfDisv2DInputModule
 
   logical :: swf_disv2d_multi_package = .false.
 
+  character(len=16), parameter :: &
+    swf_disv2d_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfdisv2d_length_units = InputParamDefinitionType &
     ( &
@@ -43,6 +50,7 @@ module SwfDisv2DInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -60,6 +68,7 @@ module SwfDisv2DInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -77,6 +86,7 @@ module SwfDisv2DInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -94,6 +104,7 @@ module SwfDisv2DInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -111,6 +122,7 @@ module SwfDisv2DInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -128,6 +140,7 @@ module SwfDisv2DInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -145,6 +158,7 @@ module SwfDisv2DInputModule
     'NODES', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cells per layer', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -162,6 +176,7 @@ module SwfDisv2DInputModule
     'NVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -179,6 +194,7 @@ module SwfDisv2DInputModule
     'BOTTOM', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'model bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -196,6 +212,7 @@ module SwfDisv2DInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -213,6 +230,7 @@ module SwfDisv2DInputModule
     'IV', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'vertex number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -230,6 +248,7 @@ module SwfDisv2DInputModule
     'XV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -247,6 +266,7 @@ module SwfDisv2DInputModule
     'YV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -264,6 +284,7 @@ module SwfDisv2DInputModule
     'ICELL2D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cell2d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -281,6 +302,7 @@ module SwfDisv2DInputModule
     'XC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +320,7 @@ module SwfDisv2DInputModule
     'YC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -315,6 +338,7 @@ module SwfDisv2DInputModule
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -332,6 +356,7 @@ module SwfDisv2DInputModule
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCVERT', & ! shape
+    'array of vertex numbers', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -372,6 +397,7 @@ module SwfDisv2DInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
+    'vertices data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -389,6 +415,7 @@ module SwfDisv2DInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D XC YC NCVERT ICVERT', & ! type
     'NODES', & ! shape
+    'cell2d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -9,6 +9,7 @@ module GwfDrnInputModule
   public gwf_drn_block_definitions
   public GwfDrnParamFoundType
   public gwf_drn_multi_package
+  public gwf_drn_subpackages
 
   type GwfDrnParamFoundType
     logical :: auxiliary = .false.
@@ -37,6 +38,12 @@ module GwfDrnInputModule
 
   logical :: gwf_drn_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_drn_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfdrn_auxiliary = InputParamDefinitionType &
     ( &
@@ -47,6 +54,7 @@ module GwfDrnInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -64,6 +72,7 @@ module GwfDrnInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -81,6 +90,7 @@ module GwfDrnInputModule
     'AUXDEPTHNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for drainage depth', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -98,6 +108,7 @@ module GwfDrnInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -115,6 +126,7 @@ module GwfDrnInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -132,6 +144,7 @@ module GwfDrnInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -149,6 +162,7 @@ module GwfDrnInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -166,6 +180,7 @@ module GwfDrnInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -183,6 +198,7 @@ module GwfDrnInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -200,6 +216,7 @@ module GwfDrnInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -217,6 +234,7 @@ module GwfDrnInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -234,6 +252,7 @@ module GwfDrnInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -251,6 +270,7 @@ module GwfDrnInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -268,6 +288,7 @@ module GwfDrnInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -285,6 +306,7 @@ module GwfDrnInputModule
     'MOVER', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -302,6 +324,7 @@ module GwfDrnInputModule
     'ICUBICSFAC', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'cubic-scaling', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -319,6 +342,7 @@ module GwfDrnInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of drains', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -336,6 +360,7 @@ module GwfDrnInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -353,6 +378,7 @@ module GwfDrnInputModule
     'ELEV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'drain elevation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -370,6 +396,7 @@ module GwfDrnInputModule
     'COND', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'drain conductance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -387,6 +414,7 @@ module GwfDrnInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -404,6 +432,7 @@ module GwfDrnInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'drain name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -448,6 +477,7 @@ module GwfDrnInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID ELEV COND AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
