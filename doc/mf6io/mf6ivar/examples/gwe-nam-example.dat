@@ -7,7 +7,7 @@ BEGIN PACKAGES
   IC6        heat_transport.ic
   EST6       heat_transport.est
   ADV6       heat_transport.adv
-  DSP6       heat_transport.dsp
+  CND6       heat_transport.cnd
   SSM6       heat_transport.ssm
   CTP6       heat_transport01.ctp LEFT
   CTP6       heat_transport02.ctp RIGHT

@@ -1,3 +1,4 @@
+../../../src/Utilities/CharString.f90
 ../../../src/Utilities/ArrayHandlers.f90
 ../../../src/Utilities/ArrayReaders.f90
 ../../../src/Utilities/BlockParser.f90

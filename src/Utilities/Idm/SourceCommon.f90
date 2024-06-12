@@ -18,10 +18,10 @@ module SourceCommonModule
   public :: idm_component_type, idm_subcomponent_type, idm_subcomponent_name
   public :: set_model_shape
   public :: get_shape_from_string
-  public :: mem_allocate_naux
   public :: file_ext
   public :: ifind_charstr
   public :: filein_fname
+  public :: inlen_check
 
 contains
 
@@ -405,26 +405,6 @@ contains
     return
   end subroutine set_model_shape
 
-  subroutine mem_allocate_naux(mempath)
-    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
-    character(len=*), intent(in) :: mempath
-    integer(I4B), pointer :: naux
-    integer(I4B) :: isize
-    !
-    ! -- initialize
-    nullify (naux)
-    !
-    ! -- allocate optional input scalars locally
-    call get_isize('NAUX', mempath, isize)
-    if (isize < 0) then
-      call mem_allocate(naux, 'NAUX', mempath)
-      naux = 0
-    end if
-    !
-    ! -- return
-    return
-  end subroutine mem_allocate_naux
-
   function ifind_charstr(array, str)
     use CharacterStringModule, only: CharacterStringType
     ! -- Find the first array element containing str
@@ -466,7 +446,6 @@ contains
   !<
   function filein_fname(filename, tagname, input_mempath, input_fname) &
     result(found)
-    use SimModule, only: store_error, store_error_filename
     use MemoryManagerModule, only: mem_setptr, get_isize
     use CharacterStringModule, only: CharacterStringType
     character(len=*), intent(inout) :: filename
@@ -503,5 +482,34 @@ contains
     ! -- return
     return
   end function filein_fname
+
+  !> @brief store an error for input exceeding internal name length
+  !<
+  subroutine inlen_check(input_name, mf6_name, maxlen, name_type)
+    use CharacterStringModule, only: CharacterStringType
+    type(CharacterStringType), intent(in) :: input_name
+    character(len=*), intent(inout) :: mf6_name
+    integer(I4B), intent(in) :: maxlen
+    character(len=*), intent(in) :: name_type
+    character(len=LINELENGTH) :: input_str
+    integer(I4B) :: ilen
+    !
+    ! -- initialize
+    mf6_name = ''
+    input_str = input_name
+    ilen = len_trim(input_str)
+    if (ilen > maxlen) then
+      write (errmsg, '(a,i0,a)') &
+        'Input name "'//trim(input_str)//'" exceeds maximum allowed length (', &
+        maxlen, ') for '//trim(name_type)//'.'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- set truncated name
+    mf6_name = trim(input_str)
+    !
+    ! -- return
+    return
+  end subroutine inlen_check
 
 end module SourceCommonModule

@@ -36,7 +36,7 @@ module ExgGwegweInputModule
     logical :: cl1 = .false.
     logical :: cl2 = .false.
     logical :: hwva = .false.
-    logical :: aux = .false.
+    logical :: auxvar = .false.
     logical :: boundname = .false.
   end type ExgGwegweParamFoundType
 
@@ -468,13 +468,13 @@ module ExgGwegweInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwegwe_aux = InputParamDefinitionType &
+    exggwegwe_auxvar = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'GWEGWE', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'AUX', & ! tag name
-    'AUX', & ! fortran variable
+    'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
     .false., & ! required
@@ -529,7 +529,7 @@ module ExgGwegweInputModule
     exggwegwe_cl1, &
     exggwegwe_cl2, &
     exggwegwe_hwva, &
-    exggwegwe_aux, &
+    exggwegwe_auxvar, &
     exggwegwe_boundname &
     ]
 

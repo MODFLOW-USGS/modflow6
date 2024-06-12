@@ -1,4 +1,4 @@
-# --------------------- gwt oc options ---------------------
+# --------------------- gwe oc options ---------------------
 
 block options
 name budget_filerecord
@@ -108,7 +108,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the output file to write conc information.
+description name of the output file to write temperature information.
 
 block options
 name temperatureprintrecord
@@ -186,7 +186,7 @@ longname write format
 description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
 
 
-# --------------------- gwt oc period ---------------------
+# --------------------- gwe oc period ---------------------
 
 block period
 name iper

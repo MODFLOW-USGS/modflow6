@@ -20,7 +20,6 @@ module PrtMipModule
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< aquifer porosity
     real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< retardation factor
     integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< zone number
-    integer(I4B), pointer :: zeromethod
   contains
     procedure :: mip_ar
     procedure :: mip_da
@@ -80,15 +79,12 @@ contains
     call mem_deallocate(this%porosity)
     call mem_deallocate(this%retfactor)
     call mem_deallocate(this%izone)
-    !
-    ! -- Deallocate scalars
-    call mem_deallocate(this%zeromethod)
+
   end subroutine mip_da
 
   subroutine allocate_scalars(this)
     class(PrtMipType) :: this
     call this%NumericalPackageType%allocate_scalars()
-    call mem_allocate(this%zeromethod, 'IZEROMETHOD', this%memoryPath)
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays
@@ -133,11 +129,6 @@ contains
                        map, found%retfactor)
     call mem_set_value(this%izone, 'IZONE', this%input_mempath, map, &
                        found%izone)
-    !
-    ! -- Source scalars
-    call mem_set_value(this%zeromethod, 'ZERO_METHOD', this%input_mempath, &
-                       found%zero_method)
-    if (.not. found%zero_method) this%zeromethod = 1
     !
     ! -- Ensure POROSITY was found
     if (.not. found%porosity) then

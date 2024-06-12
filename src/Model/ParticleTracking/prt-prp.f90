@@ -13,7 +13,7 @@ module PrtPrpModule
   use BlockParserModule, only: BlockParserType
   use PrtFmiModule, only: PrtFmiType
   use ParticleModule, only: ParticleType, ParticleStoreType, &
-                            create_particle, create_particle_store
+                            create_particle, allocate_particle_store
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
@@ -62,7 +62,11 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: locz(:) => null() !< release point local z coordinates
     real(DP), pointer, contiguous :: rptmass(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
-    type(TimeSelectType), pointer :: releasetimes
+    type(TimeSelectType), pointer :: releasetimes !< user-specified particle release times
+    integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
+    integer(I4B), pointer :: iexmethod => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    logical(LGP), pointer :: foundtol => null() !< whether tolerance option was found
 
   contains
     procedure :: prp_allocate_arrays
@@ -85,7 +89,7 @@ contains
 
   !> @brief Create a new particle release point package
   subroutine prp_create(packobj, id, ibcnum, inunit, iout, namemodel, &
-                        pakname, mempath, fmi)
+                        pakname, fmi)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -94,21 +98,20 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    character(len=*), intent(in) :: mempath
     type(PrtFmiType), pointer :: fmi
     ! -- local
     type(PrtPrpType), pointer :: prpobj
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'PRP -- PARTICLE RELEASE POINT PACKAGE', &
-       &' INPUT READ FROM MEMPATH: ', A, /)"
+       &' INPUT READ FROM UNIT ', i0, /)"
 
     ! -- allocate the object and assign values to object variables
     allocate (prpobj)
     packobj => prpobj
 
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     prpobj%text = text
 
     ! -- allocate scalars
@@ -128,7 +131,7 @@ contains
     prpobj%fmi => fmi
 
     ! -- if prp is enabled, print a message identifying it
-    if (inunit > 0) write (iout, fmtheader) mempath
+    if (inunit > 0) write (iout, fmtheader) inunit
   end subroutine prp_create
 
   !> @brief Deallocate memory
@@ -155,6 +158,10 @@ contains
     call mem_deallocate(this%itrkhdr)
     call mem_deallocate(this%itrkcsv)
     call mem_deallocate(this%irlstls)
+    call mem_deallocate(this%ifrctrn)
+    call mem_deallocate(this%iexmethod)
+    call mem_deallocate(this%extol)
+    call mem_deallocate(this%foundtol)
 
     ! -- deallocate arrays
     call mem_deallocate(this%rptx)
@@ -167,11 +174,11 @@ contains
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
     ! -- deallocate particle store
-    call this%particles%destroy(this%memoryPath)
+    call this%particles%deallocate(this%memoryPath)
     deallocate (this%particles)
 
     ! -- deallocate release time selection
-    call this%releasetimes%destroy()
+    call this%releasetimes%deallocate()
     deallocate (this%releasetimes)
   end subroutine prp_da
 
@@ -199,7 +206,10 @@ contains
 
     ! -- Allocate particle store, starting with the number
     !    of release points (arrays resized if/when needed)
-    call create_particle_store(this%particles, this%nreleasepts, this%memoryPath)
+    call allocate_particle_store( &
+      this%particles, &
+      this%nreleasepts, &
+      this%memoryPath)
 
     ! -- Allocate arrays
     call mem_allocate(this%rptx, this%nreleasepts, 'RPTX', this%memoryPath)
@@ -248,6 +258,10 @@ contains
     call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
     call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
+    call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
+    call mem_allocate(this%iexmethod, 'IEXMETHOD', this%memoryPath)
+    call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
+    call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! -- Set values
     this%rlsall = .false.
@@ -266,6 +280,10 @@ contains
     this%itrkhdr = 0
     this%itrkcsv = 0
     this%irlstls = 0
+    this%ifrctrn = 0
+    this%iexmethod = 1
+    this%extol = DZERO
+    this%foundtol = .false. ! exit_solve_tolerance is a required option
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -361,11 +379,20 @@ contains
         np = this%nparticles + 1
         this%nparticles = np
 
-        ! -- Check release point is within the specified cell
-        !    and not above/below grid top/bottom respectively
+        ! -- Particle release point. Calculate global from local z if needed.
         x = this%rptx(nps)
         y = this%rpty(nps)
-        z = this%rptz(nps)
+        if (this%localz) then
+          top = this%fmi%dis%top(ic)
+          bot = this%fmi%dis%bot(ic)
+          hds = this%fmi%gwfhead(ic)
+          z = bot + this%rptz(nps) * (hds - bot)
+        else
+          z = this%rptz(nps)
+        end if
+
+        ! -- Check release point is within the specified cell
+        !    and not above/below grid top/bottom respectively
         call this%dis%get_polyverts(ic, polyverts)
         if (.not. point_in_polygon(x, y, polyverts)) then
           write (errmsg, '(a,g0,a,g0,a,i0)') &
@@ -425,14 +452,7 @@ contains
         end if
         particle%x = x
         particle%y = y
-        if (this%localz) then
-          top = this%fmi%dis%top(ic)
-          bot = this%fmi%dis%bot(ic)
-          hds = this%fmi%gwfhead(ic)
-          particle%z = bot + this%rptz(nps) * (hds - bot)
-        else
-          particle%z = this%rptz(nps)
-        end if
+        particle%z = z
         particle%trelease = trelease
         ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
         if (this%stoptraveltime == huge(1d0)) then
@@ -442,15 +462,18 @@ contains
           if (this%stoptime < particle%tstop) particle%tstop = this%stoptime
         end if
         particle%ttrack = particle%trelease
-        particle%idomain(0) = 0
-        particle%iboundary(0) = 0
         particle%idomain(1) = 0
         particle%iboundary(1) = 0
         particle%idomain(2) = ic
         particle%iboundary(2) = 0
         particle%idomain(3) = 0
         particle%iboundary(3) = 0
-        call this%particles%load_from_particle(particle, np)
+        particle%ifrctrn = this%ifrctrn
+        particle%iexmethod = this%iexmethod
+        particle%extol = this%extol
+
+        ! -- Persist particle to particle store
+        call this%particles%save_particle(particle, np)
 
         ! -- Accumulate mass release from this point
         this%rptmass(nps) = this%rptmass(nps) + DONE
@@ -481,7 +504,7 @@ contains
                       "('Looking for BEGIN PERIOD iper.  &
                       &Found ', a, ' instead.')"
     character(len=*), parameter :: fmt_steps = &
-                                   "(6x,'TIME STEP(S) ',50(I0,' '))" ! kluge 50 (similar to STEPS in OC)?
+                                   "(6x,'TIME STEP(S) ',50(I0,' '))" ! 50 limit is similar to STEPS in OC
     character(len=*), parameter :: fmt_freq = &
                                    "(6x,'EVERY ',I0,' TIME STEP(S)')"
     character(len=*), parameter :: fmt_fracs = &
@@ -567,6 +590,7 @@ contains
             call store_error(errmsg)
             call this%parser%StoreErrorUnit(terminate=.true.)
           end if
+          call mem_reallocate(this%rlskstp, 0, 'RLSKSTP', this%memoryPath)
           do i = 1, nstp(this%ionper)
             if (mod(i, ival) == 0) then
               n = size(this%rlskstp)
@@ -591,22 +615,24 @@ contains
     end if
 
     ! -- write settings to list file
-    if (.not. any(this%rlskstp > 0)) then
-      write (this%iout, "(1x,/1x,a)") 'NO PARTICLE RELEASES IN THIS STRESS '// &
-        'PERIOD'
-    else if (use_last) then
-      write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
-        'FROM LAST STRESS PERIOD'
-    else
-      ! -- write particle release setting
-      write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE:'
-      if (any(this%rlskstp > 0)) then
-        n = size(this%rlskstp)
-        if (n > 0) write (this%iout, fmt_steps, advance='no') this%rlskstp
+    if (this%iprpak > 0) then
+      if (.not. any(this%rlskstp > 0)) then
+        write (this%iout, "(1x,/1x,a)") 'NO PARTICLE RELEASES IN THIS STRESS '// &
+          'PERIOD'
+      else if (use_last) then
+        write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
+          'FROM LAST STRESS PERIOD'
+      else
+        ! -- write particle release setting
+        write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE:'
+        if (any(this%rlskstp > 0)) then
+          n = size(this%rlskstp)
+          if (n > 0) write (this%iout, fmt_steps, advance='no') this%rlskstp
+        end if
+        write (this%iout, "(1x,a)", advance='no') 'AT OFFSET'
+        write (this%iout, fmt_fracs) (/this%offset/)
+        write (this%iout, '(A)')
       end if
-      write (this%iout, "(1x,a)", advance='no') 'AT OFFSET'
-      write (this%iout, fmt_fracs) (/this%offset/)
-      write (this%iout, '(A)')
     end if
   end subroutine prp_rp
 
@@ -616,7 +642,7 @@ contains
     use TdisModule, only: delt
     ! -- dummy variables
     class(PrtPrpType) :: this
-    real(DP), dimension(:), intent(in) :: hnew !< todo: mass concentration?
+    real(DP), dimension(:), intent(in) :: hnew
     real(DP), dimension(:), intent(inout) :: flowja !< flow between package and model
     integer(I4B), intent(in) :: imover !< flag indicating if the mover package is active
     ! -- local variables
@@ -633,11 +659,9 @@ contains
       node = this%nodelist(i)
       rrate = DZERO
       ! -- If cell is no-flow or constant-head, then ignore it.
-      ! todo: think about condition(s) under which to ignore cell
       if (node > 0) then
-        idiag = this%dis%con%ia(node)
-        ! todo: think about condition(s) under which to ignore cell
         ! -- Calculate the flow rate into the cell.
+        idiag = this%dis%con%ia(node)
         rrate = this%rptmass(i) * (DONE / delt) ! reciprocal of tstp length
         flowja(idiag) = flowja(idiag) + rrate
       end if
@@ -647,26 +671,9 @@ contains
     end do
   end subroutine prp_cq_simrate
 
-  !> @ brief Define list heading written with PRINT_INPUT option
-  subroutine define_listlabel(this) ! kluge note: update for PRT?
+  subroutine define_listlabel(this)
     class(PrtPrpType), intent(inout) :: this
-
-    ! -- create the header list label
-    this%listlabel = trim(this%filtyp)//' NO.'
-    if (this%dis%ndim == 3) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif (this%dis%ndim == 2) then
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
-    else
-      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if (this%inamedbound == 1) then
-      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    end if
+    ! not implemented, not used
   end subroutine define_listlabel
 
   !> @brief Indicates whether observations are supported.
@@ -699,7 +706,7 @@ contains
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
+    logical(LGP), intent(inout) :: found
     ! -- locals
     real(DP) :: dval
     integer(I4B) :: i, ios, nlines
@@ -732,6 +739,11 @@ contains
       this%idrape = 1
       found = .true.
     case ('RELEASE_TIMES')
+      if (this%rlstimelist) then
+        errmsg = "RELEASE TIMES ALREADY SPECIFIED"
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit(terminate=.true.)
+      end if
       rtloop: do
         success = .false.
         call this%parser%TryGetDouble(dval, success)
@@ -747,6 +759,11 @@ contains
       this%rlstimelist = .true.
       found = .true.
     case ('RELEASE_TIMESFILE')
+      if (this%rlstimelist) then
+        errmsg = "RELEASE TIMES ALREADY SPECIFIED"
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit(terminate=.true.)
+      end if
       call this%parser%GetString(fname)
       call openfile(this%irlstls, this%iout, fname, 'TLS')
       nlines = 0
@@ -811,9 +828,28 @@ contains
     case ('LOCAL_Z')
       this%localz = .true.
       found = .true.
+    case ('DEV_FORCETERNARY')
+      call this%parser%DevOpt()
+      this%ifrctrn = 1
+      write (this%iout, '(4x,a)') &
+        'TRACKING WILL BE DONE USING THE TERNARY METHOD REGARDLESS OF CELL TYPE'
+      found = .true.
+    case ('DEV_EXIT_SOLVE_METHOD')
+      this%iexmethod = this%parser%GetInteger()
+      if (.not. (this%iexmethod /= 1 .or. this%iexmethod /= 2)) &
+        call store_error('DEV_EXIT_SOLVE_METHOD MUST BE &
+          &1 (BRENT) OR 2 (CHANDRUPATLA)')
+      found = .true.
+    case ('EXIT_SOLVE_TOLERANCE')
+      this%extol = this%parser%GetDouble()
+      if (this%extol <= DZERO) &
+        call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
+      found = .true.
+      this%foundtol = .true.
     case default
       found = .false.
     end select
+
   end subroutine prp_options
 
   !> @brief Read the packagedata for this package
@@ -964,6 +1000,9 @@ contains
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+
+    if (.not. this%foundtol) &
+      call store_error('EXIT_SOLVE_TOLERANCE MISSING, VALUE REQUIRED')
 
     ! -- get dimension block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &

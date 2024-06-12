@@ -10,13 +10,14 @@ the 1st case flow is left to right, in the 2nd
 flow is top right to bottom left.
 
 Runtime is benchmarked with pytest-benchmark.
-The ZERO_METHOD option is used to select root-
-finding methods for total runtime comparison.
+The EXIT_SOLVE_METHOD option is used to select
+root- finding methods for runtime comparison.
 """
 
 from pathlib import Path
 
 import flopy
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,10 +25,9 @@ import pytest
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
-from shapely.geometry import LineString
-
 from framework import TestFramework
 from prt_test_utils import get_model_name
+from shapely.geometry import LineString
 from test_prt_triangle import (
     active_domain,
     botm,
@@ -38,22 +38,22 @@ from test_prt_triangle import (
     top,
 )
 
+pytest_plugins = ["modflow_devtools.snapshots"]
+
 simname = "prtter"
 cases = [
-    f"{simname}eu",
     f"{simname}br",
     f"{simname}ch",
-    # f"{simname}test",
 ]
 methods = [
-    0,  # euler
     1,  # brent
     2,  # chandrupatla
-    # 3    # test method (doesn't always converge??)
 ]
 
 
-def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
+def build_prt_sim(
+    idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5
+):
     prt_ws = Path(prt_ws)
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
@@ -81,9 +81,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         vertices=vertices,
         cell2d=cell2d,
     )
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=porosity, zero_method=methods[idx]
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
     prpdata = [
         # particle index, (layer, cell index), x, y, z
         (0, (0, 88), 95, 92, 0.5),
@@ -102,6 +100,8 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         trackcsv_filerecord=[prp_track_csv_file],
         boundnames=True,
         stop_at_weak_sink=True,  # currently required for this problem
+        dev_exit_solve_method=methods[idx],
+        exit_solve_tolerance=exit_solve_tolerance,
     )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"
@@ -129,17 +129,99 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
     return sim
 
 
-def build_models(idx, test):
+def build_models(idx, test, exit_solve_tolerance=1e-7):
     gwf_sim = build_gwf_sim(
         test.name, test.workspace, test.targets, ["left", "botm"]
     )
     prt_sim = build_prt_sim(
-        idx, test.name, test.workspace, test.workspace / "prt", test.targets
+        idx,
+        test.name,
+        test.workspace,
+        test.workspace / "prt",
+        test.targets,
+        exit_solve_tolerance,
     )
     return gwf_sim, prt_sim
 
 
-def check_output(idx, test):
+def plot_output(name, gwf, head, spdis, pls, fpath):
+    # plot in 2d with mpl
+    fig = plt.figure(figsize=(16, 10))
+    ax = plt.subplot(1, 1, 1, aspect="equal")
+    pmv = flopy.plot.PlotMapView(model=gwf, ax=ax)
+    pmv.plot_grid(alpha=0.25)
+    pmv.plot_ibound(alpha=0.5)
+    headmesh = pmv.plot_array(head, alpha=0.25)
+    cv = pmv.contour_array(head, levels=np.linspace(0, 1, 9), colors="black")
+    plt.clabel(cv)
+    plt.colorbar(headmesh, shrink=0.25, ax=ax, label="Head", location="right")
+    handles = [
+        mpl.lines.Line2D(
+            [0],
+            [0],
+            marker=">",
+            linestyle="",
+            label="Specific discharge",
+            color="grey",
+            markerfacecolor="gray",
+        ),
+    ]
+    if "wel" in name:
+        handles.append(
+            mpl.lines.Line2D(
+                [0],
+                [0],
+                marker="o",
+                linestyle="",
+                label="Well",
+                markerfacecolor="red",
+            ),
+        )
+    ax.legend(
+        handles=handles,
+        loc="lower right",
+    )
+    pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
+    if "wel" in name:
+        pmv.plot_bc(ftype="WEL")
+    mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        title = "DISV voronoi grid particle tracks"
+        if "welp" in name:
+            title += ": pumping wells"
+        elif "weli" in name:
+            title += ": injection wells"
+        pl.plot(
+            title=title,
+            kind="line",
+            linestyle="--",
+            marker="o",
+            markersize=2,
+            x="x",
+            y="y",
+            ax=ax,
+            legend=False,
+            color="black",
+        )
+    xc, yc = gwf.modelgrid.get_xcellcenters_for_layer(
+        0
+    ), gwf.modelgrid.get_ycellcenters_for_layer(0)
+    for i in range(gwf.modelgrid.ncpl):
+        x, y = xc[i], yc[i]
+        if i == 1639:
+            color = "green"
+            ms = 10
+        else:
+            color = "grey"
+            ms = 2
+        ax.plot(x, y, "o", color=color, alpha=0.25, ms=ms)
+        ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
+
+    plt.show()
+    plt.savefig(fpath)
+
+
+def check_output(idx, test, snapshot):
     name = test.name
     prt_ws = test.workspace / "prt"
     gwf_name = get_model_name(name, "gwf")
@@ -152,7 +234,7 @@ def check_output(idx, test):
     head = gwf.output.head().get_data()
     bdobj = gwf.output.budget()
     spdis = bdobj.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # get prt output
     prt_name = get_model_name(name, "prt")
@@ -169,14 +251,26 @@ def check_output(idx, test):
     assert endpts.shape == (2, 16)
     assert set(endpts.icell) == {111, 112}
 
+    # plot results if enabled
+    plot = False
+    if plot:
+        plot_output(
+            name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png"
+        )
+
+    # check pathlines against snapshot
+    assert snapshot == pls.round(3).to_records(index=False)
+
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
+def test_mf6model(
+    idx, name, function_tmpdir, targets, benchmark, array_snapshot
+):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t),
+        check=lambda t: check_output(idx, t, array_snapshot),
         targets=targets,
         compare=None,
     )

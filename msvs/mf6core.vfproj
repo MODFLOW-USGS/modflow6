@@ -51,6 +51,7 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="Distributed">
+		<File RelativePath="..\src\Distributed\DistributedSim.f90"/>
 		<File RelativePath="..\src\Distributed\IndexMap.f90"/>
 		<File RelativePath="..\src\Distributed\InterfaceMap.f90"/>
 		<File RelativePath="..\src\Distributed\MappedMemory.f90"/>
@@ -131,7 +132,8 @@
 		<File RelativePath="..\src\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmPrtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmSimDfnSelector.f90"/>
-		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/>
+		<File RelativePath="..\src\Idm\selector\IdmUtlDfnSelector.f90"/></Filter>
 		<File RelativePath="..\src\Idm\exg-gwegweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgwfidm.f90"/>
@@ -160,6 +162,7 @@
 		<File RelativePath="..\src\Idm\gwf-rchaidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-rchidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-rividm.f90"/>
+		<File RelativePath="..\src\Idm\gwf-stoidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-welidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-cncidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-disidm.f90"/>
@@ -185,7 +188,9 @@
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
-		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/></Filter>
+		<File RelativePath="..\src\Idm\swf-stoidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
+		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
@@ -295,7 +300,6 @@
 		<Filter Name="ParticleTracking">
 		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
-		<File RelativePath="..\src\Model\ParticleTracking\prt-obs.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-oc.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-prp.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt.f90"/></Filter>
@@ -419,6 +423,7 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileGridInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileListInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileStoInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>

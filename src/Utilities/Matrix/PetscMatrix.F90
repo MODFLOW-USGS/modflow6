@@ -12,8 +12,8 @@ module PetscMatrixModule
   private
 
   type, public, extends(MatrixBaseType) :: PetscMatrixType
-    Mat :: mat
-    ! offset in the global matrix
+    Mat :: mat !< the PETSc matrix object, NOTE: update() should be called before using this,
+               !! in case the matrix CSR array has changed!!!
     integer(I4B) :: nrow !< number of rows in this portion of the global matrix
     integer(I4B) :: ncol !< number of columns in the matrix
     integer(I4B) :: nnz !< number of nonzeros in the matrix
@@ -446,6 +446,9 @@ contains
       y => vec_y
     end select
 
+    ! copy data into petsc object
+    call this%update()
+    ! and multiply
     call MatMult(this%mat, x%vec_impl, y%vec_impl, ierr)
     CHKERRQ(ierr)
 

@@ -2,7 +2,7 @@
 name = "modflow6"
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "linux-aarch64", "osx-arm64", "osx-64"]
-version = "6.5.0.dev2"
+version = "6.6.0.dev0"
 
 [dependencies]
 appdirs = "*"
@@ -11,6 +11,7 @@ filelock = "*"
 flaky = "*"
 fortran-language-server = "*"
 fprettify = "*"
+gitpython = "*"
 jupytext = "*"
 matplotlib = "*"
 meson = "1.3.0"
@@ -30,6 +31,7 @@ python = "3.9.*"
 requests = "*"
 scipy = "*"
 shapely = "*"
+syrupy = "*"
 xmipy = "*"
 
 [tasks]
@@ -46,8 +48,9 @@ install = { depends_on = [
 ] }
 
 # format
-fortran-format-check = "python .github/common/fortran_format_check.py"
-msvs-vfproj-check = "python .github/common/msvs_vfproj_check.py"
+check-format = "python .github/common/check_format.py"
+check-vfproj = "python .github/common/check_vfproj.py"
+check-spelling = "python .github/common/check_spelling.py"
 
 # build/test
 setup = "meson setup --prefix=$(pwd) --libdir=bin"
@@ -60,12 +63,10 @@ autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd 
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
 run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
-check-docs = "python .github/common/codespell_docs_check.py"
 build-docs = { cmd = "python build_docs.py", cwd = "distribution" }
 build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
 build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
 test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
 update-version = { cmd = "python update_version.py", cwd = "distribution" }
-mk-folder-struct = { cmd = "python mk_folder_struct.py", cwd = "doc/ReleaseNotes" }
 deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
 sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }

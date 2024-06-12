@@ -336,7 +336,7 @@ def update_pixi(version: Version):
     tag = "version ="
     with open(path, "w") as fp:
         for line in lines:
-            if tag in line:
+            if line.startswith(tag):
                 line = f'{tag} "{version}"\n'
             fp.write(line)
 

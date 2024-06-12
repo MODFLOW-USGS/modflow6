@@ -42,7 +42,7 @@ module ArrayHandlersModule
   end interface
 
   interface ifind
-    module procedure ifind_character, ifind_integer
+    module procedure ifind_character, ifind_integer, ifind_charstring
   end interface ifind
 
 contains
@@ -487,6 +487,27 @@ contains
       end if
     end do findloop
   end function ifind_character
+
+  !> @brief Find the 1st array element containing str, or -1 if not found.
+  !<
+  function ifind_charstring(array, str)
+    use CharacterStringModule
+    ! -- return
+    integer(I4B) :: ifind_charstring
+    ! -- dummy
+    type(CharacterStringType), dimension(:) :: array
+    type(CharacterStringType) :: str
+    ! -- local
+    integer(I4B) :: i
+
+    ifind_charstring = -1
+    findloop: do i = 1, size(array)
+      if (array(i) == str) then
+        ifind_charstring = i
+        exit findloop
+      end if
+    end do findloop
+  end function ifind_charstring
 
   !> @brief Find the first element containing ival, or -1 if not found.
   function ifind_integer(iarray, ival)

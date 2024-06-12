@@ -183,10 +183,10 @@ contains
 
   !> @brief synchronize backtracking flag over processes
   !<
-  subroutine par_backtracking_xupdate(this, btflag)
+  subroutine par_backtracking_xupdate(this, bt_flag)
     ! -- dummy variables
     class(ParallelSolutionType), intent(inout) :: this !< ParallelSolutionType instance
-    integer(I4B), intent(inout) :: btflag !< global backtracking flag (1) backtracking performed (0) backtracking not performed
+    integer(I4B), intent(inout) :: bt_flag !< global backtracking flag (1) backtracking performed (0) backtracking not performed
     ! -- local variables
     integer(I4B) :: btflag_local
     type(MpiWorldType), pointer :: mpi_world
@@ -194,12 +194,18 @@ contains
 
     mpi_world => get_mpi_world()
 
-    btflag_local = 0
-    call this%NumericalSolutionType%sln_backtracking_xupdate(btflag_local)
+    ! get local bt flag
+    btflag_local = this%NumericalSolutionType%get_backtracking_flag()
 
-    call MPI_Allreduce(btflag_local, btflag, 1, MPI_INTEGER, &
+    ! reduce into global decision (if any, then all)
+    call MPI_Allreduce(btflag_local, bt_flag, 1, MPI_INTEGER, &
                        MPI_MAX, mpi_world%comm, ierr)
     call CHECK_MPI(ierr)
+
+    ! perform backtracking if ...
+    if (bt_flag > 0) then
+      call this%NumericalSolutionType%apply_backtracking()
+    end if
 
   end subroutine par_backtracking_xupdate
 

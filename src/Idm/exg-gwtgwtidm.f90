@@ -36,7 +36,7 @@ module ExgGwtgwtInputModule
     logical :: cl1 = .false.
     logical :: cl2 = .false.
     logical :: hwva = .false.
-    logical :: aux = .false.
+    logical :: auxvar = .false.
     logical :: boundname = .false.
   end type ExgGwtgwtParamFoundType
 
@@ -468,13 +468,13 @@ module ExgGwtgwtInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exggwtgwt_aux = InputParamDefinitionType &
+    exggwtgwt_auxvar = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'GWTGWT', & ! subcomponent
     'EXCHANGEDATA', & ! block
     'AUX', & ! tag name
-    'AUX', & ! fortran variable
+    'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
     .false., & ! required
@@ -529,7 +529,7 @@ module ExgGwtgwtInputModule
     exggwtgwt_cl1, &
     exggwtgwt_cl2, &
     exggwtgwt_hwva, &
-    exggwtgwt_aux, &
+    exggwtgwt_auxvar, &
     exggwtgwt_boundname &
     ]
 

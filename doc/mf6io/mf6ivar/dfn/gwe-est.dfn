@@ -61,7 +61,7 @@ shape (nodes)
 reader readarray
 layered true
 longname density of aquifer material
-description is a user-specified value of the density of aquifer material not considering the voids. Value will remain fixed for the entire simulation.  For example, if working in SI units, values may be entered as kg/m3. 
+description is a user-specified value of the density of aquifer material not considering the voids. Value will remain fixed for the entire simulation.  For example, if working in SI units, values may be entered as kilograms per cubic meter. 
 
 # --------------------- gwe est packagedata ---------------------
 
@@ -91,7 +91,7 @@ tagged false
 in_record true
 reader urword
 longname density of water
-description is a user-specified value of the density of water. Value will remain fixed for the entire simulation.  For example, if working in SI units, values may be entered as kg/m3. 
+description is a user-specified value of the density of water. Value will remain fixed for the entire simulation.  For example, if working in SI units, values may be entered as kilograms per cubic meter. 
 
 
 block packagedata

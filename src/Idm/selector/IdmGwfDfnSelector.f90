@@ -19,6 +19,7 @@ module IdmGwfDfnSelectorModule
   use GwfRchInputModule
   use GwfRchaInputModule
   use GwfRivInputModule
+  use GwfStoInputModule
   use GwfWelInputModule
 
   implicit none
@@ -76,6 +77,8 @@ contains
       call set_param_pointer(input_definition, gwf_rcha_param_definitions)
     case ('RIV')
       call set_param_pointer(input_definition, gwf_riv_param_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, gwf_sto_param_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_param_definitions)
     case default
@@ -116,6 +119,8 @@ contains
       call set_param_pointer(input_definition, gwf_rcha_aggregate_definitions)
     case ('RIV')
       call set_param_pointer(input_definition, gwf_riv_aggregate_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, gwf_sto_aggregate_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_aggregate_definitions)
     case default
@@ -156,6 +161,8 @@ contains
       call set_block_pointer(input_definition, gwf_rcha_block_definitions)
     case ('RIV')
       call set_block_pointer(input_definition, gwf_riv_block_definitions)
+    case ('STO')
+      call set_block_pointer(input_definition, gwf_sto_block_definitions)
     case ('WEL')
       call set_block_pointer(input_definition, gwf_wel_block_definitions)
     case default
@@ -195,6 +202,8 @@ contains
       multi_package = gwf_rcha_multi_package
     case ('RIV')
       multi_package = gwf_riv_multi_package
+    case ('STO')
+      multi_package = gwf_sto_multi_package
     case ('WEL')
       multi_package = gwf_wel_multi_package
     case default
@@ -237,6 +246,8 @@ contains
     case ('RCHA')
       integrated = .true.
     case ('RIV')
+      integrated = .true.
+    case ('STO')
       integrated = .true.
     case ('WEL')
       integrated = .true.

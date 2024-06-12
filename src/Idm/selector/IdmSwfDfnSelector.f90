@@ -15,6 +15,7 @@ module IdmSwfDfnSelectorModule
   use SwfCdbInputModule
   use SwfChdInputModule
   use SwfFlwInputModule
+  use SwfStoInputModule
   use SwfZdgInputModule
 
   implicit none
@@ -64,6 +65,8 @@ contains
       call set_param_pointer(input_definition, swf_chd_param_definitions)
     case ('FLW')
       call set_param_pointer(input_definition, swf_flw_param_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, swf_sto_param_definitions)
     case ('ZDG')
       call set_param_pointer(input_definition, swf_zdg_param_definitions)
     case default
@@ -96,6 +99,8 @@ contains
       call set_param_pointer(input_definition, swf_chd_aggregate_definitions)
     case ('FLW')
       call set_param_pointer(input_definition, swf_flw_aggregate_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, swf_sto_aggregate_definitions)
     case ('ZDG')
       call set_param_pointer(input_definition, swf_zdg_aggregate_definitions)
     case default
@@ -128,6 +133,8 @@ contains
       call set_block_pointer(input_definition, swf_chd_block_definitions)
     case ('FLW')
       call set_block_pointer(input_definition, swf_flw_block_definitions)
+    case ('STO')
+      call set_block_pointer(input_definition, swf_sto_block_definitions)
     case ('ZDG')
       call set_block_pointer(input_definition, swf_zdg_block_definitions)
     case default
@@ -159,6 +166,8 @@ contains
       multi_package = swf_chd_multi_package
     case ('FLW')
       multi_package = swf_flw_multi_package
+    case ('STO')
+      multi_package = swf_sto_multi_package
     case ('ZDG')
       multi_package = swf_zdg_multi_package
     case default
@@ -193,6 +202,8 @@ contains
     case ('CHD')
       integrated = .true.
     case ('FLW')
+      integrated = .true.
+    case ('STO')
       integrated = .true.
     case ('ZDG')
       integrated = .true.

@@ -1,6 +1,6 @@
 module GwfGwtExchangeModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENPACKAGENAME
+  use ConstantsModule, only: LENPACKAGENAME, LINELENGTH
   use ListsModule, only: basemodellist, baseexchangelist, &
                          baseconnectionlist
   use SimModule, only: store_error
@@ -12,6 +12,7 @@ module GwfGwtExchangeModule
   use GwfGwfConnectionModule, only: GwfGwfConnectionType, CastAsGwfGwfConnection
   use GwfGwfExchangeModule, only: GwfExchangeType, &
                                   GetGwfExchangeFromList
+  use GwtGwtExchangeModule, only: GwtExchangeType
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use GwfModule, only: GwfModelType
   use GwtModule, only: GwtModelType
@@ -25,6 +26,7 @@ module GwfGwtExchangeModule
 
     integer(I4B), pointer :: m1_idx => null() !< index into the list of base exchanges for model 1
     integer(I4B), pointer :: m2_idx => null() !< index into the list of base exchanges for model 2
+    character(len=LINELENGTH) :: filename !< the input file for the GWF-GWT exchange
 
   contains
 
@@ -66,6 +68,7 @@ contains
     write (cint, '(i0)') id
     exchange%name = 'GWF-GWT_'//trim(adjustl(cint))
     exchange%memoryPath = exchange%name
+    exchange%filename = filename
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
@@ -287,7 +290,7 @@ contains
   !<
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
     ! -- modules
-    use SimModule, only: store_error
+    use SimModule, only: store_error, store_error_filename, count_errors
     use SimVariablesModule, only: iout
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
@@ -299,7 +302,8 @@ contains
     class(*), pointer :: objPtr => null()
     class(GwtGwtConnectionType), pointer :: gwtConn => null()
     class(GwfGwfConnectionType), pointer :: gwfConn => null()
-    class(GwfExchangeType), pointer :: gwfEx => null()
+    class(GwfExchangeType), pointer :: gwfExg => null()
+    class(GwtExchangeType), pointer :: gwtExg => null()
     integer(I4B) :: ic1, ic2, iex
     integer(I4B) :: gwfConnIdx, gwfExIdx
     logical(LGP) :: areEqual
@@ -313,6 +317,7 @@ contains
       ! start with a GWT conn.
       objPtr => conn
       gwtConn => CastAsGwtGwtConnection(objPtr)
+      gwtExg => gwtConn%gwtExchange
       gwfConnIdx = -1
       gwfExIdx = -1
       !
@@ -321,20 +326,31 @@ contains
         conn => get_smc_from_list(baseconnectionlist, ic2)
         !
         if (associated(conn%owner, gwfModel)) then
+          !
           objPtr => conn
           gwfConn => CastAsGwfGwfConnection(objPtr)
+          gwfExg => gwfConn%gwfExchange
           !
-          ! for now, connecting the same nodes nrs will be
-          ! sufficient evidence of equality
-          areEqual = all(gwfConn%prim_exchange%nodem1 == &
-                         gwtConn%prim_exchange%nodem1)
-          areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
-                                        gwtConn%prim_exchange%nodem2)
+          ! A model can have multiple exchanges, even connecting the same two
+          ! models. We have a match if
+          !  1. gwtgwt%model1 is connected to gwfgwf%model1
+          !  2. gwtgwt%model2 is connected to gwfgwf%model2
+          !  3. the list of connected nodes (nodem1, nodem2) is equivalent, such
+          !     that it contains the same nodes, appearing in the same order in the
+          !     exchange data block
+          !
+          if (gwfExg%v_model1%name /= gwtExg%gwfmodelname1) cycle
+          if (gwfExg%v_model2%name /= gwtExg%gwfmodelname2) cycle
+          !
+          areEqual = (gwfExg%nexg == gwtExg%nexg)
+          if (areEqual) then
+            areEqual = all(gwfExg%nodem1 == gwtExg%nodem1)
+            areEqual = areEqual .and. all(gwfExg%nodem2 == gwtExg%nodem2)
+          end if
           if (areEqual) then
             ! same DIS, same exchange: link and go to next GWT conn.
             write (iout, '(/6a)') 'Linking exchange ', &
-              trim(gwtConn%prim_exchange%name), &
-              ' to ', trim(gwfConn%prim_exchange%name), &
+              trim(gwtExg%name), ' to ', trim(gwfExg%name), &
               ' (using interface model) for GWT model ', &
               trim(gwtModel%name)
             gwfConnIdx = ic2
@@ -345,50 +361,48 @@ contains
       end do gwfloop
       !
       ! fallback option: coupling to old gwfgwf exchange,
+      ! the conditions are equal to what is used above
       ! (this will go obsolete at some point)
       if (gwfConnIdx == -1) then
         gwfloopexg: do iex = 1, baseexchangelist%Count()
-          gwfEx => GetGwfExchangeFromList(baseexchangelist, iex)
+          gwfExg => GetGwfExchangeFromList(baseexchangelist, iex)
           !
-          ! -- There is no guarantee that iex is a gwfExg, in which case
-          !    it will return as null.  cycle if so.
-          if (.not. associated(gwfEx)) cycle gwfloopexg
+          if (.not. associated(gwfExg)) cycle gwfloopexg
           !
-          if (associated(gwfEx%model1, gwfModel) .or. &
-              associated(gwfEx%model2, gwfModel)) then
-
-            ! check exchanges have same node counts
-            areEqual = size(gwfEx%nodem1) == size(gwtConn%prim_exchange%nodem1)
-            ! then, connecting the same nodes nrs will be
-            ! sufficient evidence of equality
-            if (areEqual) &
-              areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
-            if (areEqual) &
-              areEqual = all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
+          if (associated(gwfExg%model1, gwfModel) .or. &
+              associated(gwfExg%model2, gwfModel)) then
+            !
+            if (gwfExg%v_model1%name /= gwtExg%gwfmodelname1) cycle
+            if (gwfExg%v_model2%name /= gwtExg%gwfmodelname2) cycle
+            !
+            areEqual = (gwfExg%nexg == gwtExg%nexg)
+            !
+            if (areEqual) then
+              areEqual = all(gwfExg%nodem1 == gwtExg%nodem1)
+              areEqual = areEqual .and. all(gwfExg%nodem2 == gwtExg%nodem2)
+            end if
             if (areEqual) then
               ! link exchange to connection
               write (iout, '(/6a)') 'Linking exchange ', &
-                trim(gwtConn%prim_exchange%name), &
-                ' to ', trim(gwfEx%name), ' for GWT model ', &
+                trim(gwtExg%name), ' to ', trim(gwfExg%name), ' for GWT model ', &
                 trim(gwtModel%name)
               gwfExIdx = iex
               if (gwtConn%owns_exchange) then
-                gwtConn%gwtExchange%gwfsimvals => gwfEx%simvals
-                call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
-                                 'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
-                                 'SIMVALS', gwfEx%memoryPath)
+                gwtExg%gwfsimvals => gwfExg%simvals
+                call mem_checkin(gwtExg%gwfsimvals, &
+                                 'GWFSIMVALS', gwtExg%memoryPath, &
+                                 'SIMVALS', gwfExg%memoryPath)
               end if
               !
               !cdl link up mvt to mvr
-              if (gwfEx%inmvr > 0) then
+              if (gwfExg%inmvr > 0) then
                 if (gwtConn%owns_exchange) then
                   !cdl todo: check and make sure gwtEx has mvt active
-                  call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj( &
-                    gwfEx%mvr%budobj)
+                  call gwtExg%mvt%set_pointer_mvrbudobj(gwfExg%mvr%budobj)
                 end if
               end if
               !
-              if (associated(gwfEx%model2, gwfModel)) gwtConn%exgflowSign = -1
+              if (associated(gwfExg%model2, gwfModel)) gwtConn%exgflowSign = -1
               gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
               !
               exit gwfloopexg
@@ -400,14 +414,20 @@ contains
       !
       if (gwfConnIdx == -1 .and. gwfExIdx == -1) then
         ! none found, report
-        write (errmsg, '(/6a)') 'Missing GWF-GWF exchange when connecting GWT'// &
-          ' model ', trim(gwtModel%name), ' with exchange ', &
-          trim(gwtConn%prim_exchange%name), ' to GWF model ', &
-          trim(gwfModel%name)
-        call store_error(errmsg, terminate=.true.)
+        write (errmsg, *) 'Cannot find GWF-GWF exchange when connecting'// &
+          ' GWT model ', trim(gwtModel%name), ' with exchange ', &
+          trim(gwtExg%name), ' to GWF model ', trim(gwfModel%name), &
+          '. Note: GWF-GWF and GWT-GWT need identical exchange data '// &
+          '(both in value and order) for the match to succeed.'
+        call store_error(errmsg)
       end if
       !
     end do gwtloop
+    !
+    ! -- report errors
+    if (count_errors() > 0) then
+      call store_error_filename(this%filename)
+    end if
     !
     ! -- Return
     return

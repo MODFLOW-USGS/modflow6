@@ -65,6 +65,7 @@ jobs:
       compiler_toolchain: ${{ steps.set_compiler.outputs.compiler_toolchain }}
       compiler_version: ${{ steps.set_compiler.outputs.compiler_version }}
       version: ${{ steps.set_version.outputs.version }}
+      models: ${{ steps.set_models.outputs.models }}
     steps:
       - name: Set branch
         id: set_branch
@@ -126,6 +127,23 @@ jobs:
             exit 1
           fi
           echo "version=$ver" >> $GITHUB_OUTPUT
+      - name: Set models
+        id: set_models
+        run: |
+          # if models were selected explicitly via workflow_dispatch, use them
+          if [[ ("${{ github.event_name }}" == "workflow_dispatch") && (-n "${{ inputs.models }}") ]]; then
+            models="${{ inputs.models }}"
+            echo "using model selection $models from workflow_dispatch"
+          elif [[ ("${{ github.event_name }}" == "push") && ("${{ github.ref_name }}" != "master") ]]; then
+            # if release was triggered by pushing a release branch, use default models
+            models="gwf,gwt,gwe,prt"
+            echo "using default model selection: $models"
+          else
+            # otherwise exit with an error
+            echo "error: model selection could not be determined"
+            exit 1
+          fi
+          echo "models=$models" >> $GITHUB_OUTPUT
   make_dist:
     name: Make distribution
     uses: MODFLOW-USGS/modflow6/.github/workflows/release.yml@develop
@@ -137,11 +155,15 @@ jobs:
       compiler_toolchain: ${{ needs.set_options.outputs.compiler_toolchain }}
       compiler_version: ${{ needs.set_options.outputs.compiler_version }}
       branch: ${{ needs.set_options.outputs.branch }}
-      developmode: ${{ inputs.developmode }}
+      # If the workflow is manually triggered, the maintainer must manually set developmode to false, otherwise the default is true.
+      # If triggered by pushing a release branch, the release is developmode if the branch name contains "rc", otherwise releasemode.
+      developmode: ${{ (github.event_name == 'workflow_dispatch' && inputs.developmode == 'true') || (github.event_name != 'workflow_dispatch' && contains(github.ref_name, 'rc')) }}
       full: true
-      run_tests: ${{ inputs.run_tests }}
+      # If the workflow is manually triggered, the maintainer must manually set run_tests to false, otherwise the default is true.
+      # If triggered by pushing a release branch, tests are enabled.
+      run_tests: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_tests == 'true') || github.event_name != 'workflow_dispatch' }}
       version: ${{ needs.set_options.outputs.version }}
-      models: ${{ inputs.models }}
+      models: ${{ needs.set_options.outputs.models }}
   pr:
     name: Draft release PR
     if: ${{ github.ref_name != 'master' && ((github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc'))) }}
@@ -230,7 +252,7 @@ jobs:
           cache-environment: true
 
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v5
 
       - name: Draft release
         working-directory: modflow6

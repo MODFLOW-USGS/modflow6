@@ -21,6 +21,7 @@ gwf-npf.dfn
 gwf-rch.dfn
 gwf-rcha.dfn
 gwf-riv.dfn
+gwf-sto.dfn
 gwf-wel.dfn
 
 # gwt model
@@ -52,6 +53,7 @@ swf-ic.dfn
 swf-cdb.dfn
 swf-chd.dfn
 swf-flw.dfn
+swf-sto.dfn
 swf-zdg.dfn
 
 # prt model
@@ -68,3 +70,6 @@ exg-gwfgwe.dfn
 exg-gwegwe.dfn
 exg-swfgwf.dfn
 exg-gwfprt.dfn
+
+# utils
+utl-hpc.dfn

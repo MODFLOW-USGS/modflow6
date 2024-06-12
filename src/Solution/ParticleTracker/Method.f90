@@ -14,7 +14,7 @@ module MethodModule
   implicit none
 
   private
-  public :: MethodType, get_iatop
+  public :: MethodType
 
   !> @brief Base type for particle tracking methods.
   !!
@@ -27,13 +27,13 @@ module MethodModule
   !! depending on cell geometry (implementing the strategy pattern).
   !<
   type, abstract :: MethodType
-    character(len=40), pointer, public :: type ! method name
-    logical(LGP), public :: delegates ! whether the method delegates
+    character(len=40), pointer, public :: type !< method name
+    logical(LGP), public :: delegates !< whether the method delegates
     type(PrtFmiType), pointer, public :: fmi => null() !< ptr to fmi
-    class(CellType), pointer, public :: cell => null() ! ptr to a cell
-    class(SubcellType), pointer, public :: subcell => null() ! ptr to a subcell
-    type(TrackFileControlType), pointer, public :: trackfilectl => null() ! ptr to track file control
-    type(TimeSelectType), pointer, public :: tracktimes => null() ! ptr to user-defined tracking times
+    class(CellType), pointer, public :: cell => null() !< ptr to the current cell
+    class(SubcellType), pointer, public :: subcell => null() !< ptr to the current subcell
+    type(TrackFileControlType), pointer, public :: trackfilectl => null() !< ptr to track file control
+    type(TimeSelectType), pointer, public :: tracktimes => null() !< ptr to user-defined tracking times
     integer(I4B), dimension(:), pointer, contiguous, public :: izone => null() !< pointer to zone numbers
     real(DP), dimension(:), pointer, contiguous, public :: flowja => null() !< pointer to intercell flows
     real(DP), dimension(:), pointer, contiguous, public :: porosity => null() !< pointer to aquifer porosity
@@ -41,7 +41,7 @@ module MethodModule
   contains
     ! Implemented in all subtypes
     procedure(apply), deferred :: apply
-    procedure(destroy), deferred :: destroy
+    procedure(deallocate), deferred :: deallocate
     ! Overridden in subtypes that delegate
     procedure :: pass
     procedure :: load
@@ -62,10 +62,10 @@ module MethodModule
       type(ParticleType), pointer, intent(inout) :: particle
       real(DP), intent(in) :: tmax
     end subroutine apply
-    subroutine destroy(this)
+    subroutine deallocate (this)
       import MethodType
       class(MethodType), intent(inout) :: this
-    end subroutine destroy
+    end subroutine deallocate
   end interface
 
 contains
@@ -202,40 +202,27 @@ contains
       if (particle%istopzone .eq. cell_defn%izone) then
         particle%advancing = .false.
         particle%istatus = 6
-        call this%save(particle, reason=3) ! reason=3: termination
+        call this%save(particle, reason=3) ! particle terminated
         return
       end if
     end if
     if (cell_defn%inoexitface .ne. 0) then
       particle%advancing = .false.
       particle%istatus = 5
-      call this%save(particle, reason=3) ! reason=3: termination
+      call this%save(particle, reason=3) ! particle terminated
       return
     end if
     if (cell_defn%iweaksink .ne. 0) then
       if (particle%istopweaksink .ne. 0) then
         particle%advancing = .false.
         particle%istatus = 3
-        call this%save(particle, reason=3) ! reason=3: termination
+        call this%save(particle, reason=3) ! particle terminated
         return
       else
-        call this%save(particle, reason=4) ! reason=4: exited weak sink
+        call this%save(particle, reason=4) ! particle exited weak sink
         return
       end if
     end if
   end subroutine update
-
-  !> @brief Get the index corresponding to top elevation of a cell in the grid.
-  !! This is -1 if the cell is in the top layer and 1 otherwise.
-  function get_iatop(ncpl, icu) result(iatop)
-    integer(I4B), intent(in) :: ncpl, icu
-    integer(I4B) :: iatop
-
-    if (icu .le. ncpl) then
-      iatop = -1
-    else
-      iatop = 1
-    end if
-  end function get_iatop
 
 end module MethodModule

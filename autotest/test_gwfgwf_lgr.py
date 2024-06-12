@@ -37,10 +37,17 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 
+from conftest import project_root_path
 from framework import TestFramework
 
-cases = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
-ifmod = [False, True]
+data_path = project_root_path / "autotest" / "data"
+cases = [
+    "gwfgwf_lgr_classic",
+    "gwfgwf_lgr_ifmod",
+    "gwfgwf_lgr_classic_binary",
+    "gwfgwf_lgr_ifmod_binary",
+]
+ifmod = [False, True, False, True]
 parent_name = "parent"
 child_name = "child"
 h_left = 1.0
@@ -222,13 +229,58 @@ def get_model(idx, test):
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
 
+    if name.endswith("_binary"):
+        exchangedata = {
+            "factor": 1.0,
+            "filename": "exg.bin",
+            "data": None,
+            "binary": True,
+        }
+        exg_fpath = data_path / "gwfgwf_lgr_exg.txt"
+        exg_fdata = np.loadtxt(
+            exg_fpath,
+            dtype={
+                "names": (
+                    "c11",
+                    "c12",
+                    "c13",
+                    "c21",
+                    "c22",
+                    "c23",
+                    "ihc",
+                    "cl1",
+                    "cl2",
+                    "hwva",
+                    "aux1",
+                    "aux2",
+                ),
+                "formats": (
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "i4",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                    "f8",
+                ),
+            },
+        )
+        exg_fdata.tofile(ws / "exg.bin")
+    else:
+        exchangedata = exgdata
+
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
         nexg=len(exgdata),
         exgmnamea=parent_name,
         exgmnameb=child_name,
-        exchangedata=exgdata,
+        exchangedata=exchangedata,
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
         dev_interfacemodel_on=ifmod[idx],

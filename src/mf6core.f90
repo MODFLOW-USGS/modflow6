@@ -272,13 +272,7 @@ contains
                              load_models, load_exchanges
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
-    use SimVariablesModule, only: idm_context, iparamlog
-    use SimulationCreateModule, only: create_load_mask
-    ! -- dummy
-    ! -- locals
-    character(len=LENMEMPATH) :: input_mempath
-    integer(I4B), dimension(:), pointer, contiguous :: model_loadmask
-    integer(I4B), pointer :: nummodels => null()
+    use SimVariablesModule, only: iparamlog
     !
     ! -- load simnam input context
     call simnam_load(iparamlog)
@@ -286,22 +280,11 @@ contains
     ! -- load tdis to input context
     call simtdis_load()
     !
-    ! -- allocate model load mask
-    input_mempath = create_mem_path(component='SIM', context=idm_context)
-    call mem_setptr(nummodels, 'NUMMODELS', input_mempath)
-    allocate (model_loadmask(nummodels))
-    !
-    ! -- initialize mask
-    call create_load_mask(model_loadmask)
-    !
     ! -- load in scope models
-    call load_models(model_loadmask, iout)
+    call load_models(iout)
     !
     ! -- load in scope exchanges
-    call load_exchanges(model_loadmask, iout)
-    !
-    ! -- cleanup
-    deallocate (model_loadmask)
+    call load_exchanges(iout)
     !
     ! -- return
     return
@@ -347,8 +330,8 @@ contains
     ! -- synchronize
     call run_ctrl%at_stage(STG_AFT_EXG_DF)
     !
-    ! -- when needed, this is were the interface models are
-    ! created and added to the numerical solutions
+    ! -- when needed, this is where the interface models are
+    !     created and added to the numerical solutions
     call connections_cr()
     !
     ! -- synchronize
@@ -379,7 +362,7 @@ contains
 
   !> @brief Simulation allocate and read
     !!
-    !! This subroutine allocates and read static data for the simulation.
+    !! This subroutine allocates and reads static data for the simulation.
     !! Steps include:
     !!   - allocate and read for each model
     !!   - allocate and read for each exchange
