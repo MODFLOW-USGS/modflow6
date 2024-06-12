@@ -1,5 +1,5 @@
 module TestMemoryContainerIterator
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryListModule, only: MemoryListType
   use MemoryTypeModule, only: MemoryType
@@ -25,7 +25,6 @@ contains
   !! is set to to true (indicating that all memory types have been reached)
   !<
   subroutine test_iterate_through_container(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(MemoryListType) :: memory_container
@@ -38,7 +37,7 @@ contains
     type(MemoryType), pointer :: current_mt
     integer(I4B) :: mt_index = 0
 
-    logical :: iterated(3) = .false.
+    logical(LGP) :: iterated(3) = .false.
 
     !- Arrange.
     mt1%name = "TestName1"

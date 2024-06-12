@@ -1,5 +1,5 @@
 module MemoryContainerIteratorModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use MemoryTypeModule, only: MemoryType
   use IteratorModule, only: IteratorType
 
@@ -21,15 +21,14 @@ module MemoryContainerIteratorModule
   end type
 
   interface MemoryContainerIteratorType
-    module procedure Constructor
+    module procedure constructor
   end interface MemoryContainerIteratorType
 
 contains
   !> @brief Constructor to create a MemoryContainerIterator
   !!
   !<
-  function Constructor(container_iterator) Result(iterator)
-    ! -- dummy
+  function constructor(container_iterator) result(iterator)
     class(IteratorType) :: container_iterator
     type(MemoryContainerIteratorType) :: iterator
 
@@ -41,9 +40,8 @@ contains
   !!
   !<
   function has_next(this) result(res)
-    ! -- dummy
     class(MemoryContainerIteratorType) :: this
-    type(logical) :: res
+    logical(LGP) :: res
 
     res = this%container_iterator%has_next()
   end function
@@ -52,7 +50,6 @@ contains
   !!
   !<
   subroutine next(this)
-    ! -- dummy
     class(MemoryContainerIteratorType) :: this
 
     call this%container_iterator%next()
@@ -62,7 +59,6 @@ contains
   !!
   !<
   function value(this) result(res)
-    ! -- dummy
     class(MemoryContainerIteratorType), target :: this
     type(MemoryType), pointer :: res
     ! -- local

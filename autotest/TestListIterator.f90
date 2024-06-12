@@ -28,7 +28,6 @@ contains
   !! - it should return null when retrieving the current value
   !<
   subroutine test_constructor(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     class(IteratorType), allocatable :: itr
@@ -55,7 +54,6 @@ contains
   !! It iterates though it and validates the expected values
   !<
   subroutine test_iterate_through_list(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     class(IteratorType), allocatable :: itr
@@ -111,7 +109,6 @@ contains
   !! - It should return null when retrieving the current value
   !<
   subroutine test_empty_list(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     class(IteratorType), allocatable :: itr
