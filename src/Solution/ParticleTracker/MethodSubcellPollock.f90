@@ -138,6 +138,7 @@ contains
     !    todo: after initial release, consider ramifications
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
       particle%istatus = 9
+      particle%advancing = .false.
       call this%save(particle, reason=3)
       return
     end if

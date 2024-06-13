@@ -1,7 +1,8 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, DONETHIRD
+  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, &
+                             DONETHIRD, DHUNDRED
 
   implicit none
   private
@@ -481,7 +482,7 @@ contains
         call pstop(1)
       end if
     else
-      ltol = DSAME
+      ltol = DSAME * DHUNDRED
     end if
 
     gamma = DONE - alpha - beta
