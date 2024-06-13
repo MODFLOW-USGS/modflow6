@@ -30,8 +30,7 @@ contains
   !> @brief Constructor to create a PtrHashTableIterator
   !!
   !<
-  function Constructor(buckets) Result(iterator)
-    ! -- dummy
+  function constructor(buckets) Result(iterator)
     type(KeyValueListType), pointer, intent(in) :: buckets(:)
     type(PtrHashTableIteratorType) :: iterator
     ! -- local
@@ -42,13 +41,12 @@ contains
     first_bucket => iterator%buckets(1)
     allocate (iterator%current_bucket_iterator, source=first_bucket%iterator())
 
-  end function Constructor
+  end function constructor
 
   !> @brief Indicates if there is a next node in the iteration chain
   !!
   !<
   function has_next(this) result(res)
-    ! -- dummy
     class(PtrHashTableIteratorType) :: this
     type(logical) :: res
     ! -- local
@@ -81,7 +79,6 @@ contains
   !!
   !<
   subroutine next(this)
-    ! -- dummy
     class(PtrHashTableIteratorType) :: this
     ! -- local
     type(KeyValueListType), pointer :: bucket !< a bucket
@@ -109,7 +106,6 @@ contains
   !!
   !<
   function value(this) result(res)
-    ! -- dummy
     class(PtrHashTableIteratorType) :: this
     class(*), pointer :: res
 

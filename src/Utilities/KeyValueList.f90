@@ -29,7 +29,6 @@ module KeyValueListModule
 contains
 
   function iterator(this) result(itr)
-    ! -- dummy
     class(KeyValueListType) :: this
     class(IteratorType), allocatable :: itr
 
@@ -41,7 +40,6 @@ contains
   !! The list uses an 'append to end' approach for adding items
   !<
   subroutine add(this, key, val)
-    ! -- dummy
     class(KeyValueListType) :: this
     character(len=*), intent(in) :: key
     class(*), pointer, intent(in) :: val
@@ -69,7 +67,6 @@ contains
   !! If the key can't be found the return value will be a null pointer
   !<
   function get(this, key) result(val)
-    ! -- dummy
     class(KeyValueListType) :: this
     character(len=*), intent(in) :: key
     class(*), pointer :: val
@@ -93,7 +90,6 @@ contains
   !!
   !<
   function count(this) result(val)
-    ! -- dummy
     class(KeyValueListType) :: this
     integer(I4B) :: val
 
@@ -105,7 +101,6 @@ contains
   !! clears all the nodes of the list
   !<
   subroutine clear(this)
-    ! -- dummy
     class(KeyValueListType) :: this
 
     if (associated(this%first)) call clear_node(this%first)
@@ -120,7 +115,6 @@ contains
   !! Recursive method that clears the next node before clearing itself
   !<
   recursive subroutine clear_node(node)
-    ! -- dummy
     type(KeyValueNodeType), pointer :: node
 
     if (associated(node)) then

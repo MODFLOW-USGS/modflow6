@@ -17,7 +17,7 @@ module KeyValueListIteratorModule
   end type
 
   interface KeyValueListIteratorType
-    module procedure Constructor
+    module procedure constructor
   end interface KeyValueListIteratorType
 
 contains
@@ -25,21 +25,19 @@ contains
   !> @brief Constructor to create a KeyValueListIterator
   !!
   !<
-  function Constructor(first_node) Result(iterator)
-    ! -- dummy
+  function constructor(first_node) Result(iterator)
     type(KeyValueNodeType), pointer, intent(in) :: first_node
     type(KeyValueListIteratorType) :: iterator
 
     iterator%first_node => first_node
     iterator%current_node => null()
 
-  end function Constructor
+  end function constructor
 
   !> @brief Indicates if there is a next node in the iteration chain
   !!
   !<
   function has_next(this) result(res)
-    ! -- dummy
     class(KeyValueListIteratorType) :: this
     type(logical) :: res
 
@@ -55,7 +53,6 @@ contains
   !!
   !<
   subroutine next(this)
-    ! -- dummy
     class(KeyValueListIteratorType) :: this
 
     if (associated(this%current_node)) then
@@ -69,7 +66,6 @@ contains
   !!
   !<
   function value(this) result(res)
-    ! -- dummy
     class(KeyValueListIteratorType) :: this
     class(*), pointer :: res
 

@@ -21,7 +21,6 @@ contains
   !! retrieved using that key from the internal container
   !<
   subroutine test_add_get_values(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(MemoryListType) :: container
@@ -60,7 +59,6 @@ contains
   !! When the key can't be found the MemoryList should return a null pointer
   !<
   subroutine test_get_nonexisting_value(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(MemoryListType) :: container

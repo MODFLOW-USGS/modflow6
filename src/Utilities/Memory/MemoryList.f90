@@ -40,7 +40,6 @@ contains
   !! The key is constructed using the memory type's path and name
   !<
   subroutine add(this, mt)
-    ! -- dummy
     class(MemoryListType) :: this
     type(MemoryType), pointer, intent(in) :: mt
     ! -- local
@@ -57,7 +56,6 @@ contains
   !! If the key can't be found the return value will be a null pointer
   !<
   function get(this, name, path) result(mt)
-    ! -- dummy
     class(MemoryListType) :: this
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: path
@@ -82,7 +80,6 @@ contains
   !!
   !<
   function count(this) result(cnt)
-    ! -- dummy
     class(MemoryListType) :: this
     integer(I4B) :: cnt
 
@@ -93,7 +90,6 @@ contains
   !!
   !<
   subroutine clear(this)
-    ! -- dummy
     class(MemoryListType) :: this
 
     call this%container%clear()

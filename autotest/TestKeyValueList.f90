@@ -23,7 +23,6 @@ contains
   !! and asserted against the expected values
   !<
   subroutine test_add_get_values(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(KeyValueListType) :: list
@@ -68,7 +67,6 @@ contains
   !! When the key can't be found the list should return a null pointer
   !<
   subroutine test_get_nonexisting_value(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(KeyValueListType) :: list
@@ -91,7 +89,6 @@ contains
   !! Three items are added to the list before calling the count method
   !<
   subroutine test_count_items(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(KeyValueListType) :: list
@@ -128,7 +125,6 @@ contains
   !! Furthermore the count of the list is reset to 0.
   !<
   subroutine test_clear_list(error)
-    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(KeyValueListType) :: list

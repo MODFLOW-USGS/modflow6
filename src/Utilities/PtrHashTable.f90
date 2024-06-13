@@ -36,7 +36,6 @@ contains
   !!
   !<
   function iterator(this) result(itr)
-    ! -- dummy
     class(PtrHashTableType), target :: this
     class(IteratorType), allocatable :: itr
 
@@ -47,7 +46,6 @@ contains
   !!
   !<
   subroutine add(this, key, val)
-    ! -- dummy
     class(PtrHashTableType), target :: this
     character(len=*), intent(in) :: key !< key of the item to be added
     class(*), pointer, intent(in) :: val !< value to be added
@@ -71,7 +69,6 @@ contains
   !!
   !<
   function get(this, key) result(val)
-    ! -- dummy
     class(PtrHashTableType), target :: this
     character(len=*), intent(in) :: key !< key of the item to retrieve
     class(*), pointer :: val !< item associated with the key
@@ -90,7 +87,6 @@ contains
   !!
   !<
   function contains(this, key) result(res)
-    ! -- dummy
     class(PtrHashTableType), target :: this
     character(len=*), intent(in) :: key !< key of the item to retrieve
     logical :: res !< item found
@@ -104,7 +100,6 @@ contains
   !!
   !<
   function count(this) result(val)
-    ! -- dummy
     class(PtrHashTableType) :: this
     integer(I4B) :: val
 
@@ -116,7 +111,6 @@ contains
   !! Loops over all the buckets and clears them.
   !<
   subroutine clear(this)
-    ! -- dummy
     class(PtrHashTableType), target :: this
     ! -- local
     type(KeyValueListType), pointer :: bucket
@@ -135,7 +129,6 @@ contains
   !! The hash produced will be in the interval 1 - BUCKET_SIZE
   !<
   function compute_hash(key) result(hash)
-    ! -- dummy
     character(len=*), intent(in) :: key !< the key
     integer(I4B) :: hash !< the hash
     ! -- local

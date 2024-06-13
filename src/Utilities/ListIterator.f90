@@ -37,7 +37,7 @@ contains
     iterator%first_node => first_node
     iterator%current_node => null()
 
-  end function Constructor
+  end function constructor
 
   !> @brief Indicates if there is a next node in the iteration chain
   !!

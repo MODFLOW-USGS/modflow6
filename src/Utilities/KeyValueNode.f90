@@ -6,7 +6,7 @@ module KeyValueNodeModule
   public :: KeyValueNodeType
 
   !> @brief A key-value pair node
-    !!
+  !!
   !<
   type KeyValueNodeType
     type(KeyValueNodeType), pointer :: next => null() !< the next node
