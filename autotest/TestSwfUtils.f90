@@ -1,7 +1,8 @@
 module TestSwfUtils
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DHALF, DONE, DTWO, DNODATA, DTWOTHIRDS
-  use testdrive, only : error_type, unittest_type, new_unittest, check, test_failed, to_string
+  use testdrive, only: error_type, unittest_type, new_unittest, check, &
+                       test_failed, to_string
   use SwfCxsUtilsModule, only: get_cross_section_area, &
                                get_wetted_perimeter, &
                                get_conveyance
@@ -9,20 +10,22 @@ module TestSwfUtils
   private
   public :: collect_swfutils
 contains
-  
+
   subroutine collect_swfutils(testsuite)
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
-      new_unittest("two_point_section", test_two_point_section), &
-      new_unittest("three_point_section", test_three_point_section), &
-      new_unittest("test_four_point_rectangular_section", test_four_point_rectangular_section), &
-      new_unittest("test_n_point_rectangular_section", test_n_point_rectangular_section) &
-      ]
+                new_unittest("two_point_section", test_two_point_section), &
+                new_unittest("three_point_section", test_three_point_section), &
+                new_unittest("test_four_point_rectangular_section", &
+                             test_four_point_rectangular_section), &
+                new_unittest("test_n_point_rectangular_section", &
+                             test_n_point_rectangular_section) &
+                ]
   end subroutine collect_swfutils
 
   subroutine test_two_point_section(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), parameter :: NPTS=2
+    integer(I4B), parameter :: NPTS = 2
     real(DP), dimension(NPTS) :: xfraction
     real(DP), dimension(NPTS) :: height
     real(DP), dimension(NPTS) :: cxs_rf
@@ -72,7 +75,7 @@ contains
                          width, rough, depth)
     conveyance = res
     call check(error, &
-               conveyance == area * (area / perimeter) ** (DTWOTHIRDS) / rough, &
+               conveyance == area * (area / perimeter)**(DTWOTHIRDS) / rough, &
                "Conveyance correct")
     if (allocated(error)) then
       call test_failed(error, "Conveyance incorrect")
@@ -82,7 +85,7 @@ contains
 
   subroutine test_three_point_section(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), parameter :: NPTS=3
+    integer(I4B), parameter :: NPTS = 3
     real(DP), dimension(NPTS) :: xfraction
     real(DP), dimension(NPTS) :: height
     real(DP), dimension(NPTS) :: cxs_rf
@@ -111,7 +114,7 @@ contains
                                width, depth)
     perimeter = res
     call check(error, &
-               perimeter == DTWO * sqrt((width / DTWO) ** DTWO + depth ** DTWO), &
+               perimeter == DTWO * sqrt((width / DTWO)**DTWO + depth**DTWO), &
                "Wetted perimeter correct")
     if (allocated(error)) then
       call test_failed(error, "Wetted perimeter incorrect")
@@ -138,11 +141,11 @@ contains
     conveyance = res
     a = area / DTWO
     p = perimeter / DTWO
-    c = DTWO * (a * ((a / p) ** DTWOTHIRDS) / rough)
+    c = DTWO * (a * ((a / p)**DTWOTHIRDS) / rough)
     call check(error, &
                abs(conveyance - c) < 1.d-8, &
-               "Swf util conveyance " // to_string(conveyance) // &
-               " /= expected conveyance " // to_string(c))
+               "Swf util conveyance "//to_string(conveyance)// &
+               " /= expected conveyance "//to_string(c))
     if (allocated(error)) then
       call test_failed(error, "Conveyance calculation failed")
       return
@@ -151,7 +154,7 @@ contains
 
   subroutine test_four_point_rectangular_section(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), parameter :: NPTS=4
+    integer(I4B), parameter :: NPTS = 4
     real(DP), dimension(NPTS) :: xfraction
     real(DP), dimension(NPTS) :: height
     real(DP), dimension(NPTS) :: cxs_rf
@@ -183,8 +186,8 @@ contains
     p = DTWO * depth + width
     call check(error, &
                perimeter == p, &
-               "Wetted perimeter " // to_string(perimeter) // &
-               " /= expected value " // to_string(p))
+               "Wetted perimeter "//to_string(perimeter)// &
+               " /= expected value "//to_string(p))
     if (allocated(error)) then
       call test_failed(error, "Wetted perimeter fail")
       return
@@ -199,8 +202,8 @@ contains
     a = depth * width
     call check(error, &
                area == a, &
-               "Area " // to_string(area) // &
-               " /= expected value " // to_string(a))
+               "Area "//to_string(area)// &
+               " /= expected value "//to_string(a))
     if (allocated(error)) then
       call test_failed(error, "Cross section area incorrect")
       return
@@ -214,11 +217,11 @@ contains
     conveyance = res
     a = area
     p = perimeter
-    c = a / rough * (a / p) ** DTWOTHIRDS
+    c = a / rough * (a / p)**DTWOTHIRDS
     call check(error, &
                abs(conveyance - c) < 1.d-8, &
-               "Conveyance " // to_string(conveyance) // &
-               " /= expected value " // to_string(c))
+               "Conveyance "//to_string(conveyance)// &
+               " /= expected value "//to_string(c))
     if (allocated(error)) then
       call test_failed(error, "Conveyance calculation failed")
       return
@@ -230,7 +233,7 @@ contains
     ! highest height point.
     depth = 1.5d0
 
-        ! confirm wetted perimeter calculation
+    ! confirm wetted perimeter calculation
     res = get_wetted_perimeter(NPTS, &
                                xfraction, &
                                height, &
@@ -239,8 +242,8 @@ contains
     p = DTWO * height(1) + width
     call check(error, &
                perimeter == p, &
-               "Wetted perimeter " // to_string(perimeter) // &
-               " /= expected value " // to_string(p))
+               "Wetted perimeter "//to_string(perimeter)// &
+               " /= expected value "//to_string(p))
     if (allocated(error)) then
       call test_failed(error, "Wetted perimeter fail")
       return
@@ -255,8 +258,8 @@ contains
     a = depth * width
     call check(error, &
                area == a, &
-               "Area " // to_string(area) // &
-               " /= expected value " // to_string(a))
+               "Area "//to_string(area)// &
+               " /= expected value "//to_string(a))
     if (allocated(error)) then
       call test_failed(error, "Cross section area incorrect")
       return
@@ -270,11 +273,11 @@ contains
     conveyance = res
     a = area
     p = perimeter
-    c = a / rough * (a / p) ** DTWOTHIRDS
+    c = a / rough * (a / p)**DTWOTHIRDS
     call check(error, &
                abs(conveyance - c) < 1.d-8, &
-               "Conveyance " // to_string(conveyance) // &
-               " /= expected value " // to_string(c))
+               "Conveyance "//to_string(conveyance)// &
+               " /= expected value "//to_string(c))
     if (allocated(error)) then
       call test_failed(error, "Conveyance calculation failed")
       return
@@ -283,12 +286,12 @@ contains
 
   !> @brief Test n-point cross section calculations
   !!
-  !! Use the 8-point cross section data from the 
+  !! Use the 8-point cross section data from the
   !< Punxsutawney example of the HEC-HMS tutorial.
   subroutine test_n_point_rectangular_section(error)
     type(error_type), allocatable, intent(out) :: error
-    integer(I4B), parameter :: NPTS=8
-    integer(I4B), parameter :: NDEPTHS=12
+    integer(I4B), parameter :: NPTS = 8
+    integer(I4B), parameter :: NDEPTHS = 12
     real(DP), dimension(NPTS) :: xfraction
     real(DP), dimension(NPTS) :: height
     real(DP), dimension(NPTS) :: cxs_rf
@@ -312,54 +315,55 @@ contains
 
     ! expected values
     area_expected = [ &
-      0.0000000000000000d0, &
-      14.756129265604915d0, &
-      37.883172712533252d0, &
-      63.615202573234768d0, &
-      91.952218847709474d0, &
-      139.22191462507655d0, &
-      231.01552353826017d0, &
-      325.38720871509929d0, &
-      422.33697015559397d0, &
-      521.86480785974402d0, &
-      623.97072182754971d0, &
-      728.53880232770473d0 &    
-    ]
+                    0.0000000000000000d0, &
+                    14.756129265604915d0, &
+                    37.883172712533252d0, &
+                    63.615202573234768d0, &
+                    91.952218847709474d0, &
+                    139.22191462507655d0, &
+                    231.01552353826017d0, &
+                    325.38720871509929d0, &
+                    422.33697015559397d0, &
+                    521.86480785974402d0, &
+                    623.97072182754971d0, &
+                    728.53880232770473d0 &
+                    ]
     wp_expected = [ &
-      0.0000000000000000d0, &
-      22.416013040258729d0, &
-      25.759029889993588d0, &
-      29.102046739728443d0, &
-      32.445063589463295d0, &
-      93.878846225107850d0, &
-      97.159078583084536d0, &
-      100.43931094106127d0, &
-      103.71954329903795d0, &
-      106.99977565701464d0, &
-      110.28000801499132d0, &
-      112.57661057753654d0 &
-    ]
+                  0.0000000000000000d0, &
+                  22.416013040258729d0, &
+                  25.759029889993588d0, &
+                  29.102046739728443d0, &
+                  32.445063589463295d0, &
+                  93.878846225107850d0, &
+                  97.159078583084536d0, &
+                  100.43931094106127d0, &
+                  103.71954329903795d0, &
+                  106.99977565701464d0, &
+                  110.28000801499132d0, &
+                  112.57661057753654d0 &
+                  ]
     conveyance_expected = [ &
-      0.0000000000000000d0, &
-      285.75028108202571d0, &
-      1289.7912773134653d0, &
-      2876.8119843270820d0, &
-      5016.5410818181253d0, &
-      7835.1910481243458d0, &
-      12094.062268307061d0, &
-      17566.086627356817d0, &
-      24108.098792137902d0, &
-      31647.248549995347d0, &
-      40136.606753502856d0, &
-      49571.805574496953d0 &
-    ]
+                          0.0000000000000000d0, &
+                          285.75028108202571d0, &
+                          1289.7912773134653d0, &
+                          2876.8119843270820d0, &
+                          5016.5410818181253d0, &
+                          7835.1910481243458d0, &
+                          12094.062268307061d0, &
+                          17566.086627356817d0, &
+                          24108.098792137902d0, &
+                          31647.248549995347d0, &
+                          40136.606753502856d0, &
+                          49571.805574496953d0 &
+                          ]
 
     xfraction = [0.d0, 6.10003658d0, 37.39941478d0, 41.09973177d0, &
                  61.39965862d0, 68.6021702d0, 96.299683d0, 105.19995123d0]
-    height = [10.70013411d0, 4.70007315d0, 4.60009754d0,  0.d0, 0.6000061d0, &
+    height = [10.70013411d0, 4.70007315d0, 4.60009754d0, 0.d0, 0.6000061d0, &
               4.60009754d0, 5.d0, 10.70013411d0]
     cxs_rf = [0.09d0, 0.09d0, 0.04d0, 0.04d0, 0.04d0, 0.09d0, 0.09d0, 0.d0]
-    depths = [0.d0, 1.d0, 2.d0, 3.d0, 4.d0, 5.d0, 6.d0, 7.d0, 8.d0, 9.d0, 10.d0, 11.d0]
+    depths = [0.d0, 1.d0, 2.d0, 3.d0, 4.d0, 5.d0, &
+              6.d0, 7.d0, 8.d0, 9.d0, 10.d0, 11.d0]
 
     width = DONE
     rough = DONE
@@ -370,17 +374,17 @@ contains
 
       ! confirm cross section area calculation
       res = get_cross_section_area(NPTS, &
-                                  xfraction, &
-                                  height, &
-                                  width, depth)
+                                   xfraction, &
+                                   height, &
+                                   width, depth)
       area = res
       a = area_expected(idepth)
       difference = abs(area - a)
       call check(error, &
                  difference < atol, &
-                 "Area " // to_string(area) // &
-                 " /= expected value " // to_string(a) // &
-                 " Difference is " // to_string(difference))
+                 "Area "//to_string(area)// &
+                 " /= expected value "//to_string(a)// &
+                 " Difference is "//to_string(difference))
       if (allocated(error)) then
         call test_failed(error, "Cross section area incorrect")
         return
@@ -388,17 +392,17 @@ contains
 
       ! confirm wetted perimeter calculation
       res = get_wetted_perimeter(NPTS, &
-                                xfraction, &
-                                height, &
-                                width, depth)
+                                 xfraction, &
+                                 height, &
+                                 width, depth)
       perimeter = res
       p = wp_expected(idepth)
       difference = abs(perimeter - p)
       call check(error, &
                  difference < atol, &
-                 "Wetted perimeter " // to_string(perimeter) // &
-                 " /= expected value " // to_string(p) // &
-                 " Difference is " // to_string(difference))
+                 "Wetted perimeter "//to_string(perimeter)// &
+                 " /= expected value "//to_string(p)// &
+                 " Difference is "//to_string(difference))
       if (allocated(error)) then
         call test_failed(error, "Wetted perimeter fail")
         return
@@ -406,17 +410,17 @@ contains
 
       ! confirm composite conveyance calculation = A/n*R^(2/3)
       res = get_conveyance(NPTS, &
-                          xfraction, &
-                          height, cxs_rf, &
-                          width, rough, depth)
+                           xfraction, &
+                           height, cxs_rf, &
+                           width, rough, depth)
       conveyance = res
       c = conveyance_expected(idepth)
       difference = abs(conveyance - c)
       call check(error, &
                  difference < atol, &
-                 "Conveyance " // to_string(conveyance) // &
-                 " /= expected value " // to_string(c) // &
-                 " Difference is " // to_string(difference))
+                 "Conveyance "//to_string(conveyance)// &
+                 " /= expected value "//to_string(c)// &
+                 " Difference is "//to_string(difference))
       if (allocated(error)) then
         call test_failed(error, "Conveyance calculation failed")
         return

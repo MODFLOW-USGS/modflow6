@@ -5,4 +5,5 @@ BEGIN OPTIONS
   [YORIGIN <yorigin>]
   [ANGROT <angrot>]
   [VERTICAL_OFFSET_TOLERANCE <vertical_offset_tolerance>]
+  [EXPORT_ARRAY_ASCII]
 END OPTIONS

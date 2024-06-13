@@ -158,7 +158,7 @@ contains
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
     !    flows may be reused (only when flows are read from a file) then set
-    !    the flag to zero to indicated that flows were not updated
+    !    the flag to zero to indicate that flows were not updated
     this%iflowsupdated = 1
     !
     ! -- If reading flows from a budget file, read the next set of records

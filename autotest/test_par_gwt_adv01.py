@@ -10,22 +10,13 @@ from framework import TestFramework
 cases = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
 
 
-def build_models(idx, test):
-    from test_gwt_adv01_gwtgwt import build_models as build
-
-    sim, dummy = build(idx, test)
-    return sim, dummy
-
-
-def check_output(idx, test):
-    from test_gwt_adv01_gwtgwt import check_output as check
-
-    check(idx, test)
-
-
 @pytest.mark.parallel
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
+    from test_gwt_adv01_gwtgwt import build_models
+    from test_gwt_adv01_gwtgwt import check_output
+
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,

@@ -147,9 +147,12 @@ contains
 
   subroutine load_simnam()
     use SimVariablesModule, only: simfile, iout
+    use MemoryManagerModule, only: mem_setptr, mem_print_detailed
     use MessageModule, only: write_message
     use IdmMf6FileModule, only: input_load
-    type(ModflowInputType) :: mf6_input
+    use SourceCommonModule, only: filein_fname
+    type(ModflowInputType) :: mf6_input, hpc_input
+    character(len=LINELENGTH) :: hpc6_filename
     character(len=LINELENGTH) :: line
     logical :: lexist
     !
@@ -168,6 +171,13 @@ contains
       !
       ! -- open namfile and load to input context
       call input_load(simfile, mf6_input, simfile, iout)
+      !
+      ! -- load optional HPC configuration file
+      if (filein_fname(hpc6_filename, 'HPC6_FILENAME', mf6_input%mempath, &
+                       simfile)) then
+        hpc_input = getModflowInput('HPC6', 'UTL', 'HPC', 'UTL', 'HPC')
+        call input_load(hpc6_filename, hpc_input, simfile, iout)
+      end if
     end if
     !
     ! -- return

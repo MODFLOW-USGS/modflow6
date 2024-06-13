@@ -16,7 +16,6 @@ module PrtModule
   use PrtFmiModule, only: PrtFmiType
   use PrtMipModule, only: PrtMipType
   use PrtOcModule, only: PrtOcType
-  use PrtObsModule, only: PrtObsType
   use BudgetModule, only: BudgetType
   use ListModule, only: ListType
   use ParticleModule, only: ParticleType, create_particle
@@ -42,7 +41,6 @@ module PrtModule
     type(PrtFmiType), pointer :: fmi => null() ! flow model interface
     type(PrtMipType), pointer :: mip => null() ! model input package
     type(PrtOcType), pointer :: oc => null() ! output control package
-    type(PrtObsType), pointer :: obs => null() ! observation package
     type(BudgetType), pointer :: budget => null() ! budget object
     class(MethodType), pointer :: method => null() ! tracking method
     type(TrackFileControlType), pointer :: trackfilectl ! track file control
@@ -54,7 +52,6 @@ module PrtModule
     integer(I4B), pointer :: indsp => null() ! unit number DSP
     integer(I4B), pointer :: inssm => null() ! unit number SSM
     integer(I4B), pointer :: inoc => null() ! unit number OC
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: nprp => null() ! number of PRP packages in the model
     real(DP), dimension(:), pointer, contiguous :: masssto => null() !< particle mass storage in cells, new value
     real(DP), dimension(:), pointer, contiguous :: massstoold => null() !< particle mass storage in cells, old value
@@ -81,7 +78,6 @@ module PrtModule
     procedure, private :: prt_ot_printflow
     procedure, private :: prt_ot_dv
     procedure, private :: prt_ot_bdsummary
-    procedure, private :: prt_ot_obs
     procedure, private :: prt_cq_sto
     procedure, private :: create_packages
     procedure, private :: create_bndpkgs
@@ -98,7 +94,7 @@ module PrtModule
   character(len=LENPACKAGETYPE), dimension(PRT_NBASEPKG) :: PRT_BASEPKG
   data PRT_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
                   &'ADV6 ', 'DSP6 ', 'SSM6 ', 'MIP6 ', 'CNC6 ', & ! 10
-                  &'OC6  ', 'OBS6 ', 'FMI6 ', '     ', 'IST6 ', & ! 15
+                  &'OC6  ', '     ', 'FMI6 ', '     ', 'IST6 ', & ! 15
                   &'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
                   &'API6 ', '     ', '     ', '     ', '     ', & ! 25
                   25*'     '/ ! 50
@@ -220,8 +216,6 @@ contains
     ! -- Allocate model arrays
     call this%allocate_arrays()
 
-    ! -- Store information needed for observations
-    call this%obs%obs_df(this%iout, this%name, 'PRT', this%dis)
   end subroutine prt_df
 
   !> @brief Allocate and read
@@ -246,7 +240,7 @@ contains
     if (this%inmip > 0) call this%mip%mip_ar()
 
     ! -- set up output control
-    call this%oc%oc_ar(this%masssto, this%dis, DHNOFLO)
+    call this%oc%oc_ar(this%dis, DHNOFLO)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
 
     ! -- Package input files now open, so allocate and read
@@ -283,7 +277,6 @@ contains
         retfactor=this%mip%retfactor, &
         tracktimes=this%oc%tracktimes)
       this%method => method_disv
-      method_disv%zeromethod = this%mip%zeromethod
     end select
 
     ! -- Initialize track output files and reporting options
@@ -293,7 +286,7 @@ contains
       call this%trackfilectl%init_track_file(this%oc%itrkcsv, csv=.true.)
     call this%trackfilectl%set_track_events( &
       this%oc%trackrelease, &
-      this%oc%tracktransit, &
+      this%oc%trackexit, &
       this%oc%tracktimestep, &
       this%oc%trackterminate, &
       this%oc%trackweaksink, &
@@ -317,7 +310,6 @@ contains
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_rp()
-      call packobj%bnd_rp_obs()
     end do
   end subroutine prt_rp
 
@@ -352,9 +344,6 @@ contains
         call packobj%bnd_ck()
       end if
     end do
-
-    ! -- Push simulated values to preceding time/subtime step
-    call this%obs%obs_ad()
     !
     ! -- Initialize the flowja array.  Flowja is calculated each time,
     !    even if output is suppressed.  (Flowja represents flow of particle
@@ -438,14 +427,13 @@ contains
       this%masssto(n) = DZERO
       this%ratesto(n) = DZERO
     end do
-    do ip = 1, this%bndlist%Count() ! kluge note: could accumulate masssto on the fly in prt_solve instead
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       select type (packobj)
       type is (PrtPrpType)
         do np = 1, packobj%nparticles
           istatus = packobj%particles%istatus(np)
-          ! refine these conditions as necessary
-          ! (status 8 is permanently unreleased)
+          ! this may need to change if istatus flags change
           if ((istatus > 0) .and. (istatus /= 8)) then
             n = packobj%particles%idomain(np, 2)
             ! -- Each particle currently assigned unit mass
@@ -454,7 +442,7 @@ contains
         end do
       end select
     end do
-    do n = 1, this%dis%nodes ! kluge note: set rate to zero and skip inactive nodes?
+    do n = 1, this%dis%nodes
       rate = -(this%masssto(n) - this%massstoold(n)) * tled
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
@@ -527,9 +515,6 @@ contains
     ibudfl = this%oc%set_print_flag('BUDGET', 1, endofperiod)
     idvprint = this%oc%set_print_flag('CONCENTRATION', 1, endofperiod)
 
-    ! -- Calculate and save observations
-    call this%prt_ot_obs()
-
     ! -- Save and print flows
     call this%prt_ot_flow(icbcfl, ibudfl, icbcun)
 
@@ -543,24 +528,6 @@ contains
     !    are printed, then ipflag is set to 1.
     if (ipflag == 1) call tdis_ot(this%iout)
   end subroutine prt_ot
-
-  !> @brief Calculate and save observations
-  subroutine prt_ot_obs(this)
-    class(PrtModelType) :: this
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Calculate and save observations
-    call this%obs%obs_bd()
-    call this%obs%obs_ot()
-
-    ! -- Calculate and save package obserations
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_bd_obs()
-      call packobj%bnd_ot_obs()
-    end do
-  end subroutine prt_ot_obs
 
   !> @brief Save flows
   subroutine prt_ot_flow(this, icbcfl, ibudfl, icbcun)
@@ -741,13 +708,11 @@ contains
     call this%mip%mip_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
-    call this%obs%obs_da()
     deallocate (this%dis)
     deallocate (this%fmi)
     deallocate (this%mip)
     deallocate (this%budget)
     deallocate (this%oc)
-    deallocate (this%obs)
 
     ! -- Method objects
     call destroy_method_subcell_pool()
@@ -770,8 +735,6 @@ contains
     call mem_deallocate(this%inmst)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
-    call mem_deallocate(this%inobs)
-    call mem_deallocate(this%nprp)
 
     ! -- Arrays
     call mem_deallocate(this%masssto)
@@ -803,8 +766,6 @@ contains
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
-    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
-    call mem_allocate(this%nprp, 'NPRP', this%memoryPath) ! kluge?
 
     this%infmi = 0
     this%inmip = 0
@@ -814,8 +775,6 @@ contains
     this%indsp = 0
     this%inssm = 0
     this%inoc = 0
-    this%inobs = 0
-    this%nprp = 0
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays
@@ -874,9 +833,8 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('PRP6')
-      this%nprp = this%nprp + 1
       call prp_create(packobj, ipakid, ipaknum, inunit, iout, &
-                      this%name, pakname, mempath, this%fmi)
+                      this%name, pakname, this%fmi)
     case ('API6')
       call api_create(packobj, ipakid, ipaknum, inunit, iout, &
                       this%name, pakname)
@@ -968,8 +926,8 @@ contains
         ! -- Loop over particles in package
         do np = 1, packobj%nparticles
           ! -- Load particle from storage
-          call particle%load_from_store(packobj%particles, &
-                                        this%id, iprp, np)
+          call particle%load_particle(packobj%particles, &
+                                      this%id, iprp, np)
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
@@ -994,13 +952,12 @@ contains
           call this%method%apply(particle, tmax)
 
           ! -- Update particle storage
-          call packobj%particles%load_from_particle(particle, np)
+          call packobj%particles%save_particle(particle, np)
         end do
       end select
     end do
 
-    ! -- Destroy particle
-    call particle%destroy()
+    ! -- Deallocate particle
     deallocate (particle)
   end subroutine prt_solve
 
@@ -1074,7 +1031,6 @@ contains
     use PrtMipModule, only: mip_cr
     use PrtFmiModule, only: fmi_cr
     use PrtOcModule, only: oc_cr
-    use PrtObsModule, only: prt_obs_cr
     ! -- dummy
     class(PrtModelType) :: this
     ! -- local
@@ -1130,8 +1086,6 @@ contains
         this%infmi = inunit
       case ('OC6')
         this%inoc = inunit
-      case ('OBS6')
-        this%inobs = inunit
       case ('PRP6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
@@ -1152,7 +1106,6 @@ contains
     call mip_cr(this%mip, this%name, mempathmip, this%inmip, this%iout, this%dis)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call prt_obs_cr(this%obs, this%inobs)
 
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(indis)

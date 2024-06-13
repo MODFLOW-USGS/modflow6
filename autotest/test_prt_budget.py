@@ -17,7 +17,6 @@ import pytest
 from flopy.mf6.utils.postprocessing import get_structured_faceflows
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-
 from framework import TestFramework
 from prt_test_utils import (
     HorizontalCase,
@@ -27,6 +26,7 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
     has_default_boundnames,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtbud"
@@ -73,7 +73,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     partdata = get_partdata(prt.modelgrid, HorizontalCase.releasepts_mp7)
     coords = partdata.to_coords(prt.modelgrid)
     releasepts = [(i, 0, 0, 0, c[0], c[1], c[2]) for i, c in enumerate(coords)]
-    # assert np.allclose(HorizontalCase.releasepts_prt, releasepts)
 
     # create prp package
     prp_track_file = f"{prt_name}.prp.trk"
@@ -89,6 +88,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         stop_at_weak_sink=False,
         boundnames=True,
+        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
     )
 
     # create output control package

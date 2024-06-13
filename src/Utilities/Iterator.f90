@@ -1,5 +1,5 @@
 module IteratorModule
-
+  use KindModule, only: LGP
   implicit none
   private
 
@@ -17,8 +17,9 @@ module IteratorModule
 
     function has_next_if(this) result(res)
       import IteratorType
+      import LGP
       class(IteratorType) :: this
-      type(logical) :: res
+      logical(LGP) :: res
     end function
 
     subroutine next_if(this)

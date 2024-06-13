@@ -252,11 +252,6 @@ contains
       end if
     end if
 
-    ! -- todo: set pointer to particle mass concentration, once calculated?
-    ! if (gwfmodel%inbuy > 0) &
-    !   call gwfmodel%buy%set_concentration_pointer(&
-    !     prtmodel%name, prtmodel%mass, prtmodel%ibound)
-
     ! -- transfer the boundary package information from gwf to prt
     call this%gwfbnd2prtfmi()
 

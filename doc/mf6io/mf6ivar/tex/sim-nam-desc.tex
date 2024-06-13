@@ -13,6 +13,12 @@
 
 \item \texttt{PRINT\_INPUT}---keyword to activate printing of simulation input summaries to the simulation list file (mfsim.lst). With this keyword, input summaries will be written for those packages that support newer input data model routines.  Not all packages are supported yet by the newer input data model routines.
 
+\item \texttt{HPC6}---keyword to specify that record corresponds to a hpc file.
+
+\item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
+
+\item \texttt{hpc6\_filename}---name of input file to define HPC file settings for the HPC package. See the ``HPC File'' section for instructions for preparing HPC input files.
+
 \end{description}
 \item \textbf{Block: TIMING}
 
@@ -49,7 +55,7 @@
 
 \item \texttt{mxiter}---is the maximum number of outer iterations for this solution group.  The default value is 1.  If there is only one solution in the solution group, then MXITER must be 1.
 
-\item \texttt{slntype}---is the type of solution.  The Integrated Model Solution (IMS6) is the only supported option in this version.
+\item \texttt{slntype}---is the type of solution.  The Integrated Model Solution (IMS6) and Explicit Model Solution (EMS6) are the only supported options in this version.
 
 \item \texttt{slnfname}---name of file containing solution input.
 

@@ -302,13 +302,18 @@ contains
   subroutine dynamic_create_loader(this)
     use Mf6FileGridInputModule, only: BoundGridInputType
     use Mf6FileListInputModule, only: BoundListInputType
+    use Mf6FileStoInputModule, only: StoInputType
     ! -- dummy
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
     class(BoundListInputType), pointer :: bndlist_loader
     class(BoundGridInputType), pointer :: bndgrid_loader
+    class(StoInputType), pointer :: sto_loader
     !
     ! -- allocate and set loader
-    if (this%readasarrays) then
+    if (this%mf6_input%subcomponent_type == 'STO') then
+      allocate (sto_loader)
+      this%rp_loader => sto_loader
+    else if (this%readasarrays) then
       allocate (bndgrid_loader)
       this%rp_loader => bndgrid_loader
     else

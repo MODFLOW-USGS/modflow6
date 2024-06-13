@@ -10,7 +10,7 @@ module ModelPackageInputsModule
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
                              LENPACKAGETYPE, LENPACKAGENAME, LENCOMPONENTNAME
-  use SimModule, only: store_error, store_error_filename
+  use SimModule, only: store_error, count_errors, store_error_filename
   use SimVariablesModule, only: iout
   use ArrayHandlersModule, only: expandarray
   use CharacterStringModule, only: CharacterStringType
@@ -384,6 +384,7 @@ contains
   subroutine modelpkgs_addpkgs(this)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use SourceCommonModule, only: inlen_check
     ! -- dummy
     class(ModelPackageInputsType) :: this
     ! -- local
@@ -410,11 +411,16 @@ contains
       ! -- attributes for this package
       ftype = ftypes(n)
       fname = fnames(n)
-      pname = pnames(n)
+      call inlen_check(pnames(n), pname, LENPACKAGENAME, 'PACKAGENAME')
       !
       ! -- add this instance to package list
       call this%add(ftype, fname, pname)
     end do
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call store_error_filename(this%modelfname)
+    end if
     !
     ! --
     return

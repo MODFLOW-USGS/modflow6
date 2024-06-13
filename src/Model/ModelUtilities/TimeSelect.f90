@@ -19,7 +19,7 @@ module TimeSelectModule
     real(DP), allocatable :: times(:)
     integer(I4B) :: selection(2)
   contains
-    procedure :: destroy
+    procedure :: deallocate
     procedure :: expand
     procedure :: init
     procedure :: increasing
@@ -30,10 +30,10 @@ module TimeSelectModule
 contains
 
   !> @brief Destroy the time selection object.
-  subroutine destroy(this)
+  subroutine deallocate (this)
     class(TimeSelectType) :: this
     deallocate (this%times)
-  end subroutine destroy
+  end subroutine deallocate
 
   !> @brief Expand capacity by the given amount. Resets the current slice.
   subroutine expand(this, increment)

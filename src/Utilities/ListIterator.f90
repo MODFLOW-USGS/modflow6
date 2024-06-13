@@ -1,5 +1,5 @@
 module ListIteratorModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use IteratorModule, only: IteratorType
   use ListNodeModule, only: ListNodeType
 
@@ -22,7 +22,7 @@ module ListIteratorModule
   end type
 
   interface ListIteratorType
-    module procedure Constructor
+    module procedure constructor
   end interface ListIteratorType
 
 contains
@@ -30,8 +30,7 @@ contains
   !> @brief Constructor to create a ListIterator
   !!
   !<
-  function Constructor(first_node) result(iterator)
-    ! -- dummy
+  function constructor(first_node) result(iterator)
     type(ListNodeType), pointer :: first_node
     type(ListIteratorType) :: iterator
 
@@ -44,9 +43,8 @@ contains
   !!
   !<
   function has_next(this) result(res)
-    ! -- dummy
     class(ListIteratorType) :: this
-    type(logical) :: res
+    logical(LGP) :: res
 
     if (associated(this%current_node)) then
       res = associated(this%current_node%nextNode)
@@ -60,7 +58,6 @@ contains
   !!
   !<
   subroutine next(this)
-    ! -- dummy
     class(ListIteratorType) :: this
 
     if (associated(this%current_node)) then
@@ -74,7 +71,6 @@ contains
   !!
   !<
   function value(this) result(res)
-    ! -- dummy
     class(ListIteratorType) :: this
     class(*), pointer :: res
 

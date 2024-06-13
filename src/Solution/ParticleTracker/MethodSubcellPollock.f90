@@ -8,6 +8,7 @@ module MethodSubcellPollockModule
   use TrackModule, only: TrackFileControlType
   use BaseDisModule, only: DisBaseType
   use CellModule, only: CellType
+  use ConstantsModule, only: DZERO, DONE
   implicit none
   private
   public :: MethodSubcellPollockType
@@ -20,13 +21,13 @@ module MethodSubcellPollockModule
     real(DP), allocatable, public :: qextl1(:), qextl2(:), qintl(:) !< external and internal subcell flows
   contains
     procedure, public :: apply => apply_msp
-    procedure, public :: destroy => destroy_msp
+    procedure, public :: deallocate
     procedure, private :: track_subcell
   end type MethodSubcellPollockType
 
 contains
 
-  !> @brief Create a new Pollock's subcell-method object
+  !> @brief Create a new Pollock's subcell method
   subroutine create_method_subcell_pollock(method)
     ! -- dummy
     type(MethodSubcellPollockType), pointer :: method
@@ -40,11 +41,11 @@ contains
     method%delegates = .false.
   end subroutine create_method_subcell_pollock
 
-  !> @brief Destructor for a Pollock's subcell-method object
-  subroutine destroy_msp(this)
+  !> @brief Deallocate the Pollock's subcell method
+  subroutine deallocate (this)
     class(MethodSubcellPollockType), intent(inout) :: this
     deallocate (this%type)
-  end subroutine destroy_msp
+  end subroutine deallocate
 
   !> @brief Apply Pollock's method to a rectangular subcell
   subroutine apply_msp(this, particle, tmax)
@@ -84,8 +85,6 @@ contains
   !! this context and for any modifications or errors.
   !<
   subroutine track_subcell(this, subcell, particle, tmax)
-    ! modules
-    use ParticleModule, only: get_particle_id
     ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     class(SubcellRectType), intent(in) :: subcell
@@ -135,12 +134,12 @@ contains
     statusVZ = calculate_dt(subcell%vz1, subcell%vz2, subcell%dz, &
                             initialZ, vz, dvzdz, dtexitz)
 
-    ! -- Subcells should never be strong sinks, contact the developer situation
+    ! -- Subcell has no exit face, terminate the particle
+    !    todo: after initial release, consider ramifications
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
-      print *, "Subcell with no exit face:", &
-        "particle", get_particle_id(particle), &
-        "cell", particle%idomain(2)
-      call pstop(1)
+      particle%istatus = 9
+      call this%save(particle, reason=3)
+      return
     end if
 
     ! -- Determine (earliest) exit face and corresponding travel time to exit
@@ -149,7 +148,7 @@ contains
     if ((statusVX .lt. 2) .or. (statusVY .lt. 2) .or. (statusVZ .lt. 2)) then
       ! -- Consider x-oriented faces
       dtexit = dtexitx
-      if (vx .lt. 0d0) then
+      if (vx .lt. DZERO) then
         exitFace = 1
       else if (vx .gt. 0) then
         exitFace = 2
@@ -157,18 +156,18 @@ contains
       ! -- Consider y-oriented faces
       if (dtexity .lt. dtexit) then
         dtexit = dtexity
-        if (vy .lt. 0d0) then
+        if (vy .lt. DZERO) then
           exitFace = 3
-        else if (vy .gt. 0d0) then
+        else if (vy .gt. DZERO) then
           exitFace = 4
         end if
       end if
       ! -- Consider z-oriented faces
       if (dtexitz .lt. dtexit) then
         dtexit = dtexitz
-        if (vz .lt. 0d0) then
+        if (vz .lt. DZERO) then
           exitFace = 5
-        else if (vz .gt. 0d0) then
+        else if (vz .gt. DZERO) then
           exitFace = 6
         end if
       end if
@@ -229,26 +228,26 @@ contains
       t = texit
       dt = dtexit
       if ((exitFace .eq. 1) .or. (exitFace .eq. 2)) then
-        x = 0d0
+        x = DZERO
         y = new_x(vy, dvydy, subcell%vy1, subcell%vy2, &
                   dt, initialY, subcell%dy, statusVY == 1)
         z = new_x(vz, dvzdz, subcell%vz1, subcell%vz2, &
                   dt, initialZ, subcell%dz, statusVZ == 1)
-        if (exitFace .eq. 2) x = 1.0d0
+        if (exitFace .eq. 2) x = DONE
       else if ((exitFace .eq. 3) .or. (exitFace .eq. 4)) then
         x = new_x(vx, dvxdx, subcell%vx1, subcell%vx2, dt, &
                   initialX, subcell%dx, statusVX == 1)
-        y = 0d0
+        y = DZERO
         z = new_x(vz, dvzdz, subcell%vz1, subcell%vz2, dt, &
                   initialZ, subcell%dz, statusVZ == 1)
-        if (exitFace .eq. 4) y = 1.0d0
+        if (exitFace .eq. 4) y = DONE
       else if ((exitFace .eq. 5) .or. (exitFace .eq. 6)) then
         x = new_x(vx, dvxdx, subcell%vx1, subcell%vx2, &
                   dt, initialX, subcell%dx, statusVX == 1)
         y = new_x(vy, dvydy, subcell%vy1, subcell%vy2, &
                   dt, initialY, subcell%dy, statusVY == 1)
-        z = 0d0
-        if (exitFace .eq. 6) z = 1.0d0
+        z = DZERO
+        if (exitFace .eq. 6) z = DONE
       else
         print *, "programmer error, invalid exit face", exitFace
         call pstop(1)
@@ -308,19 +307,19 @@ contains
     status = -1
     dt = 1.0d+20
     v2a = v2
-    if (v2a .lt. 0d0) v2a = -v2a
+    if (v2a .lt. DZERO) v2a = -v2a
     v1a = v1
-    if (v1a .lt. 0d0) v1a = -v1a
+    if (v1a .lt. DZERO) v1a = -v1a
     dv = v2 - v1
     dva = dv
-    if (dva .lt. 0d0) dva = -dva
+    if (dva .lt. DZERO) dva = -dva
 
     ! -- Check for a uniform zero velocity in this direction.
     ! -- If so, set status = 2 and return (dt = 1.0d+20).
     tol = 1.0d-15
     if ((v2a .lt. tol) .and. (v1a .lt. tol)) then
-      v = 0d0
-      dvdx = 0d0
+      v = DZERO
+      dvdx = DZERO
       status = 2
       return
     end if
@@ -338,7 +337,7 @@ contains
       x = xL * dx
       if (v1 .gt. zro) dt = (dx - x) / v1
       if (v1 .lt. zrom) dt = -x / v1
-      dvdx = 0d0
+      dvdx = DZERO
       status = 1
       return
     end if
@@ -346,13 +345,13 @@ contains
     ! -- Velocity has a linear variation.
     ! -- Compute velocity corresponding to particle position.
     dvdx = dv / dx
-    v = (1.0d0 - xL) * v1 + xL * v2
+    v = (DONE - xL) * v1 + xL * v2
 
     ! -- If flow is into the cell from both sides there is no outflow.
     ! -- In that case, set status = 3 and return.
     noOutflow = .true.
-    if (v1 .lt. 0d0) noOutflow = .false.
-    if (v2 .gt. 0d0) noOutflow = .false.
+    if (v1 .lt. DZERO) noOutflow = .false.
+    if (v2 .gt. DZERO) noOutflow = .false.
     if (noOutflow) then
       status = 3
       return
@@ -362,10 +361,10 @@ contains
     ! -- see if the particle is located exactly on the divide. If it is, move
     ! -- it very slightly to get it off the divide. This avoids possible
     ! -- numerical problems related to stagnation points.
-    if ((v1 .le. 0d0) .and. (v2 .ge. 0d0)) then
-      if (abs(v) .le. 0d0) then
+    if ((v1 .le. DZERO) .and. (v2 .ge. DZERO)) then
+      if (abs(v) .le. DZERO) then
         v = 1.0d-20
-        if (v2 .le. 0d0) v = -v
+        if (v2 .le. DZERO) v = -v
       end if
     end if
 
@@ -375,7 +374,7 @@ contains
     vr1 = v1 / v
     vr2 = v2 / v
     vr = vr1
-    if (vr .le. 0d0) then
+    if (vr .le. DZERO) then
       vr = vr2
     end if
 
@@ -383,16 +382,16 @@ contains
     ! -- throughout the cell (i.e. no flow divide). If so, set the value
     ! -- of vr to reflect the appropriate direction.
     v1v2 = v1 * v2
-    if (v1v2 .gt. 0d0) then
-      if (v .gt. 0d0) vr = vr2
-      if (v .lt. 0d0) vr = vr1
+    if (v1v2 .gt. DZERO) then
+      if (v .gt. DZERO) vr = vr2
+      if (v .lt. DZERO) vr = vr1
     end if
 
     ! -- Check if vr is (very close to) zero.
     ! -- If so, set status = 2 and return (dt = 1.0d+20).
     if (dabs(vr) .lt. 1.0d-10) then
-      v = 0d0
-      dvdx = 0d0
+      v = DZERO
+      dvdx = DZERO
       status = 2
       return
     end if
@@ -435,13 +434,13 @@ contains
     newx = x
     if (lprofile) then
       newx = newx + (v1 * dt / dx)
-    else if (v .ne. 0d0) then
-      newx = newx + (v * (exp(dvdx * dt) - 1.0d0) / dvdx / dx)
+    else if (v .ne. DZERO) then
+      newx = newx + (v * (exp(dvdx * dt) - DONE) / dvdx / dx)
     end if
 
     ! -- clamp to [0, 1]
-    if (newx .lt. 0d0) newx = 0d0
-    if (newx .gt. 1.0d0) newx = 1.0d0
+    if (newx .lt. DZERO) newx = DZERO
+    if (newx .gt. DONE) newx = DONE
 
   end function new_x
 

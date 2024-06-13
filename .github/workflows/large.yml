@@ -67,7 +67,7 @@ jobs:
           path: modflow6-largetestmodels
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.6.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.19.1
           manifest-path: "modflow6/pixi.toml"
@@ -100,7 +100,7 @@ jobs:
 
       - name: Run tests
         working-directory: modflow6
-        run: pixi run autotest -m "large"
+        run: pixi run autotest test_largetestmodels.py
       
       - name: Upload failed test output
         if: failure()

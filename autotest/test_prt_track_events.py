@@ -33,13 +33,13 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-
 from framework import TestFramework
 from prt_test_utils import (
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
     get_model_name,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtevnt"
@@ -142,6 +142,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
             nreleasepts=len(releasepts_prt[grp]),
             packagedata=releasepts_prt[grp],
             perioddata={0: ["FIRST"]},
+            exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         )
         for grp in ["a", "b"]
     ]
@@ -155,7 +156,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 pname="oc",
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
-                track_all=True,
             )
         elif "rel" in name:
             return flopy.mf6.ModflowPrtoc(
@@ -171,7 +171,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 pname="oc",
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
-                track_transit=True,
+                track_exit=True,
             )
         elif "tstp" in name:
             return flopy.mf6.ModflowPrtoc(
@@ -363,7 +363,7 @@ def check_output(idx, test):
     if "wksk" in name:
         pass
     if "trts" in name:
-        expected_len += 5324  # hardcoded... todo: or 5315?? debug
+        expected_len += 5324
     if "mult" in name:
         expected_len += 2 * (
             len(releasepts_prt["a"]) + len(releasepts_prt["b"])

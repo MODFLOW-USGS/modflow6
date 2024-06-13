@@ -8,11 +8,10 @@ module ParticleModule
 
   private
   public :: ParticleType, ParticleStoreType, &
-            create_particle, create_particle_store, &
-            get_particle_id
+            create_particle, allocate_particle_store
 
-  ! min/max tracking levels (1: model, 2: cell, 3: subcell)
-  integer, parameter, public :: levelmin = 0, levelmax = 4
+  ! tracking levels (1: model, 2: cell, 3: subcell)
+  integer, parameter, public :: levelmax = 4
 
   !> @brief A particle tracked by the PRT model.
   !!
@@ -60,10 +59,12 @@ module ParticleModule
     real(DP), public :: cosrot !< cosine of rotation angle for coordinate transformation from model to local
     logical(LGP), public :: transformed !< whether coordinates have been transformed from model to local
     logical(LGP), public :: advancing !< whether particle is still being tracked for current time step
+    integer(I4B), public :: ifrctrn !< whether to force solving the particle with the ternary method
+    integer(I4B), public :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), public :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
-    procedure, public :: destroy => destroy_particle
     procedure, public :: get_model_coords
-    procedure, public :: load_from_store
+    procedure, public :: load_particle
     procedure, public :: transform => transform_coords
   end type ParticleType
 
@@ -78,8 +79,8 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
     integer(I4B), dimension(:), pointer, contiguous :: istopzone !< stop zone number
     ! state
-    integer(I4B), dimension(:, :), allocatable :: idomain !< array of indices for domains in the tracking domain hierarchy
-    integer(I4B), dimension(:, :), allocatable :: iboundary !< array of indices for tracking domain boundaries
+    integer(I4B), dimension(:, :), pointer, contiguous :: idomain !< array of indices for domains in the tracking domain hierarchy
+    integer(I4B), dimension(:, :), pointer, contiguous :: iboundary !< array of indices for tracking domain boundaries
     integer(I4B), dimension(:), pointer, contiguous :: icu !< cell number (user, not reduced)
     integer(I4B), dimension(:), pointer, contiguous :: ilay !< layer
     integer(I4B), dimension(:), pointer, contiguous :: izone !< current zone number
@@ -90,10 +91,13 @@ module ParticleModule
     real(DP), dimension(:), pointer, contiguous :: trelease !< particle release time
     real(DP), dimension(:), pointer, contiguous :: tstop !< particle stop time
     real(DP), dimension(:), pointer, contiguous :: ttrack !< current tracking time
+    integer(I4B), dimension(:), pointer, contiguous :: ifrctrn !< force ternary method
+    integer(I4B), dimension(:), pointer, contiguous :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), dimension(:), pointer, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
   contains
-    procedure, public :: destroy => destroy_store
-    procedure, public :: resize => resize_store
-    procedure, public :: load_from_particle
+    procedure, public :: deallocate
+    procedure, public :: resize
+    procedure, public :: save_particle
   end type ParticleStoreType
 
 contains
@@ -102,19 +106,12 @@ contains
   subroutine create_particle(particle)
     type(ParticleType), pointer :: particle !< particle
     allocate (particle)
-    allocate (particle%idomain(levelmin:levelmax))
-    allocate (particle%iboundary(levelmin:levelmax))
+    allocate (particle%idomain(levelmax))
+    allocate (particle%iboundary(levelmax))
   end subroutine create_particle
 
-  !> @brief Destroy a particle
-  subroutine destroy_particle(this)
-    class(ParticleType), intent(inout) :: this !< particle
-    deallocate (this%idomain)
-    deallocate (this%iboundary)
-  end subroutine destroy_particle
-
   !> @brief Create a new particle store
-  subroutine create_particle_store(this, np, mempath)
+  subroutine allocate_particle_store(this, np, mempath)
     type(ParticleStoreType), pointer :: this !< store
     integer(I4B), intent(in) :: np !< number of particles
     character(*), intent(in) :: mempath !< path to memory
@@ -124,10 +121,6 @@ contains
     call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
     call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
     call mem_allocate(this%name, LENBOUNDNAME, np, 'PLNAME', mempath)
-    ! -- kluge todo: update mem_allocate to allow custom range of indices?
-    !    e.g. here we want to allocate 0-4 for trackdomain levels, not 1-5
-    allocate (this%idomain(np, levelmin:levelmax))
-    allocate (this%iboundary(np, levelmin:levelmax))
     call mem_allocate(this%icu, np, 'PLICU', mempath)
     call mem_allocate(this%ilay, np, 'PLILAY', mempath)
     call mem_allocate(this%izone, np, 'PLIZONE', mempath)
@@ -140,10 +133,15 @@ contains
     call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
-  end subroutine create_particle_store
+    call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
+    call mem_allocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
+    call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
+    call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
+    call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
+  end subroutine allocate_particle_store
 
   !> @brief Deallocate particle arrays
-  subroutine destroy_store(this, mempath)
+  subroutine deallocate (this, mempath)
     class(ParticleStoreType), intent(inout) :: this !< store
     character(*), intent(in) :: mempath !< path to memory
 
@@ -151,8 +149,6 @@ contains
     call mem_deallocate(this%iprp, 'PLIPRP', mempath)
     call mem_deallocate(this%irpt, 'PLIRPT', mempath)
     call mem_deallocate(this%name, 'PLNAME', mempath)
-    deallocate (this%idomain)
-    deallocate (this%iboundary)
     call mem_deallocate(this%icu, 'PLICU', mempath)
     call mem_deallocate(this%ilay, 'PLILAY', mempath)
     call mem_deallocate(this%izone, 'PLIZONE', mempath)
@@ -165,18 +161,21 @@ contains
     call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
-  end subroutine destroy_store
+    call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
+    call mem_deallocate(this%iexmethod, 'PLIEXMETHOD', mempath)
+    call mem_deallocate(this%extol, 'PLEXTOL', mempath)
+    call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
+    call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
+  end subroutine deallocate
 
   !> @brief Reallocate particle arrays
-  subroutine resize_store(this, np, mempath)
-    ! -- modules
-    use ArrayHandlersModule, only: ExpandArray2D
+  subroutine resize(this, np, mempath)
     ! -- dummy
     class(ParticleStoreType), intent(inout) :: this !< particle store
     integer(I4B), intent(in) :: np !< number of particles
     character(*), intent(in) :: mempath !< path to memory
 
-    ! resize 1D arrays
+    ! resize arrays
     call mem_reallocate(this%imdl, np, 'PLIMDL', mempath)
     call mem_reallocate(this%iprp, np, 'PLIPRP', mempath)
     call mem_reallocate(this%irpt, np, 'PLIRPT', mempath)
@@ -193,25 +192,19 @@ contains
     call mem_reallocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
-    ! resize first dimension of 2D arrays
-    ! todo: memory manager support?
-    call ExpandArray2D( &
-      this%idomain, &
-      np - size(this%idomain, 1), &
-      0)
-    call ExpandArray2D( &
-      this%iboundary, &
-      np - size(this%iboundary, 1), &
-      0)
-  end subroutine resize_store
+    call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
+    call mem_reallocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
+    call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
+    call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
+    call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
+  end subroutine resize
 
-  !> @brief Initialize particle from particle list.
+  !> @brief Load a particle from the particle store.
   !!
-  !! This routine is used to initialize a particle from the list
-  !! so it can be tracked by prt_solve. The particle's advancing
-  !! flag is set and local coordinate transformations are reset.
+  !! This routine is used to initialize a particle for tracking.
+  !! The advancing flag and coordinate transformation are reset.
   !<
-  subroutine load_from_store(this, store, imdl, iprp, ip)
+  subroutine load_particle(this, store, imdl, iprp, ip)
     class(ParticleType), intent(inout) :: this !< particle
     type(ParticleStoreType), intent(in) :: store !< particle storage
     integer(I4B), intent(in) :: imdl !< index of model particle originated in
@@ -237,15 +230,18 @@ contains
     this%tstop = store%tstop(ip)
     this%ttrack = store%ttrack(ip)
     this%advancing = .true.
-    this%idomain(levelmin:levelmax) = &
-      store%idomain(ip, levelmin:levelmax)
+    this%idomain(1:levelmax) = &
+      store%idomain(ip, 1:levelmax)
     this%idomain(1) = imdl
-    this%iboundary(levelmin:levelmax) = &
-      store%iboundary(ip, levelmin:levelmax)
-  end subroutine load_from_store
+    this%iboundary(1:levelmax) = &
+      store%iboundary(ip, 1:levelmax)
+    this%ifrctrn = store%ifrctrn(ip)
+    this%iexmethod = store%iexmethod(ip)
+    this%extol = store%extol(ip)
+  end subroutine load_particle
 
-  !> @brief Update particle store from particle
-  subroutine load_from_particle(this, particle, ip)
+  !> @brief Save a particle's state to the particle store
+  subroutine save_particle(this, particle, ip)
     class(ParticleStoreType), intent(inout) :: this !< particle storage
     type(ParticleType), intent(in) :: particle !< particle
     integer(I4B), intent(in) :: ip !< particle index
@@ -268,13 +264,16 @@ contains
     this%ttrack(ip) = particle%ttrack
     this%idomain( &
       ip, &
-      levelmin:levelmax) = &
-      particle%idomain(levelmin:levelmax)
+      1:levelmax) = &
+      particle%idomain(1:levelmax)
     this%iboundary( &
       ip, &
-      levelmin:levelmax) = &
-      particle%iboundary(levelmin:levelmax)
-  end subroutine load_from_particle
+      1:levelmax) = &
+      particle%iboundary(1:levelmax)
+    this%ifrctrn = particle%ifrctrn
+    this%iexmethod = particle%iexmethod
+    this%extol = particle%extol
+  end subroutine save_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.
   subroutine transform_coords(this, xorigin, yorigin, zorigin, &
@@ -289,7 +288,7 @@ contains
     logical(LGP), intent(in), optional :: invert !< whether to invert
     logical(LGP), intent(in), optional :: reset !< whether to reset
 
-    ! -- reset if requested
+    ! Reset if requested
     if (present(reset)) then
       if (reset) then
         this%xorigin = DZERO
@@ -303,24 +302,24 @@ contains
       end if
     end if
 
-    ! -- Otherwise, transform coordinates
+    ! Otherwise, transform coordinates
     call transform(this%x, this%y, this%z, &
                    this%x, this%y, this%z, &
                    xorigin, yorigin, zorigin, &
                    sinrot, cosrot, invert)
 
-    ! -- Modify transformation from model coordinates to particle's new
-    ! -- local coordinates by incorporating this latest transformation
+    ! Modify transformation from model coordinates to particle's new
+    ! local coordinates by incorporating this latest transformation
     call compose(this%xorigin, this%yorigin, this%zorigin, &
                  this%sinrot, this%cosrot, &
                  xorigin, yorigin, zorigin, &
                  sinrot, cosrot, invert)
 
-    ! -- Set isTransformed flag to true. Note that there is no check
-    ! -- to see whether the modification brings the coordinates back
-    ! -- to model coordinates (in which case the origin would be very
-    ! -- close to zero and sinrot and cosrot would be very close to 0.
-    ! -- and 1., respectively, allowing for roundoff error).
+    ! Set isTransformed flag to true. Note that there is no check
+    ! to see whether the modification brings the coordinates back
+    ! to model coordinates (in which case the origin would be very
+    ! close to zero and sinrot and cosrot would be very close to 0.
+    ! and 1., respectively, allowing for roundoff error).
     this%transformed = .true.
   end subroutine transform_coords
 
@@ -333,29 +332,16 @@ contains
     real(DP), intent(out) :: z !< z coordinate
 
     if (this%transformed) then
-      ! -- Transform back from local to model coordinates
+      ! Transform back from local to model coordinates
       call transform(this%x, this%y, this%z, x, y, z, &
                      this%xorigin, this%yorigin, this%zorigin, &
                      this%sinrot, this%cosrot, .true.)
     else
-      ! -- Already in model coordinates
+      ! Already in model coordinates
       x = this%x
       y = this%y
       z = this%z
     end if
   end subroutine get_model_coords
-
-  !> @brief Return the particle's composite ID.
-  !!
-  !! Particles are uniquely identified by model index, PRP index,
-  !! location index, and release time.
-  !<
-  pure function get_particle_id(particle) result(id)
-    class(ParticleType), intent(in) :: particle !< particle
-    character(len=LENMEMPATH) :: id !< particle id
-
-    write (id, '(I0,"-",I0,"-",I0,"-",F0.0)') &
-      particle%imdl, particle%iprp, particle%irpt, particle%trelease
-  end function get_particle_id
 
 end module ParticleModule

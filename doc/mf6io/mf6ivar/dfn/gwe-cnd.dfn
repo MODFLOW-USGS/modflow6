@@ -87,7 +87,7 @@ reader readarray
 layered true
 optional true
 longname thermal conductivity of the simulated fluid
-description thermal conductivity of the simulated fluid
+description thermal conductivity of the simulated fluid.   Note that the CND Package does not account for the tortuosity of the flow paths when solving for the conductive spread of heat.  If tortuosity plays an important role in the thermal conductivity calculation, its effect should be reflected in the value specified for KTW.
 
 block griddata
 name kts

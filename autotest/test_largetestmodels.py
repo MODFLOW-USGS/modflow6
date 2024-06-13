@@ -17,9 +17,8 @@ excluded_models = [
 ]
 
 
-@pytest.mark.large
-@pytest.mark.repo
 @pytest.mark.regression
+@pytest.mark.repo
 @pytest.mark.slow
 def test_model(
     function_tmpdir,

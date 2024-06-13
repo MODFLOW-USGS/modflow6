@@ -1,18 +1,7 @@
 """
-Test cases exercising release timing, 1st via
-package-level RELEASETIME option, & then with
-period-block config STEPS 1 and FRACTION 0.5.
-The model is setup to release halfway through
-the first and only time step of the first and
-only stress period, with duration 1 time unit,
-so the same value of 0.5 can be used for both
-RELEASETIME and FRACTION. A third test case
-checks that multiple values can be provided
-for RELEASETIME.
-
-Period-block FRACTION should work with FIRST
-and ALL, but flopy hangs with either option.
-Todo: debug and enable corresponding cases.
+Test cases exercising release timing option.
+including package-level RELEASETIME options,
+as well as period-block release settings.
 
 The grid is a 10x10 square with a single layer,
 the same flow system shown on the FloPy readme.
@@ -20,9 +9,6 @@ the same flow system shown on the FloPy readme.
 Particles are released from the top left cell.
 
 Results are compared against a MODPATH 7 model.
-Telease time 0.5 could be configured, but mp7
-reports relative times, so there is no reason
-& mp7 results are converted before comparison.
 """
 
 from pathlib import Path
@@ -36,8 +22,8 @@ import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
-
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 from prt_test_utils import (
     FlopyReadmeCase,
     all_equal,
@@ -45,7 +31,10 @@ from prt_test_utils import (
     check_track_data,
     get_model_name,
     get_partdata,
+    DEFAULT_EXIT_SOLVE_TOL,
 )
+
+pytest_plugins = ["modflow_devtools.snapshots"]
 
 simname = "prtrelt"
 cases = [
@@ -54,9 +43,10 @@ cases = [
     f"{simname}dbl",  # RELEASE_TIMES 0.5 0.6
     f"{simname}tls",  # RELEASE_TIMESFILE <filename>
     # period block options
-    # f"{simname}all",  # ALL FRACTION 0.5      # todo debug flopy hanging
-    # f"{simname}frst", # FIRST FRACTION 0.5    # todo debug flopy hanging
+    f"{simname}all",  # ALL FRACTION 0.5
+    f"{simname}frst",  # FIRST FRACTION 0.5
     f"{simname}stps",  # STEPS 1 FRACTION 0.5
+    f"{simname}freq",  # FREQUENCY 1
 ]
 
 
@@ -71,21 +61,39 @@ def releasetimes_file(path, rtimes) -> Path:
 def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
     if "sgl" in name or "dbl" in name or "tls" in name:
         return None
-    opt = [
-        (
-            "FIRST"
-            if "frst" in name
-            else (
-                "ALL"
-                if "all" in name
-                else ("STEPS", 1) if "stps" in name else None
-            )
-        )
-    ]
-    if opt[0] is None:
-        raise ValueError(f"Invalid period option: {name}")
+
+    # Flopy expects each period block setting
+    # value as a separate tuple to be written
+    # to separate lines in period block e.g.
+    #
+    # BEGIN period  1
+    #   ALL
+    #   FRACTION       0.50000000
+    # END period  1
+    #
+    # MF6 is fine with the two settings sharing
+    # the same line but when a keystring option
+    # may take multiple values flopy wants them
+    # on separate lines.
+
+    opt = []
+    if "frst" in name:
+        opt.append(("FIRST",))
+    elif "all" in name:
+        opt.append(("ALL",))
+    elif "stps" in name:
+        opt.append(("STEPS", 1))
+    elif "freq" in name:
+        opt.append(("FREQUENCY", 1))
+    else:
+        opt.append(None)
+
     if fraction is not None:
         opt.append(("FRACTION", fraction))
+
+    if opt[0] is None:
+        raise ValueError(f"Invalid period option: {name}")
+
     return {i: opt for i in range(periods)}
 
 
@@ -169,6 +177,8 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
             if "tls" in name
             else None
         ),
+        print_input=True,
+        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
     )
 
     # create output control package
@@ -256,7 +266,51 @@ def build_models(idx, test, fraction):
     return gwf_sim, prt_sim, mp7_sim
 
 
-def check_output(idx, test, fraction):
+def plot_output(grid, head, spdis, mf6_pls, mp7_pls, fpath):
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
+
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=grid, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.1)
+    pmv.plot_vector(*spdis[:2], normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=grid, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.1)
+    pmv.plot_vector(*spdis[:2], normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
+
+    # view/save plot
+    plt.show()
+    plt.savefig(fpath)
+
+
+def check_output(idx, test, fraction, snapshot):
     from flopy.plot.plotutil import to_mp7_pathlines
 
     name = test.name
@@ -287,6 +341,22 @@ def check_output(idx, test, fraction):
     # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
     assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # check list file for logged release configuration
+    list_file = prt_ws / f"{prt_name}.lst"
+    assert list_file.is_file()
+    lines = open(list_file).readlines()
+    lines = [l.strip() for l in lines]
+    if "sgl" in name or "dbl" in name or "tls" in name:
+        assert (
+            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
+            in lines
+        )
+    elif "frst" in name or "all" in name or "stps" in name or "freq" in name:
+        assert (
+            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.500"
+            in lines
+        )
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -332,56 +402,26 @@ def check_output(idx, test, fraction):
             track_csv=track_csv,
         )
 
-    # extract head, budget, and specific discharge results from GWF model
-    hds = HeadFile(ws / gwf_head_file).get_data()
+    # load head, budget and intercell flows from gwf model
+    head = gwf.output.head().get_data()
     bud = gwf.output.budget()
     spdis = bud.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
-    # setup plot
-    plot_results = False
-    if plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-        for a in ax:
-            a.set_aspect("equal")
+    # plot results if enabled
+    plot = False
+    if plot:
+        plot_output(
+            grid=gwf.modelgrid,
+            head=head,
+            spdis=(qx, qy),
+            mf6_pls=mf6_pls,
+            mp7_pls=mp7_pls,
+            fpath=ws / f"test_{simname}.png",
+        )
 
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title="MF6 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[0],
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
-
-        # plot mp7 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mp7_plines = mp7_pls.groupby(["particleid"])
-        for ipl, (pid, pl) in enumerate(mp7_plines):
-            pl.plot(
-                title="MP7 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[1],
-                legend=False,
-                color=cm.plasma(ipl / len(mp7_plines)),
-            )
-
-        # view/save plot
-        plt.show()
-        plt.savefig(ws / f"test_{simname}.png")
+    # compare pathlines with snapshot
+    assert snapshot == mf6_pls.round(3).to_records(index=False)
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)
@@ -411,14 +451,17 @@ def check_output(idx, test, fraction):
         assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
+@requires_pkg("syrupy")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.parametrize("fraction", [0.5])
-def test_mf6model(idx, name, function_tmpdir, targets, fraction):
+def test_mf6model(
+    idx, name, function_tmpdir, targets, fraction, array_snapshot
+):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t, fraction),
-        check=lambda t: check_output(idx, t, fraction),
+        check=lambda t: check_output(idx, t, fraction, array_snapshot),
         targets=targets,
         compare=None,
     )

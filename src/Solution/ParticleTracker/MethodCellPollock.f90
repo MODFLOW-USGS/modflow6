@@ -1,7 +1,7 @@
 module MethodCellPollockModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE
+  use ConstantsModule, only: DONE, DZERO
   use MethodModule, only: MethodType
   use MethodSubcellPoolModule, only: method_subcell_plck, &
                                      method_subcell_tern
@@ -18,7 +18,7 @@ module MethodCellPollockModule
   type, extends(MethodType) :: MethodCellPollockType
   contains
     procedure, public :: apply => apply_mcp
-    procedure, public :: destroy => destroy_mcp
+    procedure, public :: deallocate => destroy_mcp
     procedure, public :: load => load_mcp
     procedure, public :: load_subcell
     procedure, public :: pass => pass_mcp
@@ -157,7 +157,7 @@ contains
       cosrot = cell%cosrot
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot)
-      call this%track(particle, 2, tmax) ! kluge, hardwired to level 2
+      call this%track(particle, 2, tmax)
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot, invert=.true.)
       call particle%transform(reset=.true.)
@@ -165,7 +165,6 @@ contains
   end subroutine apply_mcp
 
   !> @brief Loads the lone rectangular subcell from the rectangular cell
-  !! kluge note: is levelNext needed here and in similar "load" routines???
   subroutine load_subcell(this, particle, subcell) !
     ! -- dummy
     class(MethodCellPollockType), intent(inout) :: this
@@ -181,14 +180,14 @@ contains
       subcell%dx = cell%dx
       subcell%dy = cell%dy
       subcell%dz = cell%dz
-      subcell%sinrot = 0d0
-      subcell%cosrot = 1d0 ! kluge note: rethink how/where to store subcell data???
-      subcell%xOrigin = 0d0
-      subcell%yOrigin = 0d0
-      subcell%zOrigin = 0d0
+      subcell%sinrot = DZERO
+      subcell%cosrot = DONE
+      subcell%xOrigin = DZERO
+      subcell%yOrigin = DZERO
+      subcell%zOrigin = DZERO
 
       ! -- Set subcell edge velocities
-      subcell%vx1 = cell%vx1 ! kluge note: cell velocities now already account for retfactor and porosity
+      subcell%vx1 = cell%vx1 ! cell velocities already account for retfactor and porosity
       subcell%vx2 = cell%vx2
       subcell%vy1 = cell%vy1
       subcell%vy2 = cell%vy2

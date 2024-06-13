@@ -1,12 +1,14 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DONE
+  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, DONETHIRD
+
   implicit none
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, compose
+            skew, transform, compose, &
+            area, shared_face, clamp_bary
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -361,5 +363,195 @@ contains
     invert = .false.
     if (present(invert_opt)) invert = invert_opt
   end subroutine defaults
+
+  !> @brief Calculate polygon area, with vertices given in CW or CCW order.
+  function area(xv, yv, cw) result(a)
+    ! dummy
+    real(DP), dimension(:), intent(in) :: xv
+    real(DP), dimension(:), intent(in) :: yv
+    logical(LGP), intent(in), optional :: cw
+    ! result
+    real(DP) :: a
+    integer(I4B) :: s
+
+    if (present(cw)) then
+      if (cw) then
+        s = 1
+      else
+        s = -1
+      end if
+    else
+      s = 1
+    end if
+
+    a = -DHALF * sum(xv(:) * cshift(yv(:), s) - cshift(xv(:), s) * yv(:))
+
+  end function area
+
+  !> @brief Find the lateral face shared by two cells.
+  !!
+  !! Find the lateral (x-y plane) face shared by the given cells.
+  !! The iface return argument will be 0 if they share no such face,
+  !! otherwise the index of the shared face in cell 1's vertex array,
+  !! where face N connects vertex N to vertex N + 1 going clockwise.
+  !!
+  !! Note: assumes the cells are convex and share at most 2 vertices
+  !! and that both vertex arrays are oriented clockwise.
+  !<
+  subroutine shared_face(iverts1, iverts2, iface)
+    integer(I4B), dimension(:) :: iverts1
+    integer(I4B), dimension(:) :: iverts2
+    integer(I4B), intent(out) :: iface
+    integer(I4B) :: nv1
+    integer(I4B) :: nv2
+    integer(I4B) :: il1, iil1
+    integer(I4B) :: il2, iil2
+    logical(LGP) :: found
+    logical(LGP) :: wrapped
+
+    iface = 0
+    found = .false.
+    nv1 = size(iverts1)
+    nv2 = size(iverts2)
+    wrapped = iverts1(1) == iverts1(nv1)
+
+    ! Find a vertex shared by the cells, then check the adjacent faces.
+    ! If the cells share a face, it must be one of these. When looking
+    ! forward in the 1st cell's vertices, look backwards in the 2nd's,
+    ! and vice versa, since a clockwise face in cell 1 must correspond
+    ! to a counter-clockwise face in cell 2.
+    outerloop: do il1 = 1, nv1 - 1
+      do il2 = 1, nv2 - 1
+        if (iverts1(il1) == iverts2(il2)) then
+
+          iil1 = il1 + 1
+          if (il2 == 1) then
+            iil2 = nv2
+            if (wrapped) iil2 = iil2 - 1
+          else
+            iil2 = il2 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = il1
+            exit outerloop
+          end if
+
+          iil2 = il2 + 1
+          if (il1 == 1) then
+            iil1 = nv1
+            if (wrapped) iil1 = iil1 - 1
+          else
+            iil1 = il1 - 1
+          end if
+          if (iverts1(iil1) == iverts2(iil2)) then
+            found = .true.
+            iface = iil1
+            exit outerloop
+          end if
+
+        end if
+      end do
+      if (found) exit
+    end do outerloop
+  end subroutine shared_face
+
+  !> @brief Clamp barycentric coordinates to the interior of
+  !! a triangle, to at least some distance tol from any face.
+  !!
+  !! The default tol is `DSAME`. Enforce 0 <= tol <= 1/3.
+  !! This routine also requires 1 = alpha + beta + gamma.
+  !<
+  subroutine clamp_bary(alpha, beta, gamma, tol)
+    ! dummy
+    real(DP), intent(inout) :: alpha
+    real(DP), intent(inout) :: beta
+    real(DP), intent(out) :: gamma
+    real(DP), intent(in), optional :: tol
+    ! local
+    real(DP) :: lolimit
+    real(DP) :: hilimit
+    real(DP) :: delta
+    real(DP) :: ltol
+
+    if (present(tol)) then
+      ltol = tol
+      if (tol < DZERO .or. tol > DONETHIRD) then
+        print *, "error -- tolerance must be between 0 and 1/3, inclusive"
+        call pstop(1)
+      end if
+    else
+      ltol = DSAME
+    end if
+
+    gamma = DONE - alpha - beta
+    lolimit = ltol
+    hilimit = DONE - DTWO * ltol
+    ! Check alpha coordinate against lower limit
+    if (alpha < lolimit) then
+      ! Alpha is too low, so nudge alpha to lower limit; this is a move
+      ! parallel to the "alpha axis," which also changes gamma
+      alpha = lolimit
+      gamma = DONE - alpha - beta
+      ! Check beta coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (beta < lolimit) then
+        ! Beta is too low (gamma is too high), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beta = lolimit
+        gamma = hilimit
+        ! Check beta coordinate against upper limit (which in this
+        ! case is equivalent to checking gamma coordinate against
+        ! lower limit)
+      else if (beta > hilimit) then
+        ! Beta is too high (gamma is too low), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beta = hilimit
+        gamma = lolimit
+      end if
+    end if
+    ! Check beta coordinate against lower limit. (If alpha coordinate
+    ! was nudged to lower limit, beta and gamma coordinates have also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent checks on beta and gamma will evaluate to false, and
+    ! no further adjustments will be made.)
+    if (beta < lolimit) then
+      ! Beta is too low, so nudge beta to lower limit; this is a move
+      ! parallel to the "beta axis," which also changes gamma
+      beta = lolimit
+      gamma = DONE - alpha - beta
+      ! Check alpha coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (alpha < lolimit) then
+        ! Alpha is too low (gamma is too high), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpha = lolimit
+        gamma = hilimit
+        ! Check alpha coordinate against upper limit (which in this
+        ! case is equivalent to checking gamma coordinate against
+        ! lower limit)
+      else if (alpha > hilimit) then
+        ! Alpha is too high (gamma is too low), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpha = hilimit
+        gamma = lolimit
+      end if
+    end if
+    ! Check gamma coordinate against lower limit.(If alpha and/or beta
+    ! coordinate was nudged to lower limit, gamma coordinate has also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent check on gamma will evaluate to false, and no further
+    ! adjustment will be made.)
+    if (gamma < lolimit) then
+      ! Gamma is too low, so nudge gamma to lower limit; this is a move
+      ! parallel to the "gamma axis," which also changes alpha and beta
+      delta = DHALF * (lolimit - gamma)
+      gamma = ltol
+      alpha = alpha - delta
+      beta = beta - delta
+    end if
+  end subroutine clamp_bary
 
 end module GeomUtilModule

@@ -261,6 +261,7 @@ def check_output(idx, test):
     assert np.allclose(stage_all[-1].flatten(), stage_answer, atol=1.0e-5), msg
 
 
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
