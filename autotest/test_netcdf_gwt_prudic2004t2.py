@@ -11,12 +11,16 @@ import sys
 
 import flopy
 import numpy as np
-import xarray as xa
-import xugrid as xu
 import pytest
 
 from conftest import project_root_path
 from framework import TestFramework
+
+try:
+    import xarray as xa
+    import xugrid as xu
+except ImportError:
+    pytest.skip("xuarray and xugrid not found", allow_module_level=True)
 
 cases = ["prudic2004t2"]
 data_path = project_root_path / "autotest" / "data"

@@ -18,6 +18,11 @@ module PrtDisInputModule
     logical :: yorigin = .false.
     logical :: angrot = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
+    logical :: ncf_filerecord = .false.
+    logical :: ncf6 = .false.
+    logical :: filein = .false.
+    logical :: ncf6_filename = .false.
     logical :: nlay = .false.
     logical :: nrow = .false.
     logical :: ncol = .false.
@@ -140,6 +145,96 @@ module PrtDisInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdis_export_nc = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdis_ncf_filerecord = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF_FILERECORD', & ! tag name
+    'NCF_FILERECORD', & ! fortran variable
+    'RECORD NCF6 FILEIN NCF6_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdis_ncf6 = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6', & ! tag name
+    'NCF6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'ncf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdis_filein = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    prtdis_ncf6_filename = InputParamDefinitionType &
+    ( &
+    'PRT', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6_FILENAME', & ! tag name
+    'NCF6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file name of NCF information', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -297,6 +392,11 @@ module PrtDisInputModule
     prtdis_yorigin, &
     prtdis_angrot, &
     prtdis_export_ascii, &
+    prtdis_export_nc, &
+    prtdis_ncf_filerecord, &
+    prtdis_ncf6, &
+    prtdis_filein, &
+    prtdis_ncf6_filename, &
     prtdis_nlay, &
     prtdis_nrow, &
     prtdis_ncol, &
