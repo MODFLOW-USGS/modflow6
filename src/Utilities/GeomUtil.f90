@@ -1,7 +1,8 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, DONETHIRD
+  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, &
+                             DONETHIRD, DEP3
 
   implicit none
   private
@@ -456,37 +457,34 @@ contains
     end do outerloop
   end subroutine shared_face
 
-  !> @brief Clamp barycentric coordinates to the interior of
-  !! a triangle, to at least some distance tol from any face.
+  !> @brief Clamp barycentric coordinates to the interior of a triangle,
+  !! with optional padding some minimum distance from any face.
   !!
-  !! The default tol is `DSAME`. Enforce 0 <= tol <= 1/3.
-  !! This routine also requires 1 = alpha + beta + gamma.
+  !! This routine requires 0 <= tol <= 1/3 and 1 = alpha + beta + gamma.
   !<
-  subroutine clamp_bary(alpha, beta, gamma, tol)
+  subroutine clamp_bary(alpha, beta, gamma, pad)
     ! dummy
     real(DP), intent(inout) :: alpha
     real(DP), intent(inout) :: beta
     real(DP), intent(out) :: gamma
-    real(DP), intent(in), optional :: tol
+    real(DP), intent(in), optional :: pad
     ! local
     real(DP) :: lolimit
     real(DP) :: hilimit
     real(DP) :: delta
-    real(DP) :: ltol
+    real(DP) :: lpad
 
-    if (present(tol)) then
-      ltol = tol
-      if (tol < DZERO .or. tol > DONETHIRD) then
-        print *, "error -- tolerance must be between 0 and 1/3, inclusive"
-        call pstop(1)
-      end if
+    if (present(pad)) then
+      lpad = pad
+      if (pad < DZERO .or. pad > DONETHIRD) &
+        call pstop(1, "pad must be between 0 and 1/3, inclusive")
     else
-      ltol = DSAME
+      lpad = DZERO
     end if
 
     gamma = DONE - alpha - beta
-    lolimit = ltol
-    hilimit = DONE - DTWO * ltol
+    lolimit = lpad
+    hilimit = DONE - DTWO * lpad
     ! Check alpha coordinate against lower limit
     if (alpha < lolimit) then
       ! Alpha is too low, so nudge alpha to lower limit; this is a move
@@ -548,7 +546,7 @@ contains
       ! Gamma is too low, so nudge gamma to lower limit; this is a move
       ! parallel to the "gamma axis," which also changes alpha and beta
       delta = DHALF * (lolimit - gamma)
-      gamma = ltol
+      gamma = lpad
       alpha = alpha - delta
       beta = beta - delta
     end if

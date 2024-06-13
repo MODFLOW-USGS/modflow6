@@ -4,8 +4,6 @@ The 2-level case has an abrupt transition between levels
 with no smoothing.
 
 The flow system is based on the FloPy README example.
-
-TODO: force and compare ternary solution
 """
 
 from pathlib import Path
@@ -92,6 +90,8 @@ def build_mf6_sim(idx, test, **kwargs):
     gwf_name = get_model_name(idx, "gwf")
     prt_name = get_model_name(idx, "prt")
 
+    tracking_method = kwargs.pop("tracking_method")
+
     # create refined grid
     gridprops = get_gridprops(test, **kwargs)
 
@@ -155,6 +155,7 @@ def build_mf6_sim(idx, test, **kwargs):
         packagedata=rpts,
         perioddata={0: ["FIRST"]},
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        dev_forceternary=tracking_method == "ternary",
     )
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
@@ -233,7 +234,7 @@ def check_output(idx, test, snapshot):
 
     # extract endpoints and compare to snapshot
     mf6_eps = mf6_pls[mf6_pls.ireason == 3]
-    assert snapshot == mf6_eps.round(2)
+    assert snapshot == mf6_eps.round(2).to_records(index=False)
 
     # extract head, budget, and specific discharge results from GWF model
     gwf = sim.get_model(gwf_name)
@@ -266,7 +267,9 @@ def check_output(idx, test, snapshot):
             )
 
         # plot nodes
-        xc, yc = mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0)
+        xc, yc = mg.get_xcellcenters_for_layer(
+            0
+        ), mg.get_ycellcenters_for_layer(0)
         for i in range(mg.ncpl):
             x, y = xc[i], yc[i]
             ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
@@ -278,13 +281,17 @@ def check_output(idx, test, snapshot):
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.parametrize("levels", [1, 2])
-def test_mf6model(idx, name, function_tmpdir, targets, levels, array_snapshot):
+@pytest.mark.parametrize("method", ["pollock", "ternary"])
+def test_mf6model(
+    idx, name, function_tmpdir, targets, levels, method, array_snapshot
+):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(
             idx,
             t,
+            tracking_method=method,
             refinement_levels=levels,
             smoothing_level_vertical=levels,
             smoothing_level_horizontal=levels,
