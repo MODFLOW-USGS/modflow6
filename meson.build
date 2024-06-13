@@ -5,27 +5,18 @@ project(
   license: 'CC0',
   meson_version: '>= 1.1.0',
   default_options : [
+    'buildtype=release',
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
-    'optimization=2',
-    'debug=false',
     'fortran_std=f2008',
 ])
 
-if get_option('optimization') == '3'
-  error('Only optimization levels <= 2 are supported')
-endif
-
-if get_option('optimization') == '2'
-  profile = 'release'
-else
-  profile = 'develop'
-endif
-message('The used profile is:', profile)
+build_type = get_option('buildtype')
+message('The build type is:', build_type)
 
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
-message('The fc_id is:', fc_id)
+message('Fortran compiler id:', fc_id)
 compile_args = []
 link_args = []
 
@@ -43,11 +34,11 @@ if fc_id == 'gcc'
                    '-Wno-uninitialized',
                    ]
   
-  # Options specific to profile
-  if profile == 'release'
-    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
-  elif profile == 'develop'
+  # Options specific to build_type
+  if build_type.startswith('debug')
     compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+  else
+    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
   endif
 
   # Define OS with gfortran for OS specific code
@@ -102,7 +93,6 @@ elif fc_id == 'intel-llvm-cl'
   link_args += ['/ignore:4217', # access through ddlimport might be inefficient
                 '/ignore:4286'  # same as 4217, but more general
                ]
-
 endif
 
 # parallel build options
@@ -240,6 +230,7 @@ if with_mpi
   if mpiexec.found()
     test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'], is_parallel : false)
     test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'], is_parallel : false)
+    test('Parallel compiler options command line test', mpiexec, args : ['-n', '2', mf6exe, '-co', '-p'], is_parallel : false)
     test('Serial simulation test', mf6exe, workdir : testdir, is_parallel : false)
     test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'], is_parallel : false)
     test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'], is_parallel : false)
@@ -247,6 +238,7 @@ if with_mpi
 else
   test('Version command line test', mf6exe, args : ['-v',])
   test('Compiler command line test', mf6exe, args : ['-c',])
+  test('Compiler options command line test', mf6exe, args : ['-co',])
   test('Test installation help', mf6exe, args : ['-h',])
   test('Serial simulation test', mf6exe, workdir : testdir)
 endif

@@ -386,6 +386,7 @@ jobs:
         run: |
           pixi run setup builddir
           pixi run build builddir
+          pixi run test builddir
 
       - name: Show build log
         if: failure()

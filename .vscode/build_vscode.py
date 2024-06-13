@@ -19,15 +19,13 @@ if os.getenv("BUILD_PARALLEL_MF6") is not None:
     if os.environ["BUILD_PARALLEL_MF6"] == '1':
         arg_parallel = "-Dparallel=true"
 
-if args.action == "rebuild" and os.path.isdir(builddir):
+setup_flag = [f"-Dbuildtype={args.buildtype}"]
+    
+if args.action == "rebuild":
+    setup_flag += ["--wipe"]
+
+if args.action == "rebuild":
     shutil.rmtree(builddir)
-
-if args.buildtype == "release":
-    setup_flag = ["-Doptimization=2"]
-elif args.buildtype == "debug":
-    setup_flag = ["-Ddebug=true", "-Doptimization=0"]
-
-if not os.path.isdir(builddir):
     command = [
         "meson",
         "setup",
@@ -44,14 +42,16 @@ if not os.path.isdir(builddir):
         check=True,
     )
 
-# Remove all files from bin folder
-bin_dir = os.path.join(os.getcwd(), "bin")
-if os.path.isdir(bin_dir):
-    for dir_entry in os.scandir(bin_dir):
-        path = dir_entry.path
-        if os.path.isfile(path):
-            os.remove(path)
+if args.action == "rebuild" or args.action == "build":
+    # Remove all files from bin folder
+    bin_dir = os.path.join(os.getcwd(), "bin")
+    if os.path.isdir(bin_dir):
+        for dir_entry in os.scandir(bin_dir):
+            path = dir_entry.path
+            if os.path.isfile(path):
+                os.remove(path)
 
-command = ["meson", "install", "-C", builddir]
-print("Run:", shlex.join(command))
-subprocess.run(command, check=True)
+    command = ["meson", "install", "-C", builddir]
+    print("Run:", shlex.join(command))
+    subprocess.run(command, check=True)
+
