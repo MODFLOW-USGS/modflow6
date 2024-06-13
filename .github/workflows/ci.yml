@@ -509,7 +509,7 @@ jobs:
 
       - name: Install additional netcdf testing packages
         working-directory: modflow6
-        run: pixi run pip install xugrid xarray
+        run: pixi run pip install xugrid xarray netcdf4
 
       - name: Test Extended MF6
         uses: ./modflow6/.github/actions/test-extended
