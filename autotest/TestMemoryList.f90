@@ -8,8 +8,9 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
-                  new_unittest("add_get_values", test_add_get_values), &
-                  new_unittest("get_nonexisting_value", test_get_nonexisting_value) &
+                new_unittest("add_get_values", test_add_get_values), &
+                new_unittest("get_nonexisting_value", &
+                             test_get_nonexisting_value) &
                 ]
   end subroutine collect_memorylist
 
@@ -24,7 +25,7 @@ contains
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(MemoryListType) :: container
-    
+
     type(MemoryType), target :: mt
     type(MemoryType), pointer :: mt_ptr
 
@@ -59,7 +60,7 @@ contains
   !! When the key can't be found the MemoryList should return a null pointer
   !<
   subroutine test_get_nonexisting_value(error)
-     !- Dummy
+    !- Dummy
     type(error_type), allocatable, intent(out) :: error
     !- Locals
     type(MemoryListType) :: container
@@ -72,7 +73,7 @@ contains
     mt_ptr => container%get(name, path)
 
     !- Assert
-    call check(error, .not. associated(mt_ptr))
+    call check(error,.not. associated(mt_ptr))
     if (allocated(error)) return
 
   end subroutine test_get_nonexisting_value

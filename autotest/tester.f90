@@ -35,7 +35,8 @@ program tester
                new_testsuite("List", collect_list), &
                new_testsuite("ListIterator", collect_listiterator), &
                new_testsuite("MathUtil", collect_mathutil), &
-               new_testsuite("MemoryContainerIterator", collect_memorycontaineriterator), &
+               new_testsuite("MemoryContainerIterator", &
+                             collect_memorycontaineriterator), &
                new_testsuite("MemoryList", collect_memorylist), &
                new_testsuite("Message", collect_message), &
                new_testsuite("PtrHashTable", collect_ptrhashtable), &

@@ -9,20 +9,21 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
-                  new_unittest("add_get_values", test_add_get_values), &
-                  new_unittest("get_nonexisting_value", test_get_nonexisting_value), &
-                  new_unittest("count_items", test_count_items), &
-                  new_unittest("clear_hashtable", test_clear_hashtable), &
-                  new_unittest("contains_item", test_contains_items), &
-                  new_unittest("add_duplicate_key", test_add_duplicate_key) &
+                new_unittest("add_get_values", test_add_get_values), &
+                new_unittest("get_nonexisting_value", &
+                             test_get_nonexisting_value), &
+                new_unittest("count_items", test_count_items), &
+                new_unittest("clear_hashtable", test_clear_hashtable), &
+                new_unittest("contains_item", test_contains_items), &
+                new_unittest("add_duplicate_key", test_add_duplicate_key) &
                 ]
   end subroutine collect_ptrhashtable
 
-   !> @brief Test adding and getting values from the hashtable
+  !> @brief Test adding and getting values from the hashtable
   !!
   !! Two values are added using a key to identify them
   !! These values are then retrieved by using their keys
-  !! and asserted against the expected values 
+  !! and asserted against the expected values
   !<
   subroutine test_add_get_values(error)
     !- Dummy
@@ -47,13 +48,13 @@ contains
 
     !- Act
     select type (val => hashtable%get(name1))
-        type is (integer(I4B))
-          value1 => val
+    type is (integer(I4B))
+      value1 => val
     end select
 
     select type (val => hashtable%get(name2))
-        type is (integer(I4B))
-          value2 => val
+    type is (integer(I4B))
+      value2 => val
     end select
 
     !- Assert
@@ -83,7 +84,7 @@ contains
     val_ptr => hashtable%get(name)
 
     !- Assert
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
   end subroutine test_get_nonexisting_value
@@ -157,15 +158,15 @@ contains
 
     !- Assert
     val_ptr => hashtable%get("Item1")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     val_ptr => hashtable%get("Item2")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     val_ptr => hashtable%get("Item3")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     cnt = hashtable%count()
@@ -202,7 +203,7 @@ contains
     call check(error, found_item1)
     if (allocated(error)) return
 
-    call check(error, .not. found_item2)
+    call check(error,.not. found_item2)
     if (allocated(error)) return
 
   end subroutine test_contains_items
@@ -234,7 +235,7 @@ contains
     !- Assert
     call check(error, count_warnings() == 1)
     if (allocated(error)) return
-    
+
   end subroutine test_add_duplicate_key
 
 end module TestPtrHashTable

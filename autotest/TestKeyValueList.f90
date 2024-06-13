@@ -8,10 +8,11 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
-                  new_unittest("add_get_values", test_add_get_values), &
-                  new_unittest("get_nonexisting_value", test_get_nonexisting_value), &
-                  new_unittest("count_items", test_count_items), &
-                  new_unittest("clear_list", test_clear_list) &
+                new_unittest("add_get_values", test_add_get_values), &
+                new_unittest("get_nonexisting_value", &
+                             test_get_nonexisting_value), &
+                new_unittest("count_items", test_count_items), &
+                new_unittest("clear_list", test_clear_list) &
                 ]
   end subroutine collect_keyvaluelist
 
@@ -19,7 +20,7 @@ contains
   !!
   !! Two values are added using a key to identify them
   !! These values are then retrieved by using their keys
-  !! and asserted against the expected values 
+  !! and asserted against the expected values
   !<
   subroutine test_add_get_values(error)
     !- Dummy
@@ -44,13 +45,13 @@ contains
 
     !- Act
     select type (val => list%get(name1))
-        type is (integer(I4B))
-          value1 => val
+    type is (integer(I4B))
+      value1 => val
     end select
 
     select type (val => list%get(name2))
-        type is (integer(I4B))
-          value2 => val
+    type is (integer(I4B))
+      value2 => val
     end select
 
     !- Assert
@@ -80,7 +81,7 @@ contains
     val_ptr => list%get(name)
 
     !- Assert
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
   end subroutine test_get_nonexisting_value
@@ -154,15 +155,15 @@ contains
 
     !- Assert
     val_ptr => list%get("Item1")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     val_ptr => list%get("Item2")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     val_ptr => list%get("Item3")
-    call check(error, .not. associated(val_ptr))
+    call check(error,.not. associated(val_ptr))
     if (allocated(error)) return
 
     cnt = list%count()
