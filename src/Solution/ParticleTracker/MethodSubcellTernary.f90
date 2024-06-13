@@ -1,6 +1,6 @@
 module MethodSubcellTernaryModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DSAME, DHALF, DONE, DTWO, DONETHIRD
+  use ConstantsModule, only: DZERO, DSAME, DHALF, DONE, DTWO, DONETHIRD, DEP3
   use ErrorUtilModule, only: pstop
   use GeomUtilModule, only: clamp_bary, skew
   use MethodModule, only: MethodType
@@ -18,7 +18,7 @@ module MethodSubcellTernaryModule
   public :: MethodSubcellTernaryType
   public :: create_method_subcell_ternary
 
-  !> @brief Ternary triangular subcell tracking method
+  !> @brief Ternary triangular subcell tracking method.
   type, extends(MethodType) :: MethodSubcellTernaryType
     integer(I4B), public, pointer :: zeromethod
   contains
@@ -29,7 +29,7 @@ module MethodSubcellTernaryModule
 
 contains
 
-  !> @brief Create a new ternary subcell method
+  !> @brief Create a new ternary subcell tracking method.
   subroutine create_method_subcell_ternary(method)
     ! -- dummy
     type(MethodSubcellTernaryType), pointer :: method
@@ -43,13 +43,13 @@ contains
     method%delegates = .false.
   end subroutine create_method_subcell_ternary
 
-  !> @brief Deallocate the ternary subcell method
+  !> @brief Deallocate the ternary subcell tracking method.
   subroutine deallocate (this)
     class(MethodSubcellTernaryType), intent(inout) :: this
     deallocate (this%type)
   end subroutine deallocate
 
-  !> @brief Apply the ternary subcell method
+  !> @brief Apply the ternary subcell tracking method.
   subroutine apply_mst(this, particle, tmax)
     class(MethodSubcellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -61,7 +61,7 @@ contains
     end select
   end subroutine apply_mst
 
-  !> @brief Track a particle across a triangular subcell using the ternary method
+  !> @brief Track a particle across a triangular subcell.
   subroutine track_subcell(this, subcell, particle, tmax)
     ! dummy
     class(MethodSubcellTernaryType), intent(inout) :: this
@@ -138,7 +138,7 @@ contains
     tol = particle%extol
     reason = -1
 
-    ! -- Set some local variables for convenience
+    ! Set some local variables for convenience.
     xi = particle%x
     yi = particle%y
     zi = particle%z
@@ -160,7 +160,16 @@ contains
     vzbot = subcell%vzbot
     vztop = subcell%vztop
 
-    ! -- Transform coordinates to "canonical" configuration
+    ! Transform coordinates to the "canonical" configuration:
+    ! barycentric in two dimensions with alpha, beta & gamma
+    ! such that at f2 alpha = 0, f0 beta = 0, f1 gamma = 0.
+    !
+    !     v2
+    !     |\
+    !   f2| \f1
+    !     |__\
+    !   v0 f0 v1
+    !
     call canonical(x0, y0, x1, y1, x2, y2, &
                    v0x, v0y, v1x, v1y, v2x, v2y, &
                    xi, yi, &
@@ -168,68 +177,59 @@ contains
                    sxx, sxy, syy, &
                    alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti)
 
-    ! -- Nudge particle if necessary so it begins within the subcell
-    call clamp_bary(alpi, beti, gami)
+    ! Clamp particle coordinates to the canonical triangular
+    ! subcell and nudge it ever so slightly inside if needed.
+    call clamp_bary(alpi, beti, gami, pad=DSAME * DEP3)
 
-    ! -- Do calculations related to analytical z solution, could possibly
-    !    be done just once for each cell, todo: profile? potentially store
-    !    on cell-level method? after initial release
+    ! Do calculations related to the analytical z solution.
+    ! todo: just once for each cell? store at cell-level?
     zirel = (zi - zbot) / dz
     call calculate_dt(vzbot, vztop, dz, zirel, vzi, &
                       az, dtexitz, izstatus, &
                       itopbotexit)
     vziodz = vzi / dz
 
-    ! -- Traverse triangular subcell
+    ! If possible, track the particle across the subcell.
     itrifaceenter = particle%iboundary(3) - 1
-    if (itrifaceenter .eq. -1) itrifaceenter = 999
+    if (itrifaceenter == -1) itrifaceenter = 999
     call traverse_triangle(isolv, tol, &
                            dtexitxy, alpexit, betexit, &
                            itrifaceenter, itrifaceexit, &
                            alp1, bet1, alp2, bet2, alpi, beti)
 
-    ! -- Subcell has no exit face, terminate the particle
-    !    todo: after initial release, consider ramifications
-    if ((itopbotexit .eq. 0) .and. (itrifaceexit .eq. 0)) then
+    ! If the subcell has no exit face, terminate the particle.
+    ! todo: after initial release, consider ramifications
+    if (itopbotexit == 0 .and. itrifaceexit == 0) then
       particle%istatus = 9
       particle%advancing = .false.
       call this%save(particle, reason=3)
       return
     end if
 
-    ! -- Determine (earliest) exit face and corresponding travel time to exit
-    if (itopbotexit .eq. 0) then
-      ! -- Exits through triangle face first
+    ! Determine the particle's exit face and travel time to exit.
+    ! The exit face is the face through which it would exit first,
+    ! considering only the velocity component in the direction of
+    ! the face. Then compute the particle's exit time.
+    if (itrifaceexit /= 0) then
+      ! Exit through lateral subcell face
       exitFace = itrifaceexit
       dtexit = dtexitxy
-    else if (itrifaceexit .eq. 0) then
-      ! -- Exits through top/bottom first
-      exitFace = 45
-      dtexit = dtexitz
-    else if (dtexitz .lt. dtexitxy) then
-      ! -- Exits through top/bottom first
-      exitFace = 45
-      dtexit = dtexitz
-    else
-      ! -- Exits through triangle face first
-      exitFace = itrifaceexit
-      dtexit = dtexitxy
-    end if
-    if (exitFace .eq. 45) then
-      if (itopbotexit .eq. -1) then
+    else if (dtexitz < dtexitxy) then
+      ! Exit through top or bottom
+      if (itopbotexit == -1) then
         exitFace = 4
       else
         exitFace = 5
       end if
+      dtexit = dtexitz
     end if
-
-    ! -- Compute exit time, irrespective of tmax for now
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
-    ! -- Select user tracking times to solve. If this is the last time step, include
-    !    all times after it ends (as per MODPATH 7's extension behavior). Otherwise
-    !    take the times within the current period and time step only.
+    ! Solve user-specified tracking times within the current stress period and
+    ! time step. If this is the last time step, solve all times after it ends,
+    ! as per MODPATH 7 with stop time option 'extend'.
+    ! todo: reconsider whether this should be default?
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
     if (all(tslice > 0)) then
@@ -249,8 +249,9 @@ contains
       end do
     end if
 
-    ! Compute final time, taking into account tmax, and set final
-    ! particle status
+    ! Compute exit time and face and update the particle's coordinates
+    ! (local, unscaled) and other properties. The particle may at this
+    ! point lie on a boundary of the subcell or may still be within it.
     if (texit .gt. tmax) then
       ! -- The computed exit time is greater than the maximum time, so set
       ! -- final time for particle trajectory equal to maximum time.
@@ -267,20 +268,14 @@ contains
       dt = dtexit
       reason = 1 ! (sub)cell transition
     end if
-
     call calculate_xyz_position(dt, rxx, rxy, ryx, ryy, sxx, sxy, syy, &
                                 izstatus, x0, y0, az, vzi, vzbot, &
                                 ztop, zbot, zi, x, y, z, exitface)
-
-    ! -- Set final particle location in local (unscaled) subcell coordinates,
-    ! -- final time for particle trajectory, and exit face
     particle%x = x
     particle%y = y
     particle%z = z
     particle%ttrack = t
     particle%iboundary(3) = exitFace
-
-    ! -- Save particle track record
     call this%save(particle, reason=reason)
   end subroutine track_subcell
 

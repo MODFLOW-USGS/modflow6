@@ -234,7 +234,7 @@ def check_output(idx, test, snapshot):
 
     # extract endpoints and compare to snapshot
     mf6_eps = mf6_pls[mf6_pls.ireason == 3]
-    assert snapshot == mf6_eps.round(1).to_records(index=False)
+    assert snapshot == mf6_eps.round(2).to_records(index=False)
 
     # extract head, budget, and specific discharge results from GWF model
     gwf = sim.get_model(gwf_name)
