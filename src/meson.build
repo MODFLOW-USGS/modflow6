@@ -299,7 +299,7 @@ modflow_sources = files(
     'Utilities' / 'Memory' / 'Memory.f90',
     'Utilities' / 'Memory' / 'MemoryHelper.f90',
     'Utilities' / 'Memory' / 'MemoryContainerIterator.f90',
-    'Utilities' / 'Memory' / 'MemoryList.f90',
+    'Utilities' / 'Memory' / 'MemoryStore.f90',
     'Utilities' / 'Memory' / 'MemoryManager.f90',
     'Utilities' / 'Memory' / 'MemoryManagerExt.f90',
     'Utilities' / 'Memory' / 'MemorySetHandler.f90',

@@ -455,10 +455,10 @@
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
-		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Memory\MemoryStore.f90"/>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>

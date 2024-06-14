@@ -1,5 +1,5 @@
 module TestMemoryList
-  use MemoryListModule, only: MemoryListType
+  use MemoryStoreModule, only: MemoryStoreType
   use MemoryTypeModule, only: MemoryType
   use testdrive, only: error_type, unittest_type, new_unittest, check
 
@@ -23,7 +23,7 @@ contains
   subroutine test_add_get_values(error)
     type(error_type), allocatable, intent(out) :: error
     !- Locals
-    type(MemoryListType) :: container
+    type(MemoryStoreType) :: container
 
     type(MemoryType), target :: mt
     type(MemoryType), pointer :: mt_ptr
@@ -61,7 +61,7 @@ contains
   subroutine test_get_nonexisting_value(error)
     type(error_type), allocatable, intent(out) :: error
     !- Locals
-    type(MemoryListType) :: container
+    type(MemoryStoreType) :: container
     type(MemoryType), pointer :: mt_ptr
     character(*), parameter :: name = "FakeName"
     character(*), parameter :: path = "FakePath"

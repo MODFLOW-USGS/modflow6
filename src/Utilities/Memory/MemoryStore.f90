@@ -1,4 +1,4 @@
-module MemoryListModule
+module MemoryStoreModule
   use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
   use PtrHashTableModule, only: PtrHashTableType
@@ -8,9 +8,9 @@ module MemoryListModule
   use ConstantsModule, only: LENMEMADDRESS
 
   private
-  public :: MemoryListType
+  public :: MemoryStoreType
 
-  type :: MemoryListType
+  type :: MemoryStoreType
     private
     type(PtrHashTableType), private :: container
   contains
@@ -19,7 +19,7 @@ module MemoryListModule
     procedure :: get
     procedure :: count
     procedure :: clear
-  end type MemoryListType
+  end type MemoryStoreType
 
 contains
 
@@ -28,7 +28,7 @@ contains
   !<
   function iterator(this) result(itr)
     ! -- dummy
-    class(MemoryListType) :: this
+    class(MemoryStoreType) :: this
     type(MemoryContainerIteratorType) :: itr
 
     itr = MemoryContainerIteratorType(this%container%Iterator())
@@ -40,7 +40,7 @@ contains
   !! The key is constructed using the memory type's path and name
   !<
   subroutine add(this, mt)
-    class(MemoryListType) :: this
+    class(MemoryStoreType) :: this
     type(MemoryType), pointer, intent(in) :: mt
     ! -- local
     class(*), pointer :: obj => null()
@@ -56,7 +56,7 @@ contains
   !! If the key can't be found the return value will be a null pointer
   !<
   function get(this, name, path) result(mt)
-    class(MemoryListType) :: this
+    class(MemoryStoreType) :: this
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: path
     type(MemoryType), pointer :: mt
@@ -80,7 +80,7 @@ contains
   !!
   !<
   function count(this) result(cnt)
-    class(MemoryListType) :: this
+    class(MemoryStoreType) :: this
     integer(I4B) :: cnt
 
     cnt = this%container%count()
@@ -90,9 +90,9 @@ contains
   !!
   !<
   subroutine clear(this)
-    class(MemoryListType) :: this
+    class(MemoryStoreType) :: this
 
     call this%container%clear()
   end subroutine clear
 
-end module MemoryListModule
+end module MemoryStoreModule

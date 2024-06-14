@@ -12,7 +12,7 @@ module MemoryManagerModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
-  use MemoryListModule, only: MemoryListType
+  use MemoryStoreModule, only: MemoryStoreType
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryHelperModule, only: mem_check_length, split_mem_path, &
                                 strip_context_mem_path, get_mem_path_context
@@ -43,7 +43,7 @@ module MemoryManagerModule
   public :: memorylist
   public :: mem_print_detailed
 
-  type(MemoryListType) :: memorylist
+  type(MemoryStoreType) :: memorylist
   type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
   integer(I8B) :: nvalues_astr = 0

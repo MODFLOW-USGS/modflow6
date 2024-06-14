@@ -52,7 +52,7 @@ $(OBJDIR)/Memory.o \
 $(OBJDIR)/PtrHashTable.o \
 $(OBJDIR)/MemoryContainerIterator.o \
 $(OBJDIR)/ListNode.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/MemoryStore.o \
 $(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \

@@ -89,8 +89,8 @@
 		<File RelativePath="..\..\..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryHelper.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryStore.f90"/>
 		<Filter Name="TimeSeries">
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeries.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>

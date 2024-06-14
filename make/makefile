@@ -170,7 +170,7 @@ $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/MemoryStore.o \
 $(OBJDIR)/IdmUtlDfnSelector.o \
 $(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
