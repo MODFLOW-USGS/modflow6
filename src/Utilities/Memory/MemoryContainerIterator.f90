@@ -34,7 +34,7 @@ contains
 
     iterator%container_iterator = container_iterator
 
-  end function Constructor
+  end function constructor
 
   !> @brief Indicates if there is a next node in the iteration chain
   !!

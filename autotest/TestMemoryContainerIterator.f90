@@ -1,7 +1,7 @@
 module TestMemoryContainerIterator
   use KindModule, only: I4B, LGP
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
-  use MemoryListModule, only: MemoryListType
+  use MemoryStoreModule, only: MemoryStoreType
   use MemoryTypeModule, only: MemoryType
   use testdrive, only: error_type, unittest_type, new_unittest, check
 
@@ -28,7 +28,7 @@ contains
   subroutine test_iterate_through_container(error)
     type(error_type), allocatable, intent(out) :: error
     !- Locals
-    type(MemoryListType) :: memory_container
+    type(MemoryStoreType) :: memory_container
     type(MemoryContainerIteratorType), allocatable :: itr
 
     type(MemoryType), target :: mt1

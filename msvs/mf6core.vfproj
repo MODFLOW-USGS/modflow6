@@ -455,10 +455,10 @@
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
-		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Memory\MemoryStore.f90"/>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
@@ -525,6 +525,9 @@
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\src\Utilities\Iterator.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueList.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueListIterator.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueNode.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListIterator.f90"/>
@@ -535,6 +538,8 @@
 		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTable.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTableIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimStages.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>

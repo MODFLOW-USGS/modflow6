@@ -1041,7 +1041,7 @@ contains
     call mem_deallocate(this%k11input)
     call mem_deallocate(this%k22input)
     call mem_deallocate(this%k33input)
-    call mem_deallocate(this%sat)
+    call mem_deallocate(this%sat, 'SAT', this%memoryPath)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
     call mem_deallocate(this%angle1)
@@ -1050,7 +1050,7 @@ contains
     call mem_deallocate(this%nodedge)
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
-    call mem_deallocate(this%spdis)
+    call mem_deallocate(this%spdis, 'SPDIS', this%memoryPath)
     call mem_deallocate(this%nodekchange)
     !
     ! -- deallocate parent

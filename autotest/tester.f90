@@ -7,11 +7,14 @@ program tester
   use TestGeomUtil, only: collect_geomutil
   use TestHashTable, only: collect_hashtable
   use TestInputOutput, only: collect_inputoutput
+  use TestKeyValueList, only: collect_keyvaluelist
   use TestList, only: collect_list
   use TestListIterator, only: collect_listiterator
   use TestMathUtil, only: collect_mathutil
   use TestMemoryContainerIterator, only: collect_memorycontaineriterator
+  use TestMemoryStore, only: collect_memorystore
   use TestMessage, only: collect_message
+  use TestPtrHashTable, only: collect_ptrhashtable
   use TestSim, only: collect_sim
   use TestSwfUtils, only: collect_swfutils
   use TestTimeSelect, only: collect_timeselect
@@ -28,12 +31,15 @@ program tester
                new_testsuite("GeomUtil", collect_geomutil), &
                new_testsuite("HashTable", collect_hashtable), &
                new_testsuite("InputOutput", collect_inputoutput), &
+               new_testsuite("KeyValueList", collect_keyvaluelist), &
                new_testsuite("List", collect_list), &
                new_testsuite("ListIterator", collect_listiterator), &
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("MemoryContainerIterator", &
                              collect_memorycontaineriterator), &
+               new_testsuite("MemoryStore", collect_memorystore), &
                new_testsuite("Message", collect_message), &
+               new_testsuite("PtrHashTable", collect_ptrhashtable), &
                new_testsuite("Sim", collect_sim), &
                new_testsuite("SwfUtils", collect_swfutils), &
                new_testsuite("TimeSelect", collect_timeselect) &

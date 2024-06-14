@@ -89,8 +89,8 @@
 		<File RelativePath="..\..\..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryHelper.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryStore.f90"/>
 		<Filter Name="TimeSeries">
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeries.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
@@ -108,6 +108,9 @@
 		<File RelativePath="..\..\..\src\Utilities\GeomUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Iterator.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueList.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueListIterator.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\KeyValueNode.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\ListIterator.f90"/>
@@ -116,6 +119,8 @@
 		<File RelativePath="..\..\..\src\Utilities\MathUtil.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\PtrHashTable.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\PtrHashTableIterator.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Table.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\TableTerm.f90"/>

@@ -164,7 +164,7 @@ $(OBJDIR)/StructVector.o \
 $(OBJDIR)/SfrCrossSectionManager.o \
 $(OBJDIR)/ListReader.o \
 $(OBJDIR)/Memory.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/MemoryStore.o \
 $(OBJDIR)/MemoryManager.o \
 $(OBJDIR)/ats.o \
 $(OBJDIR)/Integer1dReader.o \

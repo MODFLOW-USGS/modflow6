@@ -1771,7 +1771,7 @@ contains
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%idxglo)
     call mem_deallocate(this%idxsymglo)
-    call mem_deallocate(this%simvals)
+    call mem_deallocate(this%simvals, 'SIMVALS', this%memoryPath)
     !
     ! -- output table objects
     if (associated(this%outputtab1)) then
