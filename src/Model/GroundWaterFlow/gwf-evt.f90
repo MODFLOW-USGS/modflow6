@@ -9,7 +9,6 @@ module EvtModule
   use SimModule, only: store_error, store_error_filename, count_errors
   use SimVariablesModule, only: errmsg
   use ObsModule, only: DefaultObsIdProcessor
-  use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
   use MatrixBaseModule
   use GeomUtilModule, only: get_node
@@ -481,7 +480,7 @@ contains
     !
     ! -- terminate if errors encountered
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Return

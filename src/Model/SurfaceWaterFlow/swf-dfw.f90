@@ -1738,7 +1738,7 @@ contains
       !
       ! -- write summary of package error messages
       if (count_errors() > 0) then
-        call this%parser%StoreErrorUnit()
+        call store_error_filename(this%input_fname)
       end if
     end if
     !
@@ -1802,7 +1802,7 @@ contains
       !
       ! -- evaluate if there are any observation errors
       if (count_errors() > 0) then
-        call this%parser%StoreErrorUnit()
+        call store_error_filename(this%input_fname)
       end if
     end if
     !
