@@ -1,10 +1,10 @@
-module TestMemoryList
+module TestMemoryStore
   use MemoryStoreModule, only: MemoryStoreType
   use MemoryTypeModule, only: MemoryType
   use testdrive, only: error_type, unittest_type, new_unittest, check
 
 contains
-  subroutine collect_memorylist(testsuite)
+  subroutine collect_memorystore(testsuite)
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
 
     testsuite = [ &
@@ -12,7 +12,7 @@ contains
                 new_unittest("get_nonexisting_value", &
                              test_get_nonexisting_value) &
                 ]
-  end subroutine collect_memorylist
+  end subroutine collect_memorystore
 
   !> @brief Test adding and getting values from the container
   !!
@@ -56,7 +56,7 @@ contains
 
   !> @brief Test retrieving a MemoryType using a non-existing name and path
   !!
-  !! When the key can't be found the MemoryList should return a null pointer
+  !! When the key can't be found the MemoryStore should return a null pointer
   !<
   subroutine test_get_nonexisting_value(error)
     type(error_type), allocatable, intent(out) :: error
@@ -76,4 +76,4 @@ contains
 
   end subroutine test_get_nonexisting_value
 
-end module TestMemoryList
+end module TestMemoryStore

@@ -12,7 +12,7 @@ program tester
   use TestListIterator, only: collect_listiterator
   use TestMathUtil, only: collect_mathutil
   use TestMemoryContainerIterator, only: collect_memorycontaineriterator
-  use TestMemoryList, only: collect_memorylist
+  use TestMemoryStore, only: collect_memorystore
   use TestMessage, only: collect_message
   use TestPtrHashTable, only: collect_ptrhashtable
   use TestSim, only: collect_sim
@@ -37,7 +37,7 @@ program tester
                new_testsuite("MathUtil", collect_mathutil), &
                new_testsuite("MemoryContainerIterator", &
                              collect_memorycontaineriterator), &
-               new_testsuite("MemoryList", collect_memorylist), &
+               new_testsuite("MemoryStore", collect_memorystore), &
                new_testsuite("Message", collect_message), &
                new_testsuite("PtrHashTable", collect_ptrhashtable), &
                new_testsuite("Sim", collect_sim), &
