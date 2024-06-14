@@ -528,13 +528,13 @@ contains
   subroutine cxs_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(SwfCxsType) :: this
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'CXS', idm_context)
+    call memorystore_remove(this%name_model, 'CXS', idm_context)
     !
     ! -- Scalars
     call mem_deallocate(this%nsections)

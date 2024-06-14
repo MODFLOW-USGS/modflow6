@@ -974,13 +974,13 @@ contains
   !<
   subroutine npf_da(this)
     ! -- modules
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfNpftype) :: this
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'NPF', idm_context)
+    call memorystore_remove(this%name_model, 'NPF', idm_context)
     !
     ! -- TVK
     if (this%intvk /= 0) then

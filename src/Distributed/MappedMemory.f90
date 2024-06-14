@@ -2,7 +2,7 @@ module MappedMemoryModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use MemoryTypeModule, only: MemoryType
-  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryManagerModule, only: get_from_memorystore
 
   implicit none
   private
@@ -48,8 +48,8 @@ contains
 
     if (.not. associated(this%src)) then
       ! cache
-      call get_from_memorylist(this%src_name, this%src_path, this%src, found)
-      call get_from_memorylist(this%tgt_name, this%tgt_path, this%tgt, found)
+      call get_from_memorystore(this%src_name, this%src_path, this%src, found)
+      call get_from_memorystore(this%tgt_name, this%tgt_path, this%tgt, found)
     end if
 
     if (this%skip_sync()) return

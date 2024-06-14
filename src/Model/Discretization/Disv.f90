@@ -13,7 +13,7 @@ module DisvModule
   use SimVariablesModule, only: errmsg, idm_context
   use DisvGeom, only: DisvGeomType, line_unit_vector
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_setptr
-  use MemoryManagerExtModule, only: mem_set_value, memorylist_remove
+  use MemoryManagerExtModule, only: mem_set_value, memorystore_remove
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -171,9 +171,9 @@ contains
     class(DisvType) :: this
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name_model, 'DISV', idm_context)
-    call memorylist_remove(component=this%name_model, &
-                           context=idm_context)
+    call memorystore_remove(this%name_model, 'DISV', idm_context)
+    call memorystore_remove(component=this%name_model, &
+                            context=idm_context)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()

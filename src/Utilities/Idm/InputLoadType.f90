@@ -228,14 +228,14 @@ contains
   !<
   subroutine dynamic_destroy(this)
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     class(DynamicPkgLoadType), intent(inout) :: this
     !
     ! -- deallocate package static and dynamic input context
-    call memorylist_remove(this%mf6_input%component_name, &
-                           this%mf6_input%subcomponent_name, &
-                           idm_context)
+    call memorystore_remove(this%mf6_input%component_name, &
+                            this%mf6_input%subcomponent_name, &
+                            idm_context)
     !
     return
   end subroutine dynamic_destroy

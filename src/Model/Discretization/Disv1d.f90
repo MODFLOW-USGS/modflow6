@@ -1095,7 +1095,7 @@ contains
   subroutine disv1d_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(Disv1dType) :: this
@@ -1103,7 +1103,7 @@ contains
     logical(LGP) :: deallocate_vertices
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name_model, 'DISV1D', idm_context)
+    call memorystore_remove(this%name_model, 'DISV1D', idm_context)
     !
     ! -- scalars
     deallocate_vertices = (this%nvert > 0)
