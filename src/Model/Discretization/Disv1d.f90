@@ -5,8 +5,8 @@ module Disv1dModule
   use SimVariablesModule, only: errmsg, warnmsg
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate
-  use SimModule, only: count_errors, store_error, store_error_unit, &
-                       store_warning, store_error_filename
+  use SimModule, only: count_errors, store_error, store_warning, &
+                       store_error_filename
   use InputOutputModule, only: urword
   use BaseDisModule, only: DisBaseType
   use Disv1dGeom, only: calcdist
@@ -381,7 +381,7 @@ contains
     if (this%nodesuser < 1) then
       call store_error( &
         'NODES was not specified or was specified incorrectly.')
-      call store_error_unit(this%inunit)
+      call store_error_filename(this%input_fname)
     end if
     if (this%nvert < 1) then
       call store_warning( &
@@ -749,12 +749,12 @@ contains
     if (this%nodes == 0) then
       call store_error('Model does not have any active nodes.  Make sure &
                        &IDOMAIN has some values greater than zero.')
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
       call ustop()
     end if
 
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
       call ustop()
     end if
 
@@ -1084,7 +1084,7 @@ contains
         "Cell number cannot be determined in line '"// &
         trim(adjustl(line))//"'."
       call store_error(errmsg)
-      call store_error_unit(in)
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- return

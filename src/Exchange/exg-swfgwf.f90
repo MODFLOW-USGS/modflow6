@@ -17,7 +17,6 @@ module SwfGwfExchangeModule
   use NumericalModelModule, only: NumericalModelType
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use ListsModule, only: basemodellist, baseexchangelist
-  use BlockParserModule, only: BlockParserType
   use ObsModule, only: obs_cr, ObsType
   use MemoryHelperModule, only: create_mem_path
   use NumericalExchangeModule, only: NumericalExchangeType
@@ -47,8 +46,6 @@ module SwfGwfExchangeModule
     integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() !< mapping to global (solution) amat
     integer(I4B), dimension(:), pointer, contiguous :: idxsymglo => null() !< mapping to global (solution) symmetric amat
     real(DP), dimension(:), pointer, contiguous :: simvals => null() !< simulated flow rate for each exchange
-
-    type(BlockParserType) :: parser !< block parser for input file (controlled from derived type)
 
     integer(I4B), pointer :: inobs => null() !< unit number for GWF-GWF observations
     type(ObsType), pointer :: obs => null() !< observation object
@@ -193,7 +190,7 @@ contains
                          'Models must be in same solution: '// &
                          trim(this%swfmodel1%name)//' '// &
                          trim(this%gwfmodel2%name))
-        call this%parser%StoreErrorUnit()
+        call store_error_filename(this%filename)
       end if
     end if
     !

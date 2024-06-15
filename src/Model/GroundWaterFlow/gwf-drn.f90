@@ -251,10 +251,6 @@ contains
       end if
     end if
     !
-    if (found%icubicsfac) then
-      call this%parser%DevOpt()
-    end if
-    !
     ! -- log DRN specific options
     call this%log_drn_options(found)
     !
