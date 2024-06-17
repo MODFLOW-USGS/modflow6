@@ -1865,7 +1865,7 @@ contains
 
       end if
     else
-      ! -- set default intital stage
+      ! -- set default initial stage
       if (this%istorage == 1) then
         do n = 1, this%maxbound
           rval = this%strtop(n)
