@@ -51,7 +51,11 @@ install = { depends_on = [
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
+<<<<<<< HEAD
 fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
+=======
+fix-style = "echo 'Checking fortran format...'; python .github/common/check_format.py --write-changes; echo 'Checking spelling...'; python .github/common/check_spelling.py --write-changes"
+>>>>>>> 4a07844b (* update makefiles)
 
 # build/test
 setup = "meson setup --prefix=$(pwd) --libdir=bin"
