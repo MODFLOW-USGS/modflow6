@@ -71,3 +71,6 @@ test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
 update-version = { cmd = "python update_version.py", cwd = "distribution" }
 deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
 sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
+
+# prepare for PR
+prepare-pull-request = {depends_on = ["fix-style", "build-makefiles", "run-mf6ivar"]}
