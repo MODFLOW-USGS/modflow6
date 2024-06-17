@@ -26,36 +26,38 @@ module MeshModelModule
   !> @brief type for storing model export dimension ids
   !<
   type :: MeshNCDimIdType
-    integer(I4B) :: nmesh_node
-    integer(I4B) :: nmesh_face
-    integer(I4B) :: max_nmesh_face_nodes
-    integer(I4B) :: nlay
-    integer(I4B) :: time
+    integer(I4B) :: nmesh_node !< number of nodes in mesh
+    integer(I4B) :: nmesh_face !< number of faces in mesh
+    integer(I4B) :: max_nmesh_face_nodes !< max number of nodes in a single face
+    integer(I4B) :: nlay !< number of layers
+    integer(I4B) :: time !< number of steps
   contains
   end type MeshNCDimIdType
 
   !> @brief type for storing model export variable ids
   !<
   type :: MeshNCVarIdType
-    integer(I4B) :: mesh
-    integer(I4B) :: mesh_node_x
-    integer(I4B) :: mesh_node_y
-    integer(I4B) :: mesh_face_x
-    integer(I4B) :: mesh_face_y
-    integer(I4B) :: mesh_face_xbnds
-    integer(I4B) :: mesh_face_ybnds
-    integer(I4B) :: mesh_face_nodes
-    integer(I4B) :: time
-    integer(I4B), dimension(:), allocatable :: dependent
+    integer(I4B) :: mesh !< mesh container variable
+    integer(I4B) :: mesh_node_x !< mesh nodes x array
+    integer(I4B) :: mesh_node_y !< mesh nodes y array
+    integer(I4B) :: mesh_face_x !< mesh faces x location array
+    integer(I4B) :: mesh_face_y !< mesh faces y location array
+    integer(I4B) :: mesh_face_xbnds !< mesh faces 2D x bounds array
+    integer(I4B) :: mesh_face_ybnds !< mesh faces 2D y bounds array
+    integer(I4B) :: mesh_face_nodes !< mesh faces 2D nodes array
+    integer(I4B) :: time !< time coordinate variable
+    integer(I4B), dimension(:), allocatable :: dependent !< layered dependent variables array
   contains
   end type MeshNCVarIdType
 
   !> @brief base ugrid netcdf export type
   !<
   type, abstract, extends(NCBaseModelExportType) :: MeshModelType
-    type(MeshNCDimIdType) :: dim_ids
-    type(MeshNCVarIdType) :: var_ids
-    integer(I4B) :: nlay
+    type(MeshNCDimIdType) :: dim_ids !< dimension ids
+    type(MeshNCVarIdType) :: var_ids !< variable ids
+    integer(I4B) :: nlay !< number of layers
+    integer(I4B), pointer :: ugc_time !< chunking parameter for time dimension
+    integer(I4B), pointer :: ugc_face !< chunking parameter for face dimension
   contains
     procedure :: add_global_att
     procedure(nc_array_export_if), deferred :: export_input_array
@@ -201,9 +203,20 @@ contains
   !> @brief create the model layer dependent variables
   !<
   subroutine define_dependent(this)
+    use MemoryManagerExtModule, only: mem_set_value
     class(MeshModelType), intent(inout) :: this
     character(len=LINELENGTH) :: varname, longname
     integer(I4B) :: k
+    logical(LGP) :: found
+    !
+    ! TODO move allocate/init earlier
+    allocate (this%ugc_time)
+    allocate (this%ugc_face)
+    this%ugc_time = -1
+    this%ugc_face = -1
+    !
+    call mem_set_value(this%ugc_time, 'UGC_TIME', this%ncf_mempath, found)
+    call mem_set_value(this%ugc_face, 'UGC_FACE', this%ncf_mempath, found)
     !
     ! -- create a dependent variable for each layer
     do k = 1, this%nlay
@@ -223,6 +236,23 @@ contains
                                     this%dim_ids%time/), &
                                   this%var_ids%dependent(k)), &
                      this%ncid, this%iout)
+      !
+      ! -- apply chunking parameters
+      if (this%ugc_time > 0 .and. this%ugc_face > 0) then
+        call nf_verify(nf90_def_var_chunking(this%ncid, &
+                                             this%var_ids%dependent(k), &
+                                             NF90_CHUNKED, &
+                                             (/this%ugc_face, this%ugc_time/)), &
+                       this%ncid, this%iout)
+      end if
+      ! -- deflate and shuffle
+      if (this%deflate >= 0) then
+        call nf_verify(nf90_def_var_deflate(this%ncid, &
+                                            this%var_ids%dependent(k), &
+                                            shuffle=this%shuffle, deflate=1, &
+                                            deflate_level=this%deflate), &
+                       this%ncid, this%iout)
+      end if
       !
       ! -- assign variable attributes
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
@@ -287,7 +317,7 @@ contains
     call nf_verify(nf90_def_var(this%ncid, this%mesh_name, NF90_INT, &
                                 this%var_ids%mesh), this%ncid, this%iout)
     !
-    ! -- assign variable attributes
+    ! -- assign container variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh, 'cf_role', &
                                 'mesh_topology'), this%ncid, this%iout)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh, 'long_name', &
@@ -306,13 +336,12 @@ contains
                                 'face_node_connectivity', 'mesh_face_nodes'), &
                    this%ncid, this%iout)
 
-    ! -- NODE arrays
     ! -- create mesh x node (mesh vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_node_x', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_node/), &
                                 this%var_ids%mesh_node_x), this%ncid, this%iout)
     !
-    ! -- assign variable attributes
+    ! -- assign mesh x node variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                 'units', 'm'), this%ncid, this%iout)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
@@ -333,7 +362,7 @@ contains
                                 (/this%dim_ids%nmesh_node/), &
                                 this%var_ids%mesh_node_y), this%ncid, this%iout)
     !
-    ! -- assign variable attributes
+    ! -- assign mesh y variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                 'units', 'm'), this%ncid, this%iout)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
@@ -349,13 +378,12 @@ contains
                      this%ncid, this%iout)
     end if
 
-    ! -- FACE arrays
     ! -- create mesh x face (cell vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_x', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_x), this%ncid, this%iout)
     !
-    ! -- assign variable attributes
+    ! -- assign mesh x face variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
                                 'units', 'm'), this%ncid, this%iout)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
@@ -384,7 +412,7 @@ contains
                                 (/this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_y), this%ncid, this%iout)
     !
-    ! -- assign variable attributes
+    ! -- assign mesh y face variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
                                 'units', 'm'), this%ncid, this%iout)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
@@ -409,8 +437,6 @@ contains
                                 this%var_ids%mesh_face_ybnds), &
                    this%ncid, this%iout)
     !
-
-    ! -- FACE NODES array
     ! -- create mesh face nodes variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_nodes', NF90_INT, &
                                 (/this%dim_ids%max_nmesh_face_nodes, &
@@ -478,6 +504,8 @@ contains
         errstr = 'Illegal stride'
       case (NF90_EBADNAME) ! (-59)
         errstr = 'Attribute or variable name contains illegal characters'
+      case (-127) ! (NC_EBADCHUNK)
+        errstr = 'Bad chunksize.'
       case default
         errstr = ''
       end select

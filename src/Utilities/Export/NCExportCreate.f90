@@ -121,9 +121,10 @@ contains
       export_model => get_export_model(n)
       if (export_model%nctype /= NETCDF_UNDEF) then
         !
-        ! -- netcdf export is active, set model pointer
+        ! -- netcdf export is active identify model
         do im = 1, basemodellist%Count()
           !
+          ! -- set model pointer
           num_model => GetNumericalModelFromList(basemodellist, im)
           if (num_model%name == export_model%modelname .and. &
               num_model%macronym == export_model%modeltype) then

@@ -24,7 +24,7 @@ module NCModelExportModule
   ENUM, BIND(C)
     ENUMERATOR :: NETCDF_UNDEF = 0 !< undefined netcdf export type
     ENUMERATOR :: NETCDF_STRUCTURED = 1 !< netcdf structrured export
-    ENUMERATOR :: NETCDF_UGRID = 2 !< netcdf ugrid export
+    ENUMERATOR :: NETCDF_UGRID = 2 !< netcdf mesh export
   END ENUM
 
   !> @brief netcdf export attribute annotations
@@ -45,23 +45,25 @@ module NCModelExportModule
   !<
   type :: NCModelExportType
     character(len=LENMODELNAME) :: modelname !< name of model
-    character(len=LENCOMPONENTNAME) :: modeltype
+    character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: nc_filename
-    character(len=LINELENGTH) :: gridmap_name = 'projection'
-    character(len=LINELENGTH) :: mesh_name = 'mesh'
-    character(len=LENMEMPATH) :: dis_mempath
-    character(len=LENMEMPATH) :: ncf_mempath
-    character(len=LENBIGLINE) :: ogc_wkt
-    character(len=LINELENGTH) :: datetime
-    character(len=LINELENGTH) :: xname
-    type(NCExportAnnotation) :: annotation
-    real(DP), dimension(:), pointer, contiguous :: x
-    integer(I4B) :: disenum
-    integer(I4B) :: ncid
-    integer(I4B) :: stepcnt
-    integer(I4B) :: totnstp
-    integer(I4B) :: iout
+    character(len=LINELENGTH) :: nc_filename !< name of netcdf export file
+    character(len=LINELENGTH) :: gridmap_name = 'projection' !< name of grid mapping variable
+    character(len=LINELENGTH) :: mesh_name = 'mesh' !< name of mesh container variable
+    character(len=LENMEMPATH) :: dis_mempath !< discretization input mempath
+    character(len=LENMEMPATH) :: ncf_mempath !< netcdf utility package input mempath
+    character(len=LENBIGLINE) :: ogc_wkt !< wkt user string
+    character(len=LINELENGTH) :: datetime !< export file creation time
+    character(len=LINELENGTH) :: xname !< dependent variable name
+    type(NCExportAnnotation) :: annotation !< export file annotation
+    real(DP), dimension(:), pointer, contiguous :: x !< dependent variable pointer
+    integer(I4B) :: disenum !< type of discretization
+    integer(I4B) :: ncid !< netcdf file descriptor
+    integer(I4B) :: stepcnt !< simulation step count
+    integer(I4B) :: totnstp !< simulation total number of steps
+    integer(I4B), pointer :: deflate !< variable deflate level
+    integer(I4B), pointer :: shuffle !< variable shuffle filter
+    integer(I4B) :: iout !< lst file descriptor
   contains
     procedure :: init => export_init
     procedure :: destroy => export_destroy
@@ -90,7 +92,7 @@ module NCModelExportModule
 
 contains
 
-  !> @brief initialization of netcdf file scoped attributes
+  !> @brief set netcdf file scoped attributes
   !<
   subroutine set(this, modelname, modeltype, modelfname, nctype)
     use VersionModule, only: VERSION
@@ -120,22 +122,14 @@ contains
     case ('GWF')
       fullname = 'Groundwater Flow'
       this%title = trim(modelname)//' hydraulic head'
-      ! -- https://csdms.colorado.edu/wiki/CSN_Searchable_List-Names
-      !this%stdname = 'soil_water__pressure_head'
       this%longname = 'head'
     case ('GWT')
       fullname = 'Groundwater Transport'
       this%title = trim(modelname)//' concentration'
-      ! -- https://csdms.colorado.edu/wiki/CSN_Searchable_List-Names
-      ! -- https://en.wikipedia.org/wiki/Diffusivity
-      !this%stdname = 'soil_water__diffusivity'
       this%longname = 'concentration'
     case ('GWE')
       fullname = 'Groundwater Energy'
       this%title = trim(modelname)//' temperature'
-      ! -- https://csdms.colorado.edu/wiki/CSN_Searchable_List-Names
-      ! -- https://en.wikipedia.org/wiki/Diffusivity
-      !this%stdname = 'soil_water__diffusivity'
       this%longname = 'temperature'
     case default
       errmsg = trim(modeltype)//' models not supported for NetCDF export.'
@@ -143,7 +137,7 @@ contains
       call store_error_filename(modelfname)
     end select
     !
-    ! -- model attribute string
+    ! -- model description string
     this%model = trim(modelname)//': MODFLOW 6 '//trim(fullname)// &
                  ' ('//trim(modeltype)//') model'
     !
@@ -179,6 +173,10 @@ contains
     type(UtlNcfParamFoundType) :: found
     logical(LGP) :: found_mempath
     !
+    ! -- allocate
+    allocate (this%deflate)
+    allocate (this%shuffle)
+    !
     ! -- initialize
     this%modelname = modelname
     this%modeltype = modeltype
@@ -193,6 +191,8 @@ contains
     this%ncid = 0
     this%stepcnt = 0
     this%totnstp = 0
+    this%deflate = -1
+    this%shuffle = 0
     this%iout = iout
     !
     ! -- set file scoped attributes
@@ -225,12 +225,17 @@ contains
     model_mempath = create_mem_path(component=modelname)
     call mem_setptr(this%x, 'X', model_mempath)
     !
-    ! --set ncf_mempath and wkt string if provided
+    ! --set ncf_mempath if provided
     call mem_set_value(this%ncf_mempath, 'NCF6_MEMPATH', this%dis_mempath, &
                        found_mempath)
+    !
     if (found_mempath) then
       call mem_set_value(this%ogc_wkt, 'OGC_WKT', this%ncf_mempath, &
                          found%ogc_wkt)
+      call mem_set_value(this%deflate, 'DEFLATE', this%ncf_mempath, &
+                         found%deflate)
+      call mem_set_value(this%shuffle, 'SHUFFLE', this%ncf_mempath, &
+                         found%shuffle)
     end if
     !
     ! -- set datetime string
@@ -251,6 +256,8 @@ contains
   subroutine export_destroy(this)
     class(NCModelExportType), intent(inout) :: this
     ! -- override in derived class
+    deallocate (this%deflate)
+    deallocate (this%shuffle)
   end subroutine export_destroy
 
 end module NCModelExportModule

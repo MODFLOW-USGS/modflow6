@@ -36,10 +36,10 @@ module ModelExportModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
-    class(NCBaseModelExportType), pointer :: nc_export => null()
-    integer(I4B) :: nctype
-    integer(I4B) :: disenum
-    integer(I4B) :: iout
+    class(NCBaseModelExportType), pointer :: nc_export => null() !< netcdf export object pointer
+    integer(I4B) :: nctype !< type of netcdf export
+    integer(I4B) :: disenum !< type of discretization
+    integer(I4B) :: iout !< lst file descriptor
   contains
     procedure :: init
     procedure :: post_step

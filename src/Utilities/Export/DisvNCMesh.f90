@@ -22,9 +22,9 @@ module MeshDisvModelModule
   private
   public :: Mesh2dDisvExportType
 
-  ! -- UGRID layered mesh (ULM) DISV
+  ! -- UGRID layered mesh DISV
   type, extends(Mesh2dModelType) :: Mesh2dDisvExportType
-    class(DisvType), pointer :: disv => null() !discretization object
+    class(DisvType), pointer :: disv => null() !< pointer to model disv package
   contains
     procedure :: init => disv_export_init
     procedure :: destroy => disv_export_destroy
@@ -37,7 +37,7 @@ module MeshDisvModelModule
 
 contains
 
-  !> @brief netcdf export dis model init
+  !> @brief netcdf export disv init
   !<
   subroutine disv_export_init(this, modelname, modeltype, modelfname, disenum, &
                               nctype, iout)
@@ -66,11 +66,16 @@ contains
                    this%ncid, this%iout)
   end subroutine disv_export_init
 
+  !> @brief netcdf export disv destroy
+  !<
   subroutine disv_export_destroy(this)
     use SimVariablesModule, only: idm_context
     use MemoryManagerExtModule, only: memorylist_remove
     class(Mesh2dDisvExportType), intent(inout) :: this
     call nf_verify(nf90_close(this%ncid), this%ncid, this%iout)
+    !
+    ! -- destroy base class
+    call this%NCModelExportType%destroy()
     !
     ! -- Deallocate idm memory
     if (this%ncf_mempath /= '') then
@@ -78,6 +83,8 @@ contains
     end if
   end subroutine disv_export_destroy
 
+  !> @brief netcdf export define
+  !<
   subroutine df(this)
     class(Mesh2dDisvExportType), intent(inout) :: this
     ! -- put root group file scope attributes
@@ -90,7 +97,7 @@ contains
     call this%define_dependent()
     ! -- exit define mode
     call nf_verify(nf90_enddef(this%ncid), this%ncid, this%iout)
-    ! -- set mesh variables
+    ! -- create mesh
     call this%add_mesh_data()
     ! -- define and set package input griddata
     call this%add_pkg_data()
@@ -100,6 +107,8 @@ contains
     call nf_verify(nf90_sync(this%ncid), this%ncid, this%iout)
   end subroutine df
 
+  !> @brief netcdf export step
+  !<
   subroutine step(this)
     use ConstantsModule, only: DHNOFLO
     use TdisModule, only: totim
@@ -163,6 +172,8 @@ contains
     deallocate (dbl2d)
   end subroutine step
 
+  !> @brief netcdf export an input array
+  !<
   subroutine export_input_array(this, pkgname, mempath, idt)
     use InputOutputModule, only: lowcase
     class(Mesh2dDisvExportType), intent(inout) :: this
@@ -196,27 +207,33 @@ contains
       call mem_setptr(int1d, idt%mf6varname, mempath)
       call nc_export_int1d(this%ncid, this%dim_ids, this%var_ids, this%disv, &
                            int1d, nc_varname, pkgname, idt%tagname, gridmap, &
-                           idt%shape, idt%longname, this%iout)
+                           idt%shape, idt%longname, this%deflate, this%shuffle, &
+                           this%ugc_face, this%iout)
     case ('INTEGER2D')
       call mem_setptr(int2d, idt%mf6varname, mempath)
       call nc_export_int2d(this%ncid, this%dim_ids, this%var_ids, this%disv, &
                            int2d, nc_varname, pkgname, idt%tagname, gridmap, &
-                           idt%shape, idt%longname, this%iout)
+                           idt%shape, idt%longname, this%deflate, this%shuffle, &
+                           this%ugc_face, this%iout)
     case ('DOUBLE1D')
       call mem_setptr(dbl1d, idt%mf6varname, mempath)
       call nc_export_dbl1d(this%ncid, this%dim_ids, this%var_ids, this%disv, &
                            dbl1d, nc_varname, pkgname, idt%tagname, gridmap, &
-                           idt%shape, idt%longname, this%iout)
+                           idt%shape, idt%longname, this%deflate, this%shuffle, &
+                           this%ugc_face, this%iout)
     case ('DOUBLE2D')
       call mem_setptr(dbl2d, idt%mf6varname, mempath)
       call nc_export_dbl2d(this%ncid, this%dim_ids, this%var_ids, this%disv, &
                            dbl2d, nc_varname, pkgname, idt%tagname, gridmap, &
-                           idt%shape, idt%longname, this%iout)
+                           idt%shape, idt%longname, this%deflate, this%shuffle, &
+                           this%ugc_face, this%iout)
     case default
       ! -- no-op, no other datatypes exported
     end select
   end subroutine export_input_array
 
+  !> @brief netcdf export define dimensions
+  !<
   subroutine define_dim(this)
     class(Mesh2dDisvExportType), intent(inout) :: this
     integer(I4B), dimension(:), contiguous, pointer :: ncvert
@@ -259,6 +276,8 @@ contains
                                 ncpl_dim), this%ncid, this%iout)
   end subroutine define_dim
 
+  !> @brief netcdf export add mesh information
+  !<
   subroutine add_mesh_data(this)
     class(Mesh2dDisvExportType), intent(inout) :: this
     integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
@@ -274,8 +293,6 @@ contains
     integer(I4B) :: istop
     !
     ! -- set pointers to input context
-    ! -- TODO: should the data come from the disv object
-    ! -- TODO: does this data ignore xorigin/yorigin?
     call mem_setptr(icell2d, 'ICELL2D', this%dis_mempath)
     call mem_setptr(ncvert, 'NCVERT', this%dis_mempath)
     call mem_setptr(icvert, 'ICVERT', this%dis_mempath)
@@ -358,9 +375,11 @@ contains
     deallocate (verts)
   end subroutine add_mesh_data
 
+  !> @brief netcdf export 1D integer array
+  !<
   subroutine nc_export_int1d(ncid, dim_ids, var_ids, dis, p_mem, nc_varname, &
                              pkgname, tagname, gridmap_name, shapestr, longname, &
-                             iout)
+                             deflate, shuffle, ugc_face, iout)
     use InputOutputModule, only: lowcase
     integer(I4B), intent(in) :: ncid
     type(MeshNCDimIdType), intent(inout) :: dim_ids
@@ -373,6 +392,9 @@ contains
     character(len=*), intent(in) :: gridmap_name
     character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: longname
+    integer(I4B), intent(in) :: deflate
+    integer(I4B), intent(in) :: shuffle
+    integer(I4B), intent(in) :: ugc_face
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B), dimension(2) :: dis_shape
@@ -397,6 +419,17 @@ contains
       call nf_verify(nf90_def_var(ncid, nc_varname, NF90_INT, &
                                   (/axis_sz/), var_id(1)), &
                      ncid, iout)
+      !
+      if (ugc_face > 0) then
+        call nf_verify(nf90_def_var_chunking(ncid, var_id(1), NF90_CHUNKED, &
+                                             (/ugc_face/)), ncid, iout)
+      end if
+      if (deflate >= 0) then
+        call nf_verify(nf90_def_var_deflate(ncid, var_id(1), shuffle=shuffle, &
+                                            deflate=1, deflate_level=deflate), &
+                       ncid, iout)
+      end if
+      !
       call nf_verify(nf90_put_att(ncid, var_id(1), '_FillValue', &
                                   (/NF90_FILL_INT/)), ncid, iout)
       call nf_verify(nf90_put_att(ncid, var_id(1), 'long_name', &
@@ -429,6 +462,17 @@ contains
         call nf_verify(nf90_def_var(ncid, varname_l, NF90_INT, &
                                     (/dim_ids%nmesh_face/), var_id(k)), &
                        ncid, iout)
+        !
+        if (ugc_face > 0) then
+          call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
+                                               (/ugc_face/)), ncid, iout)
+        end if
+        if (deflate >= 0) then
+          call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
+                                              deflate=1, deflate_level=deflate), &
+                         ncid, iout)
+        end if
+        !
         call nf_verify(nf90_put_att(ncid, var_id(k), '_FillValue', &
                                     (/NF90_FILL_INT/)), ncid, iout)
         call nf_verify(nf90_put_att(ncid, var_id(k), 'long_name', &
@@ -459,11 +503,11 @@ contains
     end if
   end subroutine nc_export_int1d
 
-  !> @brief Create export file int2d
+  !> @brief netcdf export 2D integer array
   !<
   subroutine nc_export_int2d(ncid, dim_ids, var_ids, disv, p_mem, nc_varname, &
                              pkgname, tagname, gridmap_name, shapestr, longname, &
-                             iout)
+                             deflate, shuffle, ugc_face, iout)
     integer(I4B), intent(in) :: ncid
     type(MeshNCDimIdType), intent(inout) :: dim_ids
     type(MeshNCVarIdType), intent(inout) :: var_ids
@@ -475,6 +519,9 @@ contains
     character(len=*), intent(in) :: gridmap_name
     character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: longname
+    integer(I4B), intent(in) :: deflate
+    integer(I4B), intent(in) :: shuffle
+    integer(I4B), intent(in) :: ugc_face
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B), dimension(:), allocatable :: var_id
@@ -496,6 +543,17 @@ contains
       call nf_verify(nf90_def_var(ncid, varname_l, NF90_INT, &
                                   (/dim_ids%nmesh_face/), var_id(k)), &
                      ncid, iout)
+      !
+      if (ugc_face > 0) then
+        call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
+                                             (/ugc_face/)), ncid, iout)
+      end if
+      if (deflate >= 0) then
+        call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
+                                            deflate=1, deflate_level=deflate), &
+                       ncid, iout)
+      end if
+      !
       call nf_verify(nf90_put_att(ncid, var_id(k), '_FillValue', &
                                   (/NF90_FILL_INT/)), ncid, iout)
       call nf_verify(nf90_put_att(ncid, var_id(k), 'long_name', &
@@ -517,9 +575,11 @@ contains
     deallocate (var_id)
   end subroutine nc_export_int2d
 
+  !> @brief netcdf export 1D double array
+  !<
   subroutine nc_export_dbl1d(ncid, dim_ids, var_ids, dis, p_mem, nc_varname, &
                              pkgname, tagname, gridmap_name, shapestr, longname, &
-                             iout)
+                             deflate, shuffle, ugc_face, iout)
     use InputOutputModule, only: lowcase
     integer(I4B), intent(in) :: ncid
     type(MeshNCDimIdType), intent(inout) :: dim_ids
@@ -532,6 +592,9 @@ contains
     character(len=*), intent(in) :: gridmap_name
     character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: longname
+    integer(I4B), intent(in) :: deflate
+    integer(I4B), intent(in) :: shuffle
+    integer(I4B), intent(in) :: ugc_face
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B), dimension(2) :: dis_shape
@@ -556,6 +619,17 @@ contains
       call nf_verify(nf90_def_var(ncid, nc_varname, NF90_DOUBLE, &
                                   (/axis_sz/), var_id(1)), &
                      ncid, iout)
+      !
+      if (ugc_face > 0) then
+        call nf_verify(nf90_def_var_chunking(ncid, var_id(1), NF90_CHUNKED, &
+                                             (/ugc_face/)), ncid, iout)
+      end if
+      if (deflate >= 0) then
+        call nf_verify(nf90_def_var_deflate(ncid, var_id(1), shuffle=shuffle, &
+                                            deflate=1, deflate_level=deflate), &
+                       ncid, iout)
+      end if
+      !
       call nf_verify(nf90_put_att(ncid, var_id(1), '_FillValue', &
                                   (/NF90_FILL_DOUBLE/)), ncid, iout)
       call nf_verify(nf90_put_att(ncid, var_id(1), 'long_name', &
@@ -588,6 +662,17 @@ contains
         call nf_verify(nf90_def_var(ncid, varname_l, NF90_DOUBLE, &
                                     (/dim_ids%nmesh_face/), var_id(k)), &
                        ncid, iout)
+        !
+        if (ugc_face > 0) then
+          call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
+                                               (/ugc_face/)), ncid, iout)
+        end if
+        if (deflate >= 0) then
+          call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
+                                              deflate=1, deflate_level=deflate), &
+                         ncid, iout)
+        end if
+        !
         call nf_verify(nf90_put_att(ncid, var_id(k), '_FillValue', &
                                     (/NF90_FILL_DOUBLE/)), ncid, iout)
         call nf_verify(nf90_put_att(ncid, var_id(k), 'long_name', &
@@ -618,11 +703,11 @@ contains
     end if
   end subroutine nc_export_dbl1d
 
-  !> @brief Create export file dbl2d
+  !> @brief netcdf export 2D double array
   !<
   subroutine nc_export_dbl2d(ncid, dim_ids, var_ids, disv, p_mem, nc_varname, &
                              pkgname, tagname, gridmap_name, shapestr, longname, &
-                             iout)
+                             deflate, shuffle, ugc_face, iout)
     integer(I4B), intent(in) :: ncid
     type(MeshNCDimIdType), intent(inout) :: dim_ids
     type(MeshNCVarIdType), intent(inout) :: var_ids
@@ -634,6 +719,9 @@ contains
     character(len=*), intent(in) :: gridmap_name
     character(len=*), intent(in) :: shapestr
     character(len=*), intent(in) :: longname
+    integer(I4B), intent(in) :: deflate
+    integer(I4B), intent(in) :: shuffle
+    integer(I4B), intent(in) :: ugc_face
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B), dimension(:), allocatable :: var_id
@@ -655,6 +743,17 @@ contains
       call nf_verify(nf90_def_var(ncid, varname_l, NF90_DOUBLE, &
                                   (/dim_ids%nmesh_face/), var_id(k)), &
                      ncid, iout)
+      !
+      if (ugc_face > 0) then
+        call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
+                                             (/ugc_face/)), ncid, iout)
+      end if
+      if (deflate >= 0) then
+        call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
+                                            deflate=1, deflate_level=deflate), &
+                       ncid, iout)
+      end if
+      !
       call nf_verify(nf90_put_att(ncid, var_id(k), '_FillValue', &
                                   (/NF90_FILL_DOUBLE/)), ncid, iout)
       call nf_verify(nf90_put_att(ncid, var_id(k), 'long_name', &

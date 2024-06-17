@@ -61,7 +61,6 @@ description keyword that specifies input griddata arrays should be written to th
 block options
 name ncf_filerecord
 type record ncf6 filein ncf6_filename
-shape
 reader urword
 tagged true
 optional true
@@ -71,7 +70,6 @@ description
 block options
 name ncf6
 type keyword
-shape
 in_record true
 reader urword
 tagged true
@@ -82,7 +80,6 @@ description keyword to specify that record corresponds to a netcdf configuration
 block options
 name filein
 type keyword
-shape
 in_record true
 reader urword
 tagged true
