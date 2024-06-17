@@ -1,4 +1,5 @@
 BEGIN OPTIONS
+  [STORAGE]
   [AUXILIARY <auxiliary(naux)>]
   [BOUNDNAMES]
   [PRINT_INPUT]

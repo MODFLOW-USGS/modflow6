@@ -59,6 +59,7 @@ module SfrModule
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: sfrname => null() !< internal SFR reach name
     ! -- integers
+    integer(I4B), pointer :: istorage => null() !< flag for using kinematic wave approximation
     integer(I4B), pointer :: iprhed => null() !< flag for printing stages to listing file
     integer(I4B), pointer :: istageout => null() !< flag and unit number for binary stage output
     integer(I4B), pointer :: ibudgetout => null() !< flag and unit number for binary sfr budget output
@@ -112,9 +113,12 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null() !< total fraction of connected reaches that are not diversions
     integer(I4B), dimension(:), pointer, contiguous :: ndiv => null() !< number of diversions for each reach
     real(DP), dimension(:), pointer, contiguous :: usflow => null() !< upstream reach flow
+    real(DP), dimension(:), pointer, contiguous :: usflowold => null() !< upstream reach flow for previous time step
     real(DP), dimension(:), pointer, contiguous :: dsflow => null() !< downstream reach flow
+    real(DP), dimension(:), pointer, contiguous :: dsflowold => null() !< downstream reach flow for previous time step
     real(DP), dimension(:), pointer, contiguous :: depth => null() !< reach depth
     real(DP), dimension(:), pointer, contiguous :: stage => null() !< reach stage
+    real(DP), dimension(:), pointer, contiguous :: stageold => null() !< reach stage for last timestep
     real(DP), dimension(:), pointer, contiguous :: gwflow => null() !< flow from groundwater to reach
     real(DP), dimension(:), pointer, contiguous :: simevap => null() !< simulated reach evaporation
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null() !< simulated reach runoff
@@ -204,6 +208,7 @@ module SfrModule
     procedure, private :: sfr_read_crossection
     procedure, private :: sfr_read_connectiondata
     procedure, private :: sfr_read_diversions
+    procedure, private :: sfr_read_initial_stages
     ! -- calculations
     procedure, private :: sfr_calc_reach_depth
     procedure, private :: sfr_calc_xs_depth
@@ -290,6 +295,7 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
+    call mem_allocate(this%istorage, 'ISTORAGE', this%memoryPath)
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
@@ -316,6 +322,7 @@ contains
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Set values
+    this%istorage = 0
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
@@ -390,6 +397,13 @@ contains
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%memoryPath)
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%memoryPath)
     !
+    ! -- stage, usflow, and dsflow for previous timestep
+    if (this%istorage == 1) then
+      call mem_allocate(this%stageold, this%maxbound, 'STAGEOLD', this%memoryPath)
+      call mem_allocate(this%usflowold, this%maxbound, 'USFLOWOLD', this%memoryPath)
+      call mem_allocate(this%dsflowold, this%maxbound, 'DSFLOWOLD', this%memoryPath)
+    end if    
+    !
     ! -- reach order and connection data
     call mem_allocate(this%isfrorder, this%maxbound, 'ISFRORDER', &
                       this%memoryPath)
@@ -454,6 +468,13 @@ contains
       this%simrunoff(i) = DZERO
       this%stage0(i) = DZERO
       this%usflow0(i) = DZERO
+      !
+      ! -- stage
+      if (this%istorage == 1) then
+        this%stageold(i) = DZERO
+        this%usflowold(i) = DZERO
+        this%dsflowold(i) = DZERO
+      end if      
       !
       ! -- boundary data
       this%rough(i) = DZERO
@@ -611,6 +632,9 @@ contains
     ! -- read diversion data
     call this%sfr_read_diversions()
     !
+    ! -- read initial stage data
+    call this%sfr_read_initial_stages()    
+    !
     ! -- setup the budget object
     call this%sfr_setup_budobj()
     !
@@ -656,6 +680,10 @@ contains
     ! -- Check for SFR options
     found = .true.
     select case (option)
+    case ('STORAGE')
+      this%istorage = 1
+      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
+        ' REACH STORAGE IS ACTIVE.'
     case ('PRINT_STAGE')
       this%iprhed = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
@@ -1715,6 +1743,110 @@ contains
     return
   end subroutine sfr_read_diversions
 
+  !> @ brief Read initialstages data for the package
+  !!
+  !!  Method to read initialstages data for each reach for the SFR package.
+  !!
+  !<
+  subroutine sfr_read_initial_stages(this)
+    ! -- modules
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this !< SfrType object
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: ierr
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
+    integer(I4B) :: i
+    real(DP) :: rval
+    integer, allocatable, dimension(:) :: nboundchk
+    !
+    ! -- read reach data
+    call this%parser%GetBlock('INITIALSTAGES', isfound, ierr, &
+                              supportOpenClose=.true., &
+                              blockRequired=.false.)
+    !
+    ! -- parse reaches block if detected
+    if (isfound) then
+      if (this%istorage == 0) then
+        write (errmsg, '(a)') &
+        'INITIALSTAGES block can not be specified if STORAGE is &
+        &not specified in the OPTIONS block'
+      else
+        write (this%iout, '(/1x,a)') &
+          'PROCESSING '//trim(adjustl(this%text))//' INITIALSTAGES'
+
+        allocate (nboundchk(this%maxbound))
+        do n = 1, this%maxbound
+          nboundchk(n) = 0
+        end do
+          
+        do
+          call this%parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+
+          ! -- read reach number
+          n = this%parser%GetInteger()
+
+          if (n < 1 .or. n > this%maxbound) then
+            write (errmsg, '(a,i0,a,1x,i0,a)') &
+              'Reach number (', n, ') must be greater than 0 and less &
+              &than or equal to', this%maxbound, '.'
+            call store_error(errmsg)
+            cycle
+          end if
+
+          ! -- increment nboundchk
+          nboundchk(n) = nboundchk(n) + 1
+
+          rval = this%parser%GetDouble()
+          this%stage(n) = rval
+
+          if (rval < this%strtop(n)) then
+            write (errmsg, '(a,g0,a,1x,i0,1x,a,g0,a)') &
+              'Initial stage (', rval, ') for reach', n, &
+              'is less than the reach top (', this%strtop(n), ').'
+            call store_error(errmsg)
+          end if
+        end do
+
+        write (this%iout, '(1x,a)') &
+          'END OF '//trim(adjustl(this%text))//' INITIALSTAGES'
+
+        !
+        ! -- Check to make sure that every reach is specified and that no reach
+        !    is specified more than once.
+        do i = 1, this%maxbound
+          if (nboundchk(i) == 0) then
+            write (errmsg, '(a,i0,1x,a)') &
+              'Information for reach ', i, 'not specified in initialstages block.'
+            call store_error(errmsg)
+          else if (nboundchk(i) > 1) then
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
+              'Initial stage information specified', nboundchk(i), 'times for reach', i
+            call store_error(errmsg)
+          end if
+        end do
+        deallocate (nboundchk)
+      
+      end if
+    else
+      ! -- set default intital stage
+      if (this%istorage == 1) then
+        do n = 1, this%maxbound
+          rval = this%strtop(n)
+          this%stage(n) = rval
+        end do
+      end if
+    end if
+    !
+    ! -- terminate if errors encountered in reach block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+  end subroutine sfr_read_initial_stages
+
   !> @ brief Read and prepare period data for package
     !!
     !!  Method to read and prepare period data for the SFR package.
@@ -1940,6 +2072,15 @@ contains
         end do
       end do
     end if
+    
+    ! -- update previous values
+    if (this%istorage == 1) then
+      do n = 1, this%maxbound
+        this%stageold(n) = this%stage(n)
+        this%usflowold(n) = this%usflow(n)
+        this%dsflowold(n) = this%dsflow(n)
+      end do
+    end if    
     !
     ! -- reset upstream flow to zero and set specified stage
     do n = 1, this%maxbound
@@ -2677,6 +2818,13 @@ contains
     call mem_deallocate(this%denseterms)
     call mem_deallocate(this%viscratios)
     !
+    ! -- stage, usflow, and dsflow for previous timestep
+    if (this%istorage == 1) then
+      call mem_deallocate(this%stageold)
+      call mem_deallocate(this%usflowold)
+      call mem_deallocate(this%dsflowold)
+    end if    
+    !
     ! -- deallocate reach order and connection data
     call mem_deallocate(this%isfrorder)
     call mem_deallocate(this%ia)
@@ -2735,6 +2883,7 @@ contains
     end if
     !
     ! -- deallocate scalars
+    call mem_deallocate(this%istorage)
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)

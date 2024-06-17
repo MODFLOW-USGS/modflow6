@@ -3,6 +3,8 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
+\item \texttt{STORAGE}---keyword that activates storage contributions to the stream-flow routing package continuity equation.
+
 \item \texttt{auxiliary}---defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block.
 
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of stream reach cells.
@@ -124,6 +126,14 @@
 \item \texttt{iconr}---integer value that defines the downstream reach that will receive the diverted water. IDV must be greater than zero and less than or equal to NREACHES. Furthermore, reach  ICONR must be a downstream connection for reach IFNO.
 
 \item \texttt{cprior}---character string value that defines the the prioritization system for the diversion, such as when insufficient water is available to meet all diversion stipulations, and is used in conjunction with the value of FLOW value specified in the STRESS\_PERIOD\_DATA section. Available diversion options include:  (1) CPRIOR = `FRACTION', then the amount of the diversion is computed as a fraction of the streamflow leaving reach IFNO ($Q_{DS}$); in this case, 0.0 $\le$ DIVFLOW $\le$ 1.0.  (2) CPRIOR = `EXCESS', a diversion is made only if $Q_{DS}$ for reach IFNO exceeds the value of DIVFLOW. If this occurs, then the quantity of water diverted is the excess flow ($Q_{DS} -$ DIVFLOW) and $Q_{DS}$ from reach IFNO is set equal to DIVFLOW. This represents a flood-control type of diversion, as described by Danskin and Hanson (2002). (3) CPRIOR = `THRESHOLD', then if $Q_{DS}$ in reach IFNO is less than the specified diversion flow DIVFLOW, no water is diverted from reach IFNO. If $Q_{DS}$ in reach IFNO is greater than or equal to DIVFLOW, DIVFLOW is diverted and $Q_{DS}$ is set to the remainder ($Q_{DS} -$ DIVFLOW)). This approach assumes that once flow in the stream is sufficiently low, diversions from the stream cease, and is the `priority' algorithm that originally was programmed into the STR1 Package (Prudic, 1989).  (4) CPRIOR = `UPTO' -- if $Q_{DS}$ in reach IFNO is greater than or equal to the specified diversion flow DIVFLOW, $Q_{DS}$ is reduced by DIVFLOW. If $Q_{DS}$ in reach IFNO is less than DIVFLOW, DIVFLOW is set to $Q_{DS}$ and there will be no flow available for reaches connected to downstream end of reach IFNO.
+
+\end{description}
+\item \textbf{Block: INITIALSTAGES}
+
+\begin{description}
+\item \texttt{ifno}---integer value that defines the feature (reach) number associated with the specified initial stage. The program will terminate with a error if IFNO is less than one or greater than NREACHES. The program will also terminate with an error if initialstages information is specified and STORAGE is not specified in the Options block.
+
+\item \texttt{initialstage}---real value that defines the initial stage for the reach. The program will terminate with an error if INITIALSTAGE is less than the RTP value for reach IFNO defined in the PACKAGEDATA block.
 
 \end{description}
 \item \textbf{Block: PERIOD}
