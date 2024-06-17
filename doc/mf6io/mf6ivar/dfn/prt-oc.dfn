@@ -157,7 +157,7 @@ type keyword
 reader urword
 optional true
 longname track transitions
-description keyword to indicate that particle tracking output is to be written when a particle exits a cell
+description keyword to indicate that particle tracking output is to be written when a particle exits a feature (a model, cell, or subcell)
 
 block options
 name track_timestep

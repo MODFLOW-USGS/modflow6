@@ -1096,7 +1096,10 @@
 | GWF | STO | OPTIONS | SS_CONFINED_ONLY | KEYWORD | keyword to indicate that compressible storage is only calculated for a convertible cell (ICONVERT>0) when the cell is under confined conditions (head greater than or equal to the top of the cell). This option has no effect on cells that are marked as being always confined (ICONVERT=0).  This option is identical to the approach used to calculate storage changes under confined conditions in MODFLOW-2005. |
 | GWF | STO | OPTIONS | TVS6 | KEYWORD | keyword to specify that record corresponds to a time-varying storage (TVS) file.  The behavior of TVS and a description of the input file is provided separately. |
 | GWF | STO | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWF | STO | OPTIONS | TVS_FILENAME | STRING | defines a time-varying storage (TVS) input file.  Records in the TVS file can be used to change specific storage and specific yield properties at specified times or stress periods. |
+| GWF | STO | OPTIONS | TVS6_FILENAME | STRING | defines a time-varying storage (TVS) input file.  Records in the TVS file can be used to change specific storage and specific yield properties at specified times or stress periods. |
+| GWF | STO | OPTIONS | EXPORT_ARRAY_ASCII | KEYWORD | keyword that specifies input grid arrays, which already support the layered keyword, should be written to layered ascii output files. |
+| GWF | STO | OPTIONS | DEV_ORIGINAL_SPECIFIC_STORAGE | KEYWORD | flag indicating the original storage specific storage formulation should be used |
+| GWF | STO | OPTIONS | DEV_OLDSTORAGEFORMULATION | KEYWORD | development option flag for old storage formulation |
 | GWF | STO | GRIDDATA | ICONVERT | INTEGER (NODES) | is a flag for each cell that specifies whether or not a cell is convertible for the storage calculation. 0 indicates confined storage is used. $>$0 indicates confined storage is used when head is above cell top and a mixed formulation of unconfined and confined storage is used when head is below cell top. |
 | GWF | STO | GRIDDATA | SS | DOUBLE PRECISION (NODES) | is specific storage (or the storage coefficient if STORAGECOEFFICIENT is specified as an option). Specific storage values must be greater than or equal to 0. If the CSUB Package is included in the GWF model, specific storage must be zero for every cell. |
 | GWF | STO | GRIDDATA | SY | DOUBLE PRECISION (NODES) | is specific yield. Specific yield values must be greater than or equal to 0. Specific yield does not have to be specified if there are no convertible cells (ICONVERT=0 in every cell). |
@@ -1592,7 +1595,7 @@
 | PRT | OC | OPTIONS | TRACKCSV | KEYWORD | keyword to specify that record corresponds to a CSV track file.  Each PRT Model's OC Package may have only one CSV track file. |
 | PRT | OC | OPTIONS | TRACKCSVFILE | STRING | name of the comma-separated value (CSV) file to write tracking information. |
 | PRT | OC | OPTIONS | TRACK_RELEASE | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle is released |
-| PRT | OC | OPTIONS | TRACK_EXIT | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a cell |
+| PRT | OC | OPTIONS | TRACK_EXIT | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a feature (a model, cell, or subcell) |
 | PRT | OC | OPTIONS | TRACK_TIMESTEP | KEYWORD | keyword to indicate that particle tracking output is to be written at the end of each time step |
 | PRT | OC | OPTIONS | TRACK_TERMINATE | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle terminates for any reason |
 | PRT | OC | OPTIONS | TRACK_WEAKSINK | KEYWORD | keyword to indicate that particle tracking output is to be written when a particle exits a weak sink (a cell which removes some but not all inflow from adjacent cells) |
@@ -1800,6 +1803,7 @@
 | SWF | OC | PERIOD | FREQUENCY | INTEGER | save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | SWF | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | SWF | STO | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
+| SWF | STO | OPTIONS | EXPORT_ARRAY_ASCII | KEYWORD | keyword that specifies input grid arrays, which already support the layered keyword, should be written to layered ascii output files. |
 | SWF | STO | PERIOD | IPER | INTEGER | integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block. |
 | SWF | STO | PERIOD | STEADY-STATE | KEYWORD | keyword to indicate that stress period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. |
 | SWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
