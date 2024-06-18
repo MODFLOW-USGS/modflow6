@@ -51,6 +51,7 @@ install = { depends_on = [
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
+fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
 
 # build/test
 setup = "meson setup --prefix=$(pwd) --libdir=bin"
@@ -70,3 +71,6 @@ test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
 update-version = { cmd = "python update_version.py", cwd = "distribution" }
 deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
 sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
+
+# prepare for PR
+prepare-pull-request = {depends_on = ["fix-style", "build-makefiles", "run-mf6ivar"]}
