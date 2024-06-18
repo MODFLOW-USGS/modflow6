@@ -14,6 +14,7 @@ module ExgSwfgwfInputModule
   type ExgSwfgwfParamFoundType
     logical :: ipr_input = .false.
     logical :: ipr_flow = .false.
+    logical :: ifixedcond = .false.
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: filein = .false.
@@ -21,7 +22,8 @@ module ExgSwfgwfInputModule
     logical :: nexg = .false.
     logical :: cellidm1 = .false.
     logical :: cellidm2 = .false.
-    logical :: cond = .false.
+    logical :: bedleak = .false.
+    logical :: cfact = .false.
   end type ExgSwfgwfParamFoundType
 
   logical :: exg_swfgwf_multi_package = .true.
@@ -61,6 +63,23 @@ module ExgSwfgwfInputModule
     'KEYWORD', & ! type
     '', & ! shape
     'keyword to print swfgwf flows to list file', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    exgswfgwf_ifixedcond = InputParamDefinitionType &
+    ( &
+    'EXG', & ! component
+    'SWFGWF', & ! subcomponent
+    'OPTIONS', & ! block
+    'FIXED_CONDUCTANCE', & ! tag name
+    'IFIXEDCOND', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -195,13 +214,30 @@ module ExgSwfgwfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exgswfgwf_cond = InputParamDefinitionType &
+    exgswfgwf_bedleak = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
-    'COND', & ! tag name
-    'COND', & ! fortran variable
+    'BEDLEAK', & ! tag name
+    'BEDLEAK', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    exgswfgwf_cfact = InputParamDefinitionType &
+    ( &
+    'EXG', & ! component
+    'SWFGWF', & ! subcomponent
+    'EXCHANGEDATA', & ! block
+    'CFACT', & ! tag name
+    'CFACT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
     'conductance', & ! longname
@@ -217,6 +253,7 @@ module ExgSwfgwfInputModule
     [ &
     exgswfgwf_ipr_input, &
     exgswfgwf_ipr_flow, &
+    exgswfgwf_ifixedcond, &
     exgswfgwf_obs_filerecord, &
     exgswfgwf_obs6, &
     exgswfgwf_filein, &
@@ -224,7 +261,8 @@ module ExgSwfgwfInputModule
     exgswfgwf_nexg, &
     exgswfgwf_cellidm1, &
     exgswfgwf_cellidm2, &
-    exgswfgwf_cond &
+    exgswfgwf_bedleak, &
+    exgswfgwf_cfact &
     ]
 
   type(InputParamDefinitionType), parameter :: &
@@ -235,7 +273,7 @@ module ExgSwfgwfInputModule
     'EXCHANGEDATA', & ! block
     'EXCHANGEDATA', & ! tag name
     'EXCHANGEDATA', & ! fortran variable
-    'RECARRAY CELLIDM1 CELLIDM2 COND', & ! type
+    'RECARRAY CELLIDM1 CELLIDM2 BEDLEAK CFACT', & ! type
     'NEXG', & ! shape
     'exchange data', & ! longname
     .true., & ! required
