@@ -376,7 +376,7 @@ modflow_sources = files(
     'mf6lists.f90',
     'SimulationCreate.f90',
     'RunControl.f90',
-    'RunControlFactory.F90',
+    'RunControlFactory.F90'
 )
 
 modflow_petsc_sources = files(
