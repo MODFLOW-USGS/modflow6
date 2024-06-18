@@ -83,15 +83,23 @@ jobs:
       - name: Install TeX Live
         run: |
           sudo apt-get update
-          sudo apt install texlive-latex-extra texlive-science texlive-font-utils
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      - name: Test building files from dfn's for LaTeX
+      - name: Test building MF6IO LaTeX from DFNs
         working-directory: modflow6/distribution
         run: pixi run pytest -v build_docs.py::test_build_mf6io_tex_from_dfn
+
+      - name: Test building PDFs from LaTeX
+        working-directory: modflow6/distribution
+        run: pixi run pytest -v build_docs.py::test_build_pdfs_from_tex
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
