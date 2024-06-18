@@ -7,4 +7,4 @@ if "%3" == "ifort" (
 call conda activate modflow6
 
 rem run python script
-python %1 %2 %3 %4 %5 %6
+python %1 %2 %3 %4 %5 %6 %7

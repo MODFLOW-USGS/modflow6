@@ -53,24 +53,44 @@ check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
 fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
 
-# build/test
-setup = "meson setup --prefix=$(pwd) --libdir=bin"
+# meson build/test
+builddir = "echo _builddir"
+setup = "meson setup --prefix=$(pwd) --libdir=bin --bindir=bin"
 build = "meson install -C"
 test = "meson test --verbose --no-rebuild -C"
-update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
+
+# pytest tasks
 get-exes = { cmd = "pytest -v --durations 0 get_exes.py", cwd = "autotest" }
 autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd = "autotest" }
 
+# common developer tasks
+update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
+build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
+run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
+prepare-pull-request = {depends_on = ["fix-style", "build-makefiles", "run-mf6ivar"]}
+
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
-run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
 build-docs = { cmd = "python build_docs.py", cwd = "distribution" }
 build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
-build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
 test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
 update-version = { cmd = "python update_version.py", cwd = "distribution" }
 deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
 sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
 
-# prepare for PR
-prepare-pull-request = {depends_on = ["fix-style", "build-makefiles", "run-mf6ivar"]}
+# os-specific tasks
+[target.linux-64.tasks]
+builddir = "echo _builddir_linux-64"
+
+[target.linux-aarch64.tasks]
+builddir = "echo _builddir_linux-aarch64"
+
+[target.osx-64.tasks]
+builddir = "echo _builddir_osx-64"
+
+[target.osx-arm64.tasks]
+builddir = "echo _builddir_osx-arm64"
+
+[target.win-64.tasks]
+builddir = "echo _builddir_win-64"
+
