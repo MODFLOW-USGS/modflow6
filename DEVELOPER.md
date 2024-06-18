@@ -7,7 +7,6 @@ To build and test a parallel version of the program, first read the instructions
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Prerequisites](#prerequisites)
   - [Git](#git)
   - [Fortran compiler](#fortran-compiler)
@@ -33,6 +32,7 @@ To build and test a parallel version of the program, first read the instructions
     - [Doxygen & LaTeX](#doxygen--latex)
 - [Installation](#installation)
 - [Building](#building)
+- [Formatting](#formatting)
 - [Testing](#testing)
   - [Configuring a test environment](#configuring-a-test-environment)
     - [Configuring unit tests](#configuring-unit-tests)
@@ -48,10 +48,12 @@ To build and test a parallel version of the program, first read the instructions
   - [Writing tests](#writing-tests)
     - [Writing unit tests](#writing-unit-tests)
     - [Writing integration tests](#writing-integration-tests)
+      - [Test framework](#test-framework)
 - [Generating makefiles](#generating-makefiles)
   - [Updating extra and excluded files](#updating-extra-and-excluded-files)
   - [Testing makefiles](#testing-makefiles)
   - [Installing `make` on Windows](#installing-make-on-windows)
+    - [Using Conda from Git Bash](#using-conda-from-git-bash)
 - [Branching model](#branching-model)
   - [Overview](#overview)
   - [Managing long-lived branches](#managing-long-lived-branches)
@@ -202,7 +204,7 @@ These are each described briefly below. These and a number of other dependencies
 
 ##### `fprettify`
 
-[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [contribution guidelines](CONTRIBUTING.md) for additional information.
+[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [formatting guidelines](#formatting) for additional information.
 
 ##### `mfpymake`
 
@@ -287,6 +289,31 @@ pixi run build builddir  # alternatively, with pixi
 ```
 
 **Note:** If using Visual Studio Code, you can use tasks as described [here](.vscode/README.md) to automate the above.
+
+## Formatting
+
+Fortran source code can be formatted with [fprettify](https://github.com/pseewald/fprettify), specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). The `fprettify` package is included in the Conda `environment.yml` and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to format a single file:
+
+```shell
+fprettify -c .fprettify.yaml ./utils/zonebudget/src/zbud6.f90
+```
+
+When run in this way, the tool will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered (e.g. for excess line length), these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's source files satisfy formatting requirements without making any changes:
+
+```shell
+python .github/common/check_format.py
+pixi run check-format  # alternatively, with pixi
+```
+
+To format all files, add the `--write-changes` flag.
+
+**Note**: as `fprettify` may shift code in unexpected ways, it is a good idea to visually check source files afterwards.
+
+**Note**: while `fprettify` can be invoked on a directory, and will format all Fortran files within it, this should be done with care &mdash; the repository includes some files which `fprettify` can't properly format. To format the repository all at once, run the [provided Python script](.github/common/check_format.py) `check_format.py` or the `check-format` Pixi task. These exclude the proper files from formatting, including vendored library sources in [`src/Utilities/Libraries`](src/Utilities/Libraries/).
 
 ## Testing
 

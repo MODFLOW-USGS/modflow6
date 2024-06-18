@@ -128,11 +128,7 @@ The `update_version.py` script has a few other flags:
 
 ### Build makefiles
 
-The `build_makefiles.py` script is used to rewrite makefiles after Fortran source files have been added, removed, or renamed. Up-to-date makefiles must be generated for inclusion in a distribution. To build makefiles, run:
-
-```shell
-python build_makefiles.py
-```
+The `build_makefiles.py` script is used to rewrite makefiles after Fortran source files have been added, removed, or renamed. Up-to-date makefiles must be generated for inclusion in a distribution. A pixi task `build-makefiles` is also available.
 
 ### Build example models
 
