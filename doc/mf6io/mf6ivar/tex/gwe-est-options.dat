@@ -1,5 +1,7 @@
 BEGIN OPTIONS
   [SAVE_FLOWS]
   [ZERO_ORDER_DECAY]
-  [LATENT_HEAT_VAPORIZATION]
+  [RHOW <rhow>]
+  [CPW <cpw>]
+  [LATENT_HEAT_VAPORIZATION <latent_heat_vaporization>]
 END OPTIONS

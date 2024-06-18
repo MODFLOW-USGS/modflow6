@@ -329,9 +329,11 @@ def build_models(idx, test):
         gwe1,
         save_flows=True,
         porosity=prsity,
+        cpw=cpw,
+        rhow=rhow,
+        latent_heat_vaporization=lhv,
         cps=760.0,
         rhos=1500.0,
-        packagedata=[cpw, rhow, lhv],
         pname="EST-2",
         filename="{}.est".format(gwename1),
     )

@@ -289,9 +289,11 @@ def build_models(idx, test):
         gwe1,
         save_flows=True,
         porosity=prsity,
+        cpw=cpw,
+        rhow=rhow,
+        latent_heat_vaporization=lhv,
         cps=760.0,
         rhos=1500.0,
-        packagedata=[cpw, rhow, lhv],
         pname="EST-2",
         filename="{}.est".format(gwename1),
     )
@@ -403,7 +405,9 @@ def check_output(idx, test):
         "Pass through cell should not be as warm as its neighbor to "
         "the left"
     )
-    assert np.all(np.round(conc1[:, 0, 0, 3] - conc1[:, 0, 0, 2], 8) <= 0), msg5
+    assert np.all(
+        np.round(conc1[:, 0, 0, 3] - conc1[:, 0, 0, 2], 8) <= 0
+    ), msg5
 
 
 # - No need to change any code below

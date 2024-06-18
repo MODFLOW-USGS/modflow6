@@ -95,8 +95,8 @@ def Stallman(T_az, dT, tau, t, c_rho, darcy_flux, ko, c_w, rho_w, zbotm, nlay):
     zstallman = np.zeros((nlay, 2))
     K = np.pi * c_rho / ko / tau
     V = darcy_flux * c_w * rho_w / 2 / ko
-    a = ((K ** 2 + V ** 4 / 4) ** 0.5 + V ** 2 / 2) ** 0.5 - V
-    b = ((K ** 2 + V ** 4 / 4) ** 0.5 - V ** 2 / 2) ** 0.5
+    a = ((K**2 + V**4 / 4) ** 0.5 + V**2 / 2) ** 0.5 - V
+    b = ((K**2 + V**4 / 4) ** 0.5 - V**2 / 2) ** 0.5
     for i in range(len(zstallman)):
         zstallman[i, 0] = zbotm[i]
         zstallman[i, 1] = (
@@ -292,9 +292,11 @@ def build_models(idx, test):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=porosity,
+        cpw=cpw,
+        rhow=rhow,
+        latent_heat_vaporization=lhv,
         cps=cps,
         rhos=rhos,
-        packagedata=[cpw, rhow, lhv],
         filename="{}.mst".format(gwename),
     )
 

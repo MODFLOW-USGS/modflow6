@@ -1,7 +1,7 @@
 module GweInputDataModule
 
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, LENMEMPATH
+  use ConstantsModule, only: DZERO, LENMEMPATH, DEP3
 
   implicit none
   private
@@ -91,9 +91,9 @@ contains
     allocate (this%gwecps(nodes))
     !
     ! -- Initialize values
-    this%gwecpw = DZERO
-    this%gwerhow = DZERO
-    this%gwelatheatvap = DZERO
+    this%gwecpw = 4.184e3 !< kJ/(kg*C) @ 20C
+    this%gwerhow = DEP3 !< kg/m3 @ 20C
+    this%gwelatheatvap = 2.454e3 !< kJ/kg @ 20C
     do i = 1, nodes
       this%gwecps(i) = DZERO
       this%gwerhos(i) = DZERO
@@ -110,22 +110,18 @@ contains
   !! the aquifer material (cps), and density of the aquifer material
   !! (rhow) is used among other packages and is therefore stored in a
   !! separate class
-  subroutine set_gwe_dat_ptrs(this, gwerhow, gwecpw, gwerhos, gwecps, &
-                              gwelatheatvap)
+  subroutine set_gwe_dat_ptrs(this, gwerhow, gwecpw, gwelatheatvap, &
+                              gwerhos, gwecps)
     ! -- dummy
     class(GweInputDataType) :: this !< the input data block
     real(DP), intent(in) :: gwerhow !< ptr to density of water specified in EST
     real(DP), intent(in) :: gwecpw !< ptr to heat capacity of water specified in EST
-    real(DP), intent(in) :: gwerhos !< ptr to sptially-variably density of aquifer material specified in EST
-    real(DP), intent(in) :: gwecps !< ptr to sptially-variably heat capacity of aquifer material specified in EST
-    real(DP), intent(in), optional :: gwelatheatvap !< ptr to latent heat of vaporization specified in EST
+    real(DP), intent(in) :: gwelatheatvap !< ptr to latent heat of vaporization specified in EST
+    real(DP), dimension(:), pointer, contiguous :: gwerhos !< ptr to sptially-variably density of aquifer material specified in EST
+    real(DP), dimension(:), pointer, contiguous :: gwecps !< ptr to sptially-variably heat capacity of aquifer material specified in EST
     !
     ! -- Allocate scalars
-    if (present(gwelatheatvap)) then
-      call this%set_gwe_shared_scalars(gwerhow, gwecpw, gwelatheatvap)
-    else
-      call this%set_gwe_shared_scalars(gwerhow, gwecpw)
-    end if
+    call this%set_gwe_shared_scalars(gwerhow, gwecpw, gwelatheatvap)
     !
     ! -- Allocate arrays
     call this%set_gwe_shared_arrays(gwerhos, gwecps)
@@ -148,7 +144,6 @@ contains
     real(DP), intent(in) :: gwerhow
     real(DP), intent(in) :: gwecpw
     real(DP), intent(in), optional :: gwelatheatvap
-    ! -- local
     !
     ! -- Set the pointers
     ! -- Fixed density of water to be used by GWE
@@ -173,9 +168,8 @@ contains
   subroutine set_gwe_shared_arrays(this, gwerhos, gwecps)
     ! -- dummy
     class(GweInputDataType) :: this !< GweInputDataType object
-    real(DP), intent(in) :: gwerhos
-    real(DP), intent(in) :: gwecps
-    ! -- local
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: gwerhos
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: gwecps
     !
     ! -- Set the pointers
     ! -- Spatially-variable density of aquifer solid material
