@@ -412,7 +412,6 @@ $(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
-$(OBJDIR)/NCModel.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
@@ -435,7 +434,6 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
-$(OBJDIR)/MeshNCModel.o \
 $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/BoundInputContext.o \
@@ -462,9 +460,7 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
-$(OBJDIR)/ModelExport.o \
-$(OBJDIR)/DisvNCMesh.o \
-$(OBJDIR)/DisNCMesh.o \
+$(OBJDIR)/NCModel.o \
 $(OBJDIR)/Mf6FileStoInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
@@ -476,7 +472,7 @@ $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GweGweConnection.o \
 $(OBJDIR)/VirtualDataManager.o \
 $(OBJDIR)/Mapper.o \
-$(OBJDIR)/NCExportCreate.o \
+$(OBJDIR)/ModelExport.o \
 $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/ModelPackageInput.o \
 $(OBJDIR)/VirtualGwtModel.o \
