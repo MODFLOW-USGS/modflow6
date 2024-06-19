@@ -38,8 +38,6 @@ from test_prt_triangle import (
     top,
 )
 
-pytest_plugins = ["modflow_devtools.snapshots"]
-
 simname = "prtter"
 cases = [
     f"{simname}br",
@@ -259,7 +257,9 @@ def check_output(idx, test, snapshot):
         )
 
     # check pathlines against snapshot
-    assert snapshot == pls.round(3).to_records(index=False)
+    assert snapshot == pls.drop("name", axis=1).round(3).to_records(
+        index=False
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

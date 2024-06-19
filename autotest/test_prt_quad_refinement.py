@@ -26,8 +26,6 @@ from prt_test_utils import (
     DEFAULT_EXIT_SOLVE_TOL,
 )
 
-pytest_plugins = ["modflow_devtools.snapshots"]
-
 simname = "prtqref01"
 cases = [simname]
 

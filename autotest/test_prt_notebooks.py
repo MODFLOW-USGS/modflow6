@@ -11,7 +11,6 @@ from conftest import project_root_path
 from modflow_devtools.misc import run_cmd, set_env
 from modflow_devtools.markers import requires_pkg
 
-pytest_plugins = ["modflow_devtools.snapshots"]
 repos_path = environ.get("REPOS_PATH", None)
 if repos_path is None:
     repos_path = project_root_path.parent
