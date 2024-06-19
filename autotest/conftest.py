@@ -6,7 +6,7 @@ from warnings import warn
 import pytest
 from modflow_devtools.ostags import get_binary_suffixes
 
-pytest_plugins = ["modflow_devtools.fixtures"]
+pytest_plugins = ["modflow_devtools.fixtures", "modflow_devtools.snapshots"]
 project_root_path = Path(__file__).resolve().parent.parent
 
 

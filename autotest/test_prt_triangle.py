@@ -26,8 +26,6 @@ from modflow_devtools.markers import requires_pkg
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString
 
-pytest_plugins = ["modflow_devtools.snapshots"]
-
 simname = "prttri"
 cases = [f"{simname}r2l", f"{simname}diag"]
 angle = 30
@@ -281,7 +279,9 @@ def check_output(idx, test, snapshot):
     endpts = pls[pls.ireason == 3]  # termination
 
     # check termination points against snapshot
-    assert snapshot == endpts.round(3).to_records(index=False)
+    assert snapshot == endpts.drop("name", axis=1).round(3).to_records(
+        index=False
+    )
 
     plot_debug = False
     if plot_debug:

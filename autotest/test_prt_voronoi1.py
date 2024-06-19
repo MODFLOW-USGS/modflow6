@@ -28,7 +28,6 @@ from modflow_devtools.misc import is_in_ci
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
 
-pytest_plugins = ["modflow_devtools.snapshots"]
 simname = "prtvor1"
 cases = [f"{simname}l2r", f"{simname}welp", f"{simname}weli"]
 times = [True, False, False]
@@ -732,7 +731,9 @@ def check_output(idx, test, snapshot):
 
     # compare pathlines with snapshot. particles shouldn't
     # have moved vertically. round for cross-platform error
-    assert snapshot == endpts.round(1).to_records(index=False)
+    assert snapshot == endpts.drop("name", axis=1).round(1).to_records(
+        index=False
+    )
 
     # plot results if enabled
     plot = False

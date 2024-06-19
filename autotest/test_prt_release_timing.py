@@ -34,8 +34,6 @@ from prt_test_utils import (
     DEFAULT_EXIT_SOLVE_TOL,
 )
 
-pytest_plugins = ["modflow_devtools.snapshots"]
-
 simname = "prtrelt"
 cases = [
     # options block options
@@ -421,7 +419,9 @@ def check_output(idx, test, fraction, snapshot):
         )
 
     # compare pathlines with snapshot
-    assert snapshot == mf6_pls.round(3).to_records(index=False)
+    assert snapshot == mf6_pls.drop("name", axis=1).round(3).to_records(
+        index=False
+    )
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)
