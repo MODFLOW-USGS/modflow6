@@ -678,12 +678,12 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
-        case ('CPW')
+        case ('HEAT_CAPACITY_WATER')
           this%cpw = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg15.6)') &
             'Heat capacity of the water has been set to: ', &
             this%cpw
-        case ('RHOW')
+        case ('DENSITY_WATER')
           this%rhow = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg15.6)') &
             'Density of the water has been set to: ', &
