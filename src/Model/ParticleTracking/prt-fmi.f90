@@ -198,7 +198,7 @@ contains
         if (iauxiflowface > 0) then
           iflowface = NINT(this%gwfpackages(ip)%auxvar(iauxiflowface, ib))
           ! this maps bot -2 -> 9, top -1 -> 10; see note re: max faces below
-          if (iflowface < 0) iflowface = iflowface + MAX_POLY_CELLS + 1 
+          if (iflowface < 0) iflowface = iflowface + MAX_POLY_CELLS + 1
         end if
         if (iflowface .gt. 0) then
           ioffset = (i - 1) * MAX_POLY_CELLS
