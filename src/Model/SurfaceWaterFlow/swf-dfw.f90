@@ -1262,13 +1262,13 @@ contains
   subroutine dfw_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(SwfDfwType) :: this
     !
     ! Deallocate input memory
-    call memorylist_remove(this%name_model, 'DFW', idm_context)
+    call memorystore_remove(this%name_model, 'DFW', idm_context)
 
     ! Deallocate arrays
     call mem_deallocate(this%manningsn)

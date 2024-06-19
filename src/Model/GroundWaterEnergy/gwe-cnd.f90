@@ -459,14 +459,14 @@ contains
   subroutine cnd_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GweCndType) :: this
     ! -- local
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'CND', idm_context)
+    call memorystore_remove(this%name_model, 'CND', idm_context)
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then

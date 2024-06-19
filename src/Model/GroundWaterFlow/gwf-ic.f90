@@ -104,13 +104,13 @@ contains
   subroutine ic_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfIcType) :: this
     !
     ! -- deallocate IDM memory
-    call memorylist_remove(this%name_model, 'IC', idm_context)
+    call memorystore_remove(this%name_model, 'IC', idm_context)
     !
     ! -- deallocate arrays
     call mem_deallocate(this%strt)

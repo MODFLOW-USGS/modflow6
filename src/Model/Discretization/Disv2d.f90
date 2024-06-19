@@ -13,7 +13,7 @@ module Disv2dModule
   use SimVariablesModule, only: errmsg, idm_context
   use DisvGeom, only: DisvGeomType, line_unit_vector
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_setptr
-  use MemoryManagerExtModule, only: mem_set_value, memorylist_remove
+  use MemoryManagerExtModule, only: mem_set_value, memorystore_remove
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -152,14 +152,14 @@ contains
   subroutine disv2d_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(Disv2dType) :: this
     ! -- local
 
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name_model, 'DISV2D', idm_context)
+    call memorystore_remove(this%name_model, 'DISV2D', idm_context)
 
     ! -- scalars
     call mem_deallocate(this%nvert)
@@ -190,8 +190,8 @@ contains
   !   class(Disv2dType) :: this
   !   !
   !   ! -- Deallocate idm memory
-  !   call memorylist_remove(this%name_model, 'DISV', idm_context)
-  !   call memorylist_remove(component=this%name_model, &
+  !   call memorystore_remove(this%name_model, 'DISV', idm_context)
+  !   call memorystore_remove(component=this%name_model, &
   !                          context=idm_context)
   !   !
   !   ! -- DisBaseType deallocate

@@ -87,7 +87,7 @@ contains
     use SimVariablesModule, only: idm_context
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path, split_mem_path
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use CharacterStringModule, only: CharacterStringType
     integer(I4B), intent(in) :: iout
     type(CharacterStringType), dimension(:), contiguous, &
@@ -106,15 +106,15 @@ contains
       mempath = mempaths(n)
       if (mempath /= '') then
         call split_mem_path(mempath, exg_comp, exg_subcomp)
-        call memorylist_remove(exg_comp, exg_subcomp, idm_context)
+        call memorystore_remove(exg_comp, exg_subcomp, idm_context)
       end if
     end do
     !
     ! -- deallocate input context SIM paths
-    call memorylist_remove('UTL', 'HPC', idm_context)
-    call memorylist_remove('SIM', 'TDIS', idm_context)
-    call memorylist_remove('SIM', 'NAM', idm_context)
-    call memorylist_remove(component='SIM', context=idm_context)
+    call memorystore_remove('UTL', 'HPC', idm_context)
+    call memorystore_remove('SIM', 'TDIS', idm_context)
+    call memorystore_remove('SIM', 'NAM', idm_context)
+    call memorystore_remove(component='SIM', context=idm_context)
     !
     ! -- return
     return

@@ -27,7 +27,7 @@ module mf6bmi
   use CharacterStringModule
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
-                                 memorylist
+                                 memorystore
   use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
@@ -208,7 +208,7 @@ contains
     integer(kind=c_int), intent(out) :: count !< the number of input variables
     integer(kind=c_int) :: bmi_status !< BMI status code
 
-    count = memorylist%count()
+    count = memorystore%count()
 
     bmi_status = BMI_SUCCESS
 
@@ -225,7 +225,7 @@ contains
     integer(kind=c_int), intent(out) :: count !< the number of output variables
     integer(kind=c_int) :: bmi_status !< BMI status code
 
-    count = memorylist%count()
+    count = memorystore%count()
 
     bmi_status = BMI_SUCCESS
 
@@ -258,7 +258,7 @@ contains
     character(len=LENMEMADDRESS) :: var_address
 
     start = 1
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -293,7 +293,7 @@ contains
     character(len=LENMEMADDRESS) :: var_address
 
     start = 1
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()

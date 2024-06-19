@@ -1082,7 +1082,7 @@ contains
   subroutine gwf_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfModelType) :: this
@@ -1091,8 +1091,8 @@ contains
     class(BndType), pointer :: packobj
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name, 'NAM', idm_context)
-    call memorylist_remove(component=this%name, context=idm_context)
+    call memorystore_remove(this%name, 'NAM', idm_context)
+    call memorystore_remove(component=this%name, context=idm_context)
     !
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()

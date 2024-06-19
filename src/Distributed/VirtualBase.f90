@@ -4,7 +4,7 @@ module VirtualBaseModule
   use ConstantsModule, only: LENVARNAME, LENMEMPATH, LENCOMPONENTNAME
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
-                                 get_from_memorylist
+                                 get_from_memorystore
   implicit none
   private
 
@@ -145,8 +145,8 @@ contains
     ! local
     logical(LGP) :: found
 
-    call get_from_memorylist(this%var_name, this%mem_path, &
-                             this%virtual_mt, found)
+    call get_from_memorystore(this%var_name, this%mem_path, &
+                              this%virtual_mt, found)
 
   end subroutine vm_link
 

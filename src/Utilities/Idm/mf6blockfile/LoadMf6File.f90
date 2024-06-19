@@ -286,7 +286,7 @@ contains
   recursive subroutine parse_block(this, iblk, recursive_call)
     ! -- modules
     use MemoryTypeModule, only: MemoryType
-    use MemoryManagerModule, only: get_from_memorylist
+    use MemoryManagerModule, only: get_from_memorystore
     ! -- dummy
     class(LoadMf6FileType) :: this
     integer(I4B), intent(in) :: iblk
@@ -305,8 +305,8 @@ contains
         this%mf6_input%pkgtype == 'DISV2D6') then
       if (this%mf6_input%block_dfns(iblk)%blockname == 'VERTICES' .or. &
           this%mf6_input%block_dfns(iblk)%blockname == 'CELL2D') then
-        call get_from_memorylist('NVERT', this%mf6_input%mempath, mt, found, &
-                                 .false.)
+        call get_from_memorystore('NVERT', this%mf6_input%mempath, mt, found, &
+                                  .false.)
         if (.not. found) return
         if (mt%intsclr == 0) return
       end if

@@ -90,7 +90,7 @@ contains
   !<
   subroutine check_mem_address(mem_path, var_name, found)
     ! -- modules
-    use MemoryManagerModule, only: get_from_memorylist
+    use MemoryManagerModule, only: get_from_memorystore
     use MemoryTypeModule, only: MemoryType
     ! -- dummy variables
     character(len=LENMEMPATH), intent(in) :: mem_path !< memory path used by the memory manager
@@ -103,7 +103,7 @@ contains
     mt => null()
 
     ! check = false: otherwise stop is called when the variable does not exist
-    call get_from_memorylist(var_name, mem_path, mt, found, check=.false.)
+    call get_from_memorystore(var_name, mem_path, mt, found, check=.false.)
 
   end subroutine check_mem_address
 

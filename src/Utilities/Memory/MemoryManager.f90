@@ -31,7 +31,7 @@ module MemoryManagerModule
   public :: mem_write_usage
   public :: mem_da
   public :: mem_set_print_option
-  public :: get_from_memorylist
+  public :: get_from_memorystore
 
   public :: get_mem_type
   public :: get_mem_rank
@@ -40,10 +40,10 @@ module MemoryManagerModule
   public :: get_isize
   public :: copy_dbl1d
 
-  public :: memorylist
+  public :: memorystore
   public :: mem_print_detailed
 
-  type(MemoryStoreType) :: memorylist
+  type(MemoryStoreType) :: memorystore
   type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
   integer(I8B) :: nvalues_astr = 0
@@ -152,7 +152,7 @@ contains
     ! -- code
     mt => null()
     var_type = 'UNKNOWN'
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     if (found) then
       var_type = mt%memtype
     end if
@@ -178,7 +178,7 @@ contains
     rank = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set rank
     if (found) then
@@ -217,7 +217,7 @@ contains
     size = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set memory size
     if (found) then
@@ -243,7 +243,7 @@ contains
     ! -- code
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set shape
     if (found) then
@@ -290,7 +290,7 @@ contains
     terminate = .false.
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found, terminate)
+    call get_from_memorystore(name, mem_path, mt, found, terminate)
     !
     ! -- set isize
     if (found) then
@@ -306,7 +306,7 @@ contains
   !! Default value for @par check is .true. which means that this
   !! routine will kill the program when the memory entry cannot be found.
   !<
-  subroutine get_from_memorylist(name, mem_path, mt, found, check)
+  subroutine get_from_memorystore(name, mem_path, mt, found, check)
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored
     type(MemoryType), pointer, intent(inout) :: mt !< memory type entry
@@ -316,7 +316,7 @@ contains
     ! -- local
     logical(LGP) check_opt
     ! -- code
-    mt => memorylist%get(name, mem_path)
+    mt => memorystore%get(name, mem_path)
     found = associated(mt)
 
     check_opt = .true.
@@ -334,7 +334,7 @@ contains
     !
     ! -- return
     return
-  end subroutine get_from_memorylist
+  end subroutine get_from_memorystore
 
   !> @brief Issue allocation error message and stop program execution
   !<
@@ -397,7 +397,7 @@ contains
     write (mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -449,7 +449,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -518,7 +518,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -578,7 +578,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -619,7 +619,7 @@ contains
     write (mt%memtype, "(a)") 'INTEGER'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -665,7 +665,7 @@ contains
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -712,7 +712,7 @@ contains
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
   end subroutine allocate_int2d
@@ -760,7 +760,7 @@ contains
       nrow, nlay
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -801,7 +801,7 @@ contains
     write (mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -847,7 +847,7 @@ contains
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -894,7 +894,7 @@ contains
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -943,7 +943,7 @@ contains
       nrow, nlay
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -985,7 +985,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -1028,7 +1028,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -1070,7 +1070,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -1113,7 +1113,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -1157,7 +1157,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
+    call memorystore%add(mt)
     !
     ! -- return
     return
@@ -1182,7 +1182,7 @@ contains
     integer(I4B) :: n
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- reallocate astr1d
     if (found) then
@@ -1271,7 +1271,7 @@ contains
     string = ''
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- reallocate astr1d
     if (found) then
@@ -1355,7 +1355,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     isize = nrow
@@ -1402,7 +1402,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     ishape = shape(mt%aint2d)
@@ -1450,7 +1450,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     isize = nrow
@@ -1498,7 +1498,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     ishape = shape(mt%adbl2d)
@@ -1538,7 +1538,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%logicalsclr
     !
     ! -- return
@@ -1555,7 +1555,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%intsclr
     !
     ! -- return
@@ -1572,7 +1572,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint1d
     !
     ! -- return
@@ -1589,7 +1589,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint2d
     !
     ! -- return
@@ -1606,7 +1606,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint3d
     !
     ! -- return
@@ -1623,7 +1623,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%dblsclr
     !
     ! -- return
@@ -1640,7 +1640,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl1d
     !
     ! -- return
@@ -1657,7 +1657,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl2d
     !
     ! -- return
@@ -1674,7 +1674,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl3d
     !
     ! -- return
@@ -1691,7 +1691,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     asrt => mt%strsclr
     !
     ! -- return
@@ -1709,7 +1709,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     astr1d => mt%astr1d
     !
     ! -- return
@@ -1727,7 +1727,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     acharstr1d => mt%acharstr1d
     !
     ! -- return
@@ -1748,7 +1748,7 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1782,7 +1782,7 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => null()
     ncol = size(mt%aint2d, dim=1)
     nrow = size(mt%aint2d, dim=2)
@@ -1817,7 +1817,7 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1851,7 +1851,7 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => null()
     ncol = size(mt%adbl2d, dim=1)
     nrow = size(mt%adbl2d, dim=2)
@@ -1883,7 +1883,7 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
@@ -1905,8 +1905,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (associated(sclr)) then
       nvalues_aint = nvalues_aint - 1
       deallocate (sclr)
@@ -1939,8 +1939,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate (aint)
@@ -1975,8 +1975,8 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate (aint)
@@ -2011,8 +2011,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate (adbl)
@@ -2047,8 +2047,8 @@ contains
     integer(I4B) :: ncol
     integer(I4b) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate (adbl)
@@ -2083,10 +2083,10 @@ contains
     ! -- code
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%strsclr)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2127,10 +2127,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%astr1d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2172,10 +2172,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2211,7 +2211,7 @@ contains
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2246,7 +2246,7 @@ contains
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2280,7 +2280,7 @@ contains
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2319,10 +2319,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint1d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2362,10 +2362,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint2d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2405,10 +2405,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint3d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2448,10 +2448,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl1d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2491,10 +2491,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl2d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2534,10 +2534,10 @@ contains
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl3d)
     else
-      itr = memorylist%iterator()
+      itr = memorystore%iterator()
       do while (itr%has_next())
         call itr%next()
         mt => itr%value()
@@ -2891,7 +2891,7 @@ contains
         nreal = 0
         bytes = DZERO
         ilen = len_trim(cunique(icomp))
-        itr = memorylist%iterator()
+        itr = memorystore%iterator()
         do while (itr%has_next())
           call itr%next()
           mt => itr%value()
@@ -2944,8 +2944,8 @@ contains
     class(MemoryType), pointer :: mt
     type(MemoryContainerIteratorType), allocatable :: itr
 
-    call mem_detailed_table(iout, memorylist%count())
-    itr = memorylist%iterator()
+    call mem_detailed_table(iout, memorystore%count())
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2964,7 +2964,7 @@ contains
     type(MemoryType), pointer :: mt
 
     vmem_size = DZERO
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -2987,7 +2987,7 @@ contains
     character(len=LENVARNAME) :: ucname
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
@@ -3020,7 +3020,7 @@ contains
       ! -- deallocate instance of memory type
       deallocate (mt)
     end do
-    call memorylist%clear()
+    call memorystore%clear()
     if (count_errors() > 0) then
       call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
@@ -3052,7 +3052,7 @@ contains
     allocate (cunique(0))
     !
     ! -- find unique origins
-    itr = memorylist%iterator()
+    itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
