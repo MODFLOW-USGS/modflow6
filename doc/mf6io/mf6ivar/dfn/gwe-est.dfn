@@ -22,7 +22,7 @@ type double precision
 reader urword
 optional true
 longname density of water
-description density of water used by calculations related to heat storage and conduction.  This value is set to 1,000 kg/m3 if no overiding value is specified.  A user-specified value should be provided for models that use units other than kilograms and meters or if it is necessary to use a value other than the default.
+description density of water used by calculations related to heat storage and conduction.  This value is set to 1,000 kg/m3 if no overriding value is specified.  A user-specified value should be provided for models that use units other than kilograms and meters or if it is necessary to use a value other than the default.
 default_value 1000.0
 
 block options
