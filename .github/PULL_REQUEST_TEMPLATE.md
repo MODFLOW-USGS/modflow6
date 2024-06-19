@@ -3,6 +3,7 @@ Checklist of items for pull request
 - [ ] Closed issue #xxxx
 - [ ] Referenced issue or pull request #xxxx
 - [ ] Added new test or modified an existing test
+- [ ] Ran `black` on new and modified autotests
 - [ ] Formatted new and modified Fortran source files with `fprettify`
 - [ ] Added doxygen comments to new and modified procedures
 - [ ] Updated meson files, makefiles, and Visual Studio project files for new source files
