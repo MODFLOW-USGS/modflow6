@@ -575,8 +575,8 @@ def build_models(idx, test):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=porosity,
-        cpw=Cpw,
-        rhow=rhow,
+        heat_capacity_water=Cpw,
+        density_water=rhow,
         latent_heat_vaporization=lhv,
         cps=Cps,
         rhos=rhos,

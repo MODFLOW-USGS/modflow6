@@ -583,8 +583,8 @@ def add_upper_gwemodel(sim, scheme):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
-        cpw=cpw,
-        rhow=rhow,
+        heat_capacity_water=cpw,
+        density_water=rhow,
         latent_heat_vaporization=lhv,
         cps=cps,
         rhos=rhos,
@@ -663,8 +663,8 @@ def add_lower_gwemodel(sim, scheme):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
-        cpw=cpw,
-        rhow=rhow,
+        heat_capacity_water=cpw,
+        density_water=rhow,
         latent_heat_vaporization=lhv,
         cps=cps,
         rhos=rhos,
