@@ -1,10 +1,15 @@
+<<<<<<< HEAD
 # makefile created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
+=======
+# makefile created by pymake (version 1.2.10) for the 'mf6' executable.
+>>>>>>> cce116e0d5 (rebuild makefiles)
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
+<<<<<<< HEAD
 SOURCEDIR2=../src/Idm
 SOURCEDIR3=../src/Idm/selector
 SOURCEDIR4=../src/Exchange
@@ -42,6 +47,45 @@ SOURCEDIR35=../src/Model/Discretization
 SOURCEDIR36=../src/Model/TransportModel
 SOURCEDIR37=../src/Model/Geometry
 SOURCEDIR38=../src/Model/GroundWaterEnergy
+=======
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Idm
+SOURCEDIR4=../src/Idm/selector
+SOURCEDIR5=../src/Timing
+SOURCEDIR6=../src/Model
+SOURCEDIR7=../src/Model/Connection
+SOURCEDIR8=../src/Model/Discretization
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/GroundWaterFlow
+SOURCEDIR11=../src/Model/Geometry
+SOURCEDIR12=../src/Model/TransportModel
+SOURCEDIR13=../src/Model/GroundWaterTransport
+SOURCEDIR14=../src/Model/SurfaceWaterFlow
+SOURCEDIR15=../src/Model/ParticleTracking
+SOURCEDIR16=../src/Model/GroundWaterEnergy
+SOURCEDIR17=../src/Solution
+SOURCEDIR18=../src/Solution/ParticleTracker
+SOURCEDIR19=../src/Solution/LinearMethods
+SOURCEDIR20=../src/Solution/PETSc
+SOURCEDIR21=../src/Distributed
+SOURCEDIR22=../src/Utilities
+SOURCEDIR23=../src/Utilities/Export
+SOURCEDIR24=../src/Utilities/TimeSeries
+SOURCEDIR25=../src/Utilities/Idm
+SOURCEDIR26=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR27=../src/Utilities/ArrayRead
+SOURCEDIR28=../src/Utilities/Memory
+SOURCEDIR29=../src/Utilities/Matrix
+SOURCEDIR30=../src/Utilities/Vector
+SOURCEDIR31=../src/Utilities/Observation
+SOURCEDIR32=../src/Utilities/OutputControl
+SOURCEDIR33=../src/Utilities/Libraries
+SOURCEDIR34=../src/Utilities/Libraries/rcm
+SOURCEDIR35=../src/Utilities/Libraries/sparskit2
+SOURCEDIR36=../src/Utilities/Libraries/sparsekit
+SOURCEDIR37=../src/Utilities/Libraries/blas
+SOURCEDIR38=../src/Utilities/Libraries/daglib
+>>>>>>> cce116e0d5 (rebuild makefiles)
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -113,6 +157,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/ListIterator.o \
 $(OBJDIR)/PtrHashTable.o \
 $(OBJDIR)/MemoryContainerIterator.o \
+$(OBJDIR)/utl-ncfidm.o \
 $(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-stoidm.o \
@@ -367,6 +412,7 @@ $(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
+$(OBJDIR)/NCModel.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
@@ -389,6 +435,7 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
+$(OBJDIR)/MeshNCModel.o \
 $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/AsciiInputLoadType.o \
 $(OBJDIR)/BoundInputContext.o \
@@ -415,6 +462,9 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+$(OBJDIR)/ModelExport.o \
+$(OBJDIR)/DisvNCMesh.o \
+$(OBJDIR)/DisNCMesh.o \
 $(OBJDIR)/Mf6FileStoInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
@@ -426,6 +476,7 @@ $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GweGweConnection.o \
 $(OBJDIR)/VirtualDataManager.o \
 $(OBJDIR)/Mapper.o \
+$(OBJDIR)/NCExportCreate.o \
 $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/ModelPackageInput.o \
 $(OBJDIR)/VirtualGwtModel.o \
