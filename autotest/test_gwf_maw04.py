@@ -237,7 +237,7 @@ def build_model(idx, ws, mf6):
         node_data["rskin"] = np.array([sradius[name[-1]], sradius[name[-1]]])
         hks = hk * skin_mult[name[-1]]
         node_data["kskin"] = np.array([hks, hks])
-        dtype = [("wellid", np.unicode_, 20), ("qdes", "<f8")]
+        dtype = [("wellid", np.str_, 20), ("qdes", "<f8")]
         spd0 = np.zeros(1, dtype=dtype)
         spd0["wellid"] = "well1"
         spd1 = np.zeros(1, dtype=dtype)
