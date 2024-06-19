@@ -52,27 +52,21 @@ contains
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
     !
-    ! -- initialize base class
-    call this%NCModelExportType%init(modelname, modeltype, modelfname, disenum, &
-                                     nctype, iout)
-    !
-    ! allocate var_id arrays
-    allocate (this%var_ids%dependent(this%dis%nlay))
-    !
     ! -- set nlay
     this%nlay = this%dis%nlay
     !
-    ! -- create the netcdf file
-    call nf_verify(nf90_create(this%nc_filename, &
-                               IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
-                   this%ncid, this%iout)
+    ! allocate var_id arrays
+    allocate (this%var_ids%dependent(this%nlay))
+    !
+    ! -- initialize base class
+    call this%mesh_init(modelname, modeltype, modelfname, disenum, nctype, iout)
   end subroutine dis_export_init
 
   !> @brief netcdf export dis destroy
   !<
   subroutine dis_export_destroy(this)
     use SimVariablesModule, only: idm_context
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     class(Mesh2dDisExportType), intent(inout) :: this
     call nf_verify(nf90_close(this%ncid), this%ncid, this%iout)
     !
@@ -81,7 +75,7 @@ contains
     !
     ! -- Deallocate idm memory
     if (this%ncf_mempath /= '') then
-      call memorylist_remove(this%modelname, 'NCF', idm_context)
+      call memorystore_remove(this%modelname, 'NCF', idm_context)
     end if
   end subroutine dis_export_destroy
 
@@ -508,10 +502,12 @@ contains
                                     (/dim_ids%nmesh_face/), var_id(k)), &
                        ncid, iout)
         !
+        ! -- apply chunking parameters
         if (ugc_face > 0) then
           call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
                                                (/ugc_face/)), ncid, iout)
         end if
+        ! -- deflate and shuffle
         if (deflate >= 0) then
           call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
                                               deflate=1, deflate_level=deflate), &
@@ -592,10 +588,12 @@ contains
                                 (/dim_ids%nmesh_face/), var_id), &
                    ncid, iout)
     !
+    ! -- apply chunking parameters
     if (ugc_face > 0) then
       call nf_verify(nf90_def_var_chunking(ncid, var_id, NF90_CHUNKED, &
                                            (/ugc_face/)), ncid, iout)
     end if
+    ! -- deflate and shuffle
     if (deflate >= 0) then
       call nf_verify(nf90_def_var_deflate(ncid, var_id, shuffle=shuffle, &
                                           deflate=1, deflate_level=deflate), &
@@ -666,10 +664,12 @@ contains
                                   (/dim_ids%nmesh_face/), var_id(k)), &
                      ncid, iout)
       !
+      ! -- apply chunking parameters
       if (ugc_face > 0) then
         call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
                                              (/ugc_face/)), ncid, iout)
       end if
+      ! -- deflate and shuffle
       if (deflate >= 0) then
         call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
                                             deflate=1, deflate_level=deflate), &
@@ -790,10 +790,12 @@ contains
                                     (/dim_ids%nmesh_face/), var_id(k)), &
                        ncid, iout)
         !
+        ! -- apply chunking parameters
         if (ugc_face > 0) then
           call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
                                                (/ugc_face/)), ncid, iout)
         end if
+        ! -- deflate and shuffle
         if (deflate >= 0) then
           call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
                                               deflate=1, deflate_level=deflate), &
@@ -874,10 +876,12 @@ contains
                                 (/dim_ids%nmesh_face/), var_id), &
                    ncid, iout)
     !
+    ! -- apply chunking parameters
     if (ugc_face > 0) then
       call nf_verify(nf90_def_var_chunking(ncid, var_id, NF90_CHUNKED, &
                                            (/ugc_face/)), ncid, iout)
     end if
+    ! -- deflate and shuffle
     if (deflate >= 0) then
       call nf_verify(nf90_def_var_deflate(ncid, var_id, shuffle=shuffle, &
                                           deflate=1, deflate_level=deflate), &
@@ -948,10 +952,12 @@ contains
                                   (/dim_ids%nmesh_face/), var_id(k)), &
                      ncid, iout)
       !
+      ! -- apply chunking parameters
       if (ugc_face > 0) then
         call nf_verify(nf90_def_var_chunking(ncid, var_id(k), NF90_CHUNKED, &
                                              (/ugc_face/)), ncid, iout)
       end if
+      ! -- deflate and shuffle
       if (deflate >= 0) then
         call nf_verify(nf90_def_var_deflate(ncid, var_id(k), shuffle=shuffle, &
                                             deflate=1, deflate_level=deflate), &

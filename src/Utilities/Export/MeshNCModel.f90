@@ -59,6 +59,7 @@ module MeshModelModule
     integer(I4B), pointer :: ugc_time !< chunking parameter for time dimension
     integer(I4B), pointer :: ugc_face !< chunking parameter for face dimension
   contains
+    procedure :: mesh_init
     procedure :: add_global_att
     procedure(nc_array_export_if), deferred :: export_input_array
     procedure :: export_input_arrays
@@ -85,6 +86,40 @@ module MeshModelModule
   end type Mesh2dModelType
 
 contains
+
+  !> @brief initialize
+  !<
+  subroutine mesh_init(this, modelname, modeltype, modelfname, disenum, &
+                       nctype, iout)
+    use MemoryManagerExtModule, only: mem_set_value
+    class(MeshModelType), intent(inout) :: this
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modeltype
+    character(len=*), intent(in) :: modelfname
+    integer(I4B), intent(in) :: disenum
+    integer(I4B), intent(in) :: nctype
+    integer(I4B), intent(in) :: iout
+    logical(LGP) :: found
+    !
+    ! -- initialize base class
+    call this%NCModelExportType%init(modelname, modeltype, modelfname, disenum, &
+                                     nctype, iout)
+    !
+    ! -- allocate and initialize
+    allocate (this%ugc_time)
+    allocate (this%ugc_face)
+    this%ugc_time = -1
+    this%ugc_face = -1
+    !
+    ! -- update values from input context
+    call mem_set_value(this%ugc_time, 'UGC_TIME', this%ncf_mempath, found)
+    call mem_set_value(this%ugc_face, 'UGC_FACE', this%ncf_mempath, found)
+    !
+    ! -- create the netcdf file
+    call nf_verify(nf90_create(this%nc_filename, &
+                               IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
+                   this%ncid, this%iout)
+  end subroutine mesh_init
 
   !> @brief create file (group) attributes
   !<
@@ -203,20 +238,9 @@ contains
   !> @brief create the model layer dependent variables
   !<
   subroutine define_dependent(this)
-    use MemoryManagerExtModule, only: mem_set_value
     class(MeshModelType), intent(inout) :: this
     character(len=LINELENGTH) :: varname, longname
     integer(I4B) :: k
-    logical(LGP) :: found
-    !
-    ! TODO move allocate/init earlier
-    allocate (this%ugc_time)
-    allocate (this%ugc_face)
-    this%ugc_time = -1
-    this%ugc_face = -1
-    !
-    call mem_set_value(this%ugc_time, 'UGC_TIME', this%ncf_mempath, found)
-    call mem_set_value(this%ugc_face, 'UGC_FACE', this%ncf_mempath, found)
     !
     ! -- create a dependent variable for each layer
     do k = 1, this%nlay
@@ -263,7 +287,6 @@ contains
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
                                   'long_name', longname), this%ncid, this%iout)
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
-                                  !'_FillValue', (/NF90_FILL_DOUBLE/)), &
                                   '_FillValue', (/DHNOFLO/)), &
                      this%ncid, this%iout)
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
@@ -296,10 +319,10 @@ contains
       call nf_verify(nf90_redef(this%ncid), this%ncid, this%iout)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%ncid, this%iout)
-      ! toDO: is it possible that only cf-convention supported CRS can use
-      !       crs_wkt while others can use wkt?  Make sure wkt is generic,
-      !       might need to use both
+      ! -- cf-conventions prefers 'crs_wkt'
       !call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
+      !               this%ncid, this%iout)
+      ! -- QGIS recognizes 'wkt'
       call nf_verify(nf90_put_att(this%ncid, var_id, 'wkt', this%ogc_wkt), &
                      this%ncid, this%iout)
       call nf_verify(nf90_enddef(this%ncid), this%ncid, this%iout)
@@ -452,6 +475,7 @@ contains
                                 'long_name', &
                                 'Vertices bounding cell (counterclockwise)'), &
                    this%ncid, this%iout)
+    ! -- TODO: saw QGIS access violations and xugrid issues without this
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_nodes, &
                                 '_FillValue', (/NF90_FILL_INT/)), &
                    this%ncid, this%iout)
