@@ -291,7 +291,7 @@ def write_results(
     with open(output_path / _markdown_file_name, "w") as f:
         # get version numbers and write header
 
-        line = "### Comparison of simulation run times\n\n"
+        line = "### Benchmarks\n\n"
         line += (
             "Comparison of run times of the current version of "
             + f"MODFLOW 6 ({current_v}) "
