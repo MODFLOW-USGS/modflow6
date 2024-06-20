@@ -276,10 +276,12 @@ Building MODFLOW 6 requires two steps:
 To configure the build directory:
 
 ```shell
-meson setup -Ddebug=true -Doptimization=0 builddir
-meson setup builddir  # for an optimized release build
-pixi run setup builddir  # alternatively, with pixi task
+meson setup --prefix=$(pwd) --libdir=bin builddir -Ddebug=true -Doptimization=0
+meson setup --prefix=$(pwd) --libdir=bin builddir  # for an optimized release build
+pixi run setup builddir  # alternatively, with pixi
 ```
+
+Substitute `%CD%` as necessary on Windows.
 
 To build MODFLOW 6 and install binaries to `<project root>/bin/`:
 
