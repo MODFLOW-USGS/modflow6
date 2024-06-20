@@ -176,7 +176,6 @@
 		<File RelativePath="..\src\Idm\swf-cxsidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dfwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
-		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv1didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
