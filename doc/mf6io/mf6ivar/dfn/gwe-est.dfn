@@ -32,7 +32,7 @@ type double precision
 reader urword
 optional true
 longname heat capacity of water
-description heat capacity of water used by calculations related to heat storage and conduction.  This value is set to 4,184 J/kg/C if no overriding value is specified.  A user-specified value should be provided for models that use units other than kilograms, kilojoules, and degrees Celsius or it is necessary to use a value other than the default.
+description heat capacity of water used by calculations related to heat storage and conduction.  This value is set to 4,184 J/kg/C if no overriding value is specified.  A user-specified value should be provided for models that use units other than kilograms, joules, and degrees Celsius or it is necessary to use a value other than the default.
 default_value 4184.0
 mf6internal cpw
 
