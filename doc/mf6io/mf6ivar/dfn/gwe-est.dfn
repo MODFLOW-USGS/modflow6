@@ -42,7 +42,9 @@ type double precision
 reader urword
 optional true
 longname latent heat of vaporization
-description latent heat of vaporization is the amount of energy that is required to convert a given quantity of liquid into a gas and is associated with evaporative cooling.  While the EST package does not simulate evaporation, multiple other packages in a GWE simulation may.  To avoid having to specify the latent heat of vaporization in multiple packages, it is specified in a single location and accessed wherever it is needed.  For example, evaporation may occur from the surface of streams or lakes and the energy consumed by the change in phase would be needed in both the SFE and LKE packages.
+description latent heat of vaporization is the amount of energy that is required to convert a given quantity of liquid into a gas and is associated with evaporative cooling.  While the EST package does not simulate evaporation, multiple other packages in a GWE simulation may.  To avoid having to specify the latent heat of vaporization in multiple packages, it is specified in a single location and accessed wherever it is needed.  For example, evaporation may occur from the surface of streams or lakes and the energy consumed by the change in phase would be needed in both the SFE and LKE packages.  This value is set to 2,453,500 J/kg if no overriding value is specified.  A user-specified value should be provided for models that use units other than joules and kilograms or if it is necessary to use a value other than the default.
+default_value 2453500.0
+mf6internal latheatvap
 
 # --------------------- gwe est griddata ---------------------
 

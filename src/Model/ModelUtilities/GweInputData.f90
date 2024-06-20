@@ -91,9 +91,9 @@ contains
     allocate (this%gwecps(nodes))
     !
     ! -- Initialize values
-    this%gwecpw = 4.184e3 !< kJ/(kg*C) @ 20C
+    this%gwecpw = 4.184e3 !< J/(kg*C) @ 20C
     this%gwerhow = DEP3 !< kg/m3 @ 20C
-    this%gwelatheatvap = 2.454e3 !< kJ/kg @ 20C
+    this%gwelatheatvap = 2.4535e6 !< J/kg @ 20C
     do i = 1, nodes
       this%gwecps(i) = DZERO
       this%gwerhos(i) = DZERO
