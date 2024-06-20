@@ -48,8 +48,8 @@ from prt_test_utils import (
     DEFAULT_EXIT_SOLVE_TOL,
 )
 
-simname = "prtfmi01"
-cases = [simname, f"{simname}saws", f"{simname}bprp"]
+simname = "prtfmi"
+cases = [simname, f"{simname}saws", f"{simname}bprp", f"{simname}noext"]
 
 
 def build_prt_sim(name, gwf_ws, prt_ws, mf6):
@@ -123,6 +123,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         stop_at_weak_sink="saws" in prt_name,
         boundnames=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        extend="noext" not in prt_name,
     )
 
     # create output control package
@@ -346,28 +347,32 @@ def check_output(idx, test):
         plt.show()
         plt.savefig(gwf_ws / f"test_{simname}.png")
 
-    # convert mf6 pathlines to mp7 format
-    mf6_pls = to_mp7_pathlines(mf6_pls)
+    if "noext" in name:
+        # maximum tracking time should be simulation stop time
+        assert mf6_pls.t.max() == FlopyReadmeCase.nper * FlopyReadmeCase.perlen
+    else:
+        # convert mf6 pathlines to mp7 format
+        mf6_pls = to_mp7_pathlines(mf6_pls)
 
-    # sort both dataframes by particleid and time
-    mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
-    mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
+        # sort both dataframes by particleid and time
+        mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
+        mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
 
-    # drop columns for which there is no direct correspondence between mf6 and mp7
-    del mf6_pls["sequencenumber"]
-    del mf6_pls["particleidloc"]
-    del mf6_pls["xloc"]
-    del mf6_pls["yloc"]
-    del mf6_pls["zloc"]
-    del mp7_pls["sequencenumber"]
-    del mp7_pls["particleidloc"]
-    del mp7_pls["xloc"]
-    del mp7_pls["yloc"]
-    del mp7_pls["zloc"]
+        # drop columns for which there is no direct correspondence between mf6 and mp7
+        del mf6_pls["sequencenumber"]
+        del mf6_pls["particleidloc"]
+        del mf6_pls["xloc"]
+        del mf6_pls["yloc"]
+        del mf6_pls["zloc"]
+        del mp7_pls["sequencenumber"]
+        del mp7_pls["particleidloc"]
+        del mp7_pls["xloc"]
+        del mp7_pls["yloc"]
+        del mp7_pls["zloc"]
 
-    # compare mf6 / mp7 pathline data
-    assert mf6_pls.shape == mp7_pls.shape
-    assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
+        # compare mf6 / mp7 pathline data
+        assert mf6_pls.shape == mp7_pls.shape
+        assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

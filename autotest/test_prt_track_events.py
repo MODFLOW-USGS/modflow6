@@ -143,6 +143,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
             packagedata=releasepts_prt[grp],
             perioddata={0: ["FIRST"]},
             exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+            extend=True,
         )
         for grp in ["a", "b"]
     ]

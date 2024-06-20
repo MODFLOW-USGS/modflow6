@@ -47,6 +47,7 @@ module PrtPrpModule
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
     integer(I4B), pointer :: irlstls => null() !< release time file
     logical(LGP), pointer :: localz => null() !< compute z coordinates local to the cell
+    integer(I4B), pointer :: extend => null() !< extend tracking beyond simulation's end
     logical(LGP), pointer :: rlsall => null() !< release in all time step
     logical(LGP), pointer :: rlsfirst => null() !< release in first time step
     logical(LGP), pointer :: rlstimelist => null() !< use global release time
@@ -146,6 +147,7 @@ contains
     call mem_deallocate(this%rlsfirst)
     call mem_deallocate(this%rlstimelist)
     call mem_deallocate(this%localz)
+    call mem_deallocate(this%extend)
     call mem_deallocate(this%offset)
     call mem_deallocate(this%stoptime)
     call mem_deallocate(this%stoptraveltime)
@@ -246,6 +248,7 @@ contains
     call mem_allocate(this%rlsfirst, 'RLSFIRST', this%memoryPath)
     call mem_allocate(this%rlstimelist, 'RELEASETIME', this%memoryPath)
     call mem_allocate(this%localz, 'LOCALZ', this%memoryPath)
+    call mem_allocate(this%extend, 'EXTEND', this%memoryPath)
     call mem_allocate(this%offset, 'OFFSET', this%memoryPath)
     call mem_allocate(this%stoptime, 'STOPTIME', this%memoryPath)
     call mem_allocate(this%stoptraveltime, 'STOPTRAVELTIME', this%memoryPath)
@@ -268,6 +271,7 @@ contains
     this%rlsfirst = .false.
     this%rlstimelist = .false.
     this%localz = .false.
+    this%extend = 0
     this%offset = DZERO
     this%stoptime = huge(1d0)
     this%stoptraveltime = huge(1d0)
@@ -471,6 +475,7 @@ contains
         particle%ifrctrn = this%ifrctrn
         particle%iexmethod = this%iexmethod
         particle%extol = this%extol
+        particle%extend = this%extend
 
         ! -- Persist particle to particle store
         call this%particles%save_particle(particle, np)
@@ -827,6 +832,9 @@ contains
       found = .true.
     case ('LOCAL_Z')
       this%localz = .true.
+      found = .true.
+    case ('EXTEND')
+      this%extend = 1
       found = .true.
     case ('DEV_FORCETERNARY')
       call this%parser%DevOpt()

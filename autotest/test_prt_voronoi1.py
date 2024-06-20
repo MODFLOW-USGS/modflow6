@@ -554,6 +554,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         boundnames=True,
         stop_at_weak_sink=True,
         exit_solve_tolerance=1e-10,
+        extend=True,
     )
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"

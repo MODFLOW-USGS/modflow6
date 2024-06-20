@@ -177,6 +177,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
         ),
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        extend=True,
     )
 
     # create output control package

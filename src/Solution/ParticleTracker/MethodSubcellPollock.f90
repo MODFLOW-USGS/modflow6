@@ -181,15 +181,16 @@ contains
 
     ! -- Select user tracking times to solve. If this is the first time step
     !    of the simulation, include all times before it begins; if it is the
-    !    last time step include all times after it ends, otherwise the times
-    !    within the current period and time step only.
+    !    last time step include all times after it ends only if the 'extend'
+    !    option is on, otherwise times in this period and time step only.
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
 
     if (all(tslice > 0)) then
       do i = tslice(1), tslice(2)
         t = this%tracktimes%times(i)
-        if (t < particle%ttrack .or. t >= texit .or. t >= tmax) cycle
+        if (t < particle%ttrack) cycle
+        if (t >= texit .or. t >= tmax) exit
         dt = t - t0
         x = new_x(vx, dvxdx, subcell%vx1, subcell%vx2, &
                   dt, initialX, subcell%dx, statusVX == 1)
