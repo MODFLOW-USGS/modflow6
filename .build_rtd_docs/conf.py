@@ -75,6 +75,12 @@ src = os.path.join("..", fpth)
 dst = os.path.join(dstdir, fpth)
 shutil.copy(src, dst)
 
+# -- copy style guide
+fpth = "styleguide.md"
+src = os.path.join(fpth)
+dst = os.path.join(dstdir, fpth)
+shutil.copy(src, dst)
+
 # -- copy deprecations markdown ---------------------------------------------
 print("Copy the deprecations table")
 dstdir = "_mf6run"

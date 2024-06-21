@@ -9,4 +9,4 @@ This section includes developer instructions and conventions.
 
    _dev/CONTRIBUTING.md
    _dev/DEVELOPER.md
-   styleguide.md
+   _dev/styleguide.md
