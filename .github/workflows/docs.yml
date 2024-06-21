@@ -230,7 +230,6 @@ jobs:
 
       - name: Custom pixi install
         run: pixi run install
-          pixi-version: v0.24.2
 
       - name: Print python package versions
         run: pixi run pip list
