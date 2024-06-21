@@ -941,14 +941,17 @@ contains
           if (particle%trelease >= totimc) &
             call this%method%save(particle, reason=0) ! reason=0: release
 
-          ! Maximum time is end of time step unless this is the last
-          ! time step in the simulation and the extend option is on,
-          ! in which case the stop time is the particle stop time.
-          tmax = totimc + delt
+          ! Maximum time is the end of the time step or the particle
+          ! stop time, whichever comes first, unless it's the final
+          ! time step and the extend option is on, in which case
+          ! it's just the particle stop time.
           if (nper == kper .and. &
               nstp(kper) == kstp .and. &
-              particle%extend > 0) &
+              particle%extend > 0) then
             tmax = particle%tstop
+          else
+            tmax = min(totimc + delt, particle%tstop)
+          end if
 
           ! Get and apply the tracking method
           call this%method%apply(particle, tmax)

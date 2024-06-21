@@ -79,7 +79,7 @@ def build_mf6_sim(idx, test):
         perioddata={0: ["FIRST"]},
         boundnames="bnms" in name,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
-        extend=True
+        extend_tracking=True,
     )
 
     # create output control package

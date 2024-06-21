@@ -123,7 +123,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         stop_at_weak_sink="saws" in prt_name,
         boundnames=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
-        extend="noext" not in prt_name,
+        extend_tracking="noext" not in prt_name,
     )
 
     # create output control package

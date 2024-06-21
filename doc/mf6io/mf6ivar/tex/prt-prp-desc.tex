@@ -11,7 +11,7 @@
 
 \item \texttt{LOCAL\_Z}---indicates that ``zrpt'' defines the local z coordinate of the release point within the cell, with value of 0 at the bottom and 1 at the top of the cell.  If the cell is partially saturated at release time, the top of the cell is considered to be the water table elevation (the head in the cell) rather than the top defined by the user.
 
-\item \texttt{EXTEND}---indicates that particles should be tracked beyond the end of the simulation's final time step, until particles terminate or reach a specified stop time.  By default, particles are terminated at the end of the simulation's final time step.
+\item \texttt{EXTEND\_TRACKING}---indicates that particles should be tracked beyond the end of the simulation's final time step (using that time step's flows) until particles terminate or reach a specified stop time.  By default, particles are terminated at the end of the simulation's final time step.
 
 \item \texttt{TRACK}---keyword to specify that record corresponds to a binary track output file.  Each PRP Package may have a distinct binary track output file.
 

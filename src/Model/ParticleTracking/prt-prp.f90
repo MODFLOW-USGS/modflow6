@@ -833,7 +833,7 @@ contains
     case ('LOCAL_Z')
       this%localz = .true.
       found = .true.
-    case ('EXTEND')
+    case ('EXTEND_TRACKING')
       this%extend = 1
       found = .true.
     case ('DEV_FORCETERNARY')

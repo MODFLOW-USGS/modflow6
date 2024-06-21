@@ -3,7 +3,7 @@ BEGIN OPTIONS
   [PRINT_INPUT]
   EXIT_SOLVE_TOLERANCE <exit_solve_tolerance>
   [LOCAL_Z]
-  [EXTEND]
+  [EXTEND_TRACKING]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]
   [STOPTIME <stoptime>]
