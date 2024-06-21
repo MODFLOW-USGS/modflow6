@@ -221,7 +221,6 @@ contains
 
   subroutine bndlist_ts_link_bnd(this, structvector, ts_strloc)
     ! -- modules
-    use SimModule, only: count_errors, store_error_filename
     use TimeSeriesLinkModule, only: TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     use StructVectorModule, only: StructVectorType, TSStringLocType
@@ -260,18 +259,12 @@ contains
       end if
     end if
     !
-    ! -- terminate if errors were detected
-    if (count_errors() > 0) then
-      call store_error_filename(this%input_name)
-    end if
-    !
     ! -- return
     return
   end subroutine bndlist_ts_link_bnd
 
   subroutine bndlist_ts_link_aux(this, structvector, ts_strloc)
     ! -- modules
-    use SimModule, only: count_errors, store_error_filename
     use TimeSeriesLinkModule, only: TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     use StructVectorModule, only: StructVectorType, TSStringLocType
@@ -311,17 +304,13 @@ contains
       !
     end if
     !
-    ! -- terminate if errors were detected
-    if (count_errors() > 0) then
-      call store_error_filename(this%input_name)
-    end if
-    !
     ! -- return
     return
   end subroutine bndlist_ts_link_aux
 
   subroutine bndlist_ts_update(this, structarray)
     ! -- modules
+    use SimModule, only: count_errors, store_error_filename
     use StructVectorModule, only: TSStringLocType
     use StructVectorModule, only: StructVectorType
     ! -- dummy
@@ -346,6 +335,11 @@ contains
         call sv%clear()
       end if
     end do
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_name)
+    end if
     !
     ! -- return
     return
