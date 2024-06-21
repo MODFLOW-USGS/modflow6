@@ -28,7 +28,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
 
       - name: Check spelling
         run: pixi run check-spelling
@@ -65,17 +65,13 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
   
-      - name: Install additional packages for Sphinx using pip
-        working-directory: modflow6/.build_rtd_docs
-        run: pixi run pip install -r requirements.rtd.txt
-
       - name: Print python package versions
         working-directory: modflow6
         run: pixi run pip list
@@ -230,7 +226,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
 
       - name: Custom pixi install
         run: pixi run install
