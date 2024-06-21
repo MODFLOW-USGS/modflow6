@@ -779,7 +779,8 @@ contains
 
   !> @ brief Calculate conductance
   !!
-  !! Calculate the conductance for the specified connection
+  !! Calculate the conductance between the surface water cell
+  !! and the underlying groundwater cell.  
   !<
   function get_cond(this, iexg, hswf, hgwf)
     ! module
@@ -794,7 +795,7 @@ contains
     ! local
     integer(I4B) :: nodeswf
     real(DP) :: range = 1.d-6
-    real(DP) :: depth_swf
+    real(DP) :: depth_ups
     real(DP) :: dydx
     real(DP) :: smooth_factor
     real(DP) :: area
@@ -807,19 +808,17 @@ contains
       return
     end if
 
-    ! Calculate smooth factor between zero, when depth_swf is zero
-    ! and 1.0, when depth_swf is greater than or equal to range
+    ! Calculate smooth factor between zero, when the upstream-weighted
+    ! depth is zero, and 1.0, when the upstream weighted depth is 
+    ! greater than or equal to the smoothening depth
     nodeswf = this%nodeswf(iexg)
-    depth_swf = hswf - this%swfmodel%dis%bot(nodeswf)
-    call sQuadratic(depth_swf, range, dydx, smooth_factor)
+    depth_ups = max(hswf, hgwf) - this%swfmodel%dis%bot(nodeswf)
+    call sQuadratic(depth_ups, range, dydx, smooth_factor)
 
-    ! For channel model calculate area as product of cfact and upstream wetted perimeter
+    ! For channel model calculate the interaction area as product 
+    ! of cfact and upstream-wetted perimeter
     if (this%swfmodel%dfw%is2d == 0) then
-      if (hgwf > hswf) then
-        ! upstream weight depth_swf for perimeter calculation
-        depth_swf = hgwf - this%swfmodel%dis%bot(nodeswf)
-      end if
-      perimeter = this%get_wetted_perimeter(nodeswf, depth_swf)
+      perimeter = this%get_wetted_perimeter(nodeswf, depth_ups)
       area = area * perimeter
     end if
 

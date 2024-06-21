@@ -306,9 +306,10 @@ contains
   subroutine zdg_cf(this)
     ! modules
     use MathUtilModule, only: get_perturbation
-    ! -- dummy variables
+    use SmoothingModule, only: sQuadratic
+    ! dummy variables
     class(SwfZdgType) :: this !< SwfZdgType  object
-    ! -- local variables
+    ! local variables
     integer(I4B) :: i, node
     real(DP) :: q
     real(DP) :: qeps
@@ -317,6 +318,9 @@ contains
     real(DP) :: cond
     real(DP) :: derv
     real(DP) :: eps
+    real(DP) :: range = 1.d-6
+    real(DP) :: dydx
+    real(DP) :: smooth_factor
     !
     ! -- Return if no inflows
     if (this%nbound == 0) return
@@ -334,6 +338,10 @@ contains
       ! -- calculate terms and add to hcof and rhs
       absdhdxsq = this%slope(i)**DHALF
       depth = this%xnew(node) - this%dis%bot(node)
+
+      ! smooth the depth
+      call sQuadratic(depth, range, dydx, smooth_factor)
+      depth = depth * smooth_factor
 
       ! -- calculate unperturbed q
       ! TODO: UNITCONV?!
