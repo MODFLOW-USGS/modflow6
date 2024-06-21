@@ -181,12 +181,14 @@ jobs:
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
+            modflow6/.build_rtd_docs/dev.rst
             modflow6/.build_rtd_docs/index.rst
             modflow6/.build_rtd_docs/mf6io.rst
-            # run-time-comparison is moved to _mf6run by conf.py
-            modflow6/.build_rtd_docs/_mf6run/
+            modflow6/.build_rtd_docs/_dev/
             modflow6/.build_rtd_docs/_mf6io/
+            modflow6/.build_rtd_docs/_mf6run/
             modflow6/.build_rtd_docs/_static/
+            
 
   rtd_trigger:
     name: rtd-trigger
