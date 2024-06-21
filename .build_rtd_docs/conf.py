@@ -56,6 +56,25 @@ os.makedirs(dstdir)
 # copy the file
 shutil.copy(src, dst)
 
+# -- copy developer docs
+dstdir = "_dev"
+fpth = "DEVELOPER.md"
+src = os.path.join("..", fpth)
+dst = os.path.join(dstdir, fpth)
+# clean up an existing _mf6run directory
+if os.path.isdir(dstdir):
+    shutil.rmtree(dstdir)
+# make the directory
+os.makedirs(dstdir)
+# copy the file
+shutil.copy(src, dst)
+
+# -- copy contributor docs
+fpth = "CONTRIBUTING.md"
+src = os.path.join("..", fpth)
+dst = os.path.join(dstdir, fpth)
+shutil.copy(src, dst)
+
 # -- copy deprecations markdown ---------------------------------------------
 print("Copy the deprecations table")
 dstdir = "_mf6run"
@@ -125,6 +144,8 @@ extensions = [
 
 # # Tell sphinx what the pygments highlight language should be.
 # highlight_language = 'fortran'
+
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

@@ -1,4 +1,4 @@
-# Style Guide
+# Fortran Style Guide
 
 The goal of this guide is to provide a standard for MODFLOW 6 contributors to follow, in pursuit of consistent, readable, well-organized, and unsurprising source code.
 
