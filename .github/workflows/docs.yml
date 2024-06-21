@@ -68,6 +68,10 @@ jobs:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
+  
       - name: Print python package versions
         working-directory: modflow6
         run: pixi run pip list
@@ -222,6 +226,10 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
+          pixi-version: v0.24.2
+
+      - name: Custom pixi install
+        run: pixi run install
           pixi-version: v0.24.2
 
       - name: Print python package versions

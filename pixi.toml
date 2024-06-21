@@ -34,12 +34,6 @@ shapely = "*"
 syrupy = "*"
 xmipy = "*"
 
-[pypi-dependencies]
-flopy = { git = "https://github.com/modflowpy/flopy.git" }
-mfpymake = { git = "https://github.com/modflowpy/pymake.git" }
-modflowapi = { git = "https://github.com/MODFLOW-USGS/modflowapi.git" }
-modflow-devtools = { git = "https://github.com/MODFLOW-USGS/modflow-devtools.git" }
-
 [feature.rtd.dependencies]
 numpy = "*"
 bmipy = "*"
@@ -50,7 +44,7 @@ myst-parser = "*"
 sphinx_rtd_theme = ">=1"
 pytest = "*"
 filelock = "*"
-# modflow-devtools = "*"    # Has been disabled because it clashes with the modflow-devtools in the default environment
+modflow-devtools = "*"
 
 [feature.rtd.pypi-dependencies]
 # These dependencies are added as pypi dependencies because an osx-arm64 version of them doesn't exist on conda
@@ -63,6 +57,18 @@ rtds_action = "*"
 rtd = { features = ["rtd"], solve-group = "default" }
 
 [tasks]
+# install
+install-flopy = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/flopy.git"
+install-pymake = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/modflowpy/pymake.git"
+install-modflowapi = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflowapi.git"
+install-modflow-devtools = "pip install --no-build-isolation --no-deps --disable-pip-version-check git+https://github.com/MODFLOW-USGS/modflow-devtools.git"
+install = { depends_on = [
+    "install-flopy",
+    "install-pymake",
+    "install-modflowapi",
+    "install-modflow-devtools",
+] }
+
 # format
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"

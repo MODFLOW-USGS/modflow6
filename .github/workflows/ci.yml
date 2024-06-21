@@ -129,6 +129,10 @@ jobs:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
+
       - name: Build test-drive
         working-directory: test-drive
         run: |
@@ -223,6 +227,10 @@ jobs:
         with:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Set LDFLAGS (macOS)
         if: matrix.os == 'macos-14'
@@ -359,6 +367,10 @@ jobs:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
+
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
@@ -445,6 +457,10 @@ jobs:
         with:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
+
+      - name: Custom pixi install
+        working-directory: modflow6
+        run: pixi run install
 
       - name: Test parallel MF6
         if: runner.os != 'Windows'
