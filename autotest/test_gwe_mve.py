@@ -567,9 +567,11 @@ def build_mf6_model(idx, ws):
         gwe,
         save_flows=True,
         porosity=prsity,
+        heat_capacity_water=cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=cps,
         rhos=rhos,
-        packagedata=[cpw, rhow, lhv],
         pname="EST",
         filename=f"{gwename}.est",
     )

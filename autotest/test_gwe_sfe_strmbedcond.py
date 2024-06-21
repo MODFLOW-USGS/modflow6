@@ -502,9 +502,11 @@ def build_models(idx, test):
         gwe,
         save_flows=True,
         porosity=porosity,
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=Cps,
         rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
         pname="EST",
         filename="{}.est".format(gwename),
     )
@@ -624,7 +626,7 @@ def check_output(idx, test):
         )
 
         assert np.isclose(wa, shared_area[0, j], atol=1e-4), msg
-    
+
     # Sub-scenario checks
     # initialize search term
     srchStr = "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"

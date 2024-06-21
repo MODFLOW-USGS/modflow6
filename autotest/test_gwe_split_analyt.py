@@ -156,7 +156,7 @@ def calc_ener_input(primer_val):
 
 # Define function to solve analytical solution
 def assemble_half_model(sim, gwfname, gwfpath, side="right"):
-    
+
     # Create GWF model
     gwf = flopy.mf6.MFModel(
         sim,
@@ -205,7 +205,7 @@ def assemble_half_model(sim, gwfname, gwfpath, side="right"):
         steady_state=False,
         transient=True,
     )
-    
+
     # Output control
     flopy.mf6.ModflowGwfoc(
         gwf,
@@ -215,13 +215,13 @@ def assemble_half_model(sim, gwfname, gwfpath, side="right"):
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
-    
+
     gwf.set_model_relative_path(gwfpath)
     return gwf
 
 
 def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
-    
+
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
@@ -269,9 +269,11 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=theta,
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=Cps,
         rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
     )
 
     # Constant temperature goes on the left side of the left model
@@ -321,7 +323,7 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
             save_flows=False,
             pname="ESL-" + side[0],
         )
-    
+
     # Output control
     flopy.mf6.ModflowGweoc(
         gwe,
@@ -369,7 +371,7 @@ def build_models(idx, test):
 
     # left model
     gwf1 = assemble_half_model(sim, "flow1", "flow1", side="left")
-    
+
     # right model
     gwf2 = assemble_half_model(sim, "flow2", "flow2", side="right")
 
@@ -410,11 +412,15 @@ def build_models(idx, test):
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
     # Create gw3 model
-    gwe1 = get_gwe_model(idx, sim, "energy1", "energy1", ener_input, side="left")
+    gwe1 = get_gwe_model(
+        idx, sim, "energy1", "energy1", ener_input, side="left"
+    )
 
     # Create gwe model
-    gwe2 = get_gwe_model(idx, sim, "energy2", "energy2", ener_input, side="right")
-    
+    gwe2 = get_gwe_model(
+        idx, sim, "energy2", "energy2", ener_input, side="right"
+    )
+
     # Create GWE GWE exchange
     flopy.mf6.ModflowGwegwe(
         sim,
@@ -429,7 +435,7 @@ def build_models(idx, test):
         auxiliary=["ANGLDEGX", "CDIST"],
         filename="{}.gwegwe".format("exchng"),
     )
-    
+
     # GWF-GWE exchange
     flopy.mf6.ModflowGwfgwe(
         sim,
@@ -445,7 +451,7 @@ def build_models(idx, test):
         exgmnameb="energy2",
         filename="flow2_transport2.gwfgwe",
     )
-    
+
     # create iterative model solution and register the gwt model with it
     imsgwe = flopy.mf6.ModflowIms(
         sim,
@@ -545,7 +551,7 @@ def check_output(idx, test):
         sim_temps_l = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'
-    
+
     gwename = "energy2"
     fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
     try:
@@ -555,7 +561,6 @@ def check_output(idx, test):
         sim_temps_r = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'
-    
 
     # stitch the left and right sides together
     sim_temps = np.concatenate(
@@ -593,7 +598,7 @@ def check_output(idx, test):
             # plt.axhline(0.0, color='black')
             # plt.legend()
             # plt.show()
-    
+
     elif idx == 2:
 
         t_accumulate = 0.0

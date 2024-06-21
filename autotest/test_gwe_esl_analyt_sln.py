@@ -144,6 +144,7 @@ rho_C_bulk = Sw * theta * rhow * Cpw + (1 - theta) * rhos * Cps
 # Eqn 7-3: Bulk thermal diffusivity
 D = K_t_bulk / rho_C_bulk
 
+
 # Energy input to boundary (q_x term in the documentation)
 def calc_ener_input(primer_val):
     ener_add_rate = delr * delc * delz * rho_C_bulk * primer_val
@@ -334,9 +335,11 @@ def build_models(idx, test, ener_input):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=theta,
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=Cps,
         rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
         pname="EST-1",
         filename="{}.est".format(gwename),
     )
@@ -412,18 +415,18 @@ def eq7_24(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-24
-    term1 = (1 / 2) * (x_hat ** 2 - 1 / 3)
+    term1 = (1 / 2) * (x_hat**2 - 1 / 3)
     summation_terms = [
         ((-1) ** n)
-        / n ** 2
-        * math.exp(-1 * n ** 2 * math.pi ** 2 * t_hat)
+        / n**2
+        * math.exp(-1 * n**2 * math.pi**2 * t_hat)
         * math.cos(n * math.pi * x_hat)
         for n in np.arange(1, 1000)
     ]
-    term2 = 2 / (math.pi ** 2) * np.sum(summation_terms)
+    term2 = 2 / (math.pi**2) * np.sum(summation_terms)
     T = T_0 + ener_add_rate * l / K_t_bulk * (t_hat + term1 - term2)
 
     return T
@@ -434,17 +437,17 @@ def eq7_25(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-25
     summation_terms = [
         ((-1) ** n)
         / (2 * n + 1) ** 2
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat / 4)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat / 4)
         * math.sin((2 * n + 1) * math.pi * x_hat / 2)
         for n in np.arange(0, 1000)
     ]
-    term1 = (8 / math.pi ** 2) * np.sum(summation_terms)
+    term1 = (8 / math.pi**2) * np.sum(summation_terms)
 
     T = T_0 + ener_add_rate * l / K_t_bulk * (x_hat - term1)
 
@@ -456,19 +459,19 @@ def eq7_26(x, t, el, D, T_0, ener_add_rate):
     x_hat = x / el  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / el ** 2  # Dimensionless time
+    t_hat = D * t / el**2  # Dimensionless time
 
     # Solve equation 7-26
     term1 = x_hat * (1 - x_hat)
     summation_terms = [
         1
         / (2 * n + 1) ** 3
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat)
         * math.sin((2 * n + 1) * math.pi * x_hat)
         for n in np.arange(0, 1000)
     ]
-    term2 = (8 / math.pi ** 3) * np.sum(summation_terms)
-    T = T_0 + 0.5 * ener_add_rate * el ** 2 / K_t_bulk * (term1 - term2)
+    term2 = (8 / math.pi**3) * np.sum(summation_terms)
+    T = T_0 + 0.5 * ener_add_rate * el**2 / K_t_bulk * (term1 - term2)
 
     return T
 

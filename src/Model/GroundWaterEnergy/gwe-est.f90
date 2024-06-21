@@ -13,7 +13,7 @@
 module GweEstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
+  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, DEP3
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -40,6 +40,7 @@ module GweEstModule
     ! -- storage
     real(DP), pointer :: cpw => null() !< heat capacity of water
     real(DP), pointer :: rhow => null() !< density of water
+    real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
     real(DP), dimension(:), pointer, contiguous :: cps => null() !< heat capacity of solid
     real(DP), dimension(:), pointer, contiguous :: rhos => null() !< density of solid
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
@@ -47,7 +48,6 @@ module GweEstModule
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer :: ilhv => null() !< latent heat of vaporization for calculating temperature change associated with evaporation (0: not specified, not 0: specified)
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order decay rate (aqueous)
     real(DP), dimension(:), pointer, contiguous :: ratedcy => null() !< rate of decay
     real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
@@ -56,7 +56,6 @@ module GweEstModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in est
-    real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =rhow*cpw for energy
 
   contains
@@ -75,7 +74,6 @@ module GweEstModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: read_packagedata
 
   end type GweEstType
 
@@ -129,7 +127,6 @@ contains
     class(GweEstType), intent(inout) :: this !< GweEstType object
     class(DisBaseType), pointer, intent(in) :: dis !< pointer to dis package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< pointer to GWE ibound array
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtest = &
       "(1x,/1x,'EST -- ENERGY STORAGE AND TRANSFER PACKAGE, VERSION 1, &
@@ -151,17 +148,9 @@ contains
     ! -- read the gridded data
     call this%read_data()
     !
-    ! -- read package data that is not gridded
-    call this%read_packagedata()
-    !
-    ! -- set pointers for data required by other packages
-    if (this%ilhv == 1) then
-      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
-                                           this%cpw, this%latheatvap)
-    else
-      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
-                                           this%cpw)
-    end if
+    ! -- set data required by other packages
+    call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%latheatvap, &
+                                         this%rhos, this%cps)
     !
     ! -- Return
     return
@@ -546,7 +535,6 @@ contains
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
-      call mem_deallocate(this%ilhv)
       call mem_deallocate(this%decay)
       call mem_deallocate(this%ratedcy)
       call mem_deallocate(this%decaylast)
@@ -587,14 +575,12 @@ contains
     call mem_allocate(this%rhow, 'RHOW', this%memoryPath)
     call mem_allocate(this%latheatvap, 'LATHEATVAP', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
-    call mem_allocate(this%ilhv, 'ILHV', this%memoryPath)
     !
     ! -- Initialize
     this%cpw = DZERO
     this%rhow = DZERO
     this%latheatvap = DZERO
     this%idcy = 0
-    this%ilhv = 0
     !
     ! -- Return
     return
@@ -670,9 +656,6 @@ contains
                                    "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
                                    "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
-    character(len=*), parameter :: fmtilhv = &
-                                   "(4x,'LATENT HEAT OF VAPORIZATION WILL BE &
-            &USED IN EVAPORATION CALCULATIONS.')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -695,9 +678,21 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('HEAT_CAPACITY_WATER')
+          this%cpw = this%parser%GetDouble()
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'Heat capacity of the water has been set to: ', &
+            this%cpw
+        case ('DENSITY_WATER')
+          this%rhow = this%parser%GetDouble()
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'Density of the water has been set to: ', &
+            this%rhow
         case ('LATENT_HEAT_VAPORIZATION')
-          this%ilhv = 1
-          write (this%iout, fmtilhv)
+          this%latheatvap = this%parser%GetDouble()
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'Latent heat of vaporization of the water has been set to: ', &
+            this%latheatvap
         case default
           write (errmsg, '(a,a)') 'UNKNOWN EST OPTION: ', trim(keyword)
           call store_error(errmsg)
@@ -827,42 +822,6 @@ contains
     return
   end subroutine read_data
 
-  !> @ brief Read data for package
-  !!
-  !!  Method to read data for the package.
-  !<
-  subroutine read_packagedata(this)
-    ! -- modules
-    ! -- dummy
-    class(GweEstType) :: this !< GweEstType object
-    ! -- local
-    logical :: isfound
-    logical :: endOfBlock
-    integer(I4B) :: ierr
-    !
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
-                              supportopenclose=.true.)
-    !
-    ! -- parse locations block if detected
-    if (isfound) then
-      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%packName))// &
-        ' PACKAGEDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) then
-          exit
-        end if
-        !
-        ! -- get fluid constants
-        this%cpw = this%parser%GetDouble()
-        this%rhow = this%parser%GetDouble()
-      end do
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_packagedata
-
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
   !!  Function to calculate the zero-order decay rate from the user specified
@@ -880,7 +839,7 @@ contains
     real(DP), intent(in) :: cold !< temperature at end of last time step
     real(DP), intent(in) :: cnew !< temperature at end of this time step
     real(DP), intent(in) :: delt !< length of time step
-    ! -- Return
+    ! -- return
     real(DP) :: decay_rate !< returned value for decay rate
     !
     ! -- Return user rate if production, otherwise constrain, if necessary

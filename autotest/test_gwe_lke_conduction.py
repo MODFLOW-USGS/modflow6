@@ -575,9 +575,11 @@ def build_models(idx, test):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=porosity,
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=Cps,
         rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
         pname="MST-1",
         filename=f"{gwename}.mst",
     )

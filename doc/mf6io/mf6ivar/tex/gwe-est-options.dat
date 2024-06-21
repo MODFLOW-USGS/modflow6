@@ -1,5 +1,7 @@
 BEGIN OPTIONS
   [SAVE_FLOWS]
   [ZERO_ORDER_DECAY]
-  [LATENT_HEAT_VAPORIZATION]
+  [DENSITY_WATER <density_water>]
+  [HEAT_CAPACITY_WATER <heat_capacity_water>]
+  [LATENT_HEAT_VAPORIZATION <latent_heat_vaporization>]
 END OPTIONS

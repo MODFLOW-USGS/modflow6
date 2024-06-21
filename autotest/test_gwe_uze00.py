@@ -59,7 +59,7 @@ def temp_analyt(t, z, t0, tinfil, v, d):
                 0.3480242 + zeta * (-0.0958798 + zeta * 0.7478556)
             )
             temp = t0 + 0.5 * (tinfil - t0) * (
-                math.erfc(ztermm) + math.exp(vterm - ztermp ** 2) * polyterm
+                math.erfc(ztermm) + math.exp(vterm - ztermp**2) * polyterm
             )
 
     return temp
@@ -350,9 +350,11 @@ def build_models(idx, test):
         gwe,
         save_flows=True,
         porosity=prsity,
+        heat_capacity_water=cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
         cps=760.0,
         rhos=1500.0,
-        packagedata=[cpw, rhow, lhv],
         pname="EST",
         filename=f"{gwename}.est",
     )

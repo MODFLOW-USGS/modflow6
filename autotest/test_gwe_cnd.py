@@ -307,10 +307,11 @@ def build_models(idx, test):
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
+        heat_capacity_water=cpw,
+        density_water=rhow,
         porosity=prsity,
         cps=760.0,
         rhos=1500.0,
-        packagedata=[cpw, rhow, lhv],
         filename="{}.est".format(gwename),
     )
 
