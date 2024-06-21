@@ -67,10 +67,6 @@ jobs:
         with:
           pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
-  
-      - name: Install additional packages for Sphinx using pip
-        working-directory: modflow6/.build_rtd_docs
-        run: pixi run pip install -r requirements.rtd.txt
 
       - name: Print python package versions
         working-directory: modflow6
