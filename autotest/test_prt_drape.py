@@ -190,6 +190,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         drape="drp" in name,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        extend_tracking=True,
     )
 
     # create output control package

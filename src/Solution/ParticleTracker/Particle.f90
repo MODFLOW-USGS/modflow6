@@ -62,6 +62,7 @@ module ParticleModule
     integer(I4B), public :: ifrctrn !< whether to force solving the particle with the ternary method
     integer(I4B), public :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), public :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    integer(I4B), public :: extend !< whether to extend tracking beyond the end of the simulation
   contains
     procedure, public :: get_model_coords
     procedure, public :: load_particle
@@ -70,30 +71,32 @@ module ParticleModule
 
   !> @brief Structure of arrays to store particles.
   type ParticleStoreType
+    private
     ! identity
-    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous :: name !< optional particle label
-    integer(I4B), dimension(:), pointer, contiguous :: imdl !< index of model particle originated in
-    integer(I4B), dimension(:), pointer, contiguous :: iprp !< index of release package the particle originated in
-    integer(I4B), dimension(:), pointer, contiguous :: irpt !< index of release point in the particle release package the particle originated in
+    character(len=LENBOUNDNAME), dimension(:), pointer, public, contiguous :: name !< optional particle label
+    integer(I4B), dimension(:), pointer, public, contiguous :: imdl !< index of model particle originated in
+    integer(I4B), dimension(:), pointer, public, contiguous :: iprp !< index of release package the particle originated in
+    integer(I4B), dimension(:), pointer, public, contiguous :: irpt !< index of release point in the particle release package the particle originated in
     ! stopping criteria
-    integer(I4B), dimension(:), pointer, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
-    integer(I4B), dimension(:), pointer, contiguous :: istopzone !< stop zone number
+    integer(I4B), dimension(:), pointer, public, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
+    integer(I4B), dimension(:), pointer, public, contiguous :: istopzone !< stop zone number
     ! state
-    integer(I4B), dimension(:, :), pointer, contiguous :: idomain !< array of indices for domains in the tracking domain hierarchy
-    integer(I4B), dimension(:, :), pointer, contiguous :: iboundary !< array of indices for tracking domain boundaries
-    integer(I4B), dimension(:), pointer, contiguous :: icu !< cell number (user, not reduced)
-    integer(I4B), dimension(:), pointer, contiguous :: ilay !< layer
-    integer(I4B), dimension(:), pointer, contiguous :: izone !< current zone number
-    integer(I4B), dimension(:), pointer, contiguous :: istatus !< particle status
-    real(DP), dimension(:), pointer, contiguous :: x !< model x coord of particle
-    real(DP), dimension(:), pointer, contiguous :: y !< model y coord of particle
-    real(DP), dimension(:), pointer, contiguous :: z !< model z coord of particle
-    real(DP), dimension(:), pointer, contiguous :: trelease !< particle release time
-    real(DP), dimension(:), pointer, contiguous :: tstop !< particle stop time
-    real(DP), dimension(:), pointer, contiguous :: ttrack !< current tracking time
-    integer(I4B), dimension(:), pointer, contiguous :: ifrctrn !< force ternary method
-    integer(I4B), dimension(:), pointer, contiguous :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
-    real(DP), dimension(:), pointer, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    integer(I4B), dimension(:, :), pointer, public, contiguous :: idomain !< array of indices for domains in the tracking domain hierarchy
+    integer(I4B), dimension(:, :), pointer, public, contiguous :: iboundary !< array of indices for tracking domain boundaries
+    integer(I4B), dimension(:), pointer, public, contiguous :: icu !< cell number (user, not reduced)
+    integer(I4B), dimension(:), pointer, public, contiguous :: ilay !< layer
+    integer(I4B), dimension(:), pointer, public, contiguous :: izone !< current zone number
+    integer(I4B), dimension(:), pointer, public, contiguous :: istatus !< particle status
+    real(DP), dimension(:), pointer, public, contiguous :: x !< model x coord of particle
+    real(DP), dimension(:), pointer, public, contiguous :: y !< model y coord of particle
+    real(DP), dimension(:), pointer, public, contiguous :: z !< model z coord of particle
+    real(DP), dimension(:), pointer, public, contiguous :: trelease !< particle release time
+    real(DP), dimension(:), pointer, public, contiguous :: tstop !< particle stop time
+    real(DP), dimension(:), pointer, public, contiguous :: ttrack !< current tracking time
+    integer(I4B), dimension(:), pointer, public, contiguous :: ifrctrn !< force ternary method
+    integer(I4B), dimension(:), pointer, public, contiguous :: iexmethod !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), dimension(:), pointer, public, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    integer(LGP), dimension(:), pointer, public, contiguous :: extend !< whether to extend tracking beyond the end of the simulation
   contains
     procedure, public :: deallocate
     procedure, public :: resize
@@ -136,6 +139,7 @@ contains
     call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_allocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
     call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
+    call mem_allocate(this%extend, np, 'PLEXTEND', mempath)
     call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine allocate_particle_store
@@ -164,6 +168,7 @@ contains
     call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
     call mem_deallocate(this%iexmethod, 'PLIEXMETHOD', mempath)
     call mem_deallocate(this%extol, 'PLEXTOL', mempath)
+    call mem_deallocate(this%extend, 'PLEXTEND', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
   end subroutine deallocate
@@ -195,6 +200,7 @@ contains
     call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_reallocate(this%iexmethod, np, 'PLIEXMETHOD', mempath)
     call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
+    call mem_reallocate(this%extend, np, 'PLEXTEND', mempath)
     call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine resize
@@ -238,6 +244,7 @@ contains
     this%ifrctrn = store%ifrctrn(ip)
     this%iexmethod = store%iexmethod(ip)
     this%extol = store%extol(ip)
+    this%extend = store%extend(ip)
   end subroutine load_particle
 
   !> @brief Save a particle's state to the particle store
@@ -270,9 +277,10 @@ contains
       ip, &
       1:levelmax) = &
       particle%iboundary(1:levelmax)
-    this%ifrctrn = particle%ifrctrn
-    this%iexmethod = particle%iexmethod
-    this%extol = particle%extol
+    this%ifrctrn(ip) = particle%ifrctrn
+    this%iexmethod(ip) = particle%iexmethod
+    this%extol(ip) = particle%extol
+    this%extend(ip) = particle%extend
   end subroutine save_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.

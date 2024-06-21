@@ -226,16 +226,17 @@ contains
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
-    ! Solve user-specified tracking times within the current stress period and
-    ! time step. If this is the last time step, solve all times after it ends,
-    ! as per MODPATH 7 with stop time option 'extend'.
-    ! todo: reconsider whether this should be default?
+    ! -- Select user tracking times to solve. If this is the first time step
+    !    of the simulation, include all times before it begins; if it is the
+    !    last time step include all times after it ends only if the 'extend'
+    !    option is on, otherwise times in this period and time step only.
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
     if (all(tslice > 0)) then
       do i = tslice(1), tslice(2)
         t = this%tracktimes%times(i)
-        if (t < particle%ttrack .or. t >= texit .or. t >= tmax) cycle
+        if (t < particle%ttrack) cycle
+        if (t >= texit .or. t >= tmax) exit
         dt = t - t0
         call calculate_xyz_position(dt, rxx, rxy, ryx, ryy, sxx, sxy, syy, &
                                     izstatus, x0, y0, az, vzi, vzbot, &

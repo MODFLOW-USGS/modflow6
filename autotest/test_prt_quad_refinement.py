@@ -154,6 +154,7 @@ def build_mf6_sim(idx, test, **kwargs):
         perioddata={0: ["FIRST"]},
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         dev_forceternary=tracking_method == "ternary",
+        extend_tracking=True,
     )
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"

@@ -100,6 +100,7 @@ def build_prt_sim(
         stop_at_weak_sink=True,  # currently required for this problem
         dev_exit_solve_method=methods[idx],
         exit_solve_tolerance=exit_solve_tolerance,
+        extend_tracking=True,
     )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"

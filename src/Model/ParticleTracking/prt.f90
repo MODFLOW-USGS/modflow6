@@ -933,25 +933,30 @@ contains
           if (particle%istatus == 8) &
             call this%method%save(particle, reason=3) ! reason=3: termination
 
-          ! -- If particle is inactive or not yet to be released, cycle
+          ! If particle is inactive or not yet to be released, cycle
           if (particle%istatus > 1) cycle
 
-          ! -- If particle released this time step, record its initial state
+          ! If particle released this time step, record its initial state
           particle%istatus = 1
           if (particle%trelease >= totimc) &
             call this%method%save(particle, reason=0) ! reason=0: release
 
-          ! -- Maximum time is end of time step unless this is the last
-          !    time step in the simulation, which case it's the particle
-          !    stop time.
-          tmax = totimc + delt
-          if (nper == kper .and. nstp(kper) == kstp) &
+          ! Maximum time is the end of the time step or the particle
+          ! stop time, whichever comes first, unless it's the final
+          ! time step and the extend option is on, in which case
+          ! it's just the particle stop time.
+          if (nper == kper .and. &
+              nstp(kper) == kstp .and. &
+              particle%extend > 0) then
             tmax = particle%tstop
+          else
+            tmax = min(totimc + delt, particle%tstop)
+          end if
 
-          ! -- Get and apply the tracking method
+          ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
 
-          ! -- Update particle storage
+          ! Update particle storage
           call packobj%particles%save_particle(particle, np)
         end do
       end select
