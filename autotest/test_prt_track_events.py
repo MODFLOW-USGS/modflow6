@@ -489,11 +489,13 @@ def check_output(idx, test):
         del mf6_pls["xloc"]
         del mf6_pls["yloc"]
         del mf6_pls["zloc"]
+        del mf6_pls["node"]
         del mp7_pls["sequencenumber"]
         del mp7_pls["particleidloc"]
         del mp7_pls["xloc"]
         del mp7_pls["yloc"]
         del mp7_pls["zloc"]
+        del mp7_pls["node"]
 
         # sort both dataframes
         cols = ["x", "y", "z", "time"]
