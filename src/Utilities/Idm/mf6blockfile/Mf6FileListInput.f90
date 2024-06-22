@@ -310,6 +310,7 @@ contains
 
   subroutine bndlist_ts_update(this, structarray)
     ! -- modules
+    use SimModule, only: count_errors, store_error_filename
     use StructVectorModule, only: TSStringLocType
     use StructVectorModule, only: StructVectorType
     ! -- dummy
@@ -334,6 +335,11 @@ contains
         call sv%clear()
       end if
     end do
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_name)
+    end if
     !
     ! -- return
     return
