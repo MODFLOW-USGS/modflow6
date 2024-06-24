@@ -27,10 +27,10 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
   > When only using the `use ...` syntax you pull in everything a module defines. This can cause name collision. Therefore always use the `use ..., only: ...` syntax
   ```f90
   module SampleModule
-    ! Don't
+    ! don't
     use ConstantsModule
 
-    ! Do
+    ! do
     use ConstantsModule, only: DPI
   end module SampleModule
   ```
@@ -44,13 +44,13 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 #### Don't end procedures with a `return` statement; use `return` only to return early.
   > Adding a `return` statement is superfluous as the procedure will return anyway after the last line
   ```f90
-  ! Don't
+  ! don't
   subroutine run_sample()
     ! Some code
     return
   end subroutine
 
-  ! Do
+  ! do
   subroutine run_sample()
   ! Some code
   end subroutine
@@ -64,12 +64,12 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
   ```f90
   use KindModule, only: DP, I4B, LGP
 
-  ! Don't
+  ! don't
   logical :: boolean_var
   integer :: integer_var
   real(8) :: double_var
 
-  ! Do
+  ! do
   logical(LGP) :: boolean_var
   integer(I4B) :: integer_var
   real(DP) :: double_var
@@ -77,19 +77,19 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 #### Name type-bound procedures' first dummy argument `this`. A suitable docstring is `!< this instance`.
   ```f90
     subroutine method(this)
-      ! Don't
+      ! don't
       class(CustomType) :: this
     end subroutine
 
     subroutine method(this)
-      ! Do
+      ! do
       class(CustomType) :: this !< this instance
     end subroutine
   ```
 #### Avoid deeply nested control structures where possible.
   > Deeply nested structures makes it difficult for the reader to keep track of what is happening. Try to make the code as *flat* as possible.
   ```f90
-  ! Don't
+  ! don't
   subroutine nested()
     if (condition1) then
       if (condition2) then
@@ -100,7 +100,7 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
     end if
   end subroutine nested
 
-  ! Do
+  ! do
   subroutine flat()
     if (.not. condition1) then return
     if (.not. condition2) then return
@@ -112,12 +112,12 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 #### Prefer verbose names, except where the meaning is obvious from context or precedent. E.g., well-known index variables (`i`, `j`, `m`, `n`).
   > You're writing code for humans. Not for machines. Use clear names so it immediately becomes obvious what a variable means.
   ```f90
-  ! Don't 
+  ! don't 
   List :: lst
   HashTable :: ht
   real(DP) :: t
 
-  ! Do
+  ! do
   List :: list
   HashTable :: hash_table
   real(DP) :: time
