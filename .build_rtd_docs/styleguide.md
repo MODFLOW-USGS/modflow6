@@ -29,15 +29,34 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 ### Types
 
 ### Procedures
-* Avoid `implicit none` in procedures except where necessary (e.g. interface bodies).
-* Don't end procedures with a `return` statement; use `return` only to return early.
-* Avoid `goto` statements.
-* Don't use implicit dummy arguments or local variables.
-* Specify precision for logicals, integers and reals with the data types defined in `src/Utilities/kind.f90`.
-* Name type-bound procedures' first dummy argument `this`. A suitable docstring is `!< this instance`.
-* Avoid deeply nested control structures where possible.
-* Prefer verbose names, except where the meaning is obvious from context or precedent. E.g., well-known index variables (`i`, `j`, `m`, `n`).
-* * Use named constants. Avoid [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming)).
+* __Avoid `implicit none` in procedures except where necessary (e.g. interface bodies).__
+* __Don't end procedures with a `return` statement; use `return` only to return early.__
+  > Adding a `return` statement is superfluous as the procedure will return anyway after the last line
+* __Avoid `goto` statements.__
+  > `goto` statements are something from the past. If you want to reach certain code then put in in a procedure that you can call.
+* __Don't use implicit dummy arguments or local variables.__
+  > It is clear from the procedure signature what the dummy variables are. There is no need to declare them in a separate comment block.
+* __Specify precision for logicals, integers and reals with the data types defined in `src/Utilities/kind.f90`.__
+  > This ensures that the same types are used throughout the code base
+* __Name type-bound procedures' first dummy argument `this`. A suitable docstring is `!< this instance`.__
+* __Avoid deeply nested control structures where possible.__
+  > Deeply nested structures makes it difficult for the reader to keep track of what is happening. Try to make the code as *flat* as possible.
+* __Prefer verbose names, except where the meaning is obvious from context or precedent. E.g., well-known index variables (`i`, `j`, `m`, `n`).__
+  > You're writing code for humans. Not for machines. Use clear names so it immediately becomes obvious what a variable means.
+* __Use named constants. Avoid [magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming)).__
+  > Related to the rule above. Magic numbers make it difficult to understand code. What does a number mean?
+  ```f90
+  real(DP) constant_velocity
+  real(DP) delta_time = 5.0
+  real(DP) distance
+  
+  # Wrong. What does 1.0 mean?
+  distance = delta_time * 1.0
+
+  # Right. It is clear what the number means
+  constant_velocity = 1.0
+  distance = delta_time * constant_velocity
+  ```
 
 ### Naming
 * Use `CamelCase` for source file names.
