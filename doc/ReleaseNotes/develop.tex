@@ -7,6 +7,7 @@
 	\begin{itemize}
 		\item A new adaptive time stepping (ATS) capability was added to the Advection (ADV) Package of the Groundwater Transport (GWT) Model.  A new input option, called ATS\_PERCEL, specifies the fractional cell distance that a particle of water can travel within one time step.  When ATS\_PERCEL is specified by the user, and the ATS utility is activated in the TDIS Package, the ADV Package will calculate the largest time step that will meet this fractional cell distance constraint, and will submit this time step to the ATS utility.  This option may improve time stepping for solute transport models and for variable-density flow and transport models by allowing step lengths to be calculated as a function of the flow system rather than being specified as input by the user.
 		\item Added the capability to write sorbate concentrations to a binary output file.  A new SORBATE option is now available in the Mass Storage and Transfer (MST) Package of the GWT Model to provide the name of the binary output file for sorbate concentrations. Sorbate concentrations will be written to the binary output file whenever concentrations for the GWT model are saved, as determined by the GWT Output Control option.
+		\item Add kinematic-wave routing option for the Streamflow Routing (SFR) package. The implementation is based on the kinematic-wave routing option available in the SFR package available in previous versions of MODFLOW.
 	%	\item xxx
 	\end{itemize}
 

@@ -678,7 +678,7 @@ in_record true
 optional false
 reader urword
 longname reach number for this entry
-description integer value that defines the feature (reach) number associated with the specified initial stage. The program will terminate with a error if IFNO is less than one or greater than NREACHES. The program will also terminate with an error if initialstages information is specified and STORAGE is not specified in the Options block.
+description integer value that defines the feature (reach) number associated with the specified initial stage. Initial stage data must be specified for every reach or the program will terminate with an error. The program will also terminate with a error if IFNO is less than one or greater than NREACHES. 
 numeric_index true
 
 block initialstages
@@ -690,7 +690,7 @@ in_record true
 optional false
 reader urword
 longname initial reach stage
-description real value that defines the initial stage for the reach. The program will terminate with an error if INITIALSTAGE is less than the RTP value for reach IFNO defined in the PACKAGEDATA block.
+description real value that defines the initial stage for the reach. The program will terminate with an error if INITIALSTAGE is less than the RTP value for reach IFNO defined in the PACKAGEDATA block.  INITIALSTAGE data are used only if STORAGE is specified in the Options block and the first stress period is transient or for reaches defined to use the SIMPLE STATUS in the Period block.
 
 
 # --------------------- gwf sfr period ---------------------

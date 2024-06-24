@@ -1794,78 +1794,71 @@ contains
     real(DP) :: rval
     integer, allocatable, dimension(:) :: nboundchk
     !
-    ! -- read reach data
+    ! -- read data
     call this%parser%GetBlock('INITIALSTAGES', isfound, ierr, &
                               supportOpenClose=.true., &
                               blockRequired=.false.)
     !
-    ! -- parse reaches block if detected
+    ! -- parse block if detected
     if (isfound) then
-      if (this%istorage == 0) then
-        write (errmsg, '(a)') &
-        'INITIALSTAGES block can not be specified if STORAGE is &
-        &not specified in the OPTIONS block'
-      else
-        write (this%iout, '(/1x,a)') &
-          'PROCESSING '//trim(adjustl(this%text))//' INITIALSTAGES'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' INITIALSTAGES'
 
-        allocate (nboundchk(this%maxbound))
-        do n = 1, this%maxbound
-          nboundchk(n) = 0
-        end do
+      allocate (nboundchk(this%maxbound))
+      do n = 1, this%maxbound
+        nboundchk(n) = 0
+      end do
 
-        do
-          call this%parser%GetNextLine(endOfBlock)
-          if (endOfBlock) exit
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
 
-          ! -- read reach number
-          n = this%parser%GetInteger()
+        ! -- read reach number
+        n = this%parser%GetInteger()
 
-          if (n < 1 .or. n > this%maxbound) then
-            write (errmsg, '(a,i0,a,1x,i0,a)') &
-              'Reach number (', n, ') must be greater than 0 and less &
-              &than or equal to', this%maxbound, '.'
-            call store_error(errmsg)
-            cycle
-          end if
+        if (n < 1 .or. n > this%maxbound) then
+          write (errmsg, '(a,i0,a,1x,i0,a)') &
+            'Reach number (', n, ') must be greater than 0 and less &
+            &than or equal to', this%maxbound, '.'
+          call store_error(errmsg)
+          cycle
+        end if
 
-          ! -- increment nboundchk
-          nboundchk(n) = nboundchk(n) + 1
+        ! -- increment nboundchk
+        nboundchk(n) = nboundchk(n) + 1
 
-          rval = this%parser%GetDouble()
-          this%stage(n) = rval
+        rval = this%parser%GetDouble()
+        this%stage(n) = rval
 
-          if (rval < this%strtop(n)) then
-            write (errmsg, '(a,g0,a,1x,i0,1x,a,g0,a)') &
-              'Initial stage (', rval, ') for reach', n, &
-              'is less than the reach top (', this%strtop(n), ').'
-            call store_error(errmsg)
-          end if
-        end do
+        if (rval < this%strtop(n)) then
+          write (errmsg, '(a,g0,a,1x,i0,1x,a,g0,a)') &
+            'Initial stage (', rval, ') for reach', n, &
+            'is less than the reach top (', this%strtop(n), ').'
+          call store_error(errmsg)
+        end if
+      end do
 
-        write (this%iout, '(1x,a)') &
-          'END OF '//trim(adjustl(this%text))//' INITIALSTAGES'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' INITIALSTAGES'
 
-        !
-        ! -- Check to make sure that every reach is specified and that no reach
-        !    is specified more than once.
-        do i = 1, this%maxbound
-          if (nboundchk(i) == 0) then
-            write (errmsg, '(a,i0,1x,a)') &
-              'Information for reach ', i, 'not specified in initialstages block.'
-            call store_error(errmsg)
-          else if (nboundchk(i) > 1) then
-            write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
-              'Initial stage information specified', &
-              nboundchk(i), 'times for reach', i
-            call store_error(errmsg)
-          end if
-        end do
-        deallocate (nboundchk)
-
-      end if
+      !
+      ! -- Check to make sure that every reach is specified and that no reach
+      !    is specified more than once.
+      do i = 1, this%maxbound
+        if (nboundchk(i) == 0) then
+          write (errmsg, '(a,i0,1x,a)') &
+            'Information for reach ', i, 'not specified in initialstages block.'
+          call store_error(errmsg)
+        else if (nboundchk(i) > 1) then
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
+            'Initial stage information specified', &
+            nboundchk(i), 'times for reach', i
+          call store_error(errmsg)
+        end if
+      end do
+      deallocate (nboundchk)
     else
-      ! -- set default initial stage
+      ! -- set default initial stage based on a zero depth
       if (this%istorage == 1) then
         do n = 1, this%maxbound
           rval = this%strtop(n)
@@ -4216,8 +4209,8 @@ contains
     ! -- initialize local parameters
     weight = this%storage_weight
     ! weightinv = DONE - weight
-    dq = DEM6 !DEM4 !this%deps
-    qtol = dq * DTWO
+    dq = this%deps !DEM6 !DEM4 !this%deps
+    qtol = dq * DTWO !1e-9 !dq * DTWO
 
     ! -- initialize variables
     qgwf = DZERO
@@ -4248,8 +4241,7 @@ contains
     call this%sfr_calc_reach_depth(n, qd, dd)
     ad = this%calc_area_wet(n, dd)
 
-    ! end if
-    call this%sfr_calc_reach_depth(n, qd, dd)
+    ! -- estimate the depth at the midpoint
     d1 = (dc + dd) * DHALF
     d1old = d1
 
@@ -4267,7 +4259,6 @@ contains
         if (qgwf > qsrc) then
           qgwf = qsrc
         end if
-        ! qgwf_pul = -qgwf / this%length(n)
       end if
 
       qsrc = qlat - qgwf / this%length(n)
@@ -4292,7 +4283,7 @@ contains
         end if
 
         if (qd + delq < DEM30) then
-          delq = -qd * DHALF
+          delq = -qd
         end if
 
         qd = qd + delq
@@ -4303,18 +4294,19 @@ contains
                                             xsa_a, xsa_b, xsa_c, ad, &
                                             qsrc, this%length(n), weight, delt)
 
-        if (abs(delq) < qtol .and. abs(residual_final) < qtol) then
+        if (abs(delq) < qtol) then ! .and. abs(residual_final) < qtol) then
           exit newton
         end if
 
       end do newton
 
       qd = max(qd, DZERO)
-      if (qd == DZERO) then
-        d1 = DZERO
-      else
-        d1 = (dc + dd) * DHALF
-      end if
+      d1 = (dc + dd) * DHALF
+      ! if (qd == DZERO) then
+      !   d1 = DZERO
+      ! else
+      !   d1 = (dc + dd) * DHALF
+      ! end if
       delh = (d1 - d1old)
 
       iconverged = 0
@@ -4329,12 +4321,8 @@ contains
       end if
 
     end do kinematicpicard
-    write (*, *) 'residual: ', residual_final
 
-    this%storage(n) = kinematic_storage(qa, qb, qc, qd, &
-                                        xsa_a, xsa_b, xsa_c, ad, &
-                                        this%length(n), weight, delt)
-    ! this%storage(n) = kinematic_storage(xsa_a, xsa_b, xsa_c, ad, this%length(n), weight, delt)
+    this%storage(n) = kinematic_storage(qc, qd)
 
   end subroutine sfr_calc_transient
 
