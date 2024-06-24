@@ -24,7 +24,7 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
   > 
   > Furthermore as the developer of the module it also makes it clear which procedures are internal and you can change without affecting any external code. On the other hand if its public changes should be made with care.
 * __Prefer explicitly specified imports with `use ..., only: ...`, rather than merely `use ...`.__
-  > When only using the `use ...` syntax you pull in everything a module defines. This can cause name collision. Therefor always use the `use ..., only: ...` syntax
+  > When only using the `use ...` syntax you pull in everything a module defines. This can cause name collision. Therefore always use the `use ..., only: ...` syntax
 
 ### Types
 
