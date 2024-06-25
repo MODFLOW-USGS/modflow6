@@ -282,7 +282,7 @@ module SfrModule
       real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
       real(DP), intent(inout) :: qd !< reach outflow
     end subroutine
-  end interface  
+  end interface
 
 contains
 
