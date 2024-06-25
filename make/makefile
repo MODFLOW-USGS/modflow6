@@ -458,8 +458,8 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
-$(OBJDIR)/sm-gwf-sfr-steady.o \
-$(OBJDIR)/sm-gwf-sfr-constant.o \
+$(OBJDIR)/gwf-sfr-steady.o \
+$(OBJDIR)/gwf-sfr-constant.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/ExplicitModel.o \
