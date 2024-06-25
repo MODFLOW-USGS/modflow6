@@ -56,7 +56,13 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
   end subroutine
   ```
 #### Avoid `goto` statements.
-  > `goto` statements are something from the past. If you want to reach certain code then put in in a procedure that you can call.
+  > 
+  > `goto` statements are something from the past. They are usually used to reach code based on a condition. If you want to achieve the same consider using:
+  -  exit/continue in your loops, cases and if statements
+  -  splitting your code in subroutines
+  -  a loop
+  -  putting conditional code in if else statements
+  -  ...
 #### Don't use implicit dummy arguments or local variables.
   > 
 #### Specify precision for logicals, integers and reals with the data types defined in `src/Utilities/kind.f90`.
@@ -140,15 +146,96 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 ***
 ### Naming
 #### Use `CamelCase` for source file names.
+```
+- modflow
+  - src
+    - ExampleSourceFile.f90
+```
 #### Use `CamelCase` for module and derived type names.
+```f90
+module SampleModule
+
+  type :: SampleType
+    ...
+  end type SampleType
+
+end module SampleModule
+```
+
 #### Use a noun or noun phrase for module and derived type names.
+A (derived) type is an object in object-oriented programming. And objects are described with nouns. The procedures in the type should be verbs and can be thought of actions that can be performed on/by/to the object
+
 #### Use `snake_case` for procedure names.
+```f90
+subroutine display_sample_name()
+  ...
+end subroutine
+```
 #### Use a verb or verb phrase for procedure names.
+Procedures should be thought of as actions performed on an object or arguments.As actions are described by verbs or verb phrases so must procedure names be named.
+
 #### End module names with `...Module`.
+```f90
+module SampleModule
+  ...
+end module SampleModule
+```
+
 #### Derived type names may, but need not, end with `...Type`.
+```f90
+! This is good
+type :: FirstSampleType
+  ...
+end type
+
+! This as well
+type :: SecondSampleType
+  ...
+end type SecondSampleType
+```
+
 #### If a source file exists primarily to host a module, name the source file and module identically, except for trailing `...Module`.
+```f90
+module SampleModule
+  ...
+end module SampleModule
+```
+```
+- modflow
+  - src
+    - Sample.f90
+```
 #### If a module exists primarily to host a type, name the module and type identically, except for trailing `...Module` and `...Type`.
+```f90
+module SampleModule
+
+  type :: SampleType
+    ...
+  end type SampleType
+
+end module SampleModule
+```
+
 #### Include the module/subroutine/function name in `end module`, `end subroutine` and `end function` statements.
+```f90
+module SampleModule
+
+  type :: SampleType
+    ...
+  end type SampleType
+
+contains
+
+  subroutine sample_subroutine()
+    ...
+  end subroutine sample_subroutine
+
+  function sample_function(this) result(res)
+    ...
+  end functions sample_function
+
+end module SampleModule
+```
 
 ***
 
