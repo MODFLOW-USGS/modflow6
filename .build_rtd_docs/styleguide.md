@@ -269,8 +269,84 @@ end module SampleModule
   * `use...` statements and procedure declarations
   * derived type declaration and member variables
   * member variables and `contains` statements
+```f90
+module SampleModule
+
+  use KindModule, only: DP
+
+  type :: SampleType
+
+   real(DP) :: value
+
+  contains
+    procedure :: do_something
+  end type SampleType
+
+contains
+
+  subroutine do_something(this)
+    ...
+  end subroutine add
+
+end module SampleModule
+```
+
 #### Prefer importing items used throughout a module with a module-scoped `use` statement, rather than separately in multiple procedures.
+```f90
+! don't
+module SampleModule
+
+contains
+
+  subroutine do_something()
+    use KindModule, only: DP
+    ...
+  end subroutine add
+
+  subroutine do_something_else()
+    use KindModule, only: DP
+    ...
+  end subroutine add
+ 
+end module SampleModule
+end module SampleModule
+```
+```f90
+! do
+module SampleModule
+
+use KindModule, only: DP
+
+contains
+
+  subroutine do_something()
+    ...
+  end subroutine add
+
+  subroutine do_something_else()
+    ...
+  end subroutine add
+ 
+end module SampleModule
+```
+
 #### Use [Doxygen format](https://www.doxygen.nl/manual/docblocks.html#fortranblocks) for docstrings. For dummy arguments, use either `@param ...` above the signature or `!< ...` next to the dummy argument.
+```f90
+!> Description of the procedure.
+!! 
+!! @param parameter2 information about parameter2
+!! @param parameter3 information about parameter3
+!! @todo Handle special case
+subroutine intrestbuild(parameter1, parameter2, parameter3)
+  implicit none
+  integer(I4B), intent(in) :: parameter1 !< information about parameter1
+  integer(I4B), intent(in) :: parameter2
+  integer(I4B), intent(out) :: parameter3
+  
+  ...
+  
+end subroutine
+```
 
 ***
 
