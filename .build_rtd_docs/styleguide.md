@@ -40,7 +40,7 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
 
 ***
 ### Procedures
-#### Avoid `implicit none` in procedures except where necessary (e.g. interface bodies).
+
 #### Don't end procedures with a `return` statement; use `return` only to return early.
   > Adding a `return` statement is superfluous as the procedure will return anyway after the last line
   ```f90
@@ -56,15 +56,13 @@ Suggestions to change or extend the style conventions are welcome. Suggestions s
   end subroutine
   ```
 #### Avoid `goto` statements.
-  > 
   > `goto` statements are something from the past. They are usually used to reach code based on a condition. If you want to achieve the same consider using:
   -  exit/continue in your loops, cases and if statements
   -  splitting your code in subroutines
   -  a loop
   -  putting conditional code in if else statements
   -  ...
-#### Don't use implicit dummy arguments or local variables.
-  > 
+
 #### Specify precision for logicals, integers and reals with the data types defined in `src/Utilities/kind.f90`.
   > This ensures that the same types are used throughout the code base
   ```f90
@@ -275,9 +273,7 @@ module SampleModule
   use KindModule, only: DP
 
   type :: SampleType
-
-   real(DP) :: value
-
+    real(DP) :: value
   contains
     procedure :: do_something
   end type SampleType
@@ -309,13 +305,12 @@ contains
   end subroutine add
  
 end module SampleModule
-end module SampleModule
 ```
 ```f90
 ! do
 module SampleModule
 
-use KindModule, only: DP
+  use KindModule, only: DP
 
 contains
 
@@ -344,7 +339,7 @@ subroutine intrestbuild(parameter1, parameter2, parameter3)
   integer(I4B), intent(out) :: parameter3
   
   ...
-  
+
 end subroutine
 ```
 
