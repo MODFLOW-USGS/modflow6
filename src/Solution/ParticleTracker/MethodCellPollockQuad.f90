@@ -9,7 +9,7 @@ module MethodCellPollockQuadModule
   use CellDefnModule, only: CellDefnType
   use SubcellRectModule, only: SubcellRectType, create_subcell_rect
   use ParticleModule, only: ParticleType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   implicit none
 
   private
@@ -62,6 +62,7 @@ contains
       call this%load_subcell(particle, subcell)
     end select
     call method_subcell_plck%init( &
+      fmi=this%fmi, &
       cell=this%cell, &
       subcell=this%subcell, &
       trackfilectl=this%trackfilectl, &
@@ -208,23 +209,19 @@ contains
 
     select type (cell => this%cell)
     type is (CellRectQuadType)
-      ! -- Update particle state, terminate early if done advancing
+      ! Update particle state, terminate early if done advancing
       call this%update(particle, cell%defn)
       if (.not. particle%advancing) return
 
-      ! -- If the particle is above the top of the cell (which is presumed to
-      ! -- represent a water table above the cell bottom), pass the particle
-      ! -- vertically and instantaneously to the cell top elevation and save
-      ! -- the particle state to output file(s).
+      ! If the particle is above the top of the cell (presumed water table)
+      ! pass it vertically and instantaneously to the top
       if (particle%z > cell%defn%top) then
         particle%z = cell%defn%top
-        call this%save(particle, reason=1) ! reason=1: cell transition
+        call this%save(particle, reason=1)
       end if
 
-      ! -- Transform particle location into local cell coordinates,
-      !    translated and rotated but not scaled relative to model.
-      !    Then track particle, transform back to model coordinates,
-      !    and reset transformation (drop accumulated roundoff error)
+      ! Transform particle location into local cell coordinates
+      ! (translated and rotated but not scaled relative to model).
       xOrigin = cell%xOrigin
       yOrigin = cell%yOrigin
       zOrigin = cell%zOrigin
@@ -232,7 +229,12 @@ contains
       cosrot = cell%cosrot
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot)
+
+      ! Track the particle across the cell.
       call this%track(particle, 2, tmax)
+
+      ! Transform particle location back to model coordinates, then
+      ! reset transformation and eliminate accumulated roundoff error.
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot, invert=.true.)
       call particle%transform(reset=.true.)

@@ -176,7 +176,7 @@ contains
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile, lowcase
     use ConstantsModule, only: LINELENGTH
-    use TrackModule, only: TRACKHEADER, TRACKDTYPES
+    use TrackFileModule, only: TRACKHEADER, TRACKDTYPES
     use SimModule, only: store_error, store_error_unit
     use InputOutputModule, only: openfile, getunit
     ! -- dummy
