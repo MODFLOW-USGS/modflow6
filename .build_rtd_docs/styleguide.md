@@ -241,7 +241,25 @@ end module SampleModule
 
 ### Comments
 #### Avoid empty comments.
+```f90
+! don't
+
+!
+!  some comment
+```
+```f90
+! do
+
+! some comment
+```
 #### Avoid comments starting with `--`.
+```f90
+! don't
+! -- some comment
+
+! do
+! some comment
+```
 
 ***
 
