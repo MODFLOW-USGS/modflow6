@@ -180,8 +180,9 @@ contains
     end if
 
     ! Save the particle's state to any registered tracking output files
-    call this%trackctl%save(particle, kper=per, &
-                            kstp=stp, reason=reason)
+    call this%trackctl%save(particle, this%fmi%dis, &
+                            kper=per, kstp=stp, &
+                            reason=reason)
   end subroutine save
 
   !> @brief Update particle state and check termination conditions

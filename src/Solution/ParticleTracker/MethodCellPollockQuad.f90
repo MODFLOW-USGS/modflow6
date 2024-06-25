@@ -216,7 +216,7 @@ contains
       ! pass it vertically and instantaneously to the top
       if (particle%z > cell%defn%top) then
         particle%z = cell%defn%top
-        call this%save(particle, reason=1) ! reason=1: cell transition
+        call this%save(particle, reason=1)
       end if
 
       ! Transform particle location into local cell coordinates
