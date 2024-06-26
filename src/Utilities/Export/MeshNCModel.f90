@@ -112,8 +112,10 @@ contains
     this%ugc_face = -1
     !
     ! -- update values from input context
-    call mem_set_value(this%ugc_time, 'UGC_TIME', this%ncf_mempath, found)
-    call mem_set_value(this%ugc_face, 'UGC_FACE', this%ncf_mempath, found)
+    if (this%ncf_mempath /= '') then
+      call mem_set_value(this%ugc_time, 'UGC_TIME', this%ncf_mempath, found)
+      call mem_set_value(this%ugc_face, 'UGC_FACE', this%ncf_mempath, found)
+    end if
     !
     ! -- create the netcdf file
     call nf_verify(nf90_create(this%nc_filename, &

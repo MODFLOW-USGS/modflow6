@@ -24,7 +24,7 @@ module MeshDisModelModule
 
   ! -- UGRID layered mesh (ULM) DIS
   type, extends(Mesh2dModelType) :: Mesh2dDisExportType
-    class(DisType), pointer :: dis => null() !< pointer to model disv package
+    class(DisType), pointer :: dis => null() !< pointer to model dis package
     integer(I4B) :: x_dim !< ncol dimension id
     integer(I4B) :: y_dim !< nrow dimension id
   contains

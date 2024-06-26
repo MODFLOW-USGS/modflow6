@@ -111,10 +111,10 @@ contains
       ! -- update EXPORT_NETCDF string if provided
       call mem_set_value(exportstr, 'EXPORT_NETCDF', modelnam_mempath, found)
       if (found) then
-        if (exportstr == 'UGRID') then
-          export_model%nctype = NETCDF_UGRID
-        else
+        if (exportstr == 'STRUCTURED') then
           export_model%nctype = NETCDF_STRUCTURED
+        else
+          export_model%nctype = NETCDF_UGRID
         end if
       end if
       !
