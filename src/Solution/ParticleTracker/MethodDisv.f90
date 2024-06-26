@@ -21,24 +21,26 @@ module MethodDisvModule
   public :: create_method_disv
 
   type, extends(MethodType) :: MethodDisvType
+    private
     type(CellDefnType), pointer :: neighbor => null() !< ptr to a neighbor defn
   contains
-    procedure, public :: apply => apply_disv !< apply the DISV-grid method
+    procedure, public :: apply => apply_disv !< apply the DISV tracking method
     procedure, public :: deallocate !< deallocate arrays and scalars
     procedure, public :: load => load_disv !< load the cell method
     procedure, public :: load_cell_defn !< load cell definition from the grid
     procedure, public :: pass => pass_disv !< pass the particle to the next cell
-    procedure, private :: map_neighbor !< map a location on the cell face to the shared face of a neighbor
-    procedure, private :: update_flowja !< update intercell mass flows
-    procedure, private :: load_particle !< load particle properties
-    procedure, private :: load_properties !< load cell properties
-    procedure, private :: load_polygon !< load cell polygon
-    procedure, private :: load_neighbors !< load face neighbors
-    procedure, private :: load_indicators !< load 180-degree vertex indicator
-    procedure, private :: load_faceflows !< load flows
-    procedure, private :: load_boundary_flows_to_defn_rect !< load boundary flows to a rectangular cell
-    procedure, private :: load_boundary_flows_to_defn_rect_quad !< load boundary flows to a rectangular-quad cell
-    procedure, private :: load_boundary_flows_to_defn_poly !< load boundary flows to a polygonal cell
+    procedure :: map_neighbor !< map a location on the cell face to the shared face of a neighbor
+    procedure :: update_flowja !< update intercell mass flows
+    procedure :: load_particle !< load particle properties
+    procedure :: load_properties !< load cell properties
+    procedure :: load_polygon !< load cell polygon
+    procedure :: load_neighbors !< load cell face neighbors
+    procedure :: load_indicators !< load cell 180-degree vertex indicator
+    procedure :: load_flows !< load the cell's flows
+    procedure :: load_boundary_flows_to_defn_rect !< load boundary flows to a rectangular cell definition
+    procedure :: load_boundary_flows_to_defn_rect_quad !< load boundary flows to a rectangular-quad cell definition
+    procedure :: load_boundary_flows_to_defn_poly !< load boundary flows to a polygonal cell definition
+    procedure :: load_face_flows_to_defn_poly !< load face flows to a polygonal cell definition
   end type MethodDisvType
 
 contains
@@ -317,7 +319,7 @@ contains
     call this%load_indicators(defn)
 
     ! -- Load flows (assumes face neighbors already loaded)
-    call this%load_faceflows(defn)
+    call this%load_flows(defn)
   end subroutine load_cell_defn
 
   !> @brief Loads cell properties to cell definition from the grid.
@@ -435,31 +437,53 @@ contains
   end subroutine load_neighbors
 
   !> @brief Load flows into the cell definition.
-  !! These include face flows and net distributed flows.
+  !! These include face, boundary and net distributed flows.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_faceflows(this, defn)
-    ! -- dummy
+  subroutine load_flows(this, defn)
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: nfaces
     integer(I4B) :: nslots
-    integer(I4B) :: m
-    integer(I4B) :: n
-    real(DP) :: q
 
-    ! -- expand faceflow array if needed
+    ! expand faceflow array if needed
     nfaces = defn%npolyverts + 3
     nslots = size(defn%faceflow)
     if (nslots < nfaces) call ExpandArray(defn%faceflow, nfaces - nslots)
 
-    ! -- Load face flows, including boundary flows. As with cell verts,
-    !    the face flow array wraps around. Top and bottom flows make up
-    !    the last two elements, respectively, for size npolyverts + 3.
-    !    If there is no flow through any face, set a no-exit-face flag.
+    ! Load face flows, including boundary flows. As with cell verts,
+    ! the face flow array wraps around. Top and bottom flows make up
+    ! the last two elements, respectively, for size npolyverts + 3.
+    ! If there is no flow through any face, set a no-exit-face flag.
     defn%faceflow = DZERO
     defn%inoexitface = 1
     call this%load_boundary_flows_to_defn_poly(defn)
+    call this%load_face_flows_to_defn_poly(defn)
+
+    ! Add up net distributed flow
+    defn%distflow = this%fmi%SourceFlows(defn%icell) + &
+                    this%fmi%SinkFlows(defn%icell) + &
+                    this%fmi%StorageFlows(defn%icell)
+
+    ! Set weak sink flag
+    if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
+      defn%iweaksink = 1
+    else
+      defn%iweaksink = 0
+    end if
+
+  end subroutine load_flows
+
+  subroutine load_face_flows_to_defn_poly(this, defn)
+    ! dummy
+    class(MethodDisvType), intent(inout) :: this
+    type(CellDefnType), intent(inout) :: defn
+    ! local
+    integer(I4B) :: m, n, nfaces
+    real(DP) :: q
+
+    nfaces = defn%npolyverts + 3
     do m = 1, nfaces
       n = defn%facenbr(m)
       if (n > 0) then
@@ -468,20 +492,7 @@ contains
       end if
       if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
     end do
-
-    ! -- Add up net distributed flow
-    defn%distflow = this%fmi%SourceFlows(defn%icell) + &
-                    this%fmi%SinkFlows(defn%icell) + &
-                    this%fmi%StorageFlows(defn%icell)
-
-    ! -- Set weak sink flag
-    if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
-      defn%iweaksink = 1
-    else
-      defn%iweaksink = 0
-    end if
-
-  end subroutine load_faceflows
+  end subroutine load_face_flows_to_defn_poly
 
   !> @brief Load boundary flows from the grid into a rectangular cell.
   !! Assumes cell index and number of vertices are already loaded.
