@@ -464,7 +464,7 @@ contains
       n = defn%facenbr(m)
       if (n > 0) then
         q = this%fmi%gwfflowja(this%fmi%dis%con%ia(defn%icell) + n)
-        defn%faceflow(m) = q
+        defn%faceflow(m) = defn%faceflow(m) + q
       end if
       if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
     end do
