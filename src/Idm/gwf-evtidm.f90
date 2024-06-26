@@ -9,6 +9,7 @@ module GwfEvtInputModule
   public gwf_evt_block_definitions
   public GwfEvtParamFoundType
   public gwf_evt_multi_package
+  public gwf_evt_subpackages
 
   type GwfEvtParamFoundType
     logical :: fixed_cell = .false.
@@ -41,6 +42,12 @@ module GwfEvtInputModule
 
   logical :: gwf_evt_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_evt_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfevt_fixed_cell = InputParamDefinitionType &
     ( &
@@ -51,6 +58,7 @@ module GwfEvtInputModule
     'FIXED_CELL', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'if cell is dry do not apply evapotranspiration to underlying cell', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -68,6 +76,7 @@ module GwfEvtInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -85,6 +94,7 @@ module GwfEvtInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -102,6 +112,7 @@ module GwfEvtInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -119,6 +130,7 @@ module GwfEvtInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -136,6 +148,7 @@ module GwfEvtInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print evapotranspiration rates to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -153,6 +166,7 @@ module GwfEvtInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save evapotranspiration rates to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -170,6 +184,7 @@ module GwfEvtInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -187,6 +202,7 @@ module GwfEvtInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -204,6 +220,7 @@ module GwfEvtInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -221,6 +238,7 @@ module GwfEvtInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -238,6 +256,7 @@ module GwfEvtInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -255,6 +274,7 @@ module GwfEvtInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -272,6 +292,7 @@ module GwfEvtInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -289,6 +310,7 @@ module GwfEvtInputModule
     'SURFRATESPEC', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'specify proportion of evapotranspiration rate at ET surface', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -306,6 +328,7 @@ module GwfEvtInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of evapotranspiration cells', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -323,6 +346,7 @@ module GwfEvtInputModule
     'NSEG', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of ET segments', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -340,6 +364,7 @@ module GwfEvtInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -357,6 +382,7 @@ module GwfEvtInputModule
     'SURFACE', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'ET surface', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -374,6 +400,7 @@ module GwfEvtInputModule
     'RATE', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'maximum ET rate', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -391,6 +418,7 @@ module GwfEvtInputModule
     'DEPTH', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'ET extinction depth', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -408,6 +436,7 @@ module GwfEvtInputModule
     'PXDP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NSEG-1', & ! shape
+    'proportion of ET extinction depth', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -425,6 +454,7 @@ module GwfEvtInputModule
     'PETM', & ! fortran variable
     'DOUBLE1D', & ! type
     'NSEG-1', & ! shape
+    'proportion of maximum ET rate', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -442,6 +472,7 @@ module GwfEvtInputModule
     'PETM0', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'proportion of maximum ET rate at ET surface', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -459,6 +490,7 @@ module GwfEvtInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -476,6 +508,7 @@ module GwfEvtInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'evapotranspiration name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -524,6 +557,7 @@ module GwfEvtInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID SURFACE RATE DEPTH PXDP PETM PETM0 AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

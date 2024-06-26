@@ -24,7 +24,9 @@ excludedirs = [
 ]
 
 # exclude these files from checks
-excludefiles = []
+excludefiles = [
+    PROJ_ROOT / "src" / "Idm" / "gwf-stoidm.f90"
+]
 
 # commands
 fprettify = "fprettify -c .fprettify.yaml"

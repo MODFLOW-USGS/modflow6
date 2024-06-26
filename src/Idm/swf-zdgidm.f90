@@ -9,6 +9,7 @@ module SwfZdgInputModule
   public swf_zdg_block_definitions
   public SwfZdgParamFoundType
   public swf_zdg_multi_package
+  public swf_zdg_subpackages
 
   type SwfZdgParamFoundType
     logical :: auxiliary = .false.
@@ -35,6 +36,12 @@ module SwfZdgInputModule
 
   logical :: swf_zdg_multi_package = .true.
 
+  character(len=16), parameter :: &
+    swf_zdg_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfzdg_auxiliary = InputParamDefinitionType &
     ( &
@@ -45,6 +52,7 @@ module SwfZdgInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -62,6 +70,7 @@ module SwfZdgInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -79,6 +88,7 @@ module SwfZdgInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -96,6 +106,7 @@ module SwfZdgInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -113,6 +124,7 @@ module SwfZdgInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -130,6 +142,7 @@ module SwfZdgInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -147,6 +160,7 @@ module SwfZdgInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -164,6 +178,7 @@ module SwfZdgInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -181,6 +196,7 @@ module SwfZdgInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -198,6 +214,7 @@ module SwfZdgInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -215,6 +232,7 @@ module SwfZdgInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -232,6 +250,7 @@ module SwfZdgInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -249,6 +268,7 @@ module SwfZdgInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of zero-depth-gradient boundaries', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -266,6 +286,7 @@ module SwfZdgInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -283,6 +304,7 @@ module SwfZdgInputModule
     'IDCXS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cross section identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -300,6 +322,7 @@ module SwfZdgInputModule
     'WIDTH', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'width of the zero-depth gradient boundary', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -317,6 +340,7 @@ module SwfZdgInputModule
     'SLOPE', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'channel slope', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,6 +358,7 @@ module SwfZdgInputModule
     'ROUGH', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'channel roughness', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -351,6 +376,7 @@ module SwfZdgInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -368,6 +394,7 @@ module SwfZdgInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'zero-depth-gradient boundary name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -410,6 +437,7 @@ module SwfZdgInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID IDCXS WIDTH SLOPE ROUGH AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

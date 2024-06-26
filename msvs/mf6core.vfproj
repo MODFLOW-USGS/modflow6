@@ -176,7 +176,6 @@
 		<File RelativePath="..\src\Idm\swf-cxsidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dfwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
-		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv1didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
@@ -184,7 +183,8 @@
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-stoidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
-		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/></Filter>
+		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/>
+		<File RelativePath="..\src\Idm\utl-ncfidm.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
@@ -413,6 +413,29 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer1dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer2dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
+		<Filter Name="Export">
+		<File RelativePath="..\src\Utilities\Export\DisNCMesh.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\DisvNCMesh.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\MeshNCModel.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\NCExportCreate.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\ModelExport.f90"/>
+		<File RelativePath="..\src\Utilities\Export\NCModel.f90"/></Filter>
 		<Filter Name="Idm">
 		<Filter Name="mf6blockfile">
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\AsciiInputLoadType.f90"/>

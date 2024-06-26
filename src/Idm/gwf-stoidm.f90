@@ -9,6 +9,7 @@ module GwfStoInputModule
   public gwf_sto_block_definitions
   public GwfStoParamFoundType
   public gwf_sto_multi_package
+  public gwf_sto_subpackages
 
   type GwfStoParamFoundType
     logical :: ipakcb = .false.
@@ -19,6 +20,7 @@ module GwfStoInputModule
     logical :: filein = .false.
     logical :: tvs6_filename = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: iorig_ss = .false.
     logical :: iconf_ss = .false.
     logical :: iconvert = .false.
@@ -30,6 +32,12 @@ module GwfStoInputModule
 
   logical :: gwf_sto_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwf_sto_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfsto_ipakcb = InputParamDefinitionType &
     ( &
@@ -40,6 +48,7 @@ module GwfStoInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save NPF flows', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -57,6 +66,7 @@ module GwfStoInputModule
     'ISTOR_COEF', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to indicate SS is read as storage coefficient', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -74,6 +84,7 @@ module GwfStoInputModule
     'SS_CONFINED_ONLY', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to indicate specific storage only applied under confined conditions', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -91,6 +102,7 @@ module GwfStoInputModule
     'TVS_FILERECORD', & ! fortran variable
     'RECORD TVS6 FILEIN TVS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -108,6 +120,7 @@ module GwfStoInputModule
     'TVS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'tvs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -125,6 +138,7 @@ module GwfStoInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -142,6 +156,7 @@ module GwfStoInputModule
     'TVS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of TVS information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -159,6 +174,25 @@ module GwfStoInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfsto_export_nc = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'STO', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -176,6 +210,7 @@ module GwfStoInputModule
     'IORIG_SS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'development option for original specific storage', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -193,6 +228,7 @@ module GwfStoInputModule
     'ICONF_SS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'development option flag for old storage formulation', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -210,6 +246,7 @@ module GwfStoInputModule
     'ICONVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'convertible indicator', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -227,6 +264,7 @@ module GwfStoInputModule
     'SS', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'specific storage', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -244,6 +282,7 @@ module GwfStoInputModule
     'SY', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'specific yield', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -261,6 +300,7 @@ module GwfStoInputModule
     'STEADY_STATE', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'steady state indicator', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -278,6 +318,7 @@ module GwfStoInputModule
     'TRANSIENT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'transient indicator', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -296,6 +337,7 @@ module GwfStoInputModule
     gwfsto_filein, &
     gwfsto_tvs6_filename, &
     gwfsto_export_ascii, &
+    gwfsto_export_nc, &
     gwfsto_iorig_ss, &
     gwfsto_iconf_ss, &
     gwfsto_iconvert, &
@@ -317,6 +359,7 @@ module GwfStoInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

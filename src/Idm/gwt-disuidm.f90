@@ -9,6 +9,7 @@ module GwtDisuInputModule
   public gwt_disu_block_definitions
   public GwtDisuParamFoundType
   public gwt_disu_multi_package
+  public gwt_disu_subpackages
 
   type GwtDisuParamFoundType
     logical :: length_units = .false.
@@ -43,6 +44,12 @@ module GwtDisuInputModule
 
   logical :: gwt_disu_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwt_disu_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwtdisu_length_units = InputParamDefinitionType &
     ( &
@@ -53,6 +60,7 @@ module GwtDisuInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -70,6 +78,7 @@ module GwtDisuInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -87,6 +96,7 @@ module GwtDisuInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -104,6 +114,7 @@ module GwtDisuInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position origin of the model grid coordinate system', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -121,6 +132,7 @@ module GwtDisuInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -138,6 +150,7 @@ module GwtDisuInputModule
     'VOFFSETTOL', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'vertical length dimension for top and bottom checking', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -155,6 +168,7 @@ module GwtDisuInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -172,6 +186,7 @@ module GwtDisuInputModule
     'NODES', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of layers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -189,6 +204,7 @@ module GwtDisuInputModule
     'NJA', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -206,6 +222,7 @@ module GwtDisuInputModule
     'NVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of vertices', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -223,6 +240,7 @@ module GwtDisuInputModule
     'TOP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'cell top elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -240,6 +258,7 @@ module GwtDisuInputModule
     'BOT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'cell bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -257,6 +276,7 @@ module GwtDisuInputModule
     'AREA', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'cell surface area', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -274,6 +294,7 @@ module GwtDisuInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -291,6 +312,7 @@ module GwtDisuInputModule
     'IAC', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'number of cell connections', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -308,6 +330,7 @@ module GwtDisuInputModule
     'JA', & ! fortran variable
     'INTEGER1D', & ! type
     'NJA', & ! shape
+    'grid connectivity', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -325,6 +348,7 @@ module GwtDisuInputModule
     'IHC', & ! fortran variable
     'INTEGER1D', & ! type
     'NJA', & ! shape
+    'connection type', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -342,6 +366,7 @@ module GwtDisuInputModule
     'CL12', & ! fortran variable
     'DOUBLE1D', & ! type
     'NJA', & ! shape
+    'connection lengths', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -359,6 +384,7 @@ module GwtDisuInputModule
     'HWVA', & ! fortran variable
     'DOUBLE1D', & ! type
     'NJA', & ! shape
+    'connection lengths', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -376,6 +402,7 @@ module GwtDisuInputModule
     'ANGLDEGX', & ! fortran variable
     'DOUBLE1D', & ! type
     'NJA', & ! shape
+    'angle of face normal to connection', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -393,6 +420,7 @@ module GwtDisuInputModule
     'IV', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'vertex number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -410,6 +438,7 @@ module GwtDisuInputModule
     'XV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -427,6 +456,7 @@ module GwtDisuInputModule
     'YV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for vertex', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -444,6 +474,7 @@ module GwtDisuInputModule
     'ICELL2D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cell2d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -461,6 +492,7 @@ module GwtDisuInputModule
     'XC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -478,6 +510,7 @@ module GwtDisuInputModule
     'YC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-coordinate for cell center', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -495,6 +528,7 @@ module GwtDisuInputModule
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of cell vertices', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -512,6 +546,7 @@ module GwtDisuInputModule
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCVERT', & ! shape
+    'array of vertex numbers', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -562,6 +597,7 @@ module GwtDisuInputModule
     'VERTICES', & ! fortran variable
     'RECARRAY IV XV YV', & ! type
     'NVERT', & ! shape
+    'vertices data', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -579,6 +615,7 @@ module GwtDisuInputModule
     'CELL2D', & ! fortran variable
     'RECARRAY ICELL2D XC YC NCVERT ICVERT', & ! type
     'NODES', & ! shape
+    'cell2d data', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -9,6 +9,7 @@ module GwfChdInputModule
   public gwf_chd_block_definitions
   public GwfChdParamFoundType
   public gwf_chd_multi_package
+  public gwf_chd_subpackages
 
   type GwfChdParamFoundType
     logical :: auxiliary = .false.
@@ -34,6 +35,12 @@ module GwfChdInputModule
 
   logical :: gwf_chd_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_chd_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfchd_auxiliary = InputParamDefinitionType &
     ( &
@@ -44,6 +51,7 @@ module GwfChdInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -61,6 +69,7 @@ module GwfChdInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -78,6 +87,7 @@ module GwfChdInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -95,6 +105,7 @@ module GwfChdInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -112,6 +123,7 @@ module GwfChdInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print CHD flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -129,6 +141,7 @@ module GwfChdInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -146,6 +159,7 @@ module GwfChdInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -163,6 +177,7 @@ module GwfChdInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -180,6 +195,7 @@ module GwfChdInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -197,6 +213,7 @@ module GwfChdInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -214,6 +231,7 @@ module GwfChdInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -231,6 +249,7 @@ module GwfChdInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -248,6 +267,7 @@ module GwfChdInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -265,6 +285,7 @@ module GwfChdInputModule
     'INEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'turn off Newton for unconfined cells', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -282,6 +303,7 @@ module GwfChdInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of constant heads', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -299,6 +321,7 @@ module GwfChdInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -316,6 +339,7 @@ module GwfChdInputModule
     'HEAD', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'head value assigned to constant head', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -333,6 +357,7 @@ module GwfChdInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -350,6 +375,7 @@ module GwfChdInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'constant head boundary name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -391,6 +417,7 @@ module GwfChdInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID HEAD AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

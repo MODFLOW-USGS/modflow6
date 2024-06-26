@@ -9,11 +9,13 @@ module GweCndInputModule
   public gwe_cnd_block_definitions
   public GweCndParamFoundType
   public gwe_cnd_multi_package
+  public gwe_cnd_subpackages
 
   type GweCndParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: alh = .false.
     logical :: alv = .false.
     logical :: ath1 = .false.
@@ -25,6 +27,12 @@ module GweCndInputModule
 
   logical :: gwe_cnd_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwe_cnd_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwecnd_xt3d_off = InputParamDefinitionType &
     ( &
@@ -35,6 +43,7 @@ module GweCndInputModule
     'XT3D_OFF', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'deactivate xt3d', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -52,6 +61,7 @@ module GweCndInputModule
     'XT3D_RHS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'xt3d on right-hand side', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +79,25 @@ module GweCndInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwecnd_export_nc = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'CND', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +115,7 @@ module GweCndInputModule
     'ALH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'longitudinal dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +133,7 @@ module GweCndInputModule
     'ALV', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'longitudinal dispersivity in vertical direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +151,7 @@ module GweCndInputModule
     'ATH1', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -137,6 +169,7 @@ module GweCndInputModule
     'ATH2', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -154,6 +187,7 @@ module GweCndInputModule
     'ATV', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity when flow is in vertical direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +205,7 @@ module GweCndInputModule
     'KTW', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'thermal conductivity of the simulated fluid', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -188,6 +223,7 @@ module GweCndInputModule
     'KTS', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'thermal conductivity of the aquifer material', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -201,6 +237,7 @@ module GweCndInputModule
     gwecnd_xt3d_off, &
     gwecnd_xt3d_rhs, &
     gwecnd_export_ascii, &
+    gwecnd_export_nc, &
     gwecnd_alh, &
     gwecnd_alv, &
     gwecnd_ath1, &
@@ -222,6 +259,7 @@ module GweCndInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

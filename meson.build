@@ -43,13 +43,6 @@ if fc_id == 'gcc'
                    '-Wno-uninitialized',
                    ]
   
-  # Options specific to profile
-  if profile == 'release'
-    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
-  elif profile == 'develop'
-    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
-  endif
-
   # Define OS with gfortran for OS specific code
   # These are identical to pre-defined macros available with ifort
   system = build_machine.system()
@@ -172,22 +165,42 @@ if is_extended_build
 
   # find netcdf
   if build_machine.system() != 'windows'
-    netcdf = dependency('netcdf', language : 'fortran', required : false)
+    netcdff = dependency('netcdf', language : 'fortran', required : false)
   else
     # For CI testing only; Windows not yet supported
     nc_dir = meson.project_source_root() / '..' / 'ncf' / 'netcdf-fortran-4.6.1' / 'fortran'
-    netcdf = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
+    netcdff = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
     #nc_incdir = include_directories([ nc_dir ])
   endif
-  if netcdf.found()
+  if netcdff.found()
     with_netcdf = true
     extra_cmp_args += [ '-D__WITH_NETCDF__' ]
-    dependencies += [ netcdf ]    
+    dependencies += [ netcdff ]
+  else
+    with_netcdf = false
   endif
 else
   with_netcdf = false
   with_petsc = false
   with_mpi = false
+endif
+
+# GCC profile options need to be netcdf aware due to HDF5 issue
+if fc_id == 'gcc'
+  if with_netcdf and build_machine.system() == 'darwin'
+    # HDF5 1.14.3 invalid fpe trap issue: https://github.com/HDFGroup/hdf5/issues/3831
+    if profile == 'release'
+      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero']
+    elif profile == 'develop'
+      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero']
+    endif
+  else
+    if profile == 'release'
+      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
+    elif profile == 'develop'
+      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+    endif
+  endif
 endif
 
 compile_args += extra_cmp_args

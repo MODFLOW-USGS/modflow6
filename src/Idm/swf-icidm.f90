@@ -9,6 +9,7 @@ module SwfIcInputModule
   public swf_ic_block_definitions
   public SwfIcParamFoundType
   public swf_ic_multi_package
+  public swf_ic_subpackages
 
   type SwfIcParamFoundType
     logical :: export_ascii = .false.
@@ -16,6 +17,12 @@ module SwfIcInputModule
   end type SwfIcParamFoundType
 
   logical :: swf_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfic_export_ascii = InputParamDefinitionType &
@@ -27,6 +34,7 @@ module SwfIcInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -44,6 +52,7 @@ module SwfIcInputModule
     'STRT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'starting concentration', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -70,6 +79,7 @@ module SwfIcInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

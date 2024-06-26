@@ -9,6 +9,7 @@ module ExgSwfgwfInputModule
   public exg_swfgwf_block_definitions
   public ExgSwfgwfParamFoundType
   public exg_swfgwf_multi_package
+  public exg_swfgwf_subpackages
 
   type ExgSwfgwfParamFoundType
     logical :: ipr_input = .false.
@@ -25,6 +26,12 @@ module ExgSwfgwfInputModule
 
   logical :: exg_swfgwf_multi_package = .true.
 
+  character(len=16), parameter :: &
+    exg_swfgwf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     exgswfgwf_ipr_input = InputParamDefinitionType &
     ( &
@@ -35,6 +42,7 @@ module ExgSwfgwfInputModule
     'IPR_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print input to list file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -52,6 +60,7 @@ module ExgSwfgwfInputModule
     'IPR_FLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print swfgwf flows to list file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +78,7 @@ module ExgSwfgwfInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +96,7 @@ module ExgSwfgwfInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +114,7 @@ module ExgSwfgwfInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +132,7 @@ module ExgSwfgwfInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -137,6 +150,7 @@ module ExgSwfgwfInputModule
     'NEXG', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of exchanges', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -154,6 +168,7 @@ module ExgSwfgwfInputModule
     'CELLIDM1', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of first cell', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +186,7 @@ module ExgSwfgwfInputModule
     'CELLIDM2', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of second cell', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -188,6 +204,7 @@ module ExgSwfgwfInputModule
     'COND', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'conductance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -220,6 +237,7 @@ module ExgSwfgwfInputModule
     'EXCHANGEDATA', & ! fortran variable
     'RECARRAY CELLIDM1 CELLIDM2 COND', & ! type
     'NEXG', & ! shape
+    'exchange data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

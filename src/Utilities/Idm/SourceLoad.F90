@@ -8,7 +8,7 @@
 module SourceLoadModule
 
   use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, iout
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
                              LENPACKAGETYPE, LENPACKAGENAME
   use SimModule, only: store_error, store_error_filename
@@ -20,6 +20,7 @@ module SourceLoadModule
   public :: open_source_file
   public :: load_modelnam, load_simnam, load_simtdis
   public :: remote_model_ndim
+  public :: export_cr, export_post_step, export_da
 
 contains
 
@@ -147,7 +148,7 @@ contains
 
   subroutine load_simnam()
     use SimVariablesModule, only: simfile, iout
-    use MemoryManagerModule, only: mem_setptr, mem_print_detailed
+    use MemoryManagerModule, only: mem_setptr
     use MessageModule, only: write_message
     use IdmMf6FileModule, only: input_load
     use SourceCommonModule, only: filein_fname
@@ -324,5 +325,36 @@ contains
     ! -- return
     return
   end function remote_model_ndim
+
+  subroutine export_cr()
+    ! -- modules
+    use ModelExportModule, only: modelexports_create, nc_export_active
+#if defined(__WITH_NETCDF__)
+    use NCExportCreateModule, only: nc_export_create
+#endif
+    call modelexports_create(iout)
+    if (nc_export_active()) then
+#if defined(__WITH_NETCDF__)
+      call nc_export_create()
+#else
+      write (errmsg, '(a)') &
+        'Model namefile EXPORT_NETCDF option configured but NetCDF libraries are &
+        &not available.'
+      call store_error(errmsg, .true.)
+#endif
+    end if
+  end subroutine export_cr
+
+  subroutine export_post_step()
+    ! -- modules
+    use ModelExportModule, only: modelexports_post_step
+    call modelexports_post_step()
+  end subroutine export_post_step
+
+  subroutine export_da()
+    ! -- modules
+    use ModelExportModule, only: modelexports_destroy
+    call modelexports_destroy()
+  end subroutine export_da
 
 end module SourceLoadModule

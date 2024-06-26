@@ -9,6 +9,7 @@ module GweCtpInputModule
   public gwe_ctp_block_definitions
   public GweCtpParamFoundType
   public gwe_ctp_multi_package
+  public gwe_ctp_subpackages
 
   type GweCtpParamFoundType
     logical :: auxiliary = .false.
@@ -33,6 +34,12 @@ module GweCtpInputModule
 
   logical :: gwe_ctp_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwe_ctp_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwectp_auxiliary = InputParamDefinitionType &
     ( &
@@ -43,6 +50,7 @@ module GweCtpInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -60,6 +68,7 @@ module GweCtpInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -77,6 +86,7 @@ module GweCtpInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -94,6 +104,7 @@ module GweCtpInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -111,6 +122,7 @@ module GweCtpInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -128,6 +140,7 @@ module GweCtpInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save constant temperature flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -145,6 +158,7 @@ module GweCtpInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -162,6 +176,7 @@ module GweCtpInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'time series keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -179,6 +194,7 @@ module GweCtpInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -196,6 +212,7 @@ module GweCtpInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -213,6 +230,7 @@ module GweCtpInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -230,6 +248,7 @@ module GweCtpInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -247,6 +266,7 @@ module GweCtpInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -264,6 +284,7 @@ module GweCtpInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of constant temperatures', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -281,6 +302,7 @@ module GweCtpInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +320,7 @@ module GweCtpInputModule
     'TSPVAR', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'constant temperature value', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -315,6 +338,7 @@ module GweCtpInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -332,6 +356,7 @@ module GweCtpInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'constant temperature name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -372,6 +397,7 @@ module GweCtpInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID TEMP AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

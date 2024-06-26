@@ -9,6 +9,7 @@ module GweDisInputModule
   public gwe_dis_block_definitions
   public GweDisParamFoundType
   public gwe_dis_multi_package
+  public gwe_dis_subpackages
 
   type GweDisParamFoundType
     logical :: length_units = .false.
@@ -17,6 +18,11 @@ module GweDisInputModule
     logical :: yorigin = .false.
     logical :: angrot = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
+    logical :: ncf_filerecord = .false.
+    logical :: ncf6 = .false.
+    logical :: filein = .false.
+    logical :: ncf6_filename = .false.
     logical :: nlay = .false.
     logical :: nrow = .false.
     logical :: ncol = .false.
@@ -29,6 +35,12 @@ module GweDisInputModule
 
   logical :: gwe_dis_multi_package = .false.
 
+  character(len=16), parameter :: &
+    gwe_dis_subpackages(*) = &
+    [ &
+    'UTL-NCF         ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwedis_length_units = InputParamDefinitionType &
     ( &
@@ -39,6 +51,7 @@ module GweDisInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -56,6 +69,7 @@ module GweDisInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -73,6 +87,7 @@ module GweDisInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -90,6 +105,7 @@ module GweDisInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -107,6 +123,7 @@ module GweDisInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -124,9 +141,100 @@ module GweDisInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedis_export_nc = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedis_ncf_filerecord = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF_FILERECORD', & ! tag name
+    'NCF_FILERECORD', & ! fortran variable
+    'RECORD NCF6 FILEIN NCF6_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedis_ncf6 = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6', & ! tag name
+    'NCF6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'ncf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedis_filein = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwedis_ncf6_filename = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'DIS', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCF6_FILENAME', & ! tag name
+    'NCF6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file name of NCF information', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -141,6 +249,7 @@ module GweDisInputModule
     'NLAY', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of layers', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -158,6 +267,7 @@ module GweDisInputModule
     'NROW', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of rows', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -175,6 +285,7 @@ module GweDisInputModule
     'NCOL', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -192,6 +303,7 @@ module GweDisInputModule
     'DELR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCOL', & ! shape
+    'spacing along a row', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -209,6 +321,7 @@ module GweDisInputModule
     'DELC', & ! fortran variable
     'DOUBLE1D', & ! type
     'NROW', & ! shape
+    'spacing along a column', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -226,6 +339,7 @@ module GweDisInputModule
     'TOP', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
+    'cell top elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -243,6 +357,7 @@ module GweDisInputModule
     'BOTM', & ! fortran variable
     'DOUBLE3D', & ! type
     'NCOL NROW NLAY', & ! shape
+    'cell bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -260,6 +375,7 @@ module GweDisInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER3D', & ! type
     'NCOL NROW NLAY', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -276,6 +392,11 @@ module GweDisInputModule
     gwedis_yorigin, &
     gwedis_angrot, &
     gwedis_export_ascii, &
+    gwedis_export_nc, &
+    gwedis_ncf_filerecord, &
+    gwedis_ncf6, &
+    gwedis_filein, &
+    gwedis_ncf6_filename, &
     gwedis_nlay, &
     gwedis_nrow, &
     gwedis_ncol, &
@@ -298,6 +419,7 @@ module GweDisInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

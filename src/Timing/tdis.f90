@@ -38,7 +38,7 @@ module TdisModule
   real(DP), public, dimension(:), pointer, contiguous :: perlen => null() !< length of each stress period
   integer(I4B), public, dimension(:), pointer, contiguous :: nstp => null() !< number of time steps in each stress period
   real(DP), public, dimension(:), pointer, contiguous :: tsmult => null() !< time step multiplier for each stress period
-  character(len=LENDATETIME), pointer :: datetime0 => null() !< starting date and time for the simulation
+  character(len=LENDATETIME), public, pointer :: datetime0 => null() !< starting date and time for the simulation
   character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath for tdis
   character(len=LINELENGTH), pointer :: input_fname => null() !< input filename for tdis
   !
