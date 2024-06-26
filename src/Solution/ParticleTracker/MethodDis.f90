@@ -19,20 +19,22 @@ module MethodDisModule
   public :: create_method_dis
 
   type, extends(MethodType) :: MethodDisType
+    private
   contains
-    procedure, public :: apply => apply_dis !< apply the method
+    procedure, public :: apply => apply_dis !< apply the DIS tracking method
     procedure, public :: deallocate !< deallocate arrays and scalars
     procedure, public :: load => load_dis !< load the method
     procedure, public :: pass => pass_dis !< pass the particle to the next domain
-    procedure, private :: get_top !< get cell top elevation
-    procedure, private :: update_flowja !< load intercell mass flows
-    procedure, private :: load_particle !< load particle properties
-    procedure, private :: load_properties !< load cell properties
-    procedure, private :: load_neighbors !< load face neighbors
-    procedure, private :: load_faceflows !< load face flows
-    procedure, private :: load_boundary_flows !< load boundary flows
-    procedure, private :: load_celldefn !< load cell definition from the grid
-    procedure, private :: load_cell !< load cell geometry and flows
+    procedure :: get_top !< get cell top elevation
+    procedure :: update_flowja !< load intercell mass flows
+    procedure :: load_particle !< load particle properties
+    procedure :: load_properties !< load cell properties
+    procedure :: load_neighbors !< load cell face neighbors
+    procedure :: load_flows !< load cell face flows
+    procedure :: load_boundary_flows_to_defn !< load boundary flows to the cell definition
+    procedure :: load_face_flows_to_defn !< load face flows to the cell definition
+    procedure :: load_celldefn !< load cell definition from the grid
+    procedure :: load_cell !< load cell geometry and flows
   end type MethodDisType
 
 contains
@@ -317,7 +319,7 @@ contains
     defn%ispv180(1:defn%npolyverts + 1) = .false.
 
     ! -- Load face flows (assumes face neighbors already loaded)
-    call this%load_faceflows(defn)
+    call this%load_flows(defn)
 
   end subroutine load_celldefn
 
@@ -413,50 +415,57 @@ contains
   end subroutine load_neighbors
 
   !> @brief Load flows into the cell definition.
-  !! These include face flows and net distributed flows.
+  !! These include face, boundary and net distributed flows.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_faceflows(this, defn)
-    ! -- dummy
+  subroutine load_flows(this, defn)
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
-    integer(I4B) :: m
-    integer(I4B) :: n
-    real(DP) :: q
 
-    ! -- Load face flows, including boundary flows. As with cell verts,
-    !    the face flow array wraps around. Top and bottom flows make up
-    !    the last two elements, respectively, for size npolyverts + 3.
-    !    If there is no flow through any face, set a no-exit-face flag.
+    ! Load face flows, including boundary flows. As with cell verts,
+    ! the face flow array wraps around. Top and bottom flows make up
+    ! the last two elements, respectively, for size npolyverts + 3.
+    ! If there is no flow through any face, set a no-exit-face flag.
     defn%faceflow = DZERO
     defn%inoexitface = 1
-    call this%load_boundary_flows(defn)
-    do m = 1, defn%npolyverts + 3
-      n = defn%facenbr(m)
-      if (n > 0) then
-        q = this%fmi%gwfflowja(this%fmi%dis%con%ia(defn%icell) + n)
-        defn%faceflow(m) = q
-      end if
-      if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
-    end do
+    call this%load_boundary_flows_to_defn(defn)
+    call this%load_face_flows_to_defn(defn)
 
-    ! -- Add up net distributed flow
+    ! Add up net distributed flow
     defn%distflow = this%fmi%SourceFlows(defn%icell) + &
                     this%fmi%SinkFlows(defn%icell) + &
                     this%fmi%StorageFlows(defn%icell)
 
-    ! -- Set weak sink flag
+    ! Set weak sink flag
     if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
       defn%iweaksink = 1
     else
       defn%iweaksink = 0
     end if
 
-  end subroutine load_faceflows
+  end subroutine load_flows
+
+  subroutine load_face_flows_to_defn(this, defn)
+    ! dummy
+    class(MethodDisType), intent(inout) :: this
+    type(CellDefnType), intent(inout) :: defn
+    ! local
+    integer(I4B) :: m, n, nfaces
+    real(DP) :: q
+
+    nfaces = defn%npolyverts + 3
+    do m = 1, nfaces
+      n = defn%facenbr(m)
+      if (n > 0) then
+        q = this%fmi%gwfflowja(this%fmi%dis%con%ia(defn%icell) + n)
+        defn%faceflow(m) = defn%faceflow(m) + q
+      end if
+      if (defn%faceflow(m) < DZERO) defn%inoexitface = 0
+    end do
+  end subroutine load_face_flows_to_defn
 
   !> @brief Add boundary flows to the cell definition faceflow array.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_boundary_flows(this, defn)
+  subroutine load_boundary_flows_to_defn(this, defn)
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
@@ -477,6 +486,6 @@ contains
                        this%fmi%BoundaryFlows(ioffset + 9)
     defn%faceflow(7) = defn%faceflow(7) + &
                        this%fmi%BoundaryFlows(ioffset + 10)
-  end subroutine load_boundary_flows
+  end subroutine load_boundary_flows_to_defn
 
 end module MethodDisModule
