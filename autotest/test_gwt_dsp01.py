@@ -10,7 +10,7 @@ cases = ["dsp01a", "dsp01b"]
 xt3d = [False, True]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -47,7 +47,11 @@ def build_models(idx, test):
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+        sim,
+        time_units="DAYS",
+        start_date_time="2041-01-01T00:00:00-05:00",
+        nper=nper,
+        perioddata=tdis_rc,
     )
 
     # create gwf model
@@ -128,6 +132,8 @@ def build_models(idx, test):
         model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
+    if netcdf:
+        gwt.name_file.export_netcdf = "ugrid"
 
     # create iterative model solution and register the gwt model with it
     imsgwt = flopy.mf6.ModflowIms(
@@ -149,6 +155,7 @@ def build_models(idx, test):
 
     dis = flopy.mf6.ModflowGwtdis(
         gwt,
+        export_array_netcdf=netcdf,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -161,7 +168,9 @@ def build_models(idx, test):
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
+    ic = flopy.mf6.ModflowGwtic(
+        gwt, export_array_netcdf=netcdf, strt=0.0, filename=f"{gwtname}.ic"
+    )
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(
@@ -172,6 +181,7 @@ def build_models(idx, test):
     xt3d_off = not xt3d[idx]
     dsp = flopy.mf6.ModflowGwtdsp(
         gwt,
+        export_array_netcdf=netcdf,
         xt3d_off=xt3d_off,
         diffc=100.0,
         alh=0.0,
@@ -212,8 +222,8 @@ def build_models(idx, test):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
-        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+        saverecord=[("CONCENTRATION", "ALL")],
+        printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
 
     # observations

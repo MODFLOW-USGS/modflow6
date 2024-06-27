@@ -120,7 +120,7 @@ c0 = 40.0
 ctpspd = [[(0, 0, 0), c0]]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None):
     # Base MF6 GWE model type
     ws = test.workspace
     name = cases[idx]
@@ -138,7 +138,11 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 time discretization
     flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
+        sim,
+        nper=nper,
+        perioddata=tdis_rc,
+        time_units=time_units,
+        start_date_time="2041-01-01T00:00:00-05:00",
     )
 
     # Instantiating MODFLOW 6 groundwater flow model
@@ -243,6 +247,8 @@ def build_models(idx, test):
         model_nam_file="{}.nam".format(gwename),
     )
     gwe.name_file.save_flows = True
+    if netcdf:
+        gwe.name_file.export_netcdf = "ugrid"
     imsgwe = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
@@ -264,6 +270,7 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwedis(
         gwe,
         nogrb=True,
+        export_array_netcdf=netcdf,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -277,7 +284,10 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, filename="{}.ic".format(gwename)
+        gwe,
+        export_array_netcdf=netcdf,
+        strt=strt_temp,
+        filename="{}.ic".format(gwename),
     )
 
     # Instantiating MODFLOW 6 transport advection package
@@ -296,6 +306,7 @@ def build_models(idx, test):
         flopy.mf6.ModflowGwecnd(
             gwe,
             xt3d_off=True,
+            export_array_netcdf=netcdf,
             alh=dispersivity,
             ath1=dispersivity,
             ktw=0.5918,

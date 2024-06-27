@@ -19,7 +19,7 @@ from framework import TestFramework
 cases = ["disv01a", "disv01b"]
 
 
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None, wkt=None):
     name = cases[idx]
     ws = test.workspace
     nlay = 3
@@ -42,6 +42,8 @@ def build_models(idx, test):
         xoff,
         yoff,
     )
+    if netcdf:
+        disvkwargs["export_array_netcdf"] = True
     if idx == 1:
         # for the second test, set one cell to idomain = 0
         idomain = np.ones((nlay, nrow * ncol), dtype=int)
@@ -54,14 +56,31 @@ def build_models(idx, test):
         exe_name="mf6",
         sim_ws=ws,
     )
-    tdis = flopy.mf6.ModflowTdis(sim)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", start_date_time="2041-01-01T00:00:00-05:00"
+    )
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+    if netcdf:
+        gwf.name_file.export_netcdf = "ugrid"
     ims = flopy.mf6.ModflowIms(sim, print_option="SUMMARY")
     disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
-    npf = flopy.mf6.ModflowGwfnpf(gwf)
+    ic = flopy.mf6.ModflowGwfic(gwf, export_array_netcdf=netcdf, strt=0.0)
+    npf = flopy.mf6.ModflowGwfnpf(gwf, export_array_netcdf=netcdf)
     spd = {0: [[(0, 0), 1.0], [(0, nrow * ncol - 1), 0.0]]}
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
+    if netcdf:
+        # netcdf config
+        ncf = flopy.mf6.ModflowUtlncf(
+            disv, ogc_wkt=wkt, filename=f"{name}.disv.ncf"
+        )
+        # output control
+        oc = flopy.mf6.ModflowGwfoc(
+            gwf,
+            head_filerecord=f"{name}.hds",
+            saverecord=[
+                ("HEAD", "ALL"),
+            ],
+        )
     return sim, None
 
 

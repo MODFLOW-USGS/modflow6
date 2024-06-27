@@ -97,7 +97,7 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_models(idx, test):
+def build_models(idx, test, netcdf=None, wkt=None):
     name = cases[idx]
 
     # build MODFLOW 6 files
@@ -107,7 +107,11 @@ def build_models(idx, test):
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+        sim,
+        time_units="DAYS",
+        start_date_time="2041-01-01T00:00:00-05:00",
+        nper=nper,
+        perioddata=tdis_rc,
     )
 
     # create gwf model
@@ -118,6 +122,8 @@ def build_models(idx, test):
     gwf = flopy.mf6.ModflowGwf(
         sim, modelname=name, newtonoptions=newtonoptions, save_flows=True
     )
+    if netcdf:
+        gwf.name_file.export_netcdf = "ugrid"
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -138,6 +144,7 @@ def build_models(idx, test):
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
+        export_array_netcdf=netcdf,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -148,12 +155,23 @@ def build_models(idx, test):
         filename=f"{name}.dis",
     )
 
+    if netcdf:
+        # netcdf configuration
+        flopy.mf6.ModflowUtlncf(
+            dis,
+            ogc_wkt=wkt,
+            filename=f"{name}.dis.ncf",
+        )
+
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(
+        gwf, export_array_netcdf=netcdf, strt=strt, filename=f"{name}.ic"
+    )
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
+        export_array_netcdf=netcdf,
         save_flows=False,
         # dev_modflowusg_upstream_weighted_saturation=True,
         icelltype=laytyp,
