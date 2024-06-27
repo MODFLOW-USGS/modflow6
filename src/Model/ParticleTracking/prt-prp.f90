@@ -22,6 +22,8 @@ module PrtPrpModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  mem_reallocate
   use TimeSelectModule, only: TimeSelectType
+  use DisModule, only: DisType
+  use DisvModule, only: DisvType
 
   implicit none
 
@@ -37,7 +39,7 @@ module PrtPrpModule
     type(PrtFmiType), pointer :: fmi => null() !< flow model interface
     type(ParticleStoreType), pointer :: particles => null() !< particle store
     type(TrackFileControlType), pointer :: trackfilectl => null() !< track file control
-    integer(I4B), pointer :: nreleasepts => null() !< number of release points
+    integer(I4B), pointer :: npoints => null() !< number of release points
     integer(I4B), pointer :: nparticles => null() !< number of particles released
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
     integer(I4B), pointer :: istopzone => null() !< optional stop zone number: 0 = no stop zone
@@ -46,11 +48,11 @@ module PrtPrpModule
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
     integer(I4B), pointer :: irlstls => null() !< release time file
-    logical(LGP), pointer :: localz => null() !< compute z coordinates local to the cell
-    integer(I4B), pointer :: extend => null() !< extend tracking beyond simulation's end
+    integer(I4B), pointer :: ilocalz => null() !< compute z coordinates local to the cell
+    integer(I4B), pointer :: iextend => null() !< extend tracking beyond simulation's end
     logical(LGP), pointer :: rlsall => null() !< release in all time step
     logical(LGP), pointer :: rlsfirst => null() !< release in first time step
-    logical(LGP), pointer :: rlstimelist => null() !< use global release time
+    logical(LGP), pointer :: rlstimes => null() !< use global release time
     real(DP), pointer :: offset => null() !< release time offset
     real(DP), pointer :: stoptime => null() !< stop time for all release points
     real(DP), pointer :: stoptraveltime => null() !< stop travel time for all points
@@ -60,12 +62,11 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: rptx(:) => null() !< release point x coordinates
     real(DP), pointer, contiguous :: rpty(:) => null() !< release point y coordinates
     real(DP), pointer, contiguous :: rptz(:) => null() !< release point z coordinates
-    real(DP), pointer, contiguous :: locz(:) => null() !< release point local z coordinates
-    real(DP), pointer, contiguous :: rptmass(:) => null() !< total mass released from point
+    real(DP), pointer, contiguous :: rptm(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
     type(TimeSelectType), pointer :: releasetimes !< user-specified particle release times
     integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
-    integer(I4B), pointer :: iexmethod => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    integer(I4B), pointer :: iexmeth => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
     logical(LGP), pointer :: foundtol => null() !< whether tolerance option was found
 
@@ -82,6 +83,8 @@ module PrtPrpModule
     procedure :: bnd_options => prp_options
     procedure :: read_dimensions => prp_read_dimensions
     procedure :: prp_read_packagedata
+    procedure :: get_release_time
+    procedure :: release
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
   end type PrtPrpType
@@ -145,23 +148,23 @@ contains
     ! -- deallocate scalars
     call mem_deallocate(this%rlsall)
     call mem_deallocate(this%rlsfirst)
-    call mem_deallocate(this%rlstimelist)
-    call mem_deallocate(this%localz)
-    call mem_deallocate(this%extend)
+    call mem_deallocate(this%rlstimes)
+    call mem_deallocate(this%ilocalz)
+    call mem_deallocate(this%iextend)
     call mem_deallocate(this%offset)
     call mem_deallocate(this%stoptime)
     call mem_deallocate(this%stoptraveltime)
     call mem_deallocate(this%istopweaksink)
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
-    call mem_deallocate(this%nreleasepts)
+    call mem_deallocate(this%npoints)
     call mem_deallocate(this%nparticles)
     call mem_deallocate(this%itrkout)
     call mem_deallocate(this%itrkhdr)
     call mem_deallocate(this%itrkcsv)
     call mem_deallocate(this%irlstls)
     call mem_deallocate(this%ifrctrn)
-    call mem_deallocate(this%iexmethod)
+    call mem_deallocate(this%iexmeth)
     call mem_deallocate(this%extol)
     call mem_deallocate(this%foundtol)
 
@@ -169,9 +172,8 @@ contains
     call mem_deallocate(this%rptx)
     call mem_deallocate(this%rpty)
     call mem_deallocate(this%rptz)
-    call mem_deallocate(this%locz)
     call mem_deallocate(this%rptnode)
-    call mem_deallocate(this%rptmass)
+    call mem_deallocate(this%rptm)
     call mem_deallocate(this%rlskstp)
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
@@ -210,25 +212,24 @@ contains
     !    of release points (arrays resized if/when needed)
     call allocate_particle_store( &
       this%particles, &
-      this%nreleasepts, &
+      this%npoints, &
       this%memoryPath)
 
     ! -- Allocate arrays
-    call mem_allocate(this%rptx, this%nreleasepts, 'RPTX', this%memoryPath)
-    call mem_allocate(this%rpty, this%nreleasepts, 'RPTY', this%memoryPath)
-    call mem_allocate(this%rptz, this%nreleasepts, 'RPTZ', this%memoryPath)
-    call mem_allocate(this%locz, this%nreleasepts, 'LOCZ', this%memoryPath)
-    call mem_allocate(this%rptmass, this%nreleasepts, 'RPTMASS', this%memoryPath)
-    call mem_allocate(this%rptnode, this%nreleasepts, 'RPTNODER', &
+    call mem_allocate(this%rptx, this%npoints, 'RPTX', this%memoryPath)
+    call mem_allocate(this%rpty, this%npoints, 'RPTY', this%memoryPath)
+    call mem_allocate(this%rptz, this%npoints, 'RPTZ', this%memoryPath)
+    call mem_allocate(this%rptm, this%npoints, 'RPTMASS', this%memoryPath)
+    call mem_allocate(this%rptnode, this%npoints, 'RPTNODER', &
                       this%memoryPath)
     call mem_allocate(this%rlskstp, 1, 'RLSKSTP', this%memoryPath)
-    call mem_allocate(this%rptname, LENBOUNDNAME, this%nreleasepts, &
+    call mem_allocate(this%rptname, LENBOUNDNAME, this%npoints, &
                       'RPTNAME', this%memoryPath)
 
     ! -- Initialize arrays
     this%rlskstp(1) = 1 ! single release in first time step by default
-    do nps = 1, this%nreleasepts
-      this%rptmass(nps) = DZERO
+    do nps = 1, this%npoints
+      this%rptm(nps) = DZERO
     end do
   end subroutine prp_allocate_arrays
 
@@ -246,46 +247,46 @@ contains
     ! -- Allocate scalars for this type
     call mem_allocate(this%rlsall, 'RLSALL', this%memoryPath)
     call mem_allocate(this%rlsfirst, 'RLSFIRST', this%memoryPath)
-    call mem_allocate(this%rlstimelist, 'RELEASETIME', this%memoryPath)
-    call mem_allocate(this%localz, 'LOCALZ', this%memoryPath)
-    call mem_allocate(this%extend, 'EXTEND', this%memoryPath)
+    call mem_allocate(this%rlstimes, 'RELEASETIME', this%memoryPath)
+    call mem_allocate(this%ilocalz, 'ILOCALZ', this%memoryPath)
+    call mem_allocate(this%iextend, 'IEXTEND', this%memoryPath)
     call mem_allocate(this%offset, 'OFFSET', this%memoryPath)
     call mem_allocate(this%stoptime, 'STOPTIME', this%memoryPath)
     call mem_allocate(this%stoptraveltime, 'STOPTRAVELTIME', this%memoryPath)
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
-    call mem_allocate(this%nreleasepts, 'NRELEASEPTS', this%memoryPath)
-    call mem_allocate(this%nparticles, 'NPART', this%memoryPath)
+    call mem_allocate(this%npoints, 'NPOINTS', this%memoryPath)
+    call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
     call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
     call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
     call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
     call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
-    call mem_allocate(this%iexmethod, 'IEXMETHOD', this%memoryPath)
+    call mem_allocate(this%iexmeth, 'IEXMETH', this%memoryPath)
     call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
     call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! -- Set values
     this%rlsall = .false.
     this%rlsfirst = .false.
-    this%rlstimelist = .false.
-    this%localz = .false.
-    this%extend = 0
+    this%rlstimes = .false.
+    this%ilocalz = 0
+    this%iextend = 0
     this%offset = DZERO
     this%stoptime = huge(1d0)
     this%stoptraveltime = huge(1d0)
     this%istopweaksink = 0
     this%istopzone = 0
     this%idrape = 0
-    this%nreleasepts = 0
+    this%npoints = 0
     this%nparticles = 0
     this%itrkout = 0
     this%itrkhdr = 0
     this%itrkcsv = 0
     this%irlstls = 0
     this%ifrctrn = 0
-    this%iexmethod = 1
+    this%iexmeth = 0
     this%extol = DZERO
     this%foundtol = .false. ! exit_solve_tolerance is a required option
   end subroutine prp_allocate_scalars
@@ -300,11 +301,11 @@ contains
     call this%obs%obs_ar()
     call this%BndType%allocate_arrays()
     if (this%inamedbound /= 0) then
-      do n = 1, this%nreleasepts
+      do n = 1, this%npoints
         this%boundname(n) = this%rptname(n)
       end do
     end if
-    do n = 1, this%nreleasepts
+    do n = 1, this%npoints
       this%nodelist(n) = this%rptnode(n)
     end do
     ! if (this%imover /= 0) then
@@ -322,21 +323,17 @@ contains
   !! first stress period.
   !<
   subroutine prp_ad(this)
-    ! -- modules
-    use TdisModule, only: totimc, delt, kstp
-    use DisModule, only: DisType
-    use DisvModule, only: DisvType
-    ! -- dummy
+    ! modules
+    use TdisModule, only: kstp
+    ! dummy
     class(PrtPrpType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: ic, icu, nps, nts, nrel, &
-                    nreleasets, np, irow, icol, ilay, icpl
-    real(DP) :: x, y, z, trelease, tend, top, bot, hds
-    real(DP), allocatable :: polyverts(:, :)
-    type(ParticleType), pointer :: particle
+    ! local
+    integer(I4B) :: ip, it
+    integer(I4B) :: nparticles
+    integer(I4B) :: nreleasetimes
+    real(DP) :: trelease
 
-    ! -- Check if there's a release to make
+    ! Check if there's a release this time step, return early if not.
     if (.not. ( &
         ! all time steps?
         this%rlsall .or. &
@@ -345,146 +342,189 @@ contains
         ! specified time steps?
         any(this%rlskstp == kstp) .or. &
         ! specified release times?
-        this%rlstimelist)) return
+        this%rlstimes)) return
 
-    if (this%rlstimelist) then
-      nreleasets = size(this%releasetimes%times)
-    else
-      nreleasets = 1
-    end if
-    nrel = this%nreleasepts * nreleasets
-
-    ! -- Reset mass release for time step
-    do nps = 1, this%nreleasepts
-      this%rptmass(nps) = DZERO
+    ! Reset mass for this time step.
+    do ip = 1, this%npoints
+      this%rptm(ip) = DZERO
     end do
 
-    ! -- Resize particle store if another set
-    !    of particles will exceed its capacity
-    if ((this%nparticles + nrel) > size(this%particles%irpt)) &
+    ! Count release times and particles to be released.
+    if (this%rlstimes) then
+      nreleasetimes = size(this%releasetimes%times)
+    else
+      nreleasetimes = 1
+    end if
+    nparticles = this%npoints * nreleasetimes
+
+    ! Resize particle store if another set
+    ! of particles will exceed its capacity.
+    if ((this%nparticles + nparticles) > size(this%particles%irpt)) &
       call this%particles%resize( &
-      size(this%particles%irpt) + nrel, &
+      size(this%particles%irpt) + nparticles, &
       this%memoryPath)
 
-    ! -- Release a particle from each point...
-    do nps = 1, this%nreleasepts
-      ic = this%rptnode(nps)
-      icu = this%dis%get_nodeuser(ic)
-      ! -- ...for each release time in the current time step
-      tsloop: do nts = 1, nreleasets
-        if (this%rlstimelist) then
-          trelease = this%releasetimes%times(nts)
-          tend = totimc + delt
-          if (trelease < totimc .or. trelease >= tend) cycle tsloop
-        else
-          trelease = totimc + this%offset * delt
-        end if
-
-        np = this%nparticles + 1
-        this%nparticles = np
-
-        ! -- Particle release point. Calculate global from local z if needed.
-        x = this%rptx(nps)
-        y = this%rpty(nps)
-        if (this%localz) then
-          top = this%fmi%dis%top(ic)
-          bot = this%fmi%dis%bot(ic)
-          hds = this%fmi%gwfhead(ic)
-          z = bot + this%rptz(nps) * (hds - bot)
-        else
-          z = this%rptz(nps)
-        end if
-
-        ! -- Check release point is within the specified cell
-        !    and not above/below grid top/bottom respectively
-        call this%dis%get_polyverts(ic, polyverts)
-        if (.not. point_in_polygon(x, y, polyverts)) then
-          write (errmsg, '(a,g0,a,g0,a,i0)') &
-            'Error: release point (x=', x, ', y=', y, ') is not in cell ', icu
-          call store_error(errmsg, terminate=.false.)
-          call store_error_unit(this%inunit, terminate=.true.)
-        end if
-        if (z > maxval(this%dis%top)) then
-          write (errmsg, '(a,g0,a,g0,a,i0)') &
-            'Error: release point (z=', z, ') is above grid top ', &
-            maxval(this%dis%top)
-          call store_error(errmsg, terminate=.false.)
-          call store_error_unit(this%inunit, terminate=.true.)
-        else if (z < minval(this%dis%bot)) then
-          write (errmsg, '(a,g0,a,g0,a,i0)') &
-            'Error: release point (z=', z, ') is below grid bottom ', &
-            minval(this%dis%bot)
-          call store_error(errmsg, terminate=.false.)
-          call store_error_unit(this%inunit, terminate=.true.)
-        end if
-
-        ! -- Initialize particle and add it to particle store
-        ! -- Todo: branch depending on exchange PRP or a normal PRP.
-        !    if exchange PRP, particle identity properties should be
-        !    passed in (e.g. imdl, iprp, irpt, trelease, name).
-        !    if normal PRP, imdl and iprp should be set from pointers
-        !    provided to PRP by PRT model; irpt and trelease as below.
-        allocate (particle)
-        call create_particle(particle)
-        if (size(this%boundname) /= 0) then
-          particle%name = this%boundname(nps)
-        else
-          particle%name = ''
-        end if
-        particle%irpt = nps
-        particle%istopweaksink = this%istopweaksink
-        particle%istopzone = this%istopzone
-        particle%icu = icu
-        select type (dis => this%dis)
-        type is (DisType)
-          call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
-        type is (DisvType)
-          call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
-        end select
-        particle%ilay = ilay
-        particle%izone = this%rptzone(ic)
-        particle%istatus = 0
-        ! Handle inactive cells
-        if (this%ibound(ic) == 0) then
-          ! -- If drape option activated, release in highest active
-          !    cell vertically below release point.
-          if (this%idrape /= 0) &
-            call this%dis%highest_active(ic, this%ibound)
-          ! -- If returned cell is inactive, do not release particle
-          if (this%ibound(ic) == 0) &
-            particle%istatus = 8 ! permanently unreleased
-        end if
-        particle%x = x
-        particle%y = y
-        particle%z = z
-        particle%trelease = trelease
-        ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
-        if (this%stoptraveltime == huge(1d0)) then
-          particle%tstop = this%stoptime
-        else
-          particle%tstop = particle%trelease + this%stoptraveltime
-          if (this%stoptime < particle%tstop) particle%tstop = this%stoptime
-        end if
-        particle%ttrack = particle%trelease
-        particle%idomain(1) = 0
-        particle%iboundary(1) = 0
-        particle%idomain(2) = ic
-        particle%iboundary(2) = 0
-        particle%idomain(3) = 0
-        particle%iboundary(3) = 0
-        particle%ifrctrn = this%ifrctrn
-        particle%iexmethod = this%iexmethod
-        particle%extol = this%extol
-        particle%extend = this%extend
-
-        ! -- Persist particle to particle store
-        call this%particles%save_particle(particle, np)
-
-        ! -- Accumulate mass release from this point
-        this%rptmass(nps) = this%rptmass(nps) + DONE
-      end do tsloop
+    ! Release a particle from each point for each
+    ! release time within the current time step.
+    do ip = 1, this%npoints
+      do it = 1, nreleasetimes
+        call this%get_release_time(ip, it, trelease)
+        call this%release(ip, trelease)
+      end do
     end do
   end subroutine prp_ad
+
+  subroutine get_release_time(this, ip, it, trelease)
+    ! modules
+    use TdisModule, only: totimc, delt, kstp, kper
+    ! dummy
+    class(PrtPrpType), intent(inout) :: this !< prp
+    integer(I4B), intent(in) :: ip !< particle index
+    integer(I4B), intent(in) :: it !< release time index
+    real(DP), intent(out) :: trelease !< release time
+    ! local
+    character(len=LINELENGTH) :: errmsg
+
+    if (this%rlstimes) then
+      ! If this is an explicitly specified release time,
+      ! make sure it falls within the current time step.
+      ! If not, warn and don't release the particle.
+      trelease = this%releasetimes%times(it)
+      if (trelease < totimc .or. trelease >= (totimc + delt)) then
+        write (errmsg, '(a,g0,a,i0,a,i0)') &
+          'Release time ', trelease, ' falls outside period ', kper, &
+          ' time step ', kstp
+        call store_error(errmsg, terminate=.false.)
+        call store_error_unit(this%inunit, terminate=.true.)
+      end if
+    else
+      ! Reference time is timestep start, optional offset
+      trelease = totimc + this%offset * delt
+    end if
+
+  end subroutine get_release_time
+
+  subroutine release(this, ip, trelease)
+    ! dummy
+    class(PrtPrpType), intent(inout) :: this !< prp
+    integer(I4B), intent(in) :: ip !< particle index
+    real(DP), intent(in) :: trelease !< release time
+    ! local
+    integer(I4B) :: irow, icol, ilay, icpl
+    integer(I4B) :: ic, icu
+    integer(I4B) :: np
+    real(DP) :: x, y, z
+    real(DP) :: top, bot, hds
+    real(DP), allocatable :: polyverts(:, :)
+    character(len=LINELENGTH) :: errmsg
+    type(ParticleType), pointer :: particle !< particle
+
+    ! Increment particle release count
+    np = this%nparticles + 1
+    this%nparticles = np
+
+    ! Get cell number
+    ic = this%rptnode(ip)
+
+    ! Load coordinates and transform if needed
+    x = this%rptx(ip)
+    y = this%rpty(ip)
+    if (this%ilocalz > 0) then
+      top = this%fmi%dis%top(ic)
+      bot = this%fmi%dis%bot(ic)
+      hds = this%fmi%gwfhead(ic)
+      z = bot + this%rptz(ip) * (hds - bot)
+    else
+      z = this%rptz(ip)
+    end if
+
+    ! Calculate user node number
+    icu = this%dis%get_nodeuser(ic)
+
+    ! Check release point is within the specified cell
+    ! and not above/below grid top/bottom respectively
+    call this%fmi%dis%get_polyverts(ic, polyverts)
+    if (.not. point_in_polygon(x, y, polyverts)) then
+      write (errmsg, '(a,g0,a,g0,a,i0)') &
+        'Error: release point (x=', x, ', y=', y, ') is not in cell ', icu
+      call store_error(errmsg, terminate=.false.)
+      call store_error_unit(this%inunit, terminate=.true.)
+    end if
+    if (z > maxval(this%dis%top)) then
+      write (errmsg, '(a,g0,a,g0,a,i0)') &
+        'Error: release point (z=', z, ') is above grid top ', &
+        maxval(this%dis%top)
+      call store_error(errmsg, terminate=.false.)
+      call store_error_unit(this%inunit, terminate=.true.)
+    else if (z < minval(this%dis%bot)) then
+      write (errmsg, '(a,g0,a,g0,a,i0)') &
+        'Error: release point (z=', z, ') is below grid bottom ', &
+        minval(this%dis%bot)
+      call store_error(errmsg, terminate=.false.)
+      call store_error_unit(this%inunit, terminate=.true.)
+    end if
+
+    ! Initialize the particle
+    call create_particle(particle)
+    if (size(this%boundname) /= 0) then
+      particle%name = this%boundname(ip)
+    else
+      particle%name = ''
+    end if
+    particle%irpt = ip
+    particle%istopweaksink = this%istopweaksink
+    particle%istopzone = this%istopzone
+    particle%icu = icu
+    select type (dis => this%dis)
+    type is (DisType)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
+    type is (DisvType)
+      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+    end select
+    particle%ilay = ilay
+    particle%izone = this%rptzone(ic)
+    particle%istatus = 0
+    ! Handle inactive cells
+    if (this%ibound(ic) == 0) then
+      ! If drape option activated, release in highest active
+      ! cell vertically below release point.
+      if (this%idrape /= 0) &
+        call this%dis%highest_active(ic, this%ibound)
+      ! If returned cell is inactive, do not release particle
+      if (this%ibound(ic) == 0) &
+        particle%istatus = 8 ! permanently unreleased
+    end if
+    particle%x = x
+    particle%y = y
+    particle%z = z
+    particle%trelease = trelease
+    ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
+    if (this%stoptraveltime == huge(1d0)) then
+      particle%tstop = this%stoptime
+    else
+      particle%tstop = particle%trelease + this%stoptraveltime
+      if (this%stoptime < particle%tstop) particle%tstop = this%stoptime
+    end if
+    particle%ttrack = particle%trelease
+    particle%idomain(1) = 0
+    particle%iboundary(1) = 0
+    particle%idomain(2) = ic
+    particle%iboundary(2) = 0
+    particle%idomain(3) = 0
+    particle%iboundary(3) = 0
+    particle%ifrctrn = this%ifrctrn
+    particle%iexmeth = this%iexmeth
+    particle%iextend = this%iextend
+    particle%extol = this%extol
+
+    ! Save particle to the particle store
+    call this%particles%save_particle(particle, np)
+    deallocate (particle)
+
+    ! Add particle mass for release point
+    this%rptm(ip) = this%rptm(ip) + DONE
+
+  end subroutine release
 
   !> @ brief Read and prepare period data for particle input
   subroutine prp_rp(this)
@@ -667,7 +707,7 @@ contains
       if (node > 0) then
         ! -- Calculate the flow rate into the cell.
         idiag = this%dis%con%ia(node)
-        rrate = this%rptmass(i) * (DONE / delt) ! reciprocal of tstp length
+        rrate = this%rptm(i) * (DONE / delt) ! reciprocal of tstp length
         flowja(idiag) = flowja(idiag) + rrate
       end if
 
@@ -744,7 +784,7 @@ contains
       this%idrape = 1
       found = .true.
     case ('RELEASE_TIMES')
-      if (this%rlstimelist) then
+      if (this%rlstimes) then
         errmsg = "RELEASE TIMES ALREADY SPECIFIED"
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
@@ -761,10 +801,10 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if
-      this%rlstimelist = .true.
+      this%rlstimes = .true.
       found = .true.
     case ('RELEASE_TIMESFILE')
-      if (this%rlstimelist) then
+      if (this%rlstimes) then
         errmsg = "RELEASE TIMES ALREADY SPECIFIED"
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
@@ -790,7 +830,7 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if
-      this%rlstimelist = .true.
+      this%rlstimes = .true.
       found = .true.
     case ('TRACK')
       call this%parser%GetStringCaps(keyword)
@@ -831,22 +871,10 @@ contains
       end if
       found = .true.
     case ('LOCAL_Z')
-      this%localz = .true.
+      this%ilocalz = 1
       found = .true.
     case ('EXTEND_TRACKING')
-      this%extend = 1
-      found = .true.
-    case ('DEV_FORCETERNARY')
-      call this%parser%DevOpt()
-      this%ifrctrn = 1
-      write (this%iout, '(4x,a)') &
-        'TRACKING WILL BE DONE USING THE TERNARY METHOD REGARDLESS OF CELL TYPE'
-      found = .true.
-    case ('DEV_EXIT_SOLVE_METHOD')
-      this%iexmethod = this%parser%GetInteger()
-      if (.not. (this%iexmethod /= 1 .or. this%iexmethod /= 2)) &
-        call store_error('DEV_EXIT_SOLVE_METHOD MUST BE &
-          &1 (BRENT) OR 2 (CHANDRUPATLA)')
+      this%iextend = 1
       found = .true.
     case ('EXIT_SOLVE_TOLERANCE')
       this%extol = this%parser%GetDouble()
@@ -854,6 +882,19 @@ contains
         call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
       found = .true.
       this%foundtol = .true.
+    case ('DEV_FORCETERNARY')
+      call this%parser%DevOpt()
+      this%ifrctrn = 1
+      write (this%iout, '(4x,a)') &
+        'TRACKING WILL BE DONE USING THE TERNARY METHOD REGARDLESS OF CELL TYPE'
+      found = .true.
+    case ('DEV_EXIT_SOLVE_METHOD')
+      call this%parser%DevOpt()
+      this%iexmeth = this%parser%GetInteger()
+      if (.not. (this%iexmeth /= 1 .or. this%iexmeth /= 2)) &
+        call store_error('DEV_EXIT_SOLVE_METHOD MUST BE &
+          &1 (BRENT) OR 2 (CHANDRUPATLA)')
+      found = .true.
     case default
       found = .false.
     end select
@@ -886,16 +927,16 @@ contains
      &begin time (', G0, ').')"
 
     ! -- allocate and initialize temporary variables
-    allocate (noder(this%nreleasepts))
-    allocate (x(this%nreleasepts))
-    allocate (y(this%nreleasepts))
-    allocate (z(this%nreleasepts))
-    allocate (tstop(this%nreleasepts))
-    allocate (nametxt(this%nreleasepts))
-    allocate (nboundchk(this%nreleasepts))
+    allocate (noder(this%npoints))
+    allocate (x(this%npoints))
+    allocate (y(this%npoints))
+    allocate (z(this%npoints))
+    allocate (tstop(this%npoints))
+    allocate (nametxt(this%npoints))
+    allocate (nboundchk(this%npoints))
 
     ! -- initialize temporary variables
-    do n = 1, this%nreleasepts
+    do n = 1, this%npoints
       nboundchk(n) = 0
     end do
 
@@ -914,10 +955,10 @@ contains
         ival = this%parser%GetInteger()
         n = ival
 
-        if (n < 1 .or. n > this%nreleasepts) then
+        if (n < 1 .or. n > this%npoints) then
           write (errmsg, '(a,1x,i0,a)') &
             'Release point number must be greater than 0 and less than ', &
-            'or equal to', this%nreleasepts, '.'
+            'or equal to', this%npoints, '.'
           call store_error(errmsg)
           cycle
         end if
@@ -934,7 +975,7 @@ contains
         y(n) = this%parser%GetDouble()
         z(n) = this%parser%GetDouble()
 
-        if (this%localz .and. (z(n) < 0 .or. z(n) > 1)) then
+        if (this%ilocalz > 0 .and. (z(n) < 0 .or. z(n) > 1)) then
           call store_error('Local z coordinate must fall in the interval [0, 1]')
           cycle
         end if
@@ -960,7 +1001,7 @@ contains
         'END OF '//trim(adjustl(this%packName))//' PACKAGEDATA'
 
       ! -- check for duplicate or missing particle release points
-      do n = 1, this%nreleasepts
+      do n = 1, this%npoints
         if (nboundchk(n) == 0) then
           write (errmsg, '(a,a,1x,i0,a)') 'No data specified for particle ', &
             'release point', n, '.'
@@ -982,7 +1023,7 @@ contains
     end if
 
     ! -- fill particle release point data with data stored in temporary local arrays
-    do n = 1, this%nreleasepts
+    do n = 1, this%npoints
       this%rptnode(n) = noder(n)
       this%rptx(n) = x(n)
       this%rpty(n) = y(n)
@@ -1025,7 +1066,7 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('NRELEASEPTS')
-          this%nreleasepts = this%parser%GetInteger()
+          this%npoints = this%parser%GetInteger()
         case default
           write (errmsg, &
                  '(4x,a,a)') '****ERROR. UNKNOWN PARTICLE INPUT DIMENSION: ', &
@@ -1040,8 +1081,8 @@ contains
     end if
 
     ! -- set maxbound and nbound to nreleasepts
-    this%maxbound = this%nreleasepts
-    this%nbound = this%nreleasepts
+    this%maxbound = this%npoints
+    this%nbound = this%npoints
 
     ! -- allocate arrays for prp package
     call this%prp_allocate_arrays()
