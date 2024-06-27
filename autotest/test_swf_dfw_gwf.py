@@ -59,9 +59,9 @@ def build_models(idx, test):
     add_gwf_model(sim)
 
     swfgwf_data = [
-        ((0,), (0, 0, 0), 1.0),
-        ((1,), (0, 0, 1), 1.0),
-        ((2,), (0, 0, 2), 1.0),
+        ((0,), (0, 0, 0), 1.0, 1.0),
+        ((1,), (0, 0, 1), 1.0, 1.0),
+        ((2,), (0, 0, 2), 1.0, 1.0),
     ]
     swfgwf = flopy.mf6.ModflowSwfgwf(
         sim,
