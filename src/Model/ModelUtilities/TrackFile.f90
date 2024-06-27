@@ -95,7 +95,7 @@ contains
     integer(I4B), intent(in) :: reason
     logical(LGP), intent(in) :: csv
     ! local
-    real(DP) :: x, y, z, xout, yout, zout
+    real(DP) :: x, y, z
     integer(I4B) :: status
 
     ! Convert from cell-local to model coordinates if needed
