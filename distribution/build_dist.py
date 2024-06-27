@@ -123,8 +123,14 @@ def setup_examples(
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # filter examples for models selected for release
+    # and omit any excluded models
+    excluded = ["ex-prt-mp7-p02", "ex-prt-mp7-p04"]
     for p in examples_path.glob("*"):
         if not any(m in p.stem for m in models):
+            print(f"Omitting example due to model selection: {p.stem}")
+            rmtree(p)
+        if any(e in p.stem for e in excluded):
+            print(f"Omitting deliberately excluded example: {p.stem}")
             rmtree(p)
 
     # list folders with mfsim.nam (recursively)
