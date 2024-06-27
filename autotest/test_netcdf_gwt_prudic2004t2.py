@@ -24,7 +24,13 @@ cases = ["prudic2004t2"]
 def build_models(idx, test):
     from test_gwt_prudic2004t2 import build_models as build
 
-    sim, dummy = build(idx, test, netcdf=True)
+    sim, dummy = build(idx, test)
+    sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
+    gwt = sim.gwt[0]
+    gwt.name_file.export_netcdf = "ugrid"
+    gwt.dis.export_array_netcdf = True
+    gwt.ic.export_array_netcdf = True
+    gwt.dsp.export_array_netcdf = True
     return sim, dummy
 
 

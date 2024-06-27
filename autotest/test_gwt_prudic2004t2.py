@@ -23,7 +23,7 @@ fname = str(model_path / "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
-def build_models(idx, test, netcdf=None):
+def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
     gwfname = "gwf_" + name
@@ -42,11 +42,7 @@ def build_models(idx, test, netcdf=None):
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
-        sim,
-        time_units="DAYS",
-        start_date_time="2041-01-01T00:00:00-05:00",
-        nper=nper,
-        perioddata=tdis_rc,
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
@@ -363,8 +359,6 @@ def build_models(idx, test, netcdf=None):
     transport = True
     if transport:
         gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
-        if netcdf:
-            gwt.name_file.export_netcdf = "ugrid"
 
         # ims
         hclose = 0.001
@@ -392,7 +386,6 @@ def build_models(idx, test, netcdf=None):
 
         dis = flopy.mf6.ModflowGwtdis(
             gwt,
-            export_array_netcdf=netcdf,
             nlay=nlay,
             nrow=nrow,
             ncol=ncol,
@@ -402,12 +395,10 @@ def build_models(idx, test, netcdf=None):
             botm=botm,
             idomain=idomain,
         )
-        ic = flopy.mf6.ModflowGwtic(gwt, export_array_netcdf=netcdf, strt=0.0)
+        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
         mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.3)
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme="TVD")
-        dsp = flopy.mf6.ModflowGwtdsp(
-            gwt, export_array_netcdf=netcdf, alh=20.0, ath1=2, atv=0.2
-        )
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=20.0, ath1=2, atv=0.2)
         sourcerecarray = [()]
         ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
         cnclist = [

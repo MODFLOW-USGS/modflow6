@@ -32,7 +32,13 @@ cases = ["cnd01"]
 def build_models(idx, test):
     from test_gwe_cnd import build_models as build
 
-    sim, dummy = build(idx, test, netcdf=True)
+    sim, dummy = build(idx, test)
+    sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
+    gwe = sim.gwe[0]
+    gwe.name_file.export_netcdf = "ugrid"
+    gwe.dis.export_array_netcdf = True
+    gwe.ic.export_array_netcdf = True
+    gwe.cnd.export_array_netcdf = True
     return sim, dummy
 
 

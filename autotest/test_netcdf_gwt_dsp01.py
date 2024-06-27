@@ -22,7 +22,13 @@ cases = ["dsp01a", "dsp01b"]
 def build_models(idx, test):
     from test_gwt_dsp01 import build_models as build
 
-    sim, dummy = build(idx, test, netcdf=True)
+    sim, dummy = build(idx, test)
+    sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
+    gwt = sim.gwt[0]
+    gwt.name_file.export_netcdf = "ugrid"
+    gwt.dis.export_array_netcdf = True
+    gwt.ic.export_array_netcdf = True
+    gwt.dsp.export_array_netcdf = True
     return sim, dummy
 
 
@@ -58,13 +64,12 @@ def check_output(idx, test):
     timestep = 0
     for i in range(nper):
         for j in range(pd[i][1]):
-            print(cobj.get_data())
-            # rec = cobj.get_data(kstpkper=(j, i))
-            # for l in range(nlay):
-            #    assert np.allclose(
-            #        np.array(rec[l]).flatten(),
-            #        xds[f"concentration_l{l+1}"][timestep, :].data,
-            #    ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
+            rec = cobj.get_data(kstpkper=(j, i))
+            for l in range(nlay):
+                assert np.allclose(
+                    np.array(rec[l]).flatten(),
+                    xds[f"concentration_l{l+1}"][timestep, :].data,
+                ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
             timestep += 1
 
     vlist = [

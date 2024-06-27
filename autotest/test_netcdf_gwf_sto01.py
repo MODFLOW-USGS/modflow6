@@ -46,7 +46,20 @@ wkt = (
 def build_models(idx, test):
     from test_gwf_sto01 import build_models as build
 
-    sim, dummy = build(idx, test, netcdf=True, wkt=wkt)
+    sim, dummy = build(idx, test)
+    sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
+    gwf = sim.gwf[0]
+    gwf.name_file.export_netcdf = "ugrid"
+    gwf.dis.export_array_netcdf = True
+    gwf.ic.export_array_netcdf = True
+    gwf.npf.export_array_netcdf = True
+
+    name = cases[idx]
+
+    # netcdf config
+    ncf = flopy.mf6.ModflowUtlncf(
+        gwf.dis, ogc_wkt=wkt, filename=f"{name}.dis.ncf"
+    )
     return sim, dummy
 
 
