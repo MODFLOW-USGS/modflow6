@@ -99,7 +99,6 @@ def check_output(idx, test):
             for l in range(nlay):
                 assert np.allclose(
                     np.array(rec[l]).flatten(),
-                    # xds[f"head_l{l+1}"][timestep, :].data,
                     xds[f"head_l{l+1}"][timestep, :]
                     .fillna(1.00000000e30)
                     .data,

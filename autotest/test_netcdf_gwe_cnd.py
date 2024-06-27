@@ -126,7 +126,7 @@ def check_output(idx, test):
             ), f"NetCDF input array comparison failure, variable={var}"
 
 
-# - No need to change any code below
+@pytest.mark.netcdf
 @pytest.mark.parametrize(
     "idx, name",
     list(enumerate(cases)),

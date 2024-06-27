@@ -19,7 +19,6 @@ except ImportError:
 
 cases = ["gwf_sto01"]
 htol = [None for _ in range(len(cases))]
-# nstp = [1] + [6 for _ in range(nper - 1)]
 
 wkt = (
     'PROJCS["NAD83 / UTM zone 18N", '
@@ -83,7 +82,6 @@ def check_output(idx, test):
     dis = getattr(gwf, "dis")
     tdis = getattr(test.sims[0], "tdis")
     nper = getattr(tdis, "nper").data
-    # nstp = getattr(tdis, "nstp").data
     nstp = [1] + [6 for _ in range(nper - 1)]
     nlay = getattr(dis, "nlay").data
 

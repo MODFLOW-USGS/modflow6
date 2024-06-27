@@ -67,7 +67,6 @@ def check_output(idx, test):
             for l in range(nlay):
                 assert np.allclose(
                     np.array(rec[l]).flatten(),
-                    # xds[f"concentration_l{l+1}"][timestep, :].data,
                     xds[f"concentration_l{l+1}"][timestep, :]
                     .fillna(1.00000000e30)
                     .data,
@@ -114,6 +113,7 @@ def check_output(idx, test):
 
 
 @pytest.mark.slow
+@pytest.mark.netcdf
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
