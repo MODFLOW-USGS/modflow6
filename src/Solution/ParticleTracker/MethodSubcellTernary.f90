@@ -8,7 +8,7 @@ module MethodSubcellTernaryModule
   use SubcellModule, only: SubcellType
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule, only: ParticleType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType

@@ -9,7 +9,7 @@ module MethodModule
   use PrtFmiModule, only: PrtFmiType
   use CellModule, only: CellType
   use CellDefnModule, only: CellDefnType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use TimeSelectModule, only: TimeSelectType
   implicit none
 
@@ -32,7 +32,7 @@ module MethodModule
     type(PrtFmiType), pointer, public :: fmi => null() !< ptr to fmi
     class(CellType), pointer, public :: cell => null() !< ptr to the current cell
     class(SubcellType), pointer, public :: subcell => null() !< ptr to the current subcell
-    type(TrackFileControlType), pointer, public :: trackfilectl => null() !< ptr to track file control
+    type(TrackControlType), pointer, public :: trackfilectl => null() !< ptr to track file control
     type(TimeSelectType), pointer, public :: tracktimes => null() !< ptr to user-defined tracking times
     integer(I4B), dimension(:), pointer, contiguous, public :: izone => null() !< pointer to zone numbers
     real(DP), dimension(:), pointer, contiguous, public :: flowja => null() !< pointer to intercell flows
@@ -76,7 +76,7 @@ contains
     type(PrtFmiType), intent(in), pointer, optional :: fmi
     class(CellType), intent(in), pointer, optional :: cell
     class(SubcellType), intent(in), pointer, optional :: subcell
-    type(TrackFileControlType), intent(in), pointer, optional :: trackfilectl
+    type(TrackControlType), intent(in), pointer, optional :: trackfilectl
     type(TimeSelectType), intent(in), pointer, optional :: tracktimes
     integer(I4B), intent(in), pointer, optional :: izone(:)
     real(DP), intent(in), pointer, optional :: flowja(:)

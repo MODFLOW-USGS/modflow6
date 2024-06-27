@@ -9,7 +9,7 @@ module MethodCellPollockQuadModule
   use CellDefnModule, only: CellDefnType
   use SubcellRectModule, only: SubcellRectType, create_subcell_rect
   use ParticleModule, only: ParticleType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   implicit none
 
   private

@@ -17,7 +17,7 @@ module PrtPrpModule
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use GeomUtilModule, only: point_in_polygon, get_ijk, get_jk
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  mem_reallocate
@@ -36,7 +36,7 @@ module PrtPrpModule
   type, extends(BndType) :: PrtPrpType
     type(PrtFmiType), pointer :: fmi => null() !< flow model interface
     type(ParticleStoreType), pointer :: particles => null() !< particle store
-    type(TrackFileControlType), pointer :: trackfilectl => null() !< track file control
+    type(TrackControlType), pointer :: trackfilectl => null() !< track file control
     integer(I4B), pointer :: nreleasepts => null() !< number of release points
     integer(I4B), pointer :: nparticles => null() !< number of particles released
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
@@ -190,7 +190,7 @@ contains
     class(PrtPrpType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), dimension(:), pointer, contiguous :: izone
-    type(TrackFileControlType), pointer :: trackfilectl
+    type(TrackControlType), pointer :: trackfilectl
 
     this%ibound => ibound
     this%rptzone => izone
@@ -707,7 +707,7 @@ contains
     use OpenSpecModule, only: access, form
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use InputOutputModule, only: urword, getunit, openfile
-    use TrackModule, only: TRACKHEADER, TRACKDTYPES
+    use TrackFileModule, only: TRACKHEADER, TRACKDTYPES
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option

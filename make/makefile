@@ -229,7 +229,8 @@ $(OBJDIR)/Particle.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/Cell.o \
 $(OBJDIR)/Subcell.o \
-$(OBJDIR)/TrackData.o \
+$(OBJDIR)/TrackFile.o \
+$(OBJDIR)/TrackControl.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
 $(OBJDIR)/sort.o \

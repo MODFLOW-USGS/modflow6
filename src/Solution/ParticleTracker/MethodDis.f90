@@ -10,7 +10,7 @@ module MethodDisModule
   use ParticleModule
   use PrtFmiModule, only: PrtFmiType
   use DisModule, only: DisType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use GeomUtilModule, only: get_ijk, get_jk
   implicit none
 

@@ -12,7 +12,7 @@ module MethodDisvModule
   use PrtFmiModule, only: PrtFmiType
   use DisvModule, only: DisvType
   use ArrayHandlersModule, only: ExpandArray
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use GeomUtilModule, only: get_jk, shared_face
   implicit none
 

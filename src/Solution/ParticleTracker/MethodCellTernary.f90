@@ -8,7 +8,7 @@ module MethodCellTernaryModule
   use CellDefnModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use GeomUtilModule, only: area
   use ConstantsModule, only: DZERO, DONE, DTWO
   implicit none

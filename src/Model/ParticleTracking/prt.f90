@@ -19,7 +19,8 @@ module PrtModule
   use BudgetModule, only: BudgetType
   use ListModule, only: ListType
   use ParticleModule, only: ParticleType, create_particle
-  use TrackModule, only: TrackFileControlType, TrackFileType
+  use TrackControlModule, only: TrackControlType
+  use TrackFileModule, only: TrackFileType
   use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryManagerModule, only: mem_allocate
   use MethodModule, only: MethodType
@@ -43,7 +44,7 @@ module PrtModule
     type(PrtOcType), pointer :: oc => null() ! output control package
     type(BudgetType), pointer :: budget => null() ! budget object
     class(MethodType), pointer :: method => null() ! tracking method
-    type(TrackFileControlType), pointer :: trackfilectl ! track file control
+    type(TrackControlType), pointer :: trackfilectl ! track file control
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inmip => null() ! unit number MIP
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
