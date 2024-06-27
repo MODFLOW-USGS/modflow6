@@ -1,5 +1,8 @@
+Replace this paragraph with a written description of the pull request.  Include images and files as necessary to help with the documentation.  Descriptions for trivial and minor pull requests should be brief.
+
 Checklist of items for pull request
 
+- [ ] Replaced section above with description of pull request
 - [ ] Closed issue #xxxx
 - [ ] Referenced issue or pull request #xxxx
 - [ ] Added new test or modified an existing test
