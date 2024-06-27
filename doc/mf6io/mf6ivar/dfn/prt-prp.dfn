@@ -24,7 +24,7 @@ type integer
 reader urword
 optional true
 longname exit solve method
-description the method for iterative solution of particle exit location and time in the generalized Pollock's method.  1 Brent, 2 Chandrupatla.  The default is Brent.
+description the method for iterative solution of particle exit location and time in the generalized Pollock's method.  0 default, 1 Brent, 2 Chandrupatla.  The default is Brent's method.
 
 block options
 name exit_solve_tolerance

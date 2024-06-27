@@ -947,7 +947,7 @@ contains
           ! it's just the particle stop time.
           if (nper == kper .and. &
               nstp(kper) == kstp .and. &
-              particle%extend > 0) then
+              particle%iextend > 0) then
             tmax = particle%tstop
           else
             tmax = min(totimc + delt, particle%tstop)

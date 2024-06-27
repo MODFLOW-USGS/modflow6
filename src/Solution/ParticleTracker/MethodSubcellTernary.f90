@@ -133,8 +133,14 @@ contains
     integer(I4B) :: i
     integer(I4B) :: tslice(2)
 
+    ! Set solution method
+    if (particle%iexmeth == 0) then
+      isolv = 1 ! default to Brent's
+    else
+      isolv = particle%iexmeth
+    end if
+
     ntmax = 10000
-    isolv = particle%iexmethod
     tol = particle%extol
     reason = -1
 
