@@ -414,7 +414,6 @@ contains
     integer(I4B) :: ic, icu
     integer(I4B) :: np
     real(DP) :: x, y, z
-    real(DP) :: xout, yout, zout
     real(DP) :: top, bot, hds
     real(DP), allocatable :: polyverts(:, :)
     character(len=LINELENGTH) :: errmsg
