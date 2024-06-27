@@ -314,7 +314,7 @@ contains
       ibdn1 = this%swfmodel%ibound(nodeswf)
       ibdn2 = this%gwfmodel%ibound(nodegwf)
       hswf = this%swfmodel%x(nodeswf)
-      hgwf = this%gwfmodel%x(nodegwf) 
+      hgwf = this%gwfmodel%x(nodegwf)
 
       ! First add these terms to the row for the surface water model
 
@@ -744,7 +744,7 @@ contains
       ibdn1 = this%swfmodel%ibound(nodeswf)
       ibdn2 = this%gwfmodel%ibound(nodegwf)
       hswf = this%swfmodel%x(nodeswf)
-      hgwf = this%gwfmodel%x(nodegwf) 
+      hgwf = this%gwfmodel%x(nodegwf)
       if (ibdn1 /= 0 .and. ibdn2 /= 0) then
         rrate = this%qcalc(iexg, hswf, hgwf)
       end if
@@ -780,7 +780,7 @@ contains
   !> @ brief Calculate conductance
   !!
   !! Calculate the conductance between the surface water cell
-  !! and the underlying groundwater cell.  
+  !! and the underlying groundwater cell.
   !<
   function get_cond(this, iexg, hswf, hgwf)
     ! module
@@ -809,13 +809,13 @@ contains
     end if
 
     ! Calculate smooth factor between zero, when the upstream-weighted
-    ! depth is zero, and 1.0, when the upstream weighted depth is 
+    ! depth is zero, and 1.0, when the upstream weighted depth is
     ! greater than or equal to the smoothening depth
     nodeswf = this%nodeswf(iexg)
     depth_ups = max(hswf, hgwf) - this%swfmodel%dis%bot(nodeswf)
     call sQuadratic(depth_ups, range, dydx, smooth_factor)
 
-    ! For channel model calculate the interaction area as product 
+    ! For channel model calculate the interaction area as product
     ! of cfact and upstream-wetted perimeter
     if (this%swfmodel%dfw%is2d == 0) then
       perimeter = this%get_wetted_perimeter(nodeswf, depth_ups)
