@@ -80,6 +80,7 @@ module ExgSwfgwfInputModule
     'IFIXEDCOND', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to indicate conductance is fixed', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -187,7 +188,7 @@ module ExgSwfgwfInputModule
     'CELLIDM1', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
-    'cellid of first cell', & ! longname
+    'cellid of cell in surface water model', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -205,7 +206,7 @@ module ExgSwfgwfInputModule
     'CELLIDM2', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
-    'cellid of second cell', & ! longname
+    'cellid of cell in groundwater model', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -223,6 +224,7 @@ module ExgSwfgwfInputModule
     'BEDLEAK', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'bed leakance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -240,7 +242,7 @@ module ExgSwfgwfInputModule
     'CFACT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    'conductance', & ! longname
+    'factor used for conductance calculation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
