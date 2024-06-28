@@ -212,8 +212,8 @@ def build_models(idx, test):
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
-        printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
+        saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
+        printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
 
     # observations

@@ -29,6 +29,19 @@ def build_models(idx, test):
     gwt.dis.export_array_netcdf = True
     gwt.ic.export_array_netcdf = True
     gwt.dsp.export_array_netcdf = True
+
+    # output control
+    gwtname = "gwt_" + cases[idx]
+    oc = flopy.mf6.ModflowGwtoc(
+        gwt,
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
+        concentrationprintrecord=[
+            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
+        ],
+        saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
+        printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
+    )
     return sim, dummy
 
 
