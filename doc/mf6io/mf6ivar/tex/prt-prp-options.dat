@@ -3,6 +3,8 @@ BEGIN OPTIONS
   [PRINT_INPUT]
   EXIT_SOLVE_TOLERANCE <exit_solve_tolerance>
   [LOCAL_Z]
+  [LOCAL_XY]
+  [LOCAL_XY_OFFSET]
   [EXTEND_TRACKING]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]

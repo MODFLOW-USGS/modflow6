@@ -19,9 +19,9 @@ module ParticleModule
   !! data into and out of storage as tracking proceeds.
   !!
   !! Particle coordinates may be local to the cell or
-  !! global/model. Routines are provided to convert a
-  !! particle's global coordinates to/from cell-local
-  !! coordinates for tracking through cell subdomains.
+  !! model coords. Routines are provided to convert a
+  !! particle's model coordinates to/from cell-local
+  !! coordinates for tracking through subdomains.
   !!
   !! Particles are identified by composite key, i.e.,
   !! combinations of properties imdl, iprp, irpt, and
@@ -63,6 +63,7 @@ module ParticleModule
     integer(I4B), public :: ifrctrn !< whether to force solving the particle with the ternary method
     integer(I4B), public :: iexmeth !< method for iterative solution of particle exit location and time in generalized Pollock's method
     integer(I4B), public :: iextend !< whether to extend tracking beyond the end of the simulation
+    integer(I4B), public :: icoords !< coordinate system to use: 0 = model, 1: global
   contains
     procedure, public :: get_model_coords
     procedure, public :: load_particle
@@ -72,31 +73,32 @@ module ParticleModule
   !> @brief Structure of arrays to store particles.
   type ParticleStoreType
     private
-    ! identity
+    ! identity (composite key fields)
     character(len=LENBOUNDNAME), dimension(:), pointer, public, contiguous :: name !< optional particle label
     integer(I4B), dimension(:), pointer, public, contiguous :: imdl !< index of model particle originated in
     integer(I4B), dimension(:), pointer, public, contiguous :: iprp !< index of release package the particle originated in
     integer(I4B), dimension(:), pointer, public, contiguous :: irpt !< index of release point in the particle release package the particle originated in
-    ! stopping criteria
+    ! options
+    integer(I4B), dimension(:), pointer, public, contiguous :: icoords !< coordinate system to use (0: global, 1: model)
+    integer(I4B), dimension(:), pointer, public, contiguous :: iexmeth !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    integer(I4B), dimension(:), pointer, public, contiguous :: iextend !< whether to extend tracking beyond the end of the simulation
+    integer(I4B), dimension(:), pointer, public, contiguous :: ifrctrn !< force ternary method
     integer(I4B), dimension(:), pointer, public, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
     integer(I4B), dimension(:), pointer, public, contiguous :: istopzone !< stop zone number
-    ! state
-    integer(I4B), dimension(:, :), pointer, public, contiguous :: idomain !< array of indices for domains in the tracking domain hierarchy
-    integer(I4B), dimension(:, :), pointer, public, contiguous :: iboundary !< array of indices for tracking domain boundaries
-    integer(I4B), dimension(:), pointer, public, contiguous :: icu !< cell number (user, not reduced)
-    integer(I4B), dimension(:), pointer, public, contiguous :: ilay !< layer
-    integer(I4B), dimension(:), pointer, public, contiguous :: izone !< current zone number
-    integer(I4B), dimension(:), pointer, public, contiguous :: istatus !< particle status
-    real(DP), dimension(:), pointer, public, contiguous :: x !< model x coord of particle
-    real(DP), dimension(:), pointer, public, contiguous :: y !< model y coord of particle
-    real(DP), dimension(:), pointer, public, contiguous :: z !< model z coord of particle
-    real(DP), dimension(:), pointer, public, contiguous :: trelease !< particle release time
-    real(DP), dimension(:), pointer, public, contiguous :: tstop !< particle stop time
-    real(DP), dimension(:), pointer, public, contiguous :: ttrack !< current tracking time
-    integer(I4B), dimension(:), pointer, public, contiguous :: ifrctrn !< force ternary method
-    integer(I4B), dimension(:), pointer, public, contiguous :: iexmeth !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), dimension(:), pointer, public, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
-    integer(LGP), dimension(:), pointer, public, contiguous :: extend !< whether to extend tracking beyond the end of the simulation
+    ! state
+    integer(I4B), dimension(:, :), pointer, public, contiguous :: idomain !< domain hierarchy indices
+    integer(I4B), dimension(:, :), pointer, public, contiguous :: iboundary !< domain boundary indices
+    integer(I4B), dimension(:), pointer, public, contiguous :: icu !< cell number (user, not reduced)
+    integer(I4B), dimension(:), pointer, public, contiguous :: ilay !< layer number
+    integer(I4B), dimension(:), pointer, public, contiguous :: izone !< zone number
+    integer(I4B), dimension(:), pointer, public, contiguous :: istatus !< tracking status
+    real(DP), dimension(:), pointer, public, contiguous :: x !< x coordinate (model system)
+    real(DP), dimension(:), pointer, public, contiguous :: y !< y coordinate (model system)
+    real(DP), dimension(:), pointer, public, contiguous :: z !< z coordinate (model system)
+    real(DP), dimension(:), pointer, public, contiguous :: trelease !< release time
+    real(DP), dimension(:), pointer, public, contiguous :: tstop !< stop time
+    real(DP), dimension(:), pointer, public, contiguous :: ttrack !< tracking time
   contains
     procedure, public :: deallocate
     procedure, public :: resize
@@ -139,7 +141,8 @@ contains
     call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_allocate(this%iexmeth, np, 'PLIEXMETH', mempath)
     call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
-    call mem_allocate(this%extend, np, 'PLIEXTEND', mempath)
+    call mem_allocate(this%iextend, np, 'PLIEXTEND', mempath)
+    call mem_allocate(this%icoords, np, 'PLICOORDS', mempath)
     call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine allocate_particle_store
@@ -168,7 +171,8 @@ contains
     call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
     call mem_deallocate(this%iexmeth, 'PLIEXMETH', mempath)
     call mem_deallocate(this%extol, 'PLEXTOL', mempath)
-    call mem_deallocate(this%extend, 'PLIEXTEND', mempath)
+    call mem_deallocate(this%iextend, 'PLIEXTEND', mempath)
+    call mem_deallocate(this%icoords, 'PLICOORDS', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
   end subroutine deallocate
@@ -200,7 +204,8 @@ contains
     call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_reallocate(this%iexmeth, np, 'PLIEXMETH', mempath)
     call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
-    call mem_reallocate(this%extend, np, 'PLIEXTEND', mempath)
+    call mem_reallocate(this%iextend, np, 'PLIEXTEND', mempath)
+    call mem_reallocate(this%icoords, np, 'PLICOORDS', mempath)
     call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
     call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
   end subroutine resize
@@ -244,7 +249,8 @@ contains
     this%ifrctrn = store%ifrctrn(ip)
     this%iexmeth = store%iexmeth(ip)
     this%extol = store%extol(ip)
-    this%iextend = store%extend(ip)
+    this%iextend = store%iextend(ip)
+    this%icoords = store%icoords(ip)
   end subroutine load_particle
 
   !> @brief Save a particle's state to the particle store
@@ -280,7 +286,8 @@ contains
     this%ifrctrn(ip) = particle%ifrctrn
     this%iexmeth(ip) = particle%iexmeth
     this%extol(ip) = particle%extol
-    this%extend(ip) = particle%iextend
+    this%iextend(ip) = particle%iextend
+    this%icoords(ip) = particle%icoords
   end subroutine save_particle
 
   !> @brief Apply the given global-to-local transformation to the particle.
@@ -303,7 +310,6 @@ contains
         this%yorigin = DZERO
         this%zorigin = DZERO
         this%sinrot = DZERO
-        this%cosrot = DONE
         this%cosrot = DONE
         this%transformed = .false.
         return
@@ -331,7 +337,7 @@ contains
     this%transformed = .true.
   end subroutine transform_coords
 
-  !> @brief Return the particle's model (global) coordinates.
+  !> @brief Return the particle's model coordinates.
   subroutine get_model_coords(this, x, y, z)
     use GeomUtilModule, only: transform, compose
     class(ParticleType), intent(inout) :: this !< particle

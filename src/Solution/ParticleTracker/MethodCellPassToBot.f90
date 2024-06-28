@@ -8,7 +8,7 @@ module MethodCellPassToBotModule
   use ParticleModule, only: ParticleType
   use CellModule, only: CellType
   use SubcellModule, only: SubcellType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   implicit none
 
   private
@@ -43,16 +43,19 @@ contains
 
   !> @brief Pass particle vertically and instantaneously to the cell bottom
   subroutine apply_ptb(this, particle, tmax)
-    ! -- dummy
+    ! dummy
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
 
+    ! Update particle state, terminate early if done advancing
     call this%update(particle, this%defn)
     if (.not. particle%advancing) return
+
+    ! Pass the particle vertically and instantaneously to the cell bottom.
     particle%z = this%defn%bot
     particle%iboundary(2) = this%defn%npolyverts + 2
-    call this%save(particle, reason=1) ! reason=1: cell transition
+    call this%save(particle, reason=1)
   end subroutine apply_ptb
 
 end module MethodCellPassToBotModule
