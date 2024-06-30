@@ -222,6 +222,7 @@ module SfrModule
     procedure, private :: sfr_check_reaches
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
+    procedure, private :: sfr_check_initialstages
     procedure, private :: sfr_check_ustrf
     ! -- budget
     procedure, private :: sfr_setup_budobj
@@ -926,6 +927,11 @@ contains
     ! -- check the diversion data
     if (this%idiversions /= 0) then
       call this%sfr_check_diversions()
+    end if
+
+    ! -- check the diversion data
+    if (this%istorage == 1) then
+      call this%sfr_check_initialstages()
     end if
     !
     ! -- terminate if errors were detected in any of the static sfr data
@@ -1878,6 +1884,7 @@ contains
 
         rval = this%parser%GetDouble()
         this%stage(n) = rval
+        this%depth(n) = rval - this%strtop(n)
 
         if (rval < this%strtop(n)) then
           write (errmsg, '(a,g0,a,1x,i0,1x,a,g0,a)') &
@@ -4923,6 +4930,63 @@ contains
     ! -- return
     return
   end subroutine sfr_check_diversions
+
+  !> @brief Check initial stage data
+    !!
+    !! Method to check initial data for a SFR package and calculates
+    !! the initial upstream and downstream flows for the reach based
+    !! on the initial staalso creates the tables used to print input
+    !! data, if this option in enabled in the SFR package.
+    !!
+  !<
+  subroutine sfr_check_initialstages(this)
+    class(SfrType) :: this !< SfrType object
+
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    character(len=5) :: crch
+    integer(I4B) :: n
+    real(DP) :: qman
+
+    ! skip check if storage is not activated
+    if (this%istorage == 0) return
+
+    ! write header
+    if (this%iprpak /= 0) then
+      !
+      ! -- reset the input table object
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') REACH INITIAL STAGE DATA'
+      call table_cr(this%inputtab, this%packName, title)
+      call this%inputtab%table_df(this%maxbound, 4, this%iout)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL STAGE'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL DEPTH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL FLOW'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+    end if
+    !
+    ! -- check that data are correct
+    do n = 1, this%maxbound
+      write (crch, '(i5)') n
+
+      ! calculate the initial flows
+      call this%sfr_calc_qman(n, this%depth(n), qman)
+      this%usinflow(n) = qman
+      this%dsflow(n) = qman
+
+      ! add terms to the table
+      if (this%iprpak /= 0) then
+        call this%inputtab%add_term(n)
+        call this%inputtab%add_term(this%stage(n))
+        call this%inputtab%add_term(this%depth(n))
+        call this%inputtab%add_term(qman)
+      end if
+    end do
+  end subroutine sfr_check_initialstages
 
   !> @brief Check upstream fraction data
     !!

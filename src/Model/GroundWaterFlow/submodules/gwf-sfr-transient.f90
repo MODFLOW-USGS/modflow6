@@ -12,13 +12,13 @@ contains
 
   integer(I4B) :: igwfconn
   integer(I4B) :: number_picard
-  integer(I4B) :: iconverged
   integer(I4B) :: i
   integer(I4B) :: j
   real(DP) :: kinematic_residual
   real(DP) :: kinematic_storage
   real(DP) :: weight
-  ! real(DP) :: weightinv
+  real(DP) :: celerity
+  real(DP) :: courant
   real(DP) :: dq
   real(DP) :: qtol
   real(DP) :: qsrc
@@ -33,14 +33,16 @@ contains
   real(DP) :: xsa_a
   real(DP) :: xsa_b
   real(DP) :: xsa_c
-  ! real(DP) :: xsa_d
+  real(DP) :: q
+  real(DP) :: q2
+  real(DP) :: d
+  real(DP) :: d2
+  real(DP) :: a
+  real(DP) :: a2
   real(DP) :: d1old
   real(DP) :: qd2
   real(DP) :: ad
   real(DP) :: ad2
-  real(DP) :: qgwf_pul
-  ! real(DP) :: f11
-  ! real(DP) :: f12
   real(DP) :: residual
   real(DP) :: residual2
   real(DP) :: residual_final
@@ -53,12 +55,8 @@ contains
   dq = this%deps !DEM6 !DEM4 !this%deps
   qtol = dq * DTWO !1e-9 !dq * DTWO
 
+  celerity = DZERO
   qgwf = DZERO
-  qgwf_pul = DZERO
-
-  ! calculate the flow at end of the reach
-  ! excluding groundwater leakage
-  qsrc = qu + qi + qr - qe + qro + qfrommvr
 
   qlat = (qr + qro - qe) / this%length(n)
 
@@ -66,9 +64,10 @@ contains
 
   qa = this%usinflowold(n)
   qb = this%dsflowold(n)
-  qc = this%usinflow(n)
   call this%sfr_calc_reach_depth(n, qa, da)
   call this%sfr_calc_reach_depth(n, qb, db)
+
+  qc = this%usinflow(n)
   call this%sfr_calc_reach_depth(n, qc, dc)
 
   xsa_a = this%calc_area_wet(n, da)
@@ -76,15 +75,40 @@ contains
   xsa_c = this%calc_area_wet(n, dc)
 
   ! estimate qd
-  qd = (qc + qb) * DHALF
+  qd = this%dsflow(n)
+  if (qd == DZERO) then
+    qd = (qc + qb) * DHALF
+  end if
   call this%sfr_calc_reach_depth(n, qd, dd)
   ad = this%calc_area_wet(n, dd)
 
-  ! -- estimate the depth at the midpoint
+  ! estimate the depth at the midpoint
   d1 = (dc + dd) * DHALF
   d1old = d1
 
+  ! estimate qgwf
   igwfconn = this%sfr_gwf_conn(n)
+  if (igwfconn == 1) then
+    q = qu + qi + qr - qe + qro + qfrommvr
+    call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+    qgwf = -qgwf
+    if (qgwf > q) then
+      qgwf = q
+    end if
+  end if
+
+  ! calculate maximum wave speed and courant number
+  q = qc + qlat - qgwf
+  call this%sfr_calc_reach_depth(n, q, d)
+  a = this%calc_area_wet(n, d)
+  if (d > DZERO) then
+    q2 = q + dq
+    call this%sfr_calc_reach_depth(n, q2, d2)
+    a2 = this%calc_area_wet(n, d2)
+    celerity = (q2 - q) / (a2 - a)
+    courant = celerity * delt / this%length(n)
+  end if
+
   number_picard = this%maxsfrpicard
   if (igwfconn == 1) then
     number_picard = this%maxsfrpicard
@@ -94,9 +118,11 @@ contains
 
   kinematicpicard: do i = 1, number_picard
     if (igwfconn == 1) then
+      q = qu + qi + qr - qe + qro + qfrommvr
       call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
-      if (qgwf > qsrc) then
-        qgwf = qsrc
+      qgwf = -qgwf
+      if (qgwf > q) then
+        qgwf = q
       end if
     end if
 
@@ -109,11 +135,13 @@ contains
 
       residual = kinematic_residual(qa, qb, qc, qd, &
                                     xsa_a, xsa_b, xsa_c, ad, &
-                                    qsrc, this%length(n), weight, delt)
+                                    qsrc, this%length(n), weight, delt, &
+                                    courant)
 
       residual2 = kinematic_residual(qa, qb, qc, qd2, &
                                      xsa_a, xsa_b, xsa_c, ad2, &
-                                     qsrc, this%length(n), weight, delt)
+                                     qsrc, this%length(n), weight, delt, &
+                                     courant)
       qderv = (residual2 - residual) / dq
       if (qderv > DZERO) then
         delq = -residual / qderv
@@ -131,7 +159,8 @@ contains
       ad = this%calc_area_wet(n, dd)
       residual_final = kinematic_residual(qa, qb, qc, qd, &
                                           xsa_a, xsa_b, xsa_c, ad, &
-                                          qsrc, this%length(n), weight, delt)
+                                          qsrc, this%length(n), weight, delt, &
+                                          courant)
 
       if (abs(delq) < qtol) then ! .and. abs(residual_final) < qtol) then
         exit newton
@@ -141,27 +170,17 @@ contains
 
     qd = max(qd, DZERO)
     d1 = (dc + dd) * DHALF
-    ! if (qd == DZERO) then
-    !   d1 = DZERO
-    ! else
-    !   d1 = (dc + dd) * DHALF
-    ! end if
     delh = (d1 - d1old)
 
-    iconverged = 0
-    if (i == 1 .and. qd == DZERO) then
-      iconverged = 1
-    end if
     if (i > 1 .and. abs(delh) < this%dmaxchg) then
-      iconverged = 1
-    end if
-    if (iconverged == 1) then
       exit kinematicpicard
     end if
 
   end do kinematicpicard
 
-  this%storage(n) = kinematic_storage(qc, qd)
+  this%storage(n) = kinematic_storage(xsa_a, xsa_b, xsa_c, ad, &
+                                      this%length(n), delt, &
+                                      courant)
 
   end procedure sfr_calc_transient
 
