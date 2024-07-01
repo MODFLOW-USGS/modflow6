@@ -23,7 +23,7 @@
     real(DP), intent(in) :: ad !< downstream area
     real(DP), intent(in) :: qsrc !< lateral flow term (L3T-1L-1)
     real(DP), intent(in) :: length !< reach length
-    real(DP), intent(in) :: weight !< termporal weight
+    real(DP), intent(in) :: weight !< temporal weight
     real(DP), intent(in) :: delt !< time step length
     real(DP), intent(in) :: courant !< courant number
     ! --local variables
