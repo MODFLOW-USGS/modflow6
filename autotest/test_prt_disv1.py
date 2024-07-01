@@ -456,10 +456,9 @@ def check_output(idx, test):
     assert list_file.is_file()
     lines = open(list_file).readlines()
     lines = [l.strip() for l in lines]
-    assert (
-        "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
-        in lines
-    )
+    for iprp in range(1, 3):
+        i = lines.index(f"PARTICLE RELEASE FOR PRP {iprp}")
+        assert "RELEASE SCHEDULE:" in lines[i + 1]
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)

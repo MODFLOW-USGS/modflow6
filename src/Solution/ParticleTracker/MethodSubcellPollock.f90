@@ -117,16 +117,15 @@ contains
     real(DP) :: initialZ
     integer(I4B) :: exitFace
     integer(I4B) :: reason
-    integer(I4B) :: tslice(2) !< user-time slice for the current time step
 
     reason = -1
 
-    ! -- Initial particle location in scaled subcell coordinates
+    ! Initial particle location in scaled subcell coordinates
     initialX = particle%x / subcell%dx
     initialY = particle%y / subcell%dy
     initialZ = particle%z / subcell%dz
 
-    ! -- Compute time of travel to each possible exit face
+    ! Compute time of travel to each possible exit face
     statusVX = calculate_dt(subcell%vx1, subcell%vx2, subcell%dx, &
                             initialX, vx, dvxdx, dtexitx)
     statusVY = calculate_dt(subcell%vy1, subcell%vy2, subcell%dy, &
@@ -134,8 +133,8 @@ contains
     statusVZ = calculate_dt(subcell%vz1, subcell%vz2, subcell%dz, &
                             initialZ, vz, dvzdz, dtexitz)
 
-    ! -- Subcell has no exit face, terminate the particle
-    !    todo: after initial release, consider ramifications
+    !  Subcell has no exit face, terminate the particle
+    !  todo: after initial release, consider ramifications
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
       particle%istatus = 9
       particle%advancing = .false.
@@ -143,18 +142,18 @@ contains
       return
     end if
 
-    ! -- Determine (earliest) exit face and corresponding travel time to exit
+    ! Determine (earliest) exit face and corresponding travel time to exit
     exitFace = 0
     dtexit = 1.0d+30
     if ((statusVX .lt. 2) .or. (statusVY .lt. 2) .or. (statusVZ .lt. 2)) then
-      ! -- Consider x-oriented faces
+      ! Consider x-oriented faces
       dtexit = dtexitx
       if (vx .lt. DZERO) then
         exitFace = 1
       else if (vx .gt. 0) then
         exitFace = 2
       end if
-      ! -- Consider y-oriented faces
+      ! Consider y-oriented faces
       if (dtexity .lt. dtexit) then
         dtexit = dtexity
         if (vy .lt. DZERO) then
@@ -163,7 +162,7 @@ contains
           exitFace = 4
         end if
       end if
-      ! -- Consider z-oriented faces
+      ! Consider z-oriented faces
       if (dtexitz .lt. dtexit) then
         dtexit = dtexitz
         if (vz .lt. DZERO) then
@@ -175,19 +174,17 @@ contains
     else
     end if
 
-    ! -- Compute exit time
+    ! Compute exit time
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
-    ! -- Select user tracking times to solve. If this is the first time step
-    !    of the simulation, include all times before it begins; if it is the
-    !    last time step include all times after it ends only if the 'extend'
-    !    option is on, otherwise times in this period and time step only.
-    call this%tracktimes%try_advance()
-    tslice = this%tracktimes%selection
-
-    if (all(tslice > 0)) then
-      do i = tslice(1), tslice(2)
+    ! Select user tracking times to solve. If this is the first time step
+    ! of the simulation, include all times before it begins; if it is the
+    ! last time step include all times after it ends only if the 'extend'
+    ! option is on, otherwise times in this period and time step only.
+    call this%tracktimes%advance()
+    if (this%tracktimes%any()) then
+      do i = this%tracktimes%selection(1), this%tracktimes%selection(2)
         t = this%tracktimes%times(i)
         if (t < particle%ttrack) cycle
         if (t >= texit .or. t >= tmax) exit
@@ -208,9 +205,9 @@ contains
     end if
 
     if (texit .gt. tmax) then
-      ! -- The computed exit time is greater than the maximum time, so set
-      ! -- final time for particle trajectory equal to maximum time and
-      ! -- calculate particle location at that final time.
+      ! The computed exit time is greater than the maximum time, so set
+      ! final time for particle trajectory equal to maximum time and
+      ! calculate particle location at that final time.
       t = tmax
       dt = t - t0
       x = new_x(vx, dvxdx, subcell%vx1, subcell%vx2, &
@@ -224,9 +221,9 @@ contains
       particle%advancing = .false.
       reason = 2 ! timestep end
     else
-      ! -- The computed exit time is less than or equal to the maximum time,
-      ! -- so set final time for particle trajectory equal to exit time and
-      ! -- calculate exit location.
+      ! The computed exit time is less than or equal to the maximum time,
+      ! so set final time for particle trajectory equal to exit time and
+      ! calculate exit location.
       t = texit
       dt = dtexit
       if ((exitFace .eq. 1) .or. (exitFace .eq. 2)) then
@@ -257,15 +254,15 @@ contains
       reason = 1 ! cell transition
     end if
 
-    ! -- Set final particle location in local (unscaled) subcell coordinates,
-    ! -- final time for particle trajectory, and exit face
+    ! Set final particle location in local (unscaled) subcell coordinates,
+    ! final time for particle trajectory, and exit face
     particle%x = x * subcell%dx
     particle%y = y * subcell%dy
     particle%z = z * subcell%dz
     particle%ttrack = t
     particle%iboundary(3) = exitFace
 
-    ! -- Save particle track record
+    ! Save particle track record
     if (reason >= 0) call this%save(particle, reason=reason)
 
   end subroutine track_subcell

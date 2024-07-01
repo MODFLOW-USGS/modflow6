@@ -64,7 +64,7 @@ contains
        &A,' SAVE FILE MUST BE SPECIFIED IN OUTPUT CONTROL OPTIONS.')"
 
     ! If saving is enabled, make sure an output file was specified
-    if (this%psm%save_steps%any_selected()) then
+    if (this%psm%save_steps%any()) then
       if (this%idataun == 0) then
         write (errmsg, fmtocsaveerr) trim(adjustl(this%cname)), &
           trim(adjustl(this%cname)), &

@@ -415,6 +415,7 @@ $(OBJDIR)/LoadNCInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
+$(OBJDIR)/ReleaseSchedule.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
 $(OBJDIR)/swf-zdg.o \

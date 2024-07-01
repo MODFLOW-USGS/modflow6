@@ -13,10 +13,11 @@ module ParticleModule
   ! tracking levels (1: model, 2: cell, 3: subcell)
   integer, parameter, public :: levelmax = 4
 
-  !> @brief A particle tracked by the PRT model.
+  !> @brief Particle tracked by the PRT model.
   !!
-  !! Record-type used mainly for convenience to shuffle
-  !! data into and out of storage as tracking proceeds.
+  !! Record-type to conveniently shuffle a particle's
+  !! state to/from storage before/after its trajectory
+  !! is solved for each time step.
   !!
   !! Particle coordinates may be local to the cell or
   !! global/model. Routines are provided to convert a
@@ -99,6 +100,7 @@ module ParticleModule
     integer(LGP), dimension(:), pointer, public, contiguous :: extend !< whether to extend tracking beyond the end of the simulation
   contains
     procedure, public :: deallocate
+    procedure, public :: num_stored
     procedure, public :: resize
     procedure, public :: save_particle
   end type ParticleStoreType
@@ -351,5 +353,10 @@ contains
       z = this%z
     end if
   end subroutine get_model_coords
+
+  integer function num_stored(this) result(n)
+    class(ParticleStoreType) :: this
+    n = size(this%imdl)
+  end function num_stored
 
 end module ParticleModule

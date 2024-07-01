@@ -5,6 +5,7 @@ module TimeSelectModule
   use ConstantsModule, only: DZERO, DONE
   use ArrayHandlersModule, only: ExpandArray
   use ErrorUtilModule, only: pstop
+
   implicit none
   public :: TimeSelectType
 
@@ -23,13 +24,17 @@ module TimeSelectModule
     procedure :: expand
     procedure :: init
     procedure :: increasing
+    procedure :: log
     procedure :: select
-    procedure :: try_advance
+    procedure :: advance
+    procedure :: add_time
+    procedure :: any
+    procedure :: count
   end type TimeSelectType
 
 contains
 
-  !> @brief Destroy the time selection object.
+  !> @brief Deallocate the time selection object.
   subroutine deallocate (this)
     class(TimeSelectType) :: this
     deallocate (this%times)
@@ -46,7 +51,8 @@ contains
   !> @brief Initialize or clear the time selection object.
   subroutine init(this)
     class(TimeSelectType) :: this
-    if (.not. allocated(this%times)) allocate (this%times(0))
+    if (allocated(this%times)) deallocate (this%times)
+    allocate (this%times(0))
     this%selection = (/0, 0/)
   end subroutine
 
@@ -72,6 +78,23 @@ contains
     end do
   end function increasing
 
+  !> @brief Show the current time selection, if any.
+  subroutine log(this, iout, verb)
+    ! dummy
+    class(TimeSelectType) :: this !< this instance
+    integer(I4B), intent(in) :: iout !< output unit
+    character(len=*), intent(in) :: verb !< selection name
+    ! formats
+    character(len=*), parameter :: fmt = &
+      &"(6x,'THE FOLLOWING TIMES WILL BE ',A,': ',50(G0,' '))"
+
+    if (this%any()) then
+      write (iout, fmt) verb, this%times(this%selection(1):this%selection(2))
+    else
+      write (iout, "(a,1x,a)") 'NO TIMES WILL BE', verb
+    end if
+  end subroutine log
+
   !> @brief Select times between t0 and t1 (inclusive).
   !!
   !! Finds and stores the index of the first time at the same instant
@@ -90,32 +113,32 @@ contains
   !! solve any given period/step before any will proceed to the next.
   !<
   subroutine select(this, t0, t1, changed)
-    ! -- dummy
+    ! dummy
     class(TimeSelectType) :: this
     real(DP), intent(in) :: t0, t1
     logical(LGP), intent(inout), optional :: changed
-    ! -- local
+    ! local
     integer(I4B) :: i, i0, i1
     integer(I4B) :: l, u, lp, up
     real(DP) :: t
 
-    ! -- by default, need to iterate over all times
+    ! by default, need to iterate over all times
     i0 = 1
     i1 = size(this%times)
 
-    ! -- if no times fall within the slice, set to [-1, -1]
+    ! if no times fall within the slice, set to [-1, -1]
     l = -1
     u = -1
 
-    ! -- previous bounding indices
+    ! previous bounding indices
     lp = this%selection(1)
     up = this%selection(2)
 
-    ! -- Check if we can reuse either the lower or upper bound.
-    !    The lower doesn't need to change if it indexes the 1st
-    !    time simultaneous with or later than the slice's start.
-    !    The upper doesn't need to change if it indexes the last
-    !    time before or simultaneous with the slice's end.
+    ! Check if we can reuse either the lower or upper bound.
+    ! The lower doesn't need to change if it indexes the 1st
+    ! time simultaneous with or later than the slice's start.
+    ! The upper doesn't need to change if it indexes the last
+    ! time before or simultaneous with the slice's end.
     if (lp > 0 .and. up > 0) then
       if (lp > 1) then
         if (this%times(lp - 1) < t0 .and. &
@@ -138,7 +161,7 @@ contains
       end if
     end if
 
-    ! -- recompute bounding indices if needed
+    ! recompute bounding indices if needed
     do i = i0, i1
       t = this%times(i)
       if (l < 0 .and. t >= t0 .and. t <= t1) l = i
@@ -150,18 +173,44 @@ contains
   end subroutine
 
   !> @brief Update the selection to match the current time step.
-  subroutine try_advance(this)
-    ! -- modules
+  subroutine advance(this)
+    ! modules
     use TdisModule, only: kper, kstp, nper, nstp, totimc, delt
-    ! -- dummy
+    ! dummy
     class(TimeSelectType) :: this
-    ! -- local
+    ! local
     real(DP) :: l, u
     l = minval(this%times)
     u = maxval(this%times)
     if (.not. (kper == 1 .and. kstp == 1)) l = totimc
     if (.not. (kper == nper .and. kstp == nstp(kper))) u = totimc + delt
     call this%select(l, u)
-  end subroutine try_advance
+  end subroutine advance
+
+  !> @brief Add the given time to the selection.
+  subroutine add_time(this, d)
+    class(TimeSelectType) :: this
+    real(DP), intent(in) :: d
+    call this%expand()
+    this%times(size(this%times)) = d
+  end subroutine add_time
+
+  !> @brief Check if any times are currently selected.
+  function any(this) result(a)
+    class(TimeSelectType) :: this
+    logical(LGP) :: a
+    a = all(this%selection > 0)
+  end function any
+
+  !> @brief Return the number of times currently selected.
+  function count(this) result(n)
+    class(TimeSelectType) :: this
+    integer(I4B) :: n
+    if (this%any()) then
+      n = this%selection(2) - this%selection(1)
+    else
+      n = 0
+    end if
+  end function count
 
 end module TimeSelectModule
