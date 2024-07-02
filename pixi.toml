@@ -6,6 +6,7 @@ version = "6.6.0.dev0"
 
 [dependencies]
 appdirs = "*"
+black = "*"
 codespell = "*"
 filelock = "*"
 flaky = "*"
@@ -73,7 +74,9 @@ install = { depends_on = [
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
-fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
+check-autotest-style = { cmd = "black -l 79 . --check", cwd = "autotest" }
+fix-autotest-style = { cmd = "black -l 79 .", cwd = "autotest" }
+fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes; pixi run fix-autotest-style" }
 
 # meson build/test
 builddir = "echo _builddir"
