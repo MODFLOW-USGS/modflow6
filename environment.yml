@@ -24,6 +24,7 @@ dependencies:
       - git+https://github.com/Deltares/xmipy.git
       - git+https://github.com/MODFLOW-USGS/modflowapi.git
       - git+https://github.com/MODFLOW-USGS/modflow-devtools.git
+  - pooch
   - pyshp
   - pytest!=8.1.0
   - pytest-benchmark
