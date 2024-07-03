@@ -117,7 +117,7 @@ def setup_examples(
     latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
     assets = latest["assets"]
     asset = next(
-        iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None
+        iter([a for a in assets if a["name"] == "mf6examples.zip"]), None
     )
     # download example models zip asset
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
