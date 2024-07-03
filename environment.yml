@@ -32,6 +32,7 @@ dependencies:
   - pytest-order
   - pytest-xdist
   - python
+  - rasterio
   - scipy
   - shapely
   - syrupy
