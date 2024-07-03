@@ -33,6 +33,7 @@ dependencies:
   - pytest-xdist
   - python
   - rasterio
+  - rasterstats
   - scipy
   - shapely
   - syrupy
