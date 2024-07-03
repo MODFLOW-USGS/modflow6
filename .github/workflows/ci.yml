@@ -290,6 +290,19 @@ jobs:
 
           pixi run autotest -m "$markers" -k "$filters"
       
+      - name: Install executables
+        if: runner.os == 'Linux'
+        uses: modflowpy/install-modflow-action@v1
+
+      - name: Test mf6 examples
+        if: runner.os == 'Linux'
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
+        run: |
+          cp bin/mf6 $(which mf6)
+          cd ../modflow6-examples/autotest
+          pytest -v -n auto test_scripts.py
+
       - name: Upload failed test output
         if: failure()
         uses: actions/upload-artifact@v4
@@ -416,6 +429,19 @@ jobs:
           else
             pixi run autotest -m "not large"
           fi
+
+      - name: Install executables
+        if: runner.os == 'Linux'
+        uses: modflowpy/install-modflow-action@v1
+
+      - name: Test mf6 examples
+        if: runner.os == 'Linux'
+        working-directory: modflow6
+        shell: pixi run bash -e {0}
+        run: |
+          cp bin/mf6 $(which mf6)
+          cd ../modflow6-examples/autotest
+          pytest -v -n auto test_scripts.py
       
       - name: Upload failed test output
         if: failure()

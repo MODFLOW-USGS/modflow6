@@ -83,7 +83,6 @@ module PrtPrpModule
     procedure :: bnd_options => prp_options
     procedure :: read_dimensions => prp_read_dimensions
     procedure :: prp_read_packagedata
-    procedure :: get_release_time
     procedure :: release
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
@@ -324,7 +323,7 @@ contains
   !<
   subroutine prp_ad(this)
     ! modules
-    use TdisModule, only: kstp
+    use TdisModule, only: kstp, totimc, delt
     ! dummy
     class(PrtPrpType) :: this
     ! local
@@ -368,41 +367,21 @@ contains
     ! release time within the current time step.
     do ip = 1, this%npoints
       do it = 1, nreleasetimes
-        call this%get_release_time(ip, it, trelease)
+        if (this%rlstimes) then
+          ! If this is an explicitly specified release time,
+          ! make sure it falls within the current time step.
+          ! If not, warn and don't release the particle.
+          trelease = this%releasetimes%times(it)
+          if (trelease < totimc .or. trelease >= (totimc + delt)) &
+            cycle
+        else
+          ! Reference time is timestep start, optional offset
+          trelease = totimc + this%offset * delt
+        end if
         call this%release(ip, trelease)
       end do
     end do
   end subroutine prp_ad
-
-  subroutine get_release_time(this, ip, it, trelease)
-    ! modules
-    use TdisModule, only: totimc, delt, kstp, kper
-    ! dummy
-    class(PrtPrpType), intent(inout) :: this !< prp
-    integer(I4B), intent(in) :: ip !< particle index
-    integer(I4B), intent(in) :: it !< release time index
-    real(DP), intent(out) :: trelease !< release time
-    ! local
-    character(len=LINELENGTH) :: errmsg
-
-    if (this%rlstimes) then
-      ! If this is an explicitly specified release time,
-      ! make sure it falls within the current time step.
-      ! If not, warn and don't release the particle.
-      trelease = this%releasetimes%times(it)
-      if (trelease < totimc .or. trelease >= (totimc + delt)) then
-        write (errmsg, '(a,g0,a,i0,a,i0)') &
-          'Release time ', trelease, ' falls outside period ', kper, &
-          ' time step ', kstp
-        call store_error(errmsg, terminate=.false.)
-        call store_error_unit(this%inunit, terminate=.true.)
-      end if
-    else
-      ! Reference time is timestep start, optional offset
-      trelease = totimc + this%offset * delt
-    end if
-
-  end subroutine get_release_time
 
   subroutine release(this, ip, trelease)
     ! dummy
