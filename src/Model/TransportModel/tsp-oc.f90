@@ -37,7 +37,7 @@ contains
     ! -- Create the object
     allocate (ocobj)
     !
-    ! -- Allocate scalars
+    ! -- Allocate variables
     call ocobj%allocate_scalars(name_model)
     !
     ! -- Save unit numbers
@@ -72,7 +72,7 @@ contains
     ! -- Initialize variables
     inodata = 0
     nocdobj = 2
-    allocate (this%ocdobj(nocdobj))
+    allocate (this%ocds(nocdobj))
     do i = 1, nocdobj
       call ocd_cr(ocdobjptr)
       select case (i)
@@ -85,7 +85,7 @@ contains
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select
-      this%ocdobj(i) = ocdobjptr
+      this%ocds(i) = ocdobjptr
       deallocate (ocdobjptr)
     end do
     !
