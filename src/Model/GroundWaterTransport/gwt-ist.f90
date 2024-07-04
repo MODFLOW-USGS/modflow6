@@ -49,8 +49,10 @@ module GwtIstModule
   !<
   type, extends(BndType) :: GwtIstType
 
-    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
-    type(GwtMstType), pointer :: mst => null() !< pointer to mst object
+    type(TspFmiType), pointer :: fmi => null() !< flow model interface
+    type(GwtMstType), pointer :: mst => null() !< mobile storage and transfer
+    type(BudgetType), pointer :: budget => null() !< budget
+    type(OutputControlDataType), pointer :: ocd => null() !< output control data
 
     integer(I4B), pointer :: icimout => null() !< unit number for binary cim output
     integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
@@ -58,23 +60,20 @@ module GwtIstModule
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on); only linear is supported in ist
     integer(I4B), pointer :: kiter => null() !< picard iteration counter
-    real(DP), dimension(:), pointer, contiguous :: cim => null() !< concentration for immobile domain
-    real(DP), dimension(:), pointer, contiguous :: cimnew => null() !< immobile concentration at end of current time step
-    real(DP), dimension(:), pointer, contiguous :: cimold => null() !< immobile concentration at end of last time step
-    real(DP), dimension(:), pointer, contiguous :: zetaim => null() !< mass transfer rate to immobile domain
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< immobile domain porosity defined as volume of immobile voids per volume of immobile domain
-    real(DP), dimension(:), pointer, contiguous :: volfrac => null() !< volume fraction of the immobile domain defined as volume of immobile domain per aquifer volume
-    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of immobile domain defined as mass of solids in immobile domain per volume of immobile domain
-    real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< distribution coefficient
-    real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order rate constant for liquid
-    real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
-    real(DP), dimension(:), pointer, contiguous :: decayslast => null() !< sorbed decay rate used for last iteration (needed for zero order decay)
-    real(DP), dimension(:), pointer, contiguous :: decay_sorbed => null() !< first or zero order rate constant for sorbed mass
-    real(DP), dimension(:), pointer, contiguous :: strg => null() !< mass transfer rate
-    real(DP), dimension(2, NBDITEMS) :: budterm !< immmobile domain mass summaries
-
-    type(BudgetType), pointer :: budget => null() !< budget object
-    type(OutputControlDataType), pointer :: ocd => null() !< output control object for cim
+    real(DP), pointer, contiguous :: cim(:) => null() !< concentration for immobile domain
+    real(DP), pointer, contiguous :: cimnew(:) => null() !< immobile concentration at end of current time step
+    real(DP), pointer, contiguous :: cimold(:) => null() !< immobile concentration at end of last time step
+    real(DP), pointer, contiguous :: zetaim(:) => null() !< mass transfer rate to immobile domain
+    real(DP), pointer, contiguous :: porosity(:) => null() !< immobile domain porosity defined as volume of immobile voids per volume of immobile domain
+    real(DP), pointer, contiguous :: volfrac(:) => null() !< volume fraction of the immobile domain defined as volume of immobile domain per aquifer volume
+    real(DP), pointer, contiguous :: bulk_density(:) => null() !< bulk density of immobile domain defined as mass of solids in immobile domain per volume of immobile domain
+    real(DP), pointer, contiguous :: distcoef(:) => null() !< distribution coefficient
+    real(DP), pointer, contiguous :: decay(:) => null() !< first or zero order rate constant for liquid
+    real(DP), pointer, contiguous :: decaylast(:) => null() !< decay rate used for last iteration (needed for zero order decay)
+    real(DP), pointer, contiguous :: decayslast(:) => null() !< sorbed decay rate used for last iteration (needed for zero order decay)
+    real(DP), pointer, contiguous :: decay_sorbed(:) => null() !< first or zero order rate constant for sorbed mass
+    real(DP), pointer, contiguous :: strg(:) => null() !< mass transfer rate
+    real(DP) :: budterm(2, NBDITEMS) !< immmobile domain mass summaries
 
   contains
 

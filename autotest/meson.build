@@ -16,7 +16,8 @@ if test_drive.found() and not fc_id.contains('intel')
     'PtrHashTable',
     'Sim',
     'SwfUtils',
-    'TimeSelect'
+    'TimeSelect',
+    'TimeStepSelect'
   ]
 
   test_srcs = files(

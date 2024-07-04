@@ -215,6 +215,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'SwfCxsUtils.f90',
     'Model' / 'ModelUtilities' / 'TspAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'TimeSelect.f90',
+    'Model' / 'ModelUtilities' / 'TimeStepSelect.f90',
     'Model' / 'ModelUtilities' / 'TrackData.f90',
     'Model' / 'ModelUtilities' / 'UzfCellGroup.f90',
     'Model' / 'ModelUtilities' / 'VectorInterpolation.f90',

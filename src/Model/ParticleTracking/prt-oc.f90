@@ -120,7 +120,7 @@ contains
     call this%tracktimes%init()
     inodata = 0
     nocdobj = 1
-    allocate (this%ocdobj(nocdobj))
+    allocate (this%ocds(nocdobj))
     do i = 1, nocdobj
       call ocd_cr(ocdobjptr)
       select case (i)
@@ -129,7 +129,7 @@ contains
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select
-      this%ocdobj(i) = ocdobjptr
+      this%ocds(i) = ocdobjptr
       deallocate (ocdobjptr)
     end do
 
@@ -147,10 +147,10 @@ contains
 
     call this%tracktimes%deallocate()
 
-    do i = 1, size(this%ocdobj)
-      call this%ocdobj(i)%ocd_da()
+    do i = 1, size(this%ocds)
+      call this%ocds(i)%ocd_da()
     end do
-    deallocate (this%ocdobj)
+    deallocate (this%ocds)
 
     deallocate (this%name_model)
     call mem_deallocate(this%inunit)
@@ -332,8 +332,8 @@ contains
 
         ! -- check if we're done
         if (.not. found) then
-          do ipos = 1, size(this%ocdobj)
-            ocdobjptr => this%ocdobj(ipos)
+          do ipos = 1, size(this%ocds)
+            ocdobjptr => this%ocds(ipos)
             if (keyword == trim(ocdobjptr%cname)) then
               found = .true.
               exit

@@ -1,48 +1,48 @@
-# makefile created by pymake (version 1.2.10) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Idm
-SOURCEDIR4=../src/Idm/selector
-SOURCEDIR5=../src/Timing
-SOURCEDIR6=../src/Model
-SOURCEDIR7=../src/Model/Connection
-SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Model/GroundWaterFlow
-SOURCEDIR11=../src/Model/GroundWaterFlow/submodules
-SOURCEDIR12=../src/Model/Geometry
-SOURCEDIR13=../src/Model/TransportModel
-SOURCEDIR14=../src/Model/GroundWaterTransport
-SOURCEDIR15=../src/Model/SurfaceWaterFlow
-SOURCEDIR16=../src/Model/ParticleTracking
-SOURCEDIR17=../src/Model/GroundWaterEnergy
-SOURCEDIR18=../src/Solution
-SOURCEDIR19=../src/Solution/ParticleTracker
-SOURCEDIR20=../src/Solution/LinearMethods
-SOURCEDIR21=../src/Solution/PETSc
-SOURCEDIR22=../src/Distributed
-SOURCEDIR23=../src/Utilities
+SOURCEDIR2=../src/Idm
+SOURCEDIR3=../src/Idm/selector
+SOURCEDIR4=../src/Exchange
+SOURCEDIR5=../src/Distributed
+SOURCEDIR6=../src/Solution
+SOURCEDIR7=../src/Solution/LinearMethods
+SOURCEDIR8=../src/Solution/ParticleTracker
+SOURCEDIR9=../src/Solution/PETSc
+SOURCEDIR10=../src/Timing
+SOURCEDIR11=../src/Utilities
+SOURCEDIR12=../src/Utilities/Idm
+SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR14=../src/Utilities/TimeSeries
+SOURCEDIR15=../src/Utilities/Memory
+SOURCEDIR16=../src/Utilities/OutputControl
+SOURCEDIR17=../src/Utilities/ArrayRead
+SOURCEDIR18=../src/Utilities/Libraries
+SOURCEDIR19=../src/Utilities/Libraries/rcm
+SOURCEDIR20=../src/Utilities/Libraries/blas
+SOURCEDIR21=../src/Utilities/Libraries/sparskit2
+SOURCEDIR22=../src/Utilities/Libraries/daglib
+SOURCEDIR23=../src/Utilities/Libraries/sparsekit
 SOURCEDIR24=../src/Utilities/Export
-SOURCEDIR25=../src/Utilities/TimeSeries
-SOURCEDIR26=../src/Utilities/Idm
-SOURCEDIR27=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR28=../src/Utilities/ArrayRead
-SOURCEDIR29=../src/Utilities/Memory
-SOURCEDIR30=../src/Utilities/Matrix
-SOURCEDIR31=../src/Utilities/Vector
-SOURCEDIR32=../src/Utilities/Observation
-SOURCEDIR33=../src/Utilities/OutputControl
-SOURCEDIR34=../src/Utilities/Libraries
-SOURCEDIR35=../src/Utilities/Libraries/rcm
-SOURCEDIR36=../src/Utilities/Libraries/sparskit2
-SOURCEDIR37=../src/Utilities/Libraries/sparsekit
-SOURCEDIR38=../src/Utilities/Libraries/blas
-SOURCEDIR39=../src/Utilities/Libraries/daglib
+SOURCEDIR25=../src/Utilities/Vector
+SOURCEDIR26=../src/Utilities/Matrix
+SOURCEDIR27=../src/Utilities/Observation
+SOURCEDIR28=../src/Model
+SOURCEDIR29=../src/Model/Connection
+SOURCEDIR30=../src/Model/ParticleTracking
+SOURCEDIR31=../src/Model/SurfaceWaterFlow
+SOURCEDIR32=../src/Model/GroundWaterTransport
+SOURCEDIR33=../src/Model/ModelUtilities
+SOURCEDIR34=../src/Model/GroundWaterFlow
+SOURCEDIR35=../src/Model/GroundWaterFlow/submodules
+SOURCEDIR36=../src/Model/Discretization
+SOURCEDIR37=../src/Model/TransportModel
+SOURCEDIR38=../src/Model/Geometry
+SOURCEDIR39=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -235,6 +235,7 @@ $(OBJDIR)/Subcell.o \
 $(OBJDIR)/TrackData.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
+$(OBJDIR)/TimeStepSelect.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/TernarySolveTrack.o \

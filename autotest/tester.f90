@@ -18,6 +18,7 @@ program tester
   use TestSim, only: collect_sim
   use TestSwfUtils, only: collect_swfutils
   use TestTimeSelect, only: collect_timeselect
+  use TestTimeStepSelect, only: collect_timestepselect
   implicit none
   integer :: stat, is
   character(len=:), allocatable :: suite_name, test_name
@@ -42,7 +43,8 @@ program tester
                new_testsuite("PtrHashTable", collect_ptrhashtable), &
                new_testsuite("Sim", collect_sim), &
                new_testsuite("SwfUtils", collect_swfutils), &
-               new_testsuite("TimeSelect", collect_timeselect) &
+               new_testsuite("TimeSelect", collect_timeselect), &
+               new_testsuite("TimeStepSelect", collect_timestepselect) &
                ]
 
   call get_argument(1, suite_name)
