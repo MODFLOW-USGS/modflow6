@@ -10,6 +10,20 @@ runs:
         compiler: gcc
         version: 13
 
+    - name: Checkout test-drive
+      uses: actions/checkout@v4
+      with:
+        repository: fortran-lang/test-drive
+        path: test-drive
+
+    - name: Build test-drive
+      working-directory: test-drive
+      shell: bash
+      run: |
+        pixi run --manifest-path=../modflow6/pixi.toml meson setup builddir --prefix=$(pwd) --libdir=lib
+        pixi run --manifest-path=../modflow6/pixi.toml meson install -C builddir
+        echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
     - name: Checkout PETSc
       uses: actions/checkout@v4
       with:
@@ -21,14 +35,14 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
         echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
 
     - name: Configure environment
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
         echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/bin" >> $GITHUB_PATH
 
     - name: Configure PETSc
