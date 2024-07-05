@@ -100,16 +100,14 @@ endif
 
 # parallel build options
 is_extended_build = get_option('extended')
+is_parallel_build = get_option('parallel') or is_extended_build
 is_cray = get_option('cray')
 is_mpich = get_option('mpich')
 if is_cray and build_machine.system() != 'linux'
-  error('cray=true only supported on linux systems')
+  error('cray only supported on linux systems')
 endif
-if not is_extended_build
- is_extended_build = get_option('parallel')
-endif
-if is_cray and not is_extended_build
-  is_extended_build = true
+if is_cray and not is_parallel_build
+  is_parallel_build = true
   is_mpich = true
 endif
 if is_mpich
@@ -119,7 +117,12 @@ if is_mpich
     mpifort_name = 'mpichfort'
   endif
 endif
-message('Extended build:', is_extended_build)
+
+if is_extended_build
+  message('Extended build:', is_extended_build)
+elif is_parallel_build
+  message('Parallel build:', is_parallel_build)
+endif
 
 # windows options for petsc
 petsc_dir_rel = '..' /'petsc'
@@ -140,7 +143,7 @@ dependencies = [ ]
 extra_cmp_args = [ ]
 
 # load petsc, mpi, and netcdf dependencies/libraries
-if is_extended_build
+if is_parallel_build
   # find petsc
   if build_machine.system() != 'windows'
     petsc = dependency('PETSc', required : true)
@@ -162,7 +165,12 @@ if is_extended_build
   endif
   extra_cmp_args += [ '-D__WITH_MPI__']
   with_mpi = true
+else
+  with_petsc = false
+  with_mpi = false
+endif
 
+if is_extended_build
   # find netcdf
   if build_machine.system() != 'windows'
     netcdff = dependency('netcdf', language : 'fortran', required : false)
@@ -181,8 +189,6 @@ if is_extended_build
   endif
 else
   with_netcdf = false
-  with_petsc = false
-  with_mpi = false
 endif
 
 # GCC profile options need to be netcdf aware due to HDF5 issue
