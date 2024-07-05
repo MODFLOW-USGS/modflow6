@@ -143,7 +143,7 @@ dependencies = [ ]
 extra_cmp_args = [ ]
 
 # load petsc, mpi, and netcdf dependencies/libraries
-if is_parallel_build
+if is_parallel_build or is_extended_build
   # find petsc
   if build_machine.system() != 'windows'
     petsc = dependency('PETSc', required : true)
