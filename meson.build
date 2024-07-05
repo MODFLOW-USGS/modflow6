@@ -214,7 +214,7 @@ compile_args += extra_cmp_args
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-if is_extended_build and build_machine.system() == 'windows'
+if is_parallel_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir_rel / 'include', petsc_compiled_rel / 'include'])
   petsc_src = petsc_dir_abs / 'src'
