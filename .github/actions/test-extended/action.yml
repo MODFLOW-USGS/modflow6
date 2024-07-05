@@ -74,7 +74,7 @@ runs:
       shell: bash
       working-directory: modflow6
       run: |
-        pixi run setup -Dparallel=true builddir
+        pixi run setup -Dextended=true builddir
         pixi run build builddir
         pixi run test builddir
 
