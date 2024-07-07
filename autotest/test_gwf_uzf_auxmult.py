@@ -10,7 +10,7 @@ import pytest
 
 from framework import TestFramework
 
-cases = ["uzauxmult-1to1", "uzauxmult-2to1", "uzauxmult-3to1", "uzauxmult-bad"]
+cases = ["uzauxmlt-1to1", "uzauxmlt-2to1", "uzauxmlt-3to1", "uzauxmlt-bad"]
 uzarea_correspondences = ("1to1", "2to1", "3to1", "bad")
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -103,7 +103,9 @@ def build_models(idx, test):
     )
 
     # create tdis package
-    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -231,31 +233,40 @@ def build_models(idx, test):
         filename=f"{name}.oc",
     )
 
-    sim.write_simulation()
-    success, buff = sim.run_simulation(silent=False)
-    errmsg0 = f"flow model should've run successfully but didn't\n\n{buff}"
-    errmsg1 = (
-        f"flow model designed to fail, but seems to have run successfully\n\n{buff}"
-    )
-    if idx < 3:
-        assert success, errmsg0
-    else:
-        assert not success, errmsg1
+    return sim
 
 
 def check_output(idx, test):
-    if idx > 0:
-        pass
+    print("Running error check")
+    name = cases[idx]
+
+    errmsg0 = f"flow model should have run successfully but didn't\n"
+    errmsg1 = (
+        f"flow model designed to fail, but seems to have run successfully\n"
+    )
+
+    with open(test.workspace / "mfsim.lst", "r") as f:
+        lines = f.readlines()
+        error_count = 0
+        for line in lines:
+            if "error report" in line.lower():
+                error_count += 1
+
+    if "bad" in name:
+        assert error_count > 0, errmsg1
+    else:
+        assert error_count == 0, errmsg0
 
 
 @pytest.mark.parametrize("idx,name", enumerate(cases))
-@pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
+    xfail = ["bad" in cases[ct] for ct in np.arange(len(cases))]
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         targets=targets,
+        xfail=xfail[idx],
     )
     test.run()
