@@ -2252,7 +2252,7 @@ contains
         cellarea = this%uzfobj%cellarea(i)
       end do
       ! -- calculate the difference between the sum of UZF areas and GWF cell area
-      d = abs(sumarea - cellarea)
+      d = sumarea - cellarea
       if (d > DEM6) then
         call this%dis%noder_to_string(n, cellid)
         write (errmsg, '(a,1x,g0,1x,a,1x,g0,1x,a,1x,a,1x,a,a,a)') &
