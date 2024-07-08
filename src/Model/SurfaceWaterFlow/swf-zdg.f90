@@ -64,7 +64,7 @@ module SwfZdgModule
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => zdg_rp_ts
     ! -- private
-    procedure, private :: get_cond
+    procedure, private :: qcalc
   end type SwfZdgType
 
 contains
@@ -315,7 +315,6 @@ contains
     real(DP) :: qeps
     real(DP) :: absdhdxsq
     real(DP) :: depth
-    real(DP) :: cond
     real(DP) :: derv
     real(DP) :: eps
     real(DP) :: range = 1.d-6
@@ -344,14 +343,11 @@ contains
       depth = depth * smooth_factor
 
       ! -- calculate unperturbed q
-      ! TODO: UNITCONV?!
-      cond = this%get_cond(i, depth, absdhdxsq, this%unitconv)
-      q = -cond * this%slope(i)
+      q = -this%qcalc(i, depth, this%unitconv)
 
       ! -- calculate perturbed q
       eps = get_perturbation(depth)
-      cond = this%get_cond(i, depth + eps, absdhdxsq, this%unitconv)
-      qeps = -cond * this%slope(i)
+      qeps = -this%qcalc(i, depth + eps, this%unitconv)
 
       ! -- calculate derivative
       derv = (qeps - q) / eps
@@ -365,47 +361,34 @@ contains
     return
   end subroutine zdg_cf
 
-  !> @brief Calculate conductance-like term
+  ! !> @brief Calculate flow
   !!
-  !! Conductance normally has a dx term in the denominator
-  !! but that is not included here, as the flow is calculated
-  !! using Q = C * slope.  The returned c value from this
-  !! function has dimensions of L3/T.
-  !!
-  !<
-  function get_cond(this, i, depth, absdhdxsq, unitconv) result(c)
-    ! -- modules
-    ! -- dummy
+  !! Calculate volumetric flow rate for the zero-depth gradient
+  !! condition.  Flow is positive.
+  ! !<
+  function qcalc(this, i, depth, unitconv) result(q)
+    ! dummy
     class(SwfZdgType) :: this
     integer(I4B), intent(in) :: i !< boundary number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
-    real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
     real(DP), intent(in) :: unitconv !< conversion factor for roughness to length and time units of meters and seconds
-    ! -- local
+    ! return
+    real(DP) :: q
+    ! local
     integer(I4B) :: idcxs
-    real(DP) :: c
     real(DP) :: width
     real(DP) :: rough
     real(DP) :: slope
-    real(DP) :: roughc
-    real(DP) :: a
-    real(DP) :: r
     real(DP) :: conveyance
-    !
+
     idcxs = this%idcxs(i)
     width = this%width(i)
     rough = this%rough(i)
     slope = this%slope(i)
-    roughc = this%cxs%get_roughness(idcxs, width, depth, rough, &
-                                    slope)
-    a = this%cxs%get_area(idcxs, width, depth)
-    r = this%cxs%get_hydraulic_radius(idcxs, width, depth, area=a)
-
-    !conveyance = a * r**DTWOTHIRDS / roughc
     conveyance = this%cxs%get_conveyance(idcxs, width, depth, rough)
-    c = conveyance / absdhdxsq
+    q = conveyance * slope**DHALF * unitconv
 
-  end function get_cond
+  end function qcalc
 
   !> @ brief Copy hcof and rhs terms into solution.
   !!
