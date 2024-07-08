@@ -23,6 +23,16 @@ module TimeStepSelectModule
   !!   LAST
   !!   FREQUENCY 4
   !!
+  !! The read() procedure may be invoked multiple times to select multiple
+  !! time steps. Note that a character string re-using a keyword which has
+  !! been used for a previous read() invocation will override the previous
+  !! setting using that keyword. To combine multiple settings, be sure the
+  !! keywords are different on each invocation, e.g.:
+  !!
+  !!   FIRST
+  !!   LAST
+  !!   STEPS 2
+  !!
   !! The is_selected() function indicates whether the given time step is
   !! active. This function accepts an optional argument, indicating that
   !! the time step is the last in the stress period.
@@ -75,14 +85,18 @@ contains
 
     if (this%all) then
       write (iout, "(6x,a,a)") 'ALL TIME STEPS WILL BE ', verb
-    else if (this%first) then
-      write (iout, "(6x,a,a)") 'THE FIRST TIME STEP WILL BE ', verb
-    else if (this%last) then
-      write (iout, "(6x,a,a)") 'THE LAST TIME STEP WILL BE ', verb
-    else if (size(this%steps) > 0) then
+    end if
+    if (size(this%steps) > 0) then
       write (iout, fmt_steps) verb, this%steps
-    else if (this%freq > 0) then
+    end if
+    if (this%freq > 0) then
       write (iout, fmt_freq) verb, this%freq
+    end if
+    if (this%first) then
+      write (iout, "(6x,a,a)") 'THE FIRST TIME STEP WILL BE ', verb
+    end if
+    if (this%last) then
+      write (iout, "(6x,a,a)") 'THE LAST TIME STEP WILL BE ', verb
     end if
   end subroutine log
 
