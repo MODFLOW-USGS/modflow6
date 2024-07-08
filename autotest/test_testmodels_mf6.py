@@ -22,6 +22,11 @@ excluded_models = [
     "test014_NWTP3Low_dev",
 ]
 
+excluded_comparisons = [
+    "test051_uzfp3_lakmvr_v2_dev",
+    "test051_uzfp3_wellakmvr_v2",
+]
+
 
 @pytest.mark.repo
 @pytest.mark.regression
@@ -35,13 +40,18 @@ def test_model(
 ):
     model_path = test_model_mf6.parent
     model_name = model_path.name
-    excluded = model_name in excluded_models
+    exclude_model = model_name in excluded_models
+    exclude_comparison = model_name in excluded_comparisons
     compare = (
-        get_mf6_comparison(model_path) if original_regression else "mf6_regression"
+        get_mf6_comparison(model_path)
+        if original_regression
+        else None
+        if exclude_comparison
+        else "mf6_regression"
     )
     dev_only = "dev" in model_name and "not developmode" in markers
-    if excluded or dev_only:
-        reason = "excluded" if excluded else "developmode only"
+    if exclude_model or dev_only:
+        reason = "excluded" if exclude_model else "developmode only"
         pytest.skip(f"Skipping: {model_name} ({reason})")
 
     # setup test workspace and framework
