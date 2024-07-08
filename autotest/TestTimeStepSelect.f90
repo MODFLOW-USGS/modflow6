@@ -16,7 +16,8 @@ contains
                 new_unittest("last", test_last), &
                 new_unittest("all", test_all), &
                 new_unittest("freq", test_freq), &
-                new_unittest("step", test_step) &
+                new_unittest("step", test_step), &
+                new_unittest("multiple", test_multiple) &
                 ]
   end subroutine collect_timestepselect
 
@@ -118,5 +119,32 @@ contains
     if (allocated(error)) return
 
   end subroutine test_step
+
+  subroutine test_multiple(error)
+    type(error_type), allocatable, intent(out) :: error
+    type(TimeStepSelectType) :: steps
+    character(len=LINELENGTH) :: line
+
+    call steps%init()
+
+    line = "FIRST"
+    call steps%read(line)
+
+    line = "LAST"
+    call steps%read(line)
+
+    line = "STEPS 2"
+    call steps%read(line)
+
+    call check(error, steps%is_selected(1, .false.))
+    if (allocated(error)) return
+
+    call check(error, steps%is_selected(2, .false.))
+    if (allocated(error)) return
+
+    call check(error, steps%is_selected(3, .true.))
+    if (allocated(error)) return
+
+  end subroutine test_multiple
 
 end module TestTimeStepSelect
