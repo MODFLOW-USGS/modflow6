@@ -303,7 +303,7 @@ module GwfCsubModule
     procedure, private :: csub_delay_assemble_fc
     procedure, private :: csub_delay_assemble_fn
     procedure, private :: csub_delay_head_check
-    
+
     ! methods for tables
     procedure, private :: csub_initialize_tables
     !
@@ -424,7 +424,7 @@ contains
     call this%obs%obs_ar()
 
     ! setup tables
-    call this%initialize_pakcsv_table()
+    call this%csub_initialize_tables()
     !
     ! -- terminate if errors dimensions block data
     if (count_errors() > 0) then
@@ -3007,33 +3007,36 @@ contains
     return
   end subroutine csub_fn
 
-  !> @ brief Initialize delay interbed convergence tables
+  !> @ brief Initialize optional tables
   !!
-  !! Subroutine to intilize delay interbeds convergence tables.
+  !! Subroutine to initialize optional tables. Tables include:
+  !!   o delay interbeds convergence tables
   !!
   !<
-  subroutine initialize_pakcsv_table(this)
+  subroutine csub_initialize_tables(this)
     class(GwfCsubType) :: this
 
     character(len=LINELENGTH) :: tag
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-   
+
     if (this%ipakcsv > 0) then
       if (this%ndelaybeds < 1) then
-        write(warnmsg, '(a)') 'a'
+        write (warnmsg, '(a,1x,3a)') &
+          'Package convergence data is requested but delay interbeds', &
+          'are not included in package (', &
+          trim(adjustl(this%packName)), ').'
         call store_warning(warnmsg)
       end if
 
-
       ntabrows = 1
       ntabcols = 9
-      !
+
       ! setup table
       call table_cr(this%pakcsvtab, this%packName, '')
       call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
-                                  lineseparator=.FALSE., separator=',', &
-                                  finalize=.FALSE.)
+                                   lineseparator=.FALSE., separator=',', &
+                                   finalize=.FALSE.)
 
       ! add columns to package csv
       tag = 'total_inner_iterations'
@@ -3056,7 +3059,7 @@ contains
       call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
     end if
 
-  end subroutine initialize_pakcsv_table
+  end subroutine csub_initialize_tables
 
   !> @ brief Final convergence check
   !!
@@ -3120,8 +3123,6 @@ contains
     ipakfail = 0
     locdhmax = 0
     locrmax = 0
-    dhmax = DZERO
-    rmax = DZERO
     ifirst = 1
     !
     ! -- additional checks to see if convergence needs to be checked
@@ -3229,10 +3230,17 @@ contains
         call this%pakcsvtab%add_term(kper)
         call this%pakcsvtab%add_term(kstp)
         call this%pakcsvtab%add_term(kiter)
-        call this%pakcsvtab%add_term(dhmax)
-        call this%pakcsvtab%add_term(locdhmax)
-        call this%pakcsvtab%add_term(rmax)
-        call this%pakcsvtab%add_term(locrmax)
+        if (this%ndelaybeds > 0) then
+          call this%pakcsvtab%add_term(dhmax)
+          call this%pakcsvtab%add_term(locdhmax)
+          call this%pakcsvtab%add_term(rmax)
+          call this%pakcsvtab%add_term(locrmax)
+        else
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+        end if
         !
         ! -- finalize the package csv
         if (iend == 1) then
