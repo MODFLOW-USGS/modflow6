@@ -294,9 +294,6 @@ $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/SeqVector.o \
 $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
-$(OBJDIR)/NetCDFCommon.o \
-$(OBJDIR)/NCFileVars.o \
-$(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/MethodCellTernary.o \
 $(OBJDIR)/MethodCellPollockQuad.o \
@@ -329,8 +326,9 @@ $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/StructVector.o \
+$(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
-$(OBJDIR)/NCArrayReader.o \
+$(OBJDIR)/NCFileVars.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
@@ -437,7 +435,6 @@ $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GweGweConnection.o \
 $(OBJDIR)/VirtualDataManager.o \
 $(OBJDIR)/Mapper.o \
-$(OBJDIR)/NCContextBuild.o \
 $(OBJDIR)/ModelExport.o \
 $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/ModelPackageInput.o \
@@ -471,7 +468,6 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
-$(OBJDIR)/DisNCStructured.o \
 $(OBJDIR)/gwf-sfr-steady.o \
 $(OBJDIR)/gwf-sfr-constant.o \
 $(OBJDIR)/RectangularGeometry.o \
