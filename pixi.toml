@@ -99,7 +99,7 @@ autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd 
 update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
 build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
 run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
-prepare-pull-request = {depends_on = ["fix-style", "build-makefiles", "run-mf6ivar"]}
+prepare-pull-request = {depends_on = ["fix-style", "fix-python-style", "build-makefiles", "run-mf6ivar"]}
 
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }

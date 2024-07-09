@@ -59,10 +59,10 @@ jobs:
       - name: Check MSVS project files
         run: pixi run check-vfproj
 
-      - name: check python lint
+      - name: Check python lint
         run: pixi run check-python-lint
 
-      - name: check python format
+      - name: Check python format
         run: pixi run check-python-format
       
       - name: Check CITATION.cff
