@@ -1,7 +1,7 @@
 # flopy subpackage ncf_filerecord ncf packagedata packagedata
 # flopy parent_name_type parent_package MFPackage
 
-# --------------------- gwf ncf options ---------------------
+# --------------------- utl ncf options ---------------------
 
 block options
 name ogc_wkt
@@ -29,36 +29,102 @@ longname
 description is the keyword used to turn on the netcdf variable shuffle filter when the deflate option is also set. The shuffle filter has the effect of storing the first byte of all of a variable's values in a chunk contiguously, followed by all the second bytes, etc. This can be an optimization for compression with certain types of data.
 
 block options
-name ugc_record
-type record chunking_ugrid ugc_time ugc_face
+name chunk_record
+type record chunking chunk_time chunk_face chunk_z chunk_y chunk_x
 reader urword
 optional true
-longname ugrid time and face dimension chunking parameters
-description ugrid chunking record
+longname netcdf export chunking record
+description netcdf export chunking record
 
 block options
-name chunking_ugrid
+name chunking
 type keyword
 in_record true
 reader urword
 optional false
 longname keyword when defining ugrid chunking parameters
-description is a keyword for providing ugrid dimension chunk sizes. Chunking can dramatically impact data access times and is highly dependent on access patterns (timeseries vs spatial, for example). It can also significanlty impact compressibility of the data.
+description is a keyword for providing netcdf export chunk sizes. Chunking can dramatically impact data access times and is optimal chunking is highly dependent on access patterns (timeseries vs spatial, for example). It can also significanlty impact compressibility of the data. A valid input record specifies chunk_time and either chunk_face (UGRID) or chunk_z, chunk_y, and chunk_x (STRUCTURED).
 
 block options
-name ugc_time
+name chunk_time
 type integer
 in_record true
 reader urword
 optional false
 longname chunking parameter for the time dimension
-description is the keyword used to provide a ugrid time dimension chunk size.
+description is the keyword used to provide a netcdf export time dimension chunk size.
 
 block options
-name ugc_face
+name chunk_face
 type integer
 in_record true
 reader urword
-optional false
-longname chunking parameter for the face dimension
+optional true
+longname chunking parameter for the ugrid face dimension
 description is the keyword used to provide a ugrid face dimension chunk size.
+
+block options
+name chunk_z
+type integer
+in_record true
+reader urword
+optional true
+longname chunking parameter for structured z
+description is the keyword used to provide a structured grid z dimensions chunk size.
+
+block options
+name chunk_y
+type integer
+in_record true
+reader urword
+optional true
+longname chunking parameter for structured y
+description is the keyword used to provide a structured grid y dimensions chunk size.
+
+block options
+name chunk_x
+type integer
+in_record true
+reader urword
+optional true
+longname chunking parameter for structured x
+description is the keyword used to provide a structured grid x dimensions chunk size.
+
+block options
+name modflow6_attr_off
+type keyword
+reader urword
+optional true
+longname
+description is the keyword used to turn off internal input tagging in the model netcdf file. Tagging adds internal modflow 6 attribute(s) to input variables which identify the variable. Currently this applies to gridded arrays.
+mf6internal attr_off
+
+# --------------------- utl ncf dimensions ---------------------
+
+block dimensions
+name ncpl
+type integer
+optional true
+reader urword
+longname number of cells in layer
+description is the number of cells in a in a projected plane layer.
+
+# --------------------- utl ncf griddata ---------------------
+
+block griddata
+name lat
+type double precision
+shape (ncpl)
+optional true
+reader readarray
+longname cell center latitude
+description cell center latitude.
+
+block griddata
+name lon
+type double precision
+shape (ncpl)
+optional true
+reader readarray
+longname cell center longitude
+description cell center longitude.

@@ -16,6 +16,7 @@ module SimVariablesModule
   character(len=LINELENGTH) :: simlstfile = 'mfsim.lst' !< simulation listing file name
   character(len=LINELENGTH) :: simstdout = 'mfsim.stdout' !< name of standard out file if screen output is piped to a file
   character(len=LINELENGTH) :: idm_context = '__INPUT__'
+  character(len=LINELENGTH) :: odm_context = '__OUTPUT__'
 
   ! for parallel development
   character(len=LINELENGTH) :: simulation_mode = 'SEQUENTIAL'

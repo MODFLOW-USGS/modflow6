@@ -14,6 +14,7 @@ module InputLoadTypeModule
   use ModflowInputModule, only: ModflowInputType
   use ListModule, only: ListType
   use InputDefinitionModule, only: InputParamDefinitionType
+  use NCFileVarsModule, only: NCPackageVarsType
 
   implicit none
   private
@@ -47,6 +48,7 @@ module InputLoadTypeModule
   !<
   type StaticPkgLoadType
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
+    type(NCPackageVarsType), pointer :: nc_vars => null()
     character(len=LENCOMPONENTNAME) :: component_name !< name of component
     character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
     character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
@@ -75,6 +77,7 @@ module InputLoadTypeModule
   !<
   type :: DynamicPkgLoadType
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
+    type(NCPackageVarsType), pointer :: nc_vars => null()
     character(len=LENCOMPONENTNAME) :: component_name !< name of component
     character(len=LINELENGTH) :: component_input_name !< component input name, e.g. model name file
     character(len=LINELENGTH) :: input_name !< input name, e.g. package *.chd file
@@ -126,6 +129,8 @@ module InputLoadTypeModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
     type(ListType) :: pkglist !< model package list
+    character(len=LINELENGTH) :: nc_fname !< name of model netcdf input
+    integer(I4B) :: ncid !< netcdf file handle
     integer(I4B) :: iout
   contains
     procedure :: init => dynamicpkgs_init
@@ -349,6 +354,12 @@ contains
     !
     call this%subpkg_list%destroy()
     !
+    if (associated(this%nc_vars)) then
+      call this%nc_vars%destroy()
+      deallocate (this%nc_vars)
+      nullify (this%nc_vars)
+    end if
+    !
     return
   end subroutine static_destroy
 
@@ -426,13 +437,23 @@ contains
   subroutine dynamic_destroy(this)
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorystore_remove
-    use SimVariablesModule, only: idm_context
+    use SimVariablesModule, only: idm_context, odm_context
     class(DynamicPkgLoadType), intent(inout) :: this
+    !
+    ! -- clean up netcdf variables structure
+    if (associated(this%nc_vars)) then
+      call this%nc_vars%destroy()
+      deallocate (this%nc_vars)
+      nullify (this%nc_vars)
+    end if
     !
     ! -- deallocate package static and dynamic input context
     call memorystore_remove(this%mf6_input%component_name, &
                             this%mf6_input%subcomponent_name, &
                             idm_context)
+    !
+    call memorystore_remove(this%mf6_input%component_name, &
+                            odm_context)
     !
     return
   end subroutine dynamic_destroy
@@ -440,16 +461,21 @@ contains
   !> @brief model dynamic packages init
   !!
   !<
-  subroutine dynamicpkgs_init(this, modeltype, modelname, modelfname, iout)
+  subroutine dynamicpkgs_init(this, modeltype, modelname, modelfname, nc_fname, &
+                              ncid, iout)
     class(ModelDynamicPkgsType), intent(inout) :: this
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
+    integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: iout
     !
     this%modeltype = modeltype
     this%modelname = modelname
     this%modelfname = modelfname
+    this%nc_fname = nc_fname
+    this%ncid = ncid
     this%iout = iout
     !
     return
@@ -564,6 +590,7 @@ contains
     class(DynamicPkgLoadBaseType), pointer :: dynamic_pkg
     integer(I4B) :: n
     !
+    ! -- destroy dynamic loaders
     do n = 1, this%pkglist%Count()
       dynamic_pkg => this%get(n)
       call dynamic_pkg%destroy()

@@ -13,6 +13,7 @@ module SourceLoadModule
                              LENPACKAGETYPE, LENPACKAGENAME
   use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType, getModflowInput
+  use NCFileVarsModule, only: NCFileVarsType
 
   implicit none
   private
@@ -21,6 +22,8 @@ module SourceLoadModule
   public :: load_modelnam, load_simnam, load_simtdis
   public :: remote_model_ndim
   public :: export_cr, export_post_step, export_da
+  public :: nc_close
+  public :: netcdf_context
 
 contains
 
@@ -28,7 +31,8 @@ contains
   !<
   function create_input_loader(component_type, subcomponent_type, &
                                component_name, subcomponent_name, input_type, &
-                               input_fname, component_fname) result(loader)
+                               input_fname, component_fname, nc_vars) &
+    result(loader)
     use SourceCommonModule, only: package_source_type, idm_subcomponent_name
     use InputLoadTypeModule, only: StaticPkgLoadBaseType
     character(len=*), intent(in) :: component_type
@@ -38,6 +42,7 @@ contains
     character(len=*), intent(in) :: input_type
     character(len=*), intent(in) :: input_fname
     character(len=*), intent(in) :: component_fname
+    type(NCFileVarsType), pointer, optional, intent(in) :: nc_vars
     class(StaticPkgLoadBaseType), pointer :: loader
     type(ModflowInputType) :: mf6_input
     character(len=LENPACKAGENAME) :: source_type
@@ -60,6 +65,13 @@ contains
     ! -- initialize loader
     call loader%init(mf6_input, component_name, component_fname, input_fname)
     !
+    ! -- initialize loader netcdf variables structure
+    if (present(nc_vars)) then
+      call nc_vars%create_varlists(sc_name, loader%nc_vars)
+    else
+      call loader%nc_vars%init()
+    end if
+    !
     ! -- return
     return
   end function create_input_loader
@@ -81,6 +93,7 @@ contains
     case ('MF6FILE')
       allocate (mf6file_loader)
       loader => mf6file_loader
+      allocate (loader%nc_vars)
     case default
       write (errmsg, '(a)') &
         'Simulation package input source type "'//trim(source_type)// &
@@ -356,5 +369,77 @@ contains
     use ModelExportModule, only: modelexports_destroy
     call modelexports_destroy()
   end subroutine export_da
+
+  subroutine nc_close(ncid, nc_fname)
+#if defined(__WITH_NETCDF__)
+    use NetCDFCommonModule, only: nc_fclose
+#endif
+    integer(I4B), intent(in) :: ncid
+    character(len=*), intent(in) :: nc_fname
+    !
+    if (ncid > 0) then
+#if defined(__WITH_NETCDF__)
+      call nc_fclose(ncid, nc_fname)
+#endif
+    end if
+    !
+    return
+  end subroutine nc_close
+
+  !> @brief create model netcdf context
+  !<
+  function netcdf_context(modeltype, component_type, modelname, &
+                          modelfname, iout) result(nc_vars)
+    use MemoryHelperModule, only: create_mem_path
+    use SimVariablesModule, only: idm_context
+    use SourceCommonModule, only: filein_fname
+#if defined(__WITH_NETCDF__)
+    use NCContextBuildModule, only: open_ncfile, create_netcdf_context
+#endif
+    ! -- drummy
+    character(len=*), intent(in) :: modeltype
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
+    integer(I4B), intent(in) :: iout
+    ! -- return
+    type(NCFileVarsType), pointer :: nc_vars
+    ! -- local
+    character(len=LENMEMPATH) :: input_mempath
+    character(len=LINELENGTH) :: nc_fname
+    integer(I4B) :: ncid
+    !
+    ! -- set input memory path
+    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
+    !
+    ! -- allocate context object
+    allocate (nc_vars)
+    !
+    ! -- check if optional netcdf input file was provided
+    if (filein_fname(nc_fname, 'NETCDF_FNAME', input_mempath, modelfname)) then
+#if defined(__WITH_NETCDF__)
+      !
+      ! -- open nc input file
+      ncid = open_ncfile(nc_fname, iout)
+      !
+      ! -- read the file and build the context
+      call create_netcdf_context(modeltype, modelname, modelfname, &
+                                 nc_vars, nc_fname, ncid, iout)
+      !
+#else
+      write (errmsg, '(a)') &
+        'Cannot load model packages. NetCDF &
+        &keyword specified in input file but &
+        &NetCDF libraries are not available.'
+      call store_error(errmsg)
+      call store_error_filename(modelfname)
+#endif
+    else
+      call nc_vars%init(modelname, '', 0, '')
+    end if
+    !
+    ! -- return
+    return
+  end function netcdf_context
 
 end module SourceLoadModule

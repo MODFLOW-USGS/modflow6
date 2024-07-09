@@ -50,7 +50,7 @@ contains
                                       iperblock, iout)
     !
     ! -- initialize static loader
-    call loader%load(parser, mf6_input, this%input_name, iout)
+    call loader%load(parser, mf6_input, this%nc_vars, this%input_name, iout)
     !
     ! -- allocate storage string
     call mem_allocate(this%storage, LINELENGTH, 'STORAGE', this%mf6_input%mempath)

@@ -17,6 +17,7 @@ module IdmMf6FileModule
   use ModflowInputModule, only: ModflowInputType, getModflowInput
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, DynamicPkgLoadBaseType
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
+  use NCFileVarsModule, only: NCPackageVarsType
 
   implicit none
   private
@@ -54,15 +55,23 @@ contains
 
   !> @brief input load for traditional mf6 simulation static input file
   !<
-  subroutine input_load(filename, mf6_input, component_filename, iout)
+  subroutine input_load(filename, mf6_input, component_filename, iout, nc_vars)
     use LoadMf6FileModule, only: LoadMf6FileType
     character(len=*), intent(in) :: filename
     type(ModflowInputType), intent(in) :: mf6_input
     character(len=*), intent(in) :: component_filename !< component (e.g. model) filename
     integer(I4B), intent(in) :: iout !< unit number for output
+    type(NCPackageVarsType), pointer, optional, intent(in) :: nc_vars
     type(BlockParserType), allocatable, target :: parser !< block parser
+    type(NCPackageVarsType), pointer :: netcdf_vars
     type(LoadMf6FileType) :: loader
     integer(I4B) :: inunit
+    !
+    if (present(nc_vars)) then
+      netcdf_vars => nc_vars
+    else
+      nullify (netcdf_vars)
+    end if
     !
     ! -- open input file
     inunit = open_mf6file(mf6_input%pkgtype, filename, component_filename, iout)
@@ -72,7 +81,7 @@ contains
     call parser%Initialize(inunit, iout)
     !
     ! -- invoke the load routine
-    call loader%load(parser, mf6_input, filename, iout)
+    call loader%load(parser, mf6_input, netcdf_vars, filename, iout)
     !
     ! -- clear parser file handles
     call parser%clear()
@@ -122,6 +131,12 @@ contains
                            this%component_input_name, this%input_name, &
                            this%iperblock, iout)
       !
+      ! -- point to nc_vars structure
+      mf6_loader%nc_vars => this%nc_vars
+      !
+      ! -- nullify nc_vars pointer so it isn't deallocated
+      nullify (this%nc_vars)
+      !
       ! -- set return pointer to base dynamic loader
       rp_loader => mf6_loader
       !
@@ -129,7 +144,7 @@ contains
       !
       ! -- load static input
       call input_load(this%input_name, this%mf6_input, &
-                      this%component_input_name, iout)
+                      this%component_input_name, iout, this%nc_vars)
     end if
     !
     ! -- return

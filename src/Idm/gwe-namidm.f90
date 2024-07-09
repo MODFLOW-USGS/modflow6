@@ -17,6 +17,10 @@ module GweNamInputModule
     logical :: print_flows = .false.
     logical :: save_flows = .false.
     logical :: export_netcdf = .false.
+    logical :: nc_filerecord = .false.
+    logical :: netcdf = .false.
+    logical :: filein = .false.
+    logical :: netcdf_fname = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
@@ -121,6 +125,78 @@ module GweNamInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwenam_nc_filerecord = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_FILERECORD', & ! tag name
+    'NC_FILERECORD', & ! fortran variable
+    'RECORD NETCDF FILEIN NETCDF_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwenam_netcdf = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF', & ! tag name
+    'NETCDF', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'netcdf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwenam_filein = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwenam_netcdf_fname = InputParamDefinitionType &
+    ( &
+    'GWE', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_FILENAME', & ! tag name
+    'NETCDF_FNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'netcdf input filename', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwenam_ftype = InputParamDefinitionType &
     ( &
     'GWE', & ! component
@@ -182,6 +258,10 @@ module GweNamInputModule
     gwenam_print_flows, &
     gwenam_save_flows, &
     gwenam_export_netcdf, &
+    gwenam_nc_filerecord, &
+    gwenam_netcdf, &
+    gwenam_filein, &
+    gwenam_netcdf_fname, &
     gwenam_ftype, &
     gwenam_fname, &
     gwenam_pname &

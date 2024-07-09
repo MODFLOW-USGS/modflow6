@@ -420,6 +420,11 @@
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\DisNCStructured.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Utilities\Export\DisvNCMesh.f90">
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
@@ -442,6 +447,15 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\AsciiInputLoadType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadNCInput.F90">
+		<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileGridInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileListInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileStoInput.f90"/>
@@ -466,6 +480,23 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File></Filter>
+		<Filter Name="netcdf">
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCArrayReader.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCContextBuild.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NetCDFCommon.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCFileVars.f90"/></Filter>
 		<Filter Name="Libraries">
 		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\daglib\dag_module.f90"/>

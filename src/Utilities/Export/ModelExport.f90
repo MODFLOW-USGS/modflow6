@@ -27,9 +27,8 @@ module ModelExportModule
 
   !> @brief export model type
   !!
-  !!  This is a container variable which can
-  !!  contain objects which manage various model
-  !!  scoped exports.
+  !!  This is a container variable which holds
+  !!  model export objects.
   !!
   !<
   type :: ExportModelType
@@ -123,7 +122,7 @@ contains
     end do
   end subroutine modelexports_create
 
-  !> @brief deallocate export model list
+  !> @brief export model list post step
   !!
   subroutine modelexports_post_step()
     ! -- local variables
@@ -143,7 +142,7 @@ contains
     end do
   end subroutine modelexports_post_step
 
-  !> @brief deallocate export model list
+  !> @brief destroy export model list
   !!
   subroutine modelexports_destroy()
     ! -- local variables
@@ -167,7 +166,7 @@ contains
     call export_models%clear()
   end subroutine modelexports_destroy
 
-  !> @brief initialize model export container
+  !> @brief initialize model export container variable
   !!
   !<
   subroutine init(this, modelname, modeltype, modelfname, disenum, iout)
@@ -189,7 +188,7 @@ contains
     nullify (this%nc_export)
   end subroutine init
 
-  !> @brief model export container post step
+  !> @brief model export container post step actions
   !!
   !<
   subroutine post_step(this)

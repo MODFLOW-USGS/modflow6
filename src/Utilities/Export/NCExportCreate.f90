@@ -27,13 +27,15 @@ contains
   !> @brief create model netcdf export type
   !!
   subroutine create_nc_export(export_model, num_model)
-    use NCModelExportModule, only: NETCDF_UGRID
+    use NCModelExportModule, only: NETCDF_UGRID, NETCDF_STRUCTURED
     use MeshDisModelModule, only: Mesh2dDisExportType
     use MeshDisvModelModule, only: Mesh2dDisvExportType
+    use DisNCStructuredModule, only: DisNCStructuredType
     type(ExportModelType), pointer, intent(inout) :: export_model
     class(NumericalModelType), pointer, intent(in) :: num_model
     class(Mesh2dDisExportType), pointer :: ugrid_dis
     class(Mesh2dDisvExportType), pointer :: ugrid_disv
+    class(DisNCStructuredType), pointer :: structured_dis
     class(DisBaseType), pointer :: disbase
     !
     select case (export_model%disenum)
@@ -61,12 +63,28 @@ contains
         !
         ! -- set base pointer
         export_model%nc_export => ugrid_dis
-      else
-        errmsg = 'DIS model discretization only &
-                 &supported as UGRID NetCDF export. &
-                 &Model='//trim(export_model%modelname)//'.'
-        call store_error(errmsg)
-        call store_error_filename(export_model%modelfname)
+      else if (export_model%nctype == NETCDF_STRUCTURED) then
+        !
+        ! -- allocate nc structured grid export object
+        allocate (structured_dis)
+        !
+        ! -- set dis base type
+        disbase => num_model%dis
+        select type (disbase)
+        type is (DisType)
+          structured_dis%dis => disbase
+        end select
+        !
+        ! -- initialize export object
+        call structured_dis%init(export_model%modelname, export_model%modeltype, &
+                                 export_model%modelfname, export_model%disenum, &
+                                 NETCDF_STRUCTURED, export_model%iout)
+        !
+        ! -- define export object
+        call structured_dis%df()
+        !
+        ! -- set base pointer
+        export_model%nc_export => structured_dis
       end if
     case (DISV)
       if (export_model%nctype == NETCDF_UGRID) then
