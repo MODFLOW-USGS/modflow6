@@ -11,7 +11,6 @@ with a serial 'refmodel' in case of XT3D
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_xt3d02"]

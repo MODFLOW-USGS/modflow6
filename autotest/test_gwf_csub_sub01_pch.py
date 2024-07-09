@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["csub_sub01_pch"]

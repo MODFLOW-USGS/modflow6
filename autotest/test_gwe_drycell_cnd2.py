@@ -46,10 +46,9 @@ neighbors.  Referring to this test as a flowing through problem.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-import flopy
-
 from framework import TestFramework
 
 # Base simulation and model name and workspace
@@ -193,7 +192,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print("Building MF6 model...()".format())
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -581,9 +580,10 @@ def check_output(idx, test):
     assert np.all(hds[0, 0, 1, :] < 0), "row 2 is not dry"
 
     # Starting temperatures after steady flow period should be 4.0 degrees
-    np.all(
-        np.isclose(temp1[0], strt_temp, atol=1e-10)
-    ), "Steady state temperatures not as expected"
+    (
+        np.all(np.isclose(temp1[0], strt_temp, atol=1e-10)),
+        "Steady state temperatures not as expected",
+    )
     # Same with concentrations in non-dry cells
     assert np.all(
         np.isclose(conc1[0, :, 0], strt_conc[:, 0])

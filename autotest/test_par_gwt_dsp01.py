@@ -4,7 +4,6 @@ test_gwt_dsp01_gwtgwt.py and runs it in parallel mode.
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_dsp01_gwtgwt"]

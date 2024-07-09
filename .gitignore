@@ -70,10 +70,6 @@ bin/**
 UserPrefs.xml
 
 tmp_simulations/
-autotest/temp/
-autotest/tempbin/
-autotest/*.html
-autotest/notebooks/
 
 distribution/temp/
 distribution/temp_zip/
@@ -135,6 +131,11 @@ modflow6.code-workspace
 # unittests
 unittests/
 autotest/.failed
+autotest/.temp/
+autotest/temp/
+autotest/tempbin/
+autotest/*.html
+autotest/notebooks/
 
 **/__pycache__
 **/.benchmarks

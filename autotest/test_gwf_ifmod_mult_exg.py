@@ -3,7 +3,7 @@ Test the interface model approach for multiple (2) exchanges between
 the same two models. One exchange has XT3D and the other one doesn't.
 
         'parent: 1x6x8'          'child: 1x16x16'
-                            
+
      1  1  1  1  1  1  1  1                      XT3D on exg
      1  1  0  0  0  0  1  1         1, ..., 1
      1  1  0  0  0  0  1  1         1, ..., 1
@@ -26,7 +26,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-
 from framework import TestFramework
 
 cases = ["ifmod_mult_exg"]

@@ -14,9 +14,9 @@
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-import flopy
 from framework import TestFramework
 
 
@@ -42,7 +42,7 @@ def get_bud(fname, srchStr):
             if srchStr in line:
                 # Read the package budget
                 line = next(f)
-                while not "TOTAL IN =" in line:
+                while "TOTAL IN =" not in line:
                     if "=" in line:
                         in_bud_lst.update(process_line(line))
 
@@ -53,7 +53,7 @@ def get_bud(fname, srchStr):
                 T_in = dct["IN"]
 
                 line = next(f)
-                while not "TOTAL OUT =" in line:
+                while "TOTAL OUT =" not in line:
                     if "=" in line:
                         out_bud_lst.update(process_line(line))
 
@@ -728,12 +728,10 @@ def check_output(idx, test):
     )
 
     if name[-1] == "n":
-
         assert in_bud_lst["GWF"] == 0.0, msg1
         assert out_bud_lst["GWF"] == 0.0, msg1
 
     if name[-1] != "n":
-
         assert in_bud_lst["GWF"] > 0.0, msg5
         assert out_bud_lst["GWF"] > 0.0, msg6
 
@@ -752,7 +750,6 @@ def check_output(idx, test):
         assert slp > 0.0, msg4
 
     else:  # thermally reversed scenario (cold lake, warm gw)
-
         # conduction will be from gw cells to lake
         assert in_bud_lst["LAKEBED-COND"] > 0.0, msg2
         assert out_bud_lst["LAKEBED-COND"] == 0.0, msg2

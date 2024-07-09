@@ -66,11 +66,10 @@ sys.path.append(os.path.join("..", "common"))
 
 # Imports
 
-import matplotlib.pyplot as plt
 import flopy
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 # from figspecs import USGSFigure
@@ -233,7 +232,6 @@ gwtname_lo = "gwt-ll"
 
 
 def build_models(idx, test):
-
     # -----------
     #  MODFLOW 6
     # -----------

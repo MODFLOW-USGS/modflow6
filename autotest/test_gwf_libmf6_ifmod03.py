@@ -3,36 +3,36 @@ Test the interface model approach for coupling two DIS
 models where one is translated and rotated in space:
 
      'model A'              'model B'
-                               06     
-                               07                     
-                      exg      08                     
+                               06
+                               07
+                      exg      08
                                09
     01 02 03 04 05             10
-   
- where exg couples 05 with 06 and has XT3D enabled, and model B 
+
+ where exg couples 05 with 06 and has XT3D enabled, and model B
  is translated and rotated
- 
+
  The physical setup therefore is
 
       'model A'              'modelB'
    01 02 03 04 05   exg   06 07 08 09 10
-   
+
  where the interface model grid (2x) is
- 
+
    04 05 06 07
 
-                 
+
  and x -->
 
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_ifmod03"]
 

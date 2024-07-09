@@ -3,12 +3,12 @@ import sys
 from os import environ
 from pathlib import Path
 
-import pymake
 import pytest
 from flaky import flaky
 from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import set_dir
 
+import pymake
 from utils import get_modified_time, get_project_root_path
 
 _project_root_path = get_project_root_path()
@@ -20,7 +20,9 @@ _fc_reason = "make must be used with gfortran"
 
 
 def run_makefile(target):
-    assert Path("makefile").is_file(), f"makefile does not exist in {os.getcwd()}"
+    assert Path(
+        "makefile"
+    ).is_file(), f"makefile does not exist in {os.getcwd()}"
 
     base_target = os.path.basename(target)
     base_message = (
@@ -38,7 +40,9 @@ def run_makefile(target):
     return_code = os.system(f"make FC={environ.get('FC', 'gfortran')}")
 
     assert return_code == 0, f"could not make '{base_target}'." + base_message
-    assert os.path.isfile(target), f"{base_target} does not exist." + base_message
+    assert os.path.isfile(target), (
+        f"{base_target} does not exist." + base_message
+    )
 
 
 def build_mf6_makefile():

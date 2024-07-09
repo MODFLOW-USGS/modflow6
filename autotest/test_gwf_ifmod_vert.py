@@ -36,7 +36,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-
 from framework import TestFramework
 
 cases = ["ifmod_vert"]

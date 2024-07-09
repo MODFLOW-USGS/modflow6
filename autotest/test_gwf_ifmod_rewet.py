@@ -29,7 +29,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["ifmod_rewet01"]
@@ -386,9 +385,7 @@ def check_output(idx, test):
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
-        assert (
-            maxdiff < 10 * hclose_check
-        ), "Max. head diff. {} should \
+        assert maxdiff < 10 * hclose_check, "Max. head diff. {} should \
                          be within solver tolerance (x10): {}".format(
             maxdiff, 10 * hclose_check
         )

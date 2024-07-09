@@ -34,10 +34,10 @@ whether or not the Newton option is activate in the GWF name file OPTIONS block.
 # Imports
 
 import os
+
+import flopy
 import numpy as np
 import pytest
-import flopy
-
 from framework import TestFramework
 
 
@@ -154,7 +154,6 @@ for i in np.arange(nper):
 
 
 def add_gwf_model(sim, gwfname, newton=False):
-
     # Instantiating MODFLOW 6 groundwater flow model
     if newton:
         gwf = flopy.mf6.ModflowGwf(
@@ -282,7 +281,6 @@ def add_gwf_model(sim, gwfname, newton=False):
 
 
 def add_gwe_model(sim, gwename):
-
     gwe = flopy.mf6.ModflowGwe(
         sim, modelname=gwename, model_nam_file="{}.nam".format(gwename)
     )
@@ -410,12 +408,11 @@ def add_gwe_model(sim, gwename):
 
 
 def build_models(idx, test):
-
     # Base MF6 GWF model type
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print("Building MF6 model...()".format())
 
     # generate names for each model
     gwfname1 = "gwf-" + name + "nwt1"

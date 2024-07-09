@@ -13,7 +13,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_uzf04a"]
@@ -137,8 +136,7 @@ def build_models(idx, test):
 
     # note: for specifying uzf number, use fortran indexing!
     uzf_obs = {
-        name
-        + ".uzf.obs.csv": [
+        name + ".uzf.obs.csv": [
             (f"wc{k + 1}", "water-content", 1, depth)
             for k, depth in enumerate(np.linspace(1, 20, 15))
         ]

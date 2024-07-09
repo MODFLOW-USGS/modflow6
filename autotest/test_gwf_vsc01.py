@@ -13,7 +13,6 @@ import sys
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
@@ -267,14 +266,12 @@ def check_output(idx, test):
         sim_val_1 = no_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
-        assert np.allclose(
-            sim_val_1, stored_ans, atol=1e-4
-        ), "Flow in the " + cases[
-            0
-        ] + " test problem (doesn't simulate " "viscosity) has changed,\n should be " + str(
-            stored_ans
-        ) + " but instead is " + str(
-            sim_val_1
+        assert np.allclose(sim_val_1, stored_ans, atol=1e-4), (
+            "Flow in the " + cases[0] + " test problem (doesn't simulate "
+            "viscosity) has changed,\n should be "
+            + str(stored_ans)
+            + " but instead is "
+            + str(sim_val_1)
         )
 
     elif idx == 1:
@@ -282,14 +279,12 @@ def check_output(idx, test):
         sim_val_2 = with_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
-        assert np.allclose(
-            sim_val_2, stored_ans, atol=1e-4
-        ), "Flow in the " + cases[
-            1
-        ] + " test problem (simulates " "viscosity) has changed,\n should be " + str(
-            stored_ans
-        ) + " but instead is " + str(
-            sim_val_2
+        assert np.allclose(sim_val_2, stored_ans, atol=1e-4), (
+            "Flow in the " + cases[1] + " test problem (simulates "
+            "viscosity) has changed,\n should be "
+            + str(stored_ans)
+            + " but instead is "
+            + str(sim_val_2)
         )
 
     elif idx == 2:

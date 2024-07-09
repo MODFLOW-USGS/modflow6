@@ -3,12 +3,12 @@ Test zero-order decay by running a one-cell model with ten 1-day time steps
 with a decay rate of 1.  And a starting concentration of 8.  Result should be
 0 at the end and decay should shot off once concentration is zero.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["mst06_noadv"]

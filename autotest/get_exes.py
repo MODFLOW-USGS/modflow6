@@ -7,12 +7,11 @@ from warnings import warn
 
 import flopy
 import pytest
+from conftest import project_root_path
 from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
 from modflow_devtools.misc import get_ostag, is_in_ci, set_env
-
-from conftest import project_root_path
 
 repository = "MODFLOW-USGS/modflow6"
 top_bin_path = project_root_path / "bin"

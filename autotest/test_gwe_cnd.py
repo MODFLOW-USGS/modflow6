@@ -14,6 +14,7 @@ future.
 # Imports
 
 import os
+
 import numpy as np
 import pytest
 
@@ -125,7 +126,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print("Building MF6 model...()".format())
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -476,7 +477,7 @@ def check_output(idx, test):
         5.01900830e-17,
     ]
 
-    msg = f"gwe temperatures do not match stored concentrations"
+    msg = "gwe temperatures do not match stored concentrations"
     assert np.allclose(conc1[-1, 0, 0, :], c_ans, atol=1e-5), msg
 
 

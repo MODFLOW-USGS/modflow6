@@ -11,12 +11,12 @@ between the two.
 """
 
 # Imports
-import flopy
-import numpy as np
 import os
 import sys
-import pytest
 
+import flopy
+import numpy as np
+import pytest
 from framework import TestFramework
 
 # Base simulation and model name and workspace

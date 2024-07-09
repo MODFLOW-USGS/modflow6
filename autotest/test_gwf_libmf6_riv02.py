@@ -2,14 +2,14 @@
 Test the api which is used set hcof and rhs in api package compare to river
 package in the non-api simulation.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_riv02"]
 

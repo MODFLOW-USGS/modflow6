@@ -6,7 +6,6 @@ See table in LAK Package section of mf6io.pdf for an explanation of ID,
 ID2, and Observation Type.
 """
 
-
 import os
 
 import flopy

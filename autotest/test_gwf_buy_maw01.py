@@ -16,7 +16,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["buy_maw_01a"]  # , 'buy_maw_01b', 'buy_maw_01c']

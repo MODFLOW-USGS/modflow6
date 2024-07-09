@@ -2,12 +2,12 @@
 Test zero-order decay by running a one-cell model with ten 1-day time steps
 with a decay rate of -1.  Result should be 10 at the end.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["mst04_noadv"]

@@ -12,7 +12,6 @@ from os.path import join
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 
 data_path = project_root_path / "autotest" / "data"
@@ -680,7 +679,7 @@ def run_transport_model(dir, exe):
         9132.25,
     ]
     ans_times = np.array(ans_times)
-    errmsg = f"Expected number of total timesteps is different."
+    errmsg = "Expected number of total timesteps is different."
     assert times.shape == ans_times.shape, errmsg
     errmsg = f"Times {times} not equal expected times {ans_times}"
     assert np.allclose(times, ans_times)

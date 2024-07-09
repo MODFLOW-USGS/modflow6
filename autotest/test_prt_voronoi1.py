@@ -10,6 +10,7 @@ then again with wells, first pumping, then injection.
 """
 
 from pathlib import Path
+from platform import processor, system
 
 import flopy
 import matplotlib as mpl
@@ -17,7 +18,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from platform import system, processor
 from flopy.discretization import VertexGrid
 from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
@@ -323,9 +323,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
             legend=False,
             color="black",
         )
-    xc, yc = gwf.modelgrid.get_xcellcenters_for_layer(
-        0
-    ), gwf.modelgrid.get_ycellcenters_for_layer(0)
+    xc, yc = (
+        gwf.modelgrid.get_xcellcenters_for_layer(0),
+        gwf.modelgrid.get_ycellcenters_for_layer(0),
+    )
     for i in range(gwf.modelgrid.ncpl):
         x, y = xc[i], yc[i]
         if i == 1639:

@@ -4,7 +4,6 @@ import flopy
 import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 include_NWT = False
@@ -484,7 +483,7 @@ def check_output(idx, test):
                 if "WATER CONTENT   ".lower() in line.lower():
                     line = next(f)
                     wc_tmp = []
-                    while not "          10           1           3" in line:
+                    while "          10           1           3" not in line:
                         m_arr = line.strip().split()
                         for i, val in enumerate(m_arr):
                             wc_tmp.append(float(val))

@@ -11,13 +11,13 @@ not present in any of the output. The setup is two coupled
     1  1  1  1  1         1  1  1  1  1
 
 """
+
 import os
 
 import flopy
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_ifmod01"]
 name_left = "leftmodel"

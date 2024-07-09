@@ -6,7 +6,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["sfr-wetperim"]
@@ -19,7 +18,7 @@ def get_x_frac(x_coord1, rwid):
 
 def get_xy_pts(x, y, rwid):
     x_xsec1 = get_x_frac(x, rwid)
-    x_sec_tab = [[xx, hh] for xx, hh, in zip(x_xsec1, y)]
+    x_sec_tab = [[xx, hh] for xx, hh in zip(x_xsec1, y)]
     return x_sec_tab
 
 
@@ -247,7 +246,7 @@ def build_models(idx, test):
             ncol=2,
             table=x_sec_tab[n],
             filename=sfr_xsec_tab_nm[n],
-            pname=f"sfrxsectable" + str(n + 1),
+            pname="sfrxsectable" + str(n + 1),
         )
 
     packagedata = []

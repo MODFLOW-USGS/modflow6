@@ -1,6 +1,6 @@
 """
 
-This problem tests the SWF capability to simulate overland flow 
+This problem tests the SWF capability to simulate overland flow
 on a regular grid.  The problem is based on the tilted
 v-catchment problem described by Panday and Huyakorn (2004):
 Advances in Water Resources 27 (2004) 361-382.
@@ -9,10 +9,10 @@ Advances in Water Resources 27 (2004) 361-382.
 
 import os
 import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -209,7 +209,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / f"swf_model.zdg.obs.csv"
+    fpth = test.workspace / "swf_model.zdg.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(6, 4))
@@ -221,7 +221,7 @@ def make_plot(test, mfsim):
         mfc="none",
         mec="k",
         lw=0.0,
-        label=f"MODFLOW 6 Simulated Outflow",
+        label="MODFLOW 6 Simulated Outflow",
     )
     ax.plot([90, 90], [0, 5], "k--")
     ax.set_xlim(0, 180.0)
@@ -259,7 +259,7 @@ def check_output(idx, test):
     stage_all = sobj.get_alldata()
 
     # read outflow observation
-    fpth = test.workspace / f"swf_model.zdg.obs.csv"
+    fpth = test.workspace / "swf_model.zdg.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     outflow_answer = 4.859497719  # outflow value at end of first period

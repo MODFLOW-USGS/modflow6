@@ -8,7 +8,8 @@ information on the mf6 variables that are stored in the memory manager.
 """
 
 import os
-from fortran_parser import source_dir_to_dict, get_inheritance_dict
+
+from fortran_parser import get_inheritance_dict, source_dir_to_dict
 
 # Set up and check paths
 source_dir = "../../../src"
@@ -88,8 +89,14 @@ def line_list_to_var_list(line_list, fname):
             # check for uniqueness and write to md and tex
             if class_varname not in class_varname_list:
                 class_varname_list.append(class_varname)
-                l = [source_name, current_module, current_class,
-                     fortran_varname, varname, dims]
+                l = [
+                    source_name,
+                    current_module,
+                    current_class,
+                    fortran_varname,
+                    varname,
+                    dims,
+                ]
                 memvar_list.append(l)
 
     return memvar_list
@@ -98,7 +105,14 @@ def line_list_to_var_list(line_list, fname):
 def write_md(memvar_list, fmd):
     "write markdown table records for list of memory managed variables"
     for l in memvar_list:
-        source_name, current_module, typename, fortran_varname, varname, dims = l
+        (
+            source_name,
+            current_module,
+            typename,
+            fortran_varname,
+            varname,
+            dims,
+        ) = l
         write_md_record(
             fmd, source_name, current_module, typename, varname, dims
         )
@@ -108,7 +122,14 @@ def write_md(memvar_list, fmd):
 def write_tex(memvar_list, ftex):
     "write latex table records for list of memory managed variables"
     for l in memvar_list:
-        source_name, current_module, typename, fortran_varname, varname, dims = l
+        (
+            source_name,
+            current_module,
+            typename,
+            fortran_varname,
+            varname,
+            dims,
+        ) = l
         write_tex_record(ftex, typename, varname, dims)
     return
 
@@ -117,19 +138,24 @@ def write_md_header(f):
     s = "# MODFLOW 6 MEMORY MANAGER VARIABLES\n\n"
     fmd.write(s)
     s = "| {} | {} | {} | {} | {} |\n".format(
-        "source file", "module", "type.variable name", "variable name",
-        "dimensions"
+        "source file",
+        "module",
+        "type.variable name",
+        "variable name",
+        "dimensions",
     )
     fmd.write(s)
-    s = "| {} | {} | {} | {} | {} |\n".format(":---:", ":---:", ":---:",
-                                              ":---:", ":---:")
+    s = "| {} | {} | {} | {} | {} |\n".format(
+        ":---:", ":---:", ":---:", ":---:", ":---:"
+    )
     fmd.write(s)
     return
 
 
 def write_md_record(f, fname, modulename, classname, varname, varshape):
-    s = "| {} | {} | {} | {} | {} |\n".format(fname, modulename, classname,
-                                              varname, varshape)
+    s = "| {} | {} | {} | {} | {} |\n".format(
+        fname, modulename, classname, varname, varshape
+    )
     f.write(s)
     return
 

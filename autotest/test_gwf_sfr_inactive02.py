@@ -6,7 +6,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 HDRY, HNOFLO = -1e30, 1e30
@@ -200,7 +199,7 @@ def check_output(idx, test):
     node2 = v["node2"]
     conn = (node[0], node2[0])
     conn2 = (node2[1], node[1])
-    assert conn == conn2, f"FLOW-JA-FACE connectivity is not symmetric"
+    assert conn == conn2, "FLOW-JA-FACE connectivity is not symmetric"
 
     q = v["q"]
     assert np.allclose(

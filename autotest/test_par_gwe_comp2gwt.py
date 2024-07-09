@@ -1,11 +1,10 @@
 """
-This tests reuses the simulation data in 
-test_gwegwe_exchng_with_comp2gwt and runs it 
+This tests reuses the simulation data in
+test_gwegwe_exchng_with_comp2gwt and runs it
 in parallel on two cpus
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwegwe-gwtgwt"]

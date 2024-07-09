@@ -6,11 +6,11 @@
 
 # Imports
 import os
+
+import flopy
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import matplotlib.pyplot as plt
-import flopy
-
 from framework import TestFramework
 
 # Base simulation and model name and workspace
@@ -118,7 +118,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print("Building MF6 model...()".format())
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -384,7 +384,7 @@ def check_output(idx, test):
     # plt.legend()
     # plt.savefig("stallman.png")
 
-    msg = f"gwe temperatures do not match analytical temperatures"
+    msg = "gwe temperatures do not match analytical temperatures"
     assert np.allclose(zconc[:, 1], analytical_temps[:, 1], atol=1e-1), msg
 
     return

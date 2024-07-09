@@ -9,7 +9,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["maw_06a", "maw_06b"]

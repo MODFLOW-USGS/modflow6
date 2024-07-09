@@ -4,7 +4,6 @@ import flopy
 import matplotlib as mpl
 import numpy as np
 
-
 DEFAULT_EXIT_SOLVE_TOL = 1e-5
 
 
@@ -56,7 +55,11 @@ class HorizontalCase:
             time_units="DAYS",
             nper=HorizontalCase.nper,
             perioddata=[
-                (HorizontalCase.perlen, HorizontalCase.nstp, HorizontalCase.tsmult)
+                (
+                    HorizontalCase.perlen,
+                    HorizontalCase.nstp,
+                    HorizontalCase.tsmult,
+                )
             ],
         )
 
@@ -156,7 +159,11 @@ class FlopyReadmeCase:
             time_units="DAYS",
             nper=FlopyReadmeCase.nper,
             perioddata=[
-                (FlopyReadmeCase.perlen, FlopyReadmeCase.nstp, FlopyReadmeCase.tsmult)
+                (
+                    FlopyReadmeCase.perlen,
+                    FlopyReadmeCase.nstp,
+                    FlopyReadmeCase.tsmult,
+                )
             ],
         )
 
@@ -308,7 +315,9 @@ def get_ireason_code(output_event):
                 else (
                     3
                     if output_event == "TERMINATE"
-                    else 4 if output_event == "WEAKSINK" else -1
+                    else 4
+                    if output_event == "WEAKSINK"
+                    else -1
                 )
             )
         )

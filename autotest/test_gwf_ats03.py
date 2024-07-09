@@ -14,7 +14,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_ats03a"]

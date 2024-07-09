@@ -15,7 +15,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]

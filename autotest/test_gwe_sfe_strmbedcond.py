@@ -6,12 +6,12 @@
 #  - thermally hot stream water warming host gw cells
 #
 
+import math
 import os
 
 import flopy
 import numpy as np
 import pytest
-import math
 from framework import TestFramework
 
 cases = ["sfe-conductn", "sfe-conducti", "sfe-conducto", "sfe-conductm"]
@@ -42,7 +42,7 @@ def get_x_frac(x_coord1, rwid):
 
 def get_xy_pts(x, y, rwid):
     x_xsec1 = get_x_frac(x, rwid)
-    x_sec_tab = [[xx, hh] for xx, hh, in zip(x_xsec1, y)]
+    x_sec_tab = [[xx, hh] for xx, hh in zip(x_xsec1, y)]
     return x_sec_tab
 
 
@@ -158,7 +158,7 @@ def get_bud(fname, srchStr):
             if srchStr in line:
                 # Read the package budget
                 line = next(f)
-                while not "TOTAL IN =" in line:
+                while "TOTAL IN =" not in line:
                     if "=" in line:
                         in_bud_lst.update(process_line(line))
 
@@ -169,7 +169,7 @@ def get_bud(fname, srchStr):
                 T_in = dct["IN"]
 
                 line = next(f)
-                while not "TOTAL OUT =" in line:
+                while "TOTAL OUT =" not in line:
                     if "=" in line:
                         out_bud_lst.update(process_line(line))
 
@@ -383,7 +383,7 @@ def build_models(idx, test):
             ncol=2,
             table=x_sec_tab[n],
             filename=sfr_xsec_tab_nm[n],
-            pname=f"sfrxsectable" + str(n + 1),
+            pname="sfrxsectable" + str(n + 1),
         )
 
     packagedata = []
@@ -670,7 +670,6 @@ def check_output(idx, test):
     if (
         name[-1] == "n"
     ):  # no gw/sw convective exchange, simulates conductive exchange only
-
         assert in_bud_lst["GWF"] == 0.0, msg1
         assert out_bud_lst["GWF"] == 0.0, msg1
 
@@ -696,7 +695,6 @@ def check_output(idx, test):
 
     # streamflow gain from aquifer ("into stream")
     if name[-1] == "i":
-
         msg = "Budget item 'GWF' should reflect heat entering stream"
         assert in_bud_lst["GWF"] > 0.0, msg
         assert out_bud_lst["GWF"] == 0.0, msg
@@ -723,7 +721,6 @@ def check_output(idx, test):
 
     # streamflow loss to aquifer ("out of stream")
     if name[-1] == "o":
-
         msg = "Budget item 'GWF' should reflect heat exiting stream"
         assert in_bud_lst["GWF"] == 0.0, msg
         assert out_bud_lst["GWF"] > 0.0, msg
@@ -752,7 +749,6 @@ def check_output(idx, test):
     # Loss of streamwater to aquifer
     # Thus, convection from strm to gw, conduction from gw to strm
     if name[-1] == "m":  # 'm' for mixed
-
         msg = "Budget item 'GWF' should reflect heat exiting stream"
         assert in_bud_lst["GWF"] == 0.0, msg
         assert out_bud_lst["GWF"] > 0.0, msg

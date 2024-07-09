@@ -15,7 +15,7 @@ C 1 1 1 1 1 1 1 1 1
 1 1 1 1 1 1 1 1 1 1
 1 1 1 1 1 1 1 1 1 C
 
-The lake is active for the first and last stress 
+The lake is active for the first and last stress
 period and inactive for the second stress period.
 
 The test checks the lake observations, lake stage
@@ -29,7 +29,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import DNODATA, TestFramework
 
 cases = ["gwf-lak-status"]

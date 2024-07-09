@@ -10,7 +10,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["mwt_01"]
@@ -334,13 +333,13 @@ def check_obs(sim):
             print(
                 "Comparing binary concentrations with observed well concentrations."
             )
-            is_same = np.allclose(conc_ra[f"BMWT1"], conc_mwt1)
+            is_same = np.allclose(conc_ra["BMWT1"], conc_mwt1)
             if not is_same:
                 success = False
                 print(
                     "Binary concentrations do not match with observation concentrations for mwt1"
                 )
-                print(conc_ra[f"BMWT1"], conc_mwt1)
+                print(conc_ra["BMWT1"], conc_mwt1)
         # check boundname observations with numeric ID observations
         for icv in range(1):
             # print(f"  Checking reach {imwt + 1}")

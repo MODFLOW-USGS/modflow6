@@ -6,3 +6,38 @@ build-backend = "setuptools.build_meta"
 [tool.black]
 line-length = 79
 target_version = ["py37"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py37"
+include = [
+    ".doc/**/*.py",
+    "autotest/pyproject.toml",
+    "autotest/**/*.py",
+    "distribution/**/*.py",
+    "doc/**/*.py",
+    "pymake/**/*.py",
+    "utils/**/*.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "D409", # pydocstyle - section-underline-matches-section-length
+    "E",    # pycodestyle error
+    "F",    # Pyflakes
+    "I001", # isort - unsorted-imports
+]
+ignore = [
+    "E402", # module level import not at top of file
+    "E501", # line too long TODO FIXME
+    "E712", # Avoid equality comparisons to `True`
+    "E722", # do not use bare `except`
+    "E721", # use `is`/`is not` for type comparisons
+    "E741", # ambiguous variable name
+    "F401", # unused import
+    "F403", # unable to detect undefined names (star imports)
+    "F524", # `.format` missing argument(s) for placeholder(s)
+    "F811", # Redefinition of unused variable
+    "F821", # undefined name TODO FIXME
+    "F841", # local variable assigned but never used
+]

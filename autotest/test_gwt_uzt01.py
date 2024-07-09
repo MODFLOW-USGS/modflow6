@@ -10,7 +10,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["uzt01a"]
@@ -135,8 +134,7 @@ def build_models(idx, test):
 
     # note: for specifying lake number, use fortran indexing!
     uzf_obs = {
-        gwfname
-        + ".uzf.obs.csv": [
+        gwfname + ".uzf.obs.csv": [
             (f"wc{k + 1}", "water-content", k + 1, 0.5 * delv)
             for k in range(nlay)
         ]
@@ -448,7 +446,7 @@ def check_obs(sim):
                     print(
                         "Binary concentrations do not match with observation concentrations for uzt1"
                     )
-                    print(conc_ra[f"BUZT1"], conc_uzt)
+                    print(conc_ra["BUZT1"], conc_uzt)
 
             is_same = np.allclose(
                 conc_ra[f"UZT{icv + 1}"], conc_ra[f"BUZT{icv + 1}"]

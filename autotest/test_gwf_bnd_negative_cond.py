@@ -3,7 +3,7 @@ This test build models with DRN, RIV, or GHB packages with
 negative conductance multipliers or negative conductance
 values. All of these models should terminate with an error
 message.
-  
+
 The test evaluates the error messages in the mfsim.lst file
 for the correct error message.
 """
@@ -11,7 +11,6 @@ for the correct error message.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 paktest = "bnd"

@@ -10,7 +10,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disu_kwargs
-
 from framework import TestFramework
 
 cases = ["disu01a"]

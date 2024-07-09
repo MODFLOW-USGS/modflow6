@@ -3,12 +3,12 @@ Test to confirm that the sum wel and wel-reduced observations is equal
 to the specified well pumping rate when the AUTO_FLOW_REDUCE option is
 specified.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["wel01"]
@@ -181,7 +181,7 @@ def check_output(idx, test):
 
     a1 = afroutput["rate-requested"]
     a2 = afroutput["rate-actual"] + afroutput["wel-reduction"]
-    errmsg = f"Auto flow reduce requested rate must equal actual rate plus reduced rate.\n"
+    errmsg = "Auto flow reduce requested rate must equal actual rate plus reduced rate.\n"
     errmsg += f"{a1} /= {a2}"
     assert np.allclose(a1, a2), errmsg
 

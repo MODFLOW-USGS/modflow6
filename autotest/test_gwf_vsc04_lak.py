@@ -19,7 +19,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc04-lak", "vsc04-lak"]
@@ -753,20 +752,20 @@ def check_output(idx, test):
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
-        assert np.greater(
-            np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
-        ).all(), (
-            "Lake inflow did no increase with VSC turned on and should have."
-        )
+        assert (
+            np.greater(
+                np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
+            ).all()
+        ), "Lake inflow did no increase with VSC turned on and should have."
 
         # Check that all the flows leaving the lak in the 'with vsc' model are less
         # than their 'no vsc' counterpart (keep in mind values are negative, which
         # affects how the comparison is made)
-        assert np.greater(
-            np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
-        ).all(), (
-            "Lake outflow did no decrease with VSC turned on and should have."
-        )
+        assert (
+            np.greater(
+                np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
+            ).all()
+        ), "Lake outflow did no decrease with VSC turned on and should have."
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

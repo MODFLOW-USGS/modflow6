@@ -7,7 +7,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["sfr-evap"]
@@ -183,7 +182,7 @@ def build_models(idx, test):
     x_coord = [0.0, 2.0, 4.0, 5.0, 7.0, 9.0]
     x_xsec = [val / rwid for val in x_coord]
     y_xsec = [0.66666667, 0.33333333, 0.0, 0.0, 0.33333333, 0.66666667]
-    x_sec_tab = [[x, h] for x, h, in zip(x_xsec, y_xsec)]
+    x_sec_tab = [[x, h] for x, h in zip(x_xsec, y_xsec)]
 
     sfr_xsec_table_name = "{}.xsec.tab".format(gwfname_trapezoidal)
     crosssections = []
@@ -196,7 +195,7 @@ def build_models(idx, test):
         ncol=2,
         table=x_sec_tab,
         filename=sfr_xsec_table_name,
-        pname=f"sfrxsectable",
+        pname="sfrxsectable",
     )
 
     packagedata = []

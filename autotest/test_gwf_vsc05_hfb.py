@@ -22,7 +22,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]

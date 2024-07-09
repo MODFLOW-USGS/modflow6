@@ -58,6 +58,12 @@ jobs:
 
       - name: Check MSVS project files
         run: pixi run check-vfproj
+
+      - name: check python lint
+        run: pixi run check-python-lint
+
+      - name: check python format
+        run: pixi run check-python-format
       
       - name: Check CITATION.cff
         uses: dieghernan/cff-validator@v3

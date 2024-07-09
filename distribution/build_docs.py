@@ -52,7 +52,13 @@ _default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
-_soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
+_soext = (
+    ".dll"
+    if _system == "Windows"
+    else ".so"
+    if _system == "Linux"
+    else ".dylib"
+)
 
 # publications included in full dist docs
 _publication_urls = [
@@ -106,11 +112,15 @@ def clean_tex_files():
 
 
 def download_benchmarks(
-    output_path: PathLike, verbose: bool = False, repo_owner: str = "MODFLOW-USGS"
+    output_path: PathLike,
+    verbose: bool = False,
+    repo_owner: str = "MODFLOW-USGS",
 ) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"  # todo make configurable
-    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
+    repo = (
+        f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
+    )
     artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(
         artifacts,
@@ -120,19 +130,22 @@ def download_benchmarks(
     artifacts = [
         a
         for a in artifacts
-        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
+        if a["workflow_run"]["head_branch"]
+        == "develop"  # todo make configurable
     ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
+        download_artifact(
+            repo, id=most_recent["id"], path=output_path, verbose=verbose
+        )
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
         return path
     else:
-        print(f"No benchmarks found")
+        print("No benchmarks found")
         return None
 
 
@@ -155,7 +168,9 @@ def test_download_benchmarks(tmp_path, github_user):
 
 
 def build_benchmark_tex(
-    output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"
+    output_path: PathLike,
+    overwrite: bool = False,
+    repo_owner: str = "MODFLOW-USGS",
 ):
     _benchmarks_dir_path.mkdir(parents=True, exist_ok=True)
     benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
@@ -187,7 +202,9 @@ def build_benchmark_tex(
         assert tex_path.is_file()
 
     if (_distribution_path / f"{benchmarks_path.stem}.md").is_file():
-        assert (_docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex").is_file()
+        assert (
+            _docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex"
+        ).is_file()
 
 
 @flaky
@@ -205,19 +222,26 @@ def test_build_benchmark_tex(tmp_path):
 
 
 def build_deprecations_tex():
-    deprecations_path = _docs_path / "mf6io" / "mf6ivar" / "md" / "deprecations.md"
+    deprecations_path = (
+        _docs_path / "mf6io" / "mf6ivar" / "md" / "deprecations.md"
+    )
 
     # convert markdown deprecations to LaTeX
     with set_dir(_release_notes_path):
         tex_path = Path("deprecations.tex")
         tex_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
-            sys.executable, "mk_deprecations.py", deprecations_path, verbose=True
+            sys.executable,
+            "mk_deprecations.py",
+            deprecations_path,
+            verbose=True,
         )
         assert not ret, out + err
         assert tex_path.is_file()
 
-    assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
+    assert (
+        _docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex"
+    ).is_file()
 
 
 def build_mf6io_tex_from_dfn(
@@ -257,7 +281,7 @@ def build_mf6io_tex_from_dfn(
             and any(dfn_files)
             and files_match(tex_pth, dfn_pth, ignored)
         ):
-            print(f"DFN files already exist:")
+            print("DFN files already exist:")
             pprint(dfn_files)
         else:
             for f in tex_files:
@@ -279,7 +303,9 @@ def build_mf6io_tex_from_dfn(
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_build_mf6io_tex_from_dfn(overwrite):
     mf6ivar_path = _project_root_path / "doc" / "mf6io" / "mf6ivar"
-    file_paths = [p for p in (mf6ivar_path / "tex").glob("*.tex") if p.is_file()] + [
+    file_paths = [
+        p for p in (mf6ivar_path / "tex").glob("*.tex") if p.is_file()
+    ] + [
         mf6ivar_path / "md" / "mf6ivar.md",
         mf6ivar_path / "tex" / "gwf-disv-griddata.dat",
         mf6ivar_path / "tex" / "gwf-npf-options.dat",
@@ -295,7 +321,10 @@ def test_build_mf6io_tex_from_dfn(overwrite):
     finally:
         for p in file_paths + [
             # should these be under version control, since they're cleaned in fn above?
-            _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.bbl",
+            _project_root_path
+            / "doc"
+            / "ConverterGuide"
+            / "converter_mf5to6.bbl",
             _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.bbl",
             _project_root_path / "doc" / "mf6io" / "mf6io.bbl",
             _project_root_path / "doc" / "zonebudget" / "zonebudget.bbl",
@@ -380,7 +409,7 @@ def build_pdfs_from_tex(
     passes: int = 3,
     overwrite: bool = False,
 ):
-    print(f"Building PDFs from LaTex:")
+    print("Building PDFs from LaTex:")
     pprint(tex_paths)
 
     output_path = Path(output_path).expanduser().absolute()
@@ -405,7 +434,9 @@ def build_pdfs_from_tex(
                     buff = out + err
                     assert not ret, buff
                     if first:
-                        out, err, ret = run_cmd("bibtex", tex_path.stem + ".aux")
+                        out, err, ret = run_cmd(
+                            "bibtex", tex_path.stem + ".aux"
+                        )
                         buff = out + err
                         assert not ret or "I found no" in buff, buff
                         first = False
@@ -419,7 +450,9 @@ def build_pdfs_from_tex(
         else:
             print(f"{tgt_path} already exists, nothing to do")
 
-        assert tgt_path.is_file(), f"Failed to build {tgt_path} from {tex_path}"
+        assert (
+            tgt_path.is_file()
+        ), f"Failed to build {tgt_path} from {tex_path}"
         assert tgt_path not in built_paths, f"Duplicate target: {tgt_path}"
         built_paths.add(tgt_path)
 
@@ -485,7 +518,9 @@ def build_documentation(
     if not full:
         # convert LaTeX to PDF
         build_pdfs_from_tex(
-            tex_paths=_dev_dist_tex_paths, output_path=output_path, overwrite=overwrite
+            tex_paths=_dev_dist_tex_paths,
+            output_path=output_path,
+            overwrite=overwrite,
         )
     else:
         # convert benchmarks to LaTex, running them first if necessary
@@ -498,8 +533,12 @@ def build_documentation(
         if overwrite or not (output_path / expdf_name).is_file():
             latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
             assets = latest["assets"]
-            asset = next(iter([a for a in assets if a["name"] == expdf_name]), None)
-            download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
+            asset = next(
+                iter([a for a in assets if a["name"] == expdf_name]), None
+            )
+            download_and_unzip(
+                asset["browser_download_url"], output_path, verbose=True
+            )
 
         # download publications
         for url in _publication_urls:
@@ -515,7 +554,9 @@ def build_documentation(
 
         # convert LaTex to PDF
         build_pdfs_from_tex(
-            tex_paths=_full_dist_tex_paths, output_path=output_path, overwrite=overwrite
+            tex_paths=_full_dist_tex_paths,
+            output_path=output_path,
+            overwrite=overwrite,
         )
 
     # enforce os line endings on all text files

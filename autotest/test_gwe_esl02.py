@@ -6,7 +6,7 @@ Test the energy source loading package by warming a single cell with a known
 amount of energy input.
 
  Model configuration
- 
+
     *: Represents energy source loading
     ~: Represents conduction into neighboring cell
 
@@ -21,12 +21,11 @@ amount of energy input.
 # Imports
 
 import os
+
+import flopy
 import numpy as np
 import pytest
-import flopy
-
 from framework import TestFramework
-
 
 # Base simulation and model name and workspace
 
@@ -100,7 +99,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print("Building MF6 model...()".format())
 
     # generate names for each model
     gwfname = "gwf-" + name

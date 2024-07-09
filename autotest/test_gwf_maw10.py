@@ -11,7 +11,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["maw10a", "maw10b", "maw10c", "maw10d"]
@@ -230,7 +229,7 @@ def check_output(idx, test):
     for rowmfr in tcmfr:
         v1 = rowmfr["rate-requested"]
         v2 = rowmfr["rate-actual"] + rowmfr["maw-reduction"]
-        errmsg = f"MAW flow reduction output: requested rate must equal actual rate plus reduced rate.\n"
+        errmsg = "MAW flow reduction output: requested rate must equal actual rate plus reduced rate.\n"
         errmsg += f"{v1} /= {v2}"
         assert np.allclose(v1, v2), errmsg
 

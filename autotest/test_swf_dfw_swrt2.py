@@ -7,16 +7,16 @@ Package in MF6 presently works only with the DISV1D Package, it cannot
 represent flow on a grid, so it is used here to simulate a one-
 dimensional version of this same problem.  The problem is set up
 so that once steady conditions are achieved, the depth in each reach
-should be 1.0 m.  
+should be 1.0 m.
 
 """
 
 import os
 import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -176,7 +176,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / f"swf_model.obs.csv"
+    fpth = test.workspace / "swf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))
@@ -222,9 +222,10 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
     depth = stage_all[-1] - swf.disv1d.bottom.array
-    np.allclose(
-        depth, 1.0
-    ), f"Simulated depth at end should be 1, but found {depth}"
+    (
+        np.allclose(depth, 1.0),
+        f"Simulated depth at end should be 1, but found {depth}",
+    )
 
     # ensure export array is working properly
     flist = [

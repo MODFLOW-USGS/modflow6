@@ -1,7 +1,7 @@
 """
 Test for parallel MODFLOW with the HPC input file
-for a 3x3 grid of models with constant head set at 
-the lower-left corner. This constant head should 
+for a 3x3 grid of models with constant head set at
+the lower-left corner. This constant head should
 reach all domains, no matter the topology of partitions
 
 The test is to provide a HPC input file where the
@@ -15,7 +15,6 @@ rank (and not with rank == 0), etc.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [

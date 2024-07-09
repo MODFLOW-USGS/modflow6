@@ -10,11 +10,9 @@ The final split model look like:
  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
 """
 
-
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_exgmvr01"]

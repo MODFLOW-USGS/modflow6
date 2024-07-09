@@ -7,6 +7,7 @@ in the FloPy binary output head file and package data objects.
 # Imports
 
 import os
+
 import numpy as np
 import pytest
 

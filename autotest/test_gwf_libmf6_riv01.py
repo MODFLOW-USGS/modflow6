@@ -2,14 +2,14 @@
 Test the bmi which is used update to set the river stages to
 the same values as they are in the non-bmi simulation.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_riv01"]
 

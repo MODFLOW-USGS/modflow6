@@ -1,5 +1,5 @@
 """
-This test confirms that there is no difference in 
+This test confirms that there is no difference in
 steady-state Newton-Raphson simulations with PTC
 if a storage package is included in the model
 name file.
@@ -9,7 +9,6 @@ import os
 
 import flopy
 import pytest
-
 from framework import TestFramework
 
 cases = ["ptc01"]

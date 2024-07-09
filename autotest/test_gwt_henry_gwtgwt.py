@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["henry01-gwtgwt-ups", "henry01-gwtgwt-cen", "henry01-gwtgwt-tvd"]
@@ -379,14 +378,10 @@ def check_output(idx, test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_gwfgwf))
-    assert (
-        maxdiff < 10 * hclose
-    ), "Max. head diff. {} should \
-        be within solver tolerance (x10): {}".format(
-        maxdiff, 10 * hclose
-    )
+    assert maxdiff < 10 * hclose, "Max. head diff. {} should \
+        be within solver tolerance (x10): {}".format(maxdiff, 10 * hclose)
 
-    fpth = os.path.join(test.workspace, f"gwt_ref.ucn")
+    fpth = os.path.join(test.workspace, "gwt_ref.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -395,7 +390,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(test.workspace, f"gwt_left.ucn")
+    fpth = os.path.join(test.workspace, "gwt_left.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -404,7 +399,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(test.workspace, f"gwt_right.ucn")
+    fpth = os.path.join(test.workspace, "gwt_right.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -417,12 +412,8 @@ def check_output(idx, test):
     conc_gwtgwt = np.append(conc_left, conc_right, axis=2)
 
     maxdiff = np.amax(abs(conc_gwtgwt - conc_ref))
-    assert (
-        maxdiff < conc_tol
-    ), "Max. concentration diff. {} should \
-        be within solver tolerance (x10): {}".format(
-        maxdiff, conc_tol
-    )
+    assert maxdiff < conc_tol, "Max. concentration diff. {} should \
+        be within solver tolerance (x10): {}".format(maxdiff, conc_tol)
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

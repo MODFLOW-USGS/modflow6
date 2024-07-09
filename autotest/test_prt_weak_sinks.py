@@ -35,12 +35,12 @@ from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
     get_ireason_code,
     get_model_name,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtfmi04"
@@ -253,7 +253,7 @@ def check_output(idx, test):
     # if STOP_AT_WEAK_SINK disabled, check for an extra datum when particle exited weak sink
     wksk_irsn = get_ireason_code("WEAKSINK")
     assert len(mf6_pls[mf6_pls["ireason"] == wksk_irsn]) == (
-        1 if not "saws" in name else 0
+        1 if "saws" not in name else 0
     )
     # then drop the row so comparison will succeed below
     mf6_pls.drop(mf6_pls[mf6_pls["ireason"] == wksk_irsn].index, inplace=True)

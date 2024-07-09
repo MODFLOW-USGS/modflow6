@@ -1,5 +1,5 @@
 """
-Test the interface model approach for an inhomogeneous coupling 
+Test the interface model approach for an inhomogeneous coupling
 of three gwf models using the API. One exchange will have XT3D
 enabled (Exg1) and the other one (Exg2) doesn't. And the top-left
 model's NPF will be configured with XT3D as well. The numbers
@@ -11,14 +11,14 @@ in the figure are the global (solution level) indices:
                   Exg1
     06 07 08 09 10 |  26 27 28 29 30
                    |
-    -----Exg2----  
-             
-    11 12 13 14 15        
+    -----Exg2----
+
+    11 12 13 14 15
                           y
     16 17 18 19 20        |
                           |
-      'bottom'            0 ---- x 
-    
+      'bottom'            0 ---- x
+
 Note that this global numbering is determined by the order in which
 the models are added to the simulation below.
 
@@ -27,22 +27,22 @@ From this configuration, we will assert properties such as:
 - model 'top-left' does not have one but two interface models
 - the grid sizes for it are
     o 12: {3,4,5,21,22,8,9,10,26,27,14,15} for the interface model based on Exg1
-    o 10: {6,7,8,9,10,11,12,13,14,15}      for the interface model based on Exg2    
-  and the grid for the interface model for Exg1 thus contains cells 
+    o 10: {6,7,8,9,10,11,12,13,14,15}      for the interface model based on Exg2
+  and the grid for the interface model for Exg1 thus contains cells
   from model 'bottom'
-- the coefficients for the internal connection between cell 9 and cell 10 
+- the coefficients for the internal connection between cell 9 and cell 10
   are calculated by the model itself (as it does not have XT3D enabled)
 - ...
 
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_ifmod02"]
 

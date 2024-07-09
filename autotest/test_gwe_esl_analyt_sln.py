@@ -1,10 +1,10 @@
 r"""
-An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
+An analytical solution provided by Carslaw & Jaeger (1947) and discussed in
 accompanying Techniques & Methods report.
 
 Energy is added to the right hand side boundary using the energy source loading
-(ESL) package.  Basic model set up is below, with a slab of unit thickness 
-(1.0 m) that is 100 m "deep" with energy being loaded on right side.  
+(ESL) package.  Basic model set up is below, with a slab of unit thickness
+(1.0 m) that is 100 m "deep" with energy being loaded on right side.
 Temperature will begin to rise on the right and propagate to the left. There are
 no sinks in this first example.  The titles that follow, for example
 "Section 43, case x" refer to specific analytical solutions found in Carslaw &
@@ -14,7 +14,7 @@ Section 43, case i:
 -------------------
 
        | <--------------------------   10 m   --------------------------> |
-     
+
        +------------------------------------------------------------------+
        |                      Initial temperature = T_0                   | <-- *ESL
        +------------------------------------------------------------------+
@@ -29,33 +29,33 @@ Section 43, case ii:
        +------------------------------------------------------------------+
        |                     Initial temperature = 0.0                    | <-- *ESL
        +------------------------------------------------------------------+
-       ^                                     
+       ^
        |
        Specified temperature boundary, T_0
 
 
 Section 43, case iii:
 ---------------------
-        
+
         +------------------------------------------------------------------+
 CTP ->  |                                                                  | <- CTP = T_0
   = T_0 +------------------------------------------------------------------+
          \-------------------------------------------------------------/
                                    |
               Uniform, constant heat production throughout the slab
-     
-     
+
+
   Specified temperature boundary, T_0
 
 """
 
-import os
 import math
-import pytest
-import flopy
-import numpy as np
-import matplotlib.pyplot as plt
+import os
 
+import flopy
+import matplotlib.pyplot as plt
+import numpy as np
+import pytest
 from framework import TestFramework
 
 # Parameters that vary by scenario
@@ -156,7 +156,6 @@ def calc_ener_input(primer_val):
 
 
 def build_models(idx, test, ener_input):
-
     name = cases[idx]
 
     # Build MODFLOW 6 files
@@ -517,7 +516,6 @@ def check_output(idx, test, ener_input):
             # plt.show()
 
     elif idx == 2:
-
         t_accumulate = 0.0
         ener_src = ener_input / (delr * delc * delz)
 

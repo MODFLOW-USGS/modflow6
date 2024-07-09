@@ -7,9 +7,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-
-from framework import TestFramework
 from conftest import try_get_target
+from framework import TestFramework
 
 try:
     import xarray as xa

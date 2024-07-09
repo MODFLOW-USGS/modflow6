@@ -1,6 +1,6 @@
 """
 Test for splitting parallel MODFLOW GWF model
-and using the HPC input file with partitioning 
+and using the HPC input file with partitioning
 to run the simulation on 4 domains.
 """
 
@@ -9,7 +9,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -178,8 +177,8 @@ def check_output(idx, test):
                 for icol in range(grb.modelgrid.ncol):
                     xc = xyc[0][icol] + xoff
                     ref_value = exact(xc)
-                    assert heads[ilay, irow, icol] == pytest.approx(
-                        ref_value
+                    assert (
+                        heads[ilay, irow, icol] == pytest.approx(ref_value)
                     ), f"Comparing for model {model_name}, cell ({ilay},{irow},{icol}) failed"
 
 

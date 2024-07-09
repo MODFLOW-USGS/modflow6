@@ -39,7 +39,7 @@ def get_bud(fname, srchStr):
             if srchStr in line:
                 # Read the package budget
                 line = next(f)
-                while not "TOTAL IN =" in line:
+                while "TOTAL IN =" not in line:
                     if "=" in line:
                         in_bud_lst.update(process_line(line))
 
@@ -50,7 +50,7 @@ def get_bud(fname, srchStr):
                 T_in = dct["IN"]
 
                 line = next(f)
-                while not "TOTAL OUT =" in line:
+                while "TOTAL OUT =" not in line:
                     if "=" in line:
                         out_bud_lst.update(process_line(line))
 
@@ -139,7 +139,6 @@ hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
 
 def build_models(idx, test):
-
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))

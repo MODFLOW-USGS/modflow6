@@ -32,6 +32,7 @@ python = "3.9.*"
 rasterio = "*"
 rasterstats = "*"
 requests = "*"
+ruff = "*"
 scipy = "*"
 shapely = "*"
 syrupy = "*"
@@ -72,11 +73,17 @@ install = { depends_on = [
     "install-modflow-devtools",
 ] }
 
-# format
+# check format
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
+check-python-lint = { cmd = "ruff check . --config autotest/pyproject.toml" }
+check-python-format = { cmd = "pixi run fix-python-format --check" }
+
+# fix format
 fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
+fix-python-format = { cmd = "ruff format . --config autotest/pyproject.toml" }
+fix-python-style = { cmd = "pixi run check-python-lint --fix; pixi run fix-python-format" }
 
 # meson build/test
 builddir = "echo _builddir"

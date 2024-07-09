@@ -4,13 +4,12 @@ from shutil import copytree
 
 import flopy
 import pytest
-
 from common_regression import (
+    get_mf6_comparison,
     get_namefiles,
-    setup_model,
     setup_mf6,
     setup_mf6_comparison,
-    get_mf6_comparison,
+    setup_model,
 )
 from framework import TestFramework
 
@@ -81,7 +80,11 @@ def test_model(
     # setup mf6 workspace and framework
     mf6_workspace = function_tmpdir / "mf6"
     setup_mf6(src=mf5to6_workspace, dst=mf6_workspace)
-    compare = get_mf6_comparison(mf5to6_workspace) if original_regression else "mf6_regression"
+    compare = (
+        get_mf6_comparison(mf5to6_workspace)
+        if original_regression
+        else "mf6_regression"
+    )
     test = TestFramework(
         name=model_path.name,
         workspace=mf6_workspace,

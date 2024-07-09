@@ -11,7 +11,6 @@ with a serial 'refmodel'
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_rewet"]

@@ -17,7 +17,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -105,7 +104,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         length=dx,
-        width=1.,
+        width=1.0,
         bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
@@ -249,7 +248,7 @@ def check_output(idx, test):
             0.00928387,
         ]
 
-    # print out the answer in a form that can be 
+    # print out the answer in a form that can be
     # dropped into this script, if necessary, as the answer
     for v in stage_all[-1].flatten():
         print(f"{v:18.8f},")
@@ -257,7 +256,7 @@ def check_output(idx, test):
     msg = (
         "Simulated stage does not match with the answer "
         "stored from a previous run."
-        )
+    )
     assert np.allclose(stage_all[-1].flatten(), stage_answer, atol=1.0e-5), msg
 
 

@@ -40,7 +40,6 @@ from flopy.plot.plotutil import to_mp7_pathlines
 from flopy.utils import EndpointFile, PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
 from prt_test_utils import (
     all_equal,

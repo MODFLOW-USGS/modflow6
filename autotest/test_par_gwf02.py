@@ -1,7 +1,7 @@
 """
 Test for parallel MODFLOW running a simple
-multi-model setup with different numbers 
-of partitions 
+multi-model setup with different numbers
+of partitions
 
 
    [M1ny] |  ...  |   ...  | [Mnxny]
@@ -20,7 +20,6 @@ no matter the topology of partitions
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [

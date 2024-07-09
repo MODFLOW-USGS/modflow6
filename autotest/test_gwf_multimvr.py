@@ -5,7 +5,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-
 from framework import TestFramework
 
 cases = ["mltmvr", "mltmvr5050", "mltmvr7525"]
@@ -821,7 +820,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         nexg=len(exchange_data),
         exchangedata=exchange_data,
         pname="EXG-1",
-        filename=f"gwf.exg",
+        filename="gwf.exg",
     )
 
     return sim, gwf, gwfc
@@ -968,7 +967,7 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
         maxpackages=maxpackages,
         packages=mvrpack_sim,
         perioddata=mvrspd,
-        filename=f"gwf.mvr",
+        filename="gwf.mvr",
     )
 
 

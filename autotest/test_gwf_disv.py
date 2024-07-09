@@ -13,7 +13,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
 
 cases = ["disv01a", "disv01b"]

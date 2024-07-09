@@ -26,17 +26,15 @@
 #     |       |       |       |  Layer 100
 #     +-------+-------+-------+
 
+import math
 import os
 
 import flopy
+import flopy.utils.binaryfile as bf
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from framework import TestFramework
-
-import flopy.utils.binaryfile as bf
-import math
-
-import matplotlib.pyplot as plt
 
 
 # Analytical solution, from Barends (2010) Equation 5
