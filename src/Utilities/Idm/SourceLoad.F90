@@ -435,7 +435,8 @@ contains
       call store_error_filename(modelfname)
 #endif
     else
-      call nc_vars%init(modelname, '', 0, '')
+      ncid = 0
+      call nc_vars%init(modelname, '', ncid, '')
     end if
     !
     ! -- return
