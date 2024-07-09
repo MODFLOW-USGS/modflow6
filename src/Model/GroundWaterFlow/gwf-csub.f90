@@ -3124,13 +3124,14 @@ contains
     locdhmax = 0
     locrmax = 0
     ifirst = 1
+    dhmax = DZERO
+    rmax = DZERO
     !
     ! -- additional checks to see if convergence needs to be checked
     ! -- no convergence check for steady-state stress periods
     if (this%gwfiss /= 0) then
       icheck = 0
     else
-      ! check convergence if the model is considered converged
       if (icnvgmod == 0) then
         icheck = 0
       end if
