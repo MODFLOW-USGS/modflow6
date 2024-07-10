@@ -70,7 +70,7 @@ contains
       call load_integer1d_layered(int1d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
+      varid = nc_vars%varid(idt%tagname)
       call load_integer1d_type(int1d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -100,7 +100,7 @@ contains
       call load_integer2d_layered(int2d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
+      varid = nc_vars%varid(idt%tagname)
       call load_integer2d_type(int2d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -130,7 +130,7 @@ contains
       call load_integer3d_layered(int3d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
+      varid = nc_vars%varid(idt%tagname)
       call load_integer3d_type(int3d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -160,8 +160,7 @@ contains
       call load_double1d_layered(dbl1d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
-      ! TODO: valicate varid (or throw error in lookup routine)
+      varid = nc_vars%varid(idt%tagname)
       call load_double1d_type(dbl1d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
@@ -191,7 +190,7 @@ contains
       call load_double2d_layered(dbl2d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
+      varid = nc_vars%varid(idt%tagname)
       call load_double2d_type(dbl2d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
@@ -221,7 +220,7 @@ contains
       call load_double3d_layered(dbl3d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
     else
-      varid = nc_vars%varid(idt%tagname, -1)
+      varid = nc_vars%varid(idt%tagname)
       call load_double3d_type(dbl3d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if

@@ -7,7 +7,7 @@
 module NCFileVarsModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, LENMODELNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use ListModule, only: ListType
@@ -20,6 +20,7 @@ module NCFileVarsModule
   !> @brief Type describing input variables for a package in NetCDF file
   !<
   type :: NCPackageVarsType
+    character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH), dimension(:), allocatable :: tagnames !< variable tag name
     integer(I4B), dimension(:), allocatable :: layers !< variable layer
     integer(I4B), dimension(:), allocatable :: varids !< netcdf file variable id
@@ -63,11 +64,15 @@ contains
 
   !> @brief create netcdf package variable lists
   !<
-  subroutine ncvars_init(this)
+  subroutine ncvars_init(this, modelname)
     ! -- modules
     ! -- dummy
     class(NCPackageVarsType) :: this
+    character(len=*), intent(in) :: modelname
     ! -- local
+    !
+    ! -- set modelname
+    this%modelname = modelname
     !
     ! -- allocate empty arrays
     allocate (this%tagnames(0))
@@ -85,22 +90,49 @@ contains
     ! -- dummy
     class(NCPackageVarsType) :: this
     character(len=*), intent(in) :: tagname
-    integer(I4B) :: layer
+    integer(I4B), optional :: layer
     ! -- return
     integer(I4B) :: varid
     ! -- local
-    integer(I4B) :: n
+    integer(I4B) :: n, l
     !
     ! -- initialize
     varid = -1
+    l = -1
+    !
+    ! -- set search layer if provided
+    if (present(layer)) then
+      l = layer
+    end if
     !
     do n = 1, size(this%tagnames)
       if (this%tagnames(n) == tagname .and. &
-          this%layers(n) == layer) then
+          this%layers(n) == l) then
         varid = this%varids(n)
         exit
       end if
     end do
+    !
+    ! -- set error and exit if variable not in NetCDF input
+    if (varid == -1) then
+      if (this%nc_fname /= '') then
+        if (l == -1) then
+          write (errmsg, '(a)') &
+            'NetCDF variable not found, tagname="'//trim(tagname)//'".'
+        else
+          write (errmsg, '(a,i0,a)') &
+            'NetCDF variable not found, tagname="'//trim(tagname)// &
+            '", layer=', l, '.'
+        end if
+        call store_error(errmsg)
+        call store_error_filename(this%nc_fname)
+      else
+        write (errmsg, '(a)') &
+          'NetCDF variable not found, tagname="'//trim(tagname)// &
+          '". NetCDF input not provided for model "'//trim(this%modelname)//'".'
+        call store_error(errmsg, .true.)
+      end if
+    end if
     !
     ! -- return
     return
@@ -149,7 +181,6 @@ contains
     !
     ! -- allocate managed memory
     call mem_allocate(this%grid, ilen, 'NETCDF_GRID', mempath)
-    ! TODO now this is in 2 mempaths (also input under NAM)
     call mem_allocate(this%nc_fname, ilen, 'NETCDF_FNAME', mempath)
     call mem_allocate(this%ncid, 'NCID', mempath)
     !
@@ -269,10 +300,11 @@ contains
 
   !> @brief create list of variables that correspond to a package
   !<
-  subroutine create_varlists(this, pkgname, nc_vars)
+  subroutine create_varlists(this, modelname, pkgname, nc_vars)
     ! -- modules
     ! -- dummy
     class(NCFileVarsType) :: this
+    character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: pkgname
     type(NCPackageVarsType), pointer, intent(inout) :: nc_vars
     integer(I4B) :: n, cnt, pidx
@@ -311,16 +343,19 @@ contains
           nc_vars%varids(cnt) = invar%varid
         end if
       end do
-      !
-      ! -- set file attribute pointers
-      nc_vars%ncid => this%ncid
-      nc_vars%nc_fname => this%nc_fname
-      nc_vars%grid => this%grid
     else
       allocate (nc_vars%tagnames(0))
       allocate (nc_vars%layers(0))
       allocate (nc_vars%varids(0))
     end if
+    !
+    ! -- set modelname
+    nc_vars%modelname = modelname
+    !
+    ! -- set file attribute pointers
+    nc_vars%ncid => this%ncid
+    nc_vars%nc_fname => this%nc_fname
+    nc_vars%grid => this%grid
     !
     ! -- return
     return

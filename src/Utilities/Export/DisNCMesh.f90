@@ -501,7 +501,6 @@ contains
       call nf_verify(nf90_put_att(ncid, var_id(1), 'long_name', &
                                   longname_l), nc_fname)
       !
-      ! TODO: gridmap?
       if (nc_tag /= '') then
         call nf_verify(nf90_put_att(ncid, var_id(1), 'modflow6_input', &
                                     nc_tag), nc_fname)
@@ -818,7 +817,6 @@ contains
       call nf_verify(nf90_put_att(ncid, var_id(1), 'long_name', &
                                   longname_l), nc_fname)
       !
-      ! TODO: gridmap?
       if (nc_tag /= '') then
         call nf_verify(nf90_put_att(ncid, var_id(1), 'modflow6_input', &
                                     nc_tag), nc_fname)

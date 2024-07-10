@@ -600,11 +600,7 @@ contains
       call nf_verify(nf90_redef(this%ncid), this%nc_fname)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%nc_fname)
-      ! toDO: is it possible that only cf-convention supported CRS can use
-      !       crs_wkt while others can use wkt?  Make sure wkt is generic,
-      !       might need to use both
       call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
-                     !call nf_verify(nf90_put_att(this%ncid, var_id, 'wkt', this%ogc_wkt), &
                      this%nc_fname)
       call nf_verify(nf90_enddef(this%ncid), this%nc_fname)
       call nf_verify(nf90_put_var(this%ncid, var_id, 1), &
@@ -685,11 +681,6 @@ contains
     call nf_verify(nf90_put_var(this%ncid, this%var_ids%y, y), &
                    this%nc_fname)
     ! -- TODO see cf-conventions 4.3.3. Parametric Vertical Coordinate
-    !         maybe this is a way to vary z in layer based on horizontal position
-    !call nf_verify(nf90_put_var(this%ncid, this%var_ids%z, this%elevations), &
-    !               this%nc_fname)
-    !call nf_verify(nf90_put_var(this%ncid, this%var_ids%z, this%layers), &
-    !               this%nc_fname)
     call nf_verify(nf90_put_var(this%ncid, this%var_ids%z, this%layers), &
                    this%nc_fname)
 
@@ -786,18 +777,6 @@ contains
                                   (/NF90_FILL_INT/)), nc_fname)
       call nf_verify(nf90_put_att(ncid, var_id, 'long_name', &
                                   longname), nc_fname)
-      ! TODO: remove gridmap?  make consistent with mesh
-      if (gridmap_name /= '') then
-        if (latlon) then
-          call nf_verify(nf90_put_att(ncid, var_id, 'coordinates', 'lon lat'), &
-                         nc_fname)
-        else
-          call nf_verify(nf90_put_att(ncid, var_id, 'coordinates', 'x y'), &
-                         nc_fname)
-        end if
-        call nf_verify(nf90_put_att(ncid, var_id, 'grid_mapping', gridmap_name), &
-                       nc_fname)
-      end if
       !
       if (nc_tag /= '') then
         call nf_verify(nf90_put_att(ncid, var_id, 'modflow6_input', &
@@ -1063,18 +1042,6 @@ contains
                                   (/NF90_FILL_DOUBLE/)), nc_fname)
       call nf_verify(nf90_put_att(ncid, var_id, 'long_name', &
                                   longname), nc_fname)
-      ! TODO: remove gridmap?  make consistent with mesh
-      if (gridmap_name /= '') then
-        if (latlon) then
-          call nf_verify(nf90_put_att(ncid, var_id, 'coordinates', 'lon lat'), &
-                         nc_fname)
-        else
-          call nf_verify(nf90_put_att(ncid, var_id, 'coordinates', 'x y'), &
-                         nc_fname)
-        end if
-        call nf_verify(nf90_put_att(ncid, var_id, 'grid_mapping', gridmap_name), &
-                       nc_fname)
-      end if
       !
       if (nc_tag /= '') then
         call nf_verify(nf90_put_att(ncid, var_id, 'modflow6_input', &

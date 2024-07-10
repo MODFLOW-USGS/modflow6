@@ -51,6 +51,7 @@ def build_models(idx, test, export, gridded_input):
     gwf.dis.export_array_netcdf = True
     gwf.ic.export_array_netcdf = True
     gwf.npf.export_array_netcdf = True
+    gwf.sto.export_array_netcdf = True
 
     name = cases[idx]
 
@@ -128,6 +129,22 @@ def check_output(idx, test, export, gridded_input):
             f.write(f"  k33  NETCDF\n")
             f.write("END griddata\n")
 
+        with open(test.workspace / "gwf_sto01.sto", "w") as f:
+            f.write("BEGIN options\n")
+            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("END options\n\n")
+            f.write("BEGIN griddata\n")
+            f.write(f"  iconvert  NETCDF\n")
+            f.write(f"  ss  NETCDF\n")
+            f.write(f"  sy  NETCDF\n")
+            f.write("END griddata\n")
+            f.write("BEGIN period 1\n")
+            f.write(f"  STEADY-STATE\n")
+            f.write("END period 1\n")
+            f.write("BEGIN period 2\n")
+            f.write(f"  TRANSIENT\n")
+            f.write("END period 2\n")
+
         success, buff = flopy.run_model(
             test.targets["mf6"],
             test.workspace / "mfsim.nam",
@@ -190,6 +207,9 @@ def check_output(idx, test, export, gridded_input):
         "npf_k_l",
         "npf_k33_l",
         "ic_strt_l",
+        "sto_iconvert_l",
+        "sto_ss_l",
+        "sto_sy_l",
     ]
 
     # Compare NetCDF package input arrays with FloPy arrays

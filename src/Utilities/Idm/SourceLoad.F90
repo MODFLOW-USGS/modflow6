@@ -67,9 +67,9 @@ contains
     !
     ! -- initialize loader netcdf variables structure
     if (present(nc_vars)) then
-      call nc_vars%create_varlists(sc_name, loader%nc_vars)
+      call nc_vars%create_varlists(component_name, sc_name, loader%nc_vars)
     else
-      call loader%nc_vars%init()
+      call loader%nc_vars%init(component_name)
     end if
     !
     ! -- return

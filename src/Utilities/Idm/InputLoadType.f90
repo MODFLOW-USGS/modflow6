@@ -437,7 +437,7 @@ contains
   subroutine dynamic_destroy(this)
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorystore_remove
-    use SimVariablesModule, only: idm_context, odm_context
+    use SimVariablesModule, only: idm_context
     class(DynamicPkgLoadType), intent(inout) :: this
     !
     ! -- clean up netcdf variables structure
@@ -451,9 +451,6 @@ contains
     call memorystore_remove(this%mf6_input%component_name, &
                             this%mf6_input%subcomponent_name, &
                             idm_context)
-    !
-    call memorystore_remove(this%mf6_input%component_name, &
-                            odm_context)
     !
     return
   end subroutine dynamic_destroy

@@ -126,16 +126,16 @@ contains
       ! -- allocate dynamic loader
       allocate (mf6_loader)
       !
-      ! -- initialize dynamic loader
-      call mf6_loader%init(this%mf6_input, this%component_name, &
-                           this%component_input_name, this%input_name, &
-                           this%iperblock, iout)
-      !
       ! -- point to nc_vars structure
       mf6_loader%nc_vars => this%nc_vars
       !
       ! -- nullify nc_vars pointer so it isn't deallocated
       nullify (this%nc_vars)
+      !
+      ! -- initialize dynamic loader
+      call mf6_loader%init(this%mf6_input, this%component_name, &
+                           this%component_input_name, this%input_name, &
+                           this%iperblock, iout)
       !
       ! -- set return pointer to base dynamic loader
       rp_loader => mf6_loader
@@ -336,6 +336,9 @@ contains
       this%rp_loader => bndlist_loader
     end if
     !
+    ! -- set nc_vars pointer
+    this%rp_loader%nc_vars => this%nc_vars
+    !
     ! -- initialize loader
     call this%rp_loader%ainit(this%mf6_input, &
                               this%component_name, &
@@ -360,6 +363,7 @@ contains
     call mem_deallocate(this%ionper)
     !
     ! -- deallocate loader
+    nullify (this%rp_loader%nc_vars)
     call this%rp_loader%destroy()
     deallocate (this%rp_loader)
     !

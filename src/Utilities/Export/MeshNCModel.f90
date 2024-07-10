@@ -484,7 +484,6 @@ contains
                                 'long_name', &
                                 'Vertices bounding cell (counterclockwise)'), &
                    this%nc_fname)
-    ! -- TODO: saw QGIS access violations and xugrid issues without this
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_nodes, &
                                 '_FillValue', (/NF90_FILL_INT/)), &
                    this%nc_fname)
