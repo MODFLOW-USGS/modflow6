@@ -3,7 +3,6 @@ import subprocess
 from os import environ
 from pathlib import Path
 from pprint import pprint
-from random import shuffle
 
 import pytest
 from modflow_devtools.markers import no_parallel

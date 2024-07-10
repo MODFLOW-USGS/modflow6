@@ -11,8 +11,6 @@ HEC-RAS simulation.
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pandas as pd

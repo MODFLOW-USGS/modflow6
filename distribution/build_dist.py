@@ -1,7 +1,6 @@
 import argparse
 import os
 import platform
-import sys
 import textwrap
 from os import PathLike, environ
 from pathlib import Path

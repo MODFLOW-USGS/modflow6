@@ -10,10 +10,9 @@ import pytest
 from framework import TestFramework
 
 try:
-    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xuarray and xugrid not found", allow_module_level=True)
+    pytest.skip("xugrid not found", allow_module_level=True)
 
 cases = ["dsp01a", "dsp01b"]
 

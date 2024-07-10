@@ -4,8 +4,6 @@ and using the HPC input file with partitioning
 to run the simulation on 4 domains.
 """
 
-import pathlib as pl
-
 import flopy
 import numpy as np
 import pytest

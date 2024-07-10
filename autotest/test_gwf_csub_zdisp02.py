@@ -3,7 +3,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["csub_zdisp02"]

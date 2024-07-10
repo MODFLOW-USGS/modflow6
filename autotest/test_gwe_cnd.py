@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 try:
-    import pymake
+    pass
 except:
     msg = "Error. Pymake package is not available.\n"
     msg += "Try installing using the following command:\n"

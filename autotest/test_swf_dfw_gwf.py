@@ -18,8 +18,6 @@ ia  ja
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pytest

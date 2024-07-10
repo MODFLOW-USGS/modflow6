@@ -11,7 +11,6 @@ should be 1.0 m.
 
 """
 
-import os
 import pathlib as pl
 
 import flopy

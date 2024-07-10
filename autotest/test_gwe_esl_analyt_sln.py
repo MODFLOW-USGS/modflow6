@@ -53,7 +53,6 @@ import math
 import os
 
 import flopy
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from framework import TestFramework

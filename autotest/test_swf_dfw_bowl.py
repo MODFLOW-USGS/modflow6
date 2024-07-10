@@ -12,8 +12,6 @@ _|     |_|     |_  __ bottom elevation = 0.
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pytest

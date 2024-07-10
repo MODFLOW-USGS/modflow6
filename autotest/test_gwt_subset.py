@@ -15,7 +15,6 @@ all the solute should be in the leftmost cell from the transport model.
 import os
 
 import flopy
-import numpy as np
 import pytest
 from framework import TestFramework
 

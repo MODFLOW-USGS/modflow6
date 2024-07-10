@@ -27,7 +27,6 @@ option which enables logging for the package's
 particle release settings to the listing file.
 """
 
-from math import cos, pi, sin
 from pathlib import Path
 
 import flopy

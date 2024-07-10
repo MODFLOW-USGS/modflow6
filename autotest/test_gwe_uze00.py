@@ -30,7 +30,6 @@ import math
 import os
 
 import flopy
-import flopy.utils.binaryfile as bf
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest

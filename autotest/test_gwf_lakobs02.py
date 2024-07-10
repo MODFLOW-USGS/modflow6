@@ -5,9 +5,6 @@ The test evaluates the total outlet flow calculated using lake boundname
 with EXT-OUTFLOW and OUTLET flow for all three outlets.
 """
 
-import os
-import pathlib as pl
-
 import flopy
 import numpy as np
 import pytest

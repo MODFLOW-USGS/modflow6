@@ -23,7 +23,6 @@ from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
 from framework import TestFramework
-from matplotlib.patches import Polygon
 from modflow_devtools.markers import requires_pkg
 from modflow_devtools.misc import is_in_ci
 from prt_test_utils import get_model_name

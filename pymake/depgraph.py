@@ -9,7 +9,6 @@ except:
     msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     print(msg)
     raise Exception()
-import os
 import shutil
 
 srcpth = os.path.join("..", "src")

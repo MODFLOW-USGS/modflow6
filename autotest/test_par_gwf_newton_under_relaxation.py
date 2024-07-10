@@ -8,9 +8,6 @@ with a serial model.
 This test also checks that Newton under_relaxation works in parallel.
 """
 
-import os
-from decimal import Decimal
-
 import pytest
 from framework import TestFramework
 

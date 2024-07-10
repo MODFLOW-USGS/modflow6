@@ -23,7 +23,6 @@ it is enabled using WeakSinkOption 2 (stop-at).
 """
 
 from pathlib import Path
-from pprint import pformat
 
 import flopy
 import matplotlib.cm as cm

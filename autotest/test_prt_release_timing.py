@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
-from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from modflow_devtools.markers import requires_pkg
 from prt_test_utils import (

@@ -7,7 +7,6 @@ Advances in Water Resources 27 (2004) 361-382.
 
 """
 
-import os
 import pathlib as pl
 
 import flopy

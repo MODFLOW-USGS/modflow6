@@ -18,12 +18,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.discretization import VertexGrid
-from flopy.utils import GridIntersect
-from flopy.utils.triangle import Triangle
-from flopy.utils.voronoi import VoronoiGrid
 from framework import TestFramework
 from prt_test_utils import get_model_name
-from shapely.geometry import LineString, Point
 from test_prt_voronoi1 import build_gwf_sim, get_grid
 
 simname = "prtvor2"

@@ -15,16 +15,11 @@ from pathlib import Path
 
 import flopy
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import pytest
-from flopy.discretization import VertexGrid
-from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from framework import TestFramework
-from modflow_devtools.markers import requires_pkg
 from prt_test_utils import get_model_name
-from shapely.geometry import LineString
 
 simname = "prttri"
 cases = [f"{simname}r2l", f"{simname}diag"]

@@ -4,8 +4,6 @@ Loop network problem from SWR Manual (Problem 4)
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pytest

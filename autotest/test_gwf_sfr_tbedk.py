@@ -1,7 +1,5 @@
 # Test evap in SFR reaches (no interaction with gwf)
 
-import math
-import pathlib as pl
 
 import flopy
 import numpy as np

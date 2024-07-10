@@ -4,10 +4,6 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Tuple, Union
 from warnings import warn
 
-import numpy as np
-from flopy.utils import CellBudgetFile
-from flopy.utils.compare import compare_heads
-
 COMPARE_PROGRAMS = (
     "mf2005",
     "mfnwt",

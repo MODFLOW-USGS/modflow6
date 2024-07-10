@@ -7,7 +7,6 @@ The flow system is based on the FloPy README example.
 """
 
 from pathlib import Path
-from pprint import pformat
 
 import flopy
 import matplotlib.cm as cm
@@ -15,7 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils.gridgen import Gridgen
 from framework import TestFramework

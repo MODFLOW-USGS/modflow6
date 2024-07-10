@@ -16,11 +16,9 @@ also that total constant head flow is correct.
 """
 
 import math
-import os
 import pathlib as pl
 
 import flopy
-import numpy as np
 import pytest
 from framework import TestFramework
 

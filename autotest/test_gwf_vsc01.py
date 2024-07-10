@@ -8,7 +8,6 @@ accounting for viscosity when VSC is active.
 # Imports
 
 import os
-import sys
 
 import flopy
 import numpy as np

@@ -44,7 +44,6 @@ Stress period 4 should include all types (listed above) of TO-MVR flows
 import os
 
 import flopy
-import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
 from framework import TestFramework

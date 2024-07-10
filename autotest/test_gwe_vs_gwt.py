@@ -12,7 +12,6 @@ between the two.
 
 # Imports
 import os
-import sys
 
 import flopy
 import numpy as np

@@ -1,6 +1,5 @@
 import os
 import shutil
-import time
 from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
@@ -10,7 +9,6 @@ from warnings import warn
 
 import flopy
 import numpy as np
-import pytest
 from common_regression import (
     COMPARE_PROGRAMS,
     adjust_htol,
@@ -19,8 +17,6 @@ from common_regression import (
     get_namefiles,
     get_rclose,
     get_regression_files,
-    setup_mf6,
-    setup_mf6_comparison,
 )
 from flopy.mbase import BaseModel
 from flopy.mf6 import MFSimulation

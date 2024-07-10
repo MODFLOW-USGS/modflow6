@@ -13,7 +13,6 @@ boundnames to particles and one which does not.
 """
 
 from pathlib import Path
-from pprint import pformat
 
 import flopy
 import matplotlib.cm as cm

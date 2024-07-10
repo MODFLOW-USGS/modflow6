@@ -23,13 +23,10 @@ file, lake budget file, and gwf head file.
 
 """
 
-import os
-import pathlib as pl
-
 import flopy
 import numpy as np
 import pytest
-from framework import DNODATA, TestFramework
+from framework import TestFramework
 
 cases = ["gwf-lak-status"]
 
