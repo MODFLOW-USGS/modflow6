@@ -567,9 +567,7 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 energy transport initial temperatures
     strttemp = strt_gw_temp[idx]
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strttemp, filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strttemp, filename=f"{gwename}.ic")
 
     # Instantiate mobile storage and transfer package
     flopy.mf6.ModflowGweest(
@@ -593,9 +591,7 @@ def build_models(idx, test):
         raise Exception()
 
     # Instantiate advection package
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename=f"{gwename}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{gwename}.adv")
 
     # Instantiate dispersion package
     flopy.mf6.ModflowGwecnd(

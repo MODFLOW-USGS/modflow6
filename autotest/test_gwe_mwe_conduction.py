@@ -352,9 +352,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 energy transport initial temperatures
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strttemp, filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strttemp, filename=f"{gwename}.ic")
 
     # Instantiate mobile storage and transfer package
     flopy.mf6.ModflowGweest(

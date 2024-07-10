@@ -266,14 +266,10 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme="TVD", filename=f"{gwename}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme="TVD", filename=f"{gwename}.adv")
 
     # Instantiating MODFLOW 6 transport dispersion package
     flopy.mf6.ModflowGwecnd(
@@ -308,9 +304,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=[[]], filename=f"{gwename}.ssm"
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=[[]], filename=f"{gwename}.ssm")
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(

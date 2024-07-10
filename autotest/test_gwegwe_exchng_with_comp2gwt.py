@@ -562,9 +562,7 @@ def add_upper_gwemodel(sim, scheme):
     # Instantiating MODFLOW 6 heat transport initial temperature
     flopy.mf6.ModflowGweic(gwe, strt=strt_temp, filename=f"{mname}.ic")
 
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename=f"{mname}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{mname}.adv")
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
@@ -642,9 +640,7 @@ def add_lower_gwemodel(sim, scheme):
     flopy.mf6.ModflowGweic(gwe, strt=strt_temp, filename=f"{mname}.ic")
 
     # Instantiating MODFLOW 6 heat transport advection package (lower model)
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename=f"{mname}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{mname}.adv")
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
@@ -784,9 +780,7 @@ def add_upper_gwtmodel(sim, scheme):
     # Instantiating MODFLOW 6 heat transport initial temperature
     flopy.mf6.ModflowGwtic(gwt, strt=strt_temp, filename=f"{mname}.ic")
 
-    flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename=f"{mname}.adv"
-    )
+    flopy.mf6.ModflowGwtadv(gwt, scheme=scheme, filename=f"{mname}.adv")
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:
@@ -859,9 +853,7 @@ def add_lower_gwtmodel(sim, scheme):
     flopy.mf6.ModflowGwtic(gwt, strt=strt_temp, filename=f"{mname}.ic")
 
     # Instantiating MODFLOW 6 solute transport advection package (lower model)
-    flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename=f"{mname}.adv"
-    )
+    flopy.mf6.ModflowGwtadv(gwt, scheme=scheme, filename=f"{mname}.adv")
 
     # Instantiating MODFLOW 6 heat transport dispersion package
     if al != 0:

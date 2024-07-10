@@ -302,9 +302,7 @@ def build_models(idx, test):
         scheme = "TVD"
     else:
         raise Exception()
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename=f"{gwename}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{gwename}.adv")
 
     # Instantiating MODFLOW 6 heat transport conduction package
     if al != 0:

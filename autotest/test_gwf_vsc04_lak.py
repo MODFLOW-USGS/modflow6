@@ -519,9 +519,7 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport initial concentrations
     strtconc = leftTemp
-    flopy.mf6.ModflowGwtic(
-        gwt, strt=strtconc, filename=f"{gwtname}.ic"
-    )
+    flopy.mf6.ModflowGwtic(gwt, strt=strtconc, filename=f"{gwtname}.ic")
 
     # Instantiate mobile storage and transfer package
     sto = flopy.mf6.ModflowGwtmst(
@@ -537,9 +535,7 @@ def build_models(idx, test):
         raise Exception()
 
     # Instantiate advection package
-    flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename=f"{gwtname}.adv"
-    )
+    flopy.mf6.ModflowGwtadv(gwt, scheme=scheme, filename=f"{gwtname}.adv")
 
     # Instantiate dispersion package
     flopy.mf6.ModflowGwtdsp(
