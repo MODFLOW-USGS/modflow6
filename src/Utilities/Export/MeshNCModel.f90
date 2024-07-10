@@ -59,6 +59,7 @@ module MeshModelModule
     integer(I4B), pointer :: chunk_face !< chunking parameter for face dimension
   contains
     procedure :: mesh_init
+    procedure :: mesh_destroy
     procedure :: add_global_att
     procedure(nc_array_export_if), deferred :: export_input_array
     procedure :: export_input_arrays
@@ -123,6 +124,18 @@ contains
                                IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
                    this%nc_fname)
   end subroutine mesh_init
+
+  !> @brief initialize
+  !<
+  subroutine mesh_destroy(this)
+    use MemoryManagerExtModule, only: mem_set_value
+    class(MeshModelType), intent(inout) :: this
+    !
+    call nf_verify(nf90_close(this%ncid), this%nc_fname)
+    !
+    deallocate (this%chunk_face)
+    nullify (this%chunk_face)
+  end subroutine mesh_destroy
 
   !> @brief create file (group) attributes
   !<

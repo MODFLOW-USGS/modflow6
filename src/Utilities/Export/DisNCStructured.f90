@@ -152,18 +152,20 @@ contains
   !> @brief netcdf export dis destroy
   !<
   subroutine dis_export_destroy(this)
-    use SimVariablesModule, only: idm_context
-    use MemoryManagerExtModule, only: memorystore_remove
     class(DisNCStructuredType), intent(inout) :: this
     call nf_verify(nf90_close(this%ncid), this%nc_fname)
     !
+    deallocate (this%chunk_z)
+    deallocate (this%chunk_y)
+    deallocate (this%chunk_x)
+    deallocate (this%layers)
+    !
+    nullify (this%chunk_z)
+    nullify (this%chunk_y)
+    nullify (this%chunk_x)
+    !
     ! -- destroy base class
     call this%NCModelExportType%destroy()
-    !
-    ! -- Deallocate idm memory
-    if (this%ncf_mempath /= '') then
-      call memorystore_remove(this%modelname, 'NCF', idm_context)
-    end if
   end subroutine dis_export_destroy
 
   !> @brief netcdf export define

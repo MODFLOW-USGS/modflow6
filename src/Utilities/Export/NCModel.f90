@@ -280,12 +280,19 @@ contains
   !> @brief destroy model netcdf export object
   !<
   subroutine export_destroy(this)
+    use MemoryManagerExtModule, only: memorystore_remove
+    use SimVariablesModule, only: idm_context
     class(NCModelExportType), intent(inout) :: this
     ! -- override in derived class
     deallocate (this%deflate)
     deallocate (this%shuffle)
     deallocate (this%input_attr)
     deallocate (this%chunk_time)
+    !
+    ! -- Deallocate idm memory
+    if (this%ncf_mempath /= '') then
+      call memorystore_remove(this%modelname, 'NCF', idm_context)
+    end if
   end subroutine export_destroy
 
 end module NCModelExportModule

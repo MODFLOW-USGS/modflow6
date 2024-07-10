@@ -65,18 +65,13 @@ contains
   !> @brief netcdf export dis destroy
   !<
   subroutine dis_export_destroy(this)
-    use SimVariablesModule, only: idm_context
-    use MemoryManagerExtModule, only: memorystore_remove
     class(Mesh2dDisExportType), intent(inout) :: this
-    call nf_verify(nf90_close(this%ncid), this%nc_fname)
+    !
+    deallocate (this%var_ids%dependent)
     !
     ! -- destroy base class
+    call this%mesh_destroy()
     call this%NCModelExportType%destroy()
-    !
-    ! -- Deallocate idm memory
-    if (this%ncf_mempath /= '') then
-      call memorystore_remove(this%modelname, 'NCF', idm_context)
-    end if
   end subroutine dis_export_destroy
 
   !> @brief netcdf export define
