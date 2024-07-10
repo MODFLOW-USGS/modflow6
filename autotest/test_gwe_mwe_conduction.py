@@ -316,7 +316,7 @@ def build_models(idx, test):
     # Create GWE model
     # ----------------
     gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file="{}.nam".format(gwename)
+        sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
     )
     gwe.name_file.save_flows = True
 
@@ -348,12 +348,12 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         pname="DIS",
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 energy transport initial temperatures
     flopy.mf6.ModflowGweic(
-        gwe, strt=strttemp, filename="{}.ic".format(gwename)
+        gwe, strt=strttemp, filename=f"{gwename}.ic"
     )
 
     # Instantiate mobile storage and transfer package
@@ -379,7 +379,7 @@ def build_models(idx, test):
 
     # Instantiate advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
     )
 
     # Instantiate dispersion package
@@ -388,7 +388,7 @@ def build_models(idx, test):
         xt3d_off=True,
         ktw=0.5918,
         kts=0.2700,
-        filename="{}.dsp".format(gwename),
+        filename=f"{gwename}.dsp",
     )
 
     # Instantiate source/sink mixing package
@@ -402,14 +402,14 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
             ("COLUMNS", 17, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwename),
+        filename=f"{gwename}.oc",
     )
 
     # Instantiating MODFLOW 6 multi-well energy transport (mwe) package
@@ -420,7 +420,7 @@ def build_models(idx, test):
 
     # note: for specifying lake number, use fortran indexing!
     mwe_obs = {
-        "{}.mweobs".format(gwename): [
+        f"{gwename}.mweobs": [
             ("MweTemp", "temperature", 1),
         ]
     }
@@ -438,7 +438,7 @@ def build_models(idx, test):
         mweperioddata=mweperioddata,
         observations=mwe_obs,
         pname="MWE-1",
-        filename="{}.mwe".format(gwename),
+        filename=f"{gwename}.mwe",
     )
 
     # Instantiate GWF-GWE exchange

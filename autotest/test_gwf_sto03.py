@@ -196,7 +196,7 @@ def eval_hmax(fpth):
         sv[i] = b.get_data(totim=t)[obsname].item()
 
     msg = (
-        "maximum heads in {} exceed tolerance ".format(fpth)
+        f"maximum heads in {fpth} exceed tolerance "
         + f"- maximum difference {(bv - sv).max()}"
     )
     assert np.allclose(bv, sv), msg

@@ -239,7 +239,7 @@ def build_models(idx, test, ener_input):
         steady_state=False,
         transient=True,
         pname="STO",
-        filename="{}.sto".format(gwfname),
+        filename=f"{gwfname}.sto",
     )
 
     # Constant head files
@@ -327,7 +327,7 @@ def build_models(idx, test, ener_input):
         ktw=Ktw,
         kts=Kts,
         pname="CND-1",
-        filename="{}.cnd".format(gwename),
+        filename=f"{gwename}.cnd",
     )
 
     flopy.mf6.ModflowGweest(
@@ -339,7 +339,7 @@ def build_models(idx, test, ener_input):
         cps=Cps,
         rhos=rhos,
         pname="EST-1",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Constant temperature

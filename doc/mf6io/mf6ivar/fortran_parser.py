@@ -41,7 +41,7 @@ def source_dir_to_dict(source_dir=".", ext=".f90", verbose=True):
         for f in files:
             if f.endswith(ext):
                 if verbose:
-                    print("processing {}".format(f))
+                    print(f"processing {f}")
                 fwpath = os.path.join(root, f)
                 full_lines = get_full_lines(fwpath)
                 d[f] = full_lines

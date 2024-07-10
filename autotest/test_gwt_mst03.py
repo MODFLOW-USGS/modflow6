@@ -262,20 +262,14 @@ def check_output(idx, test):
     volume_sim = head * 10 * 1.0
     print("volume sim", volume_sim)
     print("volume calc", volume_calc)
-    errmsg = "{}\n{}".format(
-        volume_calc,
-        volume_sim,
-    )
+    errmsg = f"{volume_calc}\n{volume_sim}"
     assert np.allclose(volume_calc, volume_sim), errmsg
 
     # compare calculated and simulated head
     hanswer = np.array(head_calc)
     print("head sim", head)
     print("head calc", hanswer)
-    errmsg = "{}\n{}".format(
-        head,
-        hanswer,
-    )
+    errmsg = f"{head}\n{hanswer}"
     assert np.allclose(head, hanswer), errmsg
 
     # compare calculated and simulated concentration

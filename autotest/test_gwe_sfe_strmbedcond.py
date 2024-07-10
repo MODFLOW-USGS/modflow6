@@ -225,7 +225,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -265,7 +265,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -366,9 +366,9 @@ def build_models(idx, test):
     strm_incision = 1.0
 
     # use trapezoidal cross-section for channel geometry
-    sfr_xsec_tab_nm1 = "{}.xsec.tab1".format(gwfname)
-    sfr_xsec_tab_nm2 = "{}.xsec.tab2".format(gwfname)
-    sfr_xsec_tab_nm3 = "{}.xsec.tab3".format(gwfname)
+    sfr_xsec_tab_nm1 = f"{gwfname}.xsec.tab1"
+    sfr_xsec_tab_nm2 = f"{gwfname}.xsec.tab2"
+    sfr_xsec_tab_nm3 = f"{gwfname}.xsec.tab3"
     sfr_xsec_tab_nm = [sfr_xsec_tab_nm1, sfr_xsec_tab_nm2, sfr_xsec_tab_nm3]
     crosssections = []
     for n in range(nreaches):
@@ -428,7 +428,7 @@ def build_models(idx, test):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfr.obs.csv".format(gwfname): [
+        f"{gwfname}.sfr.obs.csv": [
             ("rch1_depth", "depth", 1),
             ("rch2_depth", "depth", 2),
             ("rch3_depth", "depth", 3),
@@ -456,7 +456,7 @@ def build_models(idx, test):
         perioddata=sfr_perioddata,
         observations=sfr_obs,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
 
     # --------------------------------------------------
@@ -478,7 +478,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwename])
 
@@ -494,7 +494,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         pname="DIS",
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiate Mobile Storage and Transfer package
@@ -508,7 +508,7 @@ def build_models(idx, test):
         cps=Cps,
         rhos=rhos,
         pname="EST",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Instantiate Energy Transport Initial Conditions package
@@ -524,14 +524,14 @@ def build_models(idx, test):
         ktw=0.5918,
         kts=0.2700,
         pname="CND",
-        filename="{}.cnd".format(gwename),
+        filename=f"{gwename}.cnd",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
     # [b/c at least one boundary back is active (SFR), ssm must be on]
     sourcerecarray = [("CHD-1", "AUX", "TEMPERATURE")]
     flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename="{}.ssm".format(gwename)
+        gwe, sources=sourcerecarray, filename=f"{gwename}.ssm"
     )
 
     # Instantiate Streamflow Energy Transport package
@@ -559,19 +559,19 @@ def build_models(idx, test):
         reachperioddata=sfeperioddata,
         flow_package_name="SFR-1",
         pname="SFE-1",
-        filename="{}.sfe".format(gwename),
+        filename=f"{gwename}.sfe",
     )
 
     # Instantiate Output Control package for transport
     flopy.mf6.ModflowGweoc(
         gwe,
-        temperature_filerecord="{}.ucn".format(gwename),
+        temperature_filerecord=f"{gwename}.ucn",
         saverecord=[("TEMPERATURE", "ALL")],
         temperatureprintrecord=[
             ("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")
         ],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwename),
+        filename=f"{gwename}.oc",
     )
 
     # Instantiate Gwf-Gwe Exchange package
@@ -580,7 +580,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(gwename),
+        filename=f"{gwename}.gwfgwe",
     )
 
     return sim, None

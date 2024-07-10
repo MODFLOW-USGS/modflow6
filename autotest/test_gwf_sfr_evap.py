@@ -72,7 +72,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname_trapezoidal = "gwf-" + name + "-t"
@@ -112,7 +112,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.ims",
     )
     sim.register_ims_package(ims, [gwfname_trapezoidal])
 
@@ -184,7 +184,7 @@ def build_models(idx, test):
     y_xsec = [0.66666667, 0.33333333, 0.0, 0.0, 0.33333333, 0.66666667]
     x_sec_tab = [[x, h] for x, h in zip(x_xsec, y_xsec)]
 
-    sfr_xsec_table_name = "{}.xsec.tab".format(gwfname_trapezoidal)
+    sfr_xsec_table_name = f"{gwfname_trapezoidal}.xsec.tab"
     crosssections = []
     for n in range(nreaches):
         crosssections.append([n, sfr_xsec_table_name])
@@ -238,7 +238,7 @@ def build_models(idx, test):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfrobs".format(gwfname_trapezoidal): [
+        f"{gwfname_trapezoidal}.sfrobs": [
             ("rch1_in", "ext-inflow", 1),  # For now, these need to be 1-based
             ("rch1_rain", "rainfall", 1),
             ("rch1_evap", "evaporation", 1),
@@ -273,7 +273,7 @@ def build_models(idx, test):
         perioddata=sfr_perioddata,
         observations=sfr_obs,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.sfr",
     )
 
     # ---------------------------------------------------------------------------
@@ -302,7 +302,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.ims",
     )
     sim.register_ims_package(ims2, [gwfname_rectangular])
 
@@ -369,7 +369,7 @@ def build_models(idx, test):
         connectiondata=connectiondata,
         perioddata=sfr_perioddata,
         pname="SFR-2",
-        filename="{}.sfr".format(gwfname_rectangular),
+        filename=f"{gwfname_rectangular}.sfr",
     )
 
     return sim, None

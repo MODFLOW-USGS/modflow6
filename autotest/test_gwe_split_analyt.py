@@ -387,7 +387,7 @@ def build_models(idx, test):
         xt3d=xt3d[0],
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwfgwf".format("exchng"),
+        filename="exchng.gwfgwf",
         dev_interfacemodel_on=True,
     )
 
@@ -431,7 +431,7 @@ def build_models(idx, test):
         exgmnameb=gwe2.name,
         exchangedata=exgdata,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwegwe".format("exchng"),
+        filename="exchng.gwegwe",
     )
 
     # GWF-GWE exchange

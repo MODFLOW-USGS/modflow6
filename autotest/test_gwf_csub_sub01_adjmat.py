@@ -278,7 +278,7 @@ def check_output(idx, test):
         diff = calc[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
         msg = (
-            "maximum absolute interbed {} ".format(key)
+            f"maximum absolute interbed {key} "
             + f"difference ({diffmax:15.7g}) "
         )
         if diffmax > dtol:
@@ -308,7 +308,7 @@ def check_output(idx, test):
             diff = calc[key] - ovals[key]
             diffmax = np.abs(diff).max()
             msg = (
-                "maximum absolute {}({}) difference ".format(key, n + 1)
+                f"maximum absolute {key}({n + 1}) difference "
                 + f"({diffmax:15.7g}) "
             )
             if diffmax > dtol:
@@ -327,7 +327,7 @@ def check_output(idx, test):
         diff = calci[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
         msg = (
-            "maximum absolute interbed {} difference ".format(key)
+            f"maximum absolute interbed {key} difference "
             + f"({diffmax:15.7g}) "
         )
         msg += "calculated from individual interbed cell values "

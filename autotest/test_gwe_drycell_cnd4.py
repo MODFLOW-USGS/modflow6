@@ -161,14 +161,14 @@ def add_gwf_model(sim, gwfname, newton=False):
             modelname=gwfname,
             newtonoptions="NEWTON",
             save_flows=True,
-            model_nam_file="{}.nam".format(gwfname),
+            model_nam_file=f"{gwfname}.nam",
         )
     else:
         gwf = flopy.mf6.ModflowGwf(
             sim,
             modelname=gwfname,
             save_flows=True,
-            model_nam_file="{}.nam".format(gwfname),
+            model_nam_file=f"{gwfname}.nam",
         )
 
     # Instantiating MODFLOW 6 solver for flow model
@@ -185,7 +185,7 @@ def add_gwf_model(sim, gwfname, newton=False):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwfname])
 
@@ -202,7 +202,7 @@ def add_gwf_model(sim, gwfname, newton=False):
         botm=bot,
         idomain=1,
         pname="DIS",
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiating MODFLOW 6 storage package
@@ -214,7 +214,7 @@ def add_gwf_model(sim, gwfname, newton=False):
         steady_state=steady,
         transient=transient,
         pname="STO",
-        filename="{}.sto".format(gwfname),
+        filename=f"{gwfname}.sto",
     )
 
     # Instantiating MODFLOW 6 node-property flow package
@@ -226,22 +226,22 @@ def add_gwf_model(sim, gwfname, newton=False):
         k33=k33,
         save_specific_discharge=True,
         pname="NPF",
-        filename="{}.npf".format(gwfname),
+        filename=f"{gwfname}.npf",
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
     flopy.mf6.ModflowGwfic(
         gwf,
         strt=strthd,
-        filename="{}.ic".format(gwfname),
+        filename=f"{gwfname}.ic",
     )
 
     # Instantiating MODFLOW 6 output control package for flow model
     flopy.mf6.ModflowGwfoc(
         gwf,
         pname="OC",
-        head_filerecord="{}.hds".format(gwfname),
-        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord=f"{gwfname}.hds",
+        budget_filerecord=f"{gwfname}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -266,7 +266,7 @@ def add_gwf_model(sim, gwfname, newton=False):
         connectiondata=connectiondata,
         perioddata=sfr_perioddata,
         pname=pname,
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
     fname = f"{gwfname}.sfr.obs"
     sfr_obs = {
@@ -282,7 +282,7 @@ def add_gwf_model(sim, gwfname, newton=False):
 
 def add_gwe_model(sim, gwename):
     gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file="{}.nam".format(gwename)
+        sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
     )
     gwe.name_file.save_flows = True
 
@@ -299,7 +299,7 @@ def add_gwe_model(sim, gwename):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -316,17 +316,17 @@ def add_gwe_model(sim, gwename):
         botm=bot,
         idomain=1,
         pname="DIS",
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, pname="IC", filename="{}.ic".format(gwename)
+        gwe, strt=strt_temp, pname="IC", filename=f"{gwename}.ic"
     )
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -338,7 +338,7 @@ def add_gwe_model(sim, gwename):
         ktw=ktw * 86400,
         kts=kts * 86400,
         pname="CND",
-        filename="{}.cnd".format(gwename),
+        filename=f"{gwename}.cnd",
     )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
@@ -352,7 +352,7 @@ def add_gwe_model(sim, gwename):
         cps=cps,
         rhos=rhos,
         pname="EST",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Instantiating MODFLOW 6 source/sink mixing package for dealing with
@@ -362,15 +362,15 @@ def add_gwe_model(sim, gwename):
         gwe,
         sources=sourcerecarray,
         pname="SSM",
-        filename="{}.ssm".format(gwename),
+        filename=f"{gwename}.ssm",
     )
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
         pname="OC",
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -401,7 +401,7 @@ def add_gwe_model(sim, gwename):
         reachperioddata=sfe_perioddata,
         flow_package_name=flwpckname,
         pname="SFE",
-        filename="{}.sfe".format(gwename),
+        filename=f"{gwename}.sfe",
     )
 
     return sim
@@ -412,7 +412,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format())
+    print(f"Building MF6 model...{name}")
 
     # generate names for each model
     gwfname1 = "gwf-" + name + "nwt1"
@@ -444,7 +444,7 @@ def build_models(idx, test):
         exgmnamea=gwfname1,
         exgmnameb=gwename1,
         pname="GWFGWE1",
-        filename="{}.gwfgwe1".format(gwename1),
+        filename=f"{gwename1}.gwfgwe1",
     )
 
     flopy.mf6.ModflowGwfgwe(
@@ -453,7 +453,7 @@ def build_models(idx, test):
         exgmnamea=gwfname2,
         exgmnameb=gwename2,
         pname="GWFGWE2",
-        filename="{}.gwfgwe2".format(gwename2),
+        filename=f"{gwename2}.gwfgwe2",
     )
 
     return sim, None

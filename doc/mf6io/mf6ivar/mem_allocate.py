@@ -71,7 +71,7 @@ def line_list_to_var_list(line_list, fname):
             npercents = fortran_varname.count("%")
             fortran_varname = fortran_varname.replace("this%", "")
             if current_class is not None:
-                class_varname = "{}.{}".format(current_class, fortran_varname)
+                class_varname = f"{current_class}.{fortran_varname}"
             else:
                 class_varname = fortran_varname
 
@@ -137,25 +137,15 @@ def write_tex(memvar_list, ftex):
 def write_md_header(f):
     s = "# MODFLOW 6 MEMORY MANAGER VARIABLES\n\n"
     fmd.write(s)
-    s = "| {} | {} | {} | {} | {} |\n".format(
-        "source file",
-        "module",
-        "type.variable name",
-        "variable name",
-        "dimensions",
-    )
+    s = "| source file | module | type.variable name | variable name | dimensions |\n"
     fmd.write(s)
-    s = "| {} | {} | {} | {} | {} |\n".format(
-        ":---:", ":---:", ":---:", ":---:", ":---:"
-    )
+    s = "| :---: | :---: | :---: | :---: | :---: |\n"
     fmd.write(s)
     return
 
 
 def write_md_record(f, fname, modulename, classname, varname, varshape):
-    s = "| {} | {} | {} | {} | {} |\n".format(
-        fname, modulename, classname, varname, varshape
-    )
+    s = f"| {fname} | {modulename} | {classname} | {varname} | {varshape} |\n"
     f.write(s)
     return
 
@@ -199,7 +189,7 @@ def write_tex_record(f, classname, varname, dimension):
         classname = classname.replace("_", "\_")
         classname = classname.replace("%", "-")
     varname = varname.replace("_", "\_")
-    s = "{} & {} & {} \\\\ \n".format(classname, varname, dimension)
+    s = f"{classname} & {varname} & {dimension} \\\\ \n"
     f.write(s)
     return
 
@@ -226,7 +216,7 @@ for root, dirs, files in os.walk(source_dir):
             full_lines = d[f]
             memvar_list = line_list_to_var_list(full_lines, fwpath)
             if len(memvar_list) > 0:
-                print("{} -- {}".format(i, f))
+                print(f"{i} -- {f}")
                 i += 1
             write_md(memvar_list, fmd)
             if latex_file is not None:

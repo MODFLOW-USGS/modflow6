@@ -258,29 +258,25 @@ def check_output(idx, test):
     if ncpus > 1:
         for name, rank in partitions:
             model_id = mf6_sim.model_names.index(name) + 1
-            list_file = pl.Path(test.workspace, "mfsim.p{}.lst".format(rank))
-            success_msg = "GWF6 model {} will be created".format(model_id)
+            list_file = pl.Path(test.workspace, f"mfsim.p{rank}.lst")
+            success_msg = f"GWF6 model {model_id} will be created"
             success = False
             for line in open(list_file).readlines():
                 if success_msg in line:
                     success = True
                     break
-            assert success, "Model {} not created on target process {}".format(
-                model_id, rank
-            )
+            assert success, f"Model {model_id} not created on target process {rank}"
     elif ncpus == 1:
         list_file = pl.Path(test.workspace, "mfsim.lst")
         for name, rank in partitions:
             model_id = mf6_sim.model_names.index(name) + 1
-            success_msg = "GWF6 model {} will be created".format(model_id)
+            success_msg = f"GWF6 model {model_id} will be created"
             success = False
             for line in open(list_file).readlines():
                 if success_msg in line:
                     success = True
                     break
-            assert success, "Model {} not created on target process {}".format(
-                model_id, rank
-            )
+            assert success, f"Model {model_id} not created on target process {rank}"
 
 
 @pytest.mark.parallel

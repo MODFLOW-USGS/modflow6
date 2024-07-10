@@ -124,7 +124,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname_trapezoidal = "gwf-" + name
@@ -163,7 +163,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.ims",
     )
     sim.register_ims_package(ims, [gwfname_trapezoidal])
 
@@ -229,9 +229,9 @@ def build_models(idx, test):
     strm_incision = 1.0
 
     # use trapezoidal cross-section for channel geometry
-    sfr_xsec_tab_nm1 = "{}.xsec.tab1".format(gwfname_trapezoidal)
-    sfr_xsec_tab_nm2 = "{}.xsec.tab2".format(gwfname_trapezoidal)
-    sfr_xsec_tab_nm3 = "{}.xsec.tab3".format(gwfname_trapezoidal)
+    sfr_xsec_tab_nm1 = f"{gwfname_trapezoidal}.xsec.tab1"
+    sfr_xsec_tab_nm2 = f"{gwfname_trapezoidal}.xsec.tab2"
+    sfr_xsec_tab_nm3 = f"{gwfname_trapezoidal}.xsec.tab3"
     sfr_xsec_tab_nm = [sfr_xsec_tab_nm1, sfr_xsec_tab_nm2, sfr_xsec_tab_nm3]
     crosssections = []
     for n in range(nreaches):
@@ -291,7 +291,7 @@ def build_models(idx, test):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfr.obs.csv".format(gwfname_trapezoidal): [
+        f"{gwfname_trapezoidal}.sfr.obs.csv": [
             ("rch1_depth", "depth", 1),
             ("rch2_depth", "depth", 2),
             ("rch3_depth", "depth", 3),
@@ -322,7 +322,7 @@ def build_models(idx, test):
         perioddata=sfr_perioddata,
         observations=sfr_obs,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.sfr",
     )
 
     return sim, None

@@ -162,12 +162,12 @@ def build_gwf_sim(idx, ws, mf6):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwf_name),
-        head_filerecord="{}.hds".format(gwf_name),
+        budget_filerecord=f"{gwf_name}.cbc",
+        head_filerecord=f"{gwf_name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwf_name),
+        filename=f"{gwf_name}.oc",
     )
 
     # Print human-readable heads

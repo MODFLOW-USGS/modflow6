@@ -68,7 +68,7 @@ for k in np.arange(nlay):
         else:
             ivertcon = iuzno + ncpl
 
-        bndnm = "uzf" + "{0:03d}".format(int(i + 1))
+        bndnm = "uzf" + f"{int(i + 1):03d}"
         uzf_pkdat.append(
             # iuzno     cellid landflag ivertcn surfdp vks thtr thts thti eps [bndnm]
             [
@@ -197,7 +197,7 @@ def build_models(idx, test):
         etobs.append(("uzet_" + str(j + 1), "uzet", (j,)))
         etobs.append(("uzf-gwet_" + str(j + 1), "uzf-gwet", (j,)))
 
-    uzf_obs = {"{}.uzfobs".format(name): etobs}
+    uzf_obs = {f"{name}.uzfobs": etobs}
 
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
@@ -213,18 +213,18 @@ def build_models(idx, test):
         nuzfcells=len(uzf_pkdat),
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
-        budget_filerecord="{}.uzf.bud".format(name),
+        budget_filerecord=f"{name}.uzf.bud",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     # Print human-readable heads

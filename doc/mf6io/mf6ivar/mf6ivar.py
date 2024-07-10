@@ -212,7 +212,7 @@ def block_entry(varname, block, vardict, prefix="  "):
     key = (varname, block)
     v = vardict[key]
 
-    s = "{}".format(varname.upper())
+    s = f"{varname.upper()}"
     if "tagged" in v:
         if v["tagged"] == "false":
             s = ""
@@ -231,9 +231,7 @@ def block_entry(varname, block, vardict, prefix="  "):
         vtype = vtype.split(" ", 1)[0]
     if vtype not in VALID_TYPES:
         raise ValueError(
-            "{}: {}: {!r} is not a valid type from {}".format(
-                fname, key, vtype, VALID_TYPES
-            )
+            f"{fname}: {key}: {vtype!r} is not a valid type from {VALID_TYPES}"
         )
 
     # record or recarray
@@ -242,10 +240,10 @@ def block_entry(varname, block, vardict, prefix="  "):
         s = ""
         for vn in varnames:
             blockentry = block_entry(vn, block, vardict, prefix="")
-            s += "{} ".format(blockentry.strip())
+            s += f"{blockentry.strip()} "
         if v["type"].startswith("recarray"):
             s = s.strip()
-            s = "{}{}\n{}{}\n{}{}".format("", s, prefix, s, prefix, "...")
+            s = f"{s}\n{prefix}{s}\n{prefix}..."
 
     # layered
     elif v["reader"] in ["readarray", "u1ddbl", "u2ddbl", "u1dint"]:
@@ -255,9 +253,7 @@ def block_entry(varname, block, vardict, prefix="  "):
         if "layered" in v:
             if v["layered"] == "true":
                 layered = " [LAYERED]"
-        s = "{}{}\n{}{}<{}{}> -- {}".format(
-            s, layered, prefix, prefix, varname, shape, reader
-        )
+        s = f"{s}{layered}\n{prefix}{prefix}<{varname}{shape}> -- {reader}"
 
     # keyword
     elif v["type"] != "keyword":
@@ -265,15 +261,15 @@ def block_entry(varname, block, vardict, prefix="  "):
         if "shape" in v:
             shape = v["shape"]
             vtmp += shape
-        s = "{} <{}{}{}>".format(s, tsmarker, vtmp, tsmarker)
+        s = f"{s} <{tsmarker}{vtmp}{tsmarker}>"
 
     # if optional, wrap string in square brackets
     if "optional" in v:
         if v["optional"] == "true":
-            s = "[{}]".format(s.strip())
+            s = f"[{s.strip()}]"
 
     # prepend with prefix and return string
-    s = "{}{}".format(prefix, s)
+    s = f"{prefix}{s}"
     return s
 
 
@@ -281,13 +277,13 @@ def write_block(
     vardict, block, blk_var_list, varexcludeprefix=None, indent=None
 ):
     prepend = "" if indent is None else indent * " "
-    s = prepend + "BEGIN {}".format(block.upper())
+    s = prepend + f"BEGIN {block.upper()}"
     for variable in blk_var_list:
         ts = block_entry(variable[0], block, vardict).strip()
         if variable[1]:
-            s = "{} [{}]".format(s, ts)
+            s = f"{s} [{ts}]"
         else:
-            s = "{} {}".format(s, ts)
+            s = f"{s} {ts}"
     s += "\n"
     for key in vardict.keys():
         name, b = key
@@ -315,8 +311,8 @@ def write_block(
                     addv = False
             if addv:
                 ts = block_entry(name, block, vardict, prefix="  " + prepend)
-                s += "{}\n".format(ts)
-    s += prepend + "END {}".format(block.upper())
+                s += f"{ts}\n"
+    s += prepend + f"END {block.upper()}"
     return s
 
 
@@ -368,7 +364,7 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                 else:
                     if "tagged" in v:
                         # could be used in future to write tag and name
-                        n = "{}".format(name)
+                        n = f"{name}"
                     else:
                         n = name
                 n = n.replace("_", "\\_")
@@ -377,7 +373,7 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                 else:
                     msg = ""
                     for k, v in v.items():
-                        msg += "  {}: {}\n".format(k, v)
+                        msg += f"  {k}: {v}\n"
                     print(msg)
                     raise Exception(msg)
                 ss = "\\texttt{" + n + "}---" + desc
@@ -394,7 +390,7 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                     s += "\\begin{lstlisting}[style=blockdefinition]\n"
                     for vn in t.strip().split()[1:]:
                         blockentry = block_entry(vn, block, vardict, "")
-                        s += "{}\n".format(blockentry)
+                        s += f"{blockentry}\n"
                     # s += '\\end{verbatim}\n\n'
                     s += "\\end{lstlisting}\n\n"
 
@@ -430,7 +426,7 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                 else:
                     if "tagged" in v:
                         # could be used in future to write tag and name
-                        n = "{}".format(name)
+                        n = f"{name}"
                     else:
                         n = name
                 if "description" in v:
@@ -438,7 +434,7 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                 else:
                     msg = ""
                     for k, v in v.items():
-                        msg += "  {}: {}\n".format(k, v)
+                        msg += f"  {k}: {v}\n"
                     print(msg)
                     raise Exception(msg)
                 desc = md_replace(desc)
@@ -454,7 +450,7 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                         blockentry = md_replace(
                             block_entry(vn, block, vardict, 10 * " ")
                         )
-                        s += "{}\n".format(blockentry)
+                        s += f"{blockentry}\n"
 
     return s
 
@@ -510,14 +506,14 @@ def get_examples(component):
         if idx == 0:
             s += "#### Example Input File\n"
         if len(files) > 1:
-            s += "Example {}\n\n".format(idx + 1)
+            s += f"Example {idx + 1}\n\n"
         fpth = os.path.join(EXAMPLES_DIR_PATH, filename)
         with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
         for line in lines:
             line = line.rstrip()
-            s += "    {}\n".format(line)
+            s += f"    {line}\n"
         s += "```\n\n"
     return s
 
@@ -532,14 +528,14 @@ def get_obs_examples(component):
     for idx, filename in enumerate(files):
         s += "#### Example Observation Input File\n"
         if len(files) > 1:
-            s += "Example {}\n\n".format(idx + 1)
+            s += f"Example {idx + 1}\n\n"
         fpth = os.path.join(EXAMPLES_DIR_PATH, filename)
         with open(fpth, "r") as f:
             lines = f.readlines()
         s += "```\n"
         for line in lines:
             line = line.rstrip()
-            s += "    {}\n".format(line)
+            s += f"    {line}\n"
         s += "```\n\n"
     return s
 
@@ -572,7 +568,7 @@ def get_obs_table(component):
             elif line.strip().startswith("%"):
                 save_line = False
             if save_line:
-                s += "| {} |\n".format(line.replace("&", "|"))
+                s += f"| {line.replace('&', '|')} |\n"
     if len(s) > 0:
         s += "\n\n"
     return s
@@ -581,13 +577,9 @@ def get_obs_table(component):
 def write_md_header(f):
     s = "# MODFLOW 6 INPUT VARIABLES\n\n"
     f.write(s)
-    s = "| {} | {} | {} | {} | {} | {} |\n".format(
-        "component", "package", "block", "variable name", "type", "description"
-    )
+    s = "| component | package | block | variable name | type | description |\n"
     f.write(s)
-    s = "| {} | {} | {} | {} | {} | {} |\n".format(
-        ":---:", ":---:", ":---:", ":---:", ":---:", "---"
-    )
+    s = "| :---: | :---: | :---: | :---: | :---: | --- |\n"
     f.write(s)
 
 
@@ -605,12 +597,12 @@ def write_md(f, vardict, component, package):
         else:
             if t.startswith("KEYSTRING"):
                 t = "KEYSTRING"
-            t = "{}".format(t)
+            t = f"{t}"
             if "shape" in v:
                 shape = v["shape"].upper()
-                t = "{} {}".format(t, shape)
+                t = f"{t} {shape}"
             d = get_description(v["description"])
-            s = "| {} | {} | {} | {} | {} | {} |\n".format(c, p, b, n, t, d)
+            s = f"| {c} | {p} | {b} | {n} | {t} | {d} |\n"
         f.write(s)
 
 
@@ -719,7 +711,7 @@ def write_variables():
 
             # add a full block name to allblocks
             for block in blocks:
-                b = "{}-{}-{}".format(component, package, block)
+                b = f"{component}-{package}-{block}"
                 allblocks.append(b)
 
             # go through each block and write information
@@ -728,9 +720,7 @@ def write_variables():
                 blk_var_list = []
 
                 # Write the name of the block to the latex file
-                desc += "\item \\textbf{}\n\n".format(
-                    "{Block: " + b.upper() + "}"
-                )
+                desc += f"\\item \\textbf{'{Block: ' + b.upper() + '}'}\n\n"
                 desc += "\\begin{description}\n"
                 desc += write_desc(
                     vardict, b, blk_var_list, varexcludeprefix="dev_"
@@ -757,7 +747,7 @@ def write_variables():
             # write markdown description
             mdname = fpath.stem
             with open(RTD_DOC_DIR_PATH / f"{mdname}.md", "w") as f:
-                f.write("### {}\n\n".format(mdname.upper()))
+                f.write(f"### {mdname.upper()}\n\n")
                 f.write("#### Structure of Blocks\n\n")
                 f.write("_FOR EACH SIMULATION_\n\n")
                 desc = ""
@@ -765,7 +755,7 @@ def write_variables():
                     blk_var_list = []
 
                     # Write the name of the block to the latex file
-                    desc += "##### Block: {}\n\n".format(b.upper())
+                    desc += f"##### Block: {b.upper()}\n\n"
 
                     desc += write_desc_md(
                         vardict, b, blk_var_list, varexcludeprefix="dev_"
