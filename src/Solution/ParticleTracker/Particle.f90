@@ -79,7 +79,7 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, public, contiguous :: iprp !< index of release package the particle originated in
     integer(I4B), dimension(:), pointer, public, contiguous :: irpt !< index of release point in the particle release package the particle originated in
     ! options
-    integer(I4B), dimension(:), pointer, public, contiguous :: icoords !< coordinate system to use (0: global, 1: model)
+    integer(I4B), dimension(:), pointer, public, contiguous :: icoords !< coordinate system to use (0: model, 1: global)
     integer(I4B), dimension(:), pointer, public, contiguous :: iexmeth !< method for iterative solution of particle exit location and time in generalized Pollock's method
     integer(I4B), dimension(:), pointer, public, contiguous :: iextend !< whether to extend tracking beyond the end of the simulation
     integer(I4B), dimension(:), pointer, public, contiguous :: ifrctrn !< force ternary method

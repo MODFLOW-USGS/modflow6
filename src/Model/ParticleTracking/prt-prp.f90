@@ -84,7 +84,6 @@ module PrtPrpModule
     procedure :: read_dimensions => prp_read_dimensions
     procedure :: prp_read_packagedata
     procedure :: release
-    procedure :: get_release_time
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
   end type PrtPrpType
@@ -393,12 +392,12 @@ contains
     integer(I4B) :: irow, icol, ilay, icpl
     integer(I4B) :: ic, icu
     integer(I4B) :: i, j, k
+    integer(I4B) :: icoords
     integer(I4B) :: np
     real(DP) :: x, y, z, xout, yout, zout
     real(DP) :: top, bot, hds
     real(DP), allocatable :: polyverts(:, :)
-    character(len=LINELENGTH) :: errmsg
-    type(ParticleType), pointer :: particle !< particle
+    type(ParticleType), pointer :: particle
 
     ! Increment particle release count
     np = this%nparticles + 1
@@ -409,12 +408,14 @@ contains
     icu = this%dis%get_nodeuser(ic)
 
     ! Load x/y coordinates and transform if needed
+    icoords = 0
     x = this%rptx(ip)
     y = this%rpty(ip)
     if (this%icoords == 1 .and. ( &
         this%dis%angrot /= DZERO .or. &
         this%dis%xorigin /= DZERO .or. &
         this%dis%yorigin /= DZERO)) then
+      icoords = 1
       ! Transform x and y from global to model coordinates
       call transform(x, y, z, &
                      xout, yout, zout, &
@@ -535,7 +536,7 @@ contains
     particle%ifrctrn = this%ifrctrn
     particle%iexmeth = this%iexmeth
     particle%iextend = this%iextend
-    particle%icoords = this%icoords
+    particle%icoords = icoords
     particle%extol = this%extol
 
     ! Save particle to the particle store
