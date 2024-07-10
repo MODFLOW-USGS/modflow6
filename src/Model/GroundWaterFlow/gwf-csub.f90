@@ -7,7 +7,7 @@
 !!
 !<
 module GwfCsubModule
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM8, DEM7, &
                              DEM6, DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE, &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO, &
@@ -80,7 +80,7 @@ module GwfCsubModule
     character(len=LENAUXNAME), dimension(:), &
       pointer, contiguous :: auxname => null() !< vector of auxname
     ! -- logical scalars
-    logical, pointer :: lhead_based => null() !< logical variable indicating if head-based solution
+    logical(LGP), pointer :: lhead_based => null() !< logical variable indicating if head-based solution
     ! -- integer scalars
     integer(I4B), pointer :: istounit => null() !< unit number of storage package
     integer(I4B), pointer :: istrainib => null() !< unit number of interbed strain output
@@ -303,6 +303,9 @@ module GwfCsubModule
     procedure, private :: csub_delay_assemble_fc
     procedure, private :: csub_delay_assemble_fn
     procedure, private :: csub_delay_head_check
+
+    ! methods for tables
+    procedure, private :: csub_initialize_tables
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -367,7 +370,7 @@ contains
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< model ibound array
     ! -- local variables
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     character(len=:), allocatable :: line
     character(len=LINELENGTH) :: keyword
     character(len=20) :: cellid
@@ -419,6 +422,9 @@ contains
     !
     ! - observation data
     call this%obs%obs_ar()
+
+    ! setup tables
+    call this%csub_initialize_tables()
     !
     ! -- terminate if errors dimensions block data
     if (count_errors() > 0) then
@@ -610,8 +616,8 @@ contains
     character(len=:), allocatable :: line
     character(len=MAXCHARLEN) :: fname
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
-    logical :: isfound
-    logical :: endOfBlock
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
     integer(I4B) :: n
     integer(I4B) :: lloc
     integer(I4B) :: istart
@@ -1048,7 +1054,7 @@ contains
     ! -- local variables
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     ! -- format
     !
     ! -- initialize dimensions to -1
@@ -1421,8 +1427,8 @@ contains
     character(len=10) :: text
     character(len=LENBOUNDNAME) :: bndName
     character(len=7) :: cdelay
-    logical :: isfound
-    logical :: endOfBlock
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
     integer(I4B) :: ival
     integer(I4B) :: n
     integer(I4B) :: nn
@@ -2514,8 +2520,8 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
     character(len=20) :: cellid
-    logical :: isfound
-    logical :: endOfBlock
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
     integer(I4B) :: jj
     integer(I4B) :: ierr
     integer(I4B) :: node
@@ -3001,6 +3007,60 @@ contains
     return
   end subroutine csub_fn
 
+  !> @ brief Initialize optional tables
+  !!
+  !! Subroutine to initialize optional tables. Tables include:
+  !!   o delay interbeds convergence tables
+  !!
+  !<
+  subroutine csub_initialize_tables(this)
+    class(GwfCsubType) :: this
+
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
+
+    if (this%ipakcsv > 0) then
+      if (this%ndelaybeds < 1) then
+        write (warnmsg, '(a,1x,3a)') &
+          'Package convergence data is requested but delay interbeds', &
+          'are not included in package (', &
+          trim(adjustl(this%packName)), ').'
+        call store_warning(warnmsg)
+      end if
+
+      ntabrows = 1
+      ntabcols = 9
+
+      ! setup table
+      call table_cr(this%pakcsvtab, this%packName, '')
+      call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
+                                   lineseparator=.FALSE., separator=',', &
+                                   finalize=.FALSE.)
+
+      ! add columns to package csv
+      tag = 'total_inner_iterations'
+      call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'totim'
+      call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'kper'
+      call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'kstp'
+      call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'nouter'
+      call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'dvmax'
+      call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+      tag = 'dvmax_loc'
+      call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+      tag = 'dstoragemax'
+      call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+      tag = 'dstoragemax_loc'
+      call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+    end if
+
+  end subroutine csub_initialize_tables
+
   !> @ brief Final convergence check
   !!
   !! Final convergence check for the CSUB package. The final convergence
@@ -3030,13 +3090,10 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak !< string location of the maximum change in csub package
     integer(I4B), intent(inout) :: ipak !< node with the maximum change in csub package
     real(DP), intent(inout) :: dpak !< maximum change in csub package
-    ! -- local variables
-    character(len=LINELENGTH) :: tag
+    ! local variables
     character(len=LENPAKLOC) :: cloc
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
-    integer(I4B) :: ntabrows
-    integer(I4B) :: ntabcols
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idelay
@@ -3066,57 +3123,17 @@ contains
     ipakfail = 0
     locdhmax = 0
     locrmax = 0
+    ifirst = 1
     dhmax = DZERO
     rmax = DZERO
-    ifirst = 1
     !
     ! -- additional checks to see if convergence needs to be checked
     ! -- no convergence check for steady-state stress periods
     if (this%gwfiss /= 0) then
       icheck = 0
     else
-      !
-      ! -- if not saving package convergence data on check convergence if
-      !    the model is considered converged
-      if (this%ipakcsv == 0) then
-        if (icnvgmod == 0) then
-          icheck = 0
-        end if
-      else
-        !
-        ! -- header for package csv
-        if (.not. associated(this%pakcsvtab)) then
-          !
-          ! -- determine the number of columns and rows
-          ntabrows = 1
-          ntabcols = 9
-          !
-          ! -- setup table
-          call table_cr(this%pakcsvtab, this%packName, '')
-          call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
-                                       lineseparator=.FALSE., separator=',', &
-                                       finalize=.FALSE.)
-          !
-          ! -- add columns to package csv
-          tag = 'total_inner_iterations'
-          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-          tag = 'totim'
-          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-          tag = 'kper'
-          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-          tag = 'kstp'
-          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-          tag = 'nouter'
-          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
-          tag = 'dvmax'
-          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-          tag = 'dvmax_loc'
-          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-          tag = 'dstoragemax'
-          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-          tag = 'dstoragemax_loc'
-          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        end if
+      if (icnvgmod == 0) then
+        icheck = 0
       end if
     end if
     !
@@ -3214,10 +3231,17 @@ contains
         call this%pakcsvtab%add_term(kper)
         call this%pakcsvtab%add_term(kstp)
         call this%pakcsvtab%add_term(kiter)
-        call this%pakcsvtab%add_term(dhmax)
-        call this%pakcsvtab%add_term(locdhmax)
-        call this%pakcsvtab%add_term(rmax)
-        call this%pakcsvtab%add_term(locrmax)
+        if (this%ndelaybeds > 0) then
+          call this%pakcsvtab%add_term(dhmax)
+          call this%pakcsvtab%add_term(locdhmax)
+          call this%pakcsvtab%add_term(rmax)
+          call this%pakcsvtab%add_term(locrmax)
+        else
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+          call this%pakcsvtab%add_term('--')
+        end if
         !
         ! -- finalize the package csv
         if (iend == 1) then
@@ -3793,7 +3817,7 @@ contains
         ! -- fill buff with data from buffusr
         do nodeu = 1, this%dis%nodesuser
           node = this%dis%get_nodenumber_idx1(nodeu, 1)
-          if (node /= 0) then
+          if (node > 0) then
             this%buff(node) = this%buffusr(nodeu)
           end if
         end do
@@ -5765,11 +5789,11 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib !< interbed number
     real(DP), intent(in) :: hcell !< current head in a cell
-    logical, intent(in), optional :: update !< optional logical variable indicating
-                                             !! if the maximum head change variable
-                                             !! in a delay bed should be updated
+    logical(LGP), intent(in), optional :: update !< optional logical variable indicating
+                                                 !! if the maximum head change variable
+                                                 !! in a delay bed should be updated
     ! -- local variables
-    logical :: lupdate
+    logical(LGP) :: lupdate
     integer(I4B) :: n
     integer(I4B) :: icnvg
     integer(I4B) :: iter
@@ -7512,10 +7536,11 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
-    logical :: flag_string
+    logical(LGP) :: flag_string
     !
     ! -- initialize variables
     string = obsrv%IDstring
+    flag_string = .TRUE.
     !
     ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
