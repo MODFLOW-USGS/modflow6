@@ -19,7 +19,9 @@ To build and test a parallel version of the program, first read the instructions
   - [Python](#python)
     - [Dependencies](#dependencies)
       - [`meson`](#meson)
+      - [`codespell`](#codespell)
       - [`fprettify`](#fprettify)
+      - [`ruff`](#ruff)
       - [`mfpymake`](#mfpymake)
       - [`flopy`](#flopy)
       - [`modflow-devtools`](#modflow-devtools)
@@ -27,6 +29,10 @@ To build and test a parallel version of the program, first read the instructions
 - [Installation](#installation)
 - [Building](#building)
 - [Formatting](#formatting)
+  - [Spell checking](#spell-checking)
+  - [Fortran formatting](#fortran-formatting)
+  - [python formatting](#python-formatting)
+  - [python linting](#python-linting)
 - [Testing](#testing)
   - [Configuring a test environment](#configuring-a-test-environment)
     - [Configuring unit tests](#configuring-unit-tests)
@@ -66,7 +72,7 @@ Before you can build and test MODFLOW 6, you must install and configure the
 following on your development machine:
 
 - git
-- Python3.8+
+- Python3.9+
 - a modern Fortran compiler
 
 Some additional, optional tools are also discussed below.
@@ -196,9 +202,17 @@ These are each described briefly below. These and a number of other dependencies
 
 [Meson](https://mesonbuild.com/index.html) is the recommended build system for MODFLOW 6.
 
+##### `codespell`
+
+[`codespell`](https://github.com/codespell-project/codespell) was designed primarily for checking misspelled words in source code, but it can be used with other text files as well. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md). See [Spell check guidelines](#spell-checking) for additional information.
+
 ##### `fprettify`
 
-[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [formatting guidelines](#formatting) for additional information.
+[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [Fortran formatting guidelines](#fortran-formatting) for additional information.
+
+##### `ruff`
+
+[`ruff`](https://docs.astral.sh/ruff/) can be used to format and lint python code and scripts (for example, autotest scripts) and in combination with the [MODFLOW 6 ruff configuration](.github/common/ruff.toml) establishes a contribution standard for properly formatted python code and scripts. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md).  See [python formatting guidelines](#python-formatting) and [python linting guidelines](#python-linting) for additional information.
 
 ##### `mfpymake`
 
@@ -240,14 +254,23 @@ Fork and clone the MODFLOW 6 repository:
 2. [Fork](http://help.github.com/forking) the [main MODFLOW 6](https://github.com/MODFLOW-USGS/modflow6).
 3. Clone your fork of the MODFLOW 6 repository and create an `upstream` remote pointing back to your fork.
 
+After forking the MODFLOW 6 repository on GitHub.
+
+1. Clone your fork of the GitHub repository to your computer.
+
 ```shell
-# Clone your GitHub repository:
 git clone git@github.com:<github username>/modflow6.git
+```
 
-# Go to the MODFLOW 6 directory:
+2. Go to the MODFLOW 6 directory.
+
+```shell
 cd modflow6
+```
 
-# Add the main MODFLOW 6 repository as an upstream remote to your repository:
+3. Add the main MODFLOW 6 repository as an upstream remote to your repository.
+
+```shell
 git remote add upstream https://github.com/MODFLOW-USGS/modflow6.git
 ```
 
@@ -267,13 +290,24 @@ Building MODFLOW 6 requires two steps:
 - configure the build directory
 - build the project
 
-To configure the build directory:
+To configure the build directory for a debug version:
 
 ```shell
 meson setup --prefix=$(pwd) --libdir=bin builddir -Ddebug=true -Doptimization=0
-meson setup --prefix=$(pwd) --libdir=bin builddir  # for an optimized release build
-pixi run setup builddir  # alternatively, with pixi
 ```
+Or to configure the build directory for a optimized release version:
+
+```shell
+meson setup --prefix=$(pwd) --libdir=bin builddir
+```
+
+or using pixi to setup the build directory:
+
+```shell
+pixi run setup builddir
+```
+
+Debug versions can be built using pixi by adding `-Ddebug=true -Doptimization=0` at the end of the pixi command.
 
 Substitute `%CD%` as necessary on Windows.
 
@@ -281,14 +315,48 @@ To build MODFLOW 6 and install binaries to `<project root>/bin/`:
 
 ```shell
 meson install -C builddir
-pixi run build builddir  # alternatively, with pixi
+```
+
+or using pixi:
+
+```shell
+pixi run build builddir
 ```
 
 **Note:** If using Visual Studio Code, you can use tasks as described [here](.vscode/README.md) to automate the above.
 
 ## Formatting
 
-Fortran source code can be formatted with [fprettify](https://github.com/pseewald/fprettify), specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). The `fprettify` package is included in the Conda `environment.yml` and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+### Spell checking
+
+Fortran source files, python files, definition files, markdown, and LaTeX files can be checked with [codespell](https://github.com/codespell-project/codespell). codespell was designed primarily for checking misspelled words in source code, but it can be used with other text files as well. The `codespell` package is included in the Conda `environment.yml` and the Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to format a single file:
+
+```shell
+python .github/common/check_spelling.py -p ./utils/zonebudget/src/zbud6.f90 --write-changes
+```
+When run in this way, the tool will modify the file in place. If unresolvable errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's Fortran source files, python files, definition files, markdown, and LaTeX files have any spelling errors without making any changes:
+
+```shell
+python .github/common/check_spelling.py
+```
+
+or using pixi:
+
+```shell
+pixi run check-spelling
+```
+
+To fix spelling errors in all files, add the `--write-changes` flag to the end of the python or pixi commands.
+
+**Note**: codespell may make unwanted changes (for example, a variable name in source code). As a result, you should check the `codespell` changes. codespell can be forced to leave a particular word unchanged by adding it to the `.codespell.ignore` file.
+
+### Fortran formatting
+
+Fortran source code can be formatted with [fprettify](https://github.com/pseewald/fprettify), specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). The `fprettify` package is included in the Conda `environment.yml` and the Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
 
 For instance, to format a single file:
 
@@ -302,14 +370,78 @@ To check whether the repository's source files satisfy formatting requirements w
 
 ```shell
 python .github/common/check_format.py
-pixi run check-format  # alternatively, with pixi
 ```
 
-To format all files, add the `--write-changes` flag.
+or using pixi:
+
+```shell
+pixi run check-format
+```
+
+To format all files, add the `--write-changes` flag to the end of the python or pixi commands. These commands will exclude the proper files from formatting, including vendored library sources in [`src/Utilities/Libraries`](src/Utilities/Libraries/).
 
 **Note**: as `fprettify` may shift code in unexpected ways, it is a good idea to visually check source files afterwards.
 
-**Note**: while `fprettify` can be invoked on a directory, and will format all Fortran files within it, this should be done with care &mdash; the repository includes some files which `fprettify` can't properly format. To format the repository all at once, run the [provided Python script](.github/common/check_format.py) `check_format.py` or the `check-format` Pixi task. These exclude the proper files from formatting, including vendored library sources in [`src/Utilities/Libraries`](src/Utilities/Libraries/).
+
+### python formatting
+
+python code and scripts can be formatted with [ruff](https://docs.astral.sh/ruff/), specifying the [MODFLOW 6 ruff configuration](.github/common/ruff.toml). The `ruff` package is included in the Conda `environment.yml` and Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to format a single file:
+
+```shell
+ruff format --config .github/common/ruff.toml autotest/test_gwe_cnd.py
+```
+
+When run in this way, `ruff` will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's python code and scripts satisfy formatting requirements without making any changes:
+
+```shell
+ruff format --config .github/common/ruff.toml --check .
+```
+
+or using pixi:
+
+```shell
+pixi run check-python-format
+```
+
+To format all files, remove the `--check` flag from the python command or run the pixi command:
+
+```shell
+pixi run fix-python-format
+```
+
+### python linting
+
+Linting is the automated checking of source code for programmatic and stylistic errors. python code and scripts can be linted with [ruff](https://docs.astral.sh/ruff/), specifying the [MODFLOW 6 ruff configuration](.github/common/ruff.toml). The `ruff` package is included in the Conda `environment.yml` and Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to lint a single file:
+
+```shell
+ruff check --fix --config .github/common/ruff.toml autotest/test_gwe_cnd.py
+```
+
+When run in this way, `ruff` will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's python code and scripts satisfy linting requirements without making any changes:
+
+```shell
+ruff check --config .github/common/ruff.toml .
+```
+
+or using pixi:
+
+```shell
+pixi run check-python-lint
+```
+
+To format all files, add the `--fix` flag to the python command or pixi command. Alternatively with pixi run:
+
+```shell
+pixi run fix-python-lint
+```
 
 ## Testing
 
@@ -397,12 +529,19 @@ Alternatively, run `python update_flopy.py` directly from `autotest/`.
 
 ##### Updating Fortran definitions
 
-Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated definition files should accompany related dfn file changes when creating a pull request.
+Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated Fortran definition files should accompany related dfn file changes when creating a pull request.
 
 ```shell
 cd utils/idmloader/scripts
 python dfn2f90.py
 ```
+
+or using pixi:
+
+```shell
+pixi run update-fortran-definitions
+```
+
 
 ##### Installing external models
 
@@ -424,14 +563,23 @@ Unit tests must be run from the project root. To run unit tests in verbose mode:
 
 ```shell
 meson test -C builddir
-pixi run test builddir  # alternatively, with pixi
+```
+or using pixi:
+
+```shell
+pixi run test builddir
 ```
 
 Unit tests can be selected by module name (as listed in `autotest/tester.f90`). For instance, to test the `ArrayHandlersModule`:
 
 ```shell
 meson test -C builddir --verbose ArrayHandlers
-pixi run test builddir --verbose ArrayHandlers  # alternatively, with pixi
+```
+
+or using pixi:
+
+```shell
+pixi run test builddir --verbose ArrayHandlers
 ```
 
 To run a test module in the `gdb` debugger, just add the `--gdb` flag to the test command.
@@ -443,8 +591,14 @@ Integration tests must be run from the `autotest/` folder if invoked with `pytes
 To run tests in parallel:
 
 ```shell
+cd autotest/
 pytest -v -n auto  # from autotest/
-pixi run autotest  # from project root
+```
+
+or using pixi:
+
+```shell
+pixi run autotest
 ```
 
 The Pixi `autotest` task includes options to run tests in parallel, show test runtimes, and save failed test results in `autotest/.failed/`.
@@ -470,6 +624,12 @@ The `--smoke` (short `-S`) flag, provided by `modflow-devtools` is an alias for 
 
 ```shell
 pytest -v -n auto -S
+```
+
+or using pixi:
+
+```shell
+pixi run autotest -S
 ```
 
 [Smoke testing](https://modflow-devtools.readthedocs.io/en/latest/md/markers.html#smoke-testing) is a form of integration testing which aims to test a decent fraction of the codebase quickly enough to run often during development.
@@ -618,8 +778,14 @@ After running the reference and comparison models, the framework will try to fin
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
 
 ```shell
-pixi run build-makefiles   # from project root
-python build_makefiles.py  # alternatively, from distribution/
+cd distribution/
+python build_makefiles.py
+```
+
+or using pixi:
+
+```shell
+pixi run build-makefiles
 ```
 
 ### Updating extra and excluded files

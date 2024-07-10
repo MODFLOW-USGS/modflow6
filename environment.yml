@@ -5,6 +5,7 @@ channels:
   - defaults
 
 dependencies:
+  - python>=3.9
   - appdirs
   - codespell
   - filelock

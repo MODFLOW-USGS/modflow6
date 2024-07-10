@@ -77,12 +77,12 @@ install = { depends_on = [
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
 check-spelling = "python .github/common/check_spelling.py"
-check-python-lint = { cmd = "ruff check . --config .github/common/ruff.toml" }
+check-python-lint = { cmd = "ruff check --config .github/common/ruff.toml ." }
 check-python-format = { cmd = "pixi run fix-python-format --check" }
 
 # fix format
 fix-style = { cmd = "pixi run check-format --write-changes; pixi run check-spelling --write-changes" }
-fix-python-format = { cmd = "ruff format . --config .github/common/ruff.toml" }
+fix-python-format = { cmd = "ruff format --config .github/common/ruff.toml ." }
 fix-python-style = { cmd = "pixi run check-python-lint --fix; pixi run fix-python-format" }
 
 # meson build/test
@@ -96,10 +96,11 @@ get-exes = { cmd = "pytest -v --durations 0 get_exes.py", cwd = "autotest" }
 autotest = { cmd = "pytest -v -n auto --durations 0 --keep-failed .failed", cwd = "autotest" }
 
 # common developer tasks
+update-fortran-definitions = { cmd = "python dfn2f90.py", cwd = "utils/idmloader/scripts" }
 update-flopy = { cmd = "python update_flopy.py", cwd = "autotest" }
 build-makefiles = { cmd = "python build_makefiles.py", cwd = "distribution" }
 run-mf6ivar = { cmd = "python mf6ivar.py", cwd = "doc/mf6io/mf6ivar" }
-prepare-pull-request = {depends_on = ["fix-style", "fix-python-style", "build-makefiles", "run-mf6ivar"]}
+prepare-pull-request = {depends_on = ["fix-style", "fix-python-style", "build-makefiles", "run-mf6ivar", "update-fortran-definitions"]}
 
 # dist/docs
 benchmark = { cmd = "python benchmark.py", cwd = "distribution" }
