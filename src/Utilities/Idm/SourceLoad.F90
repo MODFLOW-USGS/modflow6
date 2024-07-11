@@ -339,6 +339,8 @@ contains
     return
   end function remote_model_ndim
 
+  !> @brief create model exports list
+  !<
   subroutine export_cr()
     ! -- modules
     use ModelExportModule, only: modelexports_create, nc_export_active
@@ -346,6 +348,8 @@ contains
     use NCExportCreateModule, only: nc_export_create
 #endif
     call modelexports_create(iout)
+    !
+    ! -- are netcdf exports elected
     if (nc_export_active()) then
 #if defined(__WITH_NETCDF__)
       call nc_export_create()
@@ -358,18 +362,24 @@ contains
     end if
   end subroutine export_cr
 
+  !> @brief model exports post step actions
+  !<
   subroutine export_post_step()
     ! -- modules
     use ModelExportModule, only: modelexports_post_step
     call modelexports_post_step()
   end subroutine export_post_step
 
+  !> @brief deallocate model export objects and list
+  !<
   subroutine export_da()
     ! -- modules
     use ModelExportModule, only: modelexports_destroy
     call modelexports_destroy()
   end subroutine export_da
 
+  !> @brief close an open netcdf file
+  !<
   subroutine nc_close(ncid, nc_fname)
 #if defined(__WITH_NETCDF__)
     use NetCDFCommonModule, only: nc_fclose

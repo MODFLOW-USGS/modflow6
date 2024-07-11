@@ -24,9 +24,9 @@ module NCFileVarsModule
     character(len=LINELENGTH), dimension(:), allocatable :: tagnames !< variable tag name
     integer(I4B), dimension(:), allocatable :: layers !< variable layer
     integer(I4B), dimension(:), allocatable :: varids !< netcdf file variable id
-    character(len=LINELENGTH), pointer :: grid => null()
-    character(len=LINELENGTH), pointer :: nc_fname => null()
-    integer(I4B), pointer :: ncid => null()
+    character(len=LINELENGTH), pointer :: grid => null() !< grid type
+    character(len=LINELENGTH), pointer :: nc_fname => null() !< netcdf filename
+    integer(I4B), pointer :: ncid => null() !< netcdf file handle
   contains
     procedure :: init => ncvars_init
     procedure :: varid => ncvars_varid
@@ -49,9 +49,9 @@ module NCFileVarsModule
     type(ListType) :: mf6invar !< list of modflow 6 input variables in netcdf file
     character(len=LINELENGTH), dimension(:), allocatable :: pkgnames !< packages in file
     integer(I4B), dimension(:), allocatable :: pkgcounts !< variable counts in each package
-    character(len=LINELENGTH), pointer :: grid => null()
-    character(len=LINELENGTH), pointer :: nc_fname => null()
-    integer(I4B), pointer :: ncid => null()
+    character(len=LINELENGTH), pointer :: grid => null() !< grid type
+    character(len=LINELENGTH), pointer :: nc_fname => null() !< netcdf filename
+    integer(I4B), pointer :: ncid => null() !< netcdf file handle
   contains
     procedure :: init => fv_init
     procedure :: add => fv_add
