@@ -32,7 +32,7 @@
 		\item An array out of bounds error for Z-displacement output in inactive cells has been fixed in the CSUB package. Depending on the combination of platform and compiler used to build the program, this could result in crashes.
 		\item Initialize a few uninitialized variables in the CSUB package. Depending on the combination of platform and compiler used to build the program, this could result in different program behaviour.
 		\item Add a warning if saving convergence data for the CSUB package when delay beds are not included in a simulation. Also modified the convergence output data so that it is clear that DVMAX and DSTORAGEMAX data and locations are not calculated in this case (by writing `-\,-' to the output file). 
-		\item When using SFT in a model where some of the stream reaches are not connected to an active GWF cell (the cellid parameter is set equal to either 0 or NONE) memory access violations were occuring.  The program was fixed by using reduced node numbers instead of the total number of cells regardless of status.  The program was tested using a new example with a DISU grid type and multiple GWF cells deactivated (idomain equals 0) that host SFR reaches.
+		\item When using SFT in a model where some of the stream reaches are not connected to an active GWF cell (the cellid parameter is set equal to either 0 or NONE) memory access violations were occurring.  The program was fixed by using reduced node numbers instead of the total number of cells regardless of status.  The program was tested using a new example with a DISU grid type and multiple GWF cells deactivated (idomain equals 0) that host SFR reaches.
 	%	\item xxx
 	\end{itemize}
 
