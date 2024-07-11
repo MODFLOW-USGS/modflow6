@@ -107,7 +107,7 @@ contains
         ! -- add the variable to netcdf description
         call nc_vars%add(sc_name, varname, layer, varid)
       else
-        errmsg = 'NetCDF variable invalid mf6_input attribute: "'// &
+        errmsg = 'NetCDF variable invalid modflow6_input attribute: "'// &
                  trim(input_str)//'".'
         call store_error(errmsg)
         call store_error_filename(nc_vars%nc_fname)

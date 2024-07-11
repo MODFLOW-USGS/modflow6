@@ -25,40 +25,40 @@ module DisNCStructuredModule
   public :: DisNCStructuredType
 
   type :: StructuredNCDimIdType
-    integer(I4B) :: x
-    integer(I4B) :: y
-    integer(I4B) :: z
-    integer(I4B) :: time
-    integer(I4B) :: bnd
+    integer(I4B) :: x !< number of columns
+    integer(I4B) :: y !< number of rows
+    integer(I4B) :: z !< number of layers
+    integer(I4B) :: time !< number of steps
+    integer(I4B) :: bnd !< number in boundary
   contains
   end type StructuredNCDimIdType
 
   type :: StructuredNCVarIdType
-    integer(I4B) :: x
-    integer(I4B) :: y
-    integer(I4B) :: z
-    integer(I4B) :: time
-    integer(I4B) :: dependent
-    integer(I4B) :: x_bnds
-    integer(I4B) :: y_bnds
-    integer(I4B) :: z_bnds
-    integer(I4B) :: lat
-    integer(I4B) :: lon
+    integer(I4B) :: x !< x coordinate variable
+    integer(I4B) :: y !< y coordinate variable
+    integer(I4B) :: z !< z coordinate variable
+    integer(I4B) :: time !< time coordinate variable
+    integer(I4B) :: dependent !< dependent variable
+    integer(I4B) :: x_bnds !< x boundaries 2D array
+    integer(I4B) :: y_bnds !< y boundaries 2D array
+    integer(I4B) :: z_bnds !< z boundaries 2D array
+    integer(I4B) :: lat !< latitude 2D array
+    integer(I4B) :: lon !< longitude 2D array
   contains
   end type StructuredNCVarIdType
 
   type, extends(NCBaseModelExportType) :: DisNCStructuredType
-    type(StructuredNCDimIdType) :: dim_ids
-    type(StructuredNCVarIdType) :: var_ids
+    type(StructuredNCDimIdType) :: dim_ids !< structured dimension ids type
+    type(StructuredNCVarIdType) :: var_ids !< structured variable ids type
     class(DisType), pointer :: dis => null() !< pointer to model dis package
     integer(I4B) :: nlay !< number of layers
-    real(DP), dimension(:), pointer, contiguous :: lat => null()
-    real(DP), dimension(:), pointer, contiguous :: lon => null()
+    real(DP), dimension(:), pointer, contiguous :: lat => null() !< lat input array pointer
+    real(DP), dimension(:), pointer, contiguous :: lon => null() !< lon input array pointer
     integer(I4B), pointer :: chunk_z !< chunking parameter for z dimension
     integer(I4B), pointer :: chunk_y !< chunking parameter for y dimension
     integer(I4B), pointer :: chunk_x !< chunking parameter for x dimension
-    integer(I4B), dimension(:), allocatable :: layers
-    logical(LGP) :: latlon
+    integer(I4B), dimension(:), allocatable :: layers !< layers array
+    logical(LGP) :: latlon !< are lat and lon arrays to be written to netcdf file
   contains
     procedure :: init => dis_export_init
     procedure :: destroy => dis_export_destroy
@@ -602,6 +602,7 @@ contains
       call nf_verify(nf90_redef(this%ncid), this%nc_fname)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%nc_fname)
+      ! -- TODO: consider variants epsg_code, spatial_ref, esri_pe_string, wkt, etc
       call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
                      this%nc_fname)
       call nf_verify(nf90_enddef(this%ncid), this%nc_fname)

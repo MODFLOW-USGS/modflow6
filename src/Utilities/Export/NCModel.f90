@@ -167,8 +167,9 @@ contains
   !<
   subroutine export_init(this, modelname, modeltype, modelfname, disenum, &
                          nctype, iout)
-    use SimVariablesModule, only: idm_context
+    use SimVariablesModule, only: isim_mode, idm_context
     use TdisModule, only: datetime0, nstp
+    use ConstantsModule, only: MVALIDATE
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
@@ -265,7 +266,7 @@ contains
     end if
     !
     ! -- set datetime string
-    if (datetime0 == '') then
+    if (isim_mode /= MVALIDATE .and. datetime0 == '') then
       errmsg = 'TDIS parameter START_DATE_TIME required for NetCDF export.'
       call store_error(errmsg)
       call store_error_filename(modelfname)
