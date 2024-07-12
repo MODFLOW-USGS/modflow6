@@ -1,5 +1,0 @@
-BEGIN CONNECTIONDATA
-  <ifno> [<ic(ncon(ifno))>]
-  <ifno> [<ic(ncon(ifno))>]
-  ...
-END CONNECTIONDATA

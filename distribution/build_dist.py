@@ -23,22 +23,18 @@ from modflow_devtools.misc import get_model_paths
 from utils import get_project_root_path
 
 # default paths
-_project_root_path = get_project_root_path()
-_build_path = _project_root_path / "builddir"
-_default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
+PROJ_ROOT_PATH = get_project_root_path()
+BUILDDIR_PATH = PROJ_ROOT_PATH / "builddir"
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 
 # OS-specific extensions
-_system = platform.system()
-_eext = ".exe" if _system == "Windows" else ""
-_soext = (
-    ".dll"
-    if _system == "Windows"
-    else ".so"
-    if _system == "Linux"
-    else ".dylib"
+SYSTEM = platform.system()
+EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
+LIB_EXT = (
+    ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
 )
-_scext = ".bat" if _system == "Windows" else ".sh"
-_executable = f"mf6{_eext}"
+SCR_EXT = ".bat" if SYSTEM == "Windows" else ".sh"
+MF6_EXE = f"mf6{EXE_EXT}"
 
 # Fortran and C compilers
 FC = environ.get("FC", "gfortran")
@@ -54,7 +50,7 @@ def copy_sources(output_path: PathLike):
     # Copy Visual Studio sln and project files
     print("Copying msvs files to output directory")
     (output_path / "msvs").mkdir(exist_ok=True)
-    source_msvs_path = _project_root_path / "msvs"
+    source_msvs_path = PROJ_ROOT_PATH / "msvs"
     for d in [
         str(source_msvs_path / "mf6.sln"),
         str(source_msvs_path / "mf6.vfproj"),
@@ -67,23 +63,23 @@ def copy_sources(output_path: PathLike):
     ignored = [".DS_Store"]
 
     # copy top-level meson.build and meson.options
-    copy(_project_root_path / "meson.build", output_path)
-    copy(_project_root_path / "meson.options", output_path)
+    copy(PROJ_ROOT_PATH / "meson.build", output_path)
+    copy(PROJ_ROOT_PATH / "meson.options", output_path)
 
     # copy source folder
-    src_path = _project_root_path / "src"
+    src_path = PROJ_ROOT_PATH / "src"
     dst_path = output_path / "src"
     print(f"Copying {src_path} to {dst_path}")
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy srcbmi folder
-    src_path = _project_root_path / "srcbmi"
+    src_path = PROJ_ROOT_PATH / "srcbmi"
     dst_path = output_path / "srcbmi"
     print(f"Copying {src_path} to {dst_path}")
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy utils folder
-    src_path = _project_root_path / "utils"
+    src_path = PROJ_ROOT_PATH / "utils"
     dst_path = output_path / "utils"
     print(f"Copying {src_path} to {dst_path}")
     ignored.extend(["idmloader"])
@@ -144,50 +140,50 @@ def setup_examples(
     # and add run.sh/bat script to each folder
     model_paths = get_model_paths(examples_path)
     for mp in model_paths:
-        script_path = mp / f"run{_scext}"
+        script_path = mp / f"run{SCR_EXT}"
         if not overwrite and script_path.is_file():
             print(f"Script {script_path} already exists")
         else:
             print(f"Creating {script_path}")
             with open(script_path, "w") as f:
-                if _system == "Windows":
+                if SYSTEM == "Windows":
                     f.write("@echo off" + "\n")
                 else:
                     f.write("#!/bin/sh" + "\n")
-                runbatloc = os.path.relpath(bin_path / _executable, start=mp)
+                runbatloc = os.path.relpath(bin_path / MF6_EXE, start=mp)
                 f.write(runbatloc + "\n")
-                if _system == "Windows":
+                if SYSTEM == "Windows":
                     f.write("echo." + "\n")
                     f.write(
                         "echo Run complete.  Press any key to continue" + "\n"
                     )
                     f.write("pause>nul" + "\n")
 
-            if _system != "Windows":
+            if SYSTEM != "Windows":
                 script_path.chmod(script_path.stat().st_mode | 0o111)
                 print(f"Execute permission set for {script_path}")
 
     # add runall.sh/bat, which runs all examples
-    script_path = examples_path / f"runall{_scext}"
+    script_path = examples_path / f"runall{SCR_EXT}"
     if not overwrite and script_path.is_file():
         print(f"Script {script_path} already exists")
     else:
         print(f"Creating {script_path}")
         with open(script_path, "w") as f:
-            if _system != "Windows":
+            if SYSTEM != "Windows":
                 f.write("#!/bin/sh" + "\n")
             for mp in model_paths:
                 d = os.path.relpath(mp, start=examples_path)
                 s = f"cd {d}"
                 f.write(s + "\n")
-                runbatloc = os.path.relpath(bin_path / _executable, start=mp)
+                runbatloc = os.path.relpath(bin_path / MF6_EXE, start=mp)
                 f.write(runbatloc + "\n")
                 d = os.path.relpath(examples_path, start=mp)
                 s = f"cd {d}"
                 f.write(s + "\n")
                 s = ""
                 f.write(s + "\n")
-            if _system == "Windows":
+            if SYSTEM == "Windows":
                 f.write("pause" + "\n")
             else:
                 script_path.chmod(script_path.stat().st_mode | 0o111)
@@ -201,11 +197,11 @@ def build_programs_meson(
     bin_path = Path(bin_path).expanduser().absolute()
 
     exe_paths = [
-        bin_path / f"mf6{_eext}",
-        bin_path / f"zbud6{_eext}",
-        bin_path / f"mf5to6{_eext}",
+        bin_path / f"mf6{EXE_EXT}",
+        bin_path / f"zbud6{EXE_EXT}",
+        bin_path / f"mf5to6{EXE_EXT}",
     ]
-    lib_paths = [bin_path / f"libmf6{_soext}"]
+    lib_paths = [bin_path / f"libmf6{LIB_EXT}"]
 
     if (
         not overwrite
@@ -217,7 +213,7 @@ def build_programs_meson(
     else:
         print(f"Building binaries in {build_path}, installing to {bin_path}")
         meson_build(
-            project_path=_project_root_path,
+            project_path=PROJ_ROOT_PATH,
             build_path=build_path,
             bin_path=bin_path,
         )
@@ -240,11 +236,11 @@ def build_makefiles(output_path: PathLike):
     build_mf6_makefile()
     (output_path / "make").mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / "make" / "makefile",
+        PROJ_ROOT_PATH / "make" / "makefile",
         output_path / "make" / "makefile",
     )
     copyfile(
-        _project_root_path / "make" / "makedefaults",
+        PROJ_ROOT_PATH / "make" / "makedefaults",
         output_path / "make" / "makedefaults",
     )
 
@@ -253,11 +249,11 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "zonebudget" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile",
+        PROJ_ROOT_PATH / rel_path / "makefile",
         output_path / rel_path / "makefile",
     )
     copyfile(
-        _project_root_path / rel_path / "makedefaults",
+        PROJ_ROOT_PATH / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
 
@@ -266,11 +262,11 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "mf5to6" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile",
+        PROJ_ROOT_PATH / rel_path / "makefile",
         output_path / rel_path / "makefile",
     )
     copyfile(
-        _project_root_path / rel_path / "makedefaults",
+        PROJ_ROOT_PATH / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
 
@@ -313,7 +309,7 @@ def build_distribution(
     )
 
     # code.json metadata
-    copy(_project_root_path / "code.json", output_path)
+    copy(PROJ_ROOT_PATH / "code.json", output_path)
 
     # full releases include examples, source code, makefiles and docs
     if not full:
@@ -398,14 +394,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--build-path",
         required=False,
-        default=str(_build_path),
+        default=str(BUILDDIR_PATH),
         help="Path to the build workspace",
     )
     parser.add_argument(
         "-o",
         "--output-path",
         required=False,
-        default=str(_project_root_path / "distribution"),
+        default=str(PROJ_ROOT_PATH / "distribution"),
         help="Path to create distribution artifacts",
     )
     parser.add_argument(
@@ -434,7 +430,7 @@ if __name__ == "__main__":
     build_path = Path(args.build_path)
     out_path = Path(args.output_path)
     out_path.mkdir(parents=True, exist_ok=True)
-    models = args.model if args.model else _default_models
+    models = args.model if args.model else DEFAULT_MODELS
 
     build_distribution(
         build_path=build_path,

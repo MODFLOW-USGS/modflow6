@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  <ifno> <reachsetting>
-  <ifno> <reachsetting>
-  ...
-END PERIOD

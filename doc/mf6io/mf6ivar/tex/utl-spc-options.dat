@@ -1,4 +1,0 @@
-BEGIN OPTIONS
-  [PRINT_INPUT]
-  [TS6 FILEIN <ts6_filename>]
-END OPTIONS

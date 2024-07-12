@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  <cellid(ncelldim)> <tvssetting>
-  <cellid(ncelldim)> <tvssetting>
-  ...
-END PERIOD

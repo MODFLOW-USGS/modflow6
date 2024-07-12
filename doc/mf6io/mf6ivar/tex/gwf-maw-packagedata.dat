@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<@aux(naux)@>] [<boundname>]
-  <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<@aux(naux)@>] [<boundname>]
-  ...
-END PACKAGEDATA

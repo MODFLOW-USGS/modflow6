@@ -1,5 +1,0 @@
-BEGIN OPTIONS
-  [TIME_UNITS <time_units>]
-  [START_DATE_TIME <start_date_time>]
-  [ATS6 FILEIN <ats6_filename>]
-END OPTIONS

@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  <cellid(ncelldim)> <@recharge@> [<@aux(naux)@>] [<boundname>]
-  <cellid(ncelldim)> <@recharge@> [<@aux(naux)@>] [<boundname>]
-  ...
-END PERIOD

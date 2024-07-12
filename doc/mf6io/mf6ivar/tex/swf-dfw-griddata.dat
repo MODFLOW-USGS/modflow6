@@ -1,6 +1,0 @@
-BEGIN GRIDDATA
-  MANNINGSN
-    <manningsn(nodes)> -- READARRAY
-  [IDCXS
-    <idcxs(nodes)> -- READARRAY]
-END GRIDDATA

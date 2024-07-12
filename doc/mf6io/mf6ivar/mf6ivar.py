@@ -207,6 +207,9 @@ VALID_TYPES = [
     "record",
 ]
 
+MD_DIR_PATH.mkdir(exist_ok=True)
+TEX_DIR_PATH.mkdir(exist_ok=True)
+
 
 def block_entry(varname, block, vardict, prefix="  "):
     key = (varname, block)

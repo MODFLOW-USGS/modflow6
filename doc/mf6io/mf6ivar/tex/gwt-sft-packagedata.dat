@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
-  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
-  ...
-END PACKAGEDATA
