@@ -12,9 +12,10 @@ from framework import TestFramework
 from test_gwt_dsp01 import cases, xt3d
 
 try:
+    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xugrid not found", allow_module_level=True)
+    pytest.skip("xarray and xugrid not found", allow_module_level=True)
 
 
 def build_models(idx, test, export, gridded_input):

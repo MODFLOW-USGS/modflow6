@@ -13,9 +13,10 @@ from framework import TestFramework
 from test_gwf_sto01 import cases
 
 try:
+    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xugrid not found", allow_module_level=True)
+    pytest.skip("xarray and xugrid not found", allow_module_level=True)
 
 htol = [None for _ in range(len(cases))]
 
