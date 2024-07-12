@@ -2421,7 +2421,7 @@ contains
       end if
       !
       ! -- output table
-      if (this%istrainib > 0 .or. this%istrainsk > 0) then
+      if (associated(this%outputtab)) then
         call this%outputtab%table_da()
         deallocate (this%outputtab)
         nullify (this%outputtab)
