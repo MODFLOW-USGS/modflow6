@@ -860,7 +860,9 @@ contains
     real(DP), intent(inout) :: det
     ! -- local
     real(DP) :: s, x, c, b, et
+    integer(I4B) :: signflip
     !
+    signflip = 1
     this%gwet(icell) = DZERO
     trhs = DZERO
     thcof = DZERO
@@ -876,11 +878,12 @@ contains
                       this%celtop(icell), this%celbot(icell))
     else if (igwetflag == 2) then
       et = etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
+      signflip = -1
     end if
     ! this%gwet(icell) = et * this%uzfarea(icell)
     trhs = trhs * this%uzfarea(icell)
     thcof = thcof * this%uzfarea(icell)
-    this%gwet(icell) = trhs - (thcof * hgwf)
+    this%gwet(icell) = (trhs - (thcof * hgwf)) * signflip
     ! write(99,*)'in group', icell, this%gwet(icell)
     !
     ! -- Return
@@ -890,7 +893,7 @@ contains
   !> @brief Square-wave ET function with smoothing at extinction depth
   !<
   function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-    ! -- Return
+    ! -- return
     real(DP) :: etfunc_nlin
     ! -- dummy
     real(DP), intent(in) :: s
