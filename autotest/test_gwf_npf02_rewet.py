@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]

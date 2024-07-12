@@ -18,12 +18,9 @@ ia  ja
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -32,7 +29,6 @@ cases = [
 
 
 def build_models(idx, test):
-
     sim_ws = test.workspace
     name = cases[idx]
     sim = flopy.mf6.MFSimulation(
@@ -78,7 +74,6 @@ def build_models(idx, test):
 
 
 def add_swf_model(sim):
-
     name = "swfmodel"
     swf = flopy.mf6.ModflowSwf(sim, modelname=name, save_flows=True)
 
@@ -98,7 +93,7 @@ def add_swf_model(sim):
         nodes=nodes,
         nvert=nvert,
         length=dx,
-        width=50.,
+        width=50.0,
         bottom=0.0,
         idomain=1,
         vertices=vertices,
@@ -173,7 +168,6 @@ def add_swf_model(sim):
 
 
 def add_gwf_model(sim):
-
     # create gwf model
     name = "gwfmodel"
     gwf = flopy.mf6.ModflowGwf(

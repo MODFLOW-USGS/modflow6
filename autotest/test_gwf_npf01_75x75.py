@@ -1,11 +1,11 @@
 import os
 import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
-
-from framework import TestFramework
 from conftest import try_get_target
+from framework import TestFramework
 
 cases = ["npf01a_75x75", "npf01b_75x75"]
 top = [100.0, 0.0]

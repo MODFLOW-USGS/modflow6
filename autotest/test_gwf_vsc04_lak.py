@@ -19,7 +19,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc04-lak", "vsc04-lak"]
@@ -165,7 +164,7 @@ def build_models(idx, test):
     # Base simulation and model name and workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -201,7 +200,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -217,7 +216,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=ibound,
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiate node property flow package
@@ -244,7 +243,7 @@ def build_models(idx, test):
 
     # Instantiate viscosity package
     if viscosity_on[idx]:
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, tviscref, gwtname, "TEMPERATURE")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -257,7 +256,7 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiate output control package
@@ -433,7 +432,7 @@ def build_models(idx, test):
     }
 
     lak_obs = {
-        "{}.lakeobs".format(gwfname): [
+        f"{gwfname}.lakeobs": [
             ("lakestage", "stage", "lake1"),
             ("gwexchng", "lak", "lake1"),
         ]
@@ -455,7 +454,7 @@ def build_models(idx, test):
         connectiondata=lakeconnectiondata,
         perioddata=lakeperioddata,
         observations=lak_obs,
-        filename="{}.lak".format(gwfname),
+        filename=f"{gwfname}.lak",
     )
 
     # pull in the tabfile defining the lake stage, vol, & surface area
@@ -469,7 +468,7 @@ def build_models(idx, test):
             #                        <stage>, <volume>,  <sarea>,
             tabinput.append([float(m_arr[0]), m_arr[1], m_arr[2]])
 
-    tab6_filename = "{}.laktab".format(gwfname)
+    tab6_filename = f"{gwfname}.laktab"
     flopy.mf6.ModflowUtllaktab(
         gwf,
         nrow=len(tabinput),
@@ -483,7 +482,7 @@ def build_models(idx, test):
     # create gwt model
     # ----------------
     gwt = flopy.mf6.ModflowGwt(
-        sim, modelname=gwtname, model_nam_file="{}.nam".format(gwtname)
+        sim, modelname=gwtname, model_nam_file=f"{gwtname}.nam"
     )
     gwt.name_file.save_flows = True
 
@@ -515,14 +514,12 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=ibound,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
     strtconc = leftTemp
-    flopy.mf6.ModflowGwtic(
-        gwt, strt=strtconc, filename="{}.ic".format(gwtname)
-    )
+    flopy.mf6.ModflowGwtic(gwt, strt=strtconc, filename=f"{gwtname}.ic")
 
     # Instantiate mobile storage and transfer package
     sto = flopy.mf6.ModflowGwtmst(
@@ -538,13 +535,11 @@ def build_models(idx, test):
         raise Exception()
 
     # Instantiate advection package
-    flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename="{}.adv".format(gwtname)
-    )
+    flopy.mf6.ModflowGwtadv(gwt, scheme=scheme, filename=f"{gwtname}.adv")
 
     # Instantiate dispersion package
     flopy.mf6.ModflowGwtdsp(
-        gwt, alh=al, ath1=ath1, atv=atv, filename="{}.dsp".format(gwtname)
+        gwt, alh=al, ath1=ath1, atv=atv, filename=f"{gwtname}.dsp"
     )
 
     # Instantiate source/sink mixing package
@@ -559,14 +554,14 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 transport output control package
     flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 17, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwtname),
+        filename=f"{gwtname}.oc",
     )
 
     # Instantiating MODFLOW 6 lake transport (lkt) package
@@ -576,7 +571,7 @@ def build_models(idx, test):
 
     # note: for specifying lake number, use fortran indexing!
     lkt_obs = {
-        "{}.lakobs".format(gwtname): [
+        f"{gwtname}.lakobs": [
             ("resTemp", "concentration", 1),
             ("resGwMassExchng", "lkt", "lake1"),
         ]
@@ -596,7 +591,7 @@ def build_models(idx, test):
         lakeperioddata=lktperioddata,
         observations=lkt_obs,
         pname="LKT-1",
-        filename="{}.lkt".format(gwtname),
+        filename=f"{gwtname}.lkt",
     )
 
     # GWF-GWT exchange
@@ -753,20 +748,20 @@ def check_output(idx, test):
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater
         # than their 'no vsc' counterpart
-        assert np.greater(
-            np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
-        ).all(), (
-            "Lake inflow did no increase with VSC turned on and should have."
-        )
+        assert (
+            np.greater(
+                np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
+            ).all()
+        ), "Lake inflow did no increase with VSC turned on and should have."
 
         # Check that all the flows leaving the lak in the 'with vsc' model are less
         # than their 'no vsc' counterpart (keep in mind values are negative, which
         # affects how the comparison is made)
-        assert np.greater(
-            np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
-        ).all(), (
-            "Lake outflow did no decrease with VSC turned on and should have."
-        )
+        assert (
+            np.greater(
+                np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
+            ).all()
+        ), "Lake outflow did no decrease with VSC turned on and should have."
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

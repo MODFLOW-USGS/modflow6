@@ -1,0 +1,32 @@
+line-length = 79
+target-version = "py37"
+include = [
+    ".doc/**/*.py",
+    "autotest/pyproject.toml",
+    "autotest/**/*.py",
+    "distribution/**/*.py",
+    "doc/**/*.py",
+    "pymake/**/*.py",
+    "utils/**/*.py",
+]
+
+[lint]
+select = [
+    "D409", # pydocstyle - section-underline-matches-section-length
+    "E",    # pycodestyle error
+    "F",    # Pyflakes
+    "I001", # isort - unsorted-imports
+]
+ignore = [
+    "E501", # line too long TODO FIXME
+    "E722", # do not use bare `except`
+    "E741", # ambiguous variable name
+    "F821", # undefined name TODO FIXME
+    "F841", # local variable assigned but never used
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"

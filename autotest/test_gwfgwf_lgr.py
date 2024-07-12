@@ -35,9 +35,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.lgrutil import Lgr
-
 from conftest import project_root_path
+from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
 
 data_path = project_root_path / "autotest" / "data"

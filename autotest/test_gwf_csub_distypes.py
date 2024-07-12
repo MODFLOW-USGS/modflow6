@@ -3,9 +3,8 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.gridgen import Gridgen
-
 from conftest import try_get_target
+from flopy.utils.gridgen import Gridgen
 from framework import TestFramework
 
 cases = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]

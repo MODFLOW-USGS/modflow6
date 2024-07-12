@@ -12,7 +12,6 @@ import sys
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -723,11 +722,11 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
     if sft_on:
         # get southern model
         gwt = sim.get_model(gwtnames[1])
-        sftpack = gwt.get_package(f"sft-3")
+        sftpack = gwt.get_package("sft-3")
         times = sftpack.output.concentration().times
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
         sft3outflowconc = conc[:, -1]  # last reach
-        sftpack = gwt.get_package(f"sft-4")
+        sftpack = gwt.get_package("sft-4")
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
         sft4outflowconc = conc[:, -1]  # last reach
 
@@ -915,11 +914,11 @@ def check_output(idx, test):
     if sft_on and transport_on:
         # get southern model
         gwt = simfp.get_model(gwtnames[1])
-        sftpack = gwt.get_package(f"sft-3")
+        sftpack = gwt.get_package("sft-3")
         times = sftpack.output.concentration().times
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
         sft3outflowconc = conc[:, -1]  # last reach
-        sftpack = gwt.get_package(f"sft-4")
+        sftpack = gwt.get_package("sft-4")
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
         sft4outflowconc = conc[:, -1]  # last reach
 

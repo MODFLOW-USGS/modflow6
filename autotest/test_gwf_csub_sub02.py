@@ -2,7 +2,6 @@ import os
 
 import flopy
 import pytest
-
 from framework import TestFramework
 
 cases = [

@@ -7,7 +7,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -219,7 +218,7 @@ def check_output(idx, test):
         # Check records for each of the four recharge packages
         rchbud = rchbudall[itime]
         print(rchbud)
-        print(f"  Checking records for recharge package")
+        print("  Checking records for recharge package")
 
         # id1 is the GWF user-based cell number
         print("    Checking id1")

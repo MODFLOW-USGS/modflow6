@@ -4,12 +4,9 @@ Loop network problem from SWR Manual (Problem 4)
 
 """
 
-import os
-
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -28,7 +25,6 @@ print(answer_flow)
 
 
 def build_models(idx, test):
-
     sim_ws = test.workspace
     name = cases[idx]
     sim = flopy.mf6.MFSimulation(
@@ -230,7 +226,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         length=reach_length,
-        width=1.,
+        width=1.0,
         bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
@@ -243,7 +239,7 @@ def build_models(idx, test):
     dfw = flopy.mf6.ModflowSwfdfw(
         swf,
         central_in_space=True,
-        #dev_swr_conductance=True,
+        # dev_swr_conductance=True,
         print_flows=True,
         save_flows=True,
         manningsn=0.03,
@@ -473,7 +469,7 @@ def check_output(idx, test):
             )
         assert np.allclose(
             qresidual, 0.0, atol=atol
-        ), f"residual in flowja diagonal is not zero"
+        ), "residual in flowja diagonal is not zero"
 
     return
 

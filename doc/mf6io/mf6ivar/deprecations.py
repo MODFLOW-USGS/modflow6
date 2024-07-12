@@ -1,10 +1,13 @@
 import os
-from typing import List, Tuple, Optional
-from packaging.version import Version
 from pathlib import Path
+from typing import List, Optional, Tuple
+
+from packaging.version import Version
 
 
-def get_deprecations(dfndir) -> List[Tuple[Path, str, Version, Optional[Version]]]:
+def get_deprecations(
+    dfndir,
+) -> List[Tuple[Path, str, Version, Optional[Version]]]:
     dfns = Path(dfndir).rglob("*.dfn")
     deps = {}
     for dfn in dfns:
@@ -30,7 +33,7 @@ def get_deprecations(dfndir) -> List[Tuple[Path, str, Version, Optional[Version]
 
 def create_deprecations_file(dfndir, mddir, verbose):
     deprecations = get_deprecations(dfndir)
-    deps_path = (Path(mddir) / 'deprecations.md').absolute()
+    deps_path = (Path(mddir) / "deprecations.md").absolute()
     if verbose:
         print(f"Found {len(deprecations)} deprecations, writing {deps_path}")
     with open(deps_path, "w") as f:
@@ -39,14 +42,14 @@ def create_deprecations_file(dfndir, mddir, verbose):
         if any(deprecations):
             s += "| Model-Package | Option | Deprecated | Removed |\n"
             s += "|:--------------|:-------|:-----------|:--------|\n"
-            for (file, option, deprecated, removed) in deprecations:
+            for file, option, deprecated, removed in deprecations:
                 s += f"| {file.stem} | {option} | {deprecated} | {removed if removed else ''} |\n"
             if len(s) > 0:
                 s += "\n"
         f.write(s)
 
 
-if __name__ == '__main__':
-    dfndir = os.path.join('.', 'dfn')
-    mddir = os.path.join('.', 'md')
+if __name__ == "__main__":
+    dfndir = os.path.join(".", "dfn")
+    mddir = os.path.join(".", "md")
     create_deprecations_file(dfndir, mddir, verbose=True)

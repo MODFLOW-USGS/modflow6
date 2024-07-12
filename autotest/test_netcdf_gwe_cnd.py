@@ -7,6 +7,7 @@ in the FloPy binary output head file and package data objects.
 # Imports
 
 import os
+
 import numpy as np
 import pytest
 
@@ -19,10 +20,9 @@ except:
     raise Exception(msg)
 
 try:
-    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xuarray and xugrid not found", allow_module_level=True)
+    pytest.skip("xuarray not found", allow_module_level=True)
 
 from framework import TestFramework
 

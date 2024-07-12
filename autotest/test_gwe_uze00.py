@@ -26,17 +26,14 @@
 #     |       |       |       |  Layer 100
 #     +-------+-------+-------+
 
+import math
 import os
 
 import flopy
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from framework import TestFramework
-
-import flopy.utils.binaryfile as bf
-import math
-
-import matplotlib.pyplot as plt
 
 
 # Analytical solution, from Barends (2010) Equation 5
@@ -297,7 +294,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -327,7 +324,7 @@ def build_models(idx, test):
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -368,7 +365,7 @@ def build_models(idx, test):
         print_flows=True,
         stress_period_data=ctpspd,
         pname="CTP",
-        filename="{}.ctp".format(gwename),
+        filename=f"{gwename}.ctp",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
@@ -412,8 +409,8 @@ def build_models(idx, test):
     flopy.mf6.ModflowGweoc(
         gwe,
         pname="OC",
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -428,7 +425,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(gwename),
+        filename=f"{gwename}.gwfgwe",
     )
 
     return sim, None

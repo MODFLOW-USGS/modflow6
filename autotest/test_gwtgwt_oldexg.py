@@ -26,7 +26,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwtgwt_oldexg"]
@@ -614,63 +613,49 @@ def compare_gwf_to_ref(test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_2models))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. head diff. {} should \
+    assert maxdiff < 10 * hclose_check, "Max. head diff. {} should \
                      be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_x left
     maxdiff = np.amax(abs(qxb[:, :, 0:5] - qxb_left))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (x) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (x) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_y left
     maxdiff = np.amax(abs(qyb[:, :, 0:5] - qyb_left))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (y) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (y) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_z left
     maxdiff = np.amax(abs(qzb[:, :, 0:5] - qzb_left))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (z) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (z) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_x right
     maxdiff = np.amax(abs(qxb[:, :, 5:] - qxb_right))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (x) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (x) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_y right
     maxdiff = np.amax(abs(qyb[:, :, 5:] - qyb_right))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (y) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (y) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
 
     # compare spdis_z right
     maxdiff = np.amax(abs(qzb[:, :, 5:] - qzb_right))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (z) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (z) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
@@ -727,9 +712,7 @@ def compare_gwt_to_ref(test):
 
     # compare concentrations
     maxdiff = np.amax(abs(conc - conc_2models))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. concentration diff. {} should \
+    assert maxdiff < 10 * hclose_check, "Max. concentration diff. {} should \
                      be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )

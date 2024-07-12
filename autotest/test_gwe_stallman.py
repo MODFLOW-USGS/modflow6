@@ -6,11 +6,10 @@
 
 # Imports
 import os
+
+import flopy
 import numpy as np
 import pytest
-import matplotlib.pyplot as plt
-import flopy
-
 from framework import TestFramework
 
 # Base simulation and model name and workspace
@@ -118,7 +117,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print(f"Building MF6 model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -139,7 +138,7 @@ def build_models(idx, test):
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # Instantiating MODFLOW 6 solver for flow model
@@ -156,7 +155,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwfname])
 
@@ -172,7 +171,7 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiating MODFLOW 6 node-property flow package
@@ -181,16 +180,16 @@ def build_models(idx, test):
         save_specific_discharge=True,
         icelltype=0,
         k=hydraulic_conductivity,
-        filename="{}.npf".format(gwfname),
+        filename=f"{gwfname}.npf",
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(gwf, strt=top, filename="{}.ic".format(gwfname))
+    flopy.mf6.ModflowGwfic(gwf, strt=top, filename=f"{gwfname}.ic")
 
     # Instantiating VSC
     if viscosity_on[idx]:
         # Instantiate viscosity (VSC) package
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, 20.0, gwename, "temperature")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -203,21 +202,21 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiating MODFLOW 6 constant head package
     flopy.mf6.ModflowGwfchd(
         gwf,
         stress_period_data=chd_mf6,
-        filename="{}.chd".format(gwfname),
+        filename=f"{gwfname}.chd",
     )
 
     # Instantiating MODFLOW 6 output control package for flow model
     flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(gwfname),
-        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord=f"{gwfname}.hds",
+        budget_filerecord=f"{gwfname}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -232,7 +231,7 @@ def build_models(idx, test):
         sim,
         model_type="gwe6",
         modelname=gwename,
-        model_nam_file="{}.nam".format(gwename),
+        model_nam_file=f"{gwename}.nam",
     )
     gwe.name_file.save_flows = True
     imsgwe = flopy.mf6.ModflowIms(
@@ -248,7 +247,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -263,18 +262,14 @@ def build_models(idx, test):
         delc=delc,
         top=top,
         botm=botm,
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, filename="{}.ic".format(gwename)
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme="TVD", filename="{}.adv".format(gwename)
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme="TVD", filename=f"{gwename}.adv")
 
     # Instantiating MODFLOW 6 transport dispersion package
     flopy.mf6.ModflowGwecnd(
@@ -285,7 +280,7 @@ def build_models(idx, test):
         ktw=ktw,
         kts=kts,
         pname="CND-1",
-        filename="{}.dsp".format(gwename),
+        filename=f"{gwename}.dsp",
     )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
@@ -297,7 +292,7 @@ def build_models(idx, test):
         latent_heat_vaporization=lhv,
         cps=cps,
         rhos=rhos,
-        filename="{}.mst".format(gwename),
+        filename=f"{gwename}.mst",
     )
 
     # Instantiating MODFLOW 6 transport constant concentration package
@@ -305,19 +300,17 @@ def build_models(idx, test):
         gwe,
         stress_period_data=cnc_mf6,
         pname="CTP-1",
-        filename="{}.tmp".format(gwename),
+        filename=f"{gwename}.tmp",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=[[]], filename="{}.ssm".format(gwename)
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=[[]], filename=f"{gwename}.ssm")
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
         temperatureprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -331,7 +324,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(name),
+        filename=f"{name}.gwfgwe",
     )
     return sim, None
 
@@ -384,7 +377,7 @@ def check_output(idx, test):
     # plt.legend()
     # plt.savefig("stallman.png")
 
-    msg = f"gwe temperatures do not match analytical temperatures"
+    msg = "gwe temperatures do not match analytical temperatures"
     assert np.allclose(zconc[:, 1], analytical_temps[:, 1], atol=1e-1), msg
 
     return

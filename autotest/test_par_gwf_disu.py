@@ -16,9 +16,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.gridutil import get_disu_kwargs
-
 from conftest import project_root_path
+from flopy.utils.gridutil import get_disu_kwargs
 from framework import TestFramework
 
 data_path = project_root_path / "autotest" / "data" / "par_gwf_disu_exg"

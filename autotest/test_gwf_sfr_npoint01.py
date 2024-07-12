@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from cross_section_functions import get_depths
 from framework import TestFramework
 

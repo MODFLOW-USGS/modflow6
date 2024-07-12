@@ -7,15 +7,12 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
-from conftest import try_get_target
 
 try:
-    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xuarray and xugrid not found", allow_module_level=True)
+    pytest.skip("xugrid not found", allow_module_level=True)
 
 cases = ["gwf_sto01"]
 htol = [None for _ in range(len(cases))]

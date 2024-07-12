@@ -10,7 +10,6 @@ with a serial 'single'
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_exgmvr01"]

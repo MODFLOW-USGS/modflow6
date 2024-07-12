@@ -21,17 +21,16 @@ import numpy as np
 import pandas as pd
 import pytest
 from flopy.utils import PathlineFile
-from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from modflow_devtools.markers import requires_pkg
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     all_equal,
     check_budget_data,
     check_track_data,
     get_model_name,
     get_partdata,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtrelt"

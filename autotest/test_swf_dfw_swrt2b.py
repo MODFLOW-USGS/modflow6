@@ -1,16 +1,13 @@
 """
 
 Same as test_swf_dfw_swr2.py except this one uses
-the adaptive time stepping (ATS).  
+the adaptive time stepping (ATS).
 
 """
-
-import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -183,7 +180,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / f"swf_model.obs.csv"
+    fpth = test.workspace / "swf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))
@@ -231,9 +228,10 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     swf = mfsim.get_model(swfname)
     depth = stage_all[-1] - swf.disv1d.bottom.array
-    np.allclose(
-        depth, 1.0
-    ), f"Simulated depth at end should be 1, but found {depth}"
+    (
+        np.allclose(depth, 1.0),
+        f"Simulated depth at end should be 1, but found {depth}",
+    )
 
 
 @pytest.mark.developmode

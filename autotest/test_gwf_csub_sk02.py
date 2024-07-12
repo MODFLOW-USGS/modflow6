@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["csub_sk02a", "csub_sk02b", "csub_sk02c", "csub_sk02d"]

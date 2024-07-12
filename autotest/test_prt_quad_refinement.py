@@ -7,7 +7,6 @@ The flow system is based on the FloPy README example.
 """
 
 from pathlib import Path
-from pprint import pformat
 
 import flopy
 import matplotlib.cm as cm
@@ -15,15 +14,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.utils import PathlineFile
-from flopy.utils.gridgen import Gridgen
 from flopy.utils.binaryfile import HeadFile
+from flopy.utils.gridgen import Gridgen
 from framework import TestFramework
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtqref01"
@@ -266,9 +264,10 @@ def check_output(idx, test, snapshot):
             )
 
         # plot nodes
-        xc, yc = mg.get_xcellcenters_for_layer(
-            0
-        ), mg.get_ycellcenters_for_layer(0)
+        xc, yc = (
+            mg.get_xcellcenters_for_layer(0),
+            mg.get_ycellcenters_for_layer(0),
+        )
         for i in range(mg.ncpl):
             x, y = xc[i], yc[i]
             ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)

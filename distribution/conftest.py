@@ -11,7 +11,9 @@ _dist_dir_path = (
 
 def pytest_addoption(parser):
     # all options below are for check_dist.py
-    parser.addoption("-P", "--path", action="store", default=str(_dist_dir_path))
+    parser.addoption(
+        "-P", "--path", action="store", default=str(_dist_dir_path)
+    )
     parser.addoption("-A", "--approved", action="store_true", default=False)
     parser.addoption("-R", "--releasemode", action="store_true", default=False)
     parser.addoption("-F", "--full", action="store_true", default=False)

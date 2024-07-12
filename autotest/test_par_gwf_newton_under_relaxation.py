@@ -8,11 +8,7 @@ with a serial model.
 This test also checks that Newton under_relaxation works in parallel.
 """
 
-import os
-from decimal import Decimal
-
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_nr_ur01", "par_nr_ur02"]
@@ -21,8 +17,7 @@ cases = ["par_nr_ur01", "par_nr_ur02"]
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    from test_gwf_newton_under_relaxation import build_models
-    from test_gwf_newton_under_relaxation import check_output
+    from test_gwf_newton_under_relaxation import build_models, check_output
 
     ncpus = 2 if idx == 1 else 1
     test = TestFramework(

@@ -13,7 +13,6 @@ This test also checks that PTC works in parallel.
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_newton"]

@@ -9,8 +9,8 @@ from os import PathLike, environ
 from pathlib import Path
 from warnings import warn
 
-from modflow_devtools.markers import requires_exe
 import pytest
+from modflow_devtools.markers import requires_exe
 
 _project_root_path = Path(__file__).resolve().parent.parent
 
@@ -39,7 +39,7 @@ def get_branch():
         branch = os.environ.get("GITHUB_REF_NAME", None)
 
     if branch is None:
-        raise ValueError(f"Couldn't detect branch")
+        raise ValueError("Couldn't detect branch")
     else:
         print(f"Detected branch: {branch}")
 
@@ -47,7 +47,11 @@ def get_branch():
 
 
 def get_modified_time(path: Path) -> float:
-    return path.stat().st_mtime if path.is_file() else datetime.today().timestamp()
+    return (
+        path.stat().st_mtime
+        if path.is_file()
+        else datetime.today().timestamp()
+    )
 
 
 def get_ostag():
@@ -69,7 +73,7 @@ def get_repo_path() -> Path:
     repo_path = environ.get("REPOS_PATH", None)
     if not repo_path:
         warn(
-            f"REPOS_PATH environment variable missing, defaulting to parent of project root"
+            "REPOS_PATH environment variable missing, defaulting to parent of project root"
         )
     return Path(repo_path) if repo_path else _project_root_path
 

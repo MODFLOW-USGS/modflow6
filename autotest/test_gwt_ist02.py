@@ -1,11 +1,11 @@
 """
 Test the IST Package with a one-dimensional flow problem
-with dual-domain transport.  Flow is from left to right with 
+with dual-domain transport.  Flow is from left to right with
 constant concentration equal to 1.0 for first 20 days and then
 set to 0.0 for next 30 days.  The results are compared to
 the results of an MT3D simulation sent by Sorab Panday.  The MT3D
 results had many transport time steps, but they were interpolated
-onto an even 1-day interval.  The mf6 results are also 
+onto an even 1-day interval.  The mf6 results are also
 interpolated onto the 1-day interval for comparison.  The test
 passes if the difference in simulated concentration in column 300
 between mf6 and mt3d is less than 0.05.
@@ -16,7 +16,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["ist02"]

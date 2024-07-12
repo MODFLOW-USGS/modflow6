@@ -20,10 +20,10 @@ import pytest
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     all_equal,
     check_track_data,
     get_model_name,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtdrape"

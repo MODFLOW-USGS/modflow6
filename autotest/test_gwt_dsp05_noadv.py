@@ -3,12 +3,12 @@ Test variable layer thicknesses with a diffusion problem and constant
 concentrations on the top and bottom to make sure the resulting concentration
 field is linear from top to bottom.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["dsp05a_noadv", "dsp01b_noadv"]

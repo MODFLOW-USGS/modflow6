@@ -28,24 +28,23 @@ if the --approved flag (short -a) is provided, the disclaimer in src/Utilities/v
 the README/DISCLAIMER markdown files is modified to reflect review and approval. Otherwise the
 language reflects preliminary/provisional status, and version strings contain "(preliminary)".
 """
+
 import argparse
 import json
 import os
 import textwrap
 from collections import OrderedDict
 from datetime import datetime
-from packaging.version import Version
 from pathlib import Path
 from typing import Optional
 
 import pytest
-from filelock import FileLock
 import yaml
+from filelock import FileLock
+from modflow_devtools.markers import no_parallel
+from packaging.version import Version
 
 from utils import get_modified_time
-
-from modflow_devtools.markers import no_parallel
-
 
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
@@ -123,7 +122,11 @@ def get_disclaimer(approved: bool = False, formatted: bool = False) -> str:
     if approved:
         return _approved_fmtdisclaimer if formatted else _approved_disclaimer
     else:
-        return _preliminary_fmtdisclaimer if formatted else _preliminary_disclaimer
+        return (
+            _preliminary_fmtdisclaimer
+            if formatted
+            else _preliminary_disclaimer
+        )
 
 
 def get_software_citation(
@@ -134,7 +137,7 @@ def get_software_citation(
 
     sb = ""
     if not approved:
-        sb = f" (preliminary)"
+        sb = " (preliminary)"
     # format author names
     authors = []
     for author in citation["authors"]:
@@ -178,13 +181,19 @@ def update_version_txt_and_py(version: Version, timestamp: datetime):
         f.write(str(version))
     log_update(version_file_path, version)
 
-    py_path = project_root_path / "doc" / version_file_path.name.replace(".txt", ".py")
+    py_path = (
+        project_root_path
+        / "doc"
+        / version_file_path.name.replace(".txt", ".py")
+    )
     with open(py_path, "w") as f:
         f.write(
             f"# {project_name} version file automatically "
             + f"created using...{os.path.basename(__file__)}\n"
         )
-        f.write("# created on..." + f"{timestamp.strftime('%B %d, %Y %H:%M:%S')}\n")
+        f.write(
+            "# created on..." + f"{timestamp.strftime('%B %d, %Y %H:%M:%S')}\n"
+        )
         f.write(f'__version__ = "{version}"\n')
     log_update(py_path, version)
 
@@ -206,7 +215,9 @@ def update_version_tex(version: Version, timestamp: datetime):
         line = "\\newcommand{\\modflowversion}{mf" + str(version) + "}"
         f.write(f"{line}\n")
         line = (
-            "\\newcommand{\\modflowdate}{" + f"{timestamp.strftime('%B %d, %Y')}" + "}"
+            "\\newcommand{\\modflowdate}{"
+            + f"{timestamp.strftime('%B %d, %Y')}"
+            + "}"
         )
         f.write(f"{line}\n")
         line = (
@@ -247,7 +258,10 @@ def update_version_f90(
                     + f"IDEVELOPMODE = {1 if developmode else 0}"
                 )
             elif ":: VERSIONNUMBER =" in line:
-                line = line.rpartition("::")[0] + f":: VERSIONNUMBER = '{version_num}'"
+                line = (
+                    line.rpartition("::")[0]
+                    + f":: VERSIONNUMBER = '{version_num}'"
+                )
             elif ":: VERSIONTAG =" in line:
                 fmat_tstmp = timestamp.strftime("%m/%d/%Y")
                 label_clause = version_label if version_label else ""
@@ -304,7 +318,9 @@ def update_citation_cff(version: Version, timestamp: datetime):
     log_update(path, version)
 
 
-def update_codejson(version: Version, timestamp: datetime, approved: bool = False):
+def update_codejson(
+    version: Version, timestamp: datetime, approved: bool = False
+):
     path = project_root_path / "code.json"
     with open(path, "r") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
@@ -420,17 +436,25 @@ def test_update_version(version, approved, developmode):
             assert updated == _current_version
 
         # check IDEVELOPMODE was set correctly
-        version_f90_path = project_root_path / "src" / "Utilities" / "version.f90"
+        version_f90_path = (
+            project_root_path / "src" / "Utilities" / "version.f90"
+        )
         lines = version_f90_path.read_text().splitlines()
         assert any(
-            f"IDEVELOPMODE = {1 if developmode else 0}" in line for line in lines
+            f"IDEVELOPMODE = {1 if developmode else 0}" in line
+            for line in lines
         )
 
         # check disclaimer has appropriate language
         disclaimer_path = project_root_path / "DISCLAIMER.md"
         disclaimer = disclaimer_path.read_text().splitlines()
-        assert any(("approved for release") in line for line in lines) == approved
-        assert any(("preliminary or provisional") in line for line in lines) != approved
+        assert (
+            any(("approved for release") in line for line in lines) == approved
+        )
+        assert (
+            any(("preliminary or provisional") in line for line in lines)
+            != approved
+        )
 
         # check readme has appropriate language
         readme_path = project_root_path / "README.md"

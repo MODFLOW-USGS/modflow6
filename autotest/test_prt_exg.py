@@ -13,7 +13,6 @@ boundnames to particles and one which does not.
 """
 
 from pathlib import Path
-from pprint import pformat
 
 import flopy
 import matplotlib.cm as cm
@@ -25,10 +24,10 @@ from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtexg01"

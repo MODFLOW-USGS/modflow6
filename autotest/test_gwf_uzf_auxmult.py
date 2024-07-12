@@ -7,7 +7,6 @@ ensure this to be the case.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["uzauxmlt-1to1", "uzauxmlt-2to1", "uzauxmlt-3to1", "uzauxmlt-bad"]
@@ -240,9 +239,9 @@ def check_output(idx, test):
     print("Running error check")
     name = cases[idx]
 
-    errmsg0 = f"flow model should have run successfully but didn't\n"
+    errmsg0 = "flow model should have run successfully but didn't\n"
     errmsg1 = (
-        f"flow model designed to fail, but seems to have run successfully\n"
+        "flow model designed to fail, but seems to have run successfully\n"
     )
 
     with open(test.workspace / "mfsim.lst", "r") as f:

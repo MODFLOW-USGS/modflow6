@@ -1,7 +1,7 @@
 """
 Test gwt in a subset of the flow grid:
 
-GWT:   XXXXXXXXX     [ transport ]     
+GWT:   XXXXXXXXX     [ transport ]
                            +
 GWF: [   flow1   ] + [   flow2   ]
 
@@ -15,9 +15,7 @@ all the solute should be in the leftmost cell from the transport model.
 import os
 
 import flopy
-import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwt_subset01"]

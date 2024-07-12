@@ -256,9 +256,7 @@ def manningsq(
             area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
-                q += (
-                    conv * area * radius**mpow * slope**0.5 / roughness[i0]
-                )
+                q += conv * area * radius**mpow * slope**0.5 / roughness[i0]
     else:
         perimeter = wetted_perimeter(x, h, depth)
         area = wetted_area(x, h, depth)

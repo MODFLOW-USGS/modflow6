@@ -14,7 +14,6 @@ from os.path import join
 
 import flopy
 import numpy as np
-import pytest
 
 testgroup = "ssm04fmi"
 

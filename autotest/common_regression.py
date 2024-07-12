@@ -4,10 +4,6 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Tuple, Union
 from warnings import warn
 
-import numpy as np
-from flopy.utils import CellBudgetFile
-from flopy.utils.compare import compare_heads
-
 COMPARE_PROGRAMS = (
     "mf2005",
     "mfnwt",
@@ -15,7 +11,7 @@ COMPARE_PROGRAMS = (
     "mflgr",
     "libmf6",
     "mf6",
-    "mf6_regression"
+    "mf6_regression",
     # todo: "mp7"
 )
 EXTTEXT = {
@@ -694,7 +690,7 @@ def setup_mf6_comparison(
     """
 
     if cmp_exe is None:
-        warn(f"No action provided, aborting")
+        warn("No action provided, aborting")
         return
 
     # create and/or clean dest dir if needed

@@ -2,19 +2,16 @@
 
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
-from SWIFT2D, a USGS 2D overland flow simulator.  This version of 
+from SWIFT2D, a USGS 2D overland flow simulator.  This version of
 the problem uses the DIS Package as a 2d grid.  The problem is set up
 so that once steady conditions are achieved, the depth in each reach
-should be 1.0 m.  
+should be 1.0 m.
 
 """
-
-import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -164,7 +161,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / f"swf_model.obs.csv"
+    fpth = test.workspace / "swf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))

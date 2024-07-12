@@ -22,14 +22,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.discretization import VertexGrid
-from flopy.utils import GridIntersect
-from flopy.utils.triangle import Triangle
 from framework import TestFramework
 from prt_test_utils import get_model_name
-from shapely.geometry import LineString
 from test_prt_triangle import (
-    active_domain,
     botm,
     build_gwf_sim,
     get_tri,
@@ -202,9 +197,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
             legend=False,
             color="black",
         )
-    xc, yc = gwf.modelgrid.get_xcellcenters_for_layer(
-        0
-    ), gwf.modelgrid.get_ycellcenters_for_layer(0)
+    xc, yc = (
+        gwf.modelgrid.get_xcellcenters_for_layer(0),
+        gwf.modelgrid.get_ycellcenters_for_layer(0),
+    )
     for i in range(gwf.modelgrid.ncpl):
         x, y = xc[i], yc[i]
         if i == 1639:

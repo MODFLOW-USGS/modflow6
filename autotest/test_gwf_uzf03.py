@@ -8,7 +8,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_uzf03a"]
@@ -133,8 +132,7 @@ def build_models(idx, test):
 
     # note: for specifying lake number, use fortran indexing!
     uzf_obs = {
-        name
-        + ".uzf.obs.csv": [
+        name + ".uzf.obs.csv": [
             (f"wc{k + 1}", "water-content", k + 1, 0.5 * delv)
             for k in range(nlay)
         ]

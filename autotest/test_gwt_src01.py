@@ -5,12 +5,12 @@ on the right side.  The simulation time is set to be large so that the result
 is a linear gradient in concentration that can be calculated from a simple
 diffusion equation of the form, F = D * (c1 - c0) / L.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["src01a"]

@@ -1,7 +1,6 @@
 import argparse
 import os
 import platform
-import sys
 import textwrap
 from os import PathLike, environ
 from pathlib import Path
@@ -31,7 +30,13 @@ _default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
-_soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
+_soext = (
+    ".dll"
+    if _system == "Windows"
+    else ".so"
+    if _system == "Linux"
+    else ".dylib"
+)
 _scext = ".bat" if _system == "Windows" else ".sh"
 _executable = f"mf6{_eext}"
 
@@ -120,7 +125,9 @@ def setup_examples(
         iter([a for a in assets if a["name"] == "mf6examples.zip"]), None
     )
     # download example models zip asset
-    download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
+    download_and_unzip(
+        asset["browser_download_url"], examples_path, verbose=True
+    )
 
     # filter examples for models selected for release
     # and omit any excluded models
@@ -151,7 +158,9 @@ def setup_examples(
                 f.write(runbatloc + "\n")
                 if _system == "Windows":
                     f.write("echo." + "\n")
-                    f.write("echo Run complete.  Press any key to continue" + "\n")
+                    f.write(
+                        "echo Run complete.  Press any key to continue" + "\n"
+                    )
                     f.write("pause>nul" + "\n")
 
             if _system != "Windows":
@@ -203,12 +212,14 @@ def build_programs_meson(
         and all(p.is_file() for p in exe_paths)
         and all(p.is_file() for p in lib_paths)
     ):
-        print(f"Binaries already exist:")
+        print("Binaries already exist:")
         pprint(exe_paths + lib_paths)
     else:
         print(f"Building binaries in {build_path}, installing to {bin_path}")
         meson_build(
-            project_path=_project_root_path, build_path=build_path, bin_path=bin_path
+            project_path=_project_root_path,
+            build_path=build_path,
+            bin_path=bin_path,
         )
 
     for target in exe_paths + lib_paths:
@@ -229,7 +240,8 @@ def build_makefiles(output_path: PathLike):
     build_mf6_makefile()
     (output_path / "make").mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / "make" / "makefile", output_path / "make" / "makefile"
+        _project_root_path / "make" / "makefile",
+        output_path / "make" / "makefile",
     )
     copyfile(
         _project_root_path / "make" / "makedefaults",
@@ -241,7 +253,8 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "zonebudget" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+        _project_root_path / rel_path / "makefile",
+        output_path / rel_path / "makefile",
     )
     copyfile(
         _project_root_path / rel_path / "makedefaults",
@@ -253,7 +266,8 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "mf5to6" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+        _project_root_path / rel_path / "makefile",
+        output_path / rel_path / "makefile",
     )
     copyfile(
         _project_root_path / rel_path / "makedefaults",
@@ -268,7 +282,9 @@ def test_build_makefiles(tmp_path):
     assert (tmp_path / "make" / "makefile").is_file()
     assert (tmp_path / "make" / "makedefaults").is_file()
     assert (tmp_path / "utils" / "zonebudget" / "make" / "makefile").is_file()
-    assert (tmp_path / "utils" / "zonebudget" / "make" / "makedefaults").is_file()
+    assert (
+        tmp_path / "utils" / "zonebudget" / "make" / "makedefaults"
+    ).is_file()
     assert (tmp_path / "utils" / "mf5to6" / "make" / "makefile").is_file()
     assert (tmp_path / "utils" / "mf5to6" / "make" / "makedefaults").is_file()
 
@@ -291,7 +307,9 @@ def build_distribution(
 
     # binaries
     build_programs_meson(
-        build_path=build_path, bin_path=output_path / "bin", overwrite=overwrite
+        build_path=build_path,
+        bin_path=output_path / "bin",
+        overwrite=overwrite,
     )
 
     # code.json metadata

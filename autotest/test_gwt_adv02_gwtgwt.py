@@ -2,7 +2,7 @@
 Test the advection schemes using multiple flow and transport models
 organized from left to right.  Use the well package to inject water
 into the first column of cells on the left.  Assign constant head
-cells to the last row of the last model.  
+cells to the last row of the last model.
 """
 
 import pathlib as pl
@@ -10,7 +10,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["adv02a_gwtgwt", "adv02b_gwtgwt", "adv02c_gwtgwt"]

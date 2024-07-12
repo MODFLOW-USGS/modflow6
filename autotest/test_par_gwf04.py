@@ -4,7 +4,7 @@ Test for parallel MODFLOW running a simple
 only one exchange with XT3D
 
         (xt3d)
-          |     
+          |
           v
     [M13] | [M23] | [M33]             [3]  [6]  [9]
     ---------------------
@@ -14,8 +14,8 @@ only one exchange with XT3D
 
 with constant head set at the lower-left corner.
 This constant head should reach all domains, but
-the test is really about the underlying MPI 
-communication pattern: e.g., M13 will need data 
+the test is really about the underlying MPI
+communication pattern: e.g., M13 will need data
 from M22, but not the other way around.
 
 The test was added to reproduce and fix the issue
@@ -28,7 +28,6 @@ listed here:
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -101,7 +100,9 @@ def get_simulation(idx, ws):
         for ix in range(nr_models_x - 1):
             name_west = get_model_name(ix, iy)
             name_east = get_model_name(ix + 1, iy)
-            with_xt3d = (ix == 0 and iy == 2) and idx == 1 # enable xt3d between M13 and M23
+            with_xt3d = (
+                ix == 0 and iy == 2
+            ) and idx == 1  # enable xt3d between M13 and M23
             add_exchange_west_east(sim, name_west, name_east, with_xt3d)
 
     # add exchange from south to north

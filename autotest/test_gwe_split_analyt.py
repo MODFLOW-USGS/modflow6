@@ -1,21 +1,21 @@
 r"""
- An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
+ An analytical solution provided by Carslaw & Jaeger (1947) and discussed in
  accompanying Techniques & Methods report.
- 
+
  Energy is added to the right hand side boundary using the energy source loading
- (ESL) package.  Basic model set up is below, with a slab of unit thickness 
+ (ESL) package.  Basic model set up is below, with a slab of unit thickness
  (1.0 m) that is 1 m "deep" ("into the page") with energy being loaded on right
- side.  Temperature will begin to rise on the right and propagate to the left. 
+ side.  Temperature will begin to rise on the right and propagate to the left.
  There are no sinks in this first example.  There are two additional conceptual
  models named "case ii" and "case iii". The titles that follow, for example
  "Section 43, case x" refer to specific analytical solutions found in Carslaw &
  Jaeger (1947)
- 
+
  Section 43, case i:
  -------------------
 
        | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-    
+
        +--------------------------------+              +--------------------------------+
        |    Initial temperature = T_0   | <-exchange-> |   Initial temperature = T_0    | <-- *ESL
        +--------------------------------+              +--------------------------------+
@@ -23,12 +23,12 @@ r"""
        |
        No heat-flow boundary
 
- 
+
  Section 43, case ii:
  --------------------
- 
+
        | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-      
+
        +--------------------------------+              +--------------------------------+
        |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- *ESL
        +--------------------------------+              +--------------------------------+
@@ -51,12 +51,12 @@ CTP -> |    Initial temperature = T_0   | <-exchange-> |    Initial temperature 
 
 """
 
-import os
 import math
-import pytest
+import os
+
 import flopy
 import numpy as np
-
+import pytest
 from framework import TestFramework
 
 # Parameters that vary by scenario
@@ -156,7 +156,6 @@ def calc_ener_input(primer_val):
 
 # Define function to solve analytical solution
 def assemble_half_model(sim, gwfname, gwfpath, side="right"):
-
     # Create GWF model
     gwf = flopy.mf6.MFModel(
         sim,
@@ -221,7 +220,6 @@ def assemble_half_model(sim, gwfname, gwfpath, side="right"):
 
 
 def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
-
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
@@ -389,7 +387,7 @@ def build_models(idx, test):
         xt3d=xt3d[0],
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwfgwf".format("exchng"),
+        filename="exchng.gwfgwf",
         dev_interfacemodel_on=True,
     )
 
@@ -433,7 +431,7 @@ def build_models(idx, test):
         exgmnameb=gwe2.name,
         exchangedata=exgdata,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwegwe".format("exchng"),
+        filename="exchng.gwegwe",
     )
 
     # GWF-GWE exchange
@@ -600,7 +598,6 @@ def check_output(idx, test):
             # plt.show()
 
     elif idx == 2:
-
         t_accumulate = 0.0
         ener_src = ener_input / (delr * delc * delz)
 

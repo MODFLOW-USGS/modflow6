@@ -9,15 +9,14 @@ cpu 3: 'tr'
 cpu 4: 'br'
 
 so we can compare the parallel coupling of the 4 models
-with a serial reference case with XT3D enabled everywhere. 
-Particular aspect of this test is the capability to correctly 
+with a serial reference case with XT3D enabled everywhere.
+Particular aspect of this test is the capability to correctly
 deal with the "Four Corners" issue, where for some connections
 the flux has to be calculated using data from 4 subdomains.
 
 """
 
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_xt3d03"]

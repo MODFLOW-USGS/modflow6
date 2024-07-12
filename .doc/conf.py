@@ -88,7 +88,7 @@ if on_rtd:
     rtds_action_github_token = os.environ.get("GITHUB_TOKEN", None)
 
 # set master doc for readthedoce
-master_doc = 'index'
+master_doc = "index"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

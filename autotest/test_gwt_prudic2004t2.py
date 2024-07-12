@@ -12,7 +12,6 @@ import sys
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -702,9 +701,9 @@ def check_obs(sim):
         conc_ra = gwt.sft.obs.output.obs(f=csvfile).data
         # save a couple entries for comparison with lake
         if ".to-mvr." in csvfile:
-            sft6tomvr = conc_ra[f"BSFT6"]
+            sft6tomvr = conc_ra["BSFT6"]
         if ".from-mvr." in csvfile:
-            sft7tomvr = conc_ra[f"BSFT7"]
+            sft7tomvr = conc_ra["BSFT7"]
         success = True
         for ireach in range(38):
             # print(f"  Checking reach {ireach + 1}")
@@ -751,9 +750,9 @@ def check_obs(sim):
         print(f"Checking csv file: {csvfile}")
         conc_ra = gwt.lkt.obs.output.obs(f=csvfile).data
         if ".from-mvr." in csvfile:
-            lkt1frommvr = conc_ra[f"BLKT1"]
+            lkt1frommvr = conc_ra["BLKT1"]
         if ".to-mvr." in csvfile:
-            lkt1tomvr = conc_ra[f"BLKT1"]
+            lkt1tomvr = conc_ra["BLKT1"]
         success = True
         if ".to-mvr." in csvfile:
             numvalues = 1  # outlet
@@ -790,7 +789,7 @@ def check_obs(sim):
             success = False
             print(f"Problem with Lake {ilake + 1}")
             for itime, (cs, blkt) in enumerate(
-                zip(connection_sum, conc_ra[f"BLKT1"])
+                zip(connection_sum, conc_ra["BLKT1"])
             ):
                 print(itime, cs, blkt)
 
@@ -801,14 +800,14 @@ def check_obs(sim):
     is_same = np.allclose(-sft6tomvr, lkt1frommvr, atol=0.1)
     if not is_same:
         success = False
-        print(f"Problem with sft6tomvr comparison to lkt1frommvr")
+        print("Problem with sft6tomvr comparison to lkt1frommvr")
         for itime, (a, b) in enumerate(zip(-sft6tomvr, lkt1frommvr)):
             print(itime, a, b)
 
     is_same = np.allclose(-lkt1tomvr, sft7tomvr)
     if not is_same:
         success = False
-        print(f"Problem with lkt1tomvr comparison to sft7tomvr")
+        print("Problem with lkt1tomvr comparison to sft7tomvr")
         for itime, (a, b) in enumerate(zip(-lkt1tomvr, sft7tomvr)):
             print(itime, a, b)
 

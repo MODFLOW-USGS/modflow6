@@ -23,7 +23,7 @@ Particles are released from the top left cell.
 
 Pathlines are compared against a MODPATH 7 model.
 
-Runtime is benchmarked with pytest-benchmark. 
+Runtime is benchmarked with pytest-benchmark.
 """
 
 from pathlib import Path
@@ -38,6 +38,7 @@ from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
+    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     all_equal,
     check_budget_data,
@@ -45,7 +46,6 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
     has_default_boundnames,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtfmi"

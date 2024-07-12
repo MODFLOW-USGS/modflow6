@@ -30,7 +30,9 @@ _soext = ".dll" if _is_windows else ".so"
 _ostag = (
     "win64"
     if _is_windows
-    else "linux" if sys.platform.lower().startswith("linux") else "mac"
+    else "linux"
+    if sys.platform.lower().startswith("linux")
+    else "mac"
 )
 
 
@@ -121,7 +123,9 @@ def revert_files(app, example):
                     with open(fpth, "w") as f:
                         for line in lines:
                             if replace[0] in line.lower():
-                                line = line.lower().replace(replace[0], replace[1])
+                                line = line.lower().replace(
+                                    replace[0], replace[1]
+                                )
                             f.write(line)
 
 
@@ -177,7 +181,9 @@ def run_function(id, app, example):
     )
 
 
-def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLike):
+def run_model(
+    current_app: PathLike, previous_app: PathLike, model_path: PathLike
+):
     current_app = Path(current_app).expanduser().absolute()
     previous_app = Path(previous_app).expanduser().absolute()
     model_path = Path(model_path).expanduser().absolute()
@@ -310,7 +316,9 @@ def write_results(
         line += f"| Current Version {current_v} "
         line += f"| Previous Version {previous_v} "
         line += "| Percent difference |\n"
-        line += "| :---------- | :----------: | :----------: | :----------: |\n"
+        line += (
+            "| :---------- | :----------: | :----------: | :----------: |\n"
+        )
         f.write(line)
 
         # write benchmark data
@@ -320,7 +328,7 @@ def write_results(
 
         # add final (total) line
         pd = (current_total - previous_total) / previous_total
-        line = f"| Total simulation time |"
+        line = "| Total simulation time |"
         line += f" {elapsed_real_to_string(current_total)} |"
         line += f" {elapsed_real_to_string(previous_total)} |"
         line += f" {pd:.2%} |"
@@ -344,7 +352,9 @@ def run_benchmarks(
     output_path = Path(output_path).expanduser().absolute()
 
     example_dirs = get_model_paths(examples_path, excluded=excluded)
-    assert any(example_dirs), f"No example model paths found, have models been built?"
+    assert any(
+        example_dirs
+    ), "No example model paths found, have models been built?"
 
     # results_path = output_path / _markdown_file_name
     # if results_path.is_file():
@@ -356,7 +366,7 @@ def run_benchmarks(
     previous_exe = previous_bin_path / exe_name
 
     if not current_exe.is_file():
-        print(f"Building current MODFLOW 6 development version")
+        print("Building current MODFLOW 6 development version")
         meson_build(
             project_path=_project_root_path,
             build_path=build_path,
@@ -365,14 +375,16 @@ def run_benchmarks(
 
     if not previous_exe.is_file():
         version, download_path = download_previous_version(output_path)
-        print(f"Rebuilding latest MODFLOW 6 release {version} in development mode")
+        print(
+            f"Rebuilding latest MODFLOW 6 release {version} in development mode"
+        )
         meson_build(
             project_path=download_path,
             build_path=build_path,
             bin_path=previous_bin_path,
         )
 
-    print(f"Benchmarking MODFLOW 6 versions:")
+    print("Benchmarking MODFLOW 6 versions:")
     print(f"    current: {current_exe}")
     print(f"    previous: {previous_exe}")
 
@@ -463,7 +475,9 @@ if __name__ == "__main__":
     build_path = Path(args.build_path)
     current_bin_path = Path(args.current_bin_path)
     previous_bin_path = Path(args.previous_bin_path)
-    output_path = Path(args.output_path) if args.output_path else Path(os.getcwd())
+    output_path = (
+        Path(args.output_path) if args.output_path else Path(os.getcwd())
+    )
     examples_repo_path = (
         Path(args.examples_repo_path)
         if args.examples_repo_path
@@ -471,7 +485,9 @@ if __name__ == "__main__":
     )
 
     output_path.mkdir(parents=True, exist_ok=True)
-    assert examples_repo_path.is_dir(), f"Examples repo not found: {examples_repo_path}"
+    assert (
+        examples_repo_path.is_dir()
+    ), f"Examples repo not found: {examples_repo_path}"
 
     run_benchmarks(
         build_path=build_path,

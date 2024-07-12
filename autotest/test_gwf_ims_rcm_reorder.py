@@ -3,7 +3,6 @@ import os
 import flopy
 import pytest
 from flopy.utils.compare import eval_bud_diff
-
 from framework import TestFramework
 
 paktest = "ims"

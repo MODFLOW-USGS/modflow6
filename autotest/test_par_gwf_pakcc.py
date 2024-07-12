@@ -13,7 +13,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_uzf_3lay_1p", "par_uzf_3lay_2p"]

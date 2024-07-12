@@ -6,18 +6,15 @@ reach 1 based on time series input and outflow to a constant
 stage cell in reach 21.  The simulation is for one day using
 time steps of 600 seconds (144 time steps).  The results are
 compared to a mf2005 run using the SWR package.  A plot can
-optionally be created, which will also show results from a 
+optionally be created, which will also show results from a
 HEC-RAS simulation.
 
 """
-
-import os
 
 import flopy
 import numpy as np
 import pandas as pd
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -28,7 +25,6 @@ data_path = project_root_path / "autotest/data/beg2022/"
 
 
 def build_models(idx, test):
-
     sim_ws = test.workspace
     name = "swfmodel"
     sim = flopy.mf6.MFSimulation(
@@ -85,7 +81,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         length=dx,
-        width=40.,
+        width=40.0,
         bottom=z,
         idomain=1,
         vertices=vertices,
@@ -193,7 +189,7 @@ def make_plot(test, mfsim):
     df_mfswr = df_mfswr.loc[df_mfswr["TOTTIME"] > 86400]
     print(df_mfswr)
 
-    fpth = test.workspace / f"swfmodel.bud"
+    fpth = test.workspace / "swfmodel.bud"
     budobj = flopy.utils.binaryfile.CellBudgetFile(fpth, precision="double")
     flowja = budobj.get_data(text="FLOW-JA-FACE")
     qstorage = budobj.get_data(text="STORAGE")
@@ -224,7 +220,9 @@ def make_plot(test, mfsim):
     x = df_mfswr["TOTTIME"] - 86400.0
     x = x / 60.0 / 60.0
     ax.plot(x, -df_mfswr["QCRFLOW"], "go:", mfc="none", label="MODFLOW-SWR")
-    ax.plot(times / 60.0 / 60.0, qoutflow, "bo:", mfc="none", label="MODFLOW 6")
+    ax.plot(
+        times / 60.0 / 60.0, qoutflow, "bo:", mfc="none", label="MODFLOW 6"
+    )
     ax.set_xlim(0, 24.0)
     ax.set_ylim(19, 26)
     plt.xlabel("time, in hours")

@@ -11,7 +11,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import DNODATA, TestFramework
 
 cases = ["lkt_04"]
@@ -370,7 +369,7 @@ def eval_csv_information(testsim):
                 f"Lake transport package balance error ({pd}) > tolerance ({atol})"
             )
 
-    assert success, f"One or more errors encountered in budget checks"
+    assert success, "One or more errors encountered in budget checks"
 
 
 def check_output(idx, test):

@@ -22,7 +22,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -31,7 +30,6 @@ cases = [
 
 
 def build_models(idx, test):
-
     sim_ws = test.workspace
     name = cases[idx]
     sim = flopy.mf6.MFSimulation(
@@ -50,7 +48,9 @@ def build_models(idx, test):
         outer_dvclose=1.0e-7,
         inner_dvclose=1.0e-8,
     )
-    swf = flopy.mf6.ModflowSwf(sim, modelname=name, save_flows=True, print_flows=True)
+    swf = flopy.mf6.ModflowSwf(
+        sim, modelname=name, save_flows=True, print_flows=True
+    )
 
     dx = 1000.0
     nreach = 3
@@ -68,7 +68,7 @@ def build_models(idx, test):
         nodes=nodes,
         nvert=nvert,
         length=dx,
-        width=50.,
+        width=50.0,
         bottom=0.0,
         idomain=1,
         vertices=vertices,

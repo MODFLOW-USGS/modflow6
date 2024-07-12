@@ -27,7 +27,6 @@ option which enables logging for the package's
 particle release settings to the listing file.
 """
 
-from math import cos, pi, sin
 from pathlib import Path
 
 import flopy
@@ -40,7 +39,6 @@ from flopy.plot.plotutil import to_mp7_pathlines
 from flopy.utils import EndpointFile, PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
 from prt_test_utils import (
     all_equal,
@@ -164,12 +162,12 @@ def build_gwf_sim(idx, ws, mf6):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwf_name),
-        head_filerecord="{}.hds".format(gwf_name),
+        budget_filerecord=f"{gwf_name}.cbc",
+        head_filerecord=f"{gwf_name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwf_name),
+        filename=f"{gwf_name}.oc",
     )
 
     # Print human-readable heads

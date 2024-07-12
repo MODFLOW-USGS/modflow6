@@ -22,7 +22,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]
@@ -70,7 +69,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -101,7 +100,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -130,7 +129,7 @@ def build_models(idx, test):
     # Instantiating VSC
     if viscosity_on[idx]:
         # Instantiate viscosity (VSC) package
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, 20.0, gwtname, "temperature")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -143,7 +142,7 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiating CHD (leftside, "inflow" boundary)
@@ -187,8 +186,8 @@ def build_models(idx, test):
     )
 
     # Instantiating OC
-    head_filerecord = "{}.hds".format(gwfname)
-    budget_filerecord = "{}.bud".format(gwfname)
+    head_filerecord = f"{gwfname}.hds"
+    budget_filerecord = f"{gwfname}.bud"
     flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=head_filerecord,
@@ -214,7 +213,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwtname])
 
@@ -239,7 +238,7 @@ def build_models(idx, test):
         bulk_density=rhob,
         distcoef=K_d,
         pname="MST-1",
-        filename="{}.mst".format(gwtname),
+        filename=f"{gwtname}.mst",
     )
 
     # Instantiating IC for GWT
@@ -261,7 +260,7 @@ def build_models(idx, test):
     # Instantiating OC for GWT
     flopy.mf6.ModflowGwtoc(
         gwt,
-        concentration_filerecord="{}.ucn".format(gwtname),
+        concentration_filerecord=f"{gwtname}.ucn",
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )

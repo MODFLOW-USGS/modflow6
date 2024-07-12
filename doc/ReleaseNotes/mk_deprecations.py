@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 from warnings import warn
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("path")
@@ -48,17 +47,17 @@ if __name__ == "__main__":
 
     # if the markdown file exists, convert it to latex
     if fpath.is_file():
-        ftex = open(fnametex, 'w')
+        ftex = open(fnametex, "w")
         ftex.write(header)
         skipline = True
         with open(fpath) as fmd:
             for line in fmd:
                 if not skipline:
-                    ll = line.strip().split('|')
+                    ll = line.strip().split("|")
                     ll = ll[1:-1]
                     linetex = "& ".join(ll)
                     linetex = linetex.replace("\\", "/")
-                    linetex += '\\\\' + '\n'
+                    linetex += "\\\\" + "\n"
                     linetex = linetex.replace("%", "\\%")
                     linetex = linetex.replace("_", "\\_")
                     ftex.write(linetex)
@@ -67,6 +66,8 @@ if __name__ == "__main__":
                     skipline = False
         ftex.write(footer)
         ftex.close()
-        print(f"Created LaTex file {fnametex} from markdown deprecations file {fpath}")
+        print(
+            f"Created LaTex file {fnametex} from markdown deprecations file {fpath}"
+        )
     else:
         warn(f"Deprecations not found: {fpath}")

@@ -23,7 +23,7 @@ excluded_models = [
     "test053_npf-a-nwt_dev",
     "test053_npf-b-nwt_dev",
     # todo reinstate after resolving convergence failure
-    "test014_NWTP3Low_dev"
+    "test014_NWTP3Low_dev",
 ]
 
 

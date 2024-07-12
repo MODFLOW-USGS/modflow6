@@ -1,12 +1,10 @@
 # Test evap in SFR reaches (no interaction with gwf)
 
-import math
 import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["sfr-gwfout"]

@@ -3,7 +3,7 @@ Test the interface model approach.
 It compares the result of a single, strongly anisotropic model
 with XT3D enabled to the equivalent case where the domain is
 decomposed into 4 models connected with GWF-GWF exchanges all
-having XT3D enabled. Note the location of the well W, in the 
+having XT3D enabled. Note the location of the well W, in the
 bottom right corner of model "tl" (and also in "ref" of course)
 
           'ref'                    'tl'            'tr'
@@ -36,7 +36,6 @@ from types import SimpleNamespace
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["ifmod_xt3d03"]
@@ -334,38 +333,38 @@ def qxqyqz(fname, nlay, nrow, ncol):
 
 
 def check_output(idx, test):
-    fpth = os.path.join(test.workspace, f"ref.hds")
+    fpth = os.path.join(test.workspace, "ref.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(test.workspace, f"ref.cbc")
+    fpth = os.path.join(test.workspace, "ref.cbc")
     nlay, nrow, ncol = heads.shape
     qx, qy, qz = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"tl.hds")
+    fpth = os.path.join(test.workspace, "tl.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_tl = hds.get_data()
-    fpth = os.path.join(test.workspace, f"tl.cbc")
+    fpth = os.path.join(test.workspace, "tl.cbc")
     nlay, nrow, ncol = heads_tl.shape
     qx_tl, qy_tl, qz_tl = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"tr.hds")
+    fpth = os.path.join(test.workspace, "tr.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_tr = hds.get_data()
-    fpth = os.path.join(test.workspace, f"tr.cbc")
+    fpth = os.path.join(test.workspace, "tr.cbc")
     nlay, nrow, ncol = heads_tr.shape
     qx_tr, qy_tr, qz_tr = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"bl.hds")
+    fpth = os.path.join(test.workspace, "bl.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_bl = hds.get_data()
-    fpth = os.path.join(test.workspace, f"bl.cbc")
+    fpth = os.path.join(test.workspace, "bl.cbc")
     nlay, nrow, ncol = heads_bl.shape
     qx_bl, qy_bl, qz_bl = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"br.hds")
+    fpth = os.path.join(test.workspace, "br.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_br = hds.get_data()
-    fpth = os.path.join(test.workspace, f"br.cbc")
+    fpth = os.path.join(test.workspace, "br.cbc")
     nlay, nrow, ncol = heads_br.shape
     qx_br, qy_br, qz_br = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -375,9 +374,7 @@ def check_output(idx, test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. head diff. {} should \
+    assert maxdiff < 10 * hclose_check, "Max. head diff. {} should \
                      be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
@@ -388,9 +385,7 @@ def check_output(idx, test):
     qx_merged = np.append(qx_top, qx_bot, axis=0)
 
     maxdiff = np.amax(abs(qx - qx_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (x) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (x) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
@@ -401,9 +396,7 @@ def check_output(idx, test):
     qy_merged = np.append(qy_top, qy_bot, axis=0)
 
     maxdiff = np.amax(abs(qy - qy_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (y) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (y) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )
@@ -414,9 +407,7 @@ def check_output(idx, test):
     qz_merged = np.append(qz_top, qz_bot, axis=0)
 
     maxdiff = np.amax(abs(qz - qz_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (z) {} \
+    assert maxdiff < 10 * hclose_check, "Max. diff. in spec. discharge (z) {} \
                      should be within solver tolerance (x10): {}".format(
         maxdiff, 10 * hclose_check
     )

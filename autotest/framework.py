@@ -1,6 +1,5 @@
 import os
 import shutil
-import time
 from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
@@ -10,7 +9,6 @@ from warnings import warn
 
 import flopy
 import numpy as np
-import pytest
 from common_regression import (
     COMPARE_PROGRAMS,
     adjust_htol,
@@ -19,8 +17,6 @@ from common_regression import (
     get_namefiles,
     get_rclose,
     get_regression_files,
-    setup_mf6,
-    setup_mf6_comparison,
 )
 from flopy.mbase import BaseModel
 from flopy.mf6 import MFSimulation
@@ -93,9 +89,7 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
 
     # parallel commands
     if get_ostag() in ["win64"]:
-        mpiexec_cmd = (
-        ["mpiexec", "-np", str(ncpus), target, "-p"]
-        )
+        mpiexec_cmd = ["mpiexec", "-np", str(ncpus), target, "-p"]
     else:
         mpiexec_cmd = (
             ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
@@ -148,7 +142,7 @@ def write_input(*sims, overwrite: bool = True, verbose: bool = True):
         if isinstance(sim, flopy.mf6.MFSimulation):
             workspace = Path(sim.sim_path)
             if any(workspace.glob("*")) and not overwrite:
-                warn(f"Workspace is not empty, not writing input files")
+                warn("Workspace is not empty, not writing input files")
                 return
             if verbose:
                 print(
@@ -158,7 +152,7 @@ def write_input(*sims, overwrite: bool = True, verbose: bool = True):
         elif isinstance(sim, flopy.mbase.BaseModel):
             workspace = Path(sim.model_ws)
             if any(workspace.glob("*")) and not overwrite:
-                warn(f"Workspace is not empty, not writing input files")
+                warn("Workspace is not empty, not writing input files")
                 return
             if verbose:
                 print(
@@ -309,7 +303,9 @@ class TestFramework:
             cmp_namefile = (
                 None
                 if "mf6" in self.compare or "libmf6" in self.compare
-                else os.path.basename(nf) if nf else None
+                else os.path.basename(nf)
+                if nf
+                else None
             )
             if cmp_namefile is None:
                 pth = None
@@ -588,7 +584,7 @@ class TestFramework:
         assert tgt.is_file(), f"Target executable not found: {target}"
         assert (
             tgt in self.targets.values()
-        ), f"Targets must be explicitly registered with the test framework"
+        ), "Targets must be explicitly registered with the test framework"
 
         if self.verbose:
             print(f"Running {target} in {workspace}")
@@ -598,7 +594,9 @@ class TestFramework:
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(nf) if nf else None
+            else os.path.basename(nf)
+            if nf
+            else None
         )
 
         # run the model
@@ -688,14 +686,14 @@ class TestFramework:
             assert len(self.xfail) in [
                 1,
                 nsims,
-            ], f"Invalid xfail: expected a single boolean or one for each model"
+            ], "Invalid xfail: expected a single boolean or one for each model"
             if len(self.xfail) == 1 and nsims:
                 self.xfail = list(repeat(self.xfail[0], nsims))
 
             assert len(self.ncpus) in [
                 1,
                 nsims,
-            ], f"Invalid ncpus: expected a single integer or one for each model"
+            ], "Invalid ncpus: expected a single integer or one for each model"
             if len(self.ncpus) == 1 and nsims:
                 self.ncpus = list(repeat(self.ncpus[0], nsims))
 
@@ -705,10 +703,10 @@ class TestFramework:
             self.buffs = [None]
             assert (
                 len(self.xfail) == 1
-            ), f"Invalid xfail: expected a single boolean"
+            ), "Invalid xfail: expected a single boolean"
             assert (
                 len(self.ncpus) == 1
-            ), f"Invalid ncpus: expected a single integer"
+            ), "Invalid ncpus: expected a single integer"
 
         # run models/simulations
         for i, sim_or_model in enumerate(self.sims):

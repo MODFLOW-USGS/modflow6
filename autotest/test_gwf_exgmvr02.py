@@ -3,7 +3,7 @@ Test the exchange mover functionality to work both ways,
 also in parallel. Use the following setup of two connected
 DIS models with a stream flow crossing the boundary twice:
 
-         
+
               left:                      right:
            .  .  .  .  .             .  .  .  .  .   1
  sfr_in => x  x  x  x  x             x  x  x  x  x   2
@@ -15,11 +15,9 @@ sfr_out <= x  x  x  x  x             x  x  x  x  x   4
 The "single" model is also constructed as a reference.
 """
 
-
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_exgmvr02"]

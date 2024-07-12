@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["tvk05"]
@@ -178,7 +177,7 @@ def check_output(idx, test):
     print(
         f"Total outflow in stress period 2 after increasing K33 is {str(sp_x[1][8])}"
     )
-    errmsg = f"Expect higher flow rate in period 2 compared to period 1, but found equal or higher flow rate in period 1"
+    errmsg = "Expect higher flow rate in period 2 compared to period 1, but found equal or higher flow rate in period 1"
     assert 2.0 * sp_x[0][8] < sp_x[1][8], errmsg
 
 

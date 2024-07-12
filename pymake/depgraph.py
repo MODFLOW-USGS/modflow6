@@ -1,19 +1,19 @@
 #! /usr/bin/env python
 import os
+
 try:
     import pymake
 except:
-    msg =  'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    msg = "Error. Pymake package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     print(msg)
     raise Exception()
-import os
 import shutil
 
-srcpth = os.path.join('..', 'src')
+srcpth = os.path.join("..", "src")
 networkx = False
-deppth = 'dependencies'
+deppth = "dependencies"
 if not networkx:
     deppth += "_std"
 if os.path.exists(deppth):

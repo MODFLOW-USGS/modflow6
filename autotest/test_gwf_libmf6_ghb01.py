@@ -4,14 +4,14 @@ of the model with a head below the bottom of the cell. Compare api result to
 a non-api simulation using the well package to simulate an equivalent ghb.
 Possible solution to https://github.com/MODFLOW-USGS/modflow6/issues/724
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 cases = ["libgwf_ghb01"]
 

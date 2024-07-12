@@ -17,7 +17,6 @@ vs. serial behavior on an identical problem.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c", "par_gwf03-d"]

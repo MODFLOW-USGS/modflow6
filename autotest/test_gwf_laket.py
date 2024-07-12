@@ -1,12 +1,10 @@
 """Test for checking lak evaporation."""
 
-
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -285,10 +283,10 @@ def check_output(idx, test):
     test.success = True
     if not evap_compare:
         test.success = False
-        msg += f" Lake evaporation comparison failed."
+        msg += " Lake evaporation comparison failed."
     if not stage_compare:
         test.success = False
-        msg += f" Lake stage comparison failed."
+        msg += " Lake stage comparison failed."
     assert test.success, msg
 
 

@@ -2,12 +2,12 @@
 Test obs package to make sure that the header in output csv files  is
 correct.
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cell_dimensions = (300,)

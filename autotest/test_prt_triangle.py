@@ -15,16 +15,11 @@ from pathlib import Path
 
 import flopy
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import pytest
-from flopy.discretization import VertexGrid
-from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from framework import TestFramework
-from modflow_devtools.markers import requires_pkg
 from prt_test_utils import get_model_name
-from shapely.geometry import LineString
 
 simname = "prttri"
 cases = [f"{simname}r2l", f"{simname}diag"]
@@ -221,7 +216,9 @@ def build_models(idx, test):
         (
             ["left", "right"]
             if "r2l" in test.name
-            else ["left", "botm"] if "diag" in test.name else None
+            else ["left", "botm"]
+            if "diag" in test.name
+            else None
         ),
     )
     prt_sim = build_prt_sim(
@@ -248,9 +245,10 @@ def plot_output(name, grid, head, spdis, pls):
             legend=False,
             color="red" if iprp == 1 else "blue",
         )
-    xc, yc = grid.get_xcellcenters_for_layer(
-        0
-    ), grid.get_ycellcenters_for_layer(0)
+    xc, yc = (
+        grid.get_xcellcenters_for_layer(0),
+        grid.get_ycellcenters_for_layer(0),
+    )
     for i in range(grid.ncpl):
         x, y = xc[i], yc[i]
         ax.plot(x, y, "o", color="grey", alpha=0.25, ms=2)

@@ -3,18 +3,21 @@ import subprocess
 from os import environ
 from pathlib import Path
 from pprint import pprint
-from random import shuffle
 
 import pytest
-
 from modflow_devtools.markers import no_parallel
 from modflow_devtools.misc import run_cmd
-
 
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
-_soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
+_soext = (
+    ".dll"
+    if _system == "Windows"
+    else ".so"
+    if _system == "Linux"
+    else ".dylib"
+)
 _scext = ".bat" if _system == "Windows" else ".sh"
 
 # fortran compiler
@@ -116,22 +119,36 @@ def test_makefiles(dist_dir_path, full):
 
     assert (dist_dir_path / "make" / "makefile").is_file()
     assert (dist_dir_path / "make" / "makedefaults").is_file()
-    assert (dist_dir_path / "utils" / "zonebudget" / "make" / "makefile").is_file()
-    assert (dist_dir_path / "utils" / "zonebudget" / "make" / "makedefaults").is_file()
+    assert (
+        dist_dir_path / "utils" / "zonebudget" / "make" / "makefile"
+    ).is_file()
+    assert (
+        dist_dir_path / "utils" / "zonebudget" / "make" / "makedefaults"
+    ).is_file()
     assert (dist_dir_path / "utils" / "mf5to6" / "make" / "makefile").is_file()
-    assert (dist_dir_path / "utils" / "mf5to6" / "make" / "makedefaults").is_file()
+    assert (
+        dist_dir_path / "utils" / "mf5to6" / "make" / "makedefaults"
+    ).is_file()
 
     # makefiles can't be used on Windows with ifort compiler
     if _system != "Windows" or _fc != "ifort":
-        print(subprocess.check_output("make", cwd=dist_dir_path / "make", shell=True))
         print(
             subprocess.check_output(
-                "make", cwd=dist_dir_path / "utils" / "zonebudget" / "make", shell=True
+                "make", cwd=dist_dir_path / "make", shell=True
             )
         )
         print(
             subprocess.check_output(
-                "make", cwd=dist_dir_path / "utils" / "mf5to6" / "make", shell=True
+                "make",
+                cwd=dist_dir_path / "utils" / "zonebudget" / "make",
+                shell=True,
+            )
+        )
+        print(
+            subprocess.check_output(
+                "make",
+                cwd=dist_dir_path / "utils" / "mf5to6" / "make",
+                shell=True,
             )
         )
 
@@ -183,7 +200,9 @@ def test_examples(dist_dir_path, full):
 
     # print examples found
     example_paths = [
-        p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
+        p
+        for p in examples_path.glob("*")
+        if p.is_dir() and p.stem.startswith("ex")
     ]
     assert any(example_paths)
     print(f"{len(example_paths)} example models found:")
@@ -216,7 +235,9 @@ def test_binaries(dist_dir_path, approved):
 
     # get version string
     output = " ".join(
-        subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()
+        subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"])
+        .decode()
+        .split()
     ).lower()
     assert output.startswith("mf6")
 

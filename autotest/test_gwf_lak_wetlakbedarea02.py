@@ -10,7 +10,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["lak-wetlkbd"]
@@ -208,7 +207,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -238,8 +237,8 @@ def build_models(idx, test):
         outer_dvclose=hclose,
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
-        filename="{}.ims".format(gwfname),
+        rcloserecord=f"{rclose} strict",
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -305,9 +304,9 @@ def build_models(idx, test):
         perioddata=lak_spd,
         budget_filerecord=budpth,
         pname="LAK-1",
-        filename="{}.lak".format(gwfname),
+        filename=f"{gwfname}.lak",
     )
-    obs_file = "{}.lak.obs".format(gwfname)
+    obs_file = f"{gwfname}.lak.obs"
     csv_file = obs_file + ".csv"
     obs_dict = {
         csv_file: [
@@ -320,8 +319,8 @@ def build_models(idx, test):
     gwf.dis.idomain = idomain_wlakes
 
     # Instantiate output control package
-    head_filerecord = "{}.hds".format(gwfname)
-    budget_filerecord = "{}.cbc".format(gwfname)
+    head_filerecord = f"{gwfname}.hds"
+    budget_filerecord = f"{gwfname}.cbc"
     flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=head_filerecord,

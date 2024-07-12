@@ -9,12 +9,10 @@ model
 # Imports
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 # Setup scenario input
@@ -64,7 +62,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -95,7 +93,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -124,7 +122,7 @@ def build_models(idx, test):
     # Instantiating VSC
     if viscosity_on[idx]:
         # Instantiate viscosity (VSC) package
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, 20.0, gwtname, "temperature")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -137,7 +135,7 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiating GHB
@@ -165,8 +163,8 @@ def build_models(idx, test):
     )
 
     # Instatiatingi OC
-    head_filerecord = "{}.hds".format(gwfname)
-    budget_filerecord = "{}.bud".format(gwfname)
+    head_filerecord = f"{gwfname}.hds"
+    budget_filerecord = f"{gwfname}.bud"
     flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=head_filerecord,
@@ -192,7 +190,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwtname])
 
@@ -217,7 +215,7 @@ def build_models(idx, test):
         bulk_density=rhob,
         distcoef=K_d,
         pname="MST-1",
-        filename="{}.mst".format(gwtname),
+        filename=f"{gwtname}.mst",
     )
 
     # Instantiating IC for GWT
@@ -239,7 +237,7 @@ def build_models(idx, test):
     # Instantiating OC for GWT
     flopy.mf6.ModflowGwtoc(
         gwt,
-        concentration_filerecord="{}.ucn".format(gwtname),
+        concentration_filerecord=f"{gwtname}.ucn",
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -270,14 +268,12 @@ def check_output(idx, test):
         sim_val_1 = no_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
-        assert np.allclose(
-            sim_val_1, stored_ans, atol=1e-4
-        ), "Flow in the " + cases[
-            0
-        ] + " test problem (doesn't simulate " "viscosity) has changed,\n should be " + str(
-            stored_ans
-        ) + " but instead is " + str(
-            sim_val_1
+        assert np.allclose(sim_val_1, stored_ans, atol=1e-4), (
+            "Flow in the " + cases[0] + " test problem (doesn't simulate "
+            "viscosity) has changed,\n should be "
+            + str(stored_ans)
+            + " but instead is "
+            + str(sim_val_1)
         )
 
     elif idx == 1:
@@ -285,14 +281,12 @@ def check_output(idx, test):
         sim_val_2 = with_vsc_bud_last[:, 2].sum()
 
         # Ensure latest simulated value hasn't changed from stored answer
-        assert np.allclose(
-            sim_val_2, stored_ans, atol=1e-4
-        ), "Flow in the " + cases[
-            1
-        ] + " test problem (simulates " "viscosity) has changed,\n should be " + str(
-            stored_ans
-        ) + " but instead is " + str(
-            sim_val_2
+        assert np.allclose(sim_val_2, stored_ans, atol=1e-4), (
+            "Flow in the " + cases[1] + " test problem (simulates "
+            "viscosity) has changed,\n should be "
+            + str(stored_ans)
+            + " but instead is "
+            + str(sim_val_2)
         )
 
     elif idx == 2:

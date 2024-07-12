@@ -4,21 +4,21 @@ The test is based on the example provided with issue 1585,
 which resulted in a divide by zero error when reaches were
 inactivated in the second stress period.
 
-The test has 6 sfr reaches that are not connected to the 
+The test has 6 sfr reaches that are not connected to the
 groundwater model.
 
             Reaches
    1 -o- 2 -o- 3 -o- 4 -o- 5 -o- 6
 
 Test parameters:
-  
+
   1. initially all reaches are active
-  2. in the 2nd stress period reaches 4, 5, and 6 are 
+  2. in the 2nd stress period reaches 4, 5, and 6 are
      inactivated
   3. in the 3rd stress period reach 4 is reactivated
   4. in the 4th stress period reach 5 is reactivated
   5. in the 5th stress period reach 6 is reactivated
-  
+
 The test evaluates OUTFLOW and EXT-OUTFLOW for reaches
 3, 4, 5, and 6 against expected values.
 """
@@ -26,7 +26,6 @@ The test evaluates OUTFLOW and EXT-OUTFLOW for reaches
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 paktest = "sfr"

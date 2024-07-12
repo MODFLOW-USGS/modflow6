@@ -44,10 +44,8 @@ Stress period 4 should include all types (listed above) of TO-MVR flows
 import os
 
 import flopy
-import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 include_NWT = False
@@ -518,7 +516,7 @@ def build_mf6_model(idx, ws):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -547,7 +545,7 @@ def build_mf6_model(idx, ws):
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -611,7 +609,7 @@ def build_mf6_model(idx, ws):
         reachperioddata=sfeperioddata,
         flow_package_name="SFR-1",
         pname="SFE-1",
-        filename="{}.sfe".format(gwename),
+        filename=f"{gwename}.sfe",
     )
 
     # Instantiating MODFLOW 6 unsaturated zone energy transport
@@ -640,14 +638,14 @@ def build_mf6_model(idx, ws):
     # Instantiate Output Control package for transport
     flopy.mf6.ModflowGweoc(
         gwe,
-        temperature_filerecord="{}.ucn".format(gwename),
+        temperature_filerecord=f"{gwename}.ucn",
         budget_filerecord=f"{gwename}.bud",
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         temperatureprintrecord=[
             ("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")
         ],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwename),
+        filename=f"{gwename}.oc",
     )
 
     # Instantiate Gwf-Gwe Exchange package
@@ -656,7 +654,7 @@ def build_mf6_model(idx, ws):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(gwename),
+        filename=f"{gwename}.gwfgwe",
     )
 
     return sim

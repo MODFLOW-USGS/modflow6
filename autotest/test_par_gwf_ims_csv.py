@@ -1,6 +1,4 @@
-import flopy
 import pytest
-
 from framework import TestFramework
 
 """
@@ -22,8 +20,6 @@ name_right = "rightmodel"
 
 
 def update_ims(idx, ims):
-    from test_par_gwf01 import hclose, ninner, nouter, rclose
-
     name = cases[idx]
     ims.csv_outer_output_filerecord.set_data(f"{name}.outer.csv")
     ims.csv_inner_output_filerecord.set_data(f"{name}.inner.csv")
