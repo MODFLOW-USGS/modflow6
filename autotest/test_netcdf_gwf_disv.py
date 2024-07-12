@@ -138,12 +138,8 @@ def check_output(idx, test, export, gridded_input):
             f.write("  5  1.00000015E+08  1.00000015E+08  4  6  7  11  10\n")
             f.write("  6  1.00000025E+08  1.00000015E+08  4  7  8  12  11\n")
             f.write("  7  1.00000005E+08  1.00000005E+08  4  9  10  14  13\n")
-            f.write(
-                "  8  1.00000015E+08  1.00000005E+08  4  10  11  15  14\n"
-            )
-            f.write(
-                "  9  1.00000025E+08  1.00000005E+08  4  11  12  16  15\n"
-            )
+            f.write("  8  1.00000015E+08  1.00000005E+08  4  10  11  15  14\n")
+            f.write("  9  1.00000025E+08  1.00000005E+08  4  11  12  16  15\n")
             f.write("END cell2d\n\n")
 
         with open(test.workspace / f"{name}.ic", "w") as f:
