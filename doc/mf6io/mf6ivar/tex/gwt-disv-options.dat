@@ -5,4 +5,6 @@ BEGIN OPTIONS
   [YORIGIN <yorigin>]
   [ANGROT <angrot>]
   [EXPORT_ARRAY_ASCII]
+  [EXPORT_ARRAY_NETCDF]
+  [NCF6 FILEIN <ncf6_filename>]
 END OPTIONS

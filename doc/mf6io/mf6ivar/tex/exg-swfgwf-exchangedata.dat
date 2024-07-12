@@ -1,5 +1,5 @@
 BEGIN EXCHANGEDATA
-  <cellidm1> <cellidm2> <cond>
-  <cellidm1> <cellidm2> <cond>
+  <cellidm1> <cellidm2> <bedleak> <cfact>
+  <cellidm1> <cellidm2> <bedleak> <cfact>
   ...
 END EXCHANGEDATA

@@ -45,6 +45,26 @@ Groundwater Transport
    _mf6io/gwt-*
 
 
+Groundwater Energy Transport
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   _mf6io/gwe-*
+
+
+Particle Tracking
+^^^^^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   _mf6io/prt-*
+
+
 Model Exchanges
 ^^^^^^^^^^^^^^^
 

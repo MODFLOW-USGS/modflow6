@@ -1,0 +1,6 @@
+BEGIN OPTIONS
+  [OGC_WKT <ogc_wktlenbigline>]
+  [DEFLATE <deflate>]
+  [SHUFFLE]
+  [CHUNKING_UGRID UGC_TIME <ugc_time> UGC_FACE <ugc_face>]
+END OPTIONS

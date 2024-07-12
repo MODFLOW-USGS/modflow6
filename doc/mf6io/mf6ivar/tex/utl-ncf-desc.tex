@@ -1,0 +1,19 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{ogc\_wkt}---is the CRS well-known text (WKT) string.
+
+\item \texttt{deflate}---is the deflate level (0=min, 9=max) for per variable compression in the netcdf file. Defining the parameter activates per variable compression in the export file at the level specified.
+
+\item \texttt{SHUFFLE}---is the keyword used to turn on the netcdf variable shuffle filter when the deflate option is also set. The shuffle filter has the effect of storing the first byte of all of a variable's values in a chunk contiguously, followed by all the second bytes, etc. This can be an optimization for compression with certain types of data.
+
+\item \texttt{CHUNKING\_UGRID}---is a keyword for providing ugrid dimension chunk sizes. Chunking can dramatically impact data access times and is highly dependent on access patterns (timeseries vs spatial, for example). It can also significanlty impact compressibility of the data.
+
+\item \texttt{ugc\_time}---is the keyword used to provide a ugrid time dimension chunk size.
+
+\item \texttt{ugc\_face}---is the keyword used to provide a ugrid face dimension chunk size.
+
+\end{description}
+

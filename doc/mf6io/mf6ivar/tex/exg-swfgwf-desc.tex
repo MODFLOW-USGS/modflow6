@@ -7,6 +7,8 @@
 
 \item \texttt{PRINT\_FLOWS}---keyword to indicate that the list of exchange flow rates will be printed to the listing file for every stress period in which ``SAVE BUDGET'' is specified in Output Control.
 
+\item \texttt{FIXED\_CONDUCTANCE}---keyword to indicate that the product of the bedleak and cfact input variables in the exchangedata block represents conductance.  This conductance is fixed and does not change as a function of head in the surface water and groundwater models.
+
 \item \texttt{OBS6}---keyword to specify that record corresponds to an observations file.
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
@@ -23,11 +25,13 @@
 \item \textbf{Block: EXCHANGEDATA}
 
 \begin{description}
-\item \texttt{cellidm1}---is the cellid of the cell in model 1 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM1 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM1 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM1 is the node number for the cell.
+\item \texttt{cellidm1}---is the cellid of the cell in model 1, which must be the surface water model. For a structured grid that uses the DIS input file, CELLIDM1 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM1 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM1 is the node number for the cell.
 
-\item \texttt{cellidm2}---is the cellid of the cell in model 2 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM2 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM2 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM2 is the node number for the cell.
+\item \texttt{cellidm2}---is the cellid of the cell in model 2, which must be the groundwater model. For a structured grid that uses the DIS input file, CELLIDM2 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM2 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM2 is the node number for the cell.
 
-\item \texttt{cond}---is the conductance between the surface water cell and the groundwater cell.
+\item \texttt{bedleak}---is the leakance between the surface water and groundwater.  bedleak has dimensions of 1/T and is equal to the hydraulic conductivity of the bed sediments divided by the thickness of the bed sediments.
+
+\item \texttt{cfact}---is the factor used for the conductance calculation.  The definition for this parameter depends the type of surface water model and whether or not the fixed\_conductance option is specified.  If the fixed\_conductance option is specified, then the hydraulic conductance is calculated as the product of bedleak and cfact.  In this case, the conductance is fixed and does not change as a function of the calculated surface water and groundwater head.  If the fixed\_conductance option is not specified, then the definition of cfact depends on whether the surface water model represents one-dimensional channel flow or two-dimensional overland flow.  If the surface water model represents one-dimensional channel flow, then cfact is the length of the channel cell in the groundwater model cell.  If the surface water model represents two-dimensional overland flow, then cfact is the intersection area of the overland flow cell and the underlying groundwater model cell.
 
 \end{description}
 
