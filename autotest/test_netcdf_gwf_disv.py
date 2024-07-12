@@ -10,15 +10,13 @@ import subprocess
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 from test_gwf_disv import cases
 
 try:
-    import xarray as xa
     import xugrid as xu
 except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
+    pytest.skip("xugrid not found", allow_module_level=True)
 
 wkt = (
     'PROJCS["NAD83 / UTM zone 18N", '
@@ -100,69 +98,69 @@ def check_output(idx, test, export, gridded_input):
 
         with open(test.workspace / f"{name}.disv", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write(f"  NCF6  FILEIN  {name}.disv.ncf\n")
             f.write("END options\n\n")
             f.write("BEGIN dimensions\n")
-            f.write(f"  NLAY  3\n")
-            f.write(f"  NCPL  9\n")
-            f.write(f"  NVERT  16\n")
+            f.write("  NLAY  3\n")
+            f.write("  NCPL  9\n")
+            f.write("  NVERT  16\n")
             f.write("END dimensions\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  top NETCDF\n")
-            f.write(f"  botm NETCDF\n")
+            f.write("  top NETCDF\n")
+            f.write("  botm NETCDF\n")
             if name == "disv01b":
-                f.write(f"  idomain NETCDF\n")
+                f.write("  idomain NETCDF\n")
             f.write("END griddata\n\n")
             f.write("BEGIN vertices\n")
-            f.write(f"  1  1.00000000E+08  1.00000030E+08\n")
-            f.write(f"  2  1.00000010E+08  1.00000030E+08\n")
-            f.write(f"  3  1.00000020E+08  1.00000030E+08\n")
-            f.write(f"  4  1.00000030E+08  1.00000030E+08\n")
-            f.write(f"  5  1.00000000E+08  1.00000020E+08\n")
-            f.write(f"  6  1.00000010E+08  1.00000020E+08\n")
-            f.write(f"  7  1.00000020E+08  1.00000020E+08\n")
-            f.write(f"  8  1.00000030E+08  1.00000020E+08\n")
-            f.write(f"  9  1.00000000E+08  1.00000010E+08\n")
-            f.write(f"  10  1.00000010E+08  1.00000010E+08\n")
-            f.write(f"  11  1.00000020E+08  1.00000010E+08\n")
-            f.write(f"  12  1.00000030E+08  1.00000010E+08\n")
-            f.write(f"  13  1.00000000E+08  1.00000000E+08\n")
-            f.write(f"  14  1.00000010E+08  1.00000000E+08\n")
-            f.write(f"  15  1.00000020E+08  1.00000000E+08\n")
-            f.write(f"  16  1.00000030E+08  1.00000000E+08\n")
+            f.write("  1  1.00000000E+08  1.00000030E+08\n")
+            f.write("  2  1.00000010E+08  1.00000030E+08\n")
+            f.write("  3  1.00000020E+08  1.00000030E+08\n")
+            f.write("  4  1.00000030E+08  1.00000030E+08\n")
+            f.write("  5  1.00000000E+08  1.00000020E+08\n")
+            f.write("  6  1.00000010E+08  1.00000020E+08\n")
+            f.write("  7  1.00000020E+08  1.00000020E+08\n")
+            f.write("  8  1.00000030E+08  1.00000020E+08\n")
+            f.write("  9  1.00000000E+08  1.00000010E+08\n")
+            f.write("  10  1.00000010E+08  1.00000010E+08\n")
+            f.write("  11  1.00000020E+08  1.00000010E+08\n")
+            f.write("  12  1.00000030E+08  1.00000010E+08\n")
+            f.write("  13  1.00000000E+08  1.00000000E+08\n")
+            f.write("  14  1.00000010E+08  1.00000000E+08\n")
+            f.write("  15  1.00000020E+08  1.00000000E+08\n")
+            f.write("  16  1.00000030E+08  1.00000000E+08\n")
             f.write("END vertices\n\n")
             f.write("BEGIN cell2d\n")
-            f.write(f"  1  1.00000005E+08  1.00000025E+08  4  1  2  6  5\n")
-            f.write(f"  2  1.00000015E+08  1.00000025E+08  4  2  3  7  6\n")
-            f.write(f"  3  1.00000025E+08  1.00000025E+08  4  3  4  8  7\n")
-            f.write(f"  4  1.00000005E+08  1.00000015E+08  4  5  6  10  9\n")
-            f.write(f"  5  1.00000015E+08  1.00000015E+08  4  6  7  11  10\n")
-            f.write(f"  6  1.00000025E+08  1.00000015E+08  4  7  8  12  11\n")
-            f.write(f"  7  1.00000005E+08  1.00000005E+08  4  9  10  14  13\n")
+            f.write("  1  1.00000005E+08  1.00000025E+08  4  1  2  6  5\n")
+            f.write("  2  1.00000015E+08  1.00000025E+08  4  2  3  7  6\n")
+            f.write("  3  1.00000025E+08  1.00000025E+08  4  3  4  8  7\n")
+            f.write("  4  1.00000005E+08  1.00000015E+08  4  5  6  10  9\n")
+            f.write("  5  1.00000015E+08  1.00000015E+08  4  6  7  11  10\n")
+            f.write("  6  1.00000025E+08  1.00000015E+08  4  7  8  12  11\n")
+            f.write("  7  1.00000005E+08  1.00000005E+08  4  9  10  14  13\n")
             f.write(
-                f"  8  1.00000015E+08  1.00000005E+08  4  10  11  15  14\n"
+                "  8  1.00000015E+08  1.00000005E+08  4  10  11  15  14\n"
             )
             f.write(
-                f"  9  1.00000025E+08  1.00000005E+08  4  11  12  16  15\n"
+                "  9  1.00000025E+08  1.00000005E+08  4  11  12  16  15\n"
             )
             f.write("END cell2d\n\n")
 
         with open(test.workspace / f"{name}.ic", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  strt NETCDF\n")
+            f.write("  strt NETCDF\n")
             f.write("END griddata\n")
 
         with open(test.workspace / f"{name}.npf", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  icelltype  NETCDF\n")
-            f.write(f"  k  NETCDF\n")
+            f.write("  icelltype  NETCDF\n")
+            f.write("  k  NETCDF\n")
             f.write("END griddata\n")
 
         success, buff = flopy.run_model(

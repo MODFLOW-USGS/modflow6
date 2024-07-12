@@ -68,7 +68,7 @@ def check_output(idx, test, export, gridded_input):
 
         with open(test.workspace / f"{gwtname}.nam", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  SAVE_FLOWS\n")
+            f.write("  SAVE_FLOWS\n")
             f.write(f"  EXPORT_NETCDF {export}\n")
             f.write(f"  NETCDF  FILEIN {gwtname}.{export}.nc\n")
             f.write("END options\n\n")
@@ -86,42 +86,42 @@ def check_output(idx, test, export, gridded_input):
 
         with open(test.workspace / f"{gwtname}.dis", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write(f"  NCF6  FILEIN  {gwtname}.dis.ncf\n")
             f.write("END options\n\n")
             f.write("BEGIN dimensions\n")
-            f.write(f"  NLAY  1\n")
-            f.write(f"  NROW  1\n")
-            f.write(f"  NCOL  100\n")
+            f.write("  NLAY  1\n")
+            f.write("  NROW  1\n")
+            f.write("  NCOL  100\n")
             f.write("END dimensions\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  delr NETCDF\n")
-            f.write(f"  delc NETCDF\n")
-            f.write(f"  top NETCDF\n")
-            f.write(f"  botm NETCDF\n")
-            f.write(f"  idomain NETCDF\n")
+            f.write("  delr NETCDF\n")
+            f.write("  delc NETCDF\n")
+            f.write("  top NETCDF\n")
+            f.write("  botm NETCDF\n")
+            f.write("  idomain NETCDF\n")
             f.write("END griddata\n\n")
 
         with open(test.workspace / f"{gwtname}.ic", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  strt NETCDF\n")
+            f.write("  strt NETCDF\n")
             f.write("END griddata\n")
 
         with open(test.workspace / f"{gwtname}.dsp", "w") as f:
             f.write("BEGIN options\n")
             if not xt3d[idx]:
-                f.write(f"  XT3D_OFF\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+                f.write("  XT3D_OFF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  diffc  NETCDF\n")
-            f.write(f"  alh  NETCDF\n")
-            f.write(f"  alv  NETCDF\n")
-            f.write(f"  ath1  NETCDF\n")
-            f.write(f"  atv  NETCDF\n")
+            f.write("  diffc  NETCDF\n")
+            f.write("  alh  NETCDF\n")
+            f.write("  alv  NETCDF\n")
+            f.write("  ath1  NETCDF\n")
+            f.write("  atv  NETCDF\n")
             f.write("END griddata\n")
 
         success, buff = flopy.run_model(
@@ -175,7 +175,7 @@ def check_output(idx, test, export, gridded_input):
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
-                    xds[f"concentration"][timestep, :].data,
+                    xds["concentration"][timestep, :].data,
                 ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
                 timestep += 1
 

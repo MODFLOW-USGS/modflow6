@@ -8,7 +8,6 @@ import subprocess
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 from test_gwf_sto01 import cases
 
@@ -71,7 +70,7 @@ def check_output(idx, test, export, gridded_input):
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input
-        input_fname = f"gwf_sto01.nc"
+        input_fname = "gwf_sto01.nc"
         nc_fname = f"gwf_sto01.{export}.nc"
         subprocess.run(
             ["mv", test.workspace / input_fname, test.workspace / nc_fname]
@@ -79,71 +78,71 @@ def check_output(idx, test, export, gridded_input):
 
         with open(test.workspace / "gwf_sto01.nam", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  SAVE_FLOWS\n")
-            f.write(f"  NEWTON\n")
+            f.write("  SAVE_FLOWS\n")
+            f.write("  NEWTON\n")
             f.write(f"  EXPORT_NETCDF {export}\n")
             f.write(f"  NETCDF  FILEIN gwf_sto01.{export}.nc\n")
             f.write("END options\n\n")
             f.write("BEGIN packages\n")
-            f.write(f"  DIS6  gwf_sto01.dis  dis\n")
-            f.write(f"  IC6  gwf_sto01.ic  ic\n")
-            f.write(f"  NPF6  gwf_sto01.npf  npf\n")
-            f.write(f"  STO6  gwf_sto01.sto  sto\n")
-            f.write(f"  RCH6  gwf_sto01.rcha  rcha_0\n")
-            f.write(f"  WEL6  gwf_sto01.wel  wel_0\n")
-            f.write(f"  CHD6  gwf_sto01.chd  chd_0\n")
-            f.write(f"  OC6  gwf_sto01.oc  oc\n")
+            f.write("  DIS6  gwf_sto01.dis  dis\n")
+            f.write("  IC6  gwf_sto01.ic  ic\n")
+            f.write("  NPF6  gwf_sto01.npf  npf\n")
+            f.write("  STO6  gwf_sto01.sto  sto\n")
+            f.write("  RCH6  gwf_sto01.rcha  rcha_0\n")
+            f.write("  WEL6  gwf_sto01.wel  wel_0\n")
+            f.write("  CHD6  gwf_sto01.chd  chd_0\n")
+            f.write("  OC6  gwf_sto01.oc  oc\n")
             f.write("END packages\n")
 
         with open(test.workspace / "gwf_sto01.dis", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
-            f.write(f"  NCF6  FILEIN  gwf_sto01.dis.ncf\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
+            f.write("  NCF6  FILEIN  gwf_sto01.dis.ncf\n")
             f.write("END options\n\n")
             f.write("BEGIN dimensions\n")
-            f.write(f"  NLAY  3\n")
-            f.write(f"  NROW  10\n")
-            f.write(f"  NCOL  10\n")
+            f.write("  NLAY  3\n")
+            f.write("  NROW  10\n")
+            f.write("  NCOL  10\n")
             f.write("END dimensions\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  delr NETCDF\n")
-            f.write(f"  delc NETCDF\n")
-            f.write(f"  top NETCDF\n")
-            f.write(f"  botm NETCDF\n")
+            f.write("  delr NETCDF\n")
+            f.write("  delc NETCDF\n")
+            f.write("  top NETCDF\n")
+            f.write("  botm NETCDF\n")
             f.write("END griddata\n\n")
 
         with open(test.workspace / "gwf_sto01.ic", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  strt NETCDF\n")
+            f.write("  strt NETCDF\n")
             f.write("END griddata\n")
 
         with open(test.workspace / "gwf_sto01.npf", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  icelltype  NETCDF\n")
-            f.write(f"  k  NETCDF\n")
-            f.write(f"  k33  NETCDF\n")
+            f.write("  icelltype  NETCDF\n")
+            f.write("  k  NETCDF\n")
+            f.write("  k33  NETCDF\n")
             f.write("END griddata\n")
 
         with open(test.workspace / "gwf_sto01.sto", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_ARRAY_NETCDF\n")
+            f.write("  EXPORT_ARRAY_NETCDF\n")
             f.write("END options\n\n")
             f.write("BEGIN griddata\n")
-            f.write(f"  iconvert  NETCDF\n")
-            f.write(f"  ss  NETCDF\n")
-            f.write(f"  sy  NETCDF\n")
+            f.write("  iconvert  NETCDF\n")
+            f.write("  ss  NETCDF\n")
+            f.write("  sy  NETCDF\n")
             f.write("END griddata\n\n")
             f.write("BEGIN period 1\n")
-            f.write(f"  STEADY-STATE\n")
+            f.write("  STEADY-STATE\n")
             f.write("END period 1\n\n")
             f.write("BEGIN period 2\n")
-            f.write(f"  TRANSIENT\n")
+            f.write("  TRANSIENT\n")
             f.write("END period 2\n")
 
         success, buff = flopy.run_model(
@@ -195,7 +194,7 @@ def check_output(idx, test, export, gridded_input):
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
-                    xds[f"head"][timestep, :].data,
+                    xds["head"][timestep, :].data,
                 ), f"NetCDF-Headfile comparison failure in timestep {timestep+1}"
                 timestep += 1
 
