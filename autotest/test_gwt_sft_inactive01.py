@@ -683,10 +683,60 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
+    msg0 = (
+        "The output datasets should not be the same length.  There are "
+        "15 reaches specified, but underlain by only 12 active cells. "
+        "3 cell below the SFR/SFT reaches have idomain=0 and are "
+        "therefore inactive."
+    )
+    msg1 = (
+        "There seems to be mis-alignment in the flow/transport results "
+        "when some of the GWF cells are inactive but overlain with SFR "
+        "reaches"
+    )
+    msg2 = (
+        "Calculated number of reaches with flow should be greater than "
+        "the number of cells that receive an influx of mass from the "
+        "losing reaches since 3 of the cells underlying the streams are "
+        "inactive (idomain=0)."
+    )
+
     sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     gwf = sim.get_model()
+    gwt = sim.get_model("gwt-" + cases[idx])
     sfr = gwf.get_package("SFR-1")
+    sft = gwt.get_package("SFT")
     stage = sfr.output.stage().get_alldata().squeeze()
+    sft_mass_loss = sft.output.budget().get_data(text="GWF")
+
+    # The stream runs dry toward its bottom end, checking to make sure
+    # that where the stream is dry, there is no simulated mass seepage
+    # into the aquifer.  Where the stream is losing to the aquifer, checking
+    # to ensure that there is some mass loss to the aquifer.
+    for sp in np.arange(nper):
+        assert len(sft_mass_loss[sp]) != len(stage[0]), msg0
+
+        for i, mass_loss in enumerate(sft_mass_loss[sp]):
+            gwf_cell_id = mass_loss[0]
+            stg = stage[0][gwf_cell_id - 1]
+            if stg > 0:
+                assert mass_loss[-1] != 0.0, msg1
+            else:
+                assert np.isclose(mass_loss[-1], 0.0), msg1
+
+        num_stg_vals = 0
+        num_sftgwf_vals = 0
+        for i, itm in enumerate(stage[sp]):
+            if itm != 0:
+                num_stg_vals += 1
+        for i, itm in enumerate(sft_mass_loss[sp]):
+            if not np.isclose(itm[-1], 0):
+                num_sftgwf_vals += 1
+
+        # Owing to 3 reaches being underlain by inactive cells and therefore
+        # not able to receive mass from sft, the following values should not
+        # be equal
+        assert num_stg_vals > num_sftgwf_vals, msg2
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
