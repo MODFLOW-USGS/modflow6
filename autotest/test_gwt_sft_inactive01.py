@@ -5,7 +5,7 @@ to SFR reaches during a simulation. Additionally, this uses a DISU grid.  The
 test was developed based on a user having memory access violations for a real-
 world model that included DISU and SFR reaches where cells did not exist.
 
-The test has 6 sfr reaches that are not connected to the 
+The test has 6 sfr reaches that are not connected to the
 groundwater model.
 
 
@@ -20,21 +20,18 @@ groundwater model.
      |       |       |       |       |       |       | / |  idomain set to 0 |       |       |       |       |       |       | / |
      |       |       |       |       |       |       |/  |                   |       |       |       |       |       |       |/  |
      +-------+-------+-------+-------+-------+-------+   +                   +-------+-------+-------+-------+-------+-------+   +
-     |       |       |       |       |       |       |  /                    |       |       |       |       |       |       |  / 
-     |       |       |       |       |       |       | /                     |       |       |       |       |       |       | /  
-     |       |       |       |       |       |       |/                      |       |       |       |       |       |       |/   
-     +-------+-------+-------+-------+-------+-------+                       +-------+-------+-------+-------+-------+-------+    
+     |       |       |       |       |       |       |  /                    |       |       |       |       |       |       |  /
+     |       |       |       |       |       |       | /                     |       |       |       |       |       |       | /
+     |       |       |       |       |       |       |/                      |       |       |       |       |       |       |/
+     +-------+-------+-------+-------+-------+-------+                       +-------+-------+-------+-------+-------+-------+
 
 """
 
 # Imports
 
-import os
-
+import flopy
 import numpy as np
 import pytest
-import flopy
-
 from framework import TestFramework
 
 # Base simulation and model name and workspace
@@ -388,7 +385,6 @@ chd_spd_right = {0: chd_spd_right_block}
 
 
 def build_models(idx, test):
-
     name = cases[idx]
     ws = test.workspace
 
