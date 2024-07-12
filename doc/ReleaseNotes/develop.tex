@@ -32,7 +32,7 @@
 		\item An array out of bounds error for Z-displacement output in inactive cells has been fixed in the CSUB package. Depending on the combination of platform and compiler used to build the program, this could result in crashes.
 		\item Initialize a few uninitialized variables in the CSUB package. Depending on the combination of platform and compiler used to build the program, this could result in different program behaviour.
 		\item Add a warning if saving convergence data for the CSUB package when delay beds are not included in a simulation. Also modified the convergence output data so that it is clear that DVMAX and DSTORAGEMAX data and locations are not calculated in this case (by writing `-\,-' to the output file). 
-
+		\item Previously the PRT model's PRP package required release points to be specified in the model coordinate system (except for the z coordinate via the LOCAL\_Z option). PRT also previously reported pathlines in the model coordinate system. The PRT model now supports coordinate transformations for release point input and pathline output via keyword options for the PRP package, while preserving the existing default model coordinate system. Release point x and y coordinates may now be specified for structured grids with reference to the local rectilinear cell (with coordinates scaled to the unit interval) via the LOCAL\_XY keyword option. The LOCAL\_XY\_OFFSET option, supported for structured or unstructured grids, can be used to locate release point x and y coordinates at an offset from the cell center (with no distance rescaling).
 	%	\item xxx
 	\end{itemize}
 

@@ -9,7 +9,11 @@
 
 \item \texttt{exit\_solve\_tolerance}---the convergence tolerance for iterative solution of particle exit location and time in the generalized Pollock's method.  A value of 0.00001 works well for many problems, but the value that strikes the best balance between accuracy and runtime is problem-dependent.
 
-\item \texttt{LOCAL\_Z}---indicates that ``zrpt'' defines the local z coordinate of the release point within the cell, with value of 0 at the bottom and 1 at the top of the cell.  If the cell is partially saturated at release time, the top of the cell is considered to be the water table elevation (the head in the cell) rather than the top defined by the user.
+\item \texttt{LOCAL\_Z}---indicates that ``zrpt'' defines the local z coordinate of the release point within the cell scaled to the unit interval, with value of 0 at the bottom and 1 at the top of the cell.  If the cell is partially saturated at release time, the top of the cell is considered to be the water table elevation (the head in the cell) rather than the top defined by the user.
+
+\item \texttt{LOCAL\_XY}---indicates that ``xrpt'' and ``yrpt'' define the local x and y coordinates of the release point within the cell scaled to the unit interval, with value of 0 at the west and south faces and 1 at the east and north faces of the cell. This option may only be used with structured models.
+
+\item \texttt{LOCAL\_XY\_OFFSET}---indicates that ``xrpt'' and ``rpt'' define the local x and y offsets of the release point within the cell, where the local coordinate system's origin is the cell center and distances are not rescaled. This option may be used with structured or unstructured models.
 
 \item \texttt{EXTEND\_TRACKING}---indicates that particles should be tracked beyond the end of the simulation's final time step (using that time step's flows) until particles terminate or reach a specified stop time.  By default, particles are terminated at the end of the simulation's final time step.
 
