@@ -38,6 +38,7 @@ module CharacterStringModule
     ! not supported by gfortran 5 and 6
     ! disable for now
     ! generic :: write (unformatted) => write_unformatted
+    final :: destruct
   end type CharacterStringType
 
 contains
@@ -126,5 +127,10 @@ contains
       length = 0
     end if
   end function strlen
+
+  subroutine destruct(this)
+    type(CharacterStringType), intent(inout) :: this
+    if (allocated(this%charstring)) deallocate (this%charstring)
+  end subroutine destruct
 
 end module CharacterStringModule
