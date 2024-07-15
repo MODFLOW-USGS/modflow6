@@ -24,7 +24,7 @@ from modflow_devtools.download import (
     list_artifacts,
 )
 from modflow_devtools.markers import no_parallel, requires_exe, requires_github
-from modflow_devtools.misc import run_cmd, set_dir
+from modflow_devtools.misc import run_cmd, run_py_script, set_dir
 
 from utils import convert_line_endings, get_project_root_path
 
@@ -36,13 +36,15 @@ CHANGELOG_PATH = PROJ_ROOT_PATH / "doc" / "ReleaseNotes"
 DISTRIBUTION_PATH = PROJ_ROOT_PATH / "distribution"
 BENCHMARKS_PATH = PROJ_ROOT_PATH / "distribution" / ".benchmarks"
 DOCS_PATH = PROJ_ROOT_PATH / "doc"
+MF6IO_PATH = DOCS_PATH / "mf6io"
+DEPRECATIONS_SCRIPT_PATH = MF6IO_PATH / "mf6ivar" / "deprecations.py"
 TEX_PATHS = {
     "minimal": [
-        DOCS_PATH / "mf6io" / "mf6io.tex",
+        MF6IO_PATH / "mf6io.tex",
         DOCS_PATH / "ReleaseNotes" / "ReleaseNotes.tex",
     ],
     "full": [
-        DOCS_PATH / "mf6io" / "mf6io.tex",
+        MF6IO_PATH / "mf6io.tex",
         DOCS_PATH / "ReleaseNotes" / "ReleaseNotes.tex",
         DOCS_PATH / "zonebudget" / "zonebudget.tex",
         DOCS_PATH / "ConverterGuide" / "converter_mf5to6.tex",
@@ -221,8 +223,11 @@ def test_build_benchmark_tex(tmp_path):
 
 def build_deprecations_tex():
     deprecations_path = (
-        DOCS_PATH / "mf6io" / "mf6ivar" / "md" / "deprecations.md"
+        MF6IO_PATH / "mf6ivar" / "md" / "deprecations.md"
     )
+
+    # make deprecations markdown table
+    run_py_script(DEPRECATIONS_SCRIPT_PATH)
 
     # convert markdown deprecations to LaTeX
     with set_dir(CHANGELOG_PATH):
@@ -240,6 +245,11 @@ def build_deprecations_tex():
     assert (
         DOCS_PATH / "ReleaseNotes" / f"{deprecations_path.stem}.tex"
     ).is_file()
+
+
+@no_parallel
+def test_build_deprecations_tex():
+    build_deprecations_tex()
 
 
 def build_mf6io_tex_from_dfn(
