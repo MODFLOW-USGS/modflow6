@@ -32,11 +32,11 @@ from utils import convert_line_endings, get_project_root_path
 PROJ_ROOT_PATH = get_project_root_path()
 BIN_PATH = PROJ_ROOT_PATH / "bin"
 EXAMPLES_REPO_PATH = PROJ_ROOT_PATH.parent / "modflow6-examples"
-CHANGELOG_PATH = PROJ_ROOT_PATH / "doc" / "ReleaseNotes"
 DISTRIBUTION_PATH = PROJ_ROOT_PATH / "distribution"
 BENCHMARKS_PATH = PROJ_ROOT_PATH / "distribution" / ".benchmarks"
 DOCS_PATH = PROJ_ROOT_PATH / "doc"
 MF6IO_PATH = DOCS_PATH / "mf6io"
+RELEASE_NOTES_PATH = DOCS_PATH / "ReleaseNotes"
 DEPRECATIONS_SCRIPT_PATH = MF6IO_PATH / "mf6ivar" / "deprecations.py"
 TEX_PATHS = {
     "minimal": [
@@ -192,7 +192,7 @@ def build_benchmark_tex(
         )
 
     # convert markdown benchmark results to LaTeX
-    with set_dir(CHANGELOG_PATH):
+    with set_dir(RELEASE_NOTES_PATH):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
@@ -222,13 +222,25 @@ def test_build_benchmark_tex(tmp_path):
 
 
 def build_deprecations_tex():
-    deprecations_path = MF6IO_PATH / "mf6ivar" / "md" / "deprecations.md"
+    mf6ivar_path = MF6IO_PATH / "mf6ivar"
+    md_path = mf6ivar_path / "md"
+    md_path.mkdir(exist_ok=True)
 
     # make deprecations markdown table
     run_py_script(DEPRECATIONS_SCRIPT_PATH)
+    with set_dir(mf6ivar_path):
+        deprecations_path = md_path / "deprecations.md"
+        deprecations_path.unlink(missing_ok=True)
+        out, err, ret = run_cmd(
+            sys.executable,
+            "deprecations.py",
+            verbose=True
+        )
+        assert not ret, out + err
+        assert deprecations_path.is_file()
 
     # convert markdown deprecations to LaTeX
-    with set_dir(CHANGELOG_PATH):
+    with set_dir(RELEASE_NOTES_PATH):
         tex_path = Path("deprecations.tex")
         tex_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
