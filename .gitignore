@@ -120,6 +120,7 @@ distribution/run-time-comparison.md
 doc/ReleaseNotes/run-time-comparison.tex
 doc/ReleaseNotes/deprecations.tex
 doc/mf6io/mf6ivar/md
+doc/mf6io/mf6ivar/tex
 
 # Intel Fortran Visual Studio intermediate files
 msvs/*.fdz
