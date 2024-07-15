@@ -1,4 +1,0 @@
-BEGIN PERIOD <iper>
-  CONCENTRATION
-    <concentration(ncol*nrow; ncpl)> -- READARRAY
-END PERIOD

@@ -1,5 +1,0 @@
-BEGIN CONNECTIONDATA
-  <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
-  <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
-  ...
-END CONNECTIONDATA

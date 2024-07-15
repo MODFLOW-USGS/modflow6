@@ -1,5 +1,0 @@
-BEGIN DIMENSIONS
-  NUZFCELLS <nuzfcells>
-  NTRAILWAVES <ntrailwaves>
-  NWAVESETS <nwavesets>
-END DIMENSIONS

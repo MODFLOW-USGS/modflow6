@@ -1,5 +1,0 @@
-BEGIN OUTLETS
-  <outletno> <lakein> <lakeout> <couttype> <@invert@> <@width@> <@rough@> <@slope@>
-  <outletno> <lakein> <lakeout> <couttype> <@invert@> <@width@> <@rough@> <@slope@>
-  ...
-END OUTLETS

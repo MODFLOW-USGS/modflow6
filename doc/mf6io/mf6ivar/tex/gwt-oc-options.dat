@@ -1,6 +1,0 @@
-BEGIN OPTIONS
-  [BUDGET FILEOUT <budgetfile>]
-  [BUDGETCSV FILEOUT <budgetcsvfile>]
-  [CONCENTRATION FILEOUT <concentrationfile>]
-  [CONCENTRATION PRINT_FORMAT COLUMNS <columns> WIDTH <width> DIGITS <digits> <format>]
-END OPTIONS

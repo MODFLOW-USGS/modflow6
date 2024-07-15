@@ -1,5 +1,0 @@
-BEGIN DIMENSIONS
-  NODES <nodes>
-  NJA <nja>
-  [NVERT <nvert>]
-END DIMENSIONS

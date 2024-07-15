@@ -1,7 +1,0 @@
-BEGIN OPTIONS
-  [BUDGET FILEOUT <budgetfile>]
-  [BUDGETCSV FILEOUT <budgetcsvfile>]
-  [QOUTFLOW FILEOUT <qoutflowfile>]
-  [STAGE FILEOUT <stagefile>]
-  [QOUTFLOW PRINT_FORMAT COLUMNS <columns> WIDTH <width> DIGITS <digits> <format>]
-END OPTIONS

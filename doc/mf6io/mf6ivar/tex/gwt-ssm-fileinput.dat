@@ -1,5 +1,0 @@
-BEGIN FILEINPUT
-  <pname> SPC6 FILEIN <spc6_filename> [MIXED]
-  <pname> SPC6 FILEIN <spc6_filename> [MIXED]
-  ...
-END FILEINPUT
