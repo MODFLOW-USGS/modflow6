@@ -455,7 +455,7 @@ contains
     deallocate (this%virtual_solutions)
 
     deallocate (this%router)
-    
+
   end subroutine destroy
 
 end module VirtualDataManagerModule
