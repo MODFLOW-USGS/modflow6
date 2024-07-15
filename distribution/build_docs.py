@@ -222,9 +222,7 @@ def test_build_benchmark_tex(tmp_path):
 
 
 def build_deprecations_tex():
-    deprecations_path = (
-        MF6IO_PATH / "mf6ivar" / "md" / "deprecations.md"
-    )
+    deprecations_path = MF6IO_PATH / "mf6ivar" / "md" / "deprecations.md"
 
     # make deprecations markdown table
     run_py_script(DEPRECATIONS_SCRIPT_PATH)
