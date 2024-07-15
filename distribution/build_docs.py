@@ -232,9 +232,7 @@ def build_deprecations_tex():
         deprecations_path = md_path / "deprecations.md"
         deprecations_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
-            sys.executable,
-            "deprecations.py",
-            verbose=True
+            sys.executable, "deprecations.py", verbose=True
         )
         assert not ret, out + err
         assert deprecations_path.is_file()
