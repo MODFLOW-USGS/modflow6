@@ -1,156 +1,82 @@
+# MODFLOW 6 input specification language
 
-# Introduction
+MODFLOW 6 accepts input via **input files** which use a custom text-based format. The MODFLOW 6 input file format is specified by **definition (DFN) files**. Each definition file specifies the input expected for some MODFLOW 6 component (e.g. a simulation, model, or package). DFN files are primarily relevant to MODFLOW 6 developers and contributors, though users may find it helpful to peruse them.
 
-The input variables for MODFLOW 6 are described using a customized format that allows us to build input instructions in a variety of different ways.  Each input variable is described using multiple definition attributes.  These attributes are stored in definition files, with one definition file for each MODFLOW 6 input file.  A python script, also present in this folder [mf6ivar.py](mf6ivar.py), is used to convert the definition files into a markdown file [./md/mf6ivar.md](./md/mf6ivar.md) and latex files that are pulled into the user guide.
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+- [DFN file format](#dfn-file-format)
+- [Input parameter attributes](#input-parameter-attributes)
+- [Input parameter types](#input-parameter-types)
+  - [Keyword](#keyword)
+  - [Strings](#strings)
+  - [Numerics](#numerics)
+  - [Recarrays](#recarrays)
+  - [Records](#records)
+  - [Repeating records](#repeating-records)
+  - [Keystrings](#keystrings)
+- [Reader Attribute](#reader-attribute)
+- [Common Text Strings](#common-text-strings)
+- [Writing definition files](#writing-definition-files)
+  - [Subpackages](#subpackages)
+  - [Models](#models)
+  - [Solvers](#solvers)
+- [Developer tooling](#developer-tooling)
 
-# Variable Definition Attributes
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-A MODFLOW 6 variable, and its place within a block and on a line is defined using variable definition attributes.  Some of the attributes are optional and do not need to be specified (because they have a default value) and others are required.  The following list defines the variable definition attributes:
+## DFN file overview
 
-* block -- this is the name of the block that contains the variable.  Required.
-* name -- this is the name of the variable.  Required.
-* type -- this is the type of variable.  Valid values are: keyword, string, integer, double precision, recarray, record, recordrepeating, keystring.  Required.
-* valid -- list of valid values or keywords
-* shape -- this is the size of the array.  Only required for arrays.  Optional.
-* tagged -- if set to false, then a keyword is not required prior to value itself.  tagged is set to true if not specified.  Optional.
-* in_record -- if true, then this means that the variable is part of a record, and so it should not be listed on its own line.  in_record is False if not specified.  Optional.
-* layered -- if true, then the LAYERED keyword will be written to the input instructions.  Default is false.
-* reader -- this is the MODFLOW 6 subroutine or method that reads the data.  Valid values are: urword, u1ddbl, u2ddbl, readarray.
-* optional -- this is a logical keyword.  When true, the variable is an optional variable for MODFLOW 6.  Optional.
-* longname -- this is a long name for the variable.  Required.
-* description -- this is a written description of the variable.  Required.
-* preserve_case -- default is false, but should be set to true for file names
-* default_value -- default value for the variable.  Should be executable with Python
-* numeric_index -- default is false.  if true, then this is an index variable.  Is useful for Flopy to treat as zero-based.
-* deprecated -- default is ''.  if not '' then this MODFLOW 6 variable is considered deprecated.  The string for deprecated should be the version (such as 6.1.1) that corresponds to when the option was deprecated.
+A DFN file is a text file enumerating **input parameters** for a MODFLOW 6 component. An input parameter is any value provided by the user to configure a MODFLOW 6 simulation. Each DFN file describes a single MODFLOW 6 input file and specifies zero or more input parameters. Each input parameter is described by a set of attributes, some of which are required, some optional. Input parameters are delimited by empty lines.
 
-# Definition Files
+DFN files must contain only ASCII characters. DFN files may include comment lines, which must begin with "#".
 
-Definition files contain all the information necessary to construct all of the blocks and variables for a MODFLOW 6 input file.  A '#' symbol can be used to insert a comment anywhere within the definition file.  These comments are used here to separate the definition files into parts for each block.
-
-The .dfn files are located in the dfn folder.
-
-# Creating a Definition File that will Work with Flopy
-
-For your definition file to work with flopy:
-
-1) Follow the file naming convention \<model abbr\>-\<package abbr\>.dfn. 
-2) When your package is ready for release copy the dfn file to the flopy distribution in the flopy/mf6/data/dfn folder, run createpackages.py, and check in your new dfn file. Also check in the package class and the updated \__init\__.py that createpackages.py created.
-
-## Creating a New Subpackage Definition File
-
-A subpackage is a package referenced by another package (vs being referenced in the name file).  The tas, ts, and obs packages are examples of subpackages.  There are a few additional steps required when creating a subpackage definition file.  First, verify that the parent package's dfn file has a file record for the subpackage to the option block.   For example, for the time series package the file record definition starts with:
-
-    block options
-    name ts_filerecord
-    type record ts6 filein ts6_filename
-
-Verify that the same naming convention is followed as the example above, specifically:
-
-    name <subpackage-abbr>_filerecord
-    record <subpackage-abbr>6 filein <subpackage-abbr>6_filename
-
-Next, create the child package definition file (see sections below for more information). 
-
-When your child package is ready for release follow the same procedure described in  "Creating a Definition File that will Work with Flopy" above along with a few additional steps required for subpackages.  At the top of the child dfn file add two lines describing how the parent and child packages are related. The first line determines how the subpackage is linked to the package:
-
-\# flopy subpackage \<parent record\> \<abbreviation\> \<child data\> \<data name\>
-
-* Parent record is the MF6 record name of the filerecord in parent package that references the child packages file name
-* Abbreviation is the short abbreviation of the new subclass
-* Child data is the name of the child class data that can be passed in as parameter to the parent class. Passing in this parameter to the parent class automatically creates the child class with the data provided.
-* Data name is the parent class parameter name that automatically creates the child class with the data provided.
-
-The example below is the first line from the ts subpackage dfn:
-
-\# flopy subpackage ts_filerecord ts timeseries timeseries
-
-The second line determines the variable name of the subpackage's parent and the type of parent (the parent package's object oriented parent):
-
-\# flopy parent_name_type \<parent package variable name\> \<parent package type\>
-
-An example below is the second line in the ts subpackage dfn:
-
-\# flopy parent_name_type parent_package MFPackage
-
-There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, separating each type with a / (MFPackage/MFModel).
-
-## Creating Definition Files for New Models
-
-To create a new type of model choose a unique three letter model abbreviation ("gwf", "gwt", ...). Create a name file dfn with the naming convention \<model abbr\>-nam.dfn. The name file must have only an options and packages block (see gwf-nam.dfn as an example). Create a new dfn file for each of the packages in your new model, following the naming convention described above. 
-
-When your model is ready for release copy the dfn file to the flopy distribution in the flopy/mf6/data/dfn folder, run createpackages.py, and check in your new dfn files, the package classes, and updated init.py that createpackages.py created.
-
-## Creating Definition Files for New Solvers
-
-Create a solver definition file as you would any package definition file.  When you are done add a commented line at the top of the definition file to let FloPy know that this package is a solver (solution package type). The line should look like this:
-
-\# solution_package <solver abbreviation> <list of model abbreviations the solver supports>
-
-For example, the following would tell FloPy the IMS package supports the gwf6 and gwt6 model types:
-
-\# flopy solution_package ims gwf6 gwt6
-
-If a "*" is used instead of the list of model abbreviations, the solver is assumed to support all model types.  For example, the following would tell FloPy that the IMS package supports all models:
-
-\# flopy solution_package ims *
-
-
-# Simple Definition File Example
-
-This example shows how to construct an options block with a couple of optional keywords.
+Input parameters are organized into **blocks**. A block is a set of related input parameters. Each block in a DFN file is conventionally preceded by a comment line like the following:
 
 ```
-# --------------------- gwf dis options ---------------------
-
-block options
-name length_units
-type string
-reader urword
-optional true
-longname model length units
-description is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
-
-block options
-name nogrb
-type keyword
-reader urword
-optional true
-longname do not write binary grid file
-description keyword to deactivate writing of the binary grid file.
+# --------------------- prt prp options ---------------------
 ```
 
-This information will be converted into an ASCII representation of the options block as follows:
+An input parameter is specified by a set of attributes on adjacent one on each line, one attribute per line, following the general format:
 
 ```
-BEGIN OPTIONS
-  [LENGTH_UNITS length_units]
-  [NOGRB]
-END OPTIONS
+attribute_name attribute_value
 ```
 
-In addition, a latex file will be created.  The name of the latex file will be the prefix of the definition file plus -desc.tex.  This latex file will have the descriptions, written in latex, for the variables in the definition file.
+Some attribute values are optional.
 
-```
-% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py
+DFN files should be named `component-subcomponent.dfn`, where the component and subcomponent are abbreviated acronyms or names. For instance, a groundwater flow (GWF) model's initial conditions (IC) package DFN file is named `gwf-ic.dfn`.
 
-\item \texttt{length\_units}---is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
+DFN files are parsed to generate both source code and documentation.
 
-\item \texttt{NOGRB}---keyword to deactivate writing of the binary grid file.
-```
+## Input parameter attributes
 
-The variables will also be listed in the markdown file as:
+A MODFLOW 6 input parameter is described by a set of attributes. Some attributes are optional and do not need to be specified (because they have a default value) and others are required. The following attributes are supported:
 
-| component | package | block | variable name | type | description |
-| :---: | :---: | :---: | :---: | :---: | --- |
-| GWF | DIS | OPTIONS | LENGTH_UNITS | STRING | is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''. |
-| GWF | DIS | OPTIONS | NOGRB | KEYWORD | keyword to deactivate writing of the binary grid file. |
+| Attribute     | Description                                                            | Required | Default | Notes                                                                                                                                                         |
+|---------------|------------------------------------------------------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| block         | Block name                                                             | Yes      |         | Each parameter must belong to a block.                                                                                                                        |
+| name          | Parameter name                                                         | Yes      |         | Parameter names should be lower case and may contain (unescaped) underscores.                                                                                 |
+| type          | Parameter type                                                         | Yes      |         | Valid values are: `keyword`, `string`, `integer`, `double precision`, `recarray`, `record`, `recordrepeating`, and `keystring`.                               |
+| valid         | Valid parameter values                                                 | No       | None    |                                                                                                                                                               |
+| shape         | Array shape                                                            | No       | None    | Only required/relevant for array parameters.                                                                                                                  |
+| tagged        | Whether a keyword is required before the parameter value.              | No       | True    | Set to false for keyword parameters (which do not take a value).                                                                                              |
+| in_record     | Whether the parameter is part of a record.                             | No       | False   | If true, the parameter must follow a record parameter keyword rather than being listed on its own line.                                                       |
+| layered       | Whether the parameter is layered.                                      | No       | False   | If true, then the LAYERED keyword will be written to the input instructions.                                                                                  |
+| reader        | The MODFLOW 6 routine used to read the parameter value.                | Yes      |         | Valid values are: `urword`, `u1ddbl`, `u2ddbl`, `readarray`.                                                                                                  |
+| optional      | Whether the parameter is optional.                                     | No       | False   |                                                                                                                                                               |
+| longname      | A brief but descriptive label for the parameter.                       | Yes      |         | May contain spaces.                                                                                                                                           |
+| description   | A full description of the parameter.                                   | Yes      |         | Should describe the parameter in detail. Underscores must be escaped since this value is parsed and substituted into LaTeX files for the MF6IO documentation. |
+| preserve_case | Whether the case of the parameter value (if text) should be preserved. | No       | False   | This should be set to true for filename parameters.                                                                                                           |
+| default_value | The parameter's default value.                                         | No       | None    | Should be a valid Python literal.                                                                                                                             |
+| numeric_index | Indicates that this is an index variable.                              | No       | False   | Indicates that FloPy should treat the parameter as zero-based.                                                                                                |
+| deprecated    | Indicates that the parameter has been deprecated.                      | No       | None    | Should a semantic version number, the version in which the parameter was deprecated. If this attribute is provided without a value, it is ignored.            |
 
+## Input parameter types
 
-# Definition File Record Types
+The following input parameter types are supported.
 
-## Keyword Type
+### Keyword
 
 As shown in the simple example above, a keyword type is simply one that is specified using a text string.  The keyword name is automatically converted into upper case.  Upper case is used in the input instructions to indicate a word that is recognized by the MODFLOW 6 program.
 
@@ -178,8 +104,7 @@ END OPTIONS
 
 Note that the optional tag being set to true results in square brackets around NOGRB.
 
-
-## String Type
+### Strings
 As shown in the simple example above, a string type is simply a keyword followed by a text string.  This type allows the user to provide text information to MODFLOW 6.
 
 A simple example of a keyword is:
@@ -216,8 +141,7 @@ END OPTIONS
 
 In this case, the user would provide length_units directly without a preceding keyword.  Eliminating tags is used later to construct records consisting of multiple data entries.
 
-
-## Integer and Double Precision Type
+### Numerics
 
 As you might expect, the integer and double precision types allow for specification of integer and double precision input by the user.  A simple example from the Solution Sparse Matrix Solver Nonlinear block is:
 
@@ -252,8 +176,7 @@ END NONLINEAR
 
 Note that in this case, both of the variables are required (optional false) and so they are not enclosed in brackets.
 
-
-## Recarray Type
+### Recarrays
 
 The recarray type is patterned after the recarray type that is available in the numpy package for Python.
 
@@ -331,7 +254,7 @@ BEGIN PERIOD
 END PERIOD
 ```
 
-## Record Type
+### Records
 
 A record type is similar to the recarray type, except that it doesn't have a shape.  A record can be just a list of values on one line.  A simple example of this is in the SMS Linear block, where we have the rcloserecord consisting of the inner_rclose and rclose_option variables.
 
@@ -372,12 +295,12 @@ BEGIN LINEAR
 END LINEAR
 ```
 
-## Recordrepeating Type
+### Repeating records
 
 The recordrepeating type is the same as the record type.  We've given it another name to indicate that the user can specify more than on line.  The only place this is used at present is in the Output Control.
 
 
-## Keystring Type
+### Keystrings
 
 A keystring is a final record type.  A keystring identifies that a variable can specified using multiple different types of input.  It is most often used by the advanced packages to adjust individual comments of the package.  The following is an example of the mawsetting variable:
 
@@ -616,8 +539,7 @@ AUXILIARY auxname auxval
 \end{verbatim}
 ```
 
-
-# Reader Attribute
+## Reader Attribute
 
 The reader attribute indicates what reader is used by MODFLOW 6 for the information.  There are several reader types that result in specialized input instructions.  For example, the delr array of the DIS package is read using u1ddbl.  Because the MODFLOW 6 array readers often require a control record, when this reader type is specified, information about the control record is written.  For example, the following block identifies how delr is specified:
 
@@ -664,7 +586,7 @@ BEGIN NPFDATA
 END NPFDATA
 ```
 
-# Common Text Strings
+## Common Text Strings
 
 Many of the MODFLOW 6 input variables share common description information.  This information can be defined in one place and then referenced as many times as needed throughout the definition files.  The definition file [./dfn/common.dfn](./dfn/common.dfn) is where common information is defined.  For example, there is a text string defined as:
 
@@ -689,9 +611,144 @@ description REPLACE auxnames {'{#1}': 'Groundwater Flow'}
 In the description attribute, the capital REPLACE instructs the processor to replace auxnames with the text string defined by auxnames in common.dfn.  Also included here is a Python dictionary, which instructs the processor to replace the text string '{#1}' with 'Groundwater Flow'.
 
 
-# Conversion of Definition Files
-The Python script [mf6ivar.py](mf6ivar.py) will process all of the definition files and create a markdown file, latex files of the variable descriptions, and text files containing the blocks.
+
+## Writing definition files
+
+This section demonstrates a definition file for a MODFLOW 6 component.
+
+Below is shown DFN file contents specifying an options block with optional keywords:
+
+```
+# --------------------- gwf dis options ---------------------
+
+block options
+name length_units
+type string
+reader urword
+optional true
+longname model length units
+description is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
+
+block options
+name nogrb
+type keyword
+reader urword
+optional true
+longname do not write binary grid file
+description keyword to deactivate writing of the binary grid file.
+```
+
+This corresponds to the following in a MODFLOW 6 input file:
+
+```
+BEGIN OPTIONS
+  [LENGTH_UNITS length_units]
+  [NOGRB]
+END OPTIONS
+```
+
+Square brackets indicate that a parameter is optional.
+
+The MODFLOW 6 repository contains scripts to generate the above snippet the DFN file and substitute it into the MODFLOW 6 input/output documentation. In addition, a LaTeX file will be created, the name of which will be the prefix of the definition file plus `-desc.tex`.  This LaTeX file describes each parameter in the definition file:
+
+```
+\item \texttt{length\_units}---is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''.
+
+\item \texttt{NOGRB}---keyword to deactivate writing of the binary grid file.
+```
+
+The parameters will also be listed in a comprehensive Markdown table, which is also inserted into the MF6IO documentation and hosted on the online documentation site:
 
 
-# Deprecations
-The Python script [deprecations.py](deprecations.py) will search definition files for `deprecated` or `removed` options and create a markdown file containing a table of deprecations and removals.
+| component | package | block | variable name | type | description |
+| :---: | :---: | :---: | :---: | :---: | --- |
+| GWF | DIS | OPTIONS | LENGTH_UNITS | STRING | is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''. |
+| GWF | DIS | OPTIONS | NOGRB | KEYWORD | keyword to deactivate writing of the binary grid file. |
+
+Further consideration is needed when writing definition files for certain MODFLOW 6 components.
+
+### Subpackages
+
+A subpackage is a package referenced by another package (vs being referenced in the name file).  The tas, ts, and obs packages are examples of subpackages.  There are a few additional steps required when creating a subpackage definition file.  First, verify that the parent package's dfn file has a file record for the subpackage to the option block.   For example, for the time series package the file record definition starts with:
+
+```
+block options
+name ts_filerecord
+type record ts6 filein ts6_filename
+```
+
+Verify that the same naming convention is followed as the example above, specifically:
+
+```
+name <subpackage-abbr>_filerecord
+record <subpackage-abbr>6 filein <subpackage-abbr>6_filename
+```
+
+Next, create the child package definition file (see sections below for more information). 
+
+When your child package is ready for release follow the same procedure described in  "Creating a Definition File that will Work with Flopy" above along with a few additional steps required for subpackages.  At the top of the child dfn file add two lines describing how the parent and child packages are related. The first line determines how the subpackage is linked to the package:
+
+```
+# flopy subpackage \<parent record\> \<abbreviation\> \<child data\> \<data name\>
+```
+
+* Parent record is the MF6 record name of the filerecord in parent package that references the child packages file name
+* Abbreviation is the short abbreviation of the new subclass
+* Child data is the name of the child class data that can be passed in as parameter to the parent class. Passing in this parameter to the parent class automatically creates the child class with the data provided.
+* Data name is the parent class parameter name that automatically creates the child class with the data provided.
+
+The example below is the first line from the ts subpackage dfn:
+
+```
+# flopy subpackage ts_filerecord ts timeseries timeseries
+```
+
+The second line determines the variable name of the subpackage's parent and the type of parent (the parent package's object oriented parent):
+
+```
+# flopy parent_name_type \<parent package variable name\> \<parent package type\>
+```
+
+An example below is the second line in the ts subpackage dfn:
+
+```
+# flopy parent_name_type parent_package MFPackage
+```
+
+There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, separating each type with a / (MFPackage/MFModel).
+
+### Models
+
+To create a new type of model choose a unique three letter model abbreviation ("gwf", "gwt", ...). Create a name file dfn with the naming convention \<model abbr\>-nam.dfn. The name file must have only an options and packages block (see gwf-nam.dfn as an example). Create a new dfn file for each of the packages in your new model, following the naming convention described above. 
+
+When your model is ready for release copy the dfn file to the flopy distribution in the flopy/mf6/data/dfn folder, run createpackages.py, and check in your new dfn files, the package classes, and updated init.py that createpackages.py created.
+
+### Solvers
+
+Create a solver definition file as you would any package definition file.  When you are done add a commented line at the top of the definition file to let FloPy know that this package is a solver (solution package type). The line should look like this:
+
+```
+# solution_package <solver abbreviation> <list of model abbreviations the solver supports>
+```
+
+For example, the following would tell FloPy the IMS package supports the gwf6 and gwt6 model types:
+
+```
+# flopy solution_package ims gwf6 gwt6
+```
+
+If a "*" is used instead of the list of model abbreviations, the solver is assumed to support all model types.  For example, the following would tell FloPy that the IMS package supports all models:
+
+```
+# flopy solution_package ims *
+```
+
+## Developer tooling
+
+As mentioned, the MODFLOW 6 repository contains scripts to generate source code and documentation from DFN files.
+
+The Python script `mf6ivar.py` will process all of the definition files and create a Markdown file, LaTeX files of the variable descriptions, and text files containing the blocks.
+
+The Python script `deprecations.py` will search definition files for `deprecated` or `removed` options and create a Markdown file containing a table of deprecations and removals. The Python script `mk_deprecations.py` will convert that table to LaTeX for the PDF documentation.
+
+The Python script `dfn2f90.py` will generate a Fortran interface layer for the IDM-integrated components.
