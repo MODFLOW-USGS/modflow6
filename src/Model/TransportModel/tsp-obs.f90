@@ -16,7 +16,7 @@ module TspObsModule
   type, extends(ObsType) :: TspObsType
     ! -- Private members
     type(TspIcType), pointer, private :: ic => null() ! initial conditions
-    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
+    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration or temperature
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
   contains
     ! -- Public procedures
@@ -94,7 +94,11 @@ contains
     !
     ! -- Store obs type and assign procedure pointer for head observation type
     call this%StoreObsType('concentration', .false., indx)
-    this%obsData(indx)%ProcessIdPtr => gwt_process_concentration_obs_id
+    this%obsData(indx)%ProcessIdPtr => tsp_process_obs_id
+    !
+    ! -- Store obs type and assign procedure pointer for head observation type
+    call this%StoreObsType('temperature', .false., indx)
+    this%obsData(indx)%ProcessIdPtr => tsp_process_obs_id
     !
     ! -- Store obs type and assign procedure pointer for flow-ja-face observation type
     call this%StoreObsType('flow-ja-face', .true., indx)
@@ -123,7 +127,7 @@ contains
         nodenumber = obsrv%NodeNumber
         jaindex = obsrv%JaIndex
         select case (obsrv%ObsTypeId)
-        case ('CONCENTRATION')
+        case ('CONCENTRATION', 'TEMPERATURE')
           call this%SaveOneSimval(obsrv, this%x(nodenumber))
         case ('FLOW-JA-FACE')
           call this%SaveOneSimval(obsrv, this%flowja(jaindex))
@@ -145,7 +149,7 @@ contains
     ! -- dummy
     class(TspObsType), intent(inout) :: this
     !
-    ! Do GWT observations need any checking? If so, add checks here
+    ! Do GWT (or GWE) observations need any checking? If so, add checks here
     !
     ! -- Return
     return
@@ -154,6 +158,7 @@ contains
   !> Deallocate memory
   !!
   !! Deallocate memory associated with transport model
+  !<
   subroutine tsp_obs_da(this)
     ! -- dummy
     class(TspObsType), intent(inout) :: this
@@ -188,7 +193,7 @@ contains
   !!
   !! Process a specific observation ID
   !<
-  subroutine gwt_process_concentration_obs_id(obsrv, dis, inunitobs, iout)
+  subroutine tsp_process_obs_id(obsrv, dis, inunitobs, iout)
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -218,7 +223,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine gwt_process_concentration_obs_id
+  end subroutine tsp_process_obs_id
 
   !> @brief Procedure related to Tsp observations (NOT type-bound)
   !!
