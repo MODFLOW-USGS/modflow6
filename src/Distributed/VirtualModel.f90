@@ -280,6 +280,7 @@ contains
     ! DIS
     deallocate (this%dis_ndim)
     deallocate (this%dis_nodes)
+    deallocate (this%dis_nodesuser)
     deallocate (this%dis_nodeuser)
     deallocate (this%dis_nja)
     deallocate (this%dis_njas)
