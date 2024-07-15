@@ -31,6 +31,7 @@ module CharacterStringModule
     procedure :: charstring_eq_charstring
     procedure :: write_unformatted
     procedure :: strlen
+    procedure :: destroy
     generic :: assignment(=) => assign_to_charstring, assign_from_charstring
     generic :: operator(==) => character_eq_charstring, &
       charstring_eq_character, &
@@ -38,7 +39,6 @@ module CharacterStringModule
     ! not supported by gfortran 5 and 6
     ! disable for now
     ! generic :: write (unformatted) => write_unformatted
-    final :: destruct
   end type CharacterStringType
 
 contains
@@ -128,9 +128,9 @@ contains
     end if
   end function strlen
 
-  subroutine destruct(this)
-    type(CharacterStringType), intent(inout) :: this
+  subroutine destroy(this)
+    class(CharacterStringType), intent(inout) :: this
     if (allocated(this%charstring)) deallocate (this%charstring)
-  end subroutine destruct
+  end subroutine destroy
 
 end module CharacterStringModule

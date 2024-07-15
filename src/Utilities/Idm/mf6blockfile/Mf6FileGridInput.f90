@@ -220,7 +220,7 @@ contains
   subroutine bndgrid_destroy(this)
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
-    ! deallocate objects
+    ! deallocate tasmanager
     call this%tasmanager%da()
     deallocate (this%tasmanager)
     nullify (this%tasmanager)

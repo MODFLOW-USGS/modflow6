@@ -481,6 +481,7 @@ contains
                           this%mempath)
         do i = 1, this%nrow
           p_charstr1d(i) = this%struct_vectors(icol)%charstr1d(i)
+          call this%struct_vectors(icol)%charstr1d(i)%destroy()
         end do
       end if
 
@@ -668,6 +669,7 @@ contains
 
           do i = 1, this%struct_vectors(j)%size
             p_charstr1d(i) = this%struct_vectors(j)%charstr1d(i)
+            call this%struct_vectors(j)%charstr1d(i)%destroy()
           end do
 
           deallocate (this%struct_vectors(j)%charstr1d)

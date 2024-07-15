@@ -170,7 +170,7 @@ contains
   subroutine bndlist_destroy(this)
     class(BoundListInputType), intent(inout) :: this !< BoundListInputType
     !
-    ! deallocate objects
+    ! deallocate tsmanager
     call this%tsmanager%da()
     deallocate (this%tsmanager)
     nullify (this%tsmanager)
