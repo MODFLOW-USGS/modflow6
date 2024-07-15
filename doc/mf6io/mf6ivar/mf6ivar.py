@@ -494,6 +494,13 @@ def md_replace(s):
     }
     for key, value in replace_dict.items():
         s = s.replace(key, value)
+
+    # delete lines
+    delete_tuple = (r"{tabular}", r"hline")
+    for value in delete_tuple:
+        if value in s:
+            s = ""
+
     return s
 
 
@@ -801,6 +808,36 @@ def write_variables():
                 s = get_obs_examples(mdname)
                 if len(s) > 0:
                     f.write(s)
+
+                # special cases
+                if "sln-ims" in mdname:
+                    with open("../ims_table.tex", "r") as fims:
+                        lines = fims.readlines()
+                    s = "\n\n#### IMS variable values for the available complexity options\n"
+                    for line in lines:
+                        line = md_replace(line.rstrip())
+                        save_line = True
+                        if len(line) < 1:
+                            save_line = False
+                        elif line.strip().startswith("%"):
+                            save_line = False
+                        if save_line:
+                            if "Variable" in line:
+                                prepend = "\n\n"
+                                postpend = (
+                                    "|----------------"
+                                    + "|----------------"
+                                    + "|----------------"
+                                    + "|----------------|\n"
+                                )
+                            else:
+                                prepend = ""
+                                postpend = ""
+                            s += f"{prepend}| {line.replace('&', '|')} |\n{postpend}"
+
+                    if len(s) > 0:
+                        s += "\n\n"
+                        f.write(s)
 
             # write markdown
             write_md(fmd, vardict, component, package)
