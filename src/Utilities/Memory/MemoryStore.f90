@@ -31,7 +31,7 @@ contains
     class(MemoryStoreType) :: this
     type(MemoryContainerIteratorType) :: itr
 
-    itr = MemoryContainerIteratorType(this%container%Iterator())
+    itr = MemoryContainerIteratorType(this%container%iterator())
   end function
 
   !> @brief Add a MemoryType to the container

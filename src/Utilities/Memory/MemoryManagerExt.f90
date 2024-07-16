@@ -46,6 +46,7 @@ contains
         if (mt%path == memory_path .and. mt%mt_associated()) then
           call mt%mt_deallocate()
           removed = .true.
+          deallocate(itr)
           exit
         end if
       end do
