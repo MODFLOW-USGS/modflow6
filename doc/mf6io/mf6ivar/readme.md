@@ -5,7 +5,7 @@ MODFLOW 6 accepts input via **input files** which use a custom text-based format
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [DFN file format](#dfn-file-format)
+- [DFN file overview](#dfn-file-overview)
 - [Input parameter attributes](#input-parameter-attributes)
 - [Input parameter types](#input-parameter-types)
   - [Keyword](#keyword)
@@ -31,16 +31,16 @@ A DFN file is a text file enumerating **input parameters** for a MODFLOW 6 compo
 
 DFN files must contain only ASCII characters. DFN files may include comment lines, which must begin with "#".
 
-Input parameters are organized into **blocks**. A block is a set of related input parameters. Each block in a DFN file is conventionally preceded by a comment line like the following:
+Input parameters are organized into **blocks**. A block is a set of related input parameters. Each block in a DFN file is conventionally preceded by a comment line according to the format:
 
 ```
-# --------------------- prt prp options ---------------------
+# --------------------- component subcomponent block ---------------------
 ```
 
 An input parameter is specified by a set of attributes on adjacent one on each line, one attribute per line, following the general format:
 
 ```
-attribute_name attribute_value
+name value
 ```
 
 Some attribute values are optional.
