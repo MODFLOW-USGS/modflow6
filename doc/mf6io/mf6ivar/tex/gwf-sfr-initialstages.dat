@@ -1,5 +1,0 @@
-BEGIN INITIALSTAGES
-  <ifno> <initialstage>
-  <ifno> <initialstage>
-  ...
-END INITIALSTAGES
