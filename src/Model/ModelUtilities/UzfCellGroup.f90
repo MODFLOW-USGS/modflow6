@@ -815,9 +815,9 @@ contains
     real(DP), intent(inout) :: det
     ! -- local
     real(DP) :: s, x, c, b, et
-    integer(I4B) :: signflip
+    real(DP) :: signflip
     !
-    signflip = 1
+    signflip = DONE
     this%gwet(icell) = DZERO
     trhs = DZERO
     thcof = DZERO
@@ -833,7 +833,7 @@ contains
                       this%celtop(icell), this%celbot(icell))
     else if (igwetflag == 2) then
       et = etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-      signflip = -1
+      signflip = -DONE
     end if
     ! this%gwet(icell) = et * this%uzfarea(icell)
     trhs = trhs * this%uzfarea(icell)
