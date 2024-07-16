@@ -213,7 +213,7 @@ contains
       end do
       !
       ! -- apt-gwf connections
-      do i = 1, this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+      do i = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(i)
         jj = this%flowbudptr%budterm(this%idxbudgwf)%id2(i)
         nglo = moffset + this%dis%nodes + this%ioffset + n
@@ -266,7 +266,7 @@ contains
         iglo = moffset + this%dis%nodes + this%ioffset + n
         this%idxpakdiag(n) = matrix_sln%get_position_diag(iglo)
       end do
-      do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+      do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = moffset + this%dis%nodes + this%ioffset + n
@@ -276,7 +276,7 @@ contains
       end do
       !
       ! -- apt contributions to gwf portion of global matrix
-      do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+      do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = j + moffset
@@ -482,7 +482,7 @@ contains
     end if
     !
     ! -- fill arrays
-    do n = 1, this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+    do n = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       this%nodelist(n) = igwfnode
     end do
