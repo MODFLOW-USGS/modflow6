@@ -4978,7 +4978,7 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
-    call this%budobj%budterm(idx)%reset(this%maxbound)
+    call this%budobj%budterm(idx)%reset(maxlist)
     q = DZERO
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
