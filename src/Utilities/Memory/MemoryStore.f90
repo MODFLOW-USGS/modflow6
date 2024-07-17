@@ -31,8 +31,8 @@ contains
     type(MemoryContainerIteratorType) :: itr
     ! -- local
     class(IteratorType), allocatable :: container_iterator
-    
-    allocate(container_iterator, source=this%container%iterator())
+
+    allocate (container_iterator, source=this%container%iterator())
     itr = MemoryContainerIteratorType(container_iterator)
   end function
 
