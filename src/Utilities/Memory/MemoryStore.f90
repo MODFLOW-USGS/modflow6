@@ -12,7 +12,7 @@ module MemoryStoreModule
 
   type :: MemoryStoreType
     private
-    type(PtrHashTableType), private :: container
+    type(PtrHashTableType) :: container
   contains
     procedure :: iterator
     procedure :: add
@@ -27,11 +27,13 @@ contains
   !!
   !<
   function iterator(this) result(itr)
-    ! -- dummy
     class(MemoryStoreType) :: this
     type(MemoryContainerIteratorType) :: itr
-
-    itr = MemoryContainerIteratorType(this%container%iterator())
+    ! -- local
+    class(IteratorType), allocatable :: container_iterator
+    
+    allocate(container_iterator, source=this%container%iterator())
+    itr = MemoryContainerIteratorType(container_iterator)
   end function
 
   !> @brief Add a MemoryType to the container
