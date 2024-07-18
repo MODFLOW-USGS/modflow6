@@ -83,7 +83,7 @@ contains
     this%iout = iout
     !
     ! -- load static input
-    call loader%load(parser, mf6_input, this%input_name, iout)
+    call loader%load(parser, mf6_input, this%nc_vars, this%input_name, iout)
     !
     ! -- create tasmanager
     allocate (this%tasmanager)

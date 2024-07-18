@@ -298,8 +298,10 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'mf6blockfile' / 'Mf6FileGridInput.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'Mf6FileListInput.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'Mf6FileStoInput.f90',
+    'Utilities' / 'Idm' / 'mf6blockfile' / 'LoadNCInput.F90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructArray.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructVector.f90',
+    'Utilities' / 'Idm' / 'netcdf' / 'NCFileVars.f90',
     'Utilities' / 'Matrix' / 'MatrixBase.f90',
     'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
@@ -405,9 +407,13 @@ modflow_mpi_sources = files(
 
 modflow_netcdf_sources = files(
   'Utilities' / 'Export' / 'DisNCMesh.f90',
+  'Utilities' / 'Export' / 'DisNCStructured.f90',
   'Utilities' / 'Export' / 'DisvNCMesh.f90',
   'Utilities' / 'Export' / 'MeshNCModel.f90',
-  'Utilities' / 'Export' / 'NCExportCreate.f90'
+  'Utilities' / 'Export' / 'NCExportCreate.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCArrayReader.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NCContextBuild.f90',
+  'Utilities' / 'Idm' / 'netcdf' / 'NetCDFCommon.f90'
 )
 
 if with_petsc

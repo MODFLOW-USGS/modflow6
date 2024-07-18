@@ -11,6 +11,10 @@
 ../src/Distributed/MpiUnitCache.f90
 ../src/Distributed/MpiWorld.f90
 ../src/Utilities/Export/DisNCMesh.f90
+../src/Utilities/Export/DisNCStructured.f90
 ../src/Utilities/Export/DisvNCMesh.f90
 ../src/Utilities/Export/MeshNCModel.f90
 ../src/Utilities/Export/NCExportCreate.f90
+../src/Utilities/Idm/netcdf/NCArrayReader.f90
+../src/Utilities/Idm/netcdf/NCContextBuild.f90
+../src/Utilities/Idm/netcdf/NetCDFCommon.f90

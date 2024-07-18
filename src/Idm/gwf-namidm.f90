@@ -20,6 +20,10 @@ module GwfNamInputModule
     logical :: newton = .false.
     logical :: under_relaxation = .false.
     logical :: export_netcdf = .false.
+    logical :: nc_filerecord = .false.
+    logical :: netcdf = .false.
+    logical :: filein = .false.
+    logical :: netcdf_fname = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
@@ -178,6 +182,78 @@ module GwfNamInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfnam_nc_filerecord = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_FILERECORD', & ! tag name
+    'NC_FILERECORD', & ! fortran variable
+    'RECORD NETCDF FILEIN NETCDF_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF', & ! tag name
+    'NETCDF', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'netcdf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_filein = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf_fname = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_FILENAME', & ! tag name
+    'NETCDF_FNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'netcdf input filename', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfnam_ftype = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -242,6 +318,10 @@ module GwfNamInputModule
     gwfnam_newton, &
     gwfnam_under_relaxation, &
     gwfnam_export_netcdf, &
+    gwfnam_nc_filerecord, &
+    gwfnam_netcdf, &
+    gwfnam_filein, &
+    gwfnam_netcdf_fname, &
     gwfnam_ftype, &
     gwfnam_fname, &
     gwfnam_pname &

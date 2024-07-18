@@ -735,10 +735,10 @@ contains
         sp => GetBaseSolutionFromList(basesolutionlist, is)
         call sp%sln_ot()
       end do
+      !
+      ! -- update exports
+      call export_post_step()
     end select
-    !
-    ! -- update exports
-    call export_post_step()
     !
     ! -- Check if we're done
     call converge_check(hasConverged)

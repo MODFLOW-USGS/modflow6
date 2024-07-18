@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.11.dev0) for the 'zbud6' executable.
+# makefile created by pymake (version 1.2.10) for the 'zbud6' executable.
 
 
 include ./makedefaults

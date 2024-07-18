@@ -18,6 +18,7 @@ module SourceCommonModule
   public :: idm_component_type, idm_subcomponent_type, idm_subcomponent_name
   public :: set_model_shape
   public :: get_shape_from_string
+  public :: get_layered_shape
   public :: file_ext
   public :: ifind_charstr
   public :: filein_fname
@@ -225,6 +226,33 @@ contains
     return
   end subroutine get_shape_from_string
 
+  subroutine get_layered_shape(mshape, nlay, layer_shape)
+    integer(I4B), dimension(:), intent(in) :: mshape
+    integer(I4B), intent(out) :: nlay
+    integer(I4B), dimension(:), allocatable, intent(out) :: layer_shape
+    integer(I4B) :: ndim
+
+    ndim = size(mshape)
+    nlay = 0
+
+    if (ndim == 1) then ! disu
+      nlay = 1
+      allocate (layer_shape(1))
+      layer_shape(1) = mshape(1)
+    else if (ndim == 2) then ! disv
+      nlay = mshape(1)
+      allocate (layer_shape(1))
+      layer_shape(1) = mshape(2)
+    else if (ndim == 3) then ! disu
+      nlay = mshape(1)
+      allocate (layer_shape(2))
+      layer_shape(1) = mshape(3) ! ncol
+      layer_shape(2) = mshape(2) ! nrow
+    end if
+
+    return
+  end subroutine get_layered_shape
+
   !> @brief routine for setting the model shape
   !!
   !! The model shape must be set in the memory manager because
@@ -397,7 +425,6 @@ contains
     ncelldim = size(model_shape)
     !
     ! -- allocate and set distype in model input context
-    ! TODO make sure this doesn't clash name GRIDTYPE, e.g.
     call mem_allocate(distype, 'DISENUM', model_mempath)
     distype = dis_type
     !

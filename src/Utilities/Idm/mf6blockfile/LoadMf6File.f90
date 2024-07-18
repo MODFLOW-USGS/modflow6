@@ -30,6 +30,7 @@ module LoadMf6FileModule
   use MemoryManagerModule, only: mem_allocate, mem_setptr
   use MemoryHelperModule, only: create_mem_path
   use StructArrayModule, only: StructArrayType
+  use NCFileVarsModule, only: NCPackageVarsType
   use IdmLoggerModule, only: idm_log_var, idm_log_header, idm_log_close, &
                              idm_export
 
@@ -49,6 +50,7 @@ module LoadMf6FileModule
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< model shape
     type(StructArrayType), pointer :: structarray => null() !< structarray for loading list input
     type(ModflowInputType) :: mf6_input !< description of input
+    type(NCPackageVarsType), pointer :: nc_vars => null()
     character(len=LINELENGTH) :: filename !< name of ascii input file
     character(len=LINELENGTH), dimension(:), allocatable :: block_tags !< read block tags
     logical(LGP) :: ts_active !< is timeseries active
@@ -79,13 +81,14 @@ contains
   !! in single call.
   !!
   !<
-  subroutine load(this, parser, mf6_input, filename, iout)
+  subroutine load(this, parser, mf6_input, nc_vars, filename, iout)
     ! -- modules
     use MemoryManagerModule, only: get_isize
     ! -- dummy
     class(LoadMf6FileType) :: this
     type(BlockParserType), target, intent(inout) :: parser
     type(ModflowInputType), intent(in) :: mf6_input
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: iout
     ! -- local
@@ -93,6 +96,8 @@ contains
     !
     ! -- initialize static load
     call this%init(parser, mf6_input, filename, iout)
+    !
+    this%nc_vars => nc_vars
     !
     ! -- process blocks
     do iblk = 1, size(this%mf6_input%block_dfns)
@@ -495,25 +500,28 @@ contains
     case ('INTEGER')
       call load_integer_type(this%parser, idt, this%mf6_input%mempath, this%iout)
     case ('INTEGER1D')
-      call load_integer1d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%export, this%iout)
+      call load_integer1d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                               this%export, this%nc_vars, this%filename, &
+                               this%iout)
     case ('INTEGER2D')
-      call load_integer2d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%export, this%iout)
+      call load_integer2d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                               this%export, this%nc_vars, this%filename, &
+                               this%iout)
     case ('INTEGER3D')
-      call load_integer3d_type(this%parser, idt, this%mf6_input%mempath, &
-                               this%mshape, this%export, this%iout)
+      call load_integer3d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                               this%export, this%nc_vars, this%filename, &
+                               this%iout)
     case ('DOUBLE')
       call load_double_type(this%parser, idt, this%mf6_input%mempath, this%iout)
     case ('DOUBLE1D')
-      call load_double1d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%export, this%iout)
+      call load_double1d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                              this%export, this%nc_vars, this%filename, this%iout)
     case ('DOUBLE2D')
-      call load_double2d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%export, this%iout)
+      call load_double2d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                              this%export, this%nc_vars, this%filename, this%iout)
     case ('DOUBLE3D')
-      call load_double3d_type(this%parser, idt, this%mf6_input%mempath, &
-                              this%mshape, this%export, this%iout)
+      call load_double3d_type(this%parser, idt, this%mf6_input, this%mshape, &
+                              this%export, this%nc_vars, this%filename, this%iout)
     case default
       write (errmsg, '(a,a)') 'Failure reading data for tag: ', trim(tag)
       call store_error(errmsg)
@@ -820,16 +828,19 @@ contains
 
   !> @brief load type 1d integer
   !<
-  subroutine load_integer1d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_integer1d_type(parser, idt, mf6_input, mshape, export, &
+                                 nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:), pointer, contiguous :: int1d
-    !integer(I4B), pointer :: nsize1
     integer(I4B) :: nlay
     integer(I4B) :: nvals
     integer(I4B), dimension(:), allocatable :: array_shape
@@ -841,21 +852,22 @@ contains
     if (idt%shape == 'NODES') then
       nvals = product(mshape)
     else
-      call get_shape_from_string(idt%shape, array_shape, memoryPath)
+      call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
       nvals = array_shape(1)
     end if
 
     ! allocate memory for the array
-    call mem_allocate(int1d, nvals, idt%mf6varname, memoryPath)
+    call mem_allocate(int1d, nvals, idt%mf6varname, mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(int1d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int1d_layered(parser, int1d, idt%mf6varname, nlay, layer_shape)
     else
@@ -863,12 +875,12 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int1d, idt%tagname, memoryPath, iout)
+    call idm_log_var(int1d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(int1d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(int1d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
@@ -877,13 +889,17 @@ contains
 
   !> @brief load type 2d integer
   !<
-  subroutine load_integer2d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_integer2d_type(parser, idt, mf6_input, mshape, export, &
+                                 nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d
     integer(I4B) :: nlay
@@ -894,21 +910,22 @@ contains
 
     ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
-    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
     nsize1 = array_shape(1)
     nsize2 = array_shape(2)
 
     ! create a new 3d memory managed variable
-    call mem_allocate(int2d, nsize1, nsize2, idt%mf6varname, memoryPath)
+    call mem_allocate(int2d, nsize1, nsize2, idt%mf6varname, mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(int2d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int2d_layered(parser, int2d, idt%mf6varname, nlay, layer_shape)
     else
@@ -916,12 +933,12 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int2d, idt%tagname, memoryPath, iout)
+    call idm_log_var(int2d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(int2d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(int2d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
@@ -930,41 +947,46 @@ contains
 
   !> @brief load type 3d integer
   !<
-  subroutine load_integer3d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_integer3d_type(parser, idt, mf6_input, mshape, export, &
+                                 nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
     integer(I4B) :: nlay
     integer(I4B) :: nsize1, nsize2, nsize3
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
-    character(len=LINELENGTH) :: keyword
     integer(I4B), dimension(:), pointer, contiguous :: int1d_ptr
+    character(len=LINELENGTH) :: keyword
 
     ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
-    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
     nsize1 = array_shape(1)
     nsize2 = array_shape(2)
     nsize3 = array_shape(3)
 
     ! create a new 3d memory managed variable
     call mem_allocate(int3d, nsize1, nsize2, nsize3, idt%mf6varname, &
-                      memoryPath)
+                      mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(int3d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_int3d_layered(parser, int3d, idt%mf6varname, nlay, &
                               layer_shape)
@@ -974,12 +996,12 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int3d, idt%tagname, memoryPath, iout)
+    call idm_log_var(int3d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(int3d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(int3d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
@@ -1002,16 +1024,19 @@ contains
 
   !> @brief load type 1d double
   !<
-  subroutine load_double1d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_double1d_type(parser, idt, mf6_input, mshape, export, &
+                                nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:), pointer, contiguous :: dbl1d
-    !integer(I4B), pointer :: nsize1
     integer(I4B) :: nlay
     integer(I4B) :: nvals
     integer(I4B), dimension(:), allocatable :: array_shape
@@ -1022,21 +1047,22 @@ contains
     if (idt%shape == 'NODES') then
       nvals = product(mshape)
     else
-      call get_shape_from_string(idt%shape, array_shape, memoryPath)
+      call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
       nvals = array_shape(1)
     end if
 
     ! allocate memory for the array
-    call mem_allocate(dbl1d, nvals, idt%mf6varname, memoryPath)
+    call mem_allocate(dbl1d, nvals, idt%mf6varname, mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(dbl1d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl1d_layered(parser, dbl1d, idt%mf6varname, nlay, layer_shape)
     else
@@ -1044,12 +1070,12 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
+    call idm_log_var(dbl1d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(dbl1d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(dbl1d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
@@ -1058,13 +1084,17 @@ contains
 
   !> @brief load type 2d double
   !<
-  subroutine load_double2d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_double2d_type(parser, idt, mf6_input, mshape, export, &
+                                nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: nlay
@@ -1075,21 +1105,22 @@ contains
 
     ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
-    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
     nsize1 = array_shape(1)
     nsize2 = array_shape(2)
 
     ! create a new 3d memory managed variable
-    call mem_allocate(dbl2d, nsize1, nsize2, idt%mf6varname, memoryPath)
+    call mem_allocate(dbl2d, nsize1, nsize2, idt%mf6varname, mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(dbl2d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl2d_layered(parser, dbl2d, idt%mf6varname, nlay, layer_shape)
     else
@@ -1097,12 +1128,12 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
+    call idm_log_var(dbl2d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(dbl2d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(dbl2d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
@@ -1111,41 +1142,46 @@ contains
 
   !> @brief load type 3d double
   !<
-  subroutine load_double3d_type(parser, idt, memoryPath, mshape, export, iout)
-    use SourceCommonModule, only: get_shape_from_string
+  subroutine load_double3d_type(parser, idt, mf6_input, mshape, export, &
+                                nc_vars, input_fname, iout)
+    use SourceCommonModule, only: get_shape_from_string, get_layered_shape
+    use LoadNCInputModule, only: netcdf_read_array
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     logical(LGP), intent(in) :: export !< export to ascii layer files
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    character(len=*), intent(in) :: input_fname !< ascii input file name
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
     integer(I4B) :: nlay
     integer(I4B) :: nsize1, nsize2, nsize3
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:), allocatable :: layer_shape
-    character(len=LINELENGTH) :: keyword
     real(DP), dimension(:), pointer, contiguous :: dbl1d_ptr
+    character(len=LINELENGTH) :: keyword
 
     ! determine the array shape from the input data definition (idt%shape),
     ! which looks like "NCOL, NROW, NLAY"
-    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
     nsize1 = array_shape(1)
     nsize2 = array_shape(2)
     nsize3 = array_shape(3)
 
     ! create a new 3d memory managed variable
     call mem_allocate(dbl3d, nsize1, nsize2, nsize3, idt%mf6varname, &
-                      memoryPath)
+                      mf6_input%mempath)
 
-    ! check to see if the user specified "LAYERED" input
+    ! read keyword
     keyword = ''
-    if (idt%layered) then
-      call parser%GetStringCaps(keyword)
-    end if
+    call parser%GetStringCaps(keyword)
 
-    ! read the array from the input file
-    if (keyword == 'LAYERED' .and. idt%layered) then
+    ! check for "NETCDF" and "LAYERED"
+    if (keyword == 'NETCDF') then
+      call netcdf_read_array(dbl3d, mshape, idt, mf6_input, nc_vars, &
+                             input_fname, iout)
+    else if (keyword == 'LAYERED' .and. idt%layered) then
       call get_layered_shape(mshape, nlay, layer_shape)
       call read_dbl3d_layered(parser, dbl3d, idt%mf6varname, nlay, &
                               layer_shape)
@@ -1155,43 +1191,17 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
+    call idm_log_var(dbl3d, idt%tagname, mf6_input%mempath, iout)
 
     ! create export file for griddata parameters if optioned
     if (export) then
       if (idt%blockname == 'GRIDDATA') then
-        call idm_export(dbl3d, idt%tagname, memoryPath, idt%shape, iout)
+        call idm_export(dbl3d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
 
     return
   end subroutine load_double3d_type
-
-  subroutine get_layered_shape(mshape, nlay, layer_shape)
-    integer(I4B), dimension(:), intent(in) :: mshape
-    integer(I4B), intent(out) :: nlay
-    integer(I4B), dimension(:), allocatable, intent(out) :: layer_shape
-    integer(I4B) :: ndim
-
-    ndim = size(mshape)
-    nlay = 0
-
-    if (ndim == 1) then ! disu
-      nlay = 1
-      allocate (layer_shape(1))
-      layer_shape(1) = mshape(1)
-    else if (ndim == 2) then ! disv
-      nlay = mshape(1)
-      allocate (layer_shape(1))
-      layer_shape(1) = mshape(2)
-    else if (ndim == 3) then ! disu
-      nlay = mshape(1)
-      allocate (layer_shape(2))
-      layer_shape(1) = mshape(3) ! ncol
-      layer_shape(2) = mshape(2) ! nrow
-    end if
-
-  end subroutine get_layered_shape
 
   function read_control_record(parser, oc_inunit, iout) result(ibinary)
     ! -- modules
