@@ -1172,9 +1172,9 @@ contains
   !     n2u = this%v_model2%dis_get_nodeuser(n2)
   !     if (ibinun /= 0) then
   !       if (is_for_model1) then
-          ! if (size(auxrow) > 0) then
-          !   auxrow(:) = this%auxvar(:, i)
-          ! end if
+  ! if (size(auxrow) > 0) then
+  !   auxrow(:) = this%auxvar(:, i)
+  ! end if
 !         call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
   !                                              this%naux, auxrow, &
   !                                              .false., .false.)
