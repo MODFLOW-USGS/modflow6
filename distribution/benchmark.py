@@ -428,11 +428,10 @@ def test_run_benchmarks(tmp_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Benchmark MODFLOW 6 versions on example models",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Benchmarks the current version of MODFLOW 6 against the latest official release.
+            Benchmarks the current version of MODFLOW 6 against the latest official release,
             with the example models stored in the MODFLOW-USGS/modflow6-examples repository.
             """
         ),
