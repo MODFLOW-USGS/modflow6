@@ -565,7 +565,7 @@ contains
     real(DP) :: qssm
     real(DP) :: cssm
     integer(I4B) :: naux
-    real(DP), dimension(0, 0) :: auxvar
+    real(DP), dimension(0) :: auxrow
     character(len=LENAUXNAME), dimension(0) :: auxname
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
@@ -573,7 +573,8 @@ contains
     character(len=*), parameter :: fmttkk = &
       &"(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
     !
-    ! -- set maxrows
+    ! -- initialize
+    naux = 0
     maxrows = 0
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%outputtab%set_kstpkper(kstp, kper)
@@ -608,7 +609,6 @@ contains
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if (ibinun /= 0) then
-      naux = 0
       call this%dis%record_srcdst_list_header(text, this%name_model, &
                                               this%name_model, this%name_model, &
                                               this%packName, naux, auxname, &
@@ -652,7 +652,7 @@ contains
           if (ibinun /= 0) then
             n2 = i
             call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate, &
-                                                naux, auxvar(:, i), &
+                                                naux, auxrow, &
                                                 olconv2=.FALSE.)
           end if
           !

@@ -523,12 +523,13 @@ contains
     integer(I4B), intent(in) :: ibudfl !< flag indication if cell-by-cell data should be saved
     integer(I4B), intent(in) :: icbcun !< unit number for cell-by-cell output
     integer(I4B), dimension(:), optional, intent(in) :: imap !< mapping vector
-    ! -- loca
+    ! -- local
     integer(I4B) :: n
     integer(I4B) :: ibinun
     integer(I4B) :: nbound
     integer(I4B) :: naux
     real(DP) :: rate
+    real(DP), dimension(0) :: auxrow
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -566,7 +567,7 @@ contains
       ! -- If saving cell-by-cell flows in list, write flow
       if (ibinun /= 0) then
         call this%dis%record_mf6_list_entry(ibinun, n, n, rate, &
-                                            naux, this%auxvar(:, n), &
+                                            naux, auxrow, &
                                             olconv=.TRUE., &
                                             olconv2=.TRUE.)
       end if

@@ -222,11 +222,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup ${{ env.FC }} ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || env.FC_V }}
+      - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || env.FC_V }}
+          version: ${{ env.FC_V }}
 
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1

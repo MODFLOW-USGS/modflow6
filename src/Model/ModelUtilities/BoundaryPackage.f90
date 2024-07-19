@@ -1962,6 +1962,7 @@ contains
     integer(I4B) :: ibinun
     integer(I4B) :: nboundcount
     real(DP) :: rrate
+    real(DP), dimension(naux) :: auxrow
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     !
@@ -2051,8 +2052,11 @@ contains
           if (ibinun /= 0) then
             n2 = i
             if (present(imap)) n2 = imap(i)
+            if (naux > 0) then
+              auxrow(:) = auxvar(:, i)
+            end if
             call dis%record_mf6_list_entry(ibinun, node, n2, rrate, naux, &
-                                           auxvar(:, i), olconv2=.FALSE.)
+                                           auxrow, olconv2=.FALSE.)
           end if
         end if
         !

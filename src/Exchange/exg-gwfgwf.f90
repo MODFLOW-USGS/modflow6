@@ -1068,6 +1068,7 @@ contains
     integer(I4B) :: ibinun
     real(DP) :: ratin, ratout, rrate
     logical(LGP) :: is_for_model1
+    real(DP), dimension(this%naux) :: auxrow
     !
     budtxt(1) = '    FLOW-JA-FACE'
     packname = 'EXG '//this%name
@@ -1188,13 +1189,16 @@ contains
       n1u = this%v_model1%dis_get_nodeuser(n1)
       n2u = this%v_model2%dis_get_nodeuser(n2)
       if (ibinun /= 0) then
+        if (this%naux > 0) then
+          auxrow(:) = this%auxvar(:, i)
+        end if
         if (is_for_model1) then
           call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
-                                               this%naux, this%auxvar(:, i), &
+                                               this%naux, auxrow, &
                                                .false., .false.)
         else
           call model%dis%record_mf6_list_entry(ibinun, n2u, n1u, -rrate, &
-                                               this%naux, this%auxvar(:, i), &
+                                               this%naux, auxrow, &
                                                .false., .false.)
         end if
       end if
