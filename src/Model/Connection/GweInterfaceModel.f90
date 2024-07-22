@@ -99,7 +99,7 @@ contains
                 this%ieqnsclfac)
     call cnd_cr(this%cnd, this%name, '', -cnd_unit, this%iout, this%fmi, &
                 this%ieqnsclfac, this%gwecommon)
-    call tsp_obs_cr(this%obs, inobs)
+    call tsp_obs_cr(this%obs, inobs, this%depvartype)
     !
     ! -- Return
     return

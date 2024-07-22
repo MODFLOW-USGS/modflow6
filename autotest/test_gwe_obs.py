@@ -64,11 +64,13 @@ scheme = "UPSTREAM"
 # scheme = "TVD"
 
 cases = [
-    "horiz-obs",  # 4-cell model, horizontally connected, check adv & cnd
+    "hrz-obs",  # 4-cell model, horizontally connected, check adv & cnd
+    "hrz-badobs",  # Specify a 'concentration observation in a gwe model - should fail
     "vert-obs",  # 4-cell model, vertically connected, check adv & cnd
 ]
 
 conn_types = (
+    "horizontal",
     "horizontal",
     "vertical",
 )
@@ -83,6 +85,14 @@ dis_data = {
         "strthd": np.ones(4, dtype=float),
     },
     conn_types[1]: {
+        "nrow": 1,
+        "ncol": 4,
+        "nlay": 1,
+        "top": np.ones(4, dtype=float),
+        "bot": np.zeros(4, dtype=float),
+        "strthd": np.ones(4, dtype=float),
+    },
+    conn_types[2]: {
         "nrow": 1,
         "ncol": 1,
         "nlay": 4,
@@ -302,7 +312,7 @@ def build_gwe_model(sim, gwename, idx):
         filename=f"{gwename}.dis",
     )
 
-    # Instantiating MODFLOW 6 transport initial concentrations
+    # Instantiating MODFLOW 6 energy transport initial temperature
     flopy.mf6.ModflowGweic(
         gwe, strt=strt_temp, pname="IC", filename=f"{gwename}.ic"
     )
@@ -312,7 +322,7 @@ def build_gwe_model(sim, gwename, idx):
         gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
     )
 
-    # Instantiating MODFLOW 6 transport dispersion package
+    # Instantiating MODFLOW 6 energy transport dispersion package
     flopy.mf6.ModflowGwecnd(
         gwe,
         xt3d_off=True,
@@ -324,7 +334,8 @@ def build_gwe_model(sim, gwename, idx):
         filename=f"{gwename}.cnd",
     )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport energy storage and transfer package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
@@ -374,6 +385,10 @@ def build_gwe_model(sim, gwename, idx):
     )
 
     # Test observations
+    obs_txt = "temperature"
+    if "bad" in gwename:
+        obs_txt = "concentration"
+
     if dis_data[conn_type]["nlay"] == 1:
         obs_col1 = 1
         obs_col2 = 2
@@ -388,7 +403,7 @@ def build_gwe_model(sim, gwename, idx):
     obs_data0 = [
         (
             "temp1",
-            "temperature",
+            obs_txt,
             (obs_lay2, 0, obs_col2),
             (obs_lay1, 0, obs_col1),
         ),
@@ -463,8 +478,25 @@ def build_models(idx, test):
 
 def check_output(idx, test):
     print("evaluating results...")
+    name = cases[idx]
+
     msg0 = "Simulation with advection should be greater than just conduction"
     msg1 = "Results should be monotonic, but are not"
+
+    with open(test.workspace / "mfsim.lst", "r") as f:
+        lines = f.readlines()
+        error_count = 0
+        for line in lines:
+            if "error report" in line.lower():
+                error_count += 1
+
+    if "bad" in name:
+        assert error_count > 0, "Model should've exited with an error msg"
+        # xfail will catch the expected error for case 2, so
+        # return out of function
+        return None
+    else:
+        assert error_count == 0, errmsg0
 
     name = cases[idx]
     gwename1 = "gwe-" + name + "-1"
@@ -507,11 +539,13 @@ def check_output(idx, test):
     list(enumerate(cases)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
+    xfail = ["bad" in cases[ct] for ct in np.arange(len(cases))]
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        xfail=xfail[idx],
     )
     test.run()

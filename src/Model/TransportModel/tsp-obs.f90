@@ -1,13 +1,14 @@
 module TspObsModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
+  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES, LENVARNAME
   use BaseDisModule, only: DisBaseType
   use TspIcModule, only: TspIcType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
                        store_error_unit
+
   implicit none
 
   private
@@ -18,6 +19,7 @@ module TspObsModule
     type(TspIcType), pointer, private :: ic => null() ! initial conditions
     real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration or temperature
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
+    character(len=LENVARNAME) :: depvartype = '' !< "concentration" or "temperature"
   contains
     ! -- Public procedures
     procedure, public :: tsp_obs_ar
@@ -38,16 +40,18 @@ contains
   !!   - allocates pointers
   !!   - initializes values
   !<
-  subroutine tsp_obs_cr(obs, inobs)
+  subroutine tsp_obs_cr(obs, inobs, dvt)
     ! -- dummy
     type(TspObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
+    character(len=LENVARNAME), intent(in) :: dvt !< "concentration" or "temperature"
     !
     allocate (obs)
     call obs%allocate_scalars()
     obs%active = .false.
     obs%inputFilename = ''
     obs%inUnitObs => inobs
+    obs%depvartype = dvt
     !
     ! -- Return
     return
@@ -64,10 +68,10 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
     !
-    ! Call ar method of parent class
+    ! -- Call ar method of parent class
     call this%obs_ar()
     !
-    ! set pointers
+    ! -- set pointers
     call this%set_pointers(ic, x, flowja)
     !
     ! -- Return
@@ -86,18 +90,14 @@ contains
     ! -- local
     integer(I4B) :: indx
     !
-    ! Call overridden method of parent class
+    ! -- Call overridden method of parent class
     call this%ObsType%obs_df(iout, pkgname, filtyp, dis)
     !
     ! -- StoreObsType arguments are: (ObserveType, cumulative, indx);
     !    indx is returned.
     !
     ! -- Store obs type and assign procedure pointer for head observation type
-    call this%StoreObsType('concentration', .false., indx)
-    this%obsData(indx)%ProcessIdPtr => tsp_process_obs_id
-    !
-    ! -- Store obs type and assign procedure pointer for head observation type
-    call this%StoreObsType('temperature', .false., indx)
+    call this%StoreObsType(trim(adjustl(this%depvartype)), .false., indx)
     this%obsData(indx)%ProcessIdPtr => tsp_process_obs_id
     !
     ! -- Store obs type and assign procedure pointer for flow-ja-face observation type
