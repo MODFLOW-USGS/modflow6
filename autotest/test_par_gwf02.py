@@ -17,6 +17,8 @@ This constant head should reach all domains,
 no matter the topology of partitions
 """
 
+from platform import system
+
 import flopy
 import numpy as np
 import pytest
@@ -239,6 +241,9 @@ def check_output(idx, test):
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
+    if system() == "Windows" and name.endswith(("d", "e", "f")):
+        pytest.skip("very slow on windows runners")
+
     ncpus = domain_grid[idx][0] * domain_grid[idx][1]
     test = TestFramework(
         name=name,
