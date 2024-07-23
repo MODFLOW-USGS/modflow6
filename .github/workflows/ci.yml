@@ -504,26 +504,6 @@ jobs:
         if: runner.os == 'Windows'
         uses: ./modflow6/.github/actions/test-par-win
 
-      - name: Test serial MF6
-        working-directory: modflow6
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          markers=""
-          if [[ "${{ github.ref_name }}" == "master" ]]; then
-            markers="not large and not developmode"
-          else
-            markers="not large"
-          fi
-
-          filters=""
-          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
-            # comparison fails on macos-14 with optimization=1
-            filters="not test028_sfr_rewet"
-          fi
-
-          pixi run autotest -m "$markers" -k "$filters"
-
       - name: Upload failed test output
         if: failure()
         uses: actions/upload-artifact@v4
