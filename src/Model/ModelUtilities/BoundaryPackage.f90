@@ -1546,7 +1546,7 @@ contains
     !!
   !<
   subroutine bnd_read_initial_attr(this)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
     !
     ! -- return
@@ -1561,7 +1561,7 @@ contains
     !!
   !<
   subroutine bnd_options(this, option, found)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
     character(len=*), intent(inout) :: option !< option keyword string
     logical(LGP), intent(inout) :: found !< boolean indicating if the option was found
@@ -1580,8 +1580,9 @@ contains
     !!
   !<
   subroutine copy_boundname(this)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
+    ! -- local
     integer(I4B) :: i
     !
     ! copy from boundname to boundname_cst, which can be
