@@ -815,9 +815,7 @@ contains
     real(DP), intent(inout) :: det
     ! -- local
     real(DP) :: s, x, c, b, et
-    real(DP) :: signflip
     !
-    signflip = DONE
     this%gwet(icell) = DZERO
     trhs = DZERO
     thcof = DZERO
@@ -833,12 +831,11 @@ contains
                       this%celtop(icell), this%celbot(icell))
     else if (igwetflag == 2) then
       et = etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-      signflip = -DONE
     end if
     ! this%gwet(icell) = et * this%uzfarea(icell)
     trhs = trhs * this%uzfarea(icell)
     thcof = thcof * this%uzfarea(icell)
-    this%gwet(icell) = (trhs - (thcof * hgwf)) * signflip
+    this%gwet(icell) = trhs - (thcof * hgwf)
     ! write(99,*)'in group', icell, this%gwet(icell)
   end subroutine simgwet
 
@@ -866,7 +863,7 @@ contains
     range = DEM3 * x
     call sCubic(depth, range, det, scale)
     etgw = etgw * scale
-    trhs = -etgw
+    trhs = etgw
     det = -det * etgw
     etfunc_nlin = etgw
   end function etfunc_nlin
