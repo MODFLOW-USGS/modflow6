@@ -549,6 +549,10 @@ def check_output(idx, test):
         "Given the shallow depth to the water table, the GWET should "
         "be greater than the UZET"
     )
+    msg4 = (
+        "The square GWET formulation withdrawals more water and should "
+        "result in slightly less heads"
+    )
 
     sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     gwfname1 = cases[idx] + "-lin"
@@ -558,10 +562,21 @@ def check_output(idx, test):
     uzf1 = gwf1.get_package("UZF")
     uzf2 = gwf2.get_package("UZF")
 
+    heads_lin = gwf1.output.head().get_alldata()
+    heads_sqr = gwf2.output.head().get_alldata()
     gwet1 = gwf1.output.budget().get_data(text="UZF-GWET")
     gwet2 = gwf2.output.budget().get_data(text="UZF-GWET")
     uzet1 = uzf1.output.budget().get_data(text="UZET")
     uzet2 = uzf2.output.budget().get_data(text="UZET")
+
+    # Because the square gwet formulation removes more water from the model
+    # than the linear gwet formulation, the heads should be slightly less
+    # in the square_gwet formulation.  However, head differences will be
+    # relatively small because of the placement of constant head cell in
+    # the lower layer and specified K values.
+    for tm in np.arange(nper):
+        for ifno in np.arange(heads_sqr.shape[3] - 1):
+            assert heads_sqr[tm, 0, 0, ifno] <= heads_lin[tm, 0, 0, ifno], msg4
 
     gwet1np = []
     gwet2np = []
