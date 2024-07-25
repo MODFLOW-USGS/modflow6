@@ -22,7 +22,7 @@ runs:
     - name: Convert unix2dos
       shell: cmd
       run: |
-        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6.bat" "%TEMP%\test_modflow6.bat"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_parallel.bat" "%TEMP%\test_modflow6_parallel.bat"
         unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_serial.bat" "%TEMP%\test_modflow6_serial.bat"
 
     - name: Test programs
@@ -31,10 +31,16 @@ runs:
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
 
-    # - name: Setup tmate session
-    #   uses: mxschmitt/action-tmate@v3
+    - name: Test programs
+      if: github.ref_name == 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+        MARKERS: not developmode
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
 
     - name: Test programs (serial)
       if: github.ref_name != 'master'
@@ -44,11 +50,11 @@ runs:
       run: |
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
 
-    - name: Test programs
+    - name: Test programs (serial)
       if: github.ref_name == 'master'
       shell: cmd
       env:
         REPOS_PATH: ${{ github.workspace }}
         MARKERS: not developmode
       run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"

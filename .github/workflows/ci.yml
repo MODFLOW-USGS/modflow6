@@ -486,6 +486,12 @@ jobs:
         with:
           path: modflow6
 
+      - name: Checkout test models
+        uses: actions/checkout@v4
+        with:
+          repository: MODFLOW-USGS/modflow6-testmodels
+          path: modflow6-testmodels
+
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
