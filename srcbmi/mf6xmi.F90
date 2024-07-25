@@ -280,7 +280,7 @@ contains
     call bs%solve(iterationCounter)
 
     ! the following check is equivalent to that in NumericalSolution%sln_ca
-    select type(bs)
+    select type (bs)
     class is (NumericalSolutionType)
       if (bs%icnvg == 1) then
         has_converged = 1
