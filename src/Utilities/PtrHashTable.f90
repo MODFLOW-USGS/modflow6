@@ -18,8 +18,9 @@ module PtrHashTableModule
   !!
   !<
   type PtrHashTableType
-    type(KeyValueListType), public :: buckets(BUCKET_SIZE) !< the HashTable buckets
-    integer(I4B), private :: cnt = 0 !< the number of items in the HashTable
+    private
+    type(KeyValueListType) :: buckets(BUCKET_SIZE) !< the HashTable buckets
+    integer(I4B) :: cnt = 0 !< the number of items in the HashTable
   contains
     procedure :: iterator
     procedure :: add
