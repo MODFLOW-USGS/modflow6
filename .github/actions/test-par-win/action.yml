@@ -32,6 +32,17 @@ runs:
       run: |
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6.bat"
 
+    # - name: Setup tmate session
+    #   uses: mxschmitt/action-tmate@v3
+
+    - name: Test programs (serial)
+      if: github.ref_name != 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
+
     - name: Test programs
       if: github.ref_name == 'master'
       shell: cmd
