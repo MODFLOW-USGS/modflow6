@@ -9,7 +9,8 @@ module GwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
-                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE, &
+                             DNODATA
   use NumericalModelModule, only: NumericalModelType
 
   use BaseModelModule, only: BaseModelType
@@ -46,6 +47,7 @@ module GwtModule
     procedure :: model_mc => gwt_mc
     procedure :: model_ar => gwt_ar
     procedure :: model_rp => gwt_rp
+    procedure :: model_calculate_delt => gwt_dt
     procedure :: model_ad => gwt_ad
     procedure :: model_cf => gwt_cf
     procedure :: model_fc => gwt_fc
@@ -336,6 +338,24 @@ contains
     ! -- Return
     return
   end subroutine gwt_rp
+
+  !> @brief GWT Model time step size
+  !!
+  !! Calculate the maximum allowable time step size subject to time-step
+  !! constraints.  If adaptive time steps are used, then the time step used
+  !! will be no larger than dtmax calculated here.
+  !<
+  subroutine gwt_dt(this)
+    use TdisModule, only: kstp, kper
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    ! dummy
+    class(GwtModelType) :: this
+    ! local
+    real(DP) :: dtmax
+    dtmax = DNODATA
+    !dtmax = min(dtmax, this%adv%adv_dt())
+    call ats_submit_delt(kstp, kper, dtmax, this%memoryPath)
+  end subroutine gwt_dt
 
   !> @brief GWT Model Time Step Advance
   !!

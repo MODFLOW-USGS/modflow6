@@ -1,7 +1,7 @@
 module TspAdvModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
+  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO, DNODATA
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
@@ -126,6 +126,19 @@ contains
     ! -- Return
     return
   end subroutine adv_ar
+
+  !> @brief  Calculate maximum time step length
+  !!
+  !!  Return the largest time step that meets stability contraints
+  !<
+  function adv_dt(this) result(dtmax)
+    ! dummy
+    class(TspAdvType) :: this !< this instance
+    ! local
+    real(DP) :: dtmax
+    dtmax = DNODATA
+
+  end function adv_dt
 
   !> @brief  Fill coefficient method for ADV package
   !!
