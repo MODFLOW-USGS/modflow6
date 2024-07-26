@@ -60,7 +60,7 @@ shutil.copy(src, dst)
 dstdir = "_dev"
 fpth = "DEVELOPER.md"
 src = os.path.join("..", fpth)
-dst = os.path.join(dstdir, fpth)
+dst = os.path.join(dstdir, fpth.lower())
 # clean up an existing _mf6run directory
 if os.path.isdir(dstdir):
     shutil.rmtree(dstdir)
@@ -72,7 +72,7 @@ shutil.copy(src, dst)
 # -- copy contributor docs
 fpth = "CONTRIBUTING.md"
 src = os.path.join("..", fpth)
-dst = os.path.join(dstdir, fpth)
+dst = os.path.join(dstdir, fpth.lower())
 shutil.copy(src, dst)
 
 # -- copy style guide
@@ -80,6 +80,24 @@ fpth = "styleguide.md"
 src = os.path.join(fpth)
 dst = os.path.join(dstdir, fpth)
 shutil.copy(src, dst)
+
+# -- copy DFN spec
+fpth = "readme.md"
+src = os.path.join("..", "doc", "mf6io", "mf6ivar", fpth)
+dst = os.path.join(dstdir, "dfn.md")
+shutil.copy(src, dst)
+
+# -- build the deprecations table --------------------------------------------
+print("Build the deprecations markdown table")
+pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
+args = (sys.executable, "deprecations.py")
+# run the command
+proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
+stdout, stderr = proc.communicate()
+if stdout:
+    print(stdout.decode("utf-8"))
+if stderr:
+    print("Errors:\n{}".format(stderr.decode("utf-8")))
 
 # -- copy deprecations markdown ---------------------------------------------
 print("Copy the deprecations table")

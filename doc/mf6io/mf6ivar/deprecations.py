@@ -1,8 +1,10 @@
-import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from packaging.version import Version
+
+PROJ_ROOT_PATH = Path(__file__).parents[3]
+MF6IVAR_PATH = PROJ_ROOT_PATH / "doc" / "mf6io" / "mf6ivar"
 
 
 def get_deprecations(
@@ -33,7 +35,7 @@ def get_deprecations(
 
 def create_deprecations_file(dfndir, mddir, verbose):
     deprecations = get_deprecations(dfndir)
-    deps_path = (Path(mddir) / "deprecations.md").absolute()
+    deps_path = (mddir / "deprecations.md").absolute()
     if verbose:
         print(f"Found {len(deprecations)} deprecations, writing {deps_path}")
     with open(deps_path, "w") as f:
@@ -50,6 +52,7 @@ def create_deprecations_file(dfndir, mddir, verbose):
 
 
 if __name__ == "__main__":
-    dfndir = os.path.join(".", "dfn")
-    mddir = os.path.join(".", "md")
+    dfndir = MF6IVAR_PATH / "dfn"
+    mddir = MF6IVAR_PATH / "md"
+    mddir.mkdir(exist_ok=True)
     create_deprecations_file(dfndir, mddir, verbose=True)

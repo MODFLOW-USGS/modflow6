@@ -7,6 +7,7 @@ This section includes developer instructions and conventions.
    :maxdepth: 1
    :glob:
 
-   _dev/CONTRIBUTING.md
-   _dev/DEVELOPER.md
+   _dev/contributing.md
+   _dev/developer.md
    _dev/styleguide.md
+   _dev/dfn.md
