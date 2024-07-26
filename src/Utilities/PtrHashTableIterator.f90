@@ -12,7 +12,6 @@ module PtrHashTableIteratorModule
   !!
   !<
   type, extends(IteratorType) :: PtrHashTableIteratorType
-    private
     type(KeyValueListType), pointer :: buckets(:) => null() !< the buckets of the PtrHashTable to iterate through
     class(IteratorType), allocatable :: current_bucket_iterator !< the iterator of the bucket to which the current iterator belongs
     integer(I4B) :: curent_bucket_index = 1 !< the bucket in which the current iterator belongs
@@ -31,7 +30,7 @@ contains
   !!
   !<
   function constructor(buckets) Result(iterator)
-    type(KeyValueListType), pointer, intent(in) :: buckets(:)
+    type(KeyValueListType), target, dimension(:), intent(in) :: buckets
     type(PtrHashTableIteratorType) :: iterator
     ! -- local
     type(KeyValueListType), pointer :: first_bucket
