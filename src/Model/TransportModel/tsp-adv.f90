@@ -1,7 +1,8 @@
 module TspAdvModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO, DNODATA
+  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO, DNODATA, DPREC, &
+                             LINELENGTH
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
@@ -24,6 +25,7 @@ module TspAdvModule
 
     procedure :: adv_df
     procedure :: adv_ar
+    procedure :: adv_dt
     procedure :: adv_fc
     procedure :: adv_cq
     procedure :: adv_da
@@ -131,14 +133,56 @@ contains
   !!
   !!  Return the largest time step that meets stability contraints
   !<
-  function adv_dt(this) result(dtmax)
+  subroutine adv_dt(this, dtmax, msg, thetam)
     ! dummy
     class(TspAdvType) :: this !< this instance
+    real(DP), intent(out) :: dtmax !< maximum allowable dt subject to stability constraint
+    character(len=*), intent(inout) :: msg !< package/cell dt contraint message
+    real(DP), dimension(:), intent(in) :: thetam !< porosity
     ! local
-    real(DP) :: dtmax
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: nrmax
+    character(len=LINELENGTH) :: cellstr
+    real(DP) :: dt
+    real(DP) :: qmax
+    real(DP) :: qnmsumpos
+    real(DP) :: qnmsumneg
+    real(DP) :: qnm
+    real(DP) :: cell_volume
     dtmax = DNODATA
-
-  end function adv_dt
+    nrmax = 0
+    msg = ''
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) == 0) cycle
+      qnmsumneg = DZERO
+      qnmsumpos = DZERO
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ipos) == 0) cycle
+        m = this%dis%con%ja(ipos)
+        if (this%ibound(m) == 0) cycle
+        qnm = this%fmi%gwfflowja(ipos)
+        if (qnm < DZERO) then
+          qnmsumneg = qnmsumneg - qnm
+        else
+          qnmsumpos = qnmsumpos + qnm
+        end if
+      end do
+      qmax = max(qnmsumneg, qnmsumpos)
+      if (qmax < DPREC) cycle
+      cell_volume = this%dis%get_cell_volume(n, this%dis%top(n))
+      dt = cell_volume * this%fmi%gwfsat(n) * thetam(n) / qmax
+      if (dt < dtmax) then
+        dtmax = dt
+        nrmax = n
+      end if
+    end do
+    if (nrmax > 0) then
+      call this%dis%noder_to_string(n, cellstr)
+      write(msg, *) adjustl(trim(this%memoryPath)) // cellstr
+    end if
+  end subroutine adv_dt
 
   !> @brief  Fill coefficient method for ADV package
   !!

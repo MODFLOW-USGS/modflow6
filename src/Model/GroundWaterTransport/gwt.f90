@@ -10,7 +10,7 @@ module GwtModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
                              LENPAKLOC, LENVARNAME, LENPACKAGETYPE, &
-                             DNODATA
+                             DNODATA, LINELENGTH
   use NumericalModelModule, only: NumericalModelType
 
   use BaseModelModule, only: BaseModelType
@@ -100,7 +100,7 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use GwtNamInputModule, only: GwtNamParamFoundType
@@ -352,9 +352,14 @@ contains
     class(GwtModelType) :: this
     ! local
     real(DP) :: dtmax
+    character(len=LINELENGTH) :: msg
     dtmax = DNODATA
-    !dtmax = min(dtmax, this%adv%adv_dt())
-    call ats_submit_delt(kstp, kper, dtmax, this%memoryPath)
+
+    ! advection package courant stability
+    call this%adv%adv_dt(dtmax, msg, this%mst%thetam)
+    if (msg /= '') then
+      call ats_submit_delt(kstp, kper, dtmax, msg)
+    end if
   end subroutine gwt_dt
 
   !> @brief GWT Model Time Step Advance
@@ -779,7 +784,6 @@ contains
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
                             inunit, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
@@ -877,7 +881,7 @@ contains
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
                             mempaths, inunits)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     ! -- dummy
     class(GwtModelType) :: this
@@ -933,7 +937,7 @@ contains
   !<
   subroutine create_gwt_packages(this, indis)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     use ArrayHandlersModule, only: expandarray
     use MemoryManagerModule, only: mem_setptr
