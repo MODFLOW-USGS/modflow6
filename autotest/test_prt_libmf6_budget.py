@@ -19,7 +19,6 @@ simname = "prt_libmf6"
 cases = [simname]
 
 
-
 def build_models(idx, test):
     # build MODFLOW 6 files
     ws = test.workspace
@@ -29,7 +28,10 @@ def build_models(idx, test):
         test.name, test.workspace, test.targets["mf6"]
     )
     prt_sim = build_prt_sim(
-        test.name, test.workspace, test.workspace / "prt", test.targets["libmf6"]
+        test.name,
+        test.workspace,
+        test.workspace / "prt",
+        test.targets["libmf6"],
     )
     mp7_sim = build_mp7_sim(
         test.name,
