@@ -5,20 +5,19 @@ to run the PRT test.
 
 from pathlib import Path
 
-import flopy
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
+from test_prt_budget import (
+    HorizontalCase,
+    build_mp7_sim,
+    build_prt_sim,
+    check_output,
+)
 
 simname = "prt_libmf6"
 cases = [simname]
 
-from test_prt_budget import (HorizontalCase, build_prt_sim, build_mp7_sim, 
-                            check_output)
 
 
 def build_models(idx, test):
