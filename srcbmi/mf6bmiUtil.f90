@@ -218,11 +218,11 @@ contains
   function getSolution(subcomponent_idx) result(solution)
     ! -- modules
     use SolutionGroupModule
-    use NumericalSolutionModule
+    use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
     use ListsModule, only: basesolutionlist, solutiongrouplist
     ! -- dummy variables
     integer(I4B), intent(in) :: subcomponent_idx !< index of solution
-    class(NumericalSolutionType), pointer :: solution !< Numerical Solution
+    class(BaseSolutionType), pointer :: solution !< Base Solution
     ! -- local variables
     class(SolutionGroupType), pointer :: sgp
     integer(I4B) :: solutionIdx
@@ -230,7 +230,7 @@ contains
     ! this is equivalent to how it's done in sgp_ca
     sgp => GetSolutionGroupFromList(solutiongrouplist, 1)
     solutionIdx = sgp%idsolutions(subcomponent_idx)
-    solution => GetNumericalSolutionFromList(basesolutionlist, solutionIdx)
+    solution => GetBaseSolutionFromList(basesolutionlist, solutionIdx)
   end function getSolution
 
   !> @brief Get the grid type for a named model as a fortran string
