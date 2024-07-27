@@ -481,10 +481,10 @@ def test_build_pdfs_from_tex(tmp_path):
 
 def build_documentation(
     bin_path: PathLike,
+    output_path: PathLike,
     force: bool = False,
     full: bool = False,
     models: Optional[List[str]] = None,
-    output_path: Optional[PathLike] = None,
     repo_owner: str = "MODFLOW-USGS",
 ):
     """Build documentation for a MODFLOW 6 distribution."""
@@ -580,7 +580,7 @@ def test_build_documentation(tmp_path):
     bin_path = tmp_path / "bin"
     dist_path = tmp_path / "dist"
     meson_build(PROJ_ROOT_PATH, tmp_path / "builddir", bin_path)
-    build_documentation(bin_path, dist_path, EXAMPLES_REPO_PATH)
+    build_documentation(bin_path, dist_path)
 
 
 if __name__ == "__main__":
@@ -646,9 +646,9 @@ if __name__ == "__main__":
     models = args.model if args.model else DEFAULT_MODELS
     build_documentation(
         bin_path=bin_path,
+        output_path=output_path,
         force=args.force,
         full=args.full,
         models=models,
-        output_path=output_path,
         repo_owner=args.repo_owner,
     )
