@@ -272,7 +272,7 @@ def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
     """Build LaTeX files for the MF6IO guide from DFN files."""
 
     if models is None:
-        models = []
+        models = DEFAULT_MODELS
 
     if force:
         clean_tex_files()
