@@ -12,7 +12,10 @@ import numpy as np
 import pytest
 from framework import TestFramework
 
-cases = ["gwtadvats01", ]
+cases = [
+    "gwtadvats01",
+]
+
 
 def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 100
@@ -53,7 +56,7 @@ def build_models(idx, test):
 
     # set dt0, dtmin, dtmax, dtadj, dtfailadj
     dt0 = 0.01
-    dtmin = 1.e-5
+    dtmin = 1.0e-5
     dtmax = perlen
     dtadj = 2.0
     dtfailadj = 5.0
@@ -66,7 +69,6 @@ def build_models(idx, test):
         perioddata=atsperiod,
         filename=ats_filerecord,
     )
-
 
     # create gwf model
     gwfname = "gwf_" + name
