@@ -251,8 +251,8 @@ def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
             print("DFN files already exist.")
         else:
             # remove md and tex output dirs
-            shutil.rmtree("md")
-            shutil.rmtree("tex")
+            shutil.rmtree("md", ignore_errors=True)
+            shutil.rmtree("tex", ignore_errors=True)
 
             # run mf6ivar script
             args = [sys.executable, "mf6ivar.py"]
