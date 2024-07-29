@@ -132,13 +132,13 @@ contains
 
   !> @brief  Calculate maximum time step length
   !!
-  !!  Return the largest time step that meets stability contraints
+  !!  Return the largest time step that meets stability constraints
   !<
   subroutine adv_dt(this, dtmax, msg, thetam)
     ! dummy
     class(TspAdvType) :: this !< this instance
     real(DP), intent(out) :: dtmax !< maximum allowable dt subject to stability constraint
-    character(len=*), intent(inout) :: msg !< package/cell dt contraint message
+    character(len=*), intent(inout) :: msg !< package/cell dt constraint message
     real(DP), dimension(:), intent(in) :: thetam !< porosity
     ! local
     integer(I4B) :: n
@@ -162,7 +162,7 @@ contains
       return
     end if
 
-    ! Calculate time step lengths based on stability constraint for each cell 
+    ! Calculate time step lengths based on stability constraint for each cell
     ! and store the smallest one
     do n = 1, this%dis%nodes
       if (this%ibound(n) == 0) cycle
@@ -191,7 +191,7 @@ contains
     end do
     if (nrmax > 0) then
       call this%dis%noder_to_string(nrmax, cellstr)
-      write(msg, *) adjustl(trim(this%memoryPath)) // trim(cellstr)
+      write (msg, *) adjustl(trim(this%memoryPath))//trim(cellstr)
     end if
   end subroutine adv_dt
 
