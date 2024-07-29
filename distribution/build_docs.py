@@ -7,7 +7,7 @@ import textwrap
 from datetime import datetime
 from os import PathLike, environ
 from pathlib import Path
-from pprint import pformat, pprint
+from pprint import pprint
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from urllib.error import HTTPError
@@ -26,7 +26,13 @@ from modflow_devtools.download import (
 from modflow_devtools.markers import no_parallel, requires_exe, requires_github
 from modflow_devtools.misc import run_cmd, run_py_script, set_dir
 
-from utils import convert_line_endings, get_project_root_path
+from utils import (
+    assert_match,
+    convert_line_endings,
+    get_project_root_path,
+    glob,
+    match,
+)
 
 # paths
 PROJ_ROOT_PATH = get_project_root_path()
@@ -36,8 +42,8 @@ DISTRIBUTION_PATH = PROJ_ROOT_PATH / "distribution"
 BENCHMARKS_PATH = PROJ_ROOT_PATH / "distribution" / ".benchmarks"
 DOCS_PATH = PROJ_ROOT_PATH / "doc"
 MF6IO_PATH = DOCS_PATH / "mf6io"
+MF6IVAR_PATH = MF6IO_PATH / "mf6ivar"
 RELEASE_NOTES_PATH = DOCS_PATH / "ReleaseNotes"
-DEPRECATIONS_SCRIPT_PATH = MF6IO_PATH / "mf6ivar" / "deprecations.py"
 TEX_PATHS = {
     "minimal": [
         MF6IO_PATH / "mf6io.tex",
@@ -51,6 +57,9 @@ TEX_PATHS = {
         DOCS_PATH / "SuppTechInfo" / "mf6suptechinfo.tex",
     ],
 }
+
+# models to include in the docs by default,
+# filterable with the --models (-m) option
 DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 
 # OS-specific extensions
@@ -68,49 +77,6 @@ PUB_URLS = [
     "https://pubs.usgs.gov/tm/06/a61/tm6a61.pdf",
     "https://pubs.usgs.gov/tm/06/a62/tm6a62.pdf",
 ]
-
-
-def clean_tex_files():
-    """Remove LaTeX files before a clean rebuild."""
-
-    print("Cleaning latex files")
-    exts = ["pdf", "aux", "bbl", "idx", "lof", "out", "toc"]
-    pth = PROJ_ROOT_PATH / "doc" / "mf6io"
-    files = [(pth / f"mf6io.{e}") for e in exts]
-    for file in files:
-        file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
-
-    pth = PROJ_ROOT_PATH / "doc" / "ReleaseNotes"
-    files = [(pth / f"ReleaseNotes.{e}") for e in exts]
-    for file in files:
-        file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
-
-    pth = PROJ_ROOT_PATH / "doc" / "zonebudget"
-    files = [(pth / f"zonebudget.{e}") for e in exts]
-    for file in files:
-        file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
-
-    pth = PROJ_ROOT_PATH / "doc" / "ConverterGuide"
-    files = [(pth / f"converter_mf5to6.{e}") for e in exts]
-    for file in files:
-        file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
-
-    pth = PROJ_ROOT_PATH.parent / "modflow6-docs.git" / "mf6suptechinfo"
-    files = [(pth / f"mf6suptechinfo.{e}") for e in exts]
-    if pth.is_dir():
-        for file in files:
-            file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
-
-    pth = EXAMPLES_REPO_PATH / "doc"
-    files = [(pth / f"mf6examples.{e}") for e in exts]
-    for file in files:
-        file.unlink(missing_ok=True)
-    assert not os.path.isfile(str(pth) + ".pdf")
 
 
 def download_benchmarks(
@@ -208,9 +174,7 @@ def build_benchmark_tex(
         assert tex_path.is_file()
 
     if (DISTRIBUTION_PATH / f"{benchmarks_path.stem}.md").is_file():
-        assert (
-            DOCS_PATH / "ReleaseNotes" / f"{benchmarks_path.stem}.tex"
-        ).is_file()
+        assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
 
 
 @flaky
@@ -227,45 +191,40 @@ def test_build_benchmark_tex(tmp_path):
         tex_path.unlink(missing_ok=True)
 
 
-def build_deprecations_tex():
+def build_deprecations_tex(force: bool = False):
     """Build LaTeX files for the deprecations table to go into the release notes."""
 
-    mf6ivar_path = MF6IO_PATH / "mf6ivar"
-    md_path = mf6ivar_path / "md"
-    md_path.mkdir(exist_ok=True)
-
     # make deprecations markdown table
-    run_py_script(DEPRECATIONS_SCRIPT_PATH)
-    with set_dir(mf6ivar_path):
-        deprecations_path = md_path / "deprecations.md"
-        deprecations_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd(
-            sys.executable, "deprecations.py", verbose=True
-        )
-        assert not ret, out + err
-        assert deprecations_path.is_file()
+    (MF6IVAR_PATH / "md").mkdir(exist_ok=True)
+    md_path = MF6IVAR_PATH / "md" / "deprecations.md"
+    if md_path.is_file() and not force:
+        print(f"{md_path} already exists.")
+    else:
+        md_path.unlink(missing_ok=True)
+        with set_dir(MF6IVAR_PATH):
+            out, err, ret = run_py_script("deprecations.py", verbose=True)
+            assert not ret, out + err
 
-    # convert markdown deprecations to LaTeX
-    with set_dir(RELEASE_NOTES_PATH):
-        tex_path = Path("deprecations.tex")
+    # convert markdown table to LaTeX
+    tex_path = RELEASE_NOTES_PATH / "deprecations.tex"
+    if tex_path.is_file() and not force:
+        print(f"{tex_path} already exists.")
+    else:
         tex_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd(
-            sys.executable,
-            "mk_deprecations.py",
-            deprecations_path,
-            verbose=True,
-        )
-        assert not ret, out + err
-        assert tex_path.is_file()
+        with set_dir(RELEASE_NOTES_PATH):
+            out, err, ret = run_py_script(
+                "mk_deprecations.py", md_path, verbose=True
+            )
+            assert not ret, out + err
 
-    assert (
-        DOCS_PATH / "ReleaseNotes" / f"{deprecations_path.stem}.tex"
-    ).is_file()
+    # check deprecations files exist
+    assert md_path.is_file()
+    assert tex_path.is_file()
 
 
 @no_parallel
 def test_build_deprecations_tex():
-    build_deprecations_tex()
+    build_deprecations_tex(force=True)
 
 
 def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
@@ -274,67 +233,43 @@ def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
     if models is None:
         models = DEFAULT_MODELS
 
-    if force:
-        clean_tex_files()
+    included = models + ["sim", "utl", "exg", "sln"]
+    excluded = ["appendix", "common"] + list(set(DEFAULT_MODELS) - set(models))
 
-    def match(tex_names, dfn_names):
-        tex = set(tex_names)
-        dfn = set(dfn_names)
-        diff = tex ^ dfn
-        return not any(diff)
+    with set_dir(MF6IVAR_PATH):
+        cwd = Path.cwd()
 
-    def assert_match(tex_names, dfn_names):
-        tex = set(tex_names)
-        dfn = set(dfn_names)
-        diff = tex ^ dfn
-        assert not any(diff), (
-            f"=> symmetric difference:\n{pformat(diff)}\n"
-            f"=> tex - dfn:\n{pformat(tex - dfn)}\n"
-            f"=> dfn - tex:\n{pformat(dfn - tex)}\n"
-        )
+        def _glob(pattern):
+            return list(glob(cwd, pattern, included, excluded))
 
-    with set_dir(PROJ_ROOT_PATH / "doc" / "mf6io" / "mf6ivar"):
-        ignored = ["appendix", "common"] + list(
-            set(DEFAULT_MODELS) - set(models)
-        )
-        included = models + ["sim", "utl", "exg", "sln"]
-        tex_files = [
-            f
-            for f in Path("tex").glob("*.tex")
-            if f.is_file()
-            and any(pattern in f.name for pattern in included)
-            and not any(pattern in f.name for pattern in ignored)
-        ]
-        dfn_files = [
-            f
-            for f in Path("dfn").glob("*.dfn")
-            if f.is_file()
-            and any(pattern in f.name for pattern in included)
-            and not any(pattern in f.name for pattern in ignored)
-        ]
-        dfn_names = [f.stem for f in dfn_files]
-        tex_names = [f.stem.replace("-desc", "") for f in tex_files]
-        if match(tex_names, dfn_names) and not force:
-            print("DFN files already exist:")
-            pprint(dfn_files)
+        def _stems(paths):
+            return [p.stem.replace("-desc", "") for p in paths]
+
+        tex_files, dfn_files = _glob("*.tex"), _glob("*.dfn")
+        tex_stems, dfn_stems = _stems(tex_files), _stems(dfn_files)
+        if match(tex_stems, dfn_stems) and not force:
+            print("DFN files already exist.")
         else:
-            for f in tex_files:
-                f.unlink()
+            # remove md and tex output dirs
+            shutil.rmtree("md")
+            shutil.rmtree("tex")
 
-            # run mf6ivar script and make sure a tex
-            # file was generated for each dfn
+            # run mf6ivar script
             args = [sys.executable, "mf6ivar.py"]
             for model in models:
                 args += ["--model", model]
             out, err, ret = run_cmd(*args, verbose=True)
             assert not ret, out + err
-            assert_match(tex_names, dfn_names)
+
+            # check that a tex file was generated for each dfn
+            tex_files, dfn_files = _glob("*.tex"), _glob("*.dfn")
+            tex_stems, dfn_stems = _stems(tex_files), _stems(dfn_files)
+            assert_match(tex_stems, dfn_stems, "tex", "dfn")
 
 
 @no_parallel
-@pytest.mark.parametrize("force", [True, False])
-def test_build_mf6io_tex(force):
-    build_mf6io_tex(force=force)
+def test_build_mf6io_tex():
+    build_mf6io_tex(force=True)
 
 
 def build_usage_example_tex(
@@ -516,7 +451,7 @@ def build_documentation(
         )
 
     # build deprecations table for insertion into LaTex release notes
-    build_deprecations_tex()
+    build_deprecations_tex(force=force)
 
     if full:
         # convert benchmarks to LaTex, running them first if necessary
