@@ -201,17 +201,17 @@ jobs:
       matrix:
         include:
           - os: macos-12
-            debug: false
+            buildtype: release
           - os: macos-14
-            debug: false
+            buildtype: release
           - os: macos-14
-            debug: true
+            buildtype: debug
           - os: ubuntu-22.04
-            debug: false
+            buildtype: release
           - os: ubuntu-22.04
-            debug: true
+            buildtype: debug
           - os: windows-2022
-            debug: false
+            buildtype: release
     defaults:
       run:
         shell: bash
@@ -264,10 +264,8 @@ jobs:
       - name: Build MF6
         working-directory: modflow6
         run: |
-          setupargs=""
-          if [[ "${{ matrix.debug }}" ]]; then
-            setupargs="-Dbuildtype=debug"
-          elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
+          setupargs="-Dbuildtype=${{ matrix.buildtype }}"
+          if [[ ("${{ matrix.buildtype }}" == "release") && ("${{ matrix.os }}" == "macos-14") ]]; then
             setupargs="-Doptimization=1"
           fi
           pixi run setup builddir $setupargs
