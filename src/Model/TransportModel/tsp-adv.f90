@@ -17,6 +17,7 @@ module TspAdvModule
   type, extends(NumericalPackageType) :: TspAdvType
 
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
+    real(DP), pointer :: ats_percel => null() !< user-specified fractional number of cells advection can move a particle during one time step
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
@@ -154,6 +155,15 @@ contains
     dtmax = DNODATA
     nrmax = 0
     msg = ''
+
+    ! If ats_percel not specified by user, then return without making
+    ! the courant time step calculation
+    if (this%ats_percel == DNODATA) then
+      return
+    end if
+
+    ! Calculate time step lengths based on stability constraint for each cell 
+    ! and store the smallest one
     do n = 1, this%dis%nodes
       if (this%ibound(n) == 0) cycle
       qnmsumneg = DZERO
@@ -173,14 +183,15 @@ contains
       if (qmax < DPREC) cycle
       cell_volume = this%dis%get_cell_volume(n, this%dis%top(n))
       dt = cell_volume * this%fmi%gwfsat(n) * thetam(n) / qmax
+      dt = dt * this%ats_percel
       if (dt < dtmax) then
         dtmax = dt
         nrmax = n
       end if
     end do
     if (nrmax > 0) then
-      call this%dis%noder_to_string(n, cellstr)
-      write(msg, *) adjustl(trim(this%memoryPath)) // cellstr
+      call this%dis%noder_to_string(nrmax, cellstr)
+      write(msg, *) adjustl(trim(this%memoryPath)) // trim(cellstr)
     end if
   end subroutine adv_dt
 
@@ -412,6 +423,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
+    call mem_deallocate(this%ats_percel)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -436,9 +448,11 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%iadvwt, 'IADVWT', this%memoryPath)
+    call mem_allocate(this%ats_percel, 'ATS_PERCEL', this%memoryPath)
     !
     ! -- Initialize
     this%iadvwt = 0
+    this%ats_percel = DNODATA
     !
     ! -- Advection creates an asymmetric coefficient matrix
     this%iasym = 1
@@ -498,6 +512,11 @@ contains
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end select
+        case ('ATS_PERCEL')
+          this%ats_percel = this%parser%GetDouble()
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'User-specified fractional cell distance for adaptive time &
+            &steps: ', this%ats_percel
         case default
           write (errmsg, '(a,a)') 'Unknown ADVECTION option: ', &
             trim(keyword)
