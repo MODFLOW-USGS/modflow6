@@ -270,6 +270,10 @@ def test_build_deprecations_tex():
 
 def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
     """Build LaTeX files for the MF6IO guide from DFN files."""
+
+    if models is None:
+        models = []
+
     if force:
         clean_tex_files()
 
@@ -320,9 +324,8 @@ def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
             # run mf6ivar script and make sure a tex
             # file was generated for each dfn
             args = [sys.executable, "mf6ivar.py"]
-            if models is not None and any(models):
-                for model in models:
-                    args += ["--model", model]
+            for model in models:
+                args += ["--model", model]
             out, err, ret = run_cmd(*args, verbose=True)
             assert not ret, out + err
             assert_match(tex_names, dfn_names)
