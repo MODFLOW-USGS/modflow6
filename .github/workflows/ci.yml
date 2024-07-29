@@ -265,7 +265,7 @@ jobs:
         working-directory: modflow6
         run: |
           setupargs=""
-          if [[ "${{ matrix.debug }}" == "true"]]; then
+          if [[ "${{ matrix.debug }}" == "true" ]]; then
             setupargs="-Ddebug=true -Doptimization=0"
           elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
             setupargs="-Doptimization=1"
