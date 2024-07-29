@@ -12,10 +12,12 @@ module ModelExportModule
                              LENMEMPATH
   use ListModule, only: ListType
   use NCModelExportModule, only: NCBaseModelExportType
+  use InputLoadTypeModule, only: ModelDynamicPkgsType
 
   implicit none
   private
   public :: modelexports_create
+  public :: modelexports_post_prepare
   public :: modelexports_post_step
   public :: modelexports_destroy
   public :: nc_export_active
@@ -32,6 +34,7 @@ module ModelExportModule
   !!
   !<
   type :: ExportModelType
+    type(ModelDynamicPkgsType), pointer :: loaders => null()
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
@@ -41,6 +44,7 @@ module ModelExportModule
     integer(I4B) :: iout !< lst file descriptor
   contains
     procedure :: init
+    procedure :: post_prepare
     procedure :: post_step
     procedure :: destroy
   end type ExportModelType
@@ -68,7 +72,6 @@ contains
   !> @brief create export container variable for all local models
   !!
   subroutine modelexports_create(iout)
-    use InputLoadTypeModule, only: ModelDynamicPkgsType
     use InputLoadTypeModule, only: model_dynamic_pkgs
     use MemoryManagerModule, only: mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
@@ -103,9 +106,7 @@ contains
       call mem_setptr(disenum, 'DISENUM', model_mempath)
       !
       ! --  initialize model
-      call export_model%init(model_dynamic_input%modelname, &
-                             model_dynamic_input%modeltype, &
-                             model_dynamic_input%modelfname, disenum, iout)
+      call export_model%init(model_dynamic_input, disenum, iout)
       !
       ! -- update EXPORT_NETCDF string if provided
       call mem_set_value(exportstr, 'EXPORT_NETCDF', modelnam_mempath, found)
@@ -113,6 +114,7 @@ contains
         if (exportstr == 'STRUCTURED') then
           export_model%nctype = NETCDF_STRUCTURED
         else
+          ! -- mesh export is default
           export_model%nctype = NETCDF_UGRID
         end if
       end if
@@ -121,6 +123,26 @@ contains
       call add_export_model(export_model)
     end do
   end subroutine modelexports_create
+
+  !> @brief export model list post prepare step
+  !!
+  subroutine modelexports_post_prepare()
+    ! -- local variables
+    class(*), pointer :: obj
+    class(ExportModelType), pointer :: export_model
+    integer(I4B) :: n
+    !
+    do n = 1, export_models%Count()
+      obj => export_models%GetItem(n)
+      if (associated(obj)) then
+        select type (obj)
+        class is (ExportModelType)
+          export_model => obj
+          call export_model%post_prepare()
+        end select
+      end if
+    end do
+  end subroutine modelexports_post_prepare
 
   !> @brief export model list post step
   !!
@@ -169,24 +191,34 @@ contains
   !> @brief initialize model export container variable
   !!
   !<
-  subroutine init(this, modelname, modeltype, modelfname, disenum, iout)
+  subroutine init(this, loaders, disenum, iout)
     use NCModelExportModule, only: NETCDF_UNDEF
     class(ExportModelType), intent(inout) :: this
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: modeltype
-    character(len=*), intent(in) :: modelfname
+    type(ModelDynamicPkgsType), pointer, intent(in) :: loaders
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: iout
     !
-    this%modelname = modelname
-    this%modeltype = modeltype
-    this%modelfname = modelfname
+    this%loaders => loaders
+    this%modelname = loaders%modelname
+    this%modeltype = loaders%modeltype
+    this%modelfname = loaders%modelfname
     this%nctype = NETCDF_UNDEF
     this%disenum = disenum
     this%iout = iout
     !
     nullify (this%nc_export)
   end subroutine init
+
+  !> @brief model export container post prepare step actions
+  !!
+  !<
+  subroutine post_prepare(this)
+    class(ExportModelType), intent(inout) :: this
+    !
+    if (associated(this%nc_export)) then
+      call this%nc_export%step_rp()
+    end if
+  end subroutine post_prepare
 
   !> @brief model export container post step actions
   !!

@@ -488,6 +488,7 @@ contains
     use SimModule, only: converge_reset
     use SimVariablesModule, only: isim_mode
     use IdmLoadModule, only: idm_rp
+    use SourceLoadModule, only: export_post_prepare
     ! -- local variables
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -572,6 +573,9 @@ contains
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_dt()
     end do
+    !
+    ! -- update exports
+    call export_post_prepare()
     !
     ! -- set time step
     call tdis_set_timestep()

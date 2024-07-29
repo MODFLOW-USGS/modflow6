@@ -52,7 +52,7 @@ contains
   !> @brief Load NetCDF integer 1D array
   !<
   subroutine nc_array_load_int1d(int1d, mshape, idt, mf6_input, nc_vars, &
-                                 input_fname, iout)
+                                 input_fname, iout, kper)
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
@@ -60,6 +60,7 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: kper
     ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
@@ -70,7 +71,11 @@ contains
       call load_integer1d_layered(int1d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname)
+      if (present(kper)) then
+        varid = nc_vars%varid(idt%mf6varname, period=kper)
+      else
+        varid = nc_vars%varid(idt%mf6varname)
+      end if
       call load_integer1d_type(int1d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -100,7 +105,7 @@ contains
       call load_integer2d_layered(int2d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname)
+      varid = nc_vars%varid(idt%mf6varname)
       call load_integer2d_type(int2d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -130,7 +135,7 @@ contains
       call load_integer3d_layered(int3d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
     else
-      varid = nc_vars%varid(idt%tagname)
+      varid = nc_vars%varid(idt%mf6varname)
       call load_integer3d_type(int3d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
@@ -142,7 +147,7 @@ contains
   !> @brief Load NetCDF double 1D array
   !<
   subroutine nc_array_load_dbl1d(dbl1d, mshape, idt, mf6_input, nc_vars, &
-                                 input_fname, iout)
+                                 input_fname, iout, kper, iaux)
     real(DP), dimension(:), pointer, contiguous, intent(in) :: dbl1d
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
@@ -150,19 +155,35 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: kper
+    integer(I4B), optional, intent(in) :: iaux
     ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
     !
-    layered = (idt%layered .and. is_layered(nc_vars%grid))
+    if (present(kper)) then
+      layered = (kper > 0 .and. is_layered(nc_vars%grid))
+    else
+      layered = (idt%layered .and. is_layered(nc_vars%grid))
+    end if
     !
     if (layered) then
-      call load_double1d_layered(dbl1d, mf6_input, mshape, idt, nc_vars, &
-                                 input_fname)
+      if (present(kper)) then
+        call load_double1d_layered_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                                       kper, input_fname, iaux)
+      else
+        call load_double1d_layered(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                                   input_fname)
+      end if
     else
-      varid = nc_vars%varid(idt%tagname)
-      call load_double1d_type(dbl1d, mf6_input, mshape, idt, nc_vars, &
-                              varid, input_fname)
+      if (present(kper)) then
+        call load_double1d_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                               kper, input_fname, iaux)
+      else
+        varid = nc_vars%varid(idt%mf6varname)
+        call load_double1d_type(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                                varid, input_fname)
+      end if
     end if
     !
     ! -- return
@@ -190,7 +211,7 @@ contains
       call load_double2d_layered(dbl2d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
     else
-      varid = nc_vars%varid(idt%tagname)
+      varid = nc_vars%varid(idt%mf6varname)
       call load_double2d_type(dbl2d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
@@ -220,7 +241,7 @@ contains
       call load_double3d_layered(dbl3d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
     else
-      varid = nc_vars%varid(idt%tagname)
+      varid = nc_vars%varid(idt%mf6varname)
       call load_double3d_type(dbl3d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
@@ -305,7 +326,7 @@ contains
     ncpl = product(layer_shape)
     index_start = 1
     do k = 1, nlay
-      varid = nc_vars%varid(idt%tagname, k)
+      varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
       int1d_ptr(1:ncpl) => int1d(index_start:index_stop)
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d_ptr), &
@@ -379,7 +400,7 @@ contains
       call get_layered_shape(mshape, nlay, layer_shape)
       ncpl = layer_shape(1)
       do k = 1, nlay
-        varid = nc_vars%varid(idt%tagname, k)
+        varid = nc_vars%varid(idt%mf6varname, layer=k)
         int1d_ptr(1:ncpl) => int2d(1:ncpl, k)
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d_ptr), &
                        nc_vars%nc_fname)
@@ -435,7 +456,7 @@ contains
     ncpl = product(layer_shape)
     !
     do k = 1, nlay
-      varid = nc_vars%varid(idt%tagname, k)
+      varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
       int1d_ptr(1:ncpl) => int3d(:, :, k:k)
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d_ptr), &
@@ -498,6 +519,78 @@ contains
     return
   end subroutine load_double1d_type
 
+  !> @brief load type 1d double
+  !<
+  subroutine load_double1d_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                               iper, input_fname, iaux)
+    use ConstantsModule, only: DNODATA
+    ! -- dummy
+    real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
+    type(ModflowInputType), intent(in) :: mf6_input
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
+    type(InputParamDefinitionType), intent(in) :: idt
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    integer(I4B), intent(in) :: iper
+    character(len=*), intent(in) :: input_fname
+    integer(I4B), optional, intent(in) :: iaux
+    ! -- local
+    real(DP), dimension(:, :, :), contiguous, pointer :: dbl3d
+    integer(I4B) :: nvals, varid
+    integer(I4B) :: n, i, j, k
+    !
+    ! -- initialize
+    nvals = 0
+    !
+    ! -- set varid
+    if (present(iaux)) then
+      varid = nc_vars%varid(idt%mf6varname, period=iper, iaux=iaux)
+    else
+      varid = nc_vars%varid(idt%mf6varname, period=iper)
+    end if
+    !
+    if (idt%shape == 'NODES') then
+      ! TODO future support
+      write (errmsg, '(a)') &
+        'IDM NetCDF load_double1d_spd NODES var shape not supported => '// &
+        trim(idt%tagname)
+      call store_error(errmsg)
+      call store_error_filename(input_fname)
+    else if (idt%shape == 'NCPL' .or. idt%shape == 'NAUX NCPL') then
+
+      if (size(mshape) == 3) then
+        !
+        allocate (dbl3d(mshape(3), mshape(2), mshape(1)))
+        !
+        call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl3d), &
+                       nc_vars%nc_fname)
+        !
+        n = 0
+        do k = 1, size(dbl3d, dim=3)
+          do i = 1, size(dbl3d, dim=2)
+            do j = 1, size(dbl3d, dim=1)
+              if (n < size(dbl1d)) then
+                n = n + 1
+              else
+                n = 1
+              end if
+              if (dbl3d(j, i, k) /= DNODATA) then
+                dbl1d(n) = dbl3d(j, i, k)
+              end if
+            end do
+          end do
+        end do
+
+      else if (size(mshape) == 2) then
+        ! TODO
+        write (errmsg, '(a)') &
+          'IDM NetCDF load_double1d_spd DISV model not supported => '// &
+          trim(idt%tagname)
+        call store_error(errmsg)
+        call store_error_filename(input_fname)
+      end if
+    end if
+  end subroutine load_double1d_spd
+
   !> @brief load type 1d double layered
   !<
   subroutine load_double1d_layered(dbl1d, mf6_input, mshape, idt, nc_vars, &
@@ -524,7 +617,7 @@ contains
     ncpl = product(layer_shape)
     !
     do k = 1, nlay
-      varid = nc_vars%varid(idt%tagname, k)
+      varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
       dbl1d_ptr(1:ncpl) => dbl1d(index_start:index_stop)
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d_ptr), &
@@ -535,6 +628,56 @@ contains
     ! -- return
     return
   end subroutine load_double1d_layered
+
+  !> @brief load type 1d double layered
+  !<
+  subroutine load_double1d_layered_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
+                                       iper, input_fname, iaux)
+    use ConstantsModule, only: DNODATA
+    ! -- dummy
+    real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
+    type(ModflowInputType), intent(in) :: mf6_input
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
+    type(InputParamDefinitionType), intent(in) :: idt
+    type(NCPackageVarsType), pointer, intent(in) :: nc_vars
+    integer(I4B), intent(in) :: iper
+    character(len=*), intent(in) :: input_fname
+    integer(I4B), optional, intent(in) :: iaux
+    ! -- local
+    integer(I4B), dimension(:), allocatable :: layer_shape
+    integer(I4B) :: nlay, varid
+    integer(I4B) :: k, n, ncpl
+    integer(I4B) :: index_start, index_stop
+    real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
+    !
+    call get_layered_shape(mshape, nlay, layer_shape)
+    !
+    ncpl = product(layer_shape)
+    allocate (dbl1d_ptr(ncpl))
+    !
+    do k = 1, nlay
+      index_start = 1
+      index_stop = index_start + ncpl - 1
+      if (present(iaux)) then
+        varid = nc_vars%varid(idt%mf6varname, layer=k, period=iper, iaux=iaux)
+      else
+        varid = nc_vars%varid(idt%mf6varname, layer=k, period=iper)
+      end if
+      call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d_ptr), &
+                     nc_vars%nc_fname)
+      do n = 1, ncpl
+        if (dbl1d_ptr(n) /= DNODATA) then
+          dbl1d(n) = dbl1d_ptr(n)
+        end if
+      end do
+    end do
+    !
+    ! -- cleanup
+    deallocate (dbl1d_ptr)
+    !
+    ! -- return
+    return
+  end subroutine load_double1d_layered_spd
 
   !> @brief load type 2d double
   !<
@@ -598,7 +741,7 @@ contains
       call get_layered_shape(mshape, nlay, layer_shape)
       ncpl = layer_shape(1)
       do k = 1, nlay
-        varid = nc_vars%varid(idt%tagname, k)
+        varid = nc_vars%varid(idt%mf6varname, layer=k)
         dbl1d_ptr(1:ncpl) => dbl2d(1:ncpl, k)
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d_ptr), &
                        nc_vars%nc_fname)
@@ -653,7 +796,7 @@ contains
     ncpl = product(layer_shape)
     index_start = 1
     do k = 1, nlay
-      varid = nc_vars%varid(idt%tagname, k)
+      varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
       dbl1d_ptr(1:ncpl) => dbl3d(:, :, k:k)
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d_ptr), &

@@ -22,6 +22,11 @@ module MeshModelModule
   private
   public :: MeshNCDimIdType, MeshNCVarIdType
   public :: Mesh2dModelType
+  public :: ncvar_chunk
+  public :: ncvar_deflate
+  public :: ncvar_gridmap
+  public :: ncvar_mf6attr
+  public :: export_varname, export_longname
 
   !> @brief type for storing model export dimension ids
   !<
@@ -292,13 +297,8 @@ contains
                        this%nc_fname)
       end if
       ! -- deflate and shuffle
-      if (this%deflate >= 0) then
-        call nf_verify(nf90_def_var_deflate(this%ncid, &
-                                            this%var_ids%dependent(k), &
-                                            shuffle=this%shuffle, deflate=1, &
-                                            deflate_level=this%deflate), &
-                       this%nc_fname)
-      end if
+      call ncvar_deflate(this%ncid, this%var_ids%dependent(k), this%deflate, &
+                         this%shuffle, this%nc_fname)
       !
       ! -- assign variable attributes
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
@@ -316,15 +316,9 @@ contains
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
                                   'location', 'face'), this%nc_fname)
       !
-      if (this%ogc_wkt /= '') then
-        ! -- associate with projection
-        call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
-                                    'coordinates', 'mesh_face_x mesh_face_y'), &
-                       this%nc_fname)
-        call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
-                                    'grid_mapping', this%gridmap_name), &
-                       this%nc_fname)
-      end if
+      ! -- add grid mapping
+      call ncvar_gridmap(this%ncid, this%var_ids%dependent(k), &
+                         this%gridmap_name, this%nc_fname)
     end do
   end subroutine define_dependent
 
@@ -503,5 +497,135 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_nodes, &
                                 'start_index', 1), this%nc_fname)
   end subroutine create_mesh
+
+  subroutine ncvar_chunk(ncid, varid, chunk_face, nc_fname)
+    integer(I4B), intent(in) :: ncid
+    integer(I4B), intent(in) :: varid
+    integer(I4B), intent(in) :: chunk_face
+    character(len=*), intent(in) :: nc_fname
+    !
+    ! -- apply chunking parameters
+    if (chunk_face > 0) then
+      call nf_verify(nf90_def_var_chunking(ncid, varid, NF90_CHUNKED, &
+                                           (/chunk_face/)), nc_fname)
+    end if
+  end subroutine ncvar_chunk
+
+  subroutine ncvar_deflate(ncid, varid, deflate, shuffle, nc_fname)
+    integer(I4B), intent(in) :: ncid
+    integer(I4B), intent(in) :: varid
+    integer(I4B), intent(in) :: deflate
+    integer(I4B), intent(in) :: shuffle
+    character(len=*), intent(in) :: nc_fname
+    ! -- deflate and shuffle
+    if (deflate >= 0) then
+      call nf_verify(nf90_def_var_deflate(ncid, varid, shuffle=shuffle, &
+                                          deflate=1, deflate_level=deflate), &
+                     nc_fname)
+    end if
+  end subroutine ncvar_deflate
+
+  subroutine ncvar_gridmap(ncid, varid, gridmap_name, nc_fname)
+    integer(I4B), intent(in) :: ncid
+    integer(I4B), intent(in) :: varid
+    character(len=*), intent(in) :: gridmap_name
+    character(len=*), intent(in) :: nc_fname
+    !
+    if (gridmap_name /= '') then
+      call nf_verify(nf90_put_att(ncid, varid, 'coordinates', &
+                                  'mesh_face_x mesh_face_y'), nc_fname)
+      call nf_verify(nf90_put_att(ncid, varid, 'grid_mapping', &
+                                  gridmap_name), nc_fname)
+    end if
+  end subroutine ncvar_gridmap
+
+  subroutine ncvar_mf6attr(ncid, varid, layer, iper, iaux, nc_tag, nc_fname)
+    integer(I4B), intent(in) :: ncid
+    integer(I4B), intent(in) :: varid
+    integer(I4B), intent(in) :: layer
+    integer(I4B), intent(in) :: iper
+    integer(I4B), intent(in) :: iaux
+    character(len=*), intent(in) :: nc_tag
+    character(len=*), intent(in) :: nc_fname
+    !
+    if (nc_tag /= '') then
+      call nf_verify(nf90_put_att(ncid, varid, 'modflow6_input', &
+                                  nc_tag), nc_fname)
+      if (layer > 0) then
+        call nf_verify(nf90_put_att(ncid, varid, 'modflow6_layer', &
+                                    layer), nc_fname)
+      end if
+      !
+      if (iper > 0) then
+        call nf_verify(nf90_put_att(ncid, varid, 'modflow6_iper', &
+                                    iper), nc_fname)
+      end if
+      !
+      if (iaux > 0) then
+        call nf_verify(nf90_put_att(ncid, varid, 'modflow6_iaux', &
+                                    iaux), nc_fname)
+      end if
+    end if
+  end subroutine ncvar_mf6attr
+
+  function export_varname(varname, layer, iper, iaux) result(vname)
+    use InputOutputModule, only: lowcase
+    character(len=*), intent(in) :: varname
+    integer(I4B), optional, intent(in) :: layer
+    integer(I4B), optional, intent(in) :: iper
+    integer(I4B), optional, intent(in) :: iaux
+    character(len=LINELENGTH) :: vname
+    !
+    vname = ''
+    !
+    if (varname /= '') then
+      vname = varname
+      call lowcase(vname)
+      if (present(layer)) then
+        if (layer > 0) then
+          write (vname, '(a,i0)') trim(vname)//'_l', layer
+        end if
+      end if
+      if (present(iper)) then
+        if (iper > 0) then
+          write (vname, '(a,i0)') trim(vname)//'_p', iper
+        end if
+      end if
+      if (present(iaux)) then
+        if (iaux > 0) then
+          write (vname, '(a,i0)') trim(vname)//'a', iaux
+        end if
+      end if
+    end if
+  end function export_varname
+
+  function export_longname(longname, pkgname, tagname, layer, iper) result(lname)
+    use InputOutputModule, only: lowcase
+    character(len=*), intent(in) :: longname
+    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: tagname
+    integer(I4B), intent(in) :: layer
+    integer(I4B), optional, intent(in) :: iper
+    character(len=LINELENGTH) :: lname
+    character(len=LINELENGTH) :: pname, vname
+    !
+    pname = pkgname
+    vname = tagname
+    !call lowcase(pname)
+    !call lowcase(vname)
+    if (longname == '') then
+      lname = trim(pname)//' '//trim(vname)
+    else
+      lname = longname
+    end if
+    if (layer > 0) then
+      write (lname, '(a,i0)') trim(lname)//' layer=', layer
+    end if
+    if (present(iper)) then
+      if (iper > 0) then
+        write (lname, '(a,i0)') trim(lname)//' period=', iper
+      end if
+    end if
+  end function export_longname
 
 end module MeshModelModule

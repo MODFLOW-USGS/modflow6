@@ -26,6 +26,7 @@ module GwfRchaInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
+    logical :: export_nc = .false.
     logical :: irch = .false.
     logical :: recharge = .false.
     logical :: auxvar = .false.
@@ -292,6 +293,24 @@ module GwfRchaInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwfrcha_export_nc = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'RCHA', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwfrcha_irch = InputParamDefinitionType &
     ( &
     'GWF', & ! component
@@ -362,6 +381,7 @@ module GwfRchaInputModule
     gwfrcha_obs_filerecord, &
     gwfrcha_obs6, &
     gwfrcha_obs6_filename, &
+    gwfrcha_export_nc, &
     gwfrcha_irch, &
     gwfrcha_recharge, &
     gwfrcha_auxvar &

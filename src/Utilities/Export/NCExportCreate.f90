@@ -17,6 +17,7 @@ module NCExportCreateModule
   use DisuModule, only: DisuType
   use ModelExportModule, only: export_models, get_export_model
   use ModelExportModule, only: ExportModelType
+  use NCModelExportModule, only: ExportPackageType
 
   implicit none
   private
@@ -31,6 +32,7 @@ contains
     use MeshDisModelModule, only: Mesh2dDisExportType
     use MeshDisvModelModule, only: Mesh2dDisvExportType
     use DisNCStructuredModule, only: DisNCStructuredType
+    use InputLoadTypeModule, only: ModelDynamicPkgsType
     type(ExportModelType), pointer, intent(inout) :: export_model
     class(NumericalModelType), pointer, intent(in) :: num_model
     class(Mesh2dDisExportType), pointer :: ugrid_dis
@@ -52,6 +54,10 @@ contains
         type is (DisType)
           ugrid_dis%dis => disbase
         end select
+        !
+        ! -- set dynamic loaders
+        call create_export_pkglist(ugrid_dis%pkglist, export_model%loaders, &
+                                   export_model%iout)
         !
         ! -- initialize export object
         call ugrid_dis%init(export_model%modelname, export_model%modeltype, &
@@ -75,6 +81,10 @@ contains
           structured_dis%dis => disbase
         end select
         !
+        ! -- set dynamic loaders
+        call create_export_pkglist(structured_dis%pkglist, export_model%loaders, &
+                                   export_model%iout)
+        !
         ! -- initialize export object
         call structured_dis%init(export_model%modelname, export_model%modeltype, &
                                  export_model%modelfname, export_model%disenum, &
@@ -97,6 +107,10 @@ contains
         type is (DisvType)
           ugrid_disv%disv => disbase
         end select
+        !
+        ! -- set dynamic loaders
+        call create_export_pkglist(ugrid_disv%pkglist, export_model%loaders, &
+                                   export_model%iout)
         !
         ! -- initialize export object
         call ugrid_disv%init(export_model%modelname, export_model%modeltype, &
@@ -122,6 +136,64 @@ contains
       call store_error_filename(export_model%modelfname)
     end select
   end subroutine create_nc_export
+
+  subroutine create_export_pkglist(pkglist, loaders, iout)
+    use ListModule, only: ListType
+    use MemoryManagerExtModule, only: mem_set_value
+    use InputLoadTypeModule, only: ModelDynamicPkgsType
+    use InputLoadTypeModule, only: DynamicPkgLoadBaseType
+    use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
+    use Mf6FileGridInputModule, only: BoundGridInputType
+    use IdmMf6FileModule, only: Mf6FileDynamicPkgLoadType
+    type(ListType), intent(inout) :: pkglist
+    type(ModelDynamicPkgsType), pointer, intent(in) :: loaders
+    integer(I4B), intent(in) :: iout
+    class(DynamicPkgLoadBaseType), pointer :: dynamic_pkg
+    class(AsciiDynamicPkgLoadBaseType), pointer :: rp_loader
+    type(ExportPackageType), pointer :: export_pkg
+    integer(I4B), pointer :: export_arrays
+    class(*), pointer :: obj
+    logical(LGP) :: found
+    integer(I4B) :: n
+    !
+    ! -- create list of in scope loaders
+    allocate (export_arrays)
+    !
+    do n = 1, loaders%pkglist%Count()
+      !
+      ! -- initialize export arrays option
+      export_arrays = 0
+      !
+      dynamic_pkg => loaders%get(n)
+      !
+      ! -- update export arrays option
+      call mem_set_value(export_arrays, 'EXPORT_NC', &
+                         dynamic_pkg%mf6_input%mempath, found)
+      !
+      if (export_arrays > 0 .and. dynamic_pkg%readasarrays) then
+        select type (dynamic_pkg)
+        type is (Mf6FileDynamicPkgLoadType)
+          !
+          rp_loader => dynamic_pkg%rp_loader
+          !
+          select type (rp_loader)
+          type is (BoundGridInputType)
+            ! -- create the export object
+            allocate (export_pkg)
+            call export_pkg%init(rp_loader%mf6_input, &
+                                 rp_loader%bound_context%mshape, &
+                                 rp_loader%param_names, rp_loader%nparam)
+            obj => export_pkg
+            call pkglist%add(obj)
+            !
+          end select
+        end select
+      end if
+    end do
+    !
+    ! -- cleanup
+    deallocate (export_arrays)
+  end subroutine create_export_pkglist
 
   !> @brief initialize netcdf model export type
   !!
