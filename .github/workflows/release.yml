@@ -459,6 +459,10 @@ jobs:
           name: deprecations
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
 
+      - name: Build MF6IO files from DFNs
+        working-directory: modflow6/doc/mf6io/mf6ivar
+        run: python mf6ivar.py
+
       - name: Build documentation
         env:
           # this step is lazy about building the mf6 examples PDF document, first

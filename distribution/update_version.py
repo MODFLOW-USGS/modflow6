@@ -467,7 +467,6 @@ def test_update_version(version, approved, developmode):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Update Modflow 6 version",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\

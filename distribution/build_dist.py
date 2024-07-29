@@ -111,16 +111,21 @@ def test_copy_sources(tmp_path):
 def setup_examples(
     bin_path: PathLike,
     examples_path: PathLike,
-    overwrite: bool = False,
+    force: bool = False,
     models: Optional[List[str]] = None,
 ):
     examples_path = Path(examples_path).expanduser().absolute()
-    latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
-    assets = latest["assets"]
-    asset = next(
-        iter([a for a in assets if a["name"] == "mf6examples.zip"]), None
+
+    # find and download example models distribution from latest examples release
+    latest = get_release(
+        "MODFLOW-USGS/modflow6-examples", tag="latest", verbose=True
     )
-    # download example models zip asset
+    assets = latest["assets"]
+    print(f"Found {len(assets)} assets from the latest examples release:")
+    pprint([a["name"] for a in assets])
+    asset = next(
+        iter([a for a in assets if a["name"].endswith("examples.zip")]), None
+    )
     download_and_unzip(
         asset["browser_download_url"], examples_path, verbose=True
     )
@@ -141,7 +146,7 @@ def setup_examples(
     model_paths = get_model_paths(examples_path)
     for mp in model_paths:
         script_path = mp / f"run{SCR_EXT}"
-        if not overwrite and script_path.is_file():
+        if not force and script_path.is_file():
             print(f"Script {script_path} already exists")
         else:
             print(f"Creating {script_path}")
@@ -165,7 +170,7 @@ def setup_examples(
 
     # add runall.sh/bat, which runs all examples
     script_path = examples_path / f"runall{SCR_EXT}"
-    if not overwrite and script_path.is_file():
+    if not force and script_path.is_file():
         print(f"Script {script_path} already exists")
     else:
         print(f"Creating {script_path}")
@@ -191,7 +196,7 @@ def setup_examples(
 
 
 def build_programs_meson(
-    build_path: PathLike, bin_path: PathLike, overwrite: bool = False
+    build_path: PathLike, bin_path: PathLike, force: bool = False
 ):
     build_path = Path(build_path).expanduser().absolute()
     bin_path = Path(bin_path).expanduser().absolute()
@@ -204,7 +209,7 @@ def build_programs_meson(
     lib_paths = [bin_path / f"libmf6{LIB_EXT}"]
 
     if (
-        not overwrite
+        not force
         and all(p.is_file() for p in exe_paths)
         and all(p.is_file() for p in lib_paths)
     ):
@@ -293,7 +298,7 @@ def build_distribution(
     build_path: PathLike,
     output_path: PathLike,
     full: bool = False,
-    overwrite: bool = False,
+    force: bool = False,
     models: Optional[List[str]] = None,
 ):
     print(f"Building {'full' if full else 'minimal'} distribution")
@@ -305,7 +310,7 @@ def build_distribution(
     build_programs_meson(
         build_path=build_path,
         bin_path=output_path / "bin",
-        overwrite=overwrite,
+        force=force,
     )
 
     # code.json metadata
@@ -319,7 +324,7 @@ def build_distribution(
     setup_examples(
         bin_path=output_path / "bin",
         examples_path=output_path / "examples",
-        overwrite=overwrite,
+        force=force,
         models=models,
     )
 
@@ -334,7 +339,7 @@ def build_distribution(
         bin_path=output_path / "bin",
         full=full,
         output_path=output_path / "doc",
-        overwrite=overwrite,
+        force=force,
     )
 
 
@@ -348,7 +353,7 @@ def test_build_distribution(tmp_path, full):
         build_path=tmp_path / "builddir",
         output_path=output_path,
         full=full,
-        overwrite=True,
+        force=True,
     )
 
     if full:
@@ -378,16 +383,20 @@ def test_build_distribution(tmp_path, full):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Create a Modflow 6 distribution directory for release",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Create a distribution folder. If no output path is provided
-            distribution files are written to the distribution/ folder.
+            Create a MODFLOW 6 distribution. If output path is provided
+            distribution files are written to the selected path, if not
+            they are written to the distribution/ project subdirectory.
             By default a minimal distribution containing only binaries,
             mf6io documentation, release notes and metadata (code.json)
             is created. To create a full distribution including sources
-            and examples, use the --full flag.
+            and examples, use the --full flag. Models to be included in
+            the examples and documentation can be selected with --model
+            (or -m), which may be used multiple times. Use --force (-f)
+            to overwrite preexisting distribution artifacts; by default
+            the script is lazy and will only create what it can't find.
             """
         ),
     )
@@ -436,6 +445,6 @@ if __name__ == "__main__":
         build_path=build_path,
         output_path=out_path,
         full=args.full,
-        overwrite=args.force,
+        force=args.force,
         models=models,
     )
