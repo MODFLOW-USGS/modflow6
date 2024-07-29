@@ -264,9 +264,11 @@ jobs:
       - name: Build MF6
         working-directory: modflow6
         run: |
-          setupargs="-Ddebug=${{ matrix.debug }}"
-          if [[ ("${{ matrix.debug }}" == "false") && ("${{ matrix.os }}" == "macos-14") ]]; then
-            setupargs="$setupargs -Doptimization=1"
+          setupargs=""
+          if [[ "${{ matrix.debug }}" == "true"]]; then
+            setupargs="-Ddebug=true -Doptimization=0"
+          elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            setupargs="-Doptimization=1"
           fi
           pixi run setup builddir $setupargs
           pixi run build builddir
