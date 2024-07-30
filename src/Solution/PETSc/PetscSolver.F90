@@ -14,6 +14,7 @@ module PetscSolverModule
   use ImsLinearSettingsModule
   use SimVariablesModule, only: iout, simulation_mode
   use SimModule, only: store_error, store_warning
+  use DevFeatureModule, only: dev_feature
 
   implicit none
   private
@@ -28,6 +29,7 @@ module PetscSolverModule
 
     type(ImsLinearSettingsType), pointer :: linear_settings => null() !< pointer to linear settings from IMS
     logical(LGP) :: use_ims_pc !< when true, use custom IMS-style preconditioning
+    logical(LGP) :: use_ims_cnvgopt !< when true, use IMS convergence check in PETSc solve
     KSPType :: ksp_type !< the KSP solver type (CG, BCGS, ...)
     PCType :: pc_type !< the (global) preconditioner type, should be parallel
     PCType :: sub_pc_type !< the block preconditioner type (for the subdomain)
@@ -99,7 +101,8 @@ contains
 
     call this%petsc_check_settings(linear_settings)
 
-    this%use_ims_pc = .true. ! default is true, override with .petscrc
+    this%use_ims_cnvgopt = .true. ! use IMS convergence check, override with .petscrc
+    this%use_ims_pc = .true. ! use IMS preconditioning, override with .petscrc
     allocate (this%pc_context)
     call this%pc_context%create(this%matrix, linear_settings)
 
@@ -187,10 +190,19 @@ contains
     ! local
     PetscErrorCode :: ierr
     logical(LGP) :: found
+    logical(LGP) :: use_petsc_pc, use_petsc_cnvg
 
+    use_petsc_pc = .false.
     call PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
-                             '-ims_pc', this%use_ims_pc, found, ierr)
+                             '-use_petsc_pc', use_petsc_pc, found, ierr)
     CHKERRQ(ierr)
+    this%use_ims_pc = .not. use_petsc_pc
+
+    use_petsc_cnvg = .false.
+    call PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-use_petsc_cnvg', use_petsc_cnvg, found, ierr)
+    CHKERRQ(ierr)
+    this%use_ims_cnvgopt = .not. use_petsc_cnvg
 
   end subroutine get_options_mf6
 
@@ -216,6 +228,8 @@ contains
     if (this%use_ims_pc) then
       call this%set_ims_pc()
     else
+      call dev_feature('PETSc preconditioning is under development, install the &
+            &nightly build or compile from source with IDEVELOPMODE = 1.')
       call this%set_petsc_pc()
     end if
 
@@ -251,9 +265,9 @@ contains
     CHKERRQ(ierr)
     call PCSetType(sub_pc, this%sub_pc_type, ierr)
     CHKERRQ(ierr)
-    call PCSetFromOptions(sub_pc, ierr)
-    CHKERRQ(ierr)
     call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
+    CHKERRQ(ierr)
+    call PCSetFromOptions(sub_pc, ierr)
     CHKERRQ(ierr)
 
   end subroutine set_petsc_pc
@@ -302,8 +316,14 @@ contains
 
     call this%petsc_ctx%create(this%mat_petsc, this%linear_settings, &
                                convergence_summary)
+    if (.not. this%use_ims_cnvgopt) then
+      ! use PETSc residual L2 norm for convergence
+      call dev_feature('Using PETSc convergence is under development, install &
+      &the nightly build or compile from source with IDEVELOPMODE = 1.')
+      this%petsc_ctx%icnvgopt = 100
+    end if
 
-    call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
+    call KSPSetConvergenceTest(this%ksp_petsc, petsc_cnvg_check, &
                                this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
     CHKERRQ(ierr)
 
@@ -405,8 +425,13 @@ contains
       "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
     write (iout, '(1x,a,a)') &
       "Residual closure criterion:   ", trim(adjustl(rclose_str))
-    write (iout, '(1x,a,i0)') &
-      "Residual convergence option:  ", this%linear_settings%icnvgopt
+    if (this%use_ims_cnvgopt) then
+      write (iout, '(1x,a,i0)') &
+        "Residual convergence option:  ", this%linear_settings%icnvgopt
+    else
+      write (iout, '(1x,a)') &
+        "Residual convergence option:  PETSc L2 norm"
+    end if
     write (iout, '(1x,a,a)') &
       "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
     write (iout, '(1x,a,i0)') &
