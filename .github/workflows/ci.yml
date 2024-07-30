@@ -199,7 +199,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, macos-14, windows-2022 ]
+        include:
+          - os: macos-12
+            debug: false
+          - os: macos-14
+            debug: false
+          - os: macos-14
+            debug: true
+          - os: ubuntu-22.04
+            debug: false
+          - os: ubuntu-22.04
+            debug: true
+          - os: windows-2022
+            debug: false
     defaults:
       run:
         shell: bash
@@ -253,7 +265,9 @@ jobs:
         working-directory: modflow6
         run: |
           setupargs=""
-          if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+          if [[ "${{ matrix.debug }}" == "true" ]]; then
+            setupargs="-Ddebug=true -Doptimization=0"
+          elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
             setupargs="-Doptimization=1"
           fi
           pixi run setup builddir $setupargs
