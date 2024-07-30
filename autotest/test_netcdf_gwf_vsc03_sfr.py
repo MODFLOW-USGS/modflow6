@@ -20,14 +20,11 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
-
 from framework import TestFramework
 from test_gwf_vsc03_sfr import cases
+
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -192,7 +189,6 @@ def check_output(idx, test, export, gridded_input):
     nper = getattr(tdis, "nper").data
     nlay = getattr(dis, "nlay").data
     pd = getattr(tdis, "perioddata").array
-    print(pd)
     timestep = 0
     for i in range(nper):
         for j in range(int(pd[i][1])):
@@ -208,15 +204,36 @@ def check_output(idx, test, export, gridded_input):
                     ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
                 timestep += 1
             elif export == "structured":
-                print("compare")
-                print(np.array(rec))
-                print(xds["head"][timestep, :].data)
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
                     xds["head"][timestep, :].fillna(1.00000000e30).data,
                 ), f"NetCDF-head comparison failure in timestep {timestep+1}"
                 timestep += 1
+
+    # compare recharge arrays
+    rch = getattr(gwf, "rcha-1")
+    irch = getattr(rch, "irch").array
+    recharge = getattr(rch, "recharge").array
+    aux = getattr(rch, "aux").array
+    if export == "ugrid":
+        rarr = xds["rcha-1_recharge_l1_p1"].data.flatten()
+        auxarr = xds["rcha-1_auxvar_l1_p1a1"].data.flatten()
+    elif export == "structured":
+        rarr = xds["rcha-1_recharge_p1"].data[0].flatten()
+        auxarr = xds["rcha-1_auxvar_p1a1"].data[0].flatten()
+    assert np.allclose(
+        np.array(irch[0]).flatten() + 1,
+        xds["rcha-1_irch_p1"].data,
+    ), "NetCDF-irch comparison failure"
+    assert np.allclose(
+        np.array(recharge[0]).flatten(),
+        rarr,
+    ), "NetCDF-recharge comparison failure"
+    assert np.allclose(
+        np.array(aux[0]).flatten(),
+        auxarr,
+    ), "NetCDF-auxvar comparison failure"
 
     vlist = [
         "dis_delr",

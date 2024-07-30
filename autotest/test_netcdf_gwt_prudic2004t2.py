@@ -11,11 +11,8 @@ import pytest
 from framework import TestFramework
 from test_gwt_prudic2004t2 import cases
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 
 def build_models(idx, test, export, gridded_input):

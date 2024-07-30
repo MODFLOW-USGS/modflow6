@@ -20,14 +20,11 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
-
 from framework import TestFramework
 from test_gwf_rch01 import cases
+
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -41,7 +38,6 @@ def build_models(idx, test, export, gridded_input):
     gwf.ic.export_array_netcdf = True
     gwf.npf.export_array_netcdf = True
     gwf.rch.export_array_netcdf = True
-    print(gwf.rch)
 
     name = "rch"
 
@@ -167,7 +163,6 @@ def check_output(idx, test, export, gridded_input):
     nper = getattr(tdis, "nper").data
     nlay = getattr(dis, "nlay").data
     pd = getattr(tdis, "perioddata").array
-    print(pd)
     timestep = 0
     for i in range(nper):
         for j in range(int(pd[i][1])):
@@ -186,6 +181,27 @@ def check_output(idx, test, export, gridded_input):
                     xds["head"][timestep, :].data,
                 ), f"NetCDF-head comparison failure in timestep {timestep+1}"
                 timestep += 1
+
+    # compare recharge arrays
+    rch = getattr(gwf, "rcha_0")
+    irch = getattr(rch, "irch").array
+    recharge = getattr(rch, "recharge").array
+    if export == "ugrid":
+        rl1 = xds["rcha_0_recharge_l1_p1"].data.flatten()
+        rl2 = xds["rcha_0_recharge_l2_p1"].data.flatten()
+    elif export == "structured":
+        rl1 = xds["rcha_0_recharge_p1"].data[0].flatten()
+        rl2 = xds["rcha_0_recharge_p1"].data[1].flatten()
+    if idx == 1:
+        assert np.allclose(
+            np.array(irch).flatten() + 1,
+            xds["rcha_0_irch_p1"].data,
+        ), "NetCDF-irch comparison failure"
+    rarr = np.where(~np.isnan(rl1), rl1, rl2)
+    assert np.allclose(
+        np.array(recharge).flatten(),
+        rarr,
+    ), "NetCDF-recharge comparison failure"
 
     vlist = [
         "dis_delr",

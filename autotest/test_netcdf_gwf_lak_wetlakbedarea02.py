@@ -20,14 +20,11 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
-
 from framework import TestFramework
 from test_gwf_lak_wetlakbedarea02 import cases
+
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -42,7 +39,6 @@ def build_models(idx, test, export, gridded_input):
     gwf.npf.export_array_netcdf = True
     gwf.rch.export_array_netcdf = True
     gwf.evt.export_array_netcdf = True
-    print(gwf.rch)
 
     name = cases[idx]
     gwfname = "gwf-" + name
@@ -187,7 +183,6 @@ def check_output(idx, test, export, gridded_input):
     nper = getattr(tdis, "nper").data
     nlay = getattr(dis, "nlay").data
     pd = getattr(tdis, "perioddata").array
-    print(pd)
     timestep = 0
     for i in range(nper):
         for j in range(int(pd[i][1])):
@@ -203,9 +198,6 @@ def check_output(idx, test, export, gridded_input):
                     ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
                 timestep += 1
             elif export == "structured":
-                print("compare")
-                print(np.array(rec))
-                print(xds["head"][timestep, :].data)
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),

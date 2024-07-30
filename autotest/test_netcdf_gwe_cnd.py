@@ -20,14 +20,11 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
-
 from framework import TestFramework
 from test_gwe_cnd import cases
+
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -162,7 +159,6 @@ def check_output(idx, test, export, gridded_input):
     nper = getattr(tdis, "nper").data
     nlay = getattr(dis, "nlay").data
     pd = getattr(tdis, "perioddata").array
-    print(pd)
     timestep = 0
     for i in range(nper):
         for j in range(int(pd[i][1])):

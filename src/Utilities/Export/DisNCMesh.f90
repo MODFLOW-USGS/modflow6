@@ -1065,7 +1065,7 @@ contains
     if (iper > 0) then
       fill_value = DNODATA
     else
-      fill_value = NF90_FILL_INT
+      fill_value = NF90_FILL_DOUBLE
     end if
     !
     allocate (var_id(dis%nlay))
