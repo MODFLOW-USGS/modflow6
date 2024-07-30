@@ -425,8 +425,13 @@ contains
       "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
     write (iout, '(1x,a,a)') &
       "Residual closure criterion:   ", trim(adjustl(rclose_str))
-    write (iout, '(1x,a,i0)') &
-      "Residual convergence option:  ", this%linear_settings%icnvgopt
+    if (this%use_ims_cnvgopt) then
+      write (iout, '(1x,a,i0)') &
+        "Residual convergence option:  ", this%linear_settings%icnvgopt
+    else
+      write (iout, '(1x,a)') &
+        "Residual convergence option:  PETSc L2 norm"
+    end if
     write (iout, '(1x,a,a)') &
       "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
     write (iout, '(1x,a,i0)') &
