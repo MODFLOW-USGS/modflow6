@@ -82,7 +82,7 @@ def build_models(idx, test):
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(
         sim,
-        ats_outer_maximum_fraction=0.,
+        ats_outer_maximum_fraction=0.0,
         print_option="SUMMARY",
         outer_dvclose=hclose,
         outer_maximum=nouter,
@@ -168,7 +168,7 @@ def build_models(idx, test):
     # create iterative model solution and register the gwt model with it
     imsgwt = flopy.mf6.ModflowIms(
         sim,
-        ats_outer_maximum_fraction=0.,
+        ats_outer_maximum_fraction=0.0,
         print_option="SUMMARY",
         outer_dvclose=hclose,
         outer_maximum=nouter,
