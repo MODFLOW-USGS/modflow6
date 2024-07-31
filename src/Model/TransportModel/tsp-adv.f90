@@ -191,7 +191,7 @@ contains
     end do
     if (nrmax > 0) then
       call this%dis%noder_to_string(nrmax, cellstr)
-      write (msg, *) adjustl(trim(this%memoryPath))//trim(cellstr)
+      write (msg, *) adjustl(trim(this%memoryPath))//'-'//trim(cellstr)
     end if
   end subroutine adv_dt
 
@@ -514,6 +514,7 @@ contains
           end select
         case ('ATS_PERCEL')
           this%ats_percel = this%parser%GetDouble()
+          if (this%ats_percel == DZERO) this%ats_percel = DNODATA
           write (this%iout, '(4x,a,1pg15.6)') &
             'User-specified fractional cell distance for adaptive time &
             &steps: ', this%ats_percel
