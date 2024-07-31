@@ -2045,6 +2045,8 @@ contains
         end if
         !
       end do
+      write (this%iout, '(1x,3a)') &
+        'END OF ', trim(adjustl(this%text)), ' PACKAGEDATA'
     else
       call store_error('Required packagedata block not found.')
     end if
