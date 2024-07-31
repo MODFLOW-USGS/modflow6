@@ -34,7 +34,7 @@
 		\item Add a warning if saving convergence data for the CSUB package when delay beds are not included in a simulation. Also modified the convergence output data so that it is clear that DVMAX and DSTORAGEMAX data and locations are not calculated in this case (by writing `-\,-' to the output file). 
 		\item When using SFT in a model where some of the stream reaches are not connected to an active GWF cell (the cellid parameter is set equal to either 0 or NONE) memory access violations were occurring.  The program was fixed by setting the correct number of reaches connected to GWF cells.  The program was tested using a new example with a DISU grid type and multiple GWF cells deactivated (idomain equals 0) that host SFR reaches.
 		\item Support for temperature observations was missing in the Observation (OBS) utility for a GWE model and has been added.
-		\item UZF was not writing a message to the GWF listing file when it had finished reading the PACKAGEDATA block.  An appropriate message is not written to the GWF listing file.
+		\item UZF was not writing a message to the GWF listing file when it had finished reading the PACKAGEDATA block.  An appropriate message is now written to the GWF listing file.
 
 	%	\item xxx
 	\end{itemize}
