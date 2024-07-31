@@ -47,7 +47,7 @@ module ExplicitSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_calculate_delt
+    procedure :: sln_dt
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -147,9 +147,9 @@ contains
 
   !> @ brief Calculate time step length
   !<
-  subroutine sln_calculate_delt(this)
+  subroutine sln_dt(this)
     class(ExplicitSolutionType) :: this !< ExplicitSolutionType instance
-  end subroutine sln_calculate_delt
+  end subroutine sln_dt
 
   !> @ brief Advance the solution
   !<

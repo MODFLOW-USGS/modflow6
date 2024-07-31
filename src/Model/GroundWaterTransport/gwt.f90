@@ -47,7 +47,7 @@ module GwtModule
     procedure :: model_mc => gwt_mc
     procedure :: model_ar => gwt_ar
     procedure :: model_rp => gwt_rp
-    procedure :: model_calculate_delt => gwt_dt
+    procedure :: model_dt => gwt_dt
     procedure :: model_ad => gwt_ad
     procedure :: model_cf => gwt_cf
     procedure :: model_fc => gwt_fc
