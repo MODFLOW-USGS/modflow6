@@ -364,7 +364,6 @@ contains
   !!     and maps, from the virtual data containers, and cache
   !<
   subroutine compose_messages(this, unit, stage, body_snd_t, body_rcv_t)
-    use SimModule, only: ustop
     class(MpiRouterType) :: this
     integer(I4B) :: unit
     integer(I4B) :: stage
