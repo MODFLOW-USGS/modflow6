@@ -2650,7 +2650,7 @@ contains
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
-    call mem_allocate(this%ntrail_pvar, 'NTRAIL', this%memoryPath)
+    call mem_allocate(this%ntrail_pvar, 'NTRAIL_PVAR', this%memoryPath)
     call mem_allocate(this%nsets, 'NSETS', this%memoryPath)
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%istocb, 'ISTOCB', this%memoryPath)
