@@ -23,6 +23,7 @@ module NCModelExportModule
   public :: NCExportAnnotation
   public :: ExportPackageType
   public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_UGRID
+  public :: export_longname
 
   !> @brief netcdf export types enumerator
   !<
@@ -98,11 +99,11 @@ module NCModelExportModule
   !<
   type, abstract, extends(NCModelExportType) :: NCBaseModelExportType
   contains
-    procedure :: step_rp
+    procedure :: export_input
     procedure(model_define), deferred :: df
     procedure(model_step), deferred :: step
-    procedure(model_export_period), deferred :: export_period
-    procedure(model_export_period_ilayer), deferred :: export_period_ilayer
+    procedure(package_export), deferred :: package_step
+    procedure(package_export_ilayer), deferred :: package_step_ilayer
   end type NCBaseModelExportType
 
   !> @brief abstract interfaces for model netcdf export type
@@ -116,13 +117,13 @@ module NCModelExportModule
       import NCBaseModelExportType
       class(NCBaseModelExportType), intent(inout) :: this
     end subroutine
-    subroutine model_export_period(this, export_pkg)
+    subroutine package_export(this, export_pkg)
       import NCBaseModelExportType, ExportPackageType
       class(NCBaseModelExportType), intent(inout) :: this
       class(ExportPackageType), intent(in) :: export_pkg
     end subroutine
-    subroutine model_export_period_ilayer(this, export_pkg, ilayer_varname, &
-                                          ilayer)
+    subroutine package_export_ilayer(this, export_pkg, ilayer_varname, &
+                                     ilayer)
       import NCBaseModelExportType, ExportPackageType, I4B
       class(NCBaseModelExportType), intent(inout) :: this
       class(ExportPackageType), intent(in) :: export_pkg
@@ -133,6 +134,8 @@ module NCModelExportModule
 
 contains
 
+  !> @brief initialize dynamic package export object
+  !<
   subroutine epkg_init(this, mf6_input, mshape, param_names, &
                        nparam)
     use SimVariablesModule, only: idm_context
@@ -176,6 +179,8 @@ contains
     call mem_setptr(this%iper, 'IPER', mf6_input%mempath)
   end subroutine epkg_init
 
+  !> @brief destroy dynamic package export object
+  !<
   subroutine epkg_destroy(this)
     use InputDefinitionModule, only: InputParamDefinitionType
     ! -- dummy
@@ -371,6 +376,8 @@ contains
     this%totnstp = sum(nstp)
   end subroutine export_init
 
+  !> @brief retrieve dynamic export object from package list
+  !<
   function export_get(this, idx) result(res)
     use ListModule, only: ListType
     class(NCModelExportType), intent(inout) :: this
@@ -388,6 +395,8 @@ contains
     end if
   end function export_get
 
+  !> @brief build modflow6_input attribute string
+  !<
   function input_attribute(this, pkgname, idt) result(attr)
     use InputOutputModule, only: lowcase
     use MemoryHelperModule, only: memPathSeparator
@@ -405,9 +414,40 @@ contains
     end if
   end function input_attribute
 
-  !> @brief netcdf export rp_step
+  !> @brief build netcdf variable longname
   !<
-  subroutine step_rp(this)
+  function export_longname(longname, pkgname, tagname, layer, iper) result(lname)
+    use InputOutputModule, only: lowcase
+    character(len=*), intent(in) :: longname
+    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: tagname
+    integer(I4B), intent(in) :: layer
+    integer(I4B), optional, intent(in) :: iper
+    character(len=LINELENGTH) :: lname
+    character(len=LINELENGTH) :: pname, vname
+    !
+    pname = pkgname
+    vname = tagname
+    call lowcase(pname)
+    call lowcase(vname)
+    if (longname == '') then
+      lname = trim(pname)//' '//trim(vname)
+    else
+      lname = longname
+    end if
+    if (layer > 0) then
+      write (lname, '(a,i0)') trim(lname)//' layer=', layer
+    end if
+    if (present(iper)) then
+      if (iper > 0) then
+        write (lname, '(a,i0)') trim(lname)//' period=', iper
+      end if
+    end if
+  end function export_longname
+
+  !> @brief netcdf dynamic package period export
+  !<
+  subroutine export_input(this)
     use TdisModule, only: kper
     use ArrayHandlersModule, only: ifind
     class(NCBaseModelExportType), intent(inout) :: this
@@ -436,13 +476,13 @@ contains
       !
       ! -- layer index variable is required to be first defined in period block
       if (ilayer == 1) then
-        call this%export_period_ilayer(export_pkg, ilayer_varname, ilayer)
+        call this%package_step_ilayer(export_pkg, ilayer_varname, ilayer)
       else
-        call this%export_period(export_pkg)
+        call this%package_step(export_pkg)
       end if
       !
     end do
-  end subroutine step_rp
+  end subroutine export_input
 
   !> @brief destroy model netcdf export object
   !<

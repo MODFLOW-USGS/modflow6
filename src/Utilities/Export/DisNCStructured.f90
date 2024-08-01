@@ -15,7 +15,7 @@ module DisNCStructuredModule
   use MemoryManagerModule, only: mem_setptr
   use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
-  use NCModelExportModule, only: NCBaseModelExportType
+  use NCModelExportModule, only: NCBaseModelExportType, export_longname
   use DisModule, only: DisType
   use NetCDFCommonModule, only: nf_verify
   use netcdf
@@ -67,8 +67,8 @@ module DisNCStructuredModule
     procedure :: step
     procedure :: export_input_array
     procedure :: export_input_arrays
-    procedure :: export_period_ilayer
-    procedure :: export_period
+    procedure :: package_step_ilayer
+    procedure :: package_step
     procedure :: export_layer_3d
     procedure :: add_pkg_data
     procedure :: add_global_att
@@ -357,7 +357,9 @@ contains
     end do
   end subroutine export_input_arrays
 
-  subroutine export_period_ilayer(this, export_pkg, ilayer_varname, ilayer)
+  !> @brief netcdf export package dynamic input with ilayer index variable
+  !<
+  subroutine package_step_ilayer(this, export_pkg, ilayer_varname, ilayer)
     use ConstantsModule, only: DNODATA, DZERO
     use TdisModule, only: kper
     use NCModelExportModule, only: ExportPackageType
@@ -406,7 +408,7 @@ contains
       !
       ! -- set variable name and input attrs
       nc_varname = export_varname(export_pkg%mf6_input%subcomponent_name, idt, &
-                                  kper)
+                                  iper=kper)
       input_attr = this%input_attribute(export_pkg%mf6_input%subcomponent_name, &
                                         idt)
       !
@@ -444,11 +446,16 @@ contains
       end select
     end do
     !
+    ! -- synchronize file
+    call nf_verify(nf90_sync(this%ncid), this%nc_fname)
+    !
     ! -- return
     return
-  end subroutine export_period_ilayer
+  end subroutine package_step_ilayer
 
-  subroutine export_period(this, export_pkg)
+  !> @brief netcdf export package dynamic input
+  !<
+  subroutine package_step(this, export_pkg)
     use TdisModule, only: kper
     use NCModelExportModule, only: ExportPackageType
     use DefinitionSelectModule, only: get_param_definition_type
@@ -471,7 +478,7 @@ contains
       !
       ! -- set variable name and input attribute string
       nc_varname = export_varname(export_pkg%mf6_input%subcomponent_name, idt, &
-                                  kper)
+                                  iper=kper)
       input_attr = this%input_attribute(export_pkg%mf6_input%subcomponent_name, &
                                         idt)
       !
@@ -508,8 +515,13 @@ contains
         !
       end select
     end do
-  end subroutine export_period
+    !
+    ! -- synchronize file
+    call nf_verify(nf90_sync(this%ncid), this%nc_fname)
+  end subroutine package_step
 
+  !> @brief export layer variable as full grid
+  !<
   subroutine export_layer_3d(this, export_pkg, idt, ilayer_read, ialayer, &
                              dbl1d, nc_varname, input_attr, iaux)
     use ConstantsModule, only: DNODATA, DZERO
@@ -533,7 +545,7 @@ contains
     idxaux = 0
     if (present(iaux)) then
       nc_varname = export_varname(export_pkg%mf6_input%subcomponent_name, &
-                                  idt, kper, iaux)
+                                  idt, iper=kper, iaux=iaux)
       idxaux = iaux
     end if
 
@@ -927,6 +939,8 @@ contains
     deallocate (dbl2d)
   end subroutine add_grid_data
 
+  !> @brief define 2d variable chunking
+  !<
   subroutine ncvar_chunk2d(ncid, varid, chunk_x, chunk_y, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -940,6 +954,8 @@ contains
     end if
   end subroutine ncvar_chunk2d
 
+  !> @brief define 3d variable chunking
+  !<
   subroutine ncvar_chunk3d(ncid, varid, chunk_x, chunk_y, chunk_z, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -955,6 +971,8 @@ contains
     end if
   end subroutine ncvar_chunk3d
 
+  !> @brief define variable compression
+  !<
   subroutine ncvar_deflate(ncid, varid, deflate, shuffle, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -969,6 +987,8 @@ contains
     end if
   end subroutine ncvar_deflate
 
+  !> @brief put variable gridmap attributes
+  !<
   subroutine ncvar_gridmap(ncid, varid, gridmap_name, latlon, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -989,6 +1009,8 @@ contains
     end if
   end subroutine ncvar_gridmap
 
+  !> @brief put variable internal modflow6 attributes
+  !<
   subroutine ncvar_mf6attr(ncid, varid, iper, iaux, nc_tag, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -1040,6 +1062,7 @@ contains
     character(len=*), intent(in) :: nc_fname
     ! -- local
     integer(I4B) :: var_id, axis_sz
+    character(len=LINELENGTH) :: longname_l
     !
     if (shapestr == 'NROW' .or. &
         shapestr == 'NCOL' .or. &
@@ -1054,6 +1077,8 @@ contains
         axis_sz = dim_ids%ncpl
       end select
       !
+      longname_l = export_longname(longname, pkgname, tagname, layer=0, iper=iper)
+      !
       ! -- reenter define mode and create variable
       call nf_verify(nf90_redef(ncid), nc_fname)
       call nf_verify(nf90_def_var(ncid, nc_varname, NF90_INT, &
@@ -1067,7 +1092,7 @@ contains
       call nf_verify(nf90_put_att(ncid, var_id, '_FillValue', &
                                   (/NF90_FILL_INT/)), nc_fname)
       call nf_verify(nf90_put_att(ncid, var_id, 'long_name', &
-                                  longname), nc_fname)
+                                  longname_l), nc_fname)
       !
       ! -- add mf6 attr
       call ncvar_mf6attr(ncid, var_id, iper, 0, nc_tag, nc_fname)
@@ -1250,6 +1275,7 @@ contains
     ! -- local
     integer(I4B) :: var_id, axis_sz
     real(DP) :: fill_value
+    character(len=LINELENGTH) :: longname_l
     !
     if (shapestr == 'NROW' .or. &
         shapestr == 'NCOL' .or. &
@@ -1295,6 +1321,8 @@ contains
         fill_value = NF90_FILL_DOUBLE
       end if
       !
+      longname_l = export_longname(longname, pkgname, tagname, layer=0, iper=iper)
+      !
       ! -- reenter define mode and create variable
       call nf_verify(nf90_redef(ncid), nc_fname)
       call nf_verify(nf90_def_var(ncid, nc_varname, NF90_DOUBLE, &
@@ -1310,7 +1338,7 @@ contains
       call nf_verify(nf90_put_att(ncid, var_id, '_FillValue', &
                                   (/fill_value/)), nc_fname)
       call nf_verify(nf90_put_att(ncid, var_id, 'long_name', &
-                                  longname), nc_fname)
+                                  longname_l), nc_fname)
       !
       ! -- add grid mapping and mf6 attr
       call ncvar_gridmap(ncid, var_id, gridmap_name, latlon, nc_fname)
@@ -1411,12 +1439,15 @@ contains
     ! -- local
     integer(I4B) :: var_id
     real(DP) :: fill_value
+    character(len=LINELENGTH) :: longname_l
     !
     if (iper > 0) then
       fill_value = DNODATA
     else
       fill_value = NF90_FILL_DOUBLE
     end if
+    !
+    longname_l = export_longname(longname, pkgname, tagname, layer=0, iper=iper)
     !
     ! -- reenter define mode and create variable
     call nf_verify(nf90_redef(ncid), nc_fname)
@@ -1433,7 +1464,7 @@ contains
     call nf_verify(nf90_put_att(ncid, var_id, '_FillValue', &
                                 (/fill_value/)), nc_fname)
     call nf_verify(nf90_put_att(ncid, var_id, 'long_name', &
-                                longname), nc_fname)
+                                longname_l), nc_fname)
     !
     ! -- add grid mapping and mf6 attr
     call ncvar_gridmap(ncid, var_id, gridmap_name, latlon, nc_fname)
@@ -1446,6 +1477,8 @@ contains
                    nc_fname)
   end subroutine nc_export_dbl3d
 
+  !> @brief build netcdf variable name
+  !<
   function export_varname(pkgname, idt, iper, iaux) result(varname)
     use InputOutputModule, only: lowcase
     character(len=*), intent(in) :: pkgname

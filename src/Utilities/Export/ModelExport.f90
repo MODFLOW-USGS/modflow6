@@ -216,7 +216,7 @@ contains
     class(ExportModelType), intent(inout) :: this
     !
     if (associated(this%nc_export)) then
-      call this%nc_export%step_rp()
+      call this%nc_export%export_input()
     end if
   end subroutine post_prepare
 

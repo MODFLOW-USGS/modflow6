@@ -356,7 +356,7 @@ module GwfRchaInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE2D', & ! type
     'NAUX NCPL', & ! shape
-    'auxiliary variable iaux', & ! longname
+    'recharge auxiliary variable iaux', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

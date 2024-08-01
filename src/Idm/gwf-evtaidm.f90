@@ -394,7 +394,7 @@ module GwfEvtaInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE2D', & ! type
     'NAUX NCPL', & ! shape
-    'auxiliary variable iaux', & ! longname
+    'evapotranspiration auxiliary variable iaux', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -26,7 +26,7 @@ module MeshModelModule
   public :: ncvar_deflate
   public :: ncvar_gridmap
   public :: ncvar_mf6attr
-  public :: export_varname, export_longname
+  public :: export_varname
 
   !> @brief type for storing model export dimension ids
   !<
@@ -247,11 +247,6 @@ contains
         if (export_arrays > 0) then
           pkgtype = idm_subcomponent_type(this%modeltype, ptype)
           param_dfns => param_definitions(this%modeltype, pkgtype)
-          !if (idm_multi_package(this%modeltype, pkgtype)) then
-          !  call this%export_input_arrays(pname, mempath, param_dfns)
-          !else
-          !  call this%export_input_arrays(pkgtype, mempath, param_dfns)
-          !end if
           call this%export_input_arrays(ptype, pname, mempath, param_dfns)
         end if
       end if
@@ -498,6 +493,8 @@ contains
                                 'start_index', 1), this%nc_fname)
   end subroutine create_mesh
 
+  !> @brief define variable chunking
+  !<
   subroutine ncvar_chunk(ncid, varid, chunk_face, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -511,6 +508,8 @@ contains
     end if
   end subroutine ncvar_chunk
 
+  !> @brief define variable compression
+  !<
   subroutine ncvar_deflate(ncid, varid, deflate, shuffle, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -525,6 +524,8 @@ contains
     end if
   end subroutine ncvar_deflate
 
+  !> @brief put variable gridmap attributes
+  !<
   subroutine ncvar_gridmap(ncid, varid, gridmap_name, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -539,6 +540,8 @@ contains
     end if
   end subroutine ncvar_gridmap
 
+  !> @brief put variable internal attributes
+  !<
   subroutine ncvar_mf6attr(ncid, varid, layer, iper, iaux, nc_tag, nc_fname)
     integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: varid
@@ -568,6 +571,8 @@ contains
     end if
   end subroutine ncvar_mf6attr
 
+  !> @brief build netcdf variable name
+  !<
   function export_varname(varname, layer, iper, iaux) result(vname)
     use InputOutputModule, only: lowcase
     character(len=*), intent(in) :: varname
@@ -598,34 +603,5 @@ contains
       end if
     end if
   end function export_varname
-
-  function export_longname(longname, pkgname, tagname, layer, iper) result(lname)
-    use InputOutputModule, only: lowcase
-    character(len=*), intent(in) :: longname
-    character(len=*), intent(in) :: pkgname
-    character(len=*), intent(in) :: tagname
-    integer(I4B), intent(in) :: layer
-    integer(I4B), optional, intent(in) :: iper
-    character(len=LINELENGTH) :: lname
-    character(len=LINELENGTH) :: pname, vname
-    !
-    pname = pkgname
-    vname = tagname
-    !call lowcase(pname)
-    !call lowcase(vname)
-    if (longname == '') then
-      lname = trim(pname)//' '//trim(vname)
-    else
-      lname = longname
-    end if
-    if (layer > 0) then
-      write (lname, '(a,i0)') trim(lname)//' layer=', layer
-    end if
-    if (present(iper)) then
-      if (iper > 0) then
-        write (lname, '(a,i0)') trim(lname)//' period=', iper
-      end if
-    end if
-  end function export_longname
 
 end module MeshModelModule

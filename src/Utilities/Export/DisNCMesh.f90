@@ -17,7 +17,8 @@ module MeshDisModelModule
   use CharacterStringModule, only: CharacterStringType
   use MeshModelModule, only: Mesh2dModelType, MeshNCDimIdType, MeshNCVarIdType, &
                              ncvar_chunk, ncvar_deflate, ncvar_gridmap, &
-                             ncvar_mf6attr, export_varname, export_longname
+                             ncvar_mf6attr, export_varname
+  use NCModelExportModule, only: export_longname
   use DisModule, only: DisType
   use NetCDFCommonModule, only: nf_verify
   use netcdf
@@ -37,8 +38,8 @@ module MeshDisModelModule
     procedure :: df
     procedure :: step
     procedure :: export_input_array
-    procedure :: export_period_ilayer
-    procedure :: export_period
+    procedure :: package_step_ilayer
+    procedure :: package_step
     procedure :: export_layer_3d
     procedure :: define_dim
     procedure :: add_mesh_data
@@ -179,9 +180,9 @@ contains
     nullify (dbl2d)
   end subroutine step
 
-  !> @brief netcdf export period with ilayer index variable
+  !> @brief netcdf export package dynamic input with ilayer index variable
   !<
-  subroutine export_period_ilayer(this, export_pkg, ilayer_varname, ilayer)
+  subroutine package_step_ilayer(this, export_pkg, ilayer_varname, ilayer)
     use ConstantsModule, only: DNODATA, DZERO
     use TdisModule, only: kper
     use DefinitionSelectModule, only: get_param_definition_type
@@ -266,13 +267,16 @@ contains
       end select
     end do
     !
+    ! -- synchronize file
+    call nf_verify(nf90_sync(this%ncid), this%nc_fname)
+    !
     ! -- return
     return
-  end subroutine export_period_ilayer
+  end subroutine package_step_ilayer
 
-  !> @brief netcdf export period
+  !> @brief netcdf export package dynamic input
   !<
-  subroutine export_period(this, export_pkg)
+  subroutine package_step(this, export_pkg)
     use NCModelExportModule, only: ExportPackageType
     class(Mesh2dDisExportType), intent(inout) :: this
     class(ExportPackageType), pointer, intent(in) :: export_pkg
@@ -280,8 +284,13 @@ contains
              trim(this%modelname)//', package='// &
              trim(export_pkg%mf6_input%subcomponent_name)
     call store_error(errmsg, .true.)
-  end subroutine export_period
+    !
+    ! -- synchronize file
+    call nf_verify(nf90_sync(this%ncid), this%nc_fname)
+  end subroutine package_step
 
+  !> @brief export layer variable as full grid
+  !<
   subroutine export_layer_3d(this, export_pkg, idt, ilayer_read, ialayer, &
                              dbl1d, nc_varname, input_attr, iaux)
     use ConstantsModule, only: DNODATA, DZERO
