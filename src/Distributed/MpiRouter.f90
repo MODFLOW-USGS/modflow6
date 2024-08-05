@@ -402,7 +402,7 @@ contains
     allocate (hdr_rcv_t(this%receivers%size))
     allocate (hdr_snd_t(this%senders%size))
     allocate (headers(max_headers, this%receivers%size))
-    allocate (hdr_rcv_cnt(max_headers))
+    allocate (hdr_rcv_cnt(this%receivers%size))
 
     ! allocate map data
     allocate (map_snd_t(this%senders%size))

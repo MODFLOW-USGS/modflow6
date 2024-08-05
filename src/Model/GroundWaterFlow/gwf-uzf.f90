@@ -2045,6 +2045,8 @@ contains
         end if
         !
       end do
+      write (this%iout, '(1x,3a)') &
+        'END OF ', trim(adjustl(this%text)), ' PACKAGEDATA'
     else
       call store_error('Required packagedata block not found.')
     end if
@@ -2648,7 +2650,7 @@ contains
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
-    call mem_allocate(this%ntrail_pvar, 'NTRAIL', this%memoryPath)
+    call mem_allocate(this%ntrail_pvar, 'NTRAIL_PVAR', this%memoryPath)
     call mem_allocate(this%nsets, 'NSETS', this%memoryPath)
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%istocb, 'ISTOCB', this%memoryPath)
