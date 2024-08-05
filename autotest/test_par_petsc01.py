@@ -15,8 +15,10 @@ import numpy as np
 import pytest
 from framework import TestFramework
 
-cases = ["par_petsc01"]
-dis_shape = [(5, 5, 5)]
+cases = ["par_petsc01a", "par_petsc01b"]
+ksp_type = ["cg", "bcgs"]
+
+dis_shape = [5, 5, 5]
 
 # global convenience...
 name_left = "leftmodel"
@@ -38,9 +40,9 @@ def get_model(idx, dir):
         tdis_rc.append((1.0, 1, 1))
 
     # model spatial discretization
-    nlay = dis_shape[idx][0]
-    nrow = dis_shape[idx][1]
-    ncol = dis_shape[idx][2]
+    nlay = dis_shape[0]
+    nrow = dis_shape[1]
+    ncol = dis_shape[2]
 
     # cell spacing
     delr = 100.0
@@ -71,7 +73,9 @@ def get_model(idx, dir):
         sim_ws=dir,
     )
 
-    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
+    tdis = flopy.mf6.ModflowTdis(
+        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
+    )
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -88,7 +92,9 @@ def get_model(idx, dir):
 
     # submodel on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
+        [(ilay, irow, 0), h_left]
+        for irow in range(nrow)
+        for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
@@ -191,14 +197,18 @@ def get_model(idx, dir):
 
 def build_models(idx, test):
     sim = get_model(idx, test.workspace)
-    write_petscrc(test.workspace)
+    write_petscrc(idx, test.workspace)
     return sim, None
 
 
-def write_petscrc(exdir):
+def write_petscrc(idx, exdir):
     petsc_db_file = os.path.join(exdir, ".petscrc")
     with open(petsc_db_file, "w") as petsc_file:
-        petsc_file.write("-ksp_monitor\n")
+        petsc_file.write(f"-ksp_type {ksp_type[idx]}\n")
+        # avoid IMS preconditioning:
+        petsc_file.write("-use_petsc_pc\n")
+        petsc_file.write("-sub_pc_type ilu\n")
+        petsc_file.write("-sub_pc_factor_levels 2\n")
 
 
 def check_output(idx, test):
@@ -211,11 +221,16 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{name_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data().flatten()
-    np.testing.assert_array_almost_equal(heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0])
-    np.testing.assert_array_almost_equal(heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0])
+    np.testing.assert_array_almost_equal(
+        heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0]
+    )
+    np.testing.assert_array_almost_equal(
+        heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0]
+    )
 
 
 @pytest.mark.parallel
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
