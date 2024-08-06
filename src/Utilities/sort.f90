@@ -17,13 +17,10 @@ module SortModule
   end interface
 
 contains
+
+  !< @brief quick sort that also includes an index number
+  !<
   subroutine qsort_int1d(indx, v, reverse)
-! **************************************************************************
-! qsort -- quick sort that also includes an index number
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     integer(I4B), dimension(:), intent(inout) :: v
@@ -152,13 +149,9 @@ contains
     return
   end subroutine qsort_int1d
 
+  !< @brief quick sort that also includes an index number
+  !<
   subroutine qsort_dbl1d(indx, v, reverse)
-! **************************************************************************
-! qsort -- quick sort that also includes an index number
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     real(DP), dimension(:), intent(inout) :: v
@@ -397,13 +390,9 @@ contains
     return
   end subroutine unique_values_dbl1d
 
+  !< @brief heap selection
+  !<
   subroutine selectn(indx, v, reverse)
-! **************************************************************************
-! selectn -- heap selection
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     real(DP), dimension(:), intent(inout) :: v

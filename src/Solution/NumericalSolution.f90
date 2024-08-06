@@ -1301,7 +1301,6 @@ contains
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
     integer(I4B) :: kiter ! non-linear iteration counter
-! ------------------------------------------------------------------------------
 
     ! advance the models, exchanges, and solution
     call this%prepareSolve()
@@ -2117,7 +2116,6 @@ contains
     real(DP) :: dvmax !< maximum dependent variable change
     real(DP) :: rmax !< maximum residual
     class(NumericalModelType), pointer :: num_mod => null()
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     itot = istart
@@ -2229,7 +2227,6 @@ contains
     character(len=*), intent(in) :: filename !< filename to save solution data
     ! -- local variables
     integer(I4B) :: inunit
-! ------------------------------------------------------------------------------
     !
     select type (spm => this%system_matrix)
     class is (SparseMatrixType)
@@ -3025,7 +3022,6 @@ contains
     real(DP) :: es
     real(DP) :: aes
     real(DP) :: amom
-! ------------------------------------------------------------------------------
     !
     ! -- option for using simple dampening (as done by MODFLOW-2005 PCG)
     if (this%nonmeth == 1) then

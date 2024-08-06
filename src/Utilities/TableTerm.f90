@@ -38,13 +38,9 @@ module TableTermModule
 
 contains
 
+  !< @brief initialize the table term
+  !<
   subroutine initialize(this, tag, width, alignment)
-! ******************************************************************************
-! initialize -- initialize the table term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
@@ -60,7 +56,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: j
 
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
     call this%allocate_scalars()
@@ -141,77 +136,57 @@ contains
 
   end subroutine initialize
 
+  !< @brief get column width
+  !<
   function get_width(this)
-! ******************************************************************************
-! get_width -- get column width
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
     integer(I4B) :: get_width
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     get_width = this%width
     !
     ! -- return
     return
   end function get_width
 
+  !< @brief get column alignment
+  !<
   function get_alignment(this)
-! ******************************************************************************
-! get_width -- get column width
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
     integer(I4B) :: get_alignment
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     get_alignment = this%alignment
     !
     ! -- return
     return
   end function get_alignment
 
+  !< @brief get the number of lines in initial_lines
+  !<
   function get_header_lines(this)
-! ******************************************************************************
-! get_header_lines -- get the number of lines in initial_lines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
     integer(I4B) :: get_header_lines
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     get_header_lines = this%nheader_lines
     !
     ! -- return
     return
   end function get_header_lines
 
+  !< @brief allocate table term scalars
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate table term scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
     allocate (this%tag)
@@ -226,19 +201,14 @@ contains
     return
   end subroutine allocate_scalars
 
+  !< @brief deallocate table terms
+  !<
   subroutine da(this)
-! ******************************************************************************
-! da -- deallocate table terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
     ! -- local
     !integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate scalars
     deallocate (this%tag)
@@ -250,13 +220,9 @@ contains
     ! -- return
   end subroutine da
 
+  !< @brief set final header lines for table term
+  !<
   subroutine set_header(this, nlines)
-! ******************************************************************************
-! set_header -- set final header lines for table term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
@@ -267,7 +233,6 @@ contains
     integer(I4B) :: i0
     integer(I4B) :: i
     integer(I4B) :: j
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     string = ' '
@@ -298,13 +263,9 @@ contains
     ! -- return
   end subroutine set_header
 
+  !< @brief get header entry for table term iline
+  !<
   subroutine get_header(this, iline, cval)
-! ******************************************************************************
-! get_header -- get header entry for table term iline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
@@ -312,7 +273,6 @@ contains
     character(len=*), intent(inout) :: cval
     ! -- return variable
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set return value
     cval = this%header_lines(iline) (1:this%width)

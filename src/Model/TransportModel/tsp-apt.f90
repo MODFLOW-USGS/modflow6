@@ -2895,7 +2895,6 @@ contains
     real(DP) :: v
     type(ObserveType), pointer :: obsrv => null()
     logical :: found
-! ------------------------------------------------------------------------------
     !
     ! -- Write simulated values for all Advanced Package observations
     if (this%obs%npakobs > 0) then

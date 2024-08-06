@@ -5686,7 +5686,7 @@ contains
     real(DP) :: satderv
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+
     if (this%stoiconv(node) /= 0) then
       top = this%dis%top(node)
       bot = this%dis%bot(node)
@@ -6529,7 +6529,7 @@ contains
     real(DP) :: dzhalf
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+
     if (this%stoiconv(node) /= 0) then
       dzhalf = DHALF * this%dbdzini(n, idelay)
       top = this%dbz(n, idelay) + dzhalf

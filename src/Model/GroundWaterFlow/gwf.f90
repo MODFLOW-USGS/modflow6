@@ -257,6 +257,7 @@ contains
   end subroutine gwf_df
 
   !> @brief Add the internal connections of this model to the sparse matrix
+  !<
   subroutine gwf_ac(this, sparse)
     ! -- modules
     use SparseModule, only: sparsematrix
@@ -462,6 +463,7 @@ contains
   end subroutine gwf_ad
 
   !> @brief GroundWater Flow Model calculate coefficients
+  !<
   subroutine gwf_cf(this, kiter)
     ! -- dummy
     class(GwfModelType) :: this
@@ -484,6 +486,7 @@ contains
   end subroutine gwf_cf
 
   !> @brief GroundWater Flow Model fill coefficients
+  !<
   subroutine gwf_fc(this, kiter, matrix_sln, inwtflag)
     ! -- dummy
     class(GwfModelType) :: this
@@ -866,6 +869,7 @@ contains
   end subroutine gwf_bd
 
   !> @brief GroundWater Flow Model Output
+  !<
   subroutine gwf_ot(this)
     ! -- modules
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
@@ -924,6 +928,8 @@ contains
     return
   end subroutine gwf_ot
 
+  !> @brief GroundWater Flow Model output observations
+  !<
   subroutine gwf_ot_obs(this)
     class(GwfModelType) :: this
     class(BndType), pointer :: packobj
@@ -948,6 +954,8 @@ contains
 
   end subroutine gwf_ot_obs
 
+  !> @brief Groundwater Flow Model output flows
+  !<
   subroutine gwf_ot_flow(this, icbcfl, ibudfl, icbcun)
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -997,6 +1005,8 @@ contains
 
   end subroutine gwf_ot_flow
 
+  !> @brief Groundwater Flow Model output dependent variable
+  !<
   subroutine gwf_ot_dv(this, idvsave, idvprint, ipflag)
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: idvsave
@@ -1031,6 +1041,8 @@ contains
     return
   end subroutine gwf_ot_dv
 
+  !> @brief Groundwater Flow Model output budget summary
+  !<
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
     use TdisModule, only: kstp, kper, totim, delt
     class(GwfModelType) :: this
@@ -1039,7 +1051,6 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 
-    !
     ! -- Package budget summary
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1064,6 +1075,7 @@ contains
   end subroutine gwf_ot_bdsummary
 
   !> @brief Final processing
+  !<
   subroutine gwf_fp(this)
     ! -- modules
     ! -- dummy
@@ -1079,6 +1091,7 @@ contains
   end subroutine gwf_fp
 
   !> @brief Deallocate
+  !<
   subroutine gwf_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
@@ -1159,10 +1172,7 @@ contains
   !!
   !! This subroutine adds a budget entry to the flow budget.  It was added as
   !! a method for the gwf model object so that the exchange object could add its
-  !! contributions.
-  !!
-  !! (1) adds the entry to the budget object
-  !<
+  !< contributions.
   subroutine gwf_bdentry(this, budterm, budtxt, rowlabel)
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
@@ -1214,6 +1224,7 @@ contains
   end function gwf_get_iasym
 
   !> @brief Allocate memory for non-allocatable members
+  !<
   subroutine allocate_scalars(this, modelname)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
@@ -1349,6 +1360,7 @@ contains
   end subroutine package_create
 
   !> @brief Check to make sure required input files have been specified
+  !<
   subroutine ftype_check(this, indis)
     ! -- modules
     use ConstantsModule, only: LINELENGTH

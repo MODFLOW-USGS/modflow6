@@ -110,7 +110,6 @@ module TrackModule
   ! don't apply to PRT; for instance, MODPATH 7 distinguishes forwards
   ! and backwards tracking, but status value 4 is not used by PRT.
   !
-  ! --------------------------------------------------
   !   * is this necessary?
   !   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
   !   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone

@@ -165,7 +165,6 @@ contains
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
-! ------------------------------------------------------------------------------
     !
     ! -- Store ss and sy values from end of last stress period if needed
     if (this%integratechanges /= 0) then

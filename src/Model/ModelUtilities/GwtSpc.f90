@@ -560,8 +560,6 @@ contains
     ! -- data
     data aname(1)/'           CONCENTRATION'/
     !
-! ------------------------------------------------------------------------------
-    !
     ! -- Initialize
     jauxcol = 0
     ivarsread = 0

@@ -372,7 +372,6 @@ contains
     ! -- dummy
     class(TspAdvType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -470,7 +469,7 @@ contains
     real(DP), intent(in) :: qnm
     ! -- local
     real(DP) :: lnm, lmn
-! ------------------------------------------------------------------------------
+
     select case (iadvwt)
     case (1)
       ! -- calculate weight based on distances between nodes and the shared
