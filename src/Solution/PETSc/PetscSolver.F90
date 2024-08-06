@@ -12,7 +12,7 @@ module PetscSolverModule
   use PetscImsPreconditionerModule
   use ConvergenceSummaryModule
   use ImsLinearSettingsModule
-  use SimVariablesModule, only: iout, simulation_mode
+  use SimVariablesModule, only: iout, simulation_mode, nr_procs, proc_id
   use SimModule, only: store_error, store_warning
   use DevFeatureModule, only: dev_feature
 
@@ -31,8 +31,6 @@ module PetscSolverModule
     logical(LGP) :: use_ims_pc !< when true, use custom IMS-style preconditioning
     logical(LGP) :: use_ims_cnvgopt !< when true, use IMS convergence check in PETSc solve
     KSPType :: ksp_type !< the KSP solver type (CG, BCGS, ...)
-    PCType :: pc_type !< the (global) preconditioner type, should be parallel
-    PCType :: sub_pc_type !< the block preconditioner type (for the subdomain)
     class(PetscCnvgCtxType), pointer :: petsc_ctx => null() !< context for the PETSc custom convergence check
     type(PcShellCtxType), pointer :: pc_context => null() !< context for the custom (IMS) precondioner
     type(ConvergenceSummaryType), pointer :: convergence_summary => null() !< data structure wrapping the convergence data
@@ -49,7 +47,6 @@ module PetscSolverModule
     procedure, private :: get_options_mf6
     procedure, private :: create_ksp
     procedure, private :: create_convergence_check
-    procedure, private :: set_petsc_pc
     procedure, private :: set_ims_pc
     procedure, private :: print_vec
     procedure, private :: print_petsc_version
@@ -111,9 +108,6 @@ contains
     else
       this%ksp_type = KSPBCGS
     end if
-
-    this%pc_type = PCBJACOBI
-    this%sub_pc_type = PCILU
 
     ! get MODFLOW options from PETSc database file
     call this%get_options_mf6()
@@ -212,6 +206,7 @@ contains
     class(PetscSolverType) :: this !< This solver instance
     ! local
     PetscErrorCode :: ierr
+    PC :: pc
 
     call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)
     CHKERRQ(ierr)
@@ -230,7 +225,12 @@ contains
     else
       call dev_feature('PETSc preconditioning is under development, install the &
             &nightly build or compile from source with IDEVELOPMODE = 1.')
-      call this%set_petsc_pc()
+      ! The PC options will be set from the .petscrc
+      ! file in the call to KSPSetFromOptions below
+      call KSPGetPC(this%ksp_petsc, pc, ierr)
+      CHKERRQ(ierr)
+      call PCSetFromOptions(pc, ierr)
+      CHKERRQ(ierr)
     end if
 
     call KSPSetErrorIfNotConverged(this%ksp_petsc, .false., ierr)
@@ -241,36 +241,10 @@ contains
     call KSPSetFromOptions(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 
+    call KSPSetup(this%ksp_petsc, ierr)
+    CHKERRQ(ierr)
+
   end subroutine create_ksp
-
-  !> @brief Set up a standard PETSc preconditioner from
-  !< the configured settings
-  subroutine set_petsc_pc(this)
-    class(PetscSolverType) :: this !< This solver instance
-    ! local
-    PC :: pc, sub_pc
-    KSP, dimension(1) :: sub_ksp
-    PetscInt :: n_local, n_first
-    PetscErrorCode :: ierr
-
-    call KSPGetPC(this%ksp_petsc, pc, ierr)
-    CHKERRQ(ierr)
-    call PCSetType(pc, this%pc_type, ierr)
-    CHKERRQ(ierr)
-    call PCSetUp(pc, ierr)
-    CHKERRQ(ierr)
-    call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
-    CHKERRQ(ierr)
-    call KSPGetPC(sub_ksp(1), sub_pc, ierr)
-    CHKERRQ(ierr)
-    call PCSetType(sub_pc, this%sub_pc_type, ierr)
-    CHKERRQ(ierr)
-    call PCFactorSetLevels(sub_pc, this%linear_settings%level, ierr)
-    CHKERRQ(ierr)
-    call PCSetFromOptions(sub_pc, ierr)
-    CHKERRQ(ierr)
-
-  end subroutine set_petsc_pc
 
   !> @brief Set up a custom preconditioner following the ones
   !< we have in IMS, i.e. Modified ILU(T)
@@ -282,11 +256,9 @@ contains
     PetscInt :: n_local, n_first
     PetscErrorCode :: ierr
 
-    this%sub_pc_type = PCSHELL
-
     call KSPGetPC(this%ksp_petsc, pc, ierr)
     CHKERRQ(ierr)
-    call PCSetType(pc, this%pc_type, ierr)
+    call PCSetType(pc, PCBJACOBI, ierr)
     CHKERRQ(ierr)
     call PCSetUp(pc, ierr)
     CHKERRQ(ierr)
@@ -294,7 +266,7 @@ contains
     CHKERRQ(ierr)
     call KSPGetPC(sub_ksp(1), sub_pc, ierr)
     CHKERRQ(ierr)
-    call PCSetType(sub_pc, this%sub_pc_type, ierr)
+    call PCSetType(sub_pc, PCSHELL, ierr)
     CHKERRQ(ierr)
     call PCShellSetApply(sub_pc, pcshell_apply, ierr)
     CHKERRQ(ierr)
@@ -394,50 +366,65 @@ contains
     ! local
     character(len=128) :: ksp_str, pc_str, subpc_str, &
                           dvclose_str, rclose_str, relax_str, dtol_str
+    character(len=128) :: ksp_logfile
     integer :: ierr
     PC :: pc
+    PetscViewer :: ksp_viewer
 
-    call KSPGetType(this%ksp_petsc, ksp_str, ierr)
-    CHKERRQ(ierr)
-    call KSPGetPC(this%ksp_petsc, pc, ierr)
-    CHKERRQ(ierr)
-    call PCGetType(pc, pc_str, ierr)
-    CHKERRQ(ierr)
     if (this%use_ims_pc) then
+      call KSPGetType(this%ksp_petsc, ksp_str, ierr)
+      CHKERRQ(ierr)
+      call KSPGetPC(this%ksp_petsc, pc, ierr)
+      CHKERRQ(ierr)
+      call PCGetType(pc, pc_str, ierr)
+      CHKERRQ(ierr)
       subpc_str = this%pc_context%ims_pc_type
-    else
-      subpc_str = this%sub_pc_type
-    end if
 
-    write (dvclose_str, '(e15.5)') this%linear_settings%dvclose
-    write (rclose_str, '(e15.5)') this%linear_settings%rclose
-    write (relax_str, '(e15.5)') this%linear_settings%relax
-    write (dtol_str, '(e15.5)') this%linear_settings%droptol
+      write (dvclose_str, '(e15.5)') this%linear_settings%dvclose
+      write (rclose_str, '(e15.5)') this%linear_settings%rclose
+      write (relax_str, '(e15.5)') this%linear_settings%relax
+      write (dtol_str, '(e15.5)') this%linear_settings%droptol
 
-    write (iout, '(/,7x,a)') "PETSc linear solver settings: "
-    write (iout, '(1x,a)') repeat('-', 66)
-    write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(ksp_str)
-    write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(pc_str)
-    write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", trim(subpc_str)
-    write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", &
-      this%linear_settings%iter1
-    write (iout, '(1x,a,a)') &
-      "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
-    write (iout, '(1x,a,a)') &
-      "Residual closure criterion:   ", trim(adjustl(rclose_str))
-    if (this%use_ims_cnvgopt) then
+      write (iout, '(/,1x,a)') "PETSc linear solver settings: "
+      write (iout, '(1x,a)') repeat('-', 66)
+      write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(ksp_str)
+      write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(pc_str)
+      write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", trim(subpc_str)
+      write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", &
+        this%linear_settings%iter1
+      write (iout, '(1x,a,a)') &
+        "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
+      write (iout, '(1x,a,a)') &
+        "Residual closure criterion:   ", trim(adjustl(rclose_str))
+      if (this%use_ims_cnvgopt) then
+        write (iout, '(1x,a,i0)') &
+          "Residual convergence option:  ", this%linear_settings%icnvgopt
+      else
+        write (iout, '(1x,a)') &
+          "Residual convergence option:  PETSc L2 norm"
+      end if
+      write (iout, '(1x,a,a)') &
+        "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
       write (iout, '(1x,a,i0)') &
-        "Residual convergence option:  ", this%linear_settings%icnvgopt
+        "Fill level in factorization:  ", this%linear_settings%level
+      write (iout, '(1x,a,a,/)') &
+        "Drop tolerance level fill:    ", trim(adjustl(dtol_str))
     else
-      write (iout, '(1x,a)') &
-        "Residual convergence option:  PETSc L2 norm"
+      ksp_logfile = "ksp_logview.txt"
+      write (iout, '(/,1x,a)') "PETSc linear solver settings from .petscrc: "
+      write (iout, '(1x,a)') repeat('-', 66)
+      write (iout, '(1x,2a)') "see ", trim(ksp_logfile)
+
+      ! collective write
+      call PetscViewerASCIIOpen(PETSC_COMM_WORLD, ksp_logfile, ksp_viewer, ierr); 
+      CHKERRQ(ierr)
+      call PetscViewerPushFormat(ksp_viewer, PETSC_VIEWER_ASCII_INFO_DETAIL, ierr)
+      CHKERRQ(ierr)
+      call KspView(this%ksp_petsc, ksp_viewer, ierr)
+      CHKERRQ(ierr)
+      call PetscViewerDestroy(ksp_viewer, ierr)
+      CHKERRQ(ierr)
     end if
-    write (iout, '(1x,a,a)') &
-      "Relaxation factor MILU(T):    ", trim(adjustl(relax_str))
-    write (iout, '(1x,a,i0)') &
-      "Fill level in factorization:  ", this%linear_settings%level
-    write (iout, '(1x,a,a,/)') &
-      "Drop tolerance level fill:    ", trim(adjustl(dtol_str))
 
   end subroutine petsc_print_summary
 
