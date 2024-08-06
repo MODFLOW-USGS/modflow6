@@ -562,7 +562,7 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B), dimension(:), pointer, intent(in) :: cellid
+    integer(I4B), dimension(:), intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
     integer(I4B) :: noder, node
     !
@@ -591,7 +591,7 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B), dimension(:), pointer, intent(in) :: cellid
+    integer(I4B), dimension(:), intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
     character(len=20) :: cellstr
     character(len=*), parameter :: fmtndim1 = &
