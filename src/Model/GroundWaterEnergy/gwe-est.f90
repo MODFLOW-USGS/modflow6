@@ -680,14 +680,30 @@ contains
           write (this%iout, fmtidcy2)
         case ('HEAT_CAPACITY_WATER')
           this%cpw = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg15.6)') &
-            'Heat capacity of the water has been set to: ', &
-            this%cpw
+          if (this%cpw <= 0.0) then
+            write (errmsg, '(a)') 'SPECIFIED VALUE FOR THE HEAT CAPACITY OF &
+              &WATER MUST BE GREATER THAN 0.0 OR A DIVIDE BY ZERO ERROR &
+              &WILL OCCUR.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          else
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'Heat capacity of the water has been set to: ', &
+              this%cpw
+          end if
         case ('DENSITY_WATER')
           this%rhow = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg15.6)') &
-            'Density of the water has been set to: ', &
-            this%rhow
+          if (this%rhow <= 0.0) then
+            write (errmsg, '(a)') 'SPECIFIED VALUE FOR THE DENSITY OF &
+              &WATER MUST BE GREATER THAN 0.0 OR A DIVIDE BY ZERO ERROR &
+              &WILL OCCUR.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          else
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'Density of the water has been set to: ', &
+              this%rhow
+          end if
         case ('LATENT_HEAT_VAPORIZATION')
           this%latheatvap = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg15.6)') &
