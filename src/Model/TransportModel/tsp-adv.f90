@@ -147,10 +147,10 @@ contains
     integer(I4B) :: nrmax
     character(len=LINELENGTH) :: cellstr
     real(DP) :: dt
-    real(DP) :: qmax
-    real(DP) :: qnmsumpos
-    real(DP) :: qnmsumneg
-    real(DP) :: qnm
+    real(DP) :: flowmax
+    real(DP) :: flowsumpos
+    real(DP) :: flowsumneg
+    real(DP) :: flownm
     real(DP) :: cell_volume
     dtmax = DNODATA
     nrmax = 0
@@ -166,23 +166,23 @@ contains
     ! and store the smallest one
     do n = 1, this%dis%nodes
       if (this%ibound(n) == 0) cycle
-      qnmsumneg = DZERO
-      qnmsumpos = DZERO
+      flowsumneg = DZERO
+      flowsumpos = DZERO
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
-        if (qnm < DZERO) then
-          qnmsumneg = qnmsumneg - qnm
+        flownm = this%fmi%gwfflowja(ipos)
+        if (flownm < DZERO) then
+          flowsumneg = flowsumneg - flownm
         else
-          qnmsumpos = qnmsumpos + qnm
+          flowsumpos = flowsumpos + flownm
         end if
       end do
-      qmax = max(qnmsumneg, qnmsumpos)
-      if (qmax < DPREC) cycle
+      flowmax = max(flowsumneg, flowsumpos)
+      if (flowmax < DPREC) cycle
       cell_volume = this%dis%get_cell_volume(n, this%dis%top(n))
-      dt = cell_volume * this%fmi%gwfsat(n) * thetam(n) / qmax
+      dt = cell_volume * this%fmi%gwfsat(n) * thetam(n) / flowmax
       dt = dt * this%ats_percel
       if (dt < dtmax) then
         dtmax = dt
