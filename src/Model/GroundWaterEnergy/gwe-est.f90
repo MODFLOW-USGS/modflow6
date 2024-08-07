@@ -681,9 +681,8 @@ contains
         case ('HEAT_CAPACITY_WATER')
           this%cpw = this%parser%GetDouble()
           if (this%cpw <= 0.0) then
-            write (errmsg, '(a)') 'SPECIFIED VALUE FOR THE HEAT CAPACITY OF &
-              &WATER MUST BE GREATER THAN 0.0 OR A DIVIDE BY ZERO ERROR &
-              &WILL OCCUR.'
+            write (errmsg, '(a)') 'Specified value for the heat capacity of &
+              &water must be greater than 0.0.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           else
@@ -694,9 +693,8 @@ contains
         case ('DENSITY_WATER')
           this%rhow = this%parser%GetDouble()
           if (this%rhow <= 0.0) then
-            write (errmsg, '(a)') 'SPECIFIED VALUE FOR THE DENSITY OF &
-              &WATER MUST BE GREATER THAN 0.0 OR A DIVIDE BY ZERO ERROR &
-              &WILL OCCUR.'
+            write (errmsg, '(a)') 'Specified value for the density of &
+              &water must be greater than 0.0.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           else
@@ -710,7 +708,7 @@ contains
             'Latent heat of vaporization of the water has been set to: ', &
             this%latheatvap
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN EST OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown EST option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -785,45 +783,45 @@ contains
                                         aname(4))
           lname(4) = .true.
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown griddata tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required griddata block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check for required porosity
     if (.not. lname(1)) then
-      write (errmsg, '(a)') 'POROSITY NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'Porosity not specified in griddata block.'
       call store_error(errmsg)
     end if
     if (.not. lname(3)) then
-      write (errmsg, '(a)') 'CPS NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'CPS not specified in griddata block.'
       call store_error(errmsg)
     end if
     if (.not. lname(4)) then
-      write (errmsg, '(a)') 'RHOS NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'RHOS not specified in griddata block.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(2)) then
-        write (errmsg, '(a)') 'FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
-          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'First or zero order decay is &
+          &active but the first rate coefficient is not specified.  Decay &
+          &must be specified in griddata block.'
         call store_error(errmsg)
       end if
     else
       if (lname(2)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First or zero orer decay &
+          &is not active but decay was specified.  Decay will &
+          &have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
