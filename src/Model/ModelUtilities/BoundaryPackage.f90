@@ -599,7 +599,6 @@ contains
     integer(I4B), optional, intent(in) :: iadv !< flag that indicates if this is an advance package
     ! -- local variables
     integer(I4B) :: imover
-    ! ------------------------------------------------------------------------------
     !
     ! -- check for iadv optional variable to indicate this is an advanced
     !    package and that mover calculations should not be done here
@@ -645,8 +644,6 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idiag
     real(DP) :: rrate
-    ! -- formats
-    ! ------------------------------------------------------------------------------
     !
     ! -- If no boundaries, skip flow calculations.
     if (this%nbound > 0) then

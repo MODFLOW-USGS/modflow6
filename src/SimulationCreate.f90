@@ -34,7 +34,6 @@ contains
   subroutine simulation_cr()
     ! -- modules
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Source simulation nam input context and create objects
     call source_simulation_nam()
@@ -51,10 +50,8 @@ contains
     use DistributedSimModule, only: DistributedSimType, get_dsim
     ! -- local
     type(DistributedSimType), pointer :: ds
-! ------------------------------------------------------------------------------
-    !
+
     ! -- variables
-    !
     ds => get_dsim()
     call ds%destroy()
     !
@@ -75,7 +72,6 @@ contains
   subroutine source_simulation_nam()
     ! -- dummy
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Process OPTIONS block in namfile
     call options_create()
@@ -577,7 +573,6 @@ contains
     character(len=:), allocatable :: parse_str
     character(len=LINELENGTH) :: errmsg
     logical :: terminate = .true.
-! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -806,7 +801,7 @@ contains
     integer :: i
     character(len=LINELENGTH) :: errmsg
     logical :: terminate = .true.
-    ! ------------------------------------------------------------------------------
+
     ilen = len_trim(mname)
     if (ilen > LENMODELNAME) then
       write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)

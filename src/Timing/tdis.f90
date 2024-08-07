@@ -283,66 +283,6 @@ contains
     return
   end subroutine tdis_set_delt
 
-!  subroutine tdis_set_delt_std()
-!! ******************************************************************************
-!! tdis_tu_std -- Standard non-adaptive time update
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- modules
-!    use ConstantsModule, only: DONE, DZERO
-!    ! -- formats
-!    character(len=*),parameter :: fmttsi = &
-!      "(28X,'INITIAL TIME STEP SIZE =',G15.7)"
-!! ------------------------------------------------------------------------------
-!    !
-!    ! -- Setup new stress period if kstp is 1
-!    if(kstp == 1) then
-!      !
-!      ! -- Calculate the first value of delt for this stress period
-!      delt = perlen(kper) / float(nstp(kper))
-!      if(tsmult(kper) /= DONE) &
-!          delt = perlen(kper) * (DONE-tsmult(kper)) / &
-!              (DONE - tsmult(kper) ** nstp(kper))
-!      !
-!      ! -- Print length of first time step
-!      write(iout, fmttsi) delt
-!      !
-!      ! -- Initialize pertim (Elapsed time within stress period)
-!      pertim = DZERO
-!      !
-!      ! -- Clear flag that indicates last time step of a stress period
-!      endofperiod = .false.
-!    endif
-!    !
-!    ! -- Calculate delt for kstp > 1
-!    if (kstp /= 1) then
-!      delt = tsmult(kper) * delt
-!    end if
-!    !
-!    ! -- Store totim and pertim, which are times at end of previous time step
-!    totimsav = totim
-!    pertimsav = pertim
-!    totimc = totim
-!    !
-!    ! -- Update totim and pertim
-!    totim = totimsav + delt
-!    pertim = pertimsav + delt
-!    !
-!    ! -- End of stress period and/or simulation?
-!    if (kstp == nstp(kper)) then
-!      endofperiod = .true.
-!    end if
-!    if (endofperiod .and. kper==nper) then
-!      endofsimulation = .true.
-!      totim = totalsimtime
-!    end if
-!    !
-!    ! -- Return
-!    return
-!  end subroutine tdis_set_delt_std
-
   !> @brief Print simulation time
   !<
   subroutine tdis_ot(iout)
