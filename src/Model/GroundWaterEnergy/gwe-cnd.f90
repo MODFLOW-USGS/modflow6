@@ -653,7 +653,7 @@ contains
     if (this%idisp > 0) then
       if (.not. (found%alh .and. found%ath1)) then
         write (errmsg, '(1x,a)') &
-          'if dispersivities are specified then ALH and ATH1 are required.'
+          'If dispersivities are specified then ALH and ATH1 are required.'
         call store_error(errmsg)
       end if
       ! -- If alv not specified then point it to alh
