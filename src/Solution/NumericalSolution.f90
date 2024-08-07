@@ -148,7 +148,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_calculate_delt
+    procedure :: sln_dt
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -1060,7 +1060,7 @@ contains
   !!  Calculate time step length.
   !!
   !<
-  subroutine sln_calculate_delt(this)
+  subroutine sln_dt(this)
     ! -- modules
     use TdisModule, only: kstp, kper, delt
     use AdaptiveTimeStepModule, only: ats_submit_delt
@@ -1097,7 +1097,7 @@ contains
     end if
     !
     return
-  end subroutine sln_calculate_delt
+  end subroutine sln_dt
 
   !> @ brief Advance solution
   !!

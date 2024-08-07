@@ -3,19 +3,19 @@
 	
 	\item \currentmodflowversion
 	
-	%\underline{NEW FUNCTIONALITY}
-	%\begin{itemize}
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item A new adaptive time stepping (ATS) capability was added to the Advection (ADV) Package of the Groundwater Transport (GWT) Model.  A new input option, called ATS\_PERCEL, specifies the fractional cell distance that a particle of water can travel within one time step.  When ATS\_PERCEL is specified by the user, and the ATS utility is activated in the TDIS Package, the ADV Package will calculate the largest time step that will meet this fractional cell distance constraint, and will submit this time step to the ATS utility.  This option may improve time stepping for solute transport models and for variable-density flow and transport models by allowing step lengths to be calculated as a function of the flow system rather than being specified as input by the user.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
-	%\underline{EXAMPLES}
-	%\begin{itemize}
+	\underline{EXAMPLES}
+	\begin{itemize}
+		\item A new Toth example was added to show how the classic groundwater problem consisting of local, intermediate, and regional flow paths can be simulated with MODFLOW.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
