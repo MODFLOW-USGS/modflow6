@@ -35,6 +35,7 @@
 		\item When using SFT in a model where some of the stream reaches are not connected to an active GWF cell (the cellid parameter is set equal to either 0 or NONE) memory access violations were occurring.  The program was fixed by setting the correct number of reaches connected to GWF cells.  The program was tested using a new example with a DISU grid type and multiple GWF cells deactivated (idomain equals 0) that host SFR reaches.
 		\item Support for temperature observations was missing in the Observation (OBS) utility for a GWE model and has been added.
 		\item UZF was not writing a message to the GWF listing file when it had finished reading the PACKAGEDATA block.  An appropriate message is now written to the GWF listing file.
+		\item Error checking was added to the EST package to ensure that the inputs HEAT\_CAPACITY\_WATER and DENSITY\_WATER are not 0.0.  Values of 0.0 for either parameter result in a divide by zero error.
 
 	%	\item xxx
 	\end{itemize}

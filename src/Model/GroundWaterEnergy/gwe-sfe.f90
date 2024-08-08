@@ -208,7 +208,7 @@ contains
     !
     ! -- Error if flow package not found
     if (.not. found) then
-      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+      write (errmsg, '(a)') 'Could not find flow package with name '&
                             &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
