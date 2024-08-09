@@ -48,7 +48,7 @@ contains
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
 
-    name = string_to_char_array('MODFLOW 6', 9)
+    name = 'MODFLOW 6'//c_null_char
     bmi_status = BMI_SUCCESS
 
   end function bmi_get_component_name
@@ -612,7 +612,7 @@ contains
       call mem_setptr(srcstr, var_name, mem_path)
       call get_mem_elem_size(var_name, mem_path, ilen)
       call c_f_pointer(c_arr_ptr, tgtstr, shape=[ilen + 1])
-      tgtstr(1:len(srcstr) + 1) = string_to_char_array(srcstr, len(srcstr))
+      tgtstr(1:len(srcstr) + 1) = trim(srcstr)//c_null_char
 
     else if (rank == 1) then
       ! an array of strings
@@ -634,7 +634,7 @@ contains
       allocate (character(ilen) :: tempstr)
       do i = 1, isize
         tempstr = srccharstr1d(i)
-        tgtstr1d(1:ilen + 1, i) = string_to_char_array(tempstr, ilen)
+        tgtstr1d(1:ilen + 1, i) = trim(tempstr)//c_null_char
       end do
       deallocate (tempstr)
     else
@@ -1172,7 +1172,7 @@ contains
 
     call get_mem_type(var_name, mem_path, mem_type)
     c_var_type(1:len(trim(mem_type)) + 1) = &
-      string_to_char_array(trim(mem_type), len(trim(mem_type)))
+      trim(mem_type)//c_null_char
 
     if (mem_type == 'UNKNOWN') then
       write (bmi_last_error, fmt_general_err) 'unknown memory type'

@@ -90,7 +90,7 @@ module mf6xmi
   use mf6bmiError
   use Mf6CoreModule
   use KindModule
-  use iso_c_binding, only: c_int, c_char, c_double
+  use iso_c_binding, only: c_int, c_char, c_double, c_null_char
   implicit none
 
   integer(I4B), pointer :: iterationCounter => null() !< the counter for the outer iteration loop, initialized in xmi_prepare_iteration()
@@ -357,7 +357,7 @@ contains
     else
       vstr = VERSIONNUMBER
     end if
-    mf_version = string_to_char_array(vstr, len_trim(vstr))
+    mf_version = trim(vstr)//c_null_char
     bmi_status = BMI_SUCCESS
 
   end function xmi_get_version
@@ -412,7 +412,7 @@ contains
 
     ! convert to c string:
     c_var_address(1:len(trim(mem_address)) + 1) = &
-      string_to_char_array(trim(mem_address), len(trim(mem_address)))
+      trim(mem_address)//c_null_char
 
     bmi_status = BMI_SUCCESS
 
