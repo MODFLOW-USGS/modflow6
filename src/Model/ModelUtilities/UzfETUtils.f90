@@ -16,15 +16,15 @@ contains
     ! -- Return
     real(DP) :: etfunc_lin
     ! -- dummy
-    real(DP), intent(in) :: efflndsrf  !< effective land surface elevation after subtracting off 0.5*surfdep
-    real(DP), intent(in) :: extdp  !< extinction depth
-    real(DP), intent(in) :: resid_pet  !< residual pET remaining after applying actual ET from unsaturated zone
-    real(DP), intent(inout) :: deriv_et  !< derivative of gw ET for Newton addition to equations in _fn()
-    real(DP), intent(inout) :: trhs  !< total uzf rhs contribution to GWF model
-    real(DP), intent(inout) :: thcof  !< total uzf hcof contribution to GWF model
-    real(DP), intent(in) :: hgwf  !< calculated groundwater head
-    real(DP), intent(in) :: celtop  !< elevation of the top of the cell
-    real(DP), intent(in) :: celbot  !< elevation of the bottom of the cell
+    real(DP), intent(in) :: efflndsrf !< effective land surface elevation after subtracting off 0.5*surfdep
+    real(DP), intent(in) :: extdp !< extinction depth
+    real(DP), intent(in) :: resid_pet !< residual pET remaining after applying actual ET from unsaturated zone
+    real(DP), intent(inout) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
+    real(DP), intent(inout) :: trhs !< total uzf rhs contribution to GWF model
+    real(DP), intent(inout) :: thcof !< total uzf hcof contribution to GWF model
+    real(DP), intent(in) :: hgwf !< calculated groundwater head
+    real(DP), intent(in) :: celtop !< elevation of the top of the cell
+    real(DP), intent(in) :: celbot !< elevation of the bottom of the cell
     ! -- local
     real(DP) :: etgw
     real(DP) :: range
@@ -73,9 +73,9 @@ contains
   !<
   pure function calc_lin_scaling_fac(hgwf, lndsrf, extdp) result(sclfac)
     ! -- dummy
-    real(DP), intent(in) :: hgwf  !< groundwater head
-    real(DP), intent(in) :: lndsrf  !< effective land surface (after applying surfdep to land surface)
-    real(DP), intent(in) :: extdp  !< extinction depth
+    real(DP), intent(in) :: hgwf !< groundwater head
+    real(DP), intent(in) :: lndsrf !< effective land surface (after applying surfdep to land surface)
+    real(DP), intent(in) :: extdp !< extinction depth
     ! -- return
     real(DP) :: sclfac
     !
