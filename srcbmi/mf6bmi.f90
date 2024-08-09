@@ -46,9 +46,8 @@ contains
     ! -- dummy variables
     character(kind=c_char), intent(out) :: name(BMI_LENCOMPONENTNAME)
     integer(kind=c_int) :: bmi_status !< BMI status code
-    ! -- local variables
 
-    name = 'MODFLOW 6'//c_null_char
+    name = string_to_char_array('MODFLOW 6')
     bmi_status = BMI_SUCCESS
 
   end function bmi_get_component_name

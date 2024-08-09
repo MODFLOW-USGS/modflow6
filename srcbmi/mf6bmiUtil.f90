@@ -143,6 +143,17 @@ contains
 
   end function char_array_to_string
 
+  !> @brief Convert Fortran string to C-style character string
+  !<
+  pure function string_to_char_array(string) result(c_array)
+    ! -- dummy variables
+    character(len=*), intent(in) :: string !< string to convert
+    character(kind=c_char, len=1) :: c_array(len(string) + 1) !< C-style character string
+
+    c_array = trim(string)//c_null_char
+
+  end function string_to_char_array
+
   !> @brief Extract the model name from a memory address string
   !<
   function extract_model_name(var_address, success) result(model_name)
