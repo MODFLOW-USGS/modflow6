@@ -611,7 +611,7 @@ contains
       call mem_setptr(srcstr, var_name, mem_path)
       call get_mem_elem_size(var_name, mem_path, ilen)
       call c_f_pointer(c_arr_ptr, tgtstr, shape=[ilen + 1])
-      tgtstr(1:len(srcstr) + 1) = trim(srcstr)//c_null_char
+      tgtstr(1:len(srcstr) + 1) = string_to_char_array(trim(srcstr))
 
     else if (rank == 1) then
       ! an array of strings
@@ -633,7 +633,7 @@ contains
       allocate (character(ilen) :: tempstr)
       do i = 1, isize
         tempstr = srccharstr1d(i)
-        tgtstr1d(1:ilen + 1, i) = trim(tempstr)//c_null_char
+        tgtstr1d(1:ilen + 1, i) = string_to_char_array(trim(tempstr))
       end do
       deallocate (tempstr)
     else
@@ -1171,7 +1171,7 @@ contains
 
     call get_mem_type(var_name, mem_path, mem_type)
     c_var_type(1:len(trim(mem_type)) + 1) = &
-      trim(mem_type)//c_null_char
+      string_to_char_array(trim(mem_type))
 
     if (mem_type == 'UNKNOWN') then
       write (bmi_last_error, fmt_general_err) 'unknown memory type'

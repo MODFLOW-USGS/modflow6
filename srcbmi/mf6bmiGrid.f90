@@ -8,7 +8,7 @@
 module mf6bmiGrid
   use mf6bmiUtil
   use mf6bmiError
-  use iso_c_binding, only: c_double, c_ptr, c_loc, c_null_char
+  use iso_c_binding, only: c_double, c_ptr, c_loc
   use ConstantsModule, only: LENMODELNAME, LENMEMPATH
   use KindModule, only: DP, I4B
   use MemoryManagerModule, only: mem_setptr
@@ -81,7 +81,7 @@ contains
     else
       return
     end if
-    grid_type = trim(grid_type_f)//c_null_char
+    grid_type = string_to_char_array(trim(grid_type_f))
     bmi_status = BMI_SUCCESS
   end function get_grid_type
 
