@@ -86,6 +86,7 @@ contains
   end function is_close
 
   !> @brief Modulo with offset for integer values.
+  !<
   pure function mod_offset_int(a, n, d) result(mo)
     ! -- dummy
     integer(I4B), intent(in) :: a !< dividend
@@ -104,6 +105,7 @@ contains
   end function mod_offset_int
 
   !> @brief Modulo with offset for double precision values.
+  !<
   pure function mod_offset_dbl(a, n, d) result(mo)
     ! -- dummy
     real(DP), intent(in) :: a !< dividend
@@ -127,7 +129,6 @@ contains
   !! given tolerance epsa using Chandrupatla's method. FORTRAN code based
   !! generally on pseudocode in Scherer, POJ (2013) "Computational Physics:
   !! Simulation of Classical and Quantum Systems," 2nd ed., Springer, New York.
-  !!
   !<
   function zero_ch(x0, x1, f, epsa) result(z)
     ! -- dummy
