@@ -1,4 +1,0 @@
-BEGIN GRIDDATA
-  STRT [LAYERED]
-    <strt(nodes)> -- READARRAY
-END GRIDDATA

@@ -122,8 +122,10 @@ contains
   !> @brief load an integrated model package from supported source
   !<
   recursive subroutine input_load(component_type, subcomponent_type, modelname, &
-                                  pkgname, pkgtype, filename, modelfname, iout)
+                                  pkgname, pkgtype, filename, modelfname, &
+                                  nc_vars, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
+    use NCFileVarsModule, only: NCFileVarsType
     use SourceLoadModule, only: create_input_loader
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
@@ -132,6 +134,7 @@ contains
     character(len=*), intent(in) :: filename
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
+    type(NCFileVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: iout
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
@@ -141,7 +144,7 @@ contains
     ! -- create model package loader
     static_loader => &
       create_input_loader(component_type, subcomponent_type, modelname, pkgname, &
-                          pkgtype, filename, modelfname)
+                          pkgtype, filename, modelfname, nc_vars)
     !
     ! -- load static input and set dynamic loader
     dynamic_loader => static_loader%load(iout)
@@ -151,7 +154,8 @@ contains
       ! -- set pointer to model dynamic packages list
       dynamic_pkgs => &
         dynamic_model_pkgs(static_loader%mf6_input%component_type, modelname, &
-                           static_loader%component_input_name, iout)
+                           static_loader%component_input_name, nc_vars%nc_fname, &
+                           nc_vars%ncid, iout)
       !
       ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
@@ -171,7 +175,7 @@ contains
                       static_loader%subpkg_list%subcomponent_types(n), &
                       static_loader%subpkg_list%pkgtypes(n), &
                       static_loader%subpkg_list%filenames(n), &
-                      modelfname, iout)
+                      modelfname, nc_vars, iout)
     end do
     !
     ! -- cleanup
@@ -186,11 +190,18 @@ contains
   !<
   subroutine load_model_pkgs(model_pkg_inputs, iout)
     use ModelPackageInputsModule, only: ModelPackageInputsType
-    use SourceLoadModule, only: open_source_file
+    use NCFileVarsModule, only: NCFileVarsType
+    use SourceLoadModule, only: open_source_file, netcdf_context
     use IdmDfnSelectorModule, only: idm_integrated
     type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
     integer(i4B), intent(in) :: iout
+    type(NCFileVarsType), pointer :: nc_vars
     integer(I4B) :: itype, ipkg
+    !
+    nc_vars => netcdf_context(model_pkg_inputs%modeltype, &
+                              model_pkg_inputs%component_type, &
+                              model_pkg_inputs%modelname, &
+                              model_pkg_inputs%modelfname, iout)
     !
     ! -- load package instances by type
     do itype = 1, size(model_pkg_inputs%pkglist)
@@ -209,7 +220,7 @@ contains
                           model_pkg_inputs%pkglist(itype)%pkgnames(ipkg), &
                           model_pkg_inputs%pkglist(itype)%pkgtype, &
                           model_pkg_inputs%pkglist(itype)%filenames(ipkg), &
-                          model_pkg_inputs%modelfname, iout)
+                          model_pkg_inputs%modelfname, nc_vars, iout)
         else
           !
           ! -- open input file for package parser
@@ -220,6 +231,11 @@ contains
         end if
       end do
     end do
+    !
+    ! -- cleanup
+    call nc_vars%destroy()
+    deallocate (nc_vars)
+    nullify (nc_vars)
     !
     ! -- return
     return
@@ -507,12 +523,14 @@ contains
 
   !> @brief retrieve list of model dynamic loaders
   !<
-  function dynamic_model_pkgs(modeltype, modelname, modelfname, iout) &
-    result(model_dynamic_input)
+  function dynamic_model_pkgs(modeltype, modelname, modelfname, nc_fname, &
+                              ncid, iout) result(model_dynamic_input)
     use InputLoadTypeModule, only: AddDynamicModelToList, GetDynamicModelFromList
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
+    integer(I4B), intent(in) :: ncid
     integer(I4B), intent(in) :: iout
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     class(ModelDynamicPkgsType), pointer :: temp
@@ -533,7 +551,8 @@ contains
     ! -- create if not found
     if (.not. associated(model_dynamic_input)) then
       allocate (model_dynamic_input)
-      call model_dynamic_input%init(modeltype, modelname, modelfname, iout)
+      call model_dynamic_input%init(modeltype, modelname, modelfname, &
+                                    nc_fname, ncid, iout)
       call AddDynamicModelToList(model_dynamic_pkgs, model_dynamic_input)
     end if
     !
@@ -545,12 +564,14 @@ contains
   !<
   subroutine dynamic_da(iout)
     use InputLoadTypeModule, only: GetDynamicModelFromList
+    use SourceLoadModule, only: nc_close
     integer(I4B), intent(in) :: iout
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     integer(I4B) :: n
     !
     do n = 1, model_dynamic_pkgs%Count()
       model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+      call nc_close(model_dynamic_input%ncid, model_dynamic_input%nc_fname)
       call model_dynamic_input%destroy()
       deallocate (model_dynamic_input)
       nullify (model_dynamic_input)

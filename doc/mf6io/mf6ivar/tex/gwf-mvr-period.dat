@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  [<mname1>] <pname1> <id1> [<mname2>] <pname2> <id2> <mvrtype> <value>
-  [<mname1>] <pname1> <id1> [<mname2>] <pname2> <id2> <mvrtype> <value>
-  ...
-END PERIOD

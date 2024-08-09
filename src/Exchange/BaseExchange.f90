@@ -22,7 +22,7 @@ module BaseExchangeModule
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
     procedure :: exg_rp
-    procedure :: exg_calculate_delt
+    procedure :: exg_dt
     procedure :: exg_ot
     procedure :: exg_fp
     procedure :: exg_da
@@ -64,7 +64,7 @@ contains
 
   !> @brief Calculate time step length
   !<
-  subroutine exg_calculate_delt(this)
+  subroutine exg_dt(this)
     ! -- dummy
     class(BaseExchangeType) :: this
     !
@@ -72,7 +72,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine exg_calculate_delt
+  end subroutine exg_dt
 
   !> @brief Run output routines
   !<

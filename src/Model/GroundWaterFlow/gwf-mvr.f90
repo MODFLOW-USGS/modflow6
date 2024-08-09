@@ -1180,13 +1180,9 @@ contains
     return
   end subroutine mvr_setup_budobj
 
+  !> @brief Fill budget object
+  !<
   subroutine fill_budobj(this)
-! ******************************************************************************
-! mvr_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwfMvrType) :: this

@@ -80,3 +80,10 @@ runs:
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: pixi run autotest --parallel -k "test_par"
+
+    - name: Test programs (serial)
+      shell: bash
+      working-directory: modflow6
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: pixi run autotest

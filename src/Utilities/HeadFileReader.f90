@@ -33,13 +33,9 @@ module HeadFileReaderModule
 
 contains
 
+  !< @brief initialize
+  !<
   subroutine initialize(this, iu, iout)
-! ******************************************************************************
-! initialize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(HeadFileReaderType) :: this
     integer(I4B), intent(in) :: iu
@@ -47,7 +43,6 @@ contains
     ! -- local
     integer(I4B) :: kstp_last, kper_last
     logical :: success
-! ------------------------------------------------------------------------------
     this%inunit = iu
     this%endoffile = .false.
     this%nlay = 0
@@ -77,13 +72,9 @@ contains
     return
   end subroutine initialize
 
+  !< @brief read record
+  !<
   subroutine read_record(this, success, iout_opt)
-! ******************************************************************************
-! read_record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: fseek_stream
     ! -- dummy
@@ -93,7 +84,6 @@ contains
     ! -- local
     integer(I4B) :: iostat, iout
     integer(I4B) :: ncol, nrow, ilay
-! ------------------------------------------------------------------------------
     !
     if (present(iout_opt)) then
       iout = iout_opt
@@ -141,15 +131,10 @@ contains
     return
   end subroutine read_record
 
+  !< @brief finalize
+  !<
   subroutine finalize(this)
-! ******************************************************************************
-! budgetdata_finalize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(HeadFileReaderType) :: this
-! ------------------------------------------------------------------------------
     close (this%inunit)
     if (allocated(this%head)) deallocate (this%head)
     !

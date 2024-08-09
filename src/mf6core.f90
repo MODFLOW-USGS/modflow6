@@ -552,25 +552,25 @@ contains
     ! -- time update for each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_calculate_delt()
+      call mp%model_dt()
     end do
     !
     ! -- time update for each exchange
     do ie = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ie)
-      call ep%exg_calculate_delt()
+      call ep%exg_dt()
     end do
     !
     ! -- time update for each connection
     do ic = 1, baseconnectionlist%Count()
       mc => get_smc_from_list(baseconnectionlist, ic)
-      call mc%exg_calculate_delt()
+      call mc%exg_dt()
     end do
     !
     ! -- time update for each solution
     do is = 1, basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_calculate_delt()
+      call sp%sln_dt()
     end do
     !
     ! -- set time step
@@ -735,10 +735,10 @@ contains
         sp => GetBaseSolutionFromList(basesolutionlist, is)
         call sp%sln_ot()
       end do
+      !
+      ! -- update exports
+      call export_post_step()
     end select
-    !
-    ! -- update exports
-    call export_post_step()
     !
     ! -- Check if we're done
     call converge_check(hasConverged)

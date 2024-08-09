@@ -599,7 +599,6 @@ contains
     integer(I4B), optional, intent(in) :: iadv !< flag that indicates if this is an advance package
     ! -- local variables
     integer(I4B) :: imover
-    ! ------------------------------------------------------------------------------
     !
     ! -- check for iadv optional variable to indicate this is an advanced
     !    package and that mover calculations should not be done here
@@ -645,8 +644,6 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idiag
     real(DP) :: rrate
-    ! -- formats
-    ! ------------------------------------------------------------------------------
     !
     ! -- If no boundaries, skip flow calculations.
     if (this%nbound > 0) then
@@ -1546,7 +1543,7 @@ contains
     !!
   !<
   subroutine bnd_read_initial_attr(this)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
     !
     ! -- return
@@ -1561,7 +1558,7 @@ contains
     !!
   !<
   subroutine bnd_options(this, option, found)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
     character(len=*), intent(inout) :: option !< option keyword string
     logical(LGP), intent(inout) :: found !< boolean indicating if the option was found
@@ -1580,8 +1577,9 @@ contains
     !!
   !<
   subroutine copy_boundname(this)
-    ! -- dummy variables
+    ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
+    ! -- local
     integer(I4B) :: i
     !
     ! copy from boundname to boundname_cst, which can be
@@ -1962,6 +1960,7 @@ contains
     integer(I4B) :: ibinun
     integer(I4B) :: nboundcount
     real(DP) :: rrate
+    real(DP), dimension(naux) :: auxrow
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     !
@@ -2051,8 +2050,11 @@ contains
           if (ibinun /= 0) then
             n2 = i
             if (present(imap)) n2 = imap(i)
+            if (naux > 0) then
+              auxrow(:) = auxvar(:, i)
+            end if
             call dis%record_mf6_list_entry(ibinun, node, n2, rrate, naux, &
-                                           auxvar(:, i), olconv2=.FALSE.)
+                                           auxrow, olconv2=.FALSE.)
           end if
         end if
         !

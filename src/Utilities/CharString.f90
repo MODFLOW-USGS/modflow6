@@ -42,7 +42,7 @@ module CharacterStringModule
 
 contains
 
-  subroutine assign_to_charstring(lhs, rhs)
+  recursive subroutine assign_to_charstring(lhs, rhs)
     class(CharacterStringType), intent(out) :: lhs
     character(len=*), intent(in) :: rhs
     logical :: allocate_charstring

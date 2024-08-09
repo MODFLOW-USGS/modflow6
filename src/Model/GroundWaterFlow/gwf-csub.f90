@@ -2421,7 +2421,7 @@ contains
       end if
       !
       ! -- output table
-      if (this%istrainib > 0 .or. this%istrainsk > 0) then
+      if (associated(this%outputtab)) then
         call this%outputtab%table_da()
         deallocate (this%outputtab)
         nullify (this%outputtab)
@@ -5686,7 +5686,7 @@ contains
     real(DP) :: satderv
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+
     if (this%stoiconv(node) /= 0) then
       top = this%dis%top(node)
       bot = this%dis%bot(node)
@@ -6529,7 +6529,7 @@ contains
     real(DP) :: dzhalf
     real(DP) :: top
     real(DP) :: bot
-! ------------------------------------------------------------------------------
+
     if (this%stoiconv(node) /= 0) then
       dzhalf = DHALF * this%dbdzini(n, idelay)
       top = this%dbz(n, idelay) + dzhalf

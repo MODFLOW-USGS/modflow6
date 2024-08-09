@@ -612,7 +612,6 @@ contains
     type(TableType), pointer :: inputtab => null()
     ! -- formats
     character(len=LINELENGTH) :: fmtlstbn
-! ------------------------------------------------------------------------------
     !
     ! -- Determine sizes
     ldim = this%ncolbnd

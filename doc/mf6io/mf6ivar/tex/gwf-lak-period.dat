@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  <number> <laksetting>
-  <number> <laksetting>
-  ...
-END PERIOD

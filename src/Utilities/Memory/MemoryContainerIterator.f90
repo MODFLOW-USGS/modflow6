@@ -29,10 +29,10 @@ contains
   !!
   !<
   function constructor(container_iterator) result(iterator)
-    class(IteratorType) :: container_iterator
+    class(IteratorType), allocatable :: container_iterator
     type(MemoryContainerIteratorType) :: iterator
 
-    iterator%container_iterator = container_iterator
+    call move_alloc(container_iterator, iterator%container_iterator)
 
   end function constructor
 

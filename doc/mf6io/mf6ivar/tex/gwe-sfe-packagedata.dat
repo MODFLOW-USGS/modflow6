@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <rno> <strt> <ktf> <rbthcnd> [<@aux(naux)@>] [<boundname>]
-  <rno> <strt> <ktf> <rbthcnd> [<@aux(naux)@>] [<boundname>]
-  ...
-END PACKAGEDATA

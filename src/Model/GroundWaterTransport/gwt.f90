@@ -9,7 +9,8 @@ module GwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
-                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE, &
+                             DNODATA, LINELENGTH
   use NumericalModelModule, only: NumericalModelType
 
   use BaseModelModule, only: BaseModelType
@@ -46,6 +47,7 @@ module GwtModule
     procedure :: model_mc => gwt_mc
     procedure :: model_ar => gwt_ar
     procedure :: model_rp => gwt_rp
+    procedure :: model_dt => gwt_dt
     procedure :: model_ad => gwt_ad
     procedure :: model_cf => gwt_cf
     procedure :: model_fc => gwt_fc
@@ -98,7 +100,7 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use GwtNamInputModule, only: GwtNamParamFoundType
@@ -336,6 +338,29 @@ contains
     ! -- Return
     return
   end subroutine gwt_rp
+
+  !> @brief GWT Model time step size
+  !!
+  !! Calculate the maximum allowable time step size subject to time-step
+  !! constraints.  If adaptive time steps are used, then the time step used
+  !! will be no larger than dtmax calculated here.
+  !<
+  subroutine gwt_dt(this)
+    use TdisModule, only: kstp, kper
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    ! dummy
+    class(GwtModelType) :: this
+    ! local
+    real(DP) :: dtmax
+    character(len=LINELENGTH) :: msg
+    dtmax = DNODATA
+
+    ! advection package courant stability
+    call this%adv%adv_dt(dtmax, msg, this%mst%thetam)
+    if (msg /= '') then
+      call ats_submit_delt(kstp, kper, dtmax, msg)
+    end if
+  end subroutine gwt_dt
 
   !> @brief GWT Model Time Step Advance
   !!
@@ -759,7 +784,6 @@ contains
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
                             inunit, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
@@ -857,7 +881,7 @@ contains
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
                             mempaths, inunits)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     ! -- dummy
     class(GwtModelType) :: this
@@ -913,7 +937,7 @@ contains
   !<
   subroutine create_gwt_packages(this, indis)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     use ArrayHandlersModule, only: expandarray
     use MemoryManagerModule, only: mem_setptr

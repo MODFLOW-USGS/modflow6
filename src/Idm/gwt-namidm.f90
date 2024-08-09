@@ -17,6 +17,10 @@ module GwtNamInputModule
     logical :: print_flows = .false.
     logical :: save_flows = .false.
     logical :: export_netcdf = .false.
+    logical :: nc_filerecord = .false.
+    logical :: netcdf = .false.
+    logical :: filein = .false.
+    logical :: netcdf_fname = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
@@ -121,6 +125,78 @@ module GwtNamInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
+    gwtnam_nc_filerecord = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_FILERECORD', & ! tag name
+    'NC_FILERECORD', & ! fortran variable
+    'RECORD NETCDF FILEIN NETCDF_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtnam_netcdf = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF', & ! tag name
+    'NETCDF', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'netcdf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtnam_filein = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtnam_netcdf_fname = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_FILENAME', & ! tag name
+    'NETCDF_FNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'netcdf input filename', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
     gwtnam_ftype = InputParamDefinitionType &
     ( &
     'GWT', & ! component
@@ -182,6 +258,10 @@ module GwtNamInputModule
     gwtnam_print_flows, &
     gwtnam_save_flows, &
     gwtnam_export_netcdf, &
+    gwtnam_nc_filerecord, &
+    gwtnam_netcdf, &
+    gwtnam_filein, &
+    gwtnam_netcdf_fname, &
     gwtnam_ftype, &
     gwtnam_fname, &
     gwtnam_pname &

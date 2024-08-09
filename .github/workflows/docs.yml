@@ -89,13 +89,9 @@ jobs:
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      - name: Test building MF6IO LaTeX from DFNs
-        working-directory: modflow6/distribution
-        run: pixi run pytest -v build_docs.py::test_build_mf6io_tex_from_dfn
-
-      - name: Test building PDFs from LaTeX
-        working-directory: modflow6/distribution
-        run: pixi run pytest -v build_docs.py::test_build_pdfs_from_tex
+      - name: Build MF6IO files from DFNs
+        working-directory: modflow6
+        run: pixi run run-mf6ivar
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
@@ -172,7 +168,7 @@ jobs:
         working-directory: modflow6
         run: pixi run sphinx
       
-      - name: Upload results
+      - name: Upload RTD files
         uses: actions/upload-artifact@v3
         with:
           name: rtd-files-for-${{ github.sha }}
@@ -184,7 +180,22 @@ jobs:
             modflow6/.build_rtd_docs/_mf6io/
             modflow6/.build_rtd_docs/_mf6run/
             modflow6/.build_rtd_docs/_static/
-            
+
+      - name: Build PDF documents
+        working-directory: modflow6
+        run: pixi run build-docs
+
+      - name: Upload PDF documents
+        uses: actions/upload-artifact@v3
+        with:
+          name: mf6io.pdf
+          path: |
+            modflow6/mf6io.pdf
+            modflow6/ReleaseNotes.pdf
+            modflow6/zonebudget.pdf
+            modflow6/converter_mf5to6.pdf
+            modflow6/mf6suptechinfo.pdf
+            modflow6/mf6examples.pdf
 
   rtd_trigger:
     name: rtd-trigger

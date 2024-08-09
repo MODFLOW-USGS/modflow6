@@ -1,7 +1,7 @@
 !> @brief This module contains the NCModelExportModule
 !!
 !! This module defines a model export and base type for
-!! supported netcdf files. It is not not dependent on
+!! supported netcdf files and is not dependent on
 !! netcdf libraries.
 !!
 !<
@@ -15,7 +15,7 @@ module NCModelExportModule
 
   implicit none
   private
-  public :: NCBaseModelExportType
+  public :: NCBaseModelExportType, NCModelExportType
   public :: NCExportAnnotation
   public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_UGRID
 
@@ -32,6 +32,7 @@ module NCModelExportModule
   type :: NCExportAnnotation
     character(len=LINELENGTH) :: title !< file scoped title attribute
     character(len=LINELENGTH) :: model !< file scoped model attribute
+    character(len=LINELENGTH) :: grid !< grid type
     character(len=LINELENGTH) :: history !< file scoped history attribute
     character(len=LINELENGTH) :: source !< file scoped source attribute
     character(len=LINELENGTH) :: conventions !< file scoped conventions attribute
@@ -47,7 +48,7 @@ module NCModelExportModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: nc_filename !< name of netcdf export file
+    character(len=LINELENGTH) :: nc_fname !< name of netcdf export file
     character(len=LINELENGTH) :: gridmap_name = 'projection' !< name of grid mapping variable
     character(len=LINELENGTH) :: mesh_name = 'mesh' !< name of mesh container variable
     character(len=LENMEMPATH) :: dis_mempath !< discretization input mempath
@@ -63,7 +64,10 @@ module NCModelExportModule
     integer(I4B) :: totnstp !< simulation total number of steps
     integer(I4B), pointer :: deflate !< variable deflate level
     integer(I4B), pointer :: shuffle !< variable shuffle filter
+    integer(I4B), pointer :: input_attr !< assign variable input attr
+    integer(I4B), pointer :: chunk_time !< chunking parameter for time dimension
     integer(I4B) :: iout !< lst file descriptor
+    logical(LGP) :: chunking_active !< have chunking parameters been provided
   contains
     procedure :: init => export_init
     procedure :: destroy => export_destroy
@@ -106,6 +110,7 @@ contains
     !
     this%title = ''
     this%model = ''
+    this%grid = ''
     this%history = ''
     this%source = ''
     this%conventions = ''
@@ -137,6 +142,13 @@ contains
       call store_error_filename(modelfname)
     end select
     !
+    ! -- set export type
+    if (nctype == NETCDF_UGRID) then
+      this%grid = 'LAYERED MESH'
+    else if (nctype == NETCDF_STRUCTURED) then
+      this%grid = 'STRUCTURED'
+    end if
+    !
     ! -- model description string
     this%model = trim(modelname)//': MODFLOW 6 '//trim(fullname)// &
                  ' ('//trim(modeltype)//') model'
@@ -155,8 +167,9 @@ contains
   !<
   subroutine export_init(this, modelname, modeltype, modelfname, disenum, &
                          nctype, iout)
-    use SimVariablesModule, only: idm_context
+    use SimVariablesModule, only: isim_mode, idm_context
     use TdisModule, only: datetime0, nstp
+    use ConstantsModule, only: MVALIDATE
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
@@ -176,13 +189,15 @@ contains
     ! -- allocate
     allocate (this%deflate)
     allocate (this%shuffle)
+    allocate (this%input_attr)
+    allocate (this%chunk_time)
     !
     ! -- initialize
     this%modelname = modelname
     this%modeltype = modeltype
     this%modelfname = modelfname
-    this%nc_filename = trim(modelname)//'.nc'
-    call lowcase(this%nc_filename)
+    this%nc_fname = trim(modelname)//'.nc'
+    call lowcase(this%nc_fname)
     this%ncf_mempath = ''
     this%ogc_wkt = ''
     this%datetime = ''
@@ -193,7 +208,10 @@ contains
     this%totnstp = 0
     this%deflate = -1
     this%shuffle = 0
+    this%input_attr = 1
+    this%chunk_time = -1
     this%iout = iout
+    this%chunking_active = .false.
     !
     ! -- set file scoped attributes
     call this%annotation%set(modelname, modeltype, modelfname, nctype)
@@ -236,10 +254,19 @@ contains
                          found%deflate)
       call mem_set_value(this%shuffle, 'SHUFFLE', this%ncf_mempath, &
                          found%shuffle)
+      call mem_set_value(this%input_attr, 'ATTR_OFF', this%ncf_mempath, &
+                         found%attr_off)
+      call mem_set_value(this%chunk_time, 'CHUNK_TIME', this%ncf_mempath, &
+                         found%chunk_time)
+    end if
+    !
+    ! -- ATTR_OFF turns off modflow 6 input attributes
+    if (found%attr_off) then
+      this%input_attr = 0
     end if
     !
     ! -- set datetime string
-    if (datetime0 == '') then
+    if (isim_mode /= MVALIDATE .and. datetime0 == '') then
       errmsg = 'TDIS parameter START_DATE_TIME required for NetCDF export.'
       call store_error(errmsg)
       call store_error_filename(modelfname)
@@ -254,10 +281,19 @@ contains
   !> @brief destroy model netcdf export object
   !<
   subroutine export_destroy(this)
+    use MemoryManagerExtModule, only: memorystore_remove
+    use SimVariablesModule, only: idm_context
     class(NCModelExportType), intent(inout) :: this
     ! -- override in derived class
     deallocate (this%deflate)
     deallocate (this%shuffle)
+    deallocate (this%input_attr)
+    deallocate (this%chunk_time)
+    !
+    ! -- Deallocate idm memory
+    if (this%ncf_mempath /= '') then
+      call memorystore_remove(this%modelname, 'NCF', idm_context)
+    end if
   end subroutine export_destroy
 
 end module NCModelExportModule

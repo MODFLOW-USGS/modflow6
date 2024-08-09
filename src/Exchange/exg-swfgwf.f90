@@ -562,7 +562,7 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B), dimension(:), pointer, intent(in) :: cellid
+    integer(I4B), dimension(:), intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
     integer(I4B) :: noder, node
     !
@@ -591,7 +591,7 @@ contains
     ! -- dummy
     class(SwfGwfExchangeType) :: this !< instance of exchange object
     class(NumericalModelType), pointer, intent(in) :: model
-    integer(I4B), dimension(:), pointer, intent(in) :: cellid
+    integer(I4B), dimension(:), intent(in) :: cellid
     integer(I4B), intent(in) :: iout !< the output file unit
     character(len=20) :: cellstr
     character(len=*), parameter :: fmtndim1 = &
@@ -1052,6 +1052,7 @@ contains
   !   integer(I4B) :: ibinun
   !   real(DP) :: ratin, ratout, rrate
   !   logical(LGP) :: is_for_model1
+  !   real(DP), dimension(this%naux) :: auxrow
   !   !
   !   budtxt(1) = '    FLOW-JA-FACE'
   !   packname = 'EXG '//this%name
@@ -1171,12 +1172,15 @@ contains
   !     n2u = this%v_model2%dis_get_nodeuser(n2)
   !     if (ibinun /= 0) then
   !       if (is_for_model1) then
-  !         call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
-  !                                              this%naux, this%auxvar(:, i), &
+  ! if (size(auxrow) > 0) then
+  !   auxrow(:) = this%auxvar(:, i)
+  ! end if
+!         call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
+  !                                              this%naux, auxrow, &
   !                                              .false., .false.)
   !       else
   !         call model%dis%record_mf6_list_entry(ibinun, n2u, n1u, -rrate, &
-  !                                              this%naux, this%auxvar(:, i), &
+  !                                              this%naux, auxrow, &
   !                                              .false., .false.)
   !       end if
   !     end if

@@ -107,6 +107,7 @@ if is_cray and build_machine.system() != 'linux'
   error('cray only supported on linux systems')
 endif
 if is_cray and not is_parallel_build
+  is_extended_build = true
   is_parallel_build = true
   is_mpich = true
 endif

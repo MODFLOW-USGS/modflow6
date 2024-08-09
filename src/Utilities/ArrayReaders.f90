@@ -240,13 +240,6 @@ contains
 
   subroutine read_array_int3d(iu, iarr, aname, ndim, ncol, nrow, nlay, iout, &
                               k1, k2)
-! ******************************************************************************
-! Read three-dimensional integer array, consisting of one or more 2d arrays with
-! array control records.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     integer(I4B), intent(in) :: iu
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ndim
@@ -258,7 +251,6 @@ contains
     character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: k, kk
-! ------------------------------------------------------------------------------
     do k = k1, k2
       if (k <= 0) then
         kk = 1
@@ -271,12 +263,6 @@ contains
   end subroutine read_array_int3d
 
   subroutine read_array_int3d_all(iu, iarr, aname, ndim, nvals, iout)
-! ******************************************************************************
-! Read three-dimensional integer array, all at once.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     integer(I4B), intent(in) :: iu
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ndim
@@ -284,7 +270,6 @@ contains
     integer(I4B), dimension(nvals, 1, 1), intent(inout) :: iarr
     character(len=*), intent(in) :: aname
     ! -- local
-! ------------------------------------------------------------------------------
     !
     call read_array_int1d(iu, iarr, aname, ndim, nvals, iout, 0)
     !
@@ -502,13 +487,6 @@ contains
 
   subroutine read_array_dbl3d(iu, darr, aname, ndim, ncol, nrow, nlay, iout, &
                               k1, k2)
-! ******************************************************************************
-! Read three-dimensional real array, consisting of one or more 2d arrays with
-! array control records.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     integer(I4B), intent(in) :: iu
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ndim
@@ -520,7 +498,6 @@ contains
     character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: k, kk
-! ------------------------------------------------------------------------------
     !
     do k = k1, k2
       if (k <= 0) then
@@ -535,13 +512,6 @@ contains
   end subroutine read_array_dbl3d
 
   subroutine read_array_dbl3d_all(iu, darr, aname, ndim, nvals, iout)
-! ******************************************************************************
-! Read three-dimensional real array, consisting of one or more 2d arrays with
-! array control records.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     integer(I4B), intent(in) :: iu
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: ndim
@@ -549,7 +519,6 @@ contains
     real(DP), dimension(nvals, 1, 1), intent(inout) :: darr
     character(len=*), intent(in) :: aname
     ! -- local
-! ------------------------------------------------------------------------------
     !
     call read_array_dbl1d(iu, darr, aname, ndim, nvals, iout, 0)
     !

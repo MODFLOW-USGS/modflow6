@@ -9,22 +9,18 @@ from modflow_devtools.markers import no_parallel
 from modflow_devtools.misc import run_cmd
 
 # OS-specific extensions
-_system = platform.system()
-_eext = ".exe" if _system == "Windows" else ""
-_soext = (
-    ".dll"
-    if _system == "Windows"
-    else ".so"
-    if _system == "Linux"
-    else ".dylib"
+SYSTEM = platform.system()
+EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
+LIB_EXT = (
+    ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
 )
-_scext = ".bat" if _system == "Windows" else ".sh"
+SCR_EXT = ".bat" if SYSTEM == "Windows" else ".sh"
 
 # fortran compiler
-_fc = environ.get("FC", None)
+FC = environ.get("FC", None)
 
-# directories included in full distribution
-_included_dir_paths = {
+# top-leveldirectories included in distributions
+DIST_DIRS = {
     "full": [
         "bin",
         "doc",
@@ -75,7 +71,7 @@ def dist_dir_path(request):
 
 @no_parallel
 def test_directories(dist_dir_path, full):
-    for dir_path in _included_dir_paths["full" if full else "minimal"]:
+    for dir_path in DIST_DIRS["full" if full else "minimal"]:
         assert (dist_dir_path / dir_path).is_dir()
 
 
@@ -112,7 +108,7 @@ def test_sources(dist_dir_path, releasemode, full):
 
 
 @no_parallel
-@pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
+@pytest.mark.skipif(not FC, reason="needs Fortran compiler")
 def test_makefiles(dist_dir_path, full):
     if not full:
         pytest.skip(reason="makefiles not included in minimal distribution")
@@ -131,7 +127,7 @@ def test_makefiles(dist_dir_path, full):
     ).is_file()
 
     # makefiles can't be used on Windows with ifort compiler
-    if _system != "Windows" or _fc != "ifort":
+    if SYSTEM != "Windows" or FC != "ifort":
         print(
             subprocess.check_output(
                 "make", cwd=dist_dir_path / "make", shell=True
@@ -218,7 +214,7 @@ def test_examples(dist_dir_path, full):
     #     assert not ret, out + err
 
     # check comprehensive examples script and give it a test run
-    script_path = examples_path / f"runall{_scext}"
+    script_path = examples_path / f"runall{SCR_EXT}"
     print(f"Testing comprehensive examples script: {script_path}")
     assert script_path.is_file()
     out, err, ret = run_cmd(str(script_path), cwd=script_path.parent)
@@ -228,14 +224,14 @@ def test_examples(dist_dir_path, full):
 @no_parallel
 def test_binaries(dist_dir_path, approved):
     bin_path = dist_dir_path / "bin"
-    assert (bin_path / f"mf6{_eext}").is_file()
-    assert (bin_path / f"zbud6{_eext}").is_file()
-    assert (bin_path / f"mf5to6{_eext}").is_file()
-    assert (bin_path / f"libmf6{_soext}").is_file()
+    assert (bin_path / f"mf6{EXE_EXT}").is_file()
+    assert (bin_path / f"zbud6{EXE_EXT}").is_file()
+    assert (bin_path / f"mf5to6{EXE_EXT}").is_file()
+    assert (bin_path / f"libmf6{LIB_EXT}").is_file()
 
     # get version string
     output = " ".join(
-        subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"])
+        subprocess.check_output([str(bin_path / f"mf6{EXE_EXT}"), "-v"])
         .decode()
         .split()
     ).lower()

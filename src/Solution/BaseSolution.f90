@@ -17,7 +17,7 @@ module BaseSolutionModule
   contains
     procedure(sln_df), deferred :: sln_df
     procedure(sln_ar), deferred :: sln_ar
-    procedure(sln_calculate_delt), deferred :: sln_calculate_delt
+    procedure(sln_dt), deferred :: sln_dt
     procedure(sln_ad), deferred :: sln_ad
     procedure(sln_ca), deferred :: sln_ca
     procedure(sln_ot), deferred :: sln_ot
@@ -28,6 +28,11 @@ module BaseSolutionModule
     procedure(slnaddexchange), deferred :: add_exchange
     procedure(slngetmodels), deferred :: get_models
     procedure(slngetexchanges), deferred :: get_exchanges
+
+    ! Expose these for use through the BMI/XMI:
+    procedure(prepareSolve), deferred :: prepareSolve
+    procedure(solve), deferred :: solve
+    procedure(finalizeSolve), deferred :: finalizeSolve
   end type BaseSolutionType
 
   abstract interface
@@ -59,7 +64,7 @@ module BaseSolutionModule
       class(BaseSolutionType) :: this
     end subroutine
 
-    subroutine sln_calculate_delt(this)
+    subroutine sln_dt(this)
       import BaseSolutionType
       class(BaseSolutionType) :: this
     end subroutine
@@ -118,6 +123,27 @@ module BaseSolutionModule
       import BaseSolutionType
       class(BaseSolutionType) :: this
     end subroutine
+
+    subroutine prepareSolve(this)
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+    end subroutine prepareSolve
+
+    subroutine solve(this, kiter)
+      use KindModule, only: I4B
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+      integer(I4B), intent(in) :: kiter
+    end subroutine solve
+
+    subroutine finalizeSolve(this, kiter, isgcnvg, isuppress_output)
+      use KindModule, only: I4B
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+      integer(I4B), intent(in) :: kiter
+      integer(I4B), intent(inout) :: isgcnvg
+      integer(I4B), intent(in) :: isuppress_output
+    end subroutine finalizeSolve
 
   end interface
 

@@ -80,7 +80,7 @@ contains
     this%ts_active = 0
     !
     ! -- load static input
-    call loader%load(parser, mf6_input, this%input_name, iout)
+    call loader%load(parser, mf6_input, this%nc_vars, this%input_name, iout)
     !
     ! -- create tsmanager
     allocate (this%tsmanager)

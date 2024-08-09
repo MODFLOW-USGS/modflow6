@@ -818,7 +818,7 @@ contains
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
                 this%eqnsclfac, this%depvartype)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call tsp_obs_cr(this%obs, this%inobs)
+    call tsp_obs_cr(this%obs, this%inobs, this%depvartype)
     !
     ! -- Return
     return

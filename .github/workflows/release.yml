@@ -127,13 +127,13 @@ jobs:
             bash
             powershell
 
-      - name: Setup ${{ matrix.compiler }} ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || matrix.version }}
+      - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
         if: (!(runner.os == 'Windows' && matrix.parallel))
         id: setup-fortran
         uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
-          version: ${{ contains(fromJSON('["macos-14"]'), matrix.os) && 12 || matrix.version }}
+          version: ${{ matrix.version }}
       
       - name: Set version number
         id: set_version
@@ -458,6 +458,10 @@ jobs:
         with:
           name: deprecations
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
+
+      - name: Build MF6IO files from DFNs
+        working-directory: modflow6/doc/mf6io/mf6ivar
+        run: python mf6ivar.py
 
       - name: Build documentation
         env:

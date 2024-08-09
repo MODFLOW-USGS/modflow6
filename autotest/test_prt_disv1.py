@@ -414,7 +414,6 @@ def compare_output(name, mf6_pls, mp7_pls, mp7_eps):
     if "bprp" not in name:
         # pollock's method should be (nearly) identical
         mf6_pls_plck = mf6_pls[mf6_pls.particlegroup == 1]
-        # import pdb; pdb.set_trace()
         assert mf6_pls_plck.shape == mp7_pls.shape
         assert np.allclose(mf6_pls_plck, mp7_pls, atol=1e-3)
 

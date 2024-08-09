@@ -1,9 +1,0 @@
-BEGIN OPTIONS
-  [LENGTH_UNITS <length_units>]
-  [NOGRB]
-  [XORIGIN <xorigin>]
-  [YORIGIN <yorigin>]
-  [ANGROT <angrot>]
-  [VERTICAL_OFFSET_TOLERANCE <vertical_offset_tolerance>]
-  [EXPORT_ARRAY_ASCII]
-END OPTIONS

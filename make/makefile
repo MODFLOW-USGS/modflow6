@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.10) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -83,7 +83,8 @@ ${SOURCEDIR35} \
 ${SOURCEDIR36} \
 ${SOURCEDIR37} \
 ${SOURCEDIR38} \
-${SOURCEDIR39} 
+${SOURCEDIR39} \
+${SOURCEDIR40} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -327,6 +328,7 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
+$(OBJDIR)/NCFileVars.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
@@ -373,6 +375,7 @@ $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
 $(OBJDIR)/StructArray.o \
+$(OBJDIR)/LoadNCInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \

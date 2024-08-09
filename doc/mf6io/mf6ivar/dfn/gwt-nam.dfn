@@ -42,6 +42,47 @@ mf6internal export_netcdf
 longname export model output netcdf file.
 description keyword that specifies timeseries data for the dependent variable should be written to a model output netcdf file.  No value or ``UGRID'' (ugrid based export) values are supported.
 
+block options
+name nc_filerecord
+type record netcdf filein netcdf_filename
+reader urword
+tagged true
+optional true
+longname
+description netcdf config filerecord
+
+block options
+name netcdf
+type keyword
+in_record true
+reader urword
+tagged true
+optional false
+longname netcdf keyword
+description keyword to specify that record corresponds to a netcdf input file.
+
+block options
+name filein
+type keyword
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name netcdf_filename
+type string
+preserve_case true
+in_record true
+reader urword
+optional false
+tagged false
+longname netcdf input filename
+description defines a netcdf input file.
+mf6internal netcdf_fname
+
 # --------------------- gwt nam packages ---------------------
 
 block packages
