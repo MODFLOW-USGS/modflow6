@@ -24,7 +24,7 @@ module MeshDisvModelModule
 
   ! -- UGRID layered mesh DISV
   type, extends(Mesh2dModelType) :: Mesh2dDisvExportType
-    class(DisvType), pointer :: disv => null() !< pointer to model disv package
+    type(DisvType), pointer :: disv => null() !< pointer to model disv package
   contains
     procedure :: init => disv_export_init
     procedure :: destroy => disv_export_destroy

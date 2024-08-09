@@ -50,7 +50,7 @@ module DisNCStructuredModule
   type, extends(NCBaseModelExportType) :: DisNCStructuredType
     type(StructuredNCDimIdType) :: dim_ids !< structured dimension ids type
     type(StructuredNCVarIdType) :: var_ids !< structured variable ids type
-    class(DisType), pointer :: dis => null() !< pointer to model dis package
+    type(DisType), pointer :: dis => null() !< pointer to model dis package
     integer(I4B) :: nlay !< number of layers
     real(DP), dimension(:), pointer, contiguous :: lat => null() !< lat input array pointer
     real(DP), dimension(:), pointer, contiguous :: lon => null() !< lon input array pointer
