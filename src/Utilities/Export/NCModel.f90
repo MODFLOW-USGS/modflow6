@@ -15,7 +15,7 @@ module NCModelExportModule
 
   implicit none
   private
-  public :: NCBaseModelExportType
+  public :: NCBaseModelExportType, NCModelExportType
   public :: NCExportAnnotation
   public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_UGRID
 
