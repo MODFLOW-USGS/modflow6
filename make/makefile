@@ -5,44 +5,44 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Idm
-SOURCEDIR3=../src/Idm/selector
-SOURCEDIR4=../src/Exchange
-SOURCEDIR5=../src/Distributed
-SOURCEDIR6=../src/Solution
-SOURCEDIR7=../src/Solution/LinearMethods
-SOURCEDIR8=../src/Solution/ParticleTracker
-SOURCEDIR9=../src/Solution/PETSc
-SOURCEDIR10=../src/Timing
-SOURCEDIR11=../src/Utilities
-SOURCEDIR12=../src/Utilities/Idm
-SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR14=../src/Utilities/TimeSeries
-SOURCEDIR15=../src/Utilities/Memory
-SOURCEDIR16=../src/Utilities/OutputControl
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/Libraries
-SOURCEDIR19=../src/Utilities/Libraries/rcm
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/sparskit2
-SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Libraries/sparsekit
-SOURCEDIR24=../src/Utilities/Export
-SOURCEDIR25=../src/Utilities/Vector
-SOURCEDIR26=../src/Utilities/Matrix
-SOURCEDIR27=../src/Utilities/Observation
-SOURCEDIR28=../src/Model
-SOURCEDIR29=../src/Model/Connection
-SOURCEDIR30=../src/Model/ParticleTracking
-SOURCEDIR31=../src/Model/SurfaceWaterFlow
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Utilities
+SOURCEDIR4=../src/Utilities/Observation
+SOURCEDIR5=../src/Utilities/ArrayRead
+SOURCEDIR6=../src/Utilities/Memory
+SOURCEDIR7=../src/Utilities/Vector
+SOURCEDIR8=../src/Utilities/Idm
+SOURCEDIR9=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR10=../src/Utilities/TimeSeries
+SOURCEDIR11=../src/Utilities/OutputControl
+SOURCEDIR12=../src/Utilities/Export
+SOURCEDIR13=../src/Utilities/Libraries
+SOURCEDIR14=../src/Utilities/Libraries/sparskit2
+SOURCEDIR15=../src/Utilities/Libraries/sparsekit
+SOURCEDIR16=../src/Utilities/Libraries/rcm
+SOURCEDIR17=../src/Utilities/Libraries/blas
+SOURCEDIR18=../src/Utilities/Libraries/daglib
+SOURCEDIR19=../src/Utilities/Matrix
+SOURCEDIR20=../src/Idm
+SOURCEDIR21=../src/Idm/selector
+SOURCEDIR22=../src/Timing
+SOURCEDIR23=../src/Model
+SOURCEDIR24=../src/Model/SurfaceWaterFlow
+SOURCEDIR25=../src/Model/GroundWaterFlow
+SOURCEDIR26=../src/Model/GroundWaterFlow/submodules
+SOURCEDIR27=../src/Model/GroundWaterEnergy
+SOURCEDIR28=../src/Model/Connection
+SOURCEDIR29=../src/Model/Geometry
+SOURCEDIR30=../src/Model/ModelUtilities
+SOURCEDIR31=../src/Model/ParticleTracking
 SOURCEDIR32=../src/Model/GroundWaterTransport
-SOURCEDIR33=../src/Model/ModelUtilities
-SOURCEDIR34=../src/Model/GroundWaterFlow
-SOURCEDIR35=../src/Model/GroundWaterFlow/submodules
-SOURCEDIR36=../src/Model/Discretization
-SOURCEDIR37=../src/Model/TransportModel
-SOURCEDIR38=../src/Model/Geometry
-SOURCEDIR39=../src/Model/GroundWaterEnergy
+SOURCEDIR33=../src/Model/Discretization
+SOURCEDIR34=../src/Model/TransportModel
+SOURCEDIR35=../src/Exchange
+SOURCEDIR36=../src/Solution
+SOURCEDIR37=../src/Solution/PETSc
+SOURCEDIR38=../src/Solution/ParticleTracker
+SOURCEDIR39=../src/Solution/LinearMethods
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -257,6 +257,7 @@ $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf-ic.o \
+$(OBJDIR)/UzfETUtils.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/TvBase.o \
 $(OBJDIR)/gwf-sfr.o \
