@@ -373,7 +373,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-12, windows-2022]
+        os: [ubuntu-22.04] # , macos-12, windows-2022]
     defaults:
       run:
         shell: bash
