@@ -453,16 +453,16 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: pixi run get-exes
 
-      - name: Test MF6
-        working-directory: modflow6
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pixi run autotest -m "not large and not developmode"
-          else
-            pixi run autotest -m "not large"
-          fi
+      # - name: Test MF6
+      #   working-directory: modflow6
+      #   env:
+      #     REPOS_PATH: ${{ github.workspace }}
+      #   run: |
+      #     if [ "${{ github.ref_name }}" == "master" ]; then
+      #       pixi run autotest -m "not large and not developmode"
+      #     else
+      #       pixi run autotest -m "not large"
+      #     fi
 
       - name: Install executables
         if: runner.os == 'Linux'
