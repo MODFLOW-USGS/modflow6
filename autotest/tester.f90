@@ -19,7 +19,7 @@ program tester
   use TestSwfUtils, only: collect_swfutils
   use TestTimeSelect, only: collect_timeselect
   use TestTimeStepSelect, only: collect_timestepselect
-  use TestUzfETUtil, only: collect_uzfetutil
+  use TestUzfEtUtil, only: collect_uzfetutil
 
   implicit none
   integer :: stat, is
@@ -47,7 +47,7 @@ program tester
                new_testsuite("SwfUtils", collect_swfutils), &
                new_testsuite("TimeSelect", collect_timeselect), &
                new_testsuite("TimeStepSelect", collect_timestepselect), &
-               new_testsuite("UzfETUtil", collect_uzfetutil) &
+               new_testsuite("UzfEtUtil", collect_uzfetutil) &
                ]
 
   call get_argument(1, suite_name)

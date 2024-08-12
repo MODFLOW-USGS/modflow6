@@ -1,4 +1,4 @@
-module TestUzfETUtil
+module TestUzfEtUtil
 
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DONE, DTWO, DEM1, DHALF, D1P1, DSIX
@@ -107,4 +107,4 @@ contains
     if (allocated(error)) return
   end subroutine test_etfunc_lin
 
-end module TestUzfETUtil
+end module TestUzfEtUtil

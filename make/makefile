@@ -259,7 +259,7 @@ $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf-ic.o \
-$(OBJDIR)/UzfETUtils.o \
+$(OBJDIR)/UzfEtUtil.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/TvBase.o \
 $(OBJDIR)/gwf-sfr.o \
