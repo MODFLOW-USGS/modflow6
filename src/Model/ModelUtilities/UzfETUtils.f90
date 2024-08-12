@@ -13,9 +13,9 @@ contains
   !<
   function etfunc_lin(efflndsrf, extdp, resid_pet, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
-    ! -- Return
+    ! return
     real(DP) :: etfunc_lin
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: efflndsrf !< effective land surface elevation after subtracting off 0.5*surfdep
     real(DP), intent(in) :: extdp !< extinction depth
     real(DP), intent(in) :: resid_pet !< residual pET remaining after applying actual ET from unsaturated zone
@@ -25,16 +25,17 @@ contains
     real(DP), intent(in) :: hgwf !< calculated groundwater head
     real(DP), intent(in) :: celtop !< elevation of the top of the cell
     real(DP), intent(in) :: celbot !< elevation of the bottom of the cell
-    ! -- local
+    ! local
     real(DP) :: etgw
     real(DP) :: range
     real(DP) :: depth, scale, thick, lin_scaling_fac
     !
-    ! -- Initialize
+    ! initialize
     etgw = DZERO
     !
-    ! -- Between ET surface and extinction depth
-    !    Extdp is applied to the bottom of the effective land surface elevation
+    ! if water table between ET surface and extinction depth
+    ! (extdp starts at the bottom of the effective land surface elevation,
+    !  where the effective land surface elevation accounts for surfdep)
     if (hgwf > (efflndsrf - extdp) .and. hgwf < efflndsrf) THEN
       lin_scaling_fac = calc_lin_scaling_fac(hgwf, efflndsrf, extdp)
       etgw = resid_pet * lin_scaling_fac
@@ -43,18 +44,18 @@ contains
       thcof = -resid_pet / extdp
       etgw = trhs - (thcof * hgwf)
       !
-      ! -- Above land surface
+      ! water table above land surface
     else if (hgwf >= efflndsrf) then
       trhs = resid_pet
       etgw = resid_pet
       !
-      ! -- Below extinction depth
+      ! water table below extinction depth
     else
       etfunc_lin = DZERO
       return
     end if
     !
-    ! -- Calculate rate
+    ! calculate rate
     depth = hgwf - (efflndsrf - extdp)
     thick = celtop - celbot
     if (depth > thick) depth = thick
@@ -72,15 +73,15 @@ contains
   !> @brief Calculate the linear scaling factor
   !<
   pure function calc_lin_scaling_fac(hgwf, lndsrf, extdp) result(sclfac)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: hgwf !< groundwater head
     real(DP), intent(in) :: lndsrf !< effective land surface (after applying surfdep to land surface)
     real(DP), intent(in) :: extdp !< extinction depth
-    ! -- return
+    ! return
     real(DP) :: sclfac
     !
     sclfac = (hgwf - (lndsrf - extdp)) / extdp
-    ! -- The calculated scaling factor cannot exceed 1.0
+    ! the calculated scaling factor cannot exceed 1.0
     if (sclfac > DONE) sclfac = DONE
   end function calc_lin_scaling_fac
 
