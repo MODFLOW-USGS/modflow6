@@ -86,7 +86,6 @@ contains
   end function is_close
 
   !> @brief Modulo with offset for integer values.
-  !<
   pure function mod_offset_int(a, n, d) result(mo)
     ! -- dummy
     integer(I4B), intent(in) :: a !< dividend
@@ -105,7 +104,6 @@ contains
   end function mod_offset_int
 
   !> @brief Modulo with offset for double precision values.
-  !<
   pure function mod_offset_dbl(a, n, d) result(mo)
     ! -- dummy
     real(DP), intent(in) :: a !< dividend
