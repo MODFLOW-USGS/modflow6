@@ -26,9 +26,13 @@ contains
     type(error_type), allocatable, intent(out) :: error
 
     call check(error, calc_lin_scaling_fac(0.25_DP, 1.0_DP, 1.0_DP) == 0.25_DP)
+    if (allocated(error)) return
     call check(error, calc_lin_scaling_fac(0.5_DP, 1.0_DP, 1.0_DP) == 0.5_DP)
+    if (allocated(error)) return
     call check(error, calc_lin_scaling_fac(1.0_DP, 1.0_DP, 1.0_DP) == 1.0_DP)
+    if (allocated(error)) return
     call check(error, calc_lin_scaling_fac(2.0_DP, 1.0_DP, 1.0_DP) == 1.0_DP)
+    if (allocated(error)) return
   end subroutine test_calc_lin_scaling_fac
 
   subroutine test_etfunc_lin(error)
@@ -43,7 +47,7 @@ contains
     real(DP) :: thcof !< total uzf hcof contribution to GWF model
     real(DP) :: celtop !< elevation of the top of the cell
     real(DP) :: celbot !< elevation of the bottom of the cell
-    !
+    
     ! -- Water table exactly in the middle of the extinction depth
     deriv_et = DZERO
     extdp = DONE
@@ -59,7 +63,8 @@ contains
     rate = etfunc_lin(celtop, extdp, pET, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
     call check(error, is_close(rate, pET * DHALF))
-    !
+    if (allocated(error)) return
+    
     ! -- Water table below extdp, should return 0.0
     hgwf = DHALF
     deriv_et = DZERO
@@ -68,7 +73,8 @@ contains
     rate = etfunc_lin(celtop, extdp, pET, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
     call check(error, is_close(rate, DZERO))
-    !
+    if (allocated(error)) return
+    
     ! -- Water table at an arbitrary location within the extinction depth interval
     hgwf = D1P1
     deriv_et = DZERO
@@ -78,7 +84,8 @@ contains
                       hgwf, celtop, celbot)
     call check(error, is_close(rate, &
                                pET * (D1P1 - (celtop - (celtop - extdp)))))
-    !
+    if (allocated(error)) return
+    
     ! -- Water table at the top of the extinction depth
     hgwf = DTWO
     deriv_et = DZERO
@@ -87,7 +94,8 @@ contains
     rate = etfunc_lin(celtop, extdp, pET, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
     call check(error, is_close(rate, pET))
-    !
+    if (allocated(error)) return
+    
     ! -- Water table well above the top of the extinction depth
     hgwf = DSIX
     deriv_et = DZERO
@@ -96,6 +104,7 @@ contains
     rate = etfunc_lin(celtop, extdp, pET, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
     call check(error, is_close(rate, pET))
+    if (allocated(error)) return
   end subroutine test_etfunc_lin
 
 end module TestUzfETUtil
