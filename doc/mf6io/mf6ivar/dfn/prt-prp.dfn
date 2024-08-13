@@ -228,7 +228,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the release times file.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
+description name of the release times file. The file should contain a single real value per line. Upon encountering an empty line, the program will stop reading the file. RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
 
 block options
 name dev_forceternary

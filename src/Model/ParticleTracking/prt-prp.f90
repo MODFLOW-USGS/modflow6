@@ -24,6 +24,7 @@ module PrtPrpModule
   use TimeSelectModule, only: TimeSelectType
   use DisModule, only: DisType
   use DisvModule, only: DisvType
+  use LongLineReaderModule, only: LongLineReaderType
 
   implicit none
 
@@ -733,11 +734,12 @@ contains
     logical(LGP), intent(inout) :: found
     ! -- locals
     real(DP) :: dval
-    integer(I4B) :: i, ios, nlines
+    integer(I4B) :: i, ierr
     logical(LGP) :: success
     character(len=MAXCHARLEN) :: fname
     character(len=MAXCHARLEN) :: keyword
     character(len=:), allocatable :: line
+    type(LongLineReaderType) :: linereader
     ! -- formats
     character(len=*), parameter :: fmttrkbin = &
       "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
@@ -768,12 +770,14 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if
+      i = 0
       rtloop: do
         success = .false.
         call this%parser%TryGetDouble(dval, success)
         if (.not. success) exit rtloop
+        i = i + 1
         call this%releasetimes%expand()
-        this%releasetimes%times(size(this%releasetimes%times)) = dval
+        this%releasetimes%times(i) = dval
       end do rtloop
       if (.not. this%releasetimes%increasing()) then
         errmsg = "RELEASE TIMES MUST STRICTLY INCREASE"
@@ -790,22 +794,18 @@ contains
       end if
       call this%parser%GetString(fname)
       call openfile(this%irlstls, this%iout, fname, 'TLS')
-      nlines = 0
+      i = 0
       rtfloop: do
-        read (this%irlstls, '(A)', iostat=ios) line
-        if (ios /= 0) exit rtfloop
-        nlines = nlines + 1
-      end do rtfloop
-      call this%releasetimes%expand(nlines)
-      rewind (this%irlstls)
-      allocate (character(len=LINELENGTH) :: line)
-      do i = 1, nlines
-        read (this%irlstls, '(A)') line
+        call linereader%rdcom(this%irlstls, this%iout, line, ierr)
+        if (line == '') exit rtfloop
+        i = i + 1
+        call this%releasetimes%expand()
         read (line, '(f30.0)') dval
         this%releasetimes%times(i) = dval
-      end do
+      end do rtfloop
       if (.not. this%releasetimes%increasing()) then
         errmsg = "RELEASE TIMES MUST STRICTLY INCREASE"
+        print *, this%releasetimes%times
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if

@@ -252,7 +252,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the tracking times file
+description name of the tracking times file. The file should contain a single real value per line. Upon encountering an empty line, the program will stop reading the file. TRACK\_TIMES and TRACK\_TIMESFILE are mutually exclusive.
 
 # --------------------- prt oc period ---------------------
 

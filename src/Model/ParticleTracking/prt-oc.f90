@@ -11,6 +11,7 @@ module PrtOcModule
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: urword, openfile
   use TimeSelectModule, only: TimeSelectType
+  use LongLineReaderModule, only: LongLineReaderType
 
   implicit none
   private
@@ -186,7 +187,8 @@ contains
     character(len=LINELENGTH) :: keyword2
     character(len=LINELENGTH) :: fname
     character(len=:), allocatable :: line
-    integer(I4B) :: i, ierr, ipos, ios, nlines
+    type(LongLineReaderType) :: linereader
+    integer(I4B) :: i, ierr, ipos
     real(DP) :: dval
     logical(LGP) :: isfound, found, endOfBlock, event_found, success
     type(OutputControlDataType), pointer :: ocdobjptr
@@ -288,12 +290,19 @@ contains
           event_found = .true.
           found = .true.
         case ('TRACK_TIMES')
+          if (size(this%tracktimes%times) > 0) then
+            errmsg = "TRACK TIMES ALREADY SPECIFIED"
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit(terminate=.true.)
+          end if
+          i = 0
           ttloop: do
             success = .false.
             call this%parser%TryGetDouble(dval, success)
             if (.not. success) exit ttloop
+            i = i + 1
             call this%tracktimes%expand()
-            this%tracktimes%times(size(this%tracktimes%times)) = dval
+            this%tracktimes%times(i) = dval
           end do ttloop
           if (.not. this%tracktimes%increasing()) then
             errmsg = "TRACK TIMES MUST STRICTLY INCREASE"
@@ -303,22 +312,22 @@ contains
           this%trackusertime = .true.
           found = .true.
         case ('TRACK_TIMESFILE')
+          if (size(this%tracktimes%times) > 0) then
+            errmsg = "TRACK TIMES ALREADY SPECIFIED"
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit(terminate=.true.)
+          end if
           call this%parser%GetString(fname)
           call openfile(this%itrktls, this%iout, fname, 'TLS')
-          nlines = 0
+          i = 0
           ttfloop: do
-            read (this%itrktls, '(A)', iostat=ios) line
-            if (ios /= 0) exit ttfloop
-            nlines = nlines + 1
-          end do ttfloop
-          call this%tracktimes%expand(nlines)
-          rewind (this%itrktls)
-          allocate (character(len=LINELENGTH) :: line)
-          do i = 1, nlines
-            read (this%itrktls, '(A)') line
+            call linereader%rdcom(this%itrktls, this%iout, line, ierr)
+            if (line == '') exit ttfloop
+            i = i + 1
+            call this%tracktimes%expand()
             read (line, '(f30.0)') dval
             this%tracktimes%times(i) = dval
-          end do
+          end do ttfloop
           if (.not. this%tracktimes%increasing()) then
             errmsg = "TRACK TIMES MUST STRICTLY INCREASE"
             call store_error(errmsg)
