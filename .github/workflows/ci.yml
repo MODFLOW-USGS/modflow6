@@ -477,7 +477,7 @@ jobs:
           cp bin/libmf6.so ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
           # todo reinstate ex-gwf-capture once fixed
-          pytest -v -n auto test_scripts.py -k "not capture"
+          pytest -v -n 3 test_scripts.py -k "not capture"
       
       - name: Upload failed test output
         if: failure()
