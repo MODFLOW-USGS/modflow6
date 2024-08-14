@@ -476,7 +476,7 @@ jobs:
           cp bin/mf6 ~/.local/bin/modflow/
           cp bin/libmf6.so ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
-          # todo reinstate ex-gwf-capture once fixed
+          # todo reinstate ex-gwe-radial once memory use reduced
           pytest -v -n auto test_scripts.py -k "not gwe-radial"
       
       - name: Upload failed test output
