@@ -109,16 +109,21 @@ contains
     use TdisModule, only: totim
     class(Mesh2dDisExportType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous :: dbl1d
-    integer(I4B) :: n, k
+    integer(I4B) :: n, k, nvals
     integer(I4B), dimension(2) :: dis_shape
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    !
+    ! -- initialize
+    nullify (dbl1d)
+    nullify (dbl2d)
     !
     ! -- increment step
     this%stepcnt = this%stepcnt + 1
     !
     dis_shape(1) = this%dis%ncol * this%dis%nrow
     dis_shape(2) = this%dis%nlay
-    allocate (dbl2d(dis_shape(1), dis_shape(2)))
+    !
+    nvals = product(dis_shape)
     !
     ! -- add data to dependent variable
     if (size(this%dis%nodeuser) < &
@@ -137,12 +142,10 @@ contains
         end if
       end do
       !
-      dbl2d = reshape(dbl1d, dis_shape)
-      !
-      deallocate (dbl1d)
+      dbl2d(1:dis_shape(1), 1:dis_shape(2)) => dbl1d(1:nvals)
     else
       !
-      dbl2d = reshape(this%x, dis_shape)
+      dbl2d(1:dis_shape(1), 1:dis_shape(2)) => this%x(1:nvals)
       !
     end if
     !
@@ -164,7 +167,9 @@ contains
     call nf_verify(nf90_sync(this%ncid), this%nc_fname)
     !
     ! --cleanup
-    deallocate (dbl2d)
+    if (associated(dbl1d)) deallocate (dbl1d)
+    nullify (dbl1d)
+    nullify (dbl2d)
   end subroutine step
 
   !> @brief netcdf export an input array
