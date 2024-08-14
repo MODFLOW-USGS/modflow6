@@ -1,49 +1,49 @@
-# makefile created by pymake (version 1.2.10) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Idm
-SOURCEDIR4=../src/Idm/selector
-SOURCEDIR5=../src/Timing
-SOURCEDIR6=../src/Model
-SOURCEDIR7=../src/Model/Connection
-SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Model/GroundWaterFlow
-SOURCEDIR11=../src/Model/GroundWaterFlow/submodules
-SOURCEDIR12=../src/Model/Geometry
-SOURCEDIR13=../src/Model/TransportModel
-SOURCEDIR14=../src/Model/GroundWaterTransport
-SOURCEDIR15=../src/Model/SurfaceWaterFlow
-SOURCEDIR16=../src/Model/ParticleTracking
-SOURCEDIR17=../src/Model/GroundWaterEnergy
-SOURCEDIR18=../src/Solution
-SOURCEDIR19=../src/Solution/ParticleTracker
-SOURCEDIR20=../src/Solution/LinearMethods
-SOURCEDIR21=../src/Solution/PETSc
-SOURCEDIR22=../src/Distributed
-SOURCEDIR23=../src/Utilities
-SOURCEDIR24=../src/Utilities/Export
-SOURCEDIR25=../src/Utilities/TimeSeries
-SOURCEDIR26=../src/Utilities/Idm
-SOURCEDIR27=../src/Utilities/Idm/netcdf
-SOURCEDIR28=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR29=../src/Utilities/ArrayRead
-SOURCEDIR30=../src/Utilities/Memory
-SOURCEDIR31=../src/Utilities/Matrix
-SOURCEDIR32=../src/Utilities/Vector
-SOURCEDIR33=../src/Utilities/Observation
-SOURCEDIR34=../src/Utilities/OutputControl
-SOURCEDIR35=../src/Utilities/Libraries
-SOURCEDIR36=../src/Utilities/Libraries/rcm
-SOURCEDIR37=../src/Utilities/Libraries/sparskit2
-SOURCEDIR38=../src/Utilities/Libraries/sparsekit
-SOURCEDIR39=../src/Utilities/Libraries/blas
-SOURCEDIR40=../src/Utilities/Libraries/daglib
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Utilities
+SOURCEDIR4=../src/Utilities/Observation
+SOURCEDIR5=../src/Utilities/ArrayRead
+SOURCEDIR6=../src/Utilities/Memory
+SOURCEDIR7=../src/Utilities/Vector
+SOURCEDIR8=../src/Utilities/Idm
+SOURCEDIR9=../src/Utilities/Idm/netcdf
+SOURCEDIR10=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR11=../src/Utilities/TimeSeries
+SOURCEDIR12=../src/Utilities/OutputControl
+SOURCEDIR13=../src/Utilities/Export
+SOURCEDIR14=../src/Utilities/Libraries
+SOURCEDIR15=../src/Utilities/Libraries/sparskit2
+SOURCEDIR16=../src/Utilities/Libraries/sparsekit
+SOURCEDIR17=../src/Utilities/Libraries/rcm
+SOURCEDIR18=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/daglib
+SOURCEDIR20=../src/Utilities/Matrix
+SOURCEDIR21=../src/Idm
+SOURCEDIR22=../src/Idm/selector
+SOURCEDIR23=../src/Timing
+SOURCEDIR24=../src/Model
+SOURCEDIR25=../src/Model/SurfaceWaterFlow
+SOURCEDIR26=../src/Model/GroundWaterFlow
+SOURCEDIR27=../src/Model/GroundWaterFlow/submodules
+SOURCEDIR28=../src/Model/GroundWaterEnergy
+SOURCEDIR29=../src/Model/Connection
+SOURCEDIR30=../src/Model/Geometry
+SOURCEDIR31=../src/Model/ModelUtilities
+SOURCEDIR32=../src/Model/ParticleTracking
+SOURCEDIR33=../src/Model/GroundWaterTransport
+SOURCEDIR34=../src/Model/Discretization
+SOURCEDIR35=../src/Model/TransportModel
+SOURCEDIR36=../src/Exchange
+SOURCEDIR37=../src/Solution
+SOURCEDIR38=../src/Solution/PETSc
+SOURCEDIR39=../src/Solution/ParticleTracker
+SOURCEDIR40=../src/Solution/LinearMethods
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -259,6 +259,7 @@ $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf-ic.o \
+$(OBJDIR)/UzfEtUtil.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/TvBase.o \
 $(OBJDIR)/gwf-sfr.o \

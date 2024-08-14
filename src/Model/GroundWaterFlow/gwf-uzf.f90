@@ -26,6 +26,7 @@ module UzfModule
                        deprecation_warning
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use UzfETUtilModule
   use MatrixBaseModule
 
   implicit none

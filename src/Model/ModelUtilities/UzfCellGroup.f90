@@ -6,6 +6,7 @@ module UzfCellGroupModule
                              DTWO, DTHREE, DEP20
   use SmoothingModule
   use TdisModule, only: ITMUNI, delt, kper
+  use UzfETUtilModule, only: etfunc_lin
 
   implicit none
   private
@@ -885,64 +886,6 @@ contains
     ! -- Return
     return
   end subroutine simgwet
-
-  !> @brief Calculate gwf et using linear ET function from mf-2005
-  !<
-  function etfunc_lin(s, x, c, det, trhs, thcof, hgwf, celtop, celbot)
-    ! -- Return
-    real(DP) :: etfunc_lin
-    ! -- dummy
-    real(DP), intent(in) :: s
-    real(DP), intent(in) :: x
-    real(DP), intent(in) :: c
-    real(DP), intent(inout) :: det
-    real(DP), intent(inout) :: trhs
-    real(DP), intent(inout) :: thcof
-    real(DP), intent(in) :: hgwf
-    real(DP), intent(in) :: celtop
-    real(DP), intent(in) :: celbot
-    ! -- local
-    real(DP) :: etgw
-    real(DP) :: range
-    real(DP) :: depth, scale, thick
-    !
-    ! -- Between ET surface and extinction depth
-    if (hgwf > (s - x) .and. hgwf < s) THEN
-      etgw = (c * (hgwf - (s - x)) / x)
-      if (etgw > c) then
-        etgw = c
-      else
-        trhs = c - c * s / x
-        thcof = -c / x
-        etgw = trhs - (thcof * hgwf)
-      end if
-      !
-      ! -- Above land surface
-    else if (hgwf >= s) then
-      trhs = c
-      etgw = c
-      !
-      ! Below extinction depth
-    else
-      etgw = DZERO
-    end if
-    !
-    ! -- calculate rate
-    depth = hgwf - (s - x)
-    thick = celtop - celbot
-    if (depth > thick) depth = thick
-    if (depth < dzero) depth = dzero
-    range = DEM4 * x
-    call sCubic(depth, range, det, scale)
-    trhs = scale * trhs
-    thcof = scale * thcof
-    etgw = trhs - (thcof * hgwf)
-    det = -det * etgw
-    etfunc_lin = etgw
-    !
-    ! -- Return
-    return
-  end function etfunc_lin
 
   !> @brief Square-wave ET function with smoothing at extinction depth
   !<

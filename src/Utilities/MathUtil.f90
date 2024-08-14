@@ -127,7 +127,6 @@ contains
   !! given tolerance epsa using Chandrupatla's method. FORTRAN code based
   !! generally on pseudocode in Scherer, POJ (2013) "Computational Physics:
   !! Simulation of Classical and Quantum Systems," 2nd ed., Springer, New York.
-  !!
   !<
   function zero_ch(x0, x1, f, epsa) result(z)
     ! -- dummy
