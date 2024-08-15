@@ -48,7 +48,7 @@ contains
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
 
-    name = string_to_char_array('MODFLOW 6', 9)
+    call string_to_char_array_2('MODFLOW 6', 9, name)
     bmi_status = BMI_SUCCESS
 
   end function bmi_get_component_name
@@ -612,6 +612,7 @@ contains
       call mem_setptr(srcstr, var_name, mem_path)
       call get_mem_elem_size(var_name, mem_path, ilen)
       call c_f_pointer(c_arr_ptr, tgtstr, shape=[ilen + 1])
+
       tgtstr(1:len(srcstr) + 1) = string_to_char_array(srcstr, len(srcstr))
 
     else if (rank == 1) then
