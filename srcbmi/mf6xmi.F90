@@ -357,7 +357,7 @@ contains
     else
       vstr = VERSIONNUMBER
     end if
-    mf_version = string_to_char_array(vstr, len_trim(vstr))
+    call string_to_char_array_2(vstr, len_trim(vstr), mf_version)
     bmi_status = BMI_SUCCESS
 
   end function xmi_get_version
