@@ -462,7 +462,7 @@ contains
     integer(I4B), dimension(1) :: layer_shape
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
     integer(I4B), dimension(:), pointer, contiguous :: int1d
-    integer(I4B) :: axis_dim, k
+    integer(I4B) :: axis_dim, nvals, k
     integer(I4B), dimension(:), allocatable :: var_id
     character(len=LINELENGTH) :: longname_l, varname_l
     !
@@ -559,25 +559,22 @@ contains
         end if
       end do
       !
-      ! -- allocate temporary 3d and reshape input
+      ! -- reshape input
       dis_shape(1) = dis%ncol
       dis_shape(2) = dis%nrow
       dis_shape(3) = dis%nlay
-      allocate (int3d(dis_shape(1), dis_shape(2), dis_shape(3)))
-      int3d = reshape(p_mem, dis_shape)
+      nvals = product(dis_shape)
+      int3d(1:dis_shape(1), 1:dis_shape(2), 1:dis_shape(3)) => p_mem(1:nvals)
       !
       ! -- exit define mode and write data
       call nf_verify(nf90_enddef(ncid), nc_fname)
-      allocate (int1d(dis%nrow * dis%ncol))
       layer_shape(1) = dis%nrow * dis%ncol
       do k = 1, dis%nlay
-        int1d = reshape(int3d(:, :, k), layer_shape)
+        int1d(1:layer_shape(1)) => int3d(:, :, k)
         call nf_verify(nf90_put_var(ncid, var_id(k), int1d), nc_fname)
       end do
       !
       ! -- cleanup
-      deallocate (int1d)
-      deallocate (int3d)
       deallocate (var_id)
     end if
   end subroutine nc_export_int1d
@@ -652,11 +649,9 @@ contains
     !
     ! -- exit define mode and write data
     call nf_verify(nf90_enddef(ncid), nc_fname)
-    allocate (int1d(dis%nrow * dis%ncol))
     layer_shape(1) = dis%nrow * dis%ncol
-    int1d = reshape(p_mem, layer_shape)
+    int1d(1:layer_shape(1)) => p_mem
     call nf_verify(nf90_put_var(ncid, var_id, int1d), nc_fname)
-    deallocate (int1d)
   end subroutine nc_export_int2d
 
   !> @brief netcdf export 3D integer
@@ -737,14 +732,13 @@ contains
     !
     ! -- exit define mode and write data
     call nf_verify(nf90_enddef(ncid), nc_fname)
-    allocate (int1d(dis%nrow * dis%ncol))
     layer_shape(1) = dis%nrow * dis%ncol
     do k = 1, dis%nlay
-      int1d = reshape(p_mem(:, :, k), layer_shape)
+      int1d(1:layer_shape(1)) => p_mem(:, :, k)
       call nf_verify(nf90_put_var(ncid, var_id(k), int1d), nc_fname)
     end do
     !
-    deallocate (int1d)
+    ! -- cleanup
     deallocate (var_id)
   end subroutine nc_export_int3d
 
@@ -778,7 +772,7 @@ contains
     integer(I4B), dimension(1) :: layer_shape
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
-    integer(I4B) :: axis_dim, k
+    integer(I4B) :: axis_dim, nvals, k
     integer(I4B), dimension(:), allocatable :: var_id
     character(len=LINELENGTH) :: longname_l, varname_l
     !
@@ -875,25 +869,22 @@ contains
         end if
       end do
       !
-      ! -- allocate temporary 3d and reshape input
+      ! -- reshape input
       dis_shape(1) = dis%ncol
       dis_shape(2) = dis%nrow
       dis_shape(3) = dis%nlay
-      allocate (dbl3d(dis_shape(1), dis_shape(2), dis_shape(3)))
-      dbl3d = reshape(p_mem, dis_shape)
+      nvals = product(dis_shape)
+      dbl3d(1:dis_shape(1), 1:dis_shape(2), 1:dis_shape(3)) => p_mem(1:nvals)
       !
       ! -- exit define mode and write data
       call nf_verify(nf90_enddef(ncid), nc_fname)
-      allocate (dbl1d(dis%nrow * dis%ncol))
       layer_shape(1) = dis%nrow * dis%ncol
       do k = 1, dis%nlay
-        dbl1d = reshape(dbl3d(:, :, k), layer_shape)
+        dbl1d(1:layer_shape(1)) => dbl3d(:, :, k)
         call nf_verify(nf90_put_var(ncid, var_id(k), dbl1d), nc_fname)
       end do
       !
       ! -- cleanup
-      deallocate (dbl1d)
-      deallocate (dbl3d)
       deallocate (var_id)
     end if
   end subroutine nc_export_dbl1d
@@ -968,11 +959,9 @@ contains
     !
     ! -- exit define mode and write data
     call nf_verify(nf90_enddef(ncid), nc_fname)
-    allocate (dbl1d(dis%nrow * dis%ncol))
     layer_shape(1) = dis%nrow * dis%ncol
-    dbl1d = reshape(p_mem, layer_shape)
+    dbl1d(1:layer_shape(1)) => p_mem
     call nf_verify(nf90_put_var(ncid, var_id, dbl1d), nc_fname)
-    deallocate (dbl1d)
   end subroutine nc_export_dbl2d
 
   !> @brief netcdf export 3D double
@@ -1053,14 +1042,13 @@ contains
     !
     ! -- exit define mode and write data
     call nf_verify(nf90_enddef(ncid), nc_fname)
-    allocate (dbl1d(dis%nrow * dis%ncol))
     layer_shape(1) = dis%nrow * dis%ncol
     do k = 1, dis%nlay
-      dbl1d = reshape(p_mem(:, :, k), layer_shape)
+      dbl1d(1:layer_shape(1)) => p_mem(:, :, k)
       call nf_verify(nf90_put_var(ncid, var_id(k), dbl1d), nc_fname)
     end do
     !
-    deallocate (dbl1d)
+    ! -- cleanup
     deallocate (var_id)
   end subroutine nc_export_dbl3d
 

@@ -107,16 +107,21 @@ contains
     use TdisModule, only: totim
     class(Mesh2dDisvExportType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous :: dbl1d
-    integer(I4B) :: n, k
+    integer(I4B) :: n, k, nvals
     integer(I4B), dimension(2) :: dis_shape
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    !
+    ! -- initialize
+    nullify (dbl1d)
+    nullify (dbl2d)
     !
     ! -- increment step
     this%stepcnt = this%stepcnt + 1
     !
     dis_shape(1) = this%disv%ncpl
     dis_shape(2) = this%disv%nlay
-    allocate (dbl2d(dis_shape(1), dis_shape(2)))
+    !
+    nvals = product(dis_shape)
     !
     ! -- add data to dependent variable
     if (size(this%disv%nodeuser) < &
@@ -135,12 +140,10 @@ contains
         end if
       end do
       !
-      dbl2d = reshape(dbl1d, dis_shape)
-      !
-      deallocate (dbl1d)
+      dbl2d(1:dis_shape(1), 1:dis_shape(2)) => dbl1d(1:nvals)
     else
       !
-      dbl2d = reshape(this%x, dis_shape)
+      dbl2d(1:dis_shape(1), 1:dis_shape(2)) => this%x(1:nvals)
       !
     end if
     !
@@ -162,7 +165,9 @@ contains
     call nf_verify(nf90_sync(this%ncid), this%nc_fname)
     !
     ! -- cleanup
-    deallocate (dbl2d)
+    if (associated(dbl1d)) deallocate (dbl1d)
+    nullify (dbl1d)
+    nullify (dbl2d)
   end subroutine step
 
   !> @brief netcdf export an input array
@@ -406,7 +411,7 @@ contains
     ! -- local
     integer(I4B), dimension(2) :: dis_shape
     integer(I4B), dimension(:, :), pointer, contiguous :: int2d
-    integer(I4B) :: axis_sz, k
+    integer(I4B) :: axis_sz, nvals, k
     integer(I4B), dimension(:), allocatable :: var_id
     character(len=LINELENGTH) :: longname_l, varname_l
     !
@@ -508,11 +513,11 @@ contains
         end if
       end do
       !
-      ! -- allocate temporary 3d and reshape input
+      ! -- reshape input
       dis_shape(1) = dis%ncpl
       dis_shape(2) = dis%nlay
-      allocate (int2d(dis_shape(1), dis_shape(2)))
-      int2d = reshape(p_mem, dis_shape)
+      nvals = product(dis_shape)
+      int2d(1:dis_shape(1), 1:dis_shape(2)) => p_mem(1:nvals)
       !
       ! -- exit define mode and write data
       call nf_verify(nf90_enddef(ncid), nc_fname)
@@ -521,7 +526,6 @@ contains
       end do
       !
       ! -- cleanup
-      deallocate (int2d)
       deallocate (var_id)
     end if
   end subroutine nc_export_int1d
@@ -633,7 +637,7 @@ contains
     ! -- local
     integer(I4B), dimension(2) :: dis_shape
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B) :: axis_sz, k
+    integer(I4B) :: axis_sz, nvals, k
     integer(I4B), dimension(:), allocatable :: var_id
     character(len=LINELENGTH) :: longname_l, varname_l
     !
@@ -735,11 +739,11 @@ contains
         end if
       end do
       !
-      ! -- allocate temporary 3d and reshape input
+      ! -- reshape input
       dis_shape(1) = dis%ncpl
       dis_shape(2) = dis%nlay
-      allocate (dbl2d(dis_shape(1), dis_shape(2)))
-      dbl2d = reshape(p_mem, dis_shape)
+      nvals = product(dis_shape)
+      dbl2d(1:dis_shape(1), 1:dis_shape(2)) => p_mem(1:nvals)
       !
       ! -- exit define mode and write data
       call nf_verify(nf90_enddef(ncid), nc_fname)
@@ -748,7 +752,6 @@ contains
       end do
       !
       ! -- cleanup
-      deallocate (dbl2d)
       deallocate (var_id)
     end if
   end subroutine nc_export_dbl1d
