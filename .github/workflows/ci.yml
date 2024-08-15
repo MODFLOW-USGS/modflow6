@@ -316,12 +316,13 @@ jobs:
         if: runner.os == 'Linux'
         uses: modflowpy/install-modflow-action@v1
 
-      - name: Test MF6 examples
+      - name: Test examples
         if: runner.os == 'Linux'
         working-directory: modflow6
         shell: pixi run bash -e {0}
         run: |
-          cp bin/mf6 $(which mf6)
+          cp bin/mf6 ~/.local/bin/modflow/
+          cp bin/libmf6.so ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
           pytest -v -n auto test_scripts.py
 
@@ -476,8 +477,7 @@ jobs:
           cp bin/mf6 ~/.local/bin/modflow/
           cp bin/libmf6.so ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
-          # todo reinstate ex-gwe-radial once memory use reduced
-          pytest -v -n auto test_scripts.py -k "not gwe-radial"
+          pytest -v -n auto test_scripts.py
       
       - name: Upload failed test output
         if: failure()
