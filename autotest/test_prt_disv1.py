@@ -19,15 +19,11 @@ Several cases are provided:
     - bprp: Mismatching cell IDs in PRP input, expect PRT to catch and reject these.
     - trts: User-specified tracking times, some falling exactly on boundaries between
             time steps. PRT and MP7 should both assign the datum to the prior time step.
-    - trtf: Same as trts, except tracking times are provided to PRT in a separate file,
-            rather than inline in the OC input file.
 
 This test case also exercises the `print_input`
 option which enables logging for the package's
 particle release settings to the listing file.
 """
-
-from pathlib import Path
 
 import flopy
 import matplotlib.cm as cm
@@ -50,7 +46,7 @@ from prt_test_utils import (
 )
 
 simname = "prtdisv1"
-cases = [f"{simname}", f"{simname}bprp", f"{simname}trts", f"{simname}trtf"]
+cases = [f"{simname}", f"{simname}bprp", f"{simname}trts"]
 
 # model info
 nlay = 1
@@ -71,14 +67,6 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 porosity = 0.1
 tracktimes = list(np.linspace(0, 19, 20))
-
-
-def tracktimes_file(path) -> Path:
-    path = Path(path)
-    lines = [f"{t}\n" for t in tracktimes]
-    with open(path, "w") as f:
-        f.writelines(lines)
-    return path
 
 
 # vertex grid properties
@@ -240,7 +228,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
     # create output control package
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
-    if "trts" in name or "trtf" in name:
+    if "trts" in name:
         flopy.mf6.ModflowPrtoc(
             prt,
             pname="oc",
@@ -250,12 +238,8 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
             track_terminate=True,
             track_exit=True,
             track_usertime=True,
-            track_timesrecord=tracktimes if "trts" in name else None,
-            track_timesfilerecord=(
-                tracktimes_file(prt_ws / f"{prt_name}.tls")
-                if "trtf" in name
-                else None
-            ),
+            ntracktimes=len(tracktimes) if "trts" in name else None,
+            tracktimes=[(t,) for t in tracktimes] if "trts" in name else None,
         )
     else:
         flopy.mf6.ModflowPrtoc(

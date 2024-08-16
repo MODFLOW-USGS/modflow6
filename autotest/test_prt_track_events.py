@@ -214,7 +214,10 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
                 track_usertime=True,
-                track_timesrecord=tracktimes if "trts" in name else None,
+                ntracktimes=len(tracktimes) if "trts" in name else None,
+                tracktimes=[(t,) for t in tracktimes]
+                if "trts" in name
+                else None,
             )
 
     oc = get_oc()

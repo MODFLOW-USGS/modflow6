@@ -36,23 +36,14 @@ from prt_test_utils import (
 simname = "prtrelt"
 cases = [
     # options block options
-    f"{simname}sgl",  # RELEASE_TIMES 0.5
-    f"{simname}dbl",  # RELEASE_TIMES 0.5 0.6
-    f"{simname}tls",  # RELEASE_TIMESFILE <filename>
+    f"{simname}sgl",  # RELEASETIMES block, 0.5
+    f"{simname}dbl",  # RELEASETIMES block, 0.5 and 0.6
     # period block options
     f"{simname}all",  # ALL FRACTION 0.5
     f"{simname}frst",  # FIRST FRACTION 0.5
     f"{simname}stps",  # STEPS 1 FRACTION 0.5
     f"{simname}freq",  # FREQUENCY 1
 ]
-
-
-def releasetimes_file(path, rtimes) -> Path:
-    path = Path(path)
-    lines = [f"{t}\n" for t in rtimes]
-    with open(path, "w") as f:
-        f.writelines(lines)
-    return path
 
 
 def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
@@ -148,11 +139,11 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
     pdat = get_perioddata(prt_name, fraction=fraction)
     # fraction 0.5 equiv. to release time 0.5 since 1 period 1 step with length 1
-    releasetime = (
-        [fraction]
+    releasetimes = (
+        [(fraction,)]
         if "sgl" in prt_name
         else (
-            [fraction, fraction + 0.1]
+            [(fraction,), (fraction + 0.1,)]
             if "dbl" in prt_name or "tls" in prt_name
             else None
         )
@@ -166,14 +157,10 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
         perioddata=pdat,
         track_filerecord=[prp_track_file],
         trackcsv_filerecord=[prp_track_csv_file],
-        release_timesrecord=(
-            releasetime if ("sgl" in prt_name or "dbl" in name) else None
+        nreleasetimes=(
+            1 if "sgl" in prt_name else 2 if "dbl" in name else None
         ),
-        release_timesfilerecord=(
-            releasetimes_file(prt_ws / f"{prt_name}.tls", releasetime)
-            if "tls" in name
-            else None
-        ),
+        releasetimes=releasetimes,
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,

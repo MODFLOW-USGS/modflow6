@@ -5,6 +5,7 @@ module PrtOcModule
   use ConstantsModule, only: LENMODELNAME, MNORMAL
   use OutputControlModule, only: OutputControlType
   use OutputControlDataModule, only: OutputControlDataType, ocd_cr
+  use SimModule, only: store_error
   use SimVariablesModule, only: errmsg, warnmsg
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
@@ -30,6 +31,7 @@ module PrtOcModule
     logical(LGP), pointer :: trackterminate => null() !< whether to track termination events
     logical(LGP), pointer :: trackweaksink => null() !< whether to track weak sink exit events
     logical(LGP), pointer :: trackusertime => null() !< whether to track user-specified times
+    integer(I4B), pointer :: ntracktimes => null() !< number of user-specified tracking times
     type(TimeSelectType), pointer :: tracktimes !< user-specified tracking times
 
   contains
@@ -37,6 +39,8 @@ module PrtOcModule
     procedure :: oc_da => prt_oc_da
     procedure :: allocate_scalars => prt_oc_allocate_scalars
     procedure :: read_options => prt_oc_read_options
+    procedure, private :: prt_oc_read_dimensions
+    procedure, private :: prt_oc_read_tracktimes
 
   end type PrtOcType
 
@@ -49,17 +53,17 @@ contains
     integer(I4B), intent(in) :: inunit !< unit number for input
     integer(I4B), intent(in) :: iout !< unit number for output
 
-    ! -- Create the object
+    ! Create the object
     allocate (ocobj)
 
-    ! -- Allocate scalars
+    ! Allocate scalars
     call ocobj%allocate_scalars(name_model)
 
-    ! -- Save unit numbers
+    ! Save unit numbers
     ocobj%inunit = inunit
     ocobj%iout = iout
 
-    ! -- Initialize block parser
+    ! Initialize block parser
     call ocobj%parser%Initialize(inunit, iout)
   end subroutine oc_cr
 
@@ -85,6 +89,7 @@ contains
     call mem_allocate(this%trackterminate, 'ITRACKTER', this%memoryPath)
     call mem_allocate(this%trackweaksink, 'ITRACKWSK', this%memoryPath)
     call mem_allocate(this%trackusertime, 'ITRACKTLS', this%memoryPath)
+    call mem_allocate(this%ntracktimes, 'NTRACKTIMES', this%memoryPath)
 
     this%name_model = name_model
     this%inunit = 0
@@ -102,21 +107,22 @@ contains
     this%trackterminate = .false.
     this%trackweaksink = .false.
     this%trackusertime = .false.
+    this%ntracktimes = 0
 
   end subroutine prt_oc_allocate_scalars
 
   !> @ brief Setup output control variables.
   subroutine oc_ar(this, dis, dnodata)
-    ! -- dummy
+    ! dummy
     class(PrtOcType) :: this !< PrtOcType object
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
     real(DP), intent(in) :: dnodata !< no data value
-    ! -- local
+    ! local
     integer(I4B) :: i, nocdobj, inodata
     type(OutputControlDataType), pointer :: ocdobjptr
     real(DP), dimension(:), pointer, contiguous :: nullvec => null()
 
-    ! -- Allocate and initialize variables
+    ! Allocate and initialize variables
     allocate (this%tracktimes)
     call this%tracktimes%init()
     inodata = 0
@@ -134,16 +140,19 @@ contains
       deallocate (ocdobjptr)
     end do
 
-    ! -- Read options or set defaults if this package not on
-    if (this%inunit > 0) then
-      call this%read_options()
-    end if
+    ! Read options, dimensions, and tracktimes
+    ! blocks if this package is enabled
+    if (this%inunit <= 0) return
+    call this%read_options()
+    call this%prt_oc_read_dimensions()
+    call this%prt_oc_read_tracktimes()
+
   end subroutine oc_ar
 
   subroutine prt_oc_da(this)
-    ! -- dummy
+    ! dummy
     class(PrtOcType) :: this
-    ! -- local
+    ! local
     integer(I4B) :: i
 
     call this%tracktimes%deallocate()
@@ -169,30 +178,29 @@ contains
     call mem_deallocate(this%trackterminate)
     call mem_deallocate(this%trackweaksink)
     call mem_deallocate(this%trackusertime)
+    call mem_deallocate(this%ntracktimes)
 
   end subroutine prt_oc_da
 
   subroutine prt_oc_read_options(this)
-    ! -- modules
+    ! modules
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile, lowcase
     use ConstantsModule, only: LINELENGTH
     use TrackModule, only: TRACKHEADER, TRACKDTYPES
     use SimModule, only: store_error, store_error_unit
     use InputOutputModule, only: openfile, getunit
-    ! -- dummy
+    ! dummy
     class(PrtOcType) :: this
-    ! -- local
+    ! local
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: keyword2
     character(len=LINELENGTH) :: fname
     character(len=:), allocatable :: line
-    type(LongLineReaderType) :: linereader
-    integer(I4B) :: i, ierr, ipos
-    real(DP) :: dval
-    logical(LGP) :: isfound, found, endOfBlock, event_found, success
+    integer(I4B) :: ierr, ipos
+    logical(LGP) :: block_found, param_found, event_found, eob
     type(OutputControlDataType), pointer :: ocdobjptr
-    ! -- formats
+    ! formats
     character(len=*), parameter :: fmttrkbin = &
       "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
     &'OPENED ON UNIT: ', I0)"
@@ -200,19 +208,19 @@ contains
       "(4x, 'PARTICLE TRACKS WILL BE SAVED TO CSV FILE: ', a, /4x, &
     &'OPENED ON UNIT: ', I0)"
 
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+    ! get options block
+    call this%parser%GetBlock('OPTIONS', block_found, ierr, &
                               supportOpenClose=.true., blockRequired=.false.)
 
-    ! -- parse options block if detected
-    if (isfound) then
+    ! parse options block if detected
+    if (block_found) then
       write (this%iout, '(/,1x,a,/)') 'PROCESSING OC OPTIONS'
       event_found = .false.
       do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        call this%parser%GetNextLine(eob)
+        if (eob) exit
         call this%parser%GetStringCaps(keyword)
-        found = .false.
+        param_found = .false.
         select case (keyword)
         case ('BUDGETCSV')
           call this%parser%GetStringCaps(keyword2)
@@ -226,7 +234,7 @@ contains
           this%ibudcsv = GetUnit()
           call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                         filstat_opt='REPLACE')
-          found = .true.
+          param_found = .true.
         case ('TRACK')
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
@@ -248,7 +256,7 @@ contains
             call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
                              'FOLLOWED BY FILEOUT')
           end if
-          found = .true.
+          param_found = .true.
         case ('TRACKCSV')
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
@@ -264,91 +272,45 @@ contains
             call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
               &FOLLOWED BY FILEOUT')
           end if
-          found = .true.
+          param_found = .true.
         case ('TRACK_RELEASE')
           this%trackrelease = .true.
           event_found = .true.
-          found = .true.
+          param_found = .true.
         case ('TRACK_EXIT')
           this%trackexit = .true.
           event_found = .true.
-          found = .true.
+          param_found = .true.
         case ('TRACK_TIMESTEP')
           this%tracktimestep = .true.
           event_found = .true.
-          found = .true.
+          param_found = .true.
         case ('TRACK_TERMINATE')
           this%trackterminate = .true.
           event_found = .true.
-          found = .true.
+          param_found = .true.
         case ('TRACK_WEAKSINK')
           this%trackweaksink = .true.
           event_found = .true.
-          found = .true.
+          param_found = .true.
         case ('TRACK_USERTIME')
           this%trackusertime = .true.
           event_found = .true.
-          found = .true.
-        case ('TRACK_TIMES')
-          if (size(this%tracktimes%times) > 0) then
-            errmsg = "TRACK TIMES ALREADY SPECIFIED"
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit(terminate=.true.)
-          end if
-          i = 0
-          ttloop: do
-            success = .false.
-            call this%parser%TryGetDouble(dval, success)
-            if (.not. success) exit ttloop
-            i = i + 1
-            call this%tracktimes%expand()
-            this%tracktimes%times(i) = dval
-          end do ttloop
-          if (.not. this%tracktimes%increasing()) then
-            errmsg = "TRACK TIMES MUST STRICTLY INCREASE"
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit(terminate=.true.)
-          end if
-          this%trackusertime = .true.
-          found = .true.
-        case ('TRACK_TIMESFILE')
-          if (size(this%tracktimes%times) > 0) then
-            errmsg = "TRACK TIMES ALREADY SPECIFIED"
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit(terminate=.true.)
-          end if
-          call this%parser%GetString(fname)
-          call openfile(this%itrktls, this%iout, fname, 'TLS')
-          i = 0
-          ttfloop: do
-            call linereader%rdcom(this%itrktls, this%iout, line, ierr)
-            if (line == '') exit ttfloop
-            i = i + 1
-            call this%tracktimes%expand()
-            read (line, '(f30.0)') dval
-            this%tracktimes%times(i) = dval
-          end do ttfloop
-          if (.not. this%tracktimes%increasing()) then
-            errmsg = "TRACK TIMES MUST STRICTLY INCREASE"
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit(terminate=.true.)
-          end if
-          this%trackusertime = .true.
-          found = .true.
+          param_found = .true.
         case default
-          found = .false.
+          param_found = .false.
         end select
 
-        ! -- check if we're done
-        if (.not. found) then
+        ! check if we're done
+        if (.not. param_found) then
           do ipos = 1, size(this%ocds)
             ocdobjptr => this%ocds(ipos)
             if (keyword == trim(ocdobjptr%cname)) then
-              found = .true.
+              param_found = .true.
               exit
             end if
           end do
-          if (.not. found) then
+          if (.not. param_found) then
             errmsg = "UNKNOWN OC OPTION '"//trim(keyword)//"'."
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -358,7 +320,7 @@ contains
         end if
       end do
 
-      ! -- default to all events
+      ! default to all events
       if (.not. event_found) then
         this%trackrelease = .true.
         this%trackexit = .true.
@@ -368,9 +330,112 @@ contains
         this%trackusertime = .true.
       end if
 
-      ! -- logging
+      ! logging
       write (this%iout, '(1x,a)') 'END OF OC OPTIONS'
     end if
   end subroutine prt_oc_read_options
+
+  !> @brief Read the dimensions block.
+  subroutine prt_oc_read_dimensions(this)
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error, count_errors
+    ! dummy
+    class(PrtOcType), intent(inout) :: this
+    ! local
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: ierr
+    logical(LGP) :: isfound, endOfBlock
+
+    ! initialize dimensions to -1
+    this%ntracktimes = -1
+
+    ! get dimensions block
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                              supportOpenClose=.true., &
+                              blockRequired=.false.)
+
+    ! parse dimensions block if detected
+    if (.not. isfound) return
+    write (this%iout, '(/1x,a)') &
+      'PROCESSING OUTPUT CONTROL DIMENSIONS'
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
+      call this%parser%GetStringCaps(keyword)
+      select case (keyword)
+      case ('NTRACKTIMES')
+        this%ntracktimes = this%parser%GetInteger()
+        write (this%iout, '(4x,a,i7)') 'NTRACKTIMES = ', this%ntracktimes
+      case default
+        write (errmsg, '(a,a)') &
+          'UNKNOWN OUTPUT CONTROL DIMENSION: ', trim(keyword)
+        call store_error(errmsg)
+      end select
+    end do
+    write (this%iout, '(1x,a)') &
+      'END OF OUTPUT CONTROL DIMENSIONS'
+
+    if (this%ntracktimes < 0) then
+      write (errmsg, '(a)') &
+        'NTRACKTIMES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
+      call store_error(errmsg)
+    end if
+
+    ! stop if errors were encountered in the block
+    if (count_errors() > 0) &
+      call this%parser%StoreErrorUnit()
+
+  end subroutine prt_oc_read_dimensions
+
+  !> @brief Read the tracking times block.
+  subroutine prt_oc_read_tracktimes(this)
+    ! dummy
+    class(PrtOcType), intent(inout) :: this
+    ! local
+    integer(I4B) :: i, ierr
+    logical(LGP) :: eob, found, success
+    real(DP) :: t
+
+    ! get tracktimes block
+    call this%parser%GetBlock('TRACKTIMES', found, ierr, &
+                              supportOpenClose=.true., &
+                              blockRequired=.false.)
+
+    ! raise an error if tracktimes has a dimension
+    ! but no block was found, otherwise return early
+    if (.not. found) then
+      if (this%ntracktimes <= 0) return
+      write (errmsg, '(a, i0)') &
+        "Expected TRACKTIMES with length ", this%ntracktimes
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit(terminate=.true.)
+    end if
+
+    ! allocate time selection
+    call this%tracktimes%expand(this%ntracktimes)
+
+    ! read the block
+    write (this%iout, '(/1x,a)') &
+      'PROCESSING OUTPUT CONTROL TRACKTIMES'
+    do i = 1, this%ntracktimes
+      call this%parser%GetNextLine(eob)
+      if (eob) exit
+      call this%parser%TryGetDouble(t, success)
+      if (.not. success) then
+        errmsg = "Failed to read double precision value"
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit(terminate=.true.)
+      end if
+      this%tracktimes%times(i) = t
+    end do
+
+    ! make sure times strictly increase
+    if (.not. this%tracktimes%increasing()) then
+      errmsg = "TRACKTIMES must strictly increase"
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit(terminate=.true.)
+    end if
+
+  end subroutine prt_oc_read_tracktimes
 
 end module PrtOcModule
