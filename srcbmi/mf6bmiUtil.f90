@@ -160,33 +160,6 @@ contains
 
   end function string_to_char_array
 
-  !> @brief Convert Fortran string to C-style character string.
-  !!
-  !! This workaround is needed on ARM macs because assignment
-  !! from the return value of a function fails with gfortran
-  !! if the LHS and RHS have different lengths, producing a
-  !! runtime error like:
-  !!
-  !! Dimension 1 of array 'c_array' has extent X instead of Y
-  !!
-  !! TODO: remove this and use string_to_char_array instead
-  !! if this is truly a compiler bug and it's fixed someday.
-  !<
-  subroutine string_to_char_array_2(string, length, c_array)
-    ! -- dummy variables
-    character(len=*), intent(in) :: string !< string to convert
-    integer(c_int), intent(in) :: length !< Fortran string length
-    character(kind=c_char, len=1), intent(out) :: c_array(length + 1) !< C-style character string
-    ! -- local variables
-    integer(I4B) :: i
-
-    do i = 1, length
-      c_array(i) = string(i:i)
-    end do
-    c_array(length + 1) = C_NULL_CHAR
-
-  end subroutine string_to_char_array_2
-
   !> @brief Extract the model name from a memory address string
   !<
   function extract_model_name(var_address, success) result(model_name)

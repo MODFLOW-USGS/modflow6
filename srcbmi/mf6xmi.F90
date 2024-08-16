@@ -347,7 +347,7 @@ contains
     ! -- modules
     use VersionModule, only: VERSIONNUMBER, IDEVELOPMODE
     ! -- dummy variables
-    character(kind=c_char), intent(out) :: mf_version(BMI_LENVERSION)
+    character(kind=c_char), intent(inout) :: mf_version(BMI_LENVERSION)
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     character(len=BMI_LENVERSION) :: vstr
@@ -357,7 +357,7 @@ contains
     else
       vstr = VERSIONNUMBER
     end if
-    call string_to_char_array_2(vstr, len_trim(vstr), mf_version)
+    mf_version = string_to_char_array(vstr, len_trim(vstr))
     bmi_status = BMI_SUCCESS
 
   end function xmi_get_version
