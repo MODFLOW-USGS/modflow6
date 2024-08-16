@@ -1,6 +1,6 @@
 """
 
-This problem tests the SWF capability to simulate overland flow
+This problem tests the OLF capability to simulate overland flow
 on a regular grid.  The problem is based on the tilted
 v-catchment problem described by Panday and Huyakorn (2004):
 Advances in Water Resources 27 (2004) 361-382.
@@ -15,7 +15,7 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-swr-vcatch",
+    "olf-swr-vcatch",
 ]
 
 
@@ -57,7 +57,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = "swf"
+    name = "olf"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -91,12 +91,12 @@ def build_models(idx, test):
     )
 
     # surface water model
-    swfname = f"{name}_model"
-    swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
+    olfname = f"{name}_model"
+    olf = flopy.mf6.ModflowOlf(sim, modelname=olfname, save_flows=True)
 
     nouter, ninner = 15, 100
     hclose, rclose, relax = 1e-8, 1e-8, 1.0
-    imsswf = flopy.mf6.ModflowIms(
+    imsolf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
         outer_dvclose=hclose,
@@ -115,13 +115,13 @@ def build_models(idx, test):
         # backtracking_tolerance=1.0,
         # backtracking_reduction_factor=0.3,
         # backtracking_residual_limit=100.0,
-        filename=f"{swfname}.ims",
+        filename=f"{olfname}.ims",
     )
-    sim.register_ims_package(imsswf, [swf.name])
+    sim.register_ims_package(imsolf, [olf.name])
 
     botm = land_surface.reshape((nrow, ncol))
-    dis = flopy.mf6.ModflowSwfdis2D(
-        swf,
+    dis = flopy.mf6.ModflowOlfdis2D(
+        olf,
         export_array_ascii=True,
         nrow=nrow,
         ncol=ncol,
@@ -134,8 +134,8 @@ def build_models(idx, test):
     rough = rough_overland * np.ones((nlay, nrow, ncol), dtype=float)
     rough[0, :, int(ncol / 2)] = rough_channel
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowOlfdfw(
+        olf,
         export_array_ascii=True,
         print_flows=False,
         save_flows=True,
@@ -143,24 +143,24 @@ def build_models(idx, test):
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowOlfsto(
+        olf,
         save_flows=True,
         steady_state={0: False, 1: False},
         transient={0: True, 1: True},
     )
 
-    ic = flopy.mf6.ModflowSwfic(
-        swf,
+    ic = flopy.mf6.ModflowOlfic(
+        olf,
         export_array_ascii=True,
         strt=botm,
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
-        budget_filerecord=f"{swfname}.bud",
-        stage_filerecord=f"{swfname}.stage",
+    oc = flopy.mf6.ModflowOlfoc(
+        olf,
+        budget_filerecord=f"{olfname}.bud",
+        stage_filerecord=f"{olfname}.stage",
         saverecord=[
             ("STAGE", "ALL"),
             ("BUDGET", "ALL"),
@@ -173,8 +173,8 @@ def build_models(idx, test):
     # flw
     qinflow = rainfall * dx * dx
     spd = [(i, j, qinflow) for j in range(ncol) for i in range(nrow)]
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    flw = flopy.mf6.ModflowOlfflw(
+        olf,
         maxbound=len(spd),
         print_input=True,
         print_flows=True,
@@ -182,7 +182,7 @@ def build_models(idx, test):
     )
 
     # note: for specifying zero-based reach number, put reach number in tuple
-    fname = f"{swfname}.zdg.obs.csv"
+    fname = f"{olfname}.zdg.obs.csv"
     zdg_obs = {
         fname: [
             ("OUTFLOW", "ZDG", (nrow - 1, int(ncol / 2))),
@@ -193,8 +193,8 @@ def build_models(idx, test):
     idcxs = -1  # use cross section 0
     width = dx
     spd = [((nrow - 1, int(ncol / 2)), idcxs, width, slope_y, rough_channel)]
-    zdg = flopy.mf6.ModflowSwfzdg(
-        swf,
+    zdg = flopy.mf6.ModflowOlfzdg(
+        olf,
         observations=zdg_obs,
         print_input=True,
         maxbound=len(spd),
@@ -208,7 +208,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / "swf_model.zdg.obs.csv"
+    fpth = test.workspace / "olf_model.zdg.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(6, 4))
@@ -228,7 +228,7 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in minutes")
     plt.ylabel("flow, in meters per second")
     plt.legend()
-    fname = test.workspace / "swf_model.zdg.obs.png"
+    fname = test.workspace / "olf_model.zdg.obs.png"
     plt.savefig(fname)
 
     return
@@ -237,7 +237,7 @@ def make_plot(test, mfsim):
 def check_output(idx, test):
     print(f"evaluating model for case {idx}...")
 
-    swfname = "swf_model"
+    olfname = "olf_model"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
@@ -246,19 +246,19 @@ def check_output(idx, test):
         make_plot(test, mfsim)
 
     # read the binary grid file
-    fpth = test.workspace / f"{swfname}.dis2d.grb"
+    fpth = test.workspace / f"{olfname}.dis2d.grb"
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grb.ia
     ja = grb.ja
     assert ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
 
     # read binary stage file
-    fpth = test.workspace / f"{swfname}.stage"
+    fpth = test.workspace / f"{olfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
 
     # read outflow observation
-    fpth = test.workspace / "swf_model.zdg.obs.csv"
+    fpth = test.workspace / "olf_model.zdg.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     outflow_answer = 4.859497719  # outflow value at end of first period
@@ -278,14 +278,14 @@ def check_output(idx, test):
         "dfw.manningsn",
         "ic.strt",
     ]
-    files = [pl.Path(ws / f"{swfname}-{f}.txt") for f in flist]
-    swf = test.sims[0].swf[0]
+    files = [pl.Path(ws / f"{olfname}-{f}.txt") for f in flist]
+    olf = test.sims[0].olf[0]
     for i, fpth in enumerate(files):
         assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
         a = np.loadtxt(fpth)
         array_name = flist[i][flist[i].index(".") + 1 :]
         package_name = flist[i][0 : flist[i].index(".")]
-        package = getattr(swf, package_name)
+        package = getattr(olf, package_name)
         b = getattr(package, array_name).array
         assert np.allclose(a, b)
     return

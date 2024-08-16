@@ -1,4 +1,4 @@
-# --------------------- exg swfgwf options ---------------------
+# --------------------- exg olfgwf options ---------------------
 # flopy multi-package
 
 block options
@@ -15,7 +15,7 @@ name print_flows
 type keyword
 reader urword
 optional true
-longname keyword to print swfgwf flows to list file
+longname keyword to print olfgwf flows to list file
 description keyword to indicate that the list of exchange flow rates will be printed to the listing file for every stress period in which ``SAVE BUDGET'' is specified in Output Control.
 mf6internal ipr_flow
 
@@ -71,7 +71,7 @@ optional false
 longname obs6 input filename
 description is the file name of the observations input file for this exchange. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:gwf-obstypetable} lists observation type(s) supported by the SWF-GWF package.
 
-# --------------------- exg swfgwf dimensions ---------------------
+# --------------------- exg olfgwf dimensions ---------------------
 
 block dimensions
 name nexg
@@ -82,7 +82,7 @@ longname number of exchanges
 description keyword and integer value specifying the number of SWF-GWF exchanges.
 
 
-# --------------------- exg swfgwf exchangedata ---------------------
+# --------------------- exg olfgwf exchangedata ---------------------
 
 block exchangedata
 name exchangedata

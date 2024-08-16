@@ -2,16 +2,12 @@
 
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
-from SWIFT2D, a USGS 2D overland flow simulator.  Because the DFW
-Package in MF6 presently works only with the DISV1D Package, it cannot
-represent flow on a grid, so it is used here to simulate a one-
-dimensional version of this same problem.  The problem is set up
+from SWIFT2D, a USGS 2D overland flow simulator.  This version of
+the problem uses the DIS Package as a 2d grid.  The problem is set up
 so that once steady conditions are achieved, the depth in each reach
 should be 1.0 m.
 
 """
-
-import pathlib as pl
 
 import flopy
 import numpy as np
@@ -19,13 +15,12 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-swr-t2",
+    "olf-swr-t2-dis",
 ]
 
 
 def build_models(idx, test):
     dx = 500.0
-    nreach = 11
     nper = 1
     perlen = [5040 * 2 * 60.0]  # 7 days (in seconds)
     nstp = [50]  # In SWR report nstp = [5040] and tsmult is 1.
@@ -35,7 +30,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = "swf"
+    name = "olf"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -48,12 +43,12 @@ def build_models(idx, test):
     )
 
     # surface water model
-    swfname = f"{name}_model"
-    swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
+    olfname = f"{name}_model"
+    olf = flopy.mf6.ModflowOlf(sim, modelname=olfname, save_flows=True)
 
     nouter, ninner = 100, 50
-    hclose, rclose, relax = 1e-8, 1e-8, 1.0
-    imsswf = flopy.mf6.ModflowIms(
+    hclose, rclose, relax = 1e-6, 1e-8, 1.0
+    imsolf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
         outer_dvclose=hclose,
@@ -68,62 +63,52 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        backtracking_number=5,
-        backtracking_tolerance=1.0,
-        backtracking_reduction_factor=0.3,
-        backtracking_residual_limit=100.0,
-        filename=f"{swfname}.ims",
+        # backtracking_number=5,
+        # backtracking_tolerance=1.0,
+        # backtracking_reduction_factor=0.3,
+        # backtracking_residual_limit=100.0,
+        filename=f"{olfname}.ims",
     )
-    sim.register_ims_package(imsswf, [swf.name])
+    sim.register_ims_package(imsolf, [olf.name])
 
-    vertices = []
-    vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
-    cell2d = []
-    for j in range(nreach):
-        cell2d.append([j, 0.5, 2, j, j + 1])
-    nodes = len(cell2d)
-    nvert = len(vertices)
+    nrow = 11
+    ncol = 11
+    botm = np.empty((nrow, ncol), dtype=float)
+    for i in range(nrow):
+        botm[i, :] = np.linspace(1.05, 0.05, nrow)
 
-    reach_bottom = np.linspace(1.05, 0.05, nreach)
-
-    disv1d = flopy.mf6.ModflowSwfdisv1D(
-        swf,
-        export_array_ascii=True,
-        nodes=nodes,
-        nvert=nvert,
-        length=dx,
-        width=dx,
-        bottom=reach_bottom,
-        idomain=1,
-        vertices=vertices,
-        cell2d=cell2d,
+    dis = flopy.mf6.ModflowOlfdis2D(
+        olf,
+        nrow=nrow,
+        ncol=ncol,
+        delr=dx,
+        delc=dx,
+        botm=botm,
     )
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
-        export_array_ascii=True,
+    dfw = flopy.mf6.ModflowOlfdfw(
+        olf,
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowOlfsto(
+        olf,
         save_flows=True,
     )
 
-    ic = flopy.mf6.ModflowSwfic(
-        swf,
-        export_array_ascii=True,
+    ic = flopy.mf6.ModflowOlfic(
+        olf,
         strt=2.05,
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
-        budget_filerecord=f"{swfname}.bud",
-        stage_filerecord=f"{swfname}.stage",
+    oc = flopy.mf6.ModflowOlfoc(
+        olf,
+        budget_filerecord=f"{olfname}.bud",
+        stage_filerecord=f"{olfname}.stage",
         saverecord=[
             ("STAGE", "ALL"),
             ("BUDGET", "ALL"),
@@ -135,38 +120,39 @@ def build_models(idx, test):
     )
 
     # flw
-    inflow_reach = 0
     qinflow = 23.570
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
-        maxbound=1,
+    spd = [(i, 0, qinflow) for i in range(nrow)]
+    flw = flopy.mf6.ModflowOlfflw(
+        olf,
+        maxbound=len(spd),
         print_input=True,
         print_flows=True,
-        stress_period_data=[(inflow_reach, qinflow)],
+        stress_period_data=spd,
     )
 
-    chd = flopy.mf6.ModflowSwfchd(
-        swf,
-        maxbound=1,
+    spd = [(i, ncol - 1, 1.05) for i in range(nrow)]
+    chd = flopy.mf6.ModflowOlfchd(
+        olf,
+        maxbound=len(spd),
         print_input=True,
         print_flows=True,
-        stress_period_data=[(nreach - 1, 1.05)],
+        stress_period_data=spd,
     )
 
-    obs_data = {
-        f"{swfname}.obs.csv": [
-            ("OBS1", "STAGE", (1,)),
-            ("OBS2", "STAGE", (5,)),
-            ("OBS3", "STAGE", (8,)),
-        ],
-    }
-    obs_package = flopy.mf6.ModflowUtlobs(
-        swf,
-        filename=f"{swfname}.obs",
-        digits=10,
-        print_input=True,
-        continuous=obs_data,
-    )
+    # obs_data = {
+    #     f"{olfname}.obs.csv": [
+    #         ("OBS1", "STAGE", (1,)),
+    #         ("OBS2", "STAGE", (5,)),
+    #         ("OBS3", "STAGE", (8,)),
+    #     ],
+    # }
+    # obs_package = flopy.mf6.ModflowUtlobs(
+    #     olf,
+    #     filename=f"{olfname}.obs",
+    #     digits=10,
+    #     print_input=True,
+    #     continuous=obs_data,
+    # )
 
     return sim, None
 
@@ -175,7 +161,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / "swf_model.obs.csv"
+    fpth = test.workspace / "olf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))
@@ -196,7 +182,7 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = test.workspace / "swf_model.obs.1.png"
+    fname = test.workspace / "olf_model.obs.1.png"
     plt.savefig(fname)
 
     return
@@ -205,7 +191,7 @@ def make_plot(test, mfsim):
 def check_output(idx, test):
     print(f"evaluating model for case {idx}...")
 
-    swfname = "swf_model"
+    olfname = "olf_model"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
@@ -214,38 +200,16 @@ def check_output(idx, test):
         make_plot(test, mfsim)
 
     # read binary stage file
-    fpth = test.workspace / f"{swfname}.stage"
+    fpth = test.workspace / f"{olfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
 
     # at end of simulation, water depth should be 1.0 for all reaches
-    swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.disv1d.bottom.array
-    (
-        np.allclose(depth, 1.0),
-        f"Simulated depth at end should be 1, but found {depth}",
-    )
-
-    # ensure export array is working properly
-    flist = [
-        "disv1d.length",
-        "disv1d.width",
-        "disv1d.bottom",
-        "disv1d.idomain",
-        "dfw.manningsn",
-        "ic.strt",
-    ]
-    files = [pl.Path(ws / f"{swfname}-{f}.txt") for f in flist]
-    swf = test.sims[0].swf[0]
-    for i, fpth in enumerate(files):
-        assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
-        a = np.loadtxt(fpth)
-        array_name = flist[i][flist[i].index(".") + 1 :]
-        package_name = flist[i][0 : flist[i].index(".")]
-        package = getattr(swf, package_name)
-        b = getattr(package, array_name).array
-        assert np.allclose(a, b)
-    return
+    olf = mfsim.get_model(olfname)
+    depth = stage_all[-1] - olf.dis.botm.array
+    assert np.allclose(
+        depth, 1.0
+    ), f"Simulated depth at end should be 1, but found {depth}"
 
 
 @pytest.mark.developmode

@@ -11,7 +11,7 @@ from conftest import project_root_path
 from framework import TestFramework
 
 cases = [
-    "swf-dfw-loop",
+    "chf-dfw-loop",
 ]
 
 data_path = project_root_path / "autotest/data/swr04/"
@@ -53,7 +53,7 @@ def build_models(idx, test):
         under_relaxation="simple",
         under_relaxation_gamma=0.7,
     )
-    swf = flopy.mf6.ModflowSwf(
+    chf = flopy.mf6.ModflowChf(
         sim,
         modelname=name,
         save_flows=True,
@@ -221,8 +221,8 @@ def build_models(idx, test):
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disv1d = flopy.mf6.ModflowSwfdisv1D(
-        swf,
+    disv1d = flopy.mf6.ModflowChfdisv1D(
+        chf,
         nodes=nodes,
         nvert=nvert,
         length=reach_length,
@@ -234,10 +234,10 @@ def build_models(idx, test):
     )
 
     stage0 = np.array(14 * [3] + 4 * [2])
-    ic = flopy.mf6.ModflowSwfic(swf, strt=stage0)
+    ic = flopy.mf6.ModflowChfic(chf, strt=stage0)
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowChfdfw(
+        chf,
         central_in_space=True,
         # dev_swr_conductance=True,
         print_flows=True,
@@ -246,8 +246,8 @@ def build_models(idx, test):
         idcxs=idcxs,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowChfsto(
+        chf,
         save_flows=True,
     )
 
@@ -266,8 +266,8 @@ def build_models(idx, test):
     )
 
     cxsdata = list(zip(xfraction, height, mannfraction))
-    cxs = flopy.mf6.ModflowSwfcxs(
-        swf,
+    cxs = flopy.mf6.ModflowChfcxs(
+        chf,
         nsections=3,
         npoints=4 * 3,
         packagedata=[(0, 4), (1, 4), (2, 4)],
@@ -275,8 +275,8 @@ def build_models(idx, test):
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
+    oc = flopy.mf6.ModflowChfoc(
+        chf,
         budget_filerecord=f"{name}.bud",
         stage_filerecord=f"{name}.stage",
         saverecord=[
@@ -293,8 +293,8 @@ def build_models(idx, test):
         [(0,), "reach1"],
         [(4,), "reach5"],
     ]
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    flw = flopy.mf6.ModflowChfflw(
+        chf,
         maxbound=len(flwlist),
         print_input=True,
         print_flows=True,
@@ -311,8 +311,8 @@ def build_models(idx, test):
         interpolation_methodrecord=interpolation_methodrecord,
     )
 
-    chd = flopy.mf6.ModflowSwfchd(
-        swf,
+    chd = flopy.mf6.ModflowChfchd(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
@@ -332,7 +332,7 @@ def build_models(idx, test):
         ],
     }
     obs_package = flopy.mf6.ModflowUtlobs(
-        swf,
+        chf,
         filename=f"{name}.obs",
         digits=10,
         print_input=True,
@@ -349,7 +349,7 @@ def make_plot(test):
     name = test.name
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
-    swf = mfsim.get_model(name)
+    chf = mfsim.get_model(name)
 
     fpth = test.workspace / f"{name}.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")

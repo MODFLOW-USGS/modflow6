@@ -18,8 +18,8 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-bowl01",
-    "swf-bowl02",
+    "chf-bowl01",
+    "chf-bowl02",
 ]
 
 inflow_location = ["middle", "left"]
@@ -41,7 +41,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = "swf"
+    name = "chf"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -54,17 +54,17 @@ def build_models(idx, test):
     )
 
     # surface water model
-    swfname = f"{name}_model"
-    swf = flopy.mf6.ModflowSwf(
+    chfname = f"{name}_model"
+    chf = flopy.mf6.ModflowChf(
         sim,
-        modelname=swfname,
+        modelname=chfname,
         save_flows=True,
         newtonoptions="newton underrelaxation",
     )
 
     nouter, ninner = 200, 50
     hclose, rclose, relax = 1e-8, 1e-8, 1.0
-    imsswf = flopy.mf6.ModflowIms(
+    imschf = flopy.mf6.ModflowIms(
         sim,
         print_option="summary",
         outer_dvclose=hclose,
@@ -84,10 +84,10 @@ def build_models(idx, test):
         # backtracking_tolerance=1.0,
         # backtracking_reduction_factor=0.3,
         # backtracking_residual_limit=100.0,
-        csv_outer_output_filerecord=f"{swfname}.ims.outer.csv",
-        filename=f"{swfname}.ims",
+        csv_outer_output_filerecord=f"{chfname}.ims.outer.csv",
+        filename=f"{chfname}.ims",
     )
-    sim.register_ims_package(imsswf, [swf.name])
+    sim.register_ims_package(imschf, [chf.name])
 
     vertices = []
     vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
@@ -97,8 +97,8 @@ def build_models(idx, test):
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disv1d = flopy.mf6.ModflowSwfdisv1D(
-        swf,
+    disv1d = flopy.mf6.ModflowChfdisv1D(
+        chf,
         nodes=nodes,
         nvert=nvert,
         length=dx,
@@ -109,8 +109,8 @@ def build_models(idx, test):
         cell2d=cell2d,
     )
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowChfdfw(
+        chf,
         print_flows=True,
         save_flows=True,
         manningsn=0.035,
@@ -118,7 +118,7 @@ def build_models(idx, test):
     )
 
     # note: for specifying zero-based reach number, put reach number in tuple
-    fname = f"{swfname}.zdg.obs.csv"
+    fname = f"{chfname}.zdg.obs.csv"
     zdg_obs = {
         fname: [
             ("OUTFLOW1", "ZDG", (0,)),
@@ -134,21 +134,21 @@ def build_models(idx, test):
     spd = [((nreach - 1,), idcxs, width, slope, rough)]
     if inflow_location[idx] == "middle":
         spd.append((0, idcxs, width, slope, rough))
-    zdg = flopy.mf6.ModflowSwfzdg(
-        swf,
+    zdg = flopy.mf6.ModflowChfzdg(
+        chf,
         observations=zdg_obs,
         print_input=True,
         maxbound=len(spd),
         stress_period_data=spd,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowChfsto(
+        chf,
         save_flows=True,
     )
 
-    ic = flopy.mf6.ModflowSwfic(
-        swf,
+    ic = flopy.mf6.ModflowChfic(
+        chf,
         strt=strt,
     )
 
@@ -156,8 +156,8 @@ def build_models(idx, test):
     height = [100.0, 0.0, 0.0, 100.0]
     mannfraction = [1.0, 1.0, 1.0, 1.0]
     cxsdata = list(zip(xfraction, height, mannfraction))
-    cxs = flopy.mf6.ModflowSwfcxs(
-        swf,
+    cxs = flopy.mf6.ModflowChfcxs(
+        chf,
         nsections=1,
         npoints=4,
         packagedata=[(0, 4)],
@@ -165,10 +165,10 @@ def build_models(idx, test):
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
-        budget_filerecord=f"{swfname}.bud",
-        stage_filerecord=f"{swfname}.stage",
+    oc = flopy.mf6.ModflowChfoc(
+        chf,
+        budget_filerecord=f"{chfname}.bud",
+        stage_filerecord=f"{chfname}.stage",
         saverecord=[
             ("STAGE", "ALL"),
             ("BUDGET", "ALL"),
@@ -187,8 +187,8 @@ def build_models(idx, test):
     else:
         raise Exception(f"invalid inflow location {inflow_location[idx]}")
     qinflow = dx * 1.0 / 86400.0
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    flw = flopy.mf6.ModflowChfflw(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
@@ -201,10 +201,10 @@ def build_models(idx, test):
 def check_output(idx, test):
     print(f"evaluating model for case {idx}...")
 
-    swfname = "swf_model"
+    chfname = "chf_model"
 
     # ensure outflow on left and right is the same
-    fpth = test.workspace / f"{swfname}.zdg.obs.csv"
+    fpth = test.workspace / f"{chfname}.zdg.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     diff = obsvals["OUTFLOW1"] - obsvals["OUTFLOW9"]
     atol = 1.0e-6
@@ -214,7 +214,7 @@ def check_output(idx, test):
     #    assert np.allclose(diff, 0., atol=atol), f"{diff}"
 
     # read binary stage file
-    fpth = test.workspace / f"{swfname}.stage"
+    fpth = test.workspace / f"{chfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
     for kstp, stage in enumerate(stage_all):
