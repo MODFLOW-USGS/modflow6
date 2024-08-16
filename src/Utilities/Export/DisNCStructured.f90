@@ -201,6 +201,7 @@ contains
   !> @brief netcdf export step
   !<
   subroutine step(this)
+    use ConstantsModule, only: DHNOFLO
     use TdisModule, only: totim
     class(DisNCStructuredType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous :: dbl1d
@@ -211,7 +212,7 @@ contains
     if (size(this%dis%nodeuser) < &
         size(this%dis%nodereduced)) then
       allocate (dbl1d(size(this%dis%nodereduced)))
-      dbl1d = NF90_FILL_DOUBLE
+      dbl1d = DHNOFLO
       do n = 1, size(this%dis%nodereduced)
         if (this%dis%nodereduced(n) > 0) then
           dbl1d(n) = this%x(this%dis%nodereduced(n))
@@ -544,6 +545,7 @@ contains
   !> @brief create the model layer dependent variables
   !<
   subroutine define_dependent(this)
+    use ConstantsModule, only: DHNOFLO
     class(DisNCStructuredType), intent(inout) :: this
     !
     call nf_verify(nf90_def_var(this%ncid, this%xname, NF90_DOUBLE, &
@@ -577,7 +579,7 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent, 'long_name', &
                                 this%annotation%longname), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent, '_FillValue', &
-                                (/NF90_FILL_DOUBLE/)), this%nc_fname)
+                                (/DHNOFLO/)), this%nc_fname)
     if (this%ogc_wkt /= '') then
       if (this%latlon) then
         call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent, &
