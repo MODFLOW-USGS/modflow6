@@ -2,11 +2,9 @@
 
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
-from SWIFT2D, a USGS 2D overland flow simulator.  Because the DFW
-Package in MF6 presently works only with the DISV1D Package, it cannot
-represent flow on a grid, so it is used here to simulate a one-
-dimensional version of this same problem.  The problem is set up
-so that once steady conditions are achieved, the depth in each reach
+from SWIFT2D, a USGS 2D overland flow simulator.  The CHF model is used
+here to simulate a one-dimensional version of this same problem.  The problem 
+is set up so that once steady conditions are achieved, the depth in each reach
 should be 1.0 m.
 
 """
@@ -19,7 +17,7 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "olf-swr-t2",
+    "chf-swr-t2",
 ]
 
 
@@ -35,7 +33,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = "olf"
+    name = "chf"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -48,12 +46,12 @@ def build_models(idx, test):
     )
 
     # surface water model
-    olfname = f"{name}_model"
-    olf = flopy.mf6.ModflowOlf(sim, modelname=olfname, save_flows=True)
+    chfname = f"{name}_model"
+    chf = flopy.mf6.ModflowChf(sim, modelname=chfname, save_flows=True)
 
     nouter, ninner = 100, 50
     hclose, rclose, relax = 1e-8, 1e-8, 1.0
-    imsolf = flopy.mf6.ModflowIms(
+    imschf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
         outer_dvclose=hclose,
@@ -72,9 +70,9 @@ def build_models(idx, test):
         backtracking_tolerance=1.0,
         backtracking_reduction_factor=0.3,
         backtracking_residual_limit=100.0,
-        filename=f"{olfname}.ims",
+        filename=f"{chfname}.ims",
     )
-    sim.register_ims_package(imsolf, [olf.name])
+    sim.register_ims_package(imschf, [chf.name])
 
     vertices = []
     vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
@@ -86,8 +84,8 @@ def build_models(idx, test):
 
     reach_bottom = np.linspace(1.05, 0.05, nreach)
 
-    disv1d = flopy.mf6.ModflowOlfdisv1D(
-        olf,
+    disv1d = flopy.mf6.ModflowChfdisv1D(
+        chf,
         export_array_ascii=True,
         nodes=nodes,
         nvert=nvert,
@@ -99,8 +97,8 @@ def build_models(idx, test):
         cell2d=cell2d,
     )
 
-    dfw = flopy.mf6.ModflowOlfdfw(
-        olf,
+    dfw = flopy.mf6.ModflowChfdfw(
+        chf,
         export_array_ascii=True,
         print_flows=True,
         save_flows=True,
@@ -108,22 +106,22 @@ def build_models(idx, test):
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowOlfsto(
-        olf,
+    sto = flopy.mf6.ModflowChfsto(
+        chf,
         save_flows=True,
     )
 
-    ic = flopy.mf6.ModflowOlfic(
-        olf,
+    ic = flopy.mf6.ModflowChfic(
+        chf,
         export_array_ascii=True,
         strt=2.05,
     )
 
     # output control
-    oc = flopy.mf6.ModflowOlfoc(
-        olf,
-        budget_filerecord=f"{olfname}.bud",
-        stage_filerecord=f"{olfname}.stage",
+    oc = flopy.mf6.ModflowChfoc(
+        chf,
+        budget_filerecord=f"{chfname}.bud",
+        stage_filerecord=f"{chfname}.stage",
         saverecord=[
             ("STAGE", "ALL"),
             ("BUDGET", "ALL"),
@@ -137,16 +135,16 @@ def build_models(idx, test):
     # flw
     inflow_reach = 0
     qinflow = 23.570
-    flw = flopy.mf6.ModflowOlfflw(
-        olf,
+    flw = flopy.mf6.ModflowChfflw(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
         stress_period_data=[(inflow_reach, qinflow)],
     )
 
-    chd = flopy.mf6.ModflowOlfchd(
-        olf,
+    chd = flopy.mf6.ModflowChfchd(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
@@ -154,15 +152,15 @@ def build_models(idx, test):
     )
 
     obs_data = {
-        f"{olfname}.obs.csv": [
+        f"{chfname}.obs.csv": [
             ("OBS1", "STAGE", (1,)),
             ("OBS2", "STAGE", (5,)),
             ("OBS3", "STAGE", (8,)),
         ],
     }
     obs_package = flopy.mf6.ModflowUtlobs(
-        olf,
-        filename=f"{olfname}.obs",
+        chf,
+        filename=f"{chfname}.obs",
         digits=10,
         print_input=True,
         continuous=obs_data,
@@ -175,7 +173,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / "olf_model.obs.csv"
+    fpth = test.workspace / "chf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))
@@ -196,7 +194,7 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = test.workspace / "olf_model.obs.1.png"
+    fname = test.workspace / "chf_model.obs.1.png"
     plt.savefig(fname)
 
     return
@@ -205,7 +203,7 @@ def make_plot(test, mfsim):
 def check_output(idx, test):
     print(f"evaluating model for case {idx}...")
 
-    olfname = "olf_model"
+    chfname = "chf_model"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
@@ -214,13 +212,13 @@ def check_output(idx, test):
         make_plot(test, mfsim)
 
     # read binary stage file
-    fpth = test.workspace / f"{olfname}.stage"
+    fpth = test.workspace / f"{chfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
 
     # at end of simulation, water depth should be 1.0 for all reaches
-    olf = mfsim.get_model(olfname)
-    depth = stage_all[-1] - olf.disv1d.bottom.array
+    chf = mfsim.get_model(chfname)
+    depth = stage_all[-1] - chf.disv1d.bottom.array
     (
         np.allclose(depth, 1.0),
         f"Simulated depth at end should be 1, but found {depth}",
@@ -235,14 +233,14 @@ def check_output(idx, test):
         "dfw.manningsn",
         "ic.strt",
     ]
-    files = [pl.Path(ws / f"{olfname}-{f}.txt") for f in flist]
-    olf = test.sims[0].olf[0]
+    files = [pl.Path(ws / f"{chfname}-{f}.txt") for f in flist]
+    chf = test.sims[0].chf[0]
     for i, fpth in enumerate(files):
         assert fpth.is_file(), f"Expected file does not exist: {fpth.name}"
         a = np.loadtxt(fpth)
         array_name = flist[i][flist[i].index(".") + 1 :]
         package_name = flist[i][0 : flist[i].index(".")]
-        package = getattr(olf, package_name)
+        package = getattr(chf, package_name)
         b = getattr(package, array_name).array
         assert np.allclose(a, b)
     return

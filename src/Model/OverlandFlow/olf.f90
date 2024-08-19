@@ -29,11 +29,11 @@ module OlfModule
   !!
   !! OLF model base package types.  Only listed packages are candidates
   !< for input and these will be loaded in the order specified.
-  integer(I4B), parameter :: OLF_NBASEPKG = 9
+  integer(I4B), parameter :: OLF_NBASEPKG = 7
   character(len=LENPACKAGETYPE), dimension(OLF_NBASEPKG) :: &
-    OLF_BASEPKG = ['DISV1D6', 'DIS2D6 ', 'DISV2D6', &
-                   'DFW6   ', 'CXS6   ', 'OC6    ', &
-                   'IC6    ', 'OBS6   ', 'STO6   ']
+    OLF_BASEPKG = ['DIS2D6 ', 'DISV2D6', 'DFW6   ', &
+                   'OC6    ', 'IC6    ', 'OBS6   ', &
+                   'STO6   ']
 
   !> @brief OLF multi package array descriptors
   !!
