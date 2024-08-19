@@ -168,69 +168,6 @@ longname drape
 description is a text keyword to indicate that if a particle's release point is in a cell that happens to be inactive at release time, the particle is to be moved to the topmost active cell below it, if any. By default, a particle is not released into the simulation if its release point's cell is inactive at release time.
 
 block options
-name release_timesrecord
-type record release_times times
-shape
-reader urword
-tagged true
-optional true
-longname
-description
-
-block options
-name release_times
-type keyword
-reader urword
-in_record true
-tagged true
-shape
-longname
-description keyword indicating release times will follow
-
-block options
-name times
-type double precision
-shape (unknown)
-reader urword
-in_record true
-tagged false
-repeating true
-longname release times
-description times to release, relative to the beginning of the simulation.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
-
-block options
-name release_timesfilerecord
-type record release_timesfile timesfile
-shape
-reader urword
-tagged true
-optional true
-longname
-description
-
-block options
-name release_timesfile
-type keyword
-reader urword
-in_record true
-tagged true
-shape
-longname
-description keyword indicating release times file name will follow
-
-block options
-name timesfile
-type string
-preserve_case true
-shape
-in_record true
-reader urword
-tagged false
-optional false
-longname file keyword
-description name of the release times file.  RELEASE\_TIMES and RELEASE\_TIMESFILE are mutually exclusive.
-
-block options
 name dev_forceternary
 type keyword
 reader urword
@@ -238,7 +175,6 @@ optional false
 longname force ternary tracking method
 description force use of the ternary tracking method regardless of cell type in DISV grids.
 mf6internal ifrctrn
-
 
 # --------------------- prt prp dimensions ---------------------
 
@@ -249,6 +185,14 @@ reader urword
 optional false
 longname number of particle release points
 description is the number of particle release points.
+
+block dimensions
+name nreleasetimes
+type integer
+reader urword
+optional false
+longname number of particle release times
+description is the number of particle release times specified in the RELEASETIMES block. This is not necessarily the total number of release times; release times are the union of RELEASETIMES and PERIOD block RELEASESETTING selections.
 
 # --------------------- prt prp packagedata ---------------------
 
@@ -321,6 +265,26 @@ reader urword
 optional true
 longname release point name
 description name of the particle release point. BOUNDNAME is an ASCII character variable that can contain as many as 40 characters. If BOUNDNAME contains spaces in it, then the entire name must be enclosed within single quotes.
+
+# --------------------- prt prp releasetimes ---------------
+
+block releasetimes
+name releasetimes
+type recarray time
+shape (nreleasetimes)
+reader urword
+longname
+description
+
+block releasetimes
+name time
+type double precision
+shape
+tagged false
+in_record true
+reader urword
+longname release time
+description real value that defines the release time with respect to the simulation start time.
 
 # --------------------- prt prp period ---------------------
 
