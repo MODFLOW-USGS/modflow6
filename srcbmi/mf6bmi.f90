@@ -44,11 +44,11 @@ contains
     bind(C, name="get_component_name")
     !DIR$ ATTRIBUTES DLLEXPORT :: bmi_get_component_name
     ! -- dummy variables
-    character(kind=c_char), intent(out) :: name(BMI_LENCOMPONENTNAME)
+    character(kind=c_char), intent(inout) :: name(BMI_LENCOMPONENTNAME)
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
 
-    call string_to_char_array_2('MODFLOW 6', 9, name)
+    name = string_to_char_array('MODFLOW 6', 9)
     bmi_status = BMI_SUCCESS
 
   end function bmi_get_component_name

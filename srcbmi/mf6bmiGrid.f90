@@ -62,7 +62,7 @@ contains
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_type
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
-    character(kind=c_char), intent(out) :: grid_type(BMI_LENGRIDTYPE)
+    character(kind=c_char), intent(inout) :: grid_type(BMI_LENGRIDTYPE)
     integer(kind=c_int) :: bmi_status
     ! -- local variables
     character(len=LENGRIDTYPE) :: grid_type_f
@@ -81,10 +81,7 @@ contains
     else
       return
     end if
-    call string_to_char_array_2( &
-      trim(grid_type_f), &
-      len_trim(grid_type_f), &
-      grid_type)
+    grid_type = string_to_char_array(trim(grid_type_f), len_trim(grid_type_f))
     bmi_status = BMI_SUCCESS
   end function get_grid_type
 
