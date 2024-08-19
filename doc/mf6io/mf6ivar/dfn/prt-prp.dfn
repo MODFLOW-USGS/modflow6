@@ -176,6 +176,14 @@ longname force ternary tracking method
 description force use of the ternary tracking method regardless of cell type in DISV grids.
 mf6internal ifrctrn
 
+block options
+name release_time_tolerance
+type double precision
+reader urword
+optional true
+longname release time coincidence tolerance
+description tolerance within which to consider adjacent release times coincident and merge them into a single release time. The default is $\sisetup{input-digits = 0123456789\epsilon} \num{\epsilon e+9}$.
+
 # --------------------- prt prp dimensions ---------------------
 
 block dimensions
@@ -317,7 +325,7 @@ tagged false
 in_record true
 reader urword
 longname
-description specifies time steps at which to release a particle. A particle is released at the beginning of each specified time step. For fine control over release timing, specify times explicitly using RELEASE\_TIMES or RELEASE\_TIMESFILE. If the beginning of a specified time step coincides with a release time specified in a RELEASE_\TIMES or RELEASE_TIMESFILE setting, only one particle is released at that time. TODO: mention tolerance
+description specifies time steps at which to release a particle. A particle is released at the beginning of each specified time step. For fine control over release timing, specify times explicitly using the RELEASETIMES block. If the beginning of a specified time step coincides with a release time specified in the RELEASETIMES block, only one particle is released at that time. Coincidence is evaluated up to the tolerance specified in RELEASE_TIME_TOLERANCE, or 
 
 block period
 name all
@@ -376,4 +384,4 @@ reader urword
 optional true
 removed 6.5.1
 longname
-description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. The FRACTION option has been removed. Starting with MODFLOW 6.5.1, the FRACTION option is ignored if provided. For fine control over release timing, specify times explicitly using RELEASE\_TIMES or RELEASE\_TIMESFILE.
+description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. NOTE: The FRACTION option has been removed. Starting with MODFLOW 6.5.1, the FRACTION option is ignored if provided. For fine control over release timing, specify times explicitly using the RELEASETIMES block.

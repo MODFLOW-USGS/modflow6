@@ -2,7 +2,7 @@ module PrtPrpModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LINELENGTH, &
                              LENBOUNDNAME, LENPAKLOC, TABLEFT, TABCENTER, &
-                             MNORMAL, DSAME, DEP3
+                             MNORMAL, DSAME, DEP3, DEP9
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TableModule, only: TableType, table_cr
@@ -58,6 +58,7 @@ module PrtPrpModule
     integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
     integer(I4B), pointer :: iexmeth => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), pointer :: rttol => null() !< tolerance for coincident particle release times
     real(DP), pointer :: offset => null() !< release time offset
     real(DP), pointer :: stoptime => null() !< stop time for all release points
     real(DP), pointer :: stoptraveltime => null() !< stop travel time for all points
@@ -165,6 +166,7 @@ contains
     call mem_deallocate(this%ifrctrn)
     call mem_deallocate(this%iexmeth)
     call mem_deallocate(this%extol)
+    call mem_deallocate(this%rttol)
     call mem_deallocate(this%foundtol)
 
     ! Deallocate arrays
@@ -230,9 +232,6 @@ contains
   subroutine prp_allocate_scalars(this)
     class(PrtPrpType) :: this
 
-    ! Create release schedule
-    this%schedule => create_release_schedule()
-
     ! Allocate parent's scalars
     call this%BndType%allocate_scalars()
 
@@ -254,7 +253,8 @@ contains
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
     call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
     call mem_allocate(this%iexmeth, 'IEXMETH', this%memoryPath)
-    call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
+    call mem_allocate(this%extol, 'EXTOL', this%memoryPath)
+    call mem_allocate(this%rttol, 'RTTOL', this%memoryPath)
     call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! Set values
@@ -276,7 +276,9 @@ contains
     this%ifrctrn = 0
     this%iexmeth = 0
     this%extol = DZERO
+    this%rttol = DSAME * DEP9
     this%foundtol = .false.
+
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -578,6 +580,7 @@ contains
         if (end_of_block) exit recordloop
         call this%parser%GetStringCaps(caps)
         if (index(caps, 'FRACTION') > 0) then
+          ! todo: remove warning after a couple releases?
           warnmsg = "FRACTION is no longer supported. For fine control&
                     & over release timing, specify times explicitly&
                     & using RELEASE\_TIMES or RELEASE\_TIMESFILE."
@@ -742,6 +745,11 @@ contains
         call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
       found = .true.
       this%foundtol = .true.
+    case ('RELEASE_TIME_TOLERANCE')
+      this%rttol = this%parser%GetDouble()
+      if (this%rttol <= DZERO) &
+        call store_error('RELEASE_TIME_TOLERANCE MUST BE POSITIVE')
+      found = .true.
     case ('DEV_FORCETERNARY')
       call this%parser%DevOpt()
       this%ifrctrn = 1
@@ -758,6 +766,10 @@ contains
     case default
       found = .false.
     end select
+
+    ! Create release schedule now that we know
+    ! the coincident release time tolerance
+    this%schedule => create_release_schedule(this%rttol)
 
   end subroutine prp_options
 

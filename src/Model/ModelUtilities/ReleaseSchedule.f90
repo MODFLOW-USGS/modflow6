@@ -2,7 +2,7 @@
 module ReleaseScheduleModule
 
   use ArrayHandlersModule, only: ExpandArray
-  use ConstantsModule, only: DZERO, DONE, DSAME, DEP9, LINELENGTH
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use KindModule, only: I4B, LGP, DP
   use MathUtilModule, only: is_close
   use TimeSelectModule, only: TimeSelectType
@@ -28,6 +28,7 @@ module ReleaseScheduleModule
   !<
   type :: ReleaseScheduleType
     real(DP), allocatable :: times(:) !< release times
+    real(DP) :: tolerance !< release time coincidence tolerance
     type(TimeSelectType), pointer :: time_select !< time selection
     type(TimeStepSelectType), pointer :: step_select !< time step selection
   contains
@@ -42,24 +43,30 @@ module ReleaseScheduleModule
 contains
 
   !> @brief Create a new release schedule object.
-  function create_release_schedule() result(sched)
+  function create_release_schedule(tol) result(sched)
     type(ReleaseScheduleType), pointer :: sched !< schedule pointer
+    real(DP) :: tol !< coincident release time tolerance
+
     allocate (sched)
     allocate (sched%times(0))
     allocate (sched%time_select)
     allocate (sched%step_select)
     call sched%time_select%init()
     call sched%step_select%init()
+    sched%tolerance = tol
+
   end function create_release_schedule
 
   !> @brief Deallocate the release schedule.
   subroutine deallocate (this)
     class(ReleaseScheduleType), intent(inout) :: this !< this instance
+
     deallocate (this%times)
     call this%time_select%deallocate()
     call this%step_select%deallocate()
     deallocate (this%time_select)
     deallocate (this%step_select)
+
   end subroutine deallocate
 
   !> @brief Write the release schedule to the given output unit.
@@ -104,8 +111,8 @@ contains
     class(ReleaseScheduleType), intent(inout) :: this
     character(len=LINELENGTH), intent(in), optional :: lines(:)
     integer(I4B) :: it, i
-    real(DP) :: treleaseloc
-    real(DP) :: treleasesim
+    real(DP) :: tprevious
+    real(DP) :: trelease
 
     ! Advance the time selection.
     call this%time_select%advance()
@@ -119,35 +126,37 @@ contains
       end do
     end if
 
-    ! Initialize variables for local (period-block)
-    ! settings and simulation times (options block).
-    ! Handle these separately as the complete release
-    ! specification is their union, barring any times
-    ! which coincide (within a given tolerance).
-    treleaseloc = -DONE
-    treleasesim = -DONE
-
+    ! Reinitialize the release time schedule.
     if (allocated(this%times)) deallocate (this%times)
     allocate (this%times(0))
 
-    ! Add period-block release time.
+    tprevious = -DONE
+    trelease = -DONE
+
+    ! Add a release time configured by period-block
+    ! settings, if one is scheduled this time step.
     if (this%step_select%is_selected(kstp, endofperiod=endofperiod)) then
-      treleaseloc = totimc
-      call this%schedule(treleaseloc)
+      trelease = totimc
+      call this%schedule(trelease)
+      tprevious = trelease
     end if
 
-    ! Add explicitly specified release times.
+    ! Add explicitly configured release times, up
+    ! to the configured tolerance of coincidence.
     if (this%time_select%any()) then
       do it = this%time_select%selection(1), this%time_select%selection(2)
-        treleasesim = this%time_select%times(it)
+        trelease = this%time_select%times(it)
         ! Skip the release time if it coincides
         ! with the period block release setting.
-        if (treleaseloc >= DZERO .and. is_close( &
-            treleaseloc, &
-            treleasesim, &
-            ! TODO: configurable tolerance?
-            atol=DSAME * DEP9)) cycle
-        call this%schedule(treleasesim)
+        if (tprevious >= DZERO .and. is_close( &
+            tprevious, &
+            trelease, &
+            atol=this%tolerance)) cycle
+        print *, 'previous: ', tprevious
+        print *, 'current: ', trelease
+        print *, 'tolerance: ', this%tolerance
+        call this%schedule(trelease)
+        tprevious = trelease
       end do
     end if
   end subroutine advance
