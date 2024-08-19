@@ -3,7 +3,7 @@
 SWR Test Problem 2 simulates two-dimensional overland flow using
 a grid of rows and columns.  The SWR code was compared with results
 from SWIFT2D, a USGS 2D overland flow simulator.  The CHF model is used
-here to simulate a one-dimensional version of this same problem.  The problem 
+here to simulate a one-dimensional version of this same problem.  The problem
 is set up so that once steady conditions are achieved, the depth in each reach
 should be 1.0 m.
 
