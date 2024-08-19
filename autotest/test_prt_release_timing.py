@@ -38,6 +38,7 @@ cases = [
     # options block options
     f"{simname}sgl",  # RELEASETIMES block, 0.5
     f"{simname}dbl",  # RELEASETIMES block, 0.5 and 0.6
+    f"{simname}open",  # RELEASETIMES block, 0.5 and 0.6, OPEN/CLOSE
     # period block options
     f"{simname}all",  # ALL FRACTION 0.5
     f"{simname}frst",  # FIRST FRACTION 0.5
@@ -47,7 +48,7 @@ cases = [
 
 
 def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
-    if "sgl" in name or "dbl" in name or "tls" in name:
+    if "sgl" in name or "dbl" in name or "open" in name:
         return None
 
     # Flopy expects each period block setting
@@ -144,10 +145,15 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
         if "sgl" in prt_name
         else (
             [(fraction,), (fraction + 0.1,)]
-            if "dbl" in prt_name or "tls" in prt_name
+            if "dbl" in prt_name or "open" in prt_name
             else None
         )
     )
+    releasetimes_path = prt_ws / "releasetimes.txt"
+    if "open" in name:
+        with open(releasetimes_path, "w") as f:
+            for t in releasetimes:
+                f.write(str(t[0]) + "\n")
     flopy.mf6.ModflowPrtprp(
         prt,
         pname="prp1",
@@ -158,9 +164,17 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
         track_filerecord=[prp_track_file],
         trackcsv_filerecord=[prp_track_csv_file],
         nreleasetimes=(
-            1 if "sgl" in prt_name else 2 if "dbl" in name else None
+            1
+            if "sgl" in prt_name
+            else 2
+            if ("dbl" in name or "open" in name)
+            else None
         ),
-        releasetimes=releasetimes,
+        releasetimes=f"open/close {releasetimes_path.name}"
+        if "open" in name
+        else releasetimes
+        if releasetimes
+        else None,
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
@@ -332,7 +346,7 @@ def check_output(idx, test, fraction, snapshot):
     assert list_file.is_file()
     lines = open(list_file).readlines()
     lines = [l.strip() for l in lines]
-    if "sgl" in name or "dbl" in name or "tls" in name:
+    if "sgl" in name or "dbl" in name or "open" in name:
         assert (
             "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
             in lines
@@ -430,7 +444,7 @@ def check_output(idx, test, fraction, snapshot):
     del mp7_pls["zloc"]
 
     # compare mf6 / mp7 pathline data
-    if "dbl" in name or "tls" in name:
+    if "dbl" in name or "open" in name:
         assert len(mf6_pls) == 2 * len(mp7_pls)
         # todo check for double mass
     else:

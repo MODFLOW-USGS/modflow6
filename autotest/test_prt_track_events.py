@@ -52,6 +52,7 @@ cases = [
     f"{simname}wksk",
     f"{simname}mult",
     f"{simname}trts",
+    f"{simname}open",
 ]
 releasepts_prt = {
     "a": [
@@ -207,17 +208,22 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
                 track_release=True,
                 track_terminate=True,
             )
-        elif "trts" in name:
+        elif "trts" in name or "open" in name:
+            tracktimes_path = prt_ws / "tracktimes.txt"
+            if "open" in name:
+                with open(tracktimes_path, "w") as f:
+                    for t in tracktimes:
+                        f.write(str(t) + "\n")
             return flopy.mf6.ModflowPrtoc(
                 prt,
                 pname="oc",
                 track_filerecord=[prt_track_file],
                 trackcsv_filerecord=[prt_track_csv_file],
                 track_usertime=True,
-                ntracktimes=len(tracktimes) if "trts" in name else None,
-                tracktimes=[(t,) for t in tracktimes]
-                if "trts" in name
-                else None,
+                ntracktimes=len(tracktimes),
+                tracktimes=f"open/close {tracktimes_path.name}"
+                if "open" in name
+                else [(t,) for t in tracktimes],
             )
 
     oc = get_oc()
@@ -366,7 +372,7 @@ def check_output(idx, test):
         pass
     if "wksk" in name:
         pass
-    if "trts" in name:
+    if "trts" in name or "open" in name:
         expected_len += 5324
     if "mult" in name:
         expected_len += 2 * (
