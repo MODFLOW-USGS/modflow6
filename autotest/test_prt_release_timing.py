@@ -49,7 +49,7 @@ cases = [
     f"{simname}both",  # RELEASETIMES block: 0.1; also FIRST
     f"{simname}dupe",  # RELEASETIMES block: 0.0: also FIRST, expect consolidation
     # test an absurdly high RELEASE_TIME_TOLERANCE
-    f"{simname}tol"
+    f"{simname}tol",
 ]
 
 
@@ -138,7 +138,9 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
             [(0.1,)]
             if "both" in name
             else (
-                [(0.0,), (0.1,)] if ("dbl" in name or "open" in name or "tol" in name) else None
+                [(0.0,), (0.1,)]
+                if ("dbl" in name or "open" in name or "tol" in name)
+                else None
             )
         )
     )
@@ -177,7 +179,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
-        release_time_tolerance=.2 if "tol" in name else None
+        release_time_tolerance=0.2 if "tol" in name else None,
     )
 
     # create output control package
