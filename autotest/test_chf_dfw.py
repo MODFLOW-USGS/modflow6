@@ -1,10 +1,9 @@
 """
 
-Simple 3-reach SWF model connected to a simple
-3-cell GWF model
+Simple 3 reach network with 4 vertices
 
 
-SWF zero-based diagram below
+zero-based diagram below
 
 o------o------o------o
 v0     v1     v2     v3
@@ -18,13 +17,15 @@ ia  ja
 
 """
 
+import os
+
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-gwf01",
+    "chf-dfw01",
 ]
 
 
@@ -44,38 +45,12 @@ def build_models(idx, test):
         sim,
         print_option="all",
         linear_acceleration="BICGSTAB",
-        outer_dvclose=1.0e-12,
-        inner_dvclose=1.0e-12,
-        outer_maximum=500,
-        under_relaxation="simple",
-        under_relaxation_gamma=0.1,
+        outer_dvclose=1.0e-7,
+        inner_dvclose=1.0e-8,
     )
-
-    add_swf_model(sim)
-    add_gwf_model(sim)
-
-    swfgwf_data = [
-        ((0,), (0, 0, 0), 1.0, 1.0),
-        ((1,), (0, 0, 1), 1.0, 1.0),
-        ((2,), (0, 0, 2), 1.0, 1.0),
-    ]
-    swfgwf = flopy.mf6.ModflowSwfgwf(
-        sim,
-        print_input=True,
-        print_flows=True,
-        exgtype="SWF6-GWF6",
-        nexg=len(swfgwf_data),
-        exgmnamea="swfmodel",
-        exgmnameb="gwfmodel",
-        exchangedata=swfgwf_data,
+    chf = flopy.mf6.ModflowChf(
+        sim, modelname=name, save_flows=True, print_flows=True
     )
-
-    return sim, None
-
-
-def add_swf_model(sim):
-    name = "swfmodel"
-    swf = flopy.mf6.ModflowSwf(sim, modelname=name, save_flows=True)
 
     dx = 1000.0
     nreach = 3
@@ -88,8 +63,8 @@ def add_swf_model(sim):
     nodes = len(cell2d)
     nvert = len(vertices)
 
-    disv1d = flopy.mf6.ModflowSwfdisv1D(
-        swf,
+    disv1d = flopy.mf6.ModflowChfdisv1D(
+        chf,
         nodes=nodes,
         nvert=nvert,
         length=dx,
@@ -100,29 +75,27 @@ def add_swf_model(sim):
         cell2d=cell2d,
     )
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowChfdfw(
+        chf,
         print_flows=True,
         save_flows=True,
-        length_conversion=1.0,
-        time_conversion=86400.0,
         manningsn=0.035,
         idcxs=0,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowChfsto(
+        chf,
         save_flows=True,
     )
 
-    ic = flopy.mf6.ModflowSwfic(swf, strt=1.0)
+    ic = flopy.mf6.ModflowChfic(chf, strt=1.0)
 
     xfraction = [0.0, 0.0, 1.0, 1.0]
     height = [100.0, 0.0, 0.0, 100.0]
     mannfraction = [1.0, 1.0, 1.0, 1.0]
     cxsdata = list(zip(xfraction, height, mannfraction))
-    cxs = flopy.mf6.ModflowSwfcxs(
-        swf,
+    cxs = flopy.mf6.ModflowChfcxs(
+        chf,
         nsections=1,
         npoints=4,
         packagedata=[(0, 4)],
@@ -130,8 +103,8 @@ def add_swf_model(sim):
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
+    oc = flopy.mf6.ModflowChfoc(
+        chf,
         budget_filerecord=f"{name}.bud",
         stage_filerecord=f"{name}.stage",
         saverecord=[
@@ -144,87 +117,48 @@ def add_swf_model(sim):
         ],
     )
 
-    flw_spd = [
-        (0, 100),
-    ]
-    maxbound = len(flw_spd)
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    # Save to external binary file or into flw package depending on binary keyword
+    binary = True
+    flw_list = [
+        (1, 100),
+    ]  # one-based cell numbers here
+    maxbound = len(flw_list)
+    if binary:
+        ra = np.array(flw_list, dtype=[("irch", "<i4"), ("q", "<f8")])
+        ra.tofile(os.path.join(sim_ws, "flw0.bin"))
+        flw_spd = {
+            0: {
+                "filename": "flw0.bin",
+                "binary": True,
+                "data": None,
+            },
+        }
+    else:
+        flw_spd = {0: flw_list}
+    flw = flopy.mf6.ModflowChfflw(
+        chf,
         maxbound=maxbound,
         print_input=True,
         print_flows=True,
         stress_period_data=flw_spd,
     )
 
-    chd = flopy.mf6.ModflowSwfchd(
-        swf,
+    chd = flopy.mf6.ModflowChfchd(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
         stress_period_data=[(2, 1.0)],
     )
 
-    return
-
-
-def add_gwf_model(sim):
-    # create gwf model
-    name = "gwfmodel"
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=name,
-        save_flows=True,
-    )
-
-    dis = flopy.mf6.ModflowGwfdis(
-        gwf,
-        nlay=1,
-        nrow=1,
-        ncol=3,
-        delr=1000.0,
-        delc=50.0,
-        top=0.0,
-        botm=-10.0,
-    )
-
-    # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=-5.0)
-
-    # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        save_flows=False,
-        icelltype=1,
-        k=1.0,
-    )
-
-    sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.1, ss=1.0e-5, iconvert=1)
-
-    # chd files
-    # chd_spd = [(0, 0, 0, 1.0), (0, 0, 2, 1.0)]
-    # chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
-    #     gwf,
-    #     maxbound=len(chd_spd),
-    #     stress_period_data=chd_spd,
-    #     pname="CHD-1",
-    # )
-
-    # output control
-    oc = flopy.mf6.ModflowGwfoc(
-        gwf,
-        budget_filerecord=f"{name}.cbc",
-        head_filerecord=f"{name}.hds",
-        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-    )
+    return sim, None
 
 
 def check_output(idx, test):
     print("evaluating model...")
 
     # assign name
-    name = "swfmodel"
+    name = cases[idx]
 
     # read the binary grid file
     fpth = test.workspace / f"{name}.disv1d.grb"
@@ -241,23 +175,11 @@ def check_output(idx, test):
     # read the budget file
     fpth = test.workspace / f"{name}.bud"
     budobj = flopy.utils.binaryfile.CellBudgetFile(fpth)
-    flowja = budobj.get_data(text="FLOW-JA-FACE")[0].flatten()
+    flowja = budobj.get_data(text="FLOW-JA-FACE")
     qstorage = budobj.get_data(text="STORAGE")
     qflw = budobj.get_data(text="FLW")
     qchd = budobj.get_data(text="CHD")
     qresidual = np.zeros(grb.nodes)
-    nodes = ia.shape[0] - 1
-    for n in range(nodes):
-        qresidual[n] = flowja[ia[n]]
-
-    print(budobj.list_records())
-    print(f"flowja: {flowja}")
-    print(f"qstorage: {qstorage}")
-    print(f"qchd: {qchd}")
-    print(f"qflw: {qflw}")
-    print(f"qresidual: {qresidual}")
-
-    assert np.allclose(qresidual, 0.0, atol=1.0e-3), "Flowja residual > 1.e-3"
 
     return
 

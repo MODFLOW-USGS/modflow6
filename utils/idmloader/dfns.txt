@@ -42,7 +42,35 @@ gwe-disv.dfn
 gwe-disu.dfn
 gwe-dis.dfn
 
-# swf model
+# chf model
+chf-nam.dfn
+chf-disv1d.dfn
+chf-dis2d.dfn
+chf-disv2d.dfn
+chf-cxs.dfn
+chf-dfw.dfn
+chf-ic.dfn
+chf-cdb.dfn
+chf-chd.dfn
+chf-flw.dfn
+chf-sto.dfn
+chf-zdg.dfn
+
+# olf model
+olf-nam.dfn
+olf-disv1d.dfn
+olf-dis2d.dfn
+olf-disv2d.dfn
+olf-cxs.dfn
+olf-dfw.dfn
+olf-ic.dfn
+olf-cdb.dfn
+olf-chd.dfn
+olf-flw.dfn
+olf-sto.dfn
+olf-zdg.dfn
+
+# olf model
 swf-nam.dfn
 swf-disv1d.dfn
 swf-dis2d.dfn
@@ -63,13 +91,14 @@ prt-disv.dfn
 prt-mip.dfn
 
 # exchanges
+exg-chfgwf.dfn
 exg-gwfgwf.dfn
 exg-gwfgwt.dfn
 exg-gwtgwt.dfn
 exg-gwfgwe.dfn
 exg-gwegwe.dfn
-exg-swfgwf.dfn
 exg-gwfprt.dfn
+exg-olfgwf.dfn
 
 # utils
 utl-hpc.dfn

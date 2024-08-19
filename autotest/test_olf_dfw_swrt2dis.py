@@ -15,7 +15,7 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "swf-swr-t2-dis",
+    "olf-swr-t2-dis",
 ]
 
 
@@ -30,7 +30,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    name = "swf"
+    name = "olf"
 
     # build MODFLOW 6 files
     ws = test.workspace
@@ -43,12 +43,12 @@ def build_models(idx, test):
     )
 
     # surface water model
-    swfname = f"{name}_model"
-    swf = flopy.mf6.ModflowSwf(sim, modelname=swfname, save_flows=True)
+    olfname = f"{name}_model"
+    olf = flopy.mf6.ModflowOlf(sim, modelname=olfname, save_flows=True)
 
     nouter, ninner = 100, 50
     hclose, rclose, relax = 1e-6, 1e-8, 1.0
-    imsswf = flopy.mf6.ModflowIms(
+    imsolf = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
         outer_dvclose=hclose,
@@ -67,9 +67,9 @@ def build_models(idx, test):
         # backtracking_tolerance=1.0,
         # backtracking_reduction_factor=0.3,
         # backtracking_residual_limit=100.0,
-        filename=f"{swfname}.ims",
+        filename=f"{olfname}.ims",
     )
-    sim.register_ims_package(imsswf, [swf.name])
+    sim.register_ims_package(imsolf, [olf.name])
 
     nrow = 11
     ncol = 11
@@ -77,8 +77,8 @@ def build_models(idx, test):
     for i in range(nrow):
         botm[i, :] = np.linspace(1.05, 0.05, nrow)
 
-    dis = flopy.mf6.ModflowSwfdis2D(
-        swf,
+    dis = flopy.mf6.ModflowOlfdis2D(
+        olf,
         nrow=nrow,
         ncol=ncol,
         delr=dx,
@@ -86,29 +86,29 @@ def build_models(idx, test):
         botm=botm,
     )
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowOlfdfw(
+        olf,
         print_flows=True,
         save_flows=True,
         manningsn=0.30,
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowOlfsto(
+        olf,
         save_flows=True,
     )
 
-    ic = flopy.mf6.ModflowSwfic(
-        swf,
+    ic = flopy.mf6.ModflowOlfic(
+        olf,
         strt=2.05,
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
-        budget_filerecord=f"{swfname}.bud",
-        stage_filerecord=f"{swfname}.stage",
+    oc = flopy.mf6.ModflowOlfoc(
+        olf,
+        budget_filerecord=f"{olfname}.bud",
+        stage_filerecord=f"{olfname}.stage",
         saverecord=[
             ("STAGE", "ALL"),
             ("BUDGET", "ALL"),
@@ -122,8 +122,8 @@ def build_models(idx, test):
     # flw
     qinflow = 23.570
     spd = [(i, 0, qinflow) for i in range(nrow)]
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    flw = flopy.mf6.ModflowOlfflw(
+        olf,
         maxbound=len(spd),
         print_input=True,
         print_flows=True,
@@ -131,8 +131,8 @@ def build_models(idx, test):
     )
 
     spd = [(i, ncol - 1, 1.05) for i in range(nrow)]
-    chd = flopy.mf6.ModflowSwfchd(
-        swf,
+    chd = flopy.mf6.ModflowOlfchd(
+        olf,
         maxbound=len(spd),
         print_input=True,
         print_flows=True,
@@ -140,15 +140,15 @@ def build_models(idx, test):
     )
 
     # obs_data = {
-    #     f"{swfname}.obs.csv": [
+    #     f"{olfname}.obs.csv": [
     #         ("OBS1", "STAGE", (1,)),
     #         ("OBS2", "STAGE", (5,)),
     #         ("OBS3", "STAGE", (8,)),
     #     ],
     # }
     # obs_package = flopy.mf6.ModflowUtlobs(
-    #     swf,
-    #     filename=f"{swfname}.obs",
+    #     olf,
+    #     filename=f"{olfname}.obs",
     #     digits=10,
     #     print_input=True,
     #     continuous=obs_data,
@@ -161,7 +161,7 @@ def make_plot(test, mfsim):
     print("making plots...")
     import matplotlib.pyplot as plt
 
-    fpth = test.workspace / "swf_model.obs.csv"
+    fpth = test.workspace / "olf_model.obs.csv"
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     fig = plt.figure(figsize=(10, 10))
@@ -182,7 +182,7 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = test.workspace / "swf_model.obs.1.png"
+    fname = test.workspace / "olf_model.obs.1.png"
     plt.savefig(fname)
 
     return
@@ -191,7 +191,7 @@ def make_plot(test, mfsim):
 def check_output(idx, test):
     print(f"evaluating model for case {idx}...")
 
-    swfname = "swf_model"
+    olfname = "olf_model"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
@@ -200,13 +200,13 @@ def check_output(idx, test):
         make_plot(test, mfsim)
 
     # read binary stage file
-    fpth = test.workspace / f"{swfname}.stage"
+    fpth = test.workspace / f"{olfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage_all = sobj.get_alldata()
 
     # at end of simulation, water depth should be 1.0 for all reaches
-    swf = mfsim.get_model(swfname)
-    depth = stage_all[-1] - swf.dis.botm.array
+    olf = mfsim.get_model(olfname)
+    depth = stage_all[-1] - olf.dis.botm.array
     assert np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"

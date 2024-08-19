@@ -19,14 +19,14 @@ from conftest import project_root_path
 from framework import TestFramework
 
 cases = [
-    "swf-beg2022",
+    "chf-beg2022",
 ]
 data_path = project_root_path / "autotest/data/beg2022/"
 
 
 def build_models(idx, test):
     sim_ws = test.workspace
-    name = "swfmodel"
+    name = "chfmodel"
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -59,7 +59,7 @@ def build_models(idx, test):
         outer_dvclose=1.0e-4,
         inner_dvclose=1.0e-4,
     )
-    swf = flopy.mf6.ModflowSwf(sim, modelname=name, save_flows=True)
+    chf = flopy.mf6.ModflowChf(sim, modelname=name, save_flows=True)
 
     total_length = 21000
     dx = 1000.0
@@ -76,8 +76,8 @@ def build_models(idx, test):
     x = np.linspace(dx / 2, total_length - dx / 2, nreach)
     z = (total_length - x) * slope
 
-    disv1d = flopy.mf6.ModflowSwfdisv1D(
-        swf,
+    disv1d = flopy.mf6.ModflowChfdisv1D(
+        chf,
         nodes=nodes,
         nvert=nvert,
         length=dx,
@@ -88,8 +88,8 @@ def build_models(idx, test):
         cell2d=cell2d,
     )
 
-    dfw = flopy.mf6.ModflowSwfdfw(
-        swf,
+    dfw = flopy.mf6.ModflowChfdfw(
+        chf,
         central_in_space=True,
         print_flows=True,
         save_flows=True,
@@ -97,8 +97,8 @@ def build_models(idx, test):
         idcxs=0,
     )
 
-    sto = flopy.mf6.ModflowSwfsto(
-        swf,
+    sto = flopy.mf6.ModflowChfsto(
+        chf,
         save_flows=True,
         steady_state={0: True, 1: False},
         transient={0: False, 1: True},
@@ -106,15 +106,15 @@ def build_models(idx, test):
 
     water_depth = 4.0
     strt = z + water_depth
-    ic = flopy.mf6.ModflowSwfic(swf, strt=strt)
+    ic = flopy.mf6.ModflowChfic(chf, strt=strt)
 
     xfraction = np.array([0.0, 0.0, 10.0, 15.0, 25.0, 30.0, 40.0, 40.0]) / 40.0
     height = [40.0, 10.0, 10.0, 0.0, 0.0, 10.0, 10.0, 40.0]
     npts = len(height)
     mannfraction = npts * [1.0]
     cxsdata = list(zip(xfraction, height, mannfraction))
-    cxs = flopy.mf6.ModflowSwfcxs(
-        swf,
+    cxs = flopy.mf6.ModflowChfcxs(
+        chf,
         nsections=1,
         npoints=npts,
         packagedata=[(0, npts)],
@@ -122,8 +122,8 @@ def build_models(idx, test):
     )
 
     # output control
-    oc = flopy.mf6.ModflowSwfoc(
-        swf,
+    oc = flopy.mf6.ModflowChfoc(
+        chf,
         budget_filerecord=f"{name}.bud",
         stage_filerecord=f"{name}.stage",
         saverecord=[
@@ -147,8 +147,8 @@ def build_models(idx, test):
     flwlist = [
         [(0,), "reach1"],
     ]
-    flw = flopy.mf6.ModflowSwfflw(
-        swf,
+    flw = flopy.mf6.ModflowChfflw(
+        chf,
         maxbound=len(flwlist),
         print_input=True,
         print_flows=True,
@@ -164,8 +164,8 @@ def build_models(idx, test):
         interpolation_methodrecord=interpolation_methodrecord,
     )
 
-    chd = flopy.mf6.ModflowSwfchd(
-        swf,
+    chd = flopy.mf6.ModflowChfchd(
+        chf,
         maxbound=1,
         print_input=True,
         print_flows=True,
@@ -189,7 +189,7 @@ def make_plot(test, mfsim):
     df_mfswr = df_mfswr.loc[df_mfswr["TOTTIME"] > 86400]
     print(df_mfswr)
 
-    fpth = test.workspace / "swfmodel.bud"
+    fpth = test.workspace / "chfmodel.bud"
     budobj = flopy.utils.binaryfile.CellBudgetFile(fpth, precision="double")
     flowja = budobj.get_data(text="FLOW-JA-FACE")
     qstorage = budobj.get_data(text="STORAGE")
@@ -228,11 +228,11 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in hours")
     plt.ylabel("flow, in meters cubed per second")
     plt.legend()
-    fname = test.workspace / "swfmodel.flow.png"
+    fname = test.workspace / "chfmodel.flow.png"
     plt.savefig(fname)
 
     # read and plot stages
-    fpth = test.workspace / "swfmodel.stage"
+    fpth = test.workspace / "chfmodel.stage"
     qobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage = qobj.get_alldata()
 
@@ -251,7 +251,7 @@ def make_plot(test, mfsim):
     plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = test.workspace / "swfmodel.stage.png"
+    fname = test.workspace / "chfmodel.stage.png"
     plt.savefig(fname)
 
     return
@@ -268,7 +268,7 @@ def check_output(idx, test):
         make_plot(test, sim)
 
     # assign name
-    name = "swfmodel"
+    name = "chfmodel"
 
     # read the binary grid file
     fpth = test.workspace / f"{name}.disv1d.grb"
