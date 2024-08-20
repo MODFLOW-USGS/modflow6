@@ -1023,10 +1023,13 @@ contains
 
     ! make sure times strictly increase
     if (.not. this%schedule%time_select%increasing()) then
-      errmsg = "RELEASETIMES must strictly increase"
+      errmsg = "Release times must strictly increase"
       call store_error(errmsg)
       call this%parser%StoreErrorUnit(terminate=.true.)
     end if
+
+    ! deallocate
+    deallocate (times)
 
   end subroutine prp_read_releasetimes
 
@@ -1050,6 +1053,16 @@ contains
 
     ! register times with release schedule
     call this%schedule%time_select%extend(times)
+
+    ! make sure times strictly increase
+    if (.not. this%schedule%time_select%increasing()) then
+      errmsg = "Release times must strictly increase"
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit(terminate=.true.)
+    end if
+
+    ! deallocate
+    deallocate (times)
 
   end subroutine prp_load_releasetimefrequency
 

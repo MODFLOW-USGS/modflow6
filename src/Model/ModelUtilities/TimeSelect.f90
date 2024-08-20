@@ -255,6 +255,7 @@ contains
 
     allocate (indx(size(this%times)))
     call qsort(indx, this%times)
+    deallocate (indx)
   end subroutine sort
 
   !> @brief Extend the time selection with the given array.
