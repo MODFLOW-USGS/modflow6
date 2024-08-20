@@ -1,4 +1,4 @@
-# makedefaults created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
+# makedefaults created by pymake (version 1.2.10) for the 'mf6' executable.
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -72,11 +72,11 @@ endif
 # set the ldflgs
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), $(filter $(FC), gfortran))
-		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm -Wl,-ld_classic
+		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm
 	endif
 else
 	ifeq ($(FC), gfortran)
-		LDFLAGS ?= -lc -Wl,-ld_classic
+		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
 		LDFLAGS ?= -lc
