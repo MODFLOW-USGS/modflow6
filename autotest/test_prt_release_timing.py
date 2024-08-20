@@ -44,8 +44,8 @@ cases = [
     f"{simname}frac",  # ALL FRACTION 0.5, expect removal warning
     f"{simname}frst",  # FIRST
     f"{simname}stps",  # STEPS 1
-    f"{simname}freq",  # FREQUENCY 1
-    # both options block and period block options
+    f"{simname}freq",  # FREQUENCY 1 and RELEASE_TIME_FREQUENCY 0.2
+    # both releasetimes block and period block options
     f"{simname}both",  # RELEASETIMES block: 0.1; also FIRST
     f"{simname}dupe",  # RELEASETIMES block: 0.0: also FIRST, expect consolidation
     # test an absurdly high RELEASE_TIME_TOLERANCE
@@ -176,6 +176,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
             or "tol" in name
         )
         else None,
+        release_time_frequency=0.2 if "freq" in name else None,
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
@@ -316,18 +317,6 @@ def check_output(test, snapshot):
     name = test.name
     ws = test.workspace
 
-    # check error message for duplicate options-block release times case
-    if "bad" in name:
-        prt_output = test.buffs[1]
-        assert any("RELEASE TIMES ALREADY SPECIFIED" in l for l in prt_output)
-        return
-
-    # check warning message for removed FRACTION period-block setting
-    if "frac" in name:
-        prt_output = test.buffs[1]
-        assert any("FRACTION is no longer supported" in l for l in prt_output)
-        return
-
     prt_ws = test.workspace / "prt"
     mp7_ws = test.workspace / "mp7"
     gwf_name = get_model_name(name, "gwf")
@@ -456,9 +445,17 @@ def check_output(test, snapshot):
     # also match mp7 results because the duplicated
     # release time should be consolidated into one,
     # as should the "tol" case for similar reasons.
+    # the "freq" case uses both time step frequency
+    # in the period block and RELEASE_TIME_FREQUENCY
+    # in the options block, setting the former to 1
+    # and the latter to 0.2, so we expect 5 times as
+    # many particles (first time t=0 is deduplicated)
     if "dbl" in name or "open" in name or "both" in name:
         assert len(mf6_pls) == 2 * len(mp7_pls)
-        # todo check for double mass
+        # todo check mass
+    elif "freq" in name:
+        assert len(mf6_pls) == 5 * len(mp7_pls)
+        # todo check mass
     else:
         assert mf6_pls.shape == mp7_pls.shape
         assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
@@ -474,6 +471,7 @@ def test_mf6model(name, function_tmpdir, targets, array_snapshot):
         check=lambda t: check_output(t, array_snapshot),
         targets=targets,
         compare=None,
-        xfail=[False, True, False] if "bad" in name else False,
+        # expect case using FRACTION to fail
+        xfail=[False, True, False] if "frac" in name else False,
     )
     test.run()

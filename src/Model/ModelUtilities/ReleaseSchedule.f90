@@ -44,8 +44,8 @@ contains
 
   !> @brief Create a new release schedule object.
   function create_release_schedule(tol) result(sched)
+    real(DP), intent(in) :: tol !< coincident release time tolerance
     type(ReleaseScheduleType), pointer :: sched !< schedule pointer
-    real(DP) :: tol !< coincident release time tolerance
 
     allocate (sched)
     allocate (sched%times(0))
@@ -152,9 +152,6 @@ contains
             tprevious, &
             trelease, &
             atol=this%tolerance)) cycle
-        print *, 'previous: ', tprevious
-        print *, 'current: ', trelease
-        print *, 'tolerance: ', this%tolerance
         call this%schedule(trelease)
         tprevious = trelease
       end do

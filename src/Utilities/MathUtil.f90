@@ -8,7 +8,7 @@ module MathUtilModule
   implicit none
   private
   public :: f1d, is_close, mod_offset, zero_ch, zero_br, &
-            get_perturbation
+            get_perturbation, linspace
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
@@ -374,5 +374,32 @@ contains
     real(DP) :: res !< calculated perturbation value
     res = DPRECSQRT * max(abs(x), DONE) * sign(DONE, x)
   end function get_perturbation
+
+  !> @brief Generate evenly spaced reals over the specified interval.
+  !!
+  !! This function is designed to behave like NumPy's linspace.
+  !! Adapted from https://stackoverflow.com/a/57211848/6514033.
+  !<
+  pure function linspace(start, stop, num) result(array)
+    ! dummy
+    real(DP), intent(in) :: start, stop
+    integer(I4B), intent(in) :: num
+    real(DP), allocatable :: array(:)
+    ! local
+    real(DP) :: range
+    integer(I4B) :: i
+
+    allocate (array(num))
+    range = stop - start
+
+    if (num == 0) return
+    if (num == 1) then
+      array(1) = start
+      return
+    end if
+    do i = 1, num
+      array(i) = start + range * (i - 1) / (num - 1)
+    end do
+  end function linspace
 
 end module MathUtilModule

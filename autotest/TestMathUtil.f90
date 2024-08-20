@@ -1,11 +1,11 @@
 module TestMathUtil
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DNODATA, DZERO
+  use ConstantsModule, only: DNODATA, DZERO, DONE
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
   use MathUtilModule, only: f1d, is_close, mod_offset, &
                             zero_ch, zero_br, &
-                            get_perturbation
+                            get_perturbation, linspace
   implicit none
   private
   public :: collect_mathutil
@@ -25,7 +25,8 @@ contains
                 new_unittest("zero_br", &
                              test_zero_br), &
                 new_unittest("get_perturbation", &
-                             test_get_perturbation) &
+                             test_get_perturbation), &
+                new_unittest("linspace", test_linspace) &
                 ]
   end subroutine collect_mathutil
 
@@ -260,5 +261,18 @@ contains
                'expected '//to_string(v1)//' got: '//to_string(v2))
 
   end subroutine test_get_perturbation
+
+  subroutine test_linspace(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable :: a(:)
+    integer(I4B) :: i
+
+    a = linspace(DONE, 10.0_DP, 10)
+    call check(error, size(a) == 10)
+    do i = 1, 10
+      call check(error, is_close(a(i), real(i, DP)))
+    end do
+
+  end subroutine test_linspace
 
 end module TestMathUtil

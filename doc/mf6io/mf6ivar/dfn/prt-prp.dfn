@@ -184,6 +184,14 @@ optional true
 longname release time coincidence tolerance
 description tolerance within which to consider adjacent release times coincident and merge them into a single release time. The default is $\epsilon \times 10^9$.
 
+block options
+name release_time_frequency
+type double precision
+reader urword
+optional true
+longname release time frequency
+description time frequency at which to release particles. This option can be used to schedule releases at a regular interval for the duration of the simulation. The release schedule is the union of this option, the RELEASETIMES block, and period-block release settings.
+
 # --------------------- prt prp dimensions ---------------------
 
 block dimensions
@@ -384,4 +392,4 @@ reader urword
 optional true
 removed 6.5.1
 longname
-description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. NOTE: The FRACTION option has been removed. Starting with MODFLOW 6.5.1, the FRACTION option is ignored if provided. For fine control over release timing, specify times explicitly using the RELEASETIMES block.
+description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. NOTE: The FRACTION option has been removed. For fine control over release timing, specify times explicitly using the RELEASETIMES block.

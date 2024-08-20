@@ -25,7 +25,7 @@ module PrtPrpModule
   use DisModule, only: DisType
   use DisvModule, only: DisvType
   use ErrorUtilModule, only: pstop
-  use MathUtilModule, only: is_close
+  use MathUtilModule, only: is_close, linspace
   use ArrayHandlersModule, only: ExpandArray
 
   implicit none
@@ -59,6 +59,7 @@ module PrtPrpModule
     integer(I4B), pointer :: iexmeth => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
     real(DP), pointer :: rttol => null() !< tolerance for coincident particle release times
+    real(DP), pointer :: rtfreq => null() !< frequency for regularly spaced release times
     real(DP), pointer :: offset => null() !< release time offset
     real(DP), pointer :: stoptime => null() !< stop time for all release points
     real(DP), pointer :: stoptraveltime => null() !< stop travel time for all points
@@ -84,6 +85,7 @@ module PrtPrpModule
     procedure :: read_dimensions => prp_read_dimensions
     procedure :: prp_read_packagedata
     procedure :: prp_read_releasetimes
+    procedure :: prp_load_releasetimefrequency
     procedure :: release
     procedure :: log_release
     procedure :: validate_release_point
@@ -167,6 +169,7 @@ contains
     call mem_deallocate(this%iexmeth)
     call mem_deallocate(this%extol)
     call mem_deallocate(this%rttol)
+    call mem_deallocate(this%rtfreq)
     call mem_deallocate(this%foundtol)
 
     ! Deallocate arrays
@@ -255,6 +258,7 @@ contains
     call mem_allocate(this%iexmeth, 'IEXMETH', this%memoryPath)
     call mem_allocate(this%extol, 'EXTOL', this%memoryPath)
     call mem_allocate(this%rttol, 'RTTOL', this%memoryPath)
+    call mem_allocate(this%rtfreq, 'RTFREQ', this%memoryPath)
     call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! Set values
@@ -277,6 +281,7 @@ contains
     this%iexmeth = 0
     this%extol = DZERO
     this%rttol = DSAME * DEP9
+    this%rtfreq = DZERO
     this%foundtol = .false.
 
   end subroutine prp_allocate_scalars
@@ -512,7 +517,7 @@ contains
     logical(LGP) :: is_found
     logical(LGP) :: end_of_block
     logical(LGP) :: no_blocks
-    character(len=LINELENGTH) :: line, caps
+    character(len=LINELENGTH) :: line
     character(len=LINELENGTH), allocatable :: lines(:)
     ! formats
     character(len=*), parameter :: fmtblkerr = &
@@ -578,15 +583,6 @@ contains
       recordloop: do
         call this%parser%GetNextLine(end_of_block)
         if (end_of_block) exit recordloop
-        call this%parser%GetStringCaps(caps)
-        if (index(caps, 'FRACTION') > 0) then
-          ! todo: remove warning after a couple releases?
-          warnmsg = "FRACTION is no longer supported. For fine control&
-                    & over release timing, specify times explicitly&
-                    & using RELEASE\_TIMES or RELEASE\_TIMESFILE."
-          call store_warning(warnmsg)
-          cycle recordloop
-        end if
         call this%parser%GetCurrentLine(line)
         call ExpandArray(lines)
         lines(size(lines)) = line
@@ -750,6 +746,11 @@ contains
       if (this%rttol <= DZERO) &
         call store_error('RELEASE_TIME_TOLERANCE MUST BE POSITIVE')
       found = .true.
+    case ('RELEASE_TIME_FREQUENCY')
+      this%rtfreq = this%parser%GetDouble()
+      if (this%rtfreq <= DZERO) &
+        call store_error('RELEASE_TIME_FREQUENCY MUST BE POSITIVE')
+      found = .true.
     case ('DEV_FORCETERNARY')
       call this%parser%DevOpt()
       this%ifrctrn = 1
@@ -769,7 +770,7 @@ contains
 
     ! Create release schedule now that we know
     ! the coincident release time tolerance
-    this%schedule => create_release_schedule(this%rttol)
+    this%schedule => create_release_schedule(tol=this%rttol)
 
   end subroutine prp_options
 
@@ -824,9 +825,10 @@ contains
     ! read packagedata and releasetimes blocks
     call this%prp_read_packagedata()
     call this%prp_read_releasetimes()
+    call this%prp_load_releasetimefrequency()
   end subroutine prp_read_dimensions
 
-  !> @brief Read the packagedata for this package
+  !> @brief Load package data (release points).
   subroutine prp_read_packagedata(this)
     ! dummy
     class(PrtPrpType), intent(inout) :: this
@@ -966,6 +968,7 @@ contains
     deallocate (nboundchk)
   end subroutine prp_read_packagedata
 
+  !> @brief Load explicitly specified release times.
   subroutine prp_read_releasetimes(this)
     ! dummy
     class(PrtPrpType), intent(inout) :: this
@@ -973,6 +976,7 @@ contains
     integer(I4B) :: i, ierr
     logical(LGP) :: eob, found, success
     real(DP) :: t
+    real(DP), allocatable :: times(:)
 
     ! get releasetimes block
     call this%parser%GetBlock('RELEASETIMES', found, ierr, &
@@ -989,10 +993,10 @@ contains
       call this%parser%StoreErrorUnit(terminate=.true.)
     end if
 
-    ! allocate time selection
-    call this%schedule%time_select%expand(this%nreleasetimes)
+    ! allocate times array
+    allocate (times(this%nreleasetimes))
 
-    ! read the block
+    ! read times from the block
     write (this%iout, '(/1x,a)') &
       'PROCESSING '//trim(adjustl(this%text))//' RELEASETIMES'
     do i = 1, this%nreleasetimes
@@ -1004,8 +1008,11 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if
-      this%schedule%time_select%times(i) = t
+      times(i) = t
     end do
+
+    ! register times with the release schedule
+    call this%schedule%time_select%extend(times)
 
     ! make sure times strictly increase
     if (.not. this%schedule%time_select%increasing()) then
@@ -1015,5 +1022,28 @@ contains
     end if
 
   end subroutine prp_read_releasetimes
+
+  !> @brief Load regularly spaced release times if configured.
+  subroutine prp_load_releasetimefrequency(this)
+    ! modules
+    use TdisModule, only: totalsimtime
+    ! dummy
+    class(PrtPrpType), intent(inout) :: this
+    ! local
+    real(DP), allocatable :: times(:)
+
+    ! check if a release time frequency is configured
+    if (this%rtfreq <= DZERO) return
+
+    ! create array of regularly-spaced release times
+    times = linspace( &
+            start=DZERO, &
+            stop=totalsimtime, &
+            num=ceiling(totalsimtime / this%rtfreq))
+
+    ! register times with release schedule
+    call this%schedule%time_select%extend(times)
+
+  end subroutine prp_load_releasetimefrequency
 
 end module PrtPrpModule
