@@ -22,7 +22,7 @@ module TimeSelectModule
   !! Alternatively, the extend() routine will automatically expand the array
   !! and sort it.
   !!
-  !! Most uses cases likely assume a strictly increasing time selection; this
+  !! Most use cases likely assume a strictly increasing time selection; this
   !! can be checked with increasing(). Note that the sort() routine does not
   !! check for duplicates, and should usually be followed by an increasing()
   !! check before the time selection is used.

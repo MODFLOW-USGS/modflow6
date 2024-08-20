@@ -102,7 +102,8 @@ contains
   !! This involves several tasks: first, advance the time
   !! selection. Then, if period-block release setting lines
   !! are provided, reinitialize the time step selection for
-  !! the given period. Finally, refresh the schedule array.
+  !! the given period. Finally, refresh the schedule array,
+  !! deduplicating any times closer than the set tolerance.
   !!
   !! This routine is idempotent.
   !<
@@ -146,8 +147,8 @@ contains
     if (this%time_select%any()) then
       do it = this%time_select%selection(1), this%time_select%selection(2)
         trelease = this%time_select%times(it)
-        ! Skip the release time if it coincides
-        ! with the period block release setting.
+        ! Skip the release time if it's too close
+        ! to the previously scheduled release time.
         if (tprevious >= DZERO .and. is_close( &
             tprevious, &
             trelease, &
