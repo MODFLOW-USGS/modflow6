@@ -768,6 +768,13 @@ contains
       found = .false.
     end select
 
+    ! Catch unrecognized options
+    if (.not. found) then
+      errmsg = "UNKNOWN PRP OPTION '"//trim(keyword)//"'."
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end if
+
     ! Create release schedule now that we know
     ! the coincident release time tolerance
     this%schedule => create_release_schedule(tol=this%rttol)

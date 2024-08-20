@@ -349,8 +349,12 @@ def check_output(test, snapshot):
     assert list_file.is_file()
     lines = open(list_file).readlines()
     lines = [l.strip() for l in lines]
-    li = lines.index("PARTICLE RELEASE FOR PRP 1")
-    assert "RELEASE SCHEDULE:" in lines[li + 1]
+    if "frac" in name:
+        # FRACTION no longer supported
+        return
+    else:
+        li = lines.index("PARTICLE RELEASE FOR PRP 1")
+        assert "RELEASE SCHEDULE:" in lines[li + 1]
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -415,9 +419,9 @@ def check_output(test, snapshot):
         )
 
     # compare pathlines with snapshot
-    # assert snapshot == mf6_pls.drop("name", axis=1).round(3).to_records(
-    #     index=False
-    # )
+    assert snapshot == mf6_pls.drop("name", axis=1).round(3).to_records(
+        index=False
+    )
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)
