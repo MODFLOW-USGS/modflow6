@@ -32,7 +32,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
 
 cases = ["libgwf_ifmod03"]
 
@@ -220,6 +219,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
 

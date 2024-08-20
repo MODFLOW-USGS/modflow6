@@ -17,7 +17,6 @@ import os
 import flopy
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
 
 cases = ["libgwf_ifmod01"]
 name_left = "leftmodel"
@@ -207,6 +206,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
     output_file_path = os.path.join(model_ws, "mfsim.stdout")

@@ -10,7 +10,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
 
 cases = ["libgwf_rch02"]
 
@@ -180,6 +179,8 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     print("\nBMI implementation test:")
 
     name = cases[idx].upper()

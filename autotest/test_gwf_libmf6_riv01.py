@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
 
 cases = ["libgwf_riv01"]
 
@@ -153,6 +152,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."

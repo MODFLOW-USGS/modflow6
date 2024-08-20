@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
 
 cases = ["libgwf_evt01"]
 
@@ -150,6 +149,8 @@ def head2et_wellrate(h):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
