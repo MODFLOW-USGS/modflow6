@@ -10,6 +10,7 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_rch02"]
 
@@ -305,6 +306,7 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
