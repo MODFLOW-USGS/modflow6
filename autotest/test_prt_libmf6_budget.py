@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
+from modflow_devtools.markers import requires_pkg
 from test_prt_budget import (
     HorizontalCase,
     build_mp7_sim,
@@ -44,6 +44,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     name = cases[idx].upper()
     if model_ws is None:
         model_ws = Path(".")
@@ -97,6 +99,7 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

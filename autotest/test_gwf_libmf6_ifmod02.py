@@ -42,7 +42,7 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from modflowapi import ModflowApi
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_ifmod02"]
 
@@ -303,6 +303,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
 
@@ -401,6 +403,7 @@ def check_interface_models(mf6):
     )
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
