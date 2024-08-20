@@ -262,6 +262,7 @@ $(OBJDIR)/BudgetObject.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/CellDefn.o \
 $(OBJDIR)/Particle.o \
+$(OBJDIR)/sort.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/Cell.o \
 $(OBJDIR)/Subcell.o \
@@ -269,7 +270,6 @@ $(OBJDIR)/TrackData.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
 $(OBJDIR)/TimeStepSelect.o \
-$(OBJDIR)/sort.o \
 $(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/TernarySolveTrack.o \
 $(OBJDIR)/SubcellTri.o \
