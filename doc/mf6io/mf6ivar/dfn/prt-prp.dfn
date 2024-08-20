@@ -190,7 +190,7 @@ type double precision
 reader urword
 optional true
 longname release time frequency
-description time frequency at which to release particles. This option can be used to schedule releases at a regular interval for the duration of the simulation. The release schedule is the union of this option, the RELEASETIMES block, and period-block release settings.
+description time frequency at which to release particles. This option can be used to schedule releases at a regular interval for the duration of the simulation, starting at the simulation start time. The release schedule is the union of this option, the RELEASETIMES block, and period-block release settings.
 
 # --------------------- prt prp dimensions ---------------------
 
