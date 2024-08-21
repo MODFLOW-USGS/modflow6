@@ -25,7 +25,7 @@ module PrtPrpModule
   use DisModule, only: DisType
   use DisvModule, only: DisvType
   use ErrorUtilModule, only: pstop
-  use MathUtilModule, only: is_close, linspace
+  use MathUtilModule, only: arange, is_close
   use ArrayHandlersModule, only: ExpandArray
 
   implicit none
@@ -1046,10 +1046,10 @@ contains
     if (this%rtfreq <= DZERO) return
 
     ! create array of regularly-spaced release times
-    times = linspace( &
+    times = arange( &
             start=DZERO, &
             stop=totalsimtime, &
-            num=ceiling(totalsimtime / this%rtfreq))
+            step=this%rtfreq)
 
     ! register times with release schedule
     call this%schedule%time_select%extend(times)

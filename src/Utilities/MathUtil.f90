@@ -8,7 +8,7 @@ module MathUtilModule
   implicit none
   private
   public :: f1d, is_close, mod_offset, zero_ch, zero_br, &
-            get_perturbation, linspace
+            get_perturbation, arange, linspace
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
@@ -375,7 +375,38 @@ contains
     res = DPRECSQRT * max(abs(x), DONE) * sign(DONE, x)
   end function get_perturbation
 
-  !> @brief Generate evenly spaced reals over the specified interval.
+  !> @brief Return reals separated by the given step over the given interval.
+  !!
+  !! This function is designed to behave like NumPy's arange.
+  !! Adapted from https://stackoverflow.com/a/65839162/6514033.
+  !<
+  pure function arange(start, stop, step) result(array)
+    ! dummy
+    real(DP), intent(in) :: start, stop
+    real(DP), intent(in), optional :: step
+    real(DP), allocatable :: array(:)
+    ! local
+    real(DP) :: lstep
+    integer(I4B) :: i, n
+
+    if (present(step)) then
+      lstep = step
+    else
+      lstep = DONE
+    end if
+
+    if (step <= 0) then
+      allocate (array(0))
+    else
+      n = ceiling((stop - start) / step)
+      allocate (array(n))
+      do i = 0, n - 1
+        array(i + 1) = start + step * i
+      end do
+    end if
+  end function arange
+
+  !> @brief Return evenly spaced reals over the given interval.
   !!
   !! This function is designed to behave like NumPy's linspace.
   !! Adapted from https://stackoverflow.com/a/57211848/6514033.
