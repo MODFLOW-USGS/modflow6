@@ -176,6 +176,22 @@ longname force ternary tracking method
 description force use of the ternary tracking method regardless of cell type in DISV grids.
 mf6internal ifrctrn
 
+block options
+name release_time_tolerance
+type double precision
+reader urword
+optional true
+longname release time coincidence tolerance
+description tolerance within which to consider adjacent release times coincident and merge them into a single release time. The default is $\epsilon \times 10^9$.
+
+block options
+name release_time_frequency
+type double precision
+reader urword
+optional true
+longname release time frequency
+description time frequency at which to release particles. This option can be used to schedule releases at a regular interval for the duration of the simulation, starting at the simulation start time. The release schedule is the union of this option, the RELEASETIMES block, and period-block release settings.
+
 # --------------------- prt prp dimensions ---------------------
 
 block dimensions
@@ -317,7 +333,7 @@ tagged false
 in_record true
 reader urword
 longname
-description specifies when to release particles within the stress period.  Overrides package-level RELEASETIME option, which applies to all stress periods. By default, RELEASESETTING configures particles for release at the beginning of the specified time steps. For time-offset releases, provide a FRACTION value.
+description specifies time steps at which to release a particle. A particle is released at the beginning of each specified time step. For fine control over release timing, specify times explicitly using the RELEASETIMES block. If the beginning of a specified time step coincides with a release time specified in the RELEASETIMES block or configured via RELEASE\_TIME\_FREQUENCY, only one particle is released at that time. Coincidence is evaluated up to the tolerance specified in RELEASE\_TIME\_TOLERANCE, or $\epsilon \times 10^9$ by default.
 
 block period
 name all
@@ -326,7 +342,7 @@ shape
 in_record true
 reader urword
 longname
-description keyword to indicate release of particles at the start of all time steps in the period.
+description keyword to indicate release at the start of all time steps in the period.
 
 block period
 name first
@@ -335,7 +351,16 @@ shape
 in_record true
 reader urword
 longname
-description keyword to indicate release of particles at the start of the first time step in the period. This keyword may be used in conjunction with other keywords to release particles at the start of multiple time steps.
+description keyword to indicate release at the start of the first time step in the period. This keyword may be used in conjunction with other RELEASESETTING options.
+
+block period
+name last
+type keyword
+shape
+in_record true
+reader urword
+longname
+description keyword to indicate release at the start of the last time step in the period. This keyword may be used in conjunction with other RELEASESETTING options.
 
 block period
 name frequency
@@ -345,7 +370,7 @@ tagged true
 in_record true
 reader urword
 longname
-description release particles at the specified time step frequency. This keyword may be used in conjunction with other keywords to release particles at the start of multiple time steps.
+description release at the specified time step frequency. This keyword may be used in conjunction with other RELEASESETTING options.
 
 block period
 name steps
@@ -355,7 +380,7 @@ tagged true
 in_record true
 reader urword
 longname
-description release particles at the start of each step specified in STEPS. This keyword may be used in conjunction with other keywords to release particles at the start of multiple time steps.
+description release at the start of each step specified in STEPS. This option may be used in conjunction with other RELEASESETTING options.
 
 block period
 name fraction
@@ -365,5 +390,6 @@ tagged true
 in_record true
 reader urword
 optional true
+removed 6.5.1
 longname
-description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps.
+description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. NOTE: The FRACTION option has been removed. For fine control over release timing, specify times explicitly using the RELEASETIMES block.

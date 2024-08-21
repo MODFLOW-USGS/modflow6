@@ -131,7 +131,6 @@ contains
     real(DP) :: betexit
     integer(I4B) :: reason
     integer(I4B) :: i
-    integer(I4B) :: tslice(2)
 
     ! Set solution method
     if (particle%iexmeth == 0) then
@@ -232,14 +231,13 @@ contains
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
-    ! -- Select user tracking times to solve. If this is the first time step
-    !    of the simulation, include all times before it begins; if it is the
-    !    last time step include all times after it ends only if the 'extend'
-    !    option is on, otherwise times in this period and time step only.
-    call this%tracktimes%try_advance()
-    tslice = this%tracktimes%selection
-    if (all(tslice > 0)) then
-      do i = tslice(1), tslice(2)
+    ! Select user tracking times to solve. If this is the first time step
+    ! of the simulation, include all times before it begins; if it is the
+    ! last time step include all times after it ends only if the 'extend'
+    ! option is on, otherwise times in this period and time step only.
+    call this%tracktimes%advance()
+    if (this%tracktimes%any()) then
+      do i = this%tracktimes%selection(1), this%tracktimes%selection(2)
         t = this%tracktimes%times(i)
         if (t < particle%ttrack) cycle
         if (t >= texit .or. t >= tmax) exit

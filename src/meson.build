@@ -241,6 +241,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'ModelPackageInput.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
+    'Model' / 'ModelUtilities' / 'ReleaseSchedule.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionManager.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionUtils.f90',
     'Model' / 'ModelUtilities' / 'SwfCxsUtils.f90',

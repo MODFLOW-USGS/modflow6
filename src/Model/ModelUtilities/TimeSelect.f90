@@ -1,19 +1,31 @@
-!> @brief Specify times for some event(s) to occur.
+!> @brief Specify times for some event to occur.
 module TimeSelectModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE
   use ArrayHandlersModule, only: ExpandArray
   use ErrorUtilModule, only: pstop
+  use SortModule, only: qsort
+
   implicit none
   public :: TimeSelectType
 
   !> @brief Represents a series of instants at which some event should occur.
   !!
-  !! Supports selection e.g. to filter times in a selected period & time step.
-  !! Array storage can be expanded as needed. Note: array expansion must take
-  !! place before selection; when expand() is invoked the selection is cleared.
-  !! The time series is assumed to strictly increase, increasing() checks this.
+  !! Maintains an array of configured times which can be sliced to match e.g.
+  !! the current period & time step. Slicing can be performed manually, with
+  !! the select() routine, or automatically, with the advance() routine, for
+  !! a convenient view onto the applicable subset of the complete time array.
+  !!
+  !! Array storage can be expanded manually. Note: array expansion must take
+  !! place before selection; when expand() is called the selection is wiped.
+  !! Alternatively, the extend() routine will automatically expand the array
+  !! and sort it.
+  !!
+  !! Most use cases likely assume a strictly increasing time selection; this
+  !! can be checked with increasing(). Note that the sort() routine does not
+  !! check for duplicates, and should usually be followed by an increasing()
+  !! check before the time selection is used.
   !<
   type :: TimeSelectType
     real(DP), allocatable :: times(:)
@@ -23,13 +35,18 @@ module TimeSelectModule
     procedure :: expand
     procedure :: init
     procedure :: increasing
+    procedure :: log
     procedure :: select
-    procedure :: try_advance
+    procedure :: advance
+    procedure :: any
+    procedure :: count
+    procedure :: sort
+    procedure :: extend
   end type TimeSelectType
 
 contains
 
-  !> @brief Destroy the time selection object.
+  !> @brief Deallocate the time selection object.
   subroutine deallocate (this)
     class(TimeSelectType) :: this
     deallocate (this%times)
@@ -39,6 +56,7 @@ contains
   subroutine expand(this, increment)
     class(TimeSelectType) :: this
     integer(I4B), optional, intent(in) :: increment
+
     call ExpandArray(this%times, increment=increment)
     this%selection = (/1, size(this%times)/)
   end subroutine expand
@@ -46,12 +64,21 @@ contains
   !> @brief Initialize or clear the time selection object.
   subroutine init(this)
     class(TimeSelectType) :: this
-    if (.not. allocated(this%times)) allocate (this%times(0))
+
+    if (allocated(this%times)) deallocate (this%times)
+    allocate (this%times(0))
     this%selection = (/0, 0/)
   end subroutine
 
   !> @brief Determine if times strictly increase.
-  !! Returns true if empty or not yet allocated.
+  !!
+  !! Returns true if the times array strictly increases,
+  !! as well as if the times array is empty, or not yet
+  !! allocated. Note that this function operates on the
+  !! entire times array, not the current selection. Note
+  !! also that this function conducts exact comparisons;
+  !! deduplication with tolerance must be done manually.
+  !<
   function increasing(this) result(inc)
     class(TimeSelectType) :: this
     logical(LGP) :: inc
@@ -72,6 +99,23 @@ contains
     end do
   end function increasing
 
+  !> @brief Show the current time selection, if any.
+  subroutine log(this, iout, verb)
+    ! dummy
+    class(TimeSelectType) :: this !< this instance
+    integer(I4B), intent(in) :: iout !< output unit
+    character(len=*), intent(in) :: verb !< selection name
+    ! formats
+    character(len=*), parameter :: fmt = &
+      &"(6x,'THE FOLLOWING TIMES WILL BE ',A,': ',50(G0,' '))"
+
+    if (this%any()) then
+      write (iout, fmt) verb, this%times(this%selection(1):this%selection(2))
+    else
+      write (iout, "(a,1x,a)") 'NO TIMES WILL BE', verb
+    end if
+  end subroutine log
+
   !> @brief Select times between t0 and t1 (inclusive).
   !!
   !! Finds and stores the index of the first time at the same instant
@@ -90,32 +134,32 @@ contains
   !! solve any given period/step before any will proceed to the next.
   !<
   subroutine select(this, t0, t1, changed)
-    ! -- dummy
+    ! dummy
     class(TimeSelectType) :: this
     real(DP), intent(in) :: t0, t1
     logical(LGP), intent(inout), optional :: changed
-    ! -- local
+    ! local
     integer(I4B) :: i, i0, i1
     integer(I4B) :: l, u, lp, up
     real(DP) :: t
 
-    ! -- by default, need to iterate over all times
+    ! by default, need to iterate over all times
     i0 = 1
     i1 = size(this%times)
 
-    ! -- if no times fall within the slice, set to [-1, -1]
+    ! if no times fall within the slice, set to [-1, -1]
     l = -1
     u = -1
 
-    ! -- previous bounding indices
+    ! previous bounding indices
     lp = this%selection(1)
     up = this%selection(2)
 
-    ! -- Check if we can reuse either the lower or upper bound.
-    !    The lower doesn't need to change if it indexes the 1st
-    !    time simultaneous with or later than the slice's start.
-    !    The upper doesn't need to change if it indexes the last
-    !    time before or simultaneous with the slice's end.
+    ! Check if we can reuse either the lower or upper bound.
+    ! The lower doesn't need to change if it indexes the 1st
+    ! time simultaneous with or later than the slice's start.
+    ! The upper doesn't need to change if it indexes the last
+    ! time before or simultaneous with the slice's end.
     if (lp > 0 .and. up > 0) then
       if (lp > 1) then
         if (this%times(lp - 1) < t0 .and. &
@@ -138,7 +182,7 @@ contains
       end if
     end if
 
-    ! -- recompute bounding indices if needed
+    ! recompute bounding indices if needed
     do i = i0, i1
       t = this%times(i)
       if (l < 0 .and. t >= t0 .and. t <= t1) l = i
@@ -149,19 +193,83 @@ contains
 
   end subroutine
 
-  !> @brief Update the selection to match the current time step.
-  subroutine try_advance(this)
-    ! -- modules
+  !> @brief Update the selection to the current time step.
+  subroutine advance(this)
+    ! modules
     use TdisModule, only: kper, kstp, nper, nstp, totimc, delt
-    ! -- dummy
+    ! dummy
     class(TimeSelectType) :: this
-    ! -- local
+    ! local
     real(DP) :: l, u
+
     l = minval(this%times)
     u = maxval(this%times)
     if (.not. (kper == 1 .and. kstp == 1)) l = totimc
     if (.not. (kper == nper .and. kstp == nstp(kper))) u = totimc + delt
     call this%select(l, u)
-  end subroutine try_advance
+  end subroutine advance
+
+  !> @brief Check if any times are currently selected.
+  !!
+  !! Indicates whether any times are selected for the
+  !! current time step.
+  !!
+  !! Note that this routine does NOT indicate whether
+  !! the times array has nonzero size; use the size
+  !! intrinsic for that.
+  !<
+  function any(this) result(a)
+    class(TimeSelectType) :: this
+    logical(LGP) :: a
+
+    a = all(this%selection > 0)
+  end function any
+
+  !> @brief Return the number of times currently selected.
+  !!
+  !! Returns the number of times selected for the current
+  !! time step.
+  !!
+  !! Note that this routine does NOT return the total size
+  !! of the times array; use the size intrinsic for that.
+  !<
+  function count(this) result(n)
+    class(TimeSelectType) :: this
+    integer(I4B) :: n
+
+    if (this%any()) then
+      n = this%selection(2) - this%selection(1)
+    else
+      n = 0
+    end if
+  end function count
+
+  !> @brief Sort the time selection in increasing order.
+  !!
+  !! Note that this routine does NOT remove duplicate times.
+  !! Call increasing() to check for duplicates in the array.
+  !<
+  subroutine sort(this)
+    class(TimeSelectType) :: this
+    integer(I4B), allocatable :: indx(:)
+
+    allocate (indx(size(this%times)))
+    call qsort(indx, this%times)
+    deallocate (indx)
+  end subroutine sort
+
+  !> @brief Extend the time selection with the given array.
+  !!
+  !! This routine sorts the selection after appending the
+  !! elements of the given array, but users should likely
+  !! still call increasing() to check for duplicate times.
+  !<
+  subroutine extend(this, a)
+    class(TimeSelectType) :: this
+    real(DP) :: a(:)
+
+    this%times = [this%times, a]
+    call this%sort()
+  end subroutine extend
 
 end module TimeSelectModule

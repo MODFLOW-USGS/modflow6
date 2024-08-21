@@ -49,7 +49,7 @@ module TimeStepSelectModule
     procedure :: log
     procedure :: read
     procedure :: is_selected
-    procedure :: any_selected
+    procedure :: any
   end type TimeStepSelectType
 
 contains
@@ -177,13 +177,13 @@ contains
   end function is_selected
 
   !> @brief Indicates whether any time steps are selected.
-  logical function any_selected(this)
+  logical function any(this) result(a)
     class(TimeStepSelectType) :: this !< this instance
-    any_selected = (this%all .or. &
-                    this%first .or. &
-                    this%last .or. &
-                    this%freq > 0 .or. &
-                    size(this%steps) > 0)
-  end function any_selected
+    a = (this%all .or. &
+         this%first .or. &
+         this%last .or. &
+         this%freq > 0 .or. &
+         size(this%steps) > 0)
+  end function any
 
 end module TimeStepSelectModule

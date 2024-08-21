@@ -2,7 +2,7 @@ module PrtPrpModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LINELENGTH, &
                              LENBOUNDNAME, LENPAKLOC, TABLEFT, TABCENTER, &
-                             MNORMAL
+                             MNORMAL, DSAME, DEP3, DEP9
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TableModule, only: TableType, table_cr
@@ -21,10 +21,12 @@ module PrtPrpModule
   use GeomUtilModule, only: point_in_polygon, get_ijk, get_jk
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  mem_reallocate
-  use TimeSelectModule, only: TimeSelectType
+  use ReleaseScheduleModule, only: ReleaseScheduleType, create_release_schedule
   use DisModule, only: DisType
   use DisvModule, only: DisvType
-  use LongLineReaderModule, only: LongLineReaderType
+  use ErrorUtilModule, only: pstop
+  use MathUtilModule, only: arange, is_close
+  use ArrayHandlersModule, only: ExpandArray
 
   implicit none
 
@@ -39,7 +41,8 @@ module PrtPrpModule
   type, extends(BndType) :: PrtPrpType
     type(PrtFmiType), pointer :: fmi => null() !< flow model interface
     type(ParticleStoreType), pointer :: particles => null() !< particle store
-    type(TrackFileControlType), pointer :: trackfilectl => null() !< track file control
+    type(TrackFileControlType), pointer :: tracks => null() !< output manager
+    type(ReleaseScheduleType), pointer :: schedule !< particle release schedule
     integer(I4B), pointer :: nreleasepoints => null() !< number of release points
     integer(I4B), pointer :: nreleasetimes => null() !< number of user-specified particle release times
     integer(I4B), pointer :: nparticles => null() !< number of particles released
@@ -52,13 +55,15 @@ module PrtPrpModule
     integer(I4B), pointer :: irlstls => null() !< release time file
     integer(I4B), pointer :: ilocalz => null() !< compute z coordinates local to the cell
     integer(I4B), pointer :: iextend => null() !< extend tracking beyond simulation's end
-    logical(LGP), pointer :: rlsall => null() !< release in all time step
-    logical(LGP), pointer :: rlsfirst => null() !< release in first time step
-    logical(LGP), pointer :: rlstimes => null() !< use user-specified release times
+    integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
+    integer(I4B), pointer :: iexmeth => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
+    real(DP), pointer :: rttol => null() !< tolerance for coincident particle release times
+    real(DP), pointer :: rtfreq => null() !< frequency for regularly spaced release times
     real(DP), pointer :: offset => null() !< release time offset
     real(DP), pointer :: stoptime => null() !< stop time for all release points
     real(DP), pointer :: stoptraveltime => null() !< stop travel time for all points
-    integer(I4B), pointer, contiguous :: rlskstp(:) !< time steps selected for release
+    logical(LGP), pointer :: foundtol => null() !< whether tolerance option was found
     integer(I4B), pointer, contiguous :: rptnode(:) => null() !< release point reduced nns
     integer(I4B), pointer, contiguous :: rptzone(:) => null() !< release point zone numbers
     real(DP), pointer, contiguous :: rptx(:) => null() !< release point x coordinates
@@ -66,12 +71,6 @@ module PrtPrpModule
     real(DP), pointer, contiguous :: rptz(:) => null() !< release point z coordinates
     real(DP), pointer, contiguous :: rptm(:) => null() !< total mass released from point
     character(len=LENBOUNDNAME), pointer, contiguous :: rptname(:) => null() !< release point names
-    type(TimeSelectType), pointer :: releasetimes !< user-specified particle release times
-    integer(I4B), pointer :: ifrctrn => null() !< force ternary solution for quad grids
-    integer(I4B), pointer :: iexmeth => null() !< method for iterative solution of particle exit location and time in generalized Pollock's method
-    real(DP), pointer :: extol => null() !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
-    logical(LGP), pointer :: foundtol => null() !< whether tolerance option was found
-
   contains
     procedure :: prp_allocate_arrays
     procedure :: prp_allocate_scalars
@@ -86,7 +85,10 @@ module PrtPrpModule
     procedure :: read_dimensions => prp_read_dimensions
     procedure :: prp_read_packagedata
     procedure :: prp_read_releasetimes
+    procedure :: prp_load_releasetimefrequency
     procedure :: release
+    procedure :: log_release
+    procedure :: validate_release_point
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
   end type PrtPrpType
@@ -144,13 +146,10 @@ contains
   subroutine prp_da(this)
     class(PrtPrpType) :: this
 
-    ! deallocate parent
+    ! Deallocate parent
     call this%BndType%bnd_da()
 
-    ! deallocate scalars
-    call mem_deallocate(this%rlsall)
-    call mem_deallocate(this%rlsfirst)
-    call mem_deallocate(this%rlstimes)
+    ! Deallocate scalars
     call mem_deallocate(this%ilocalz)
     call mem_deallocate(this%iextend)
     call mem_deallocate(this%offset)
@@ -169,29 +168,27 @@ contains
     call mem_deallocate(this%ifrctrn)
     call mem_deallocate(this%iexmeth)
     call mem_deallocate(this%extol)
+    call mem_deallocate(this%rttol)
+    call mem_deallocate(this%rtfreq)
     call mem_deallocate(this%foundtol)
 
-    ! deallocate arrays
+    ! Deallocate arrays
     call mem_deallocate(this%rptx)
     call mem_deallocate(this%rpty)
     call mem_deallocate(this%rptz)
     call mem_deallocate(this%rptnode)
     call mem_deallocate(this%rptm)
-    call mem_deallocate(this%rlskstp)
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
-    ! deallocate particle store
+    ! Deallocate particle store, release time and release step selections
     call this%particles%deallocate(this%memoryPath)
+    call this%schedule%deallocate()
     deallocate (this%particles)
-
-    ! deallocate release time selection
-    call this%releasetimes%deallocate()
-    deallocate (this%releasetimes)
+    deallocate (this%schedule)
   end subroutine prp_da
 
   !> @ brief Set pointers to model variables
   subroutine prp_set_pointers(this, ibound, izone, trackfilectl)
-    ! dummy variables
     class(PrtPrpType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), dimension(:), pointer, contiguous :: izone
@@ -199,7 +196,7 @@ contains
 
     this%ibound => ibound
     this%rptzone => izone
-    this%trackfilectl => trackfilectl
+    this%tracks => trackfilectl
   end subroutine prp_set_pointers
 
   !> @brief Allocate arrays
@@ -212,7 +209,7 @@ contains
     integer(I4B) :: nps
 
     ! Allocate particle store, starting with the number
-    !    of release points (arrays resized if/when needed)
+    ! of release points (arrays resized if/when needed)
     call allocate_particle_store( &
       this%particles, &
       this%nreleasepoints, &
@@ -225,12 +222,10 @@ contains
     call mem_allocate(this%rptm, this%nreleasepoints, 'RPTMASS', this%memoryPath)
     call mem_allocate(this%rptnode, this%nreleasepoints, 'RPTNODER', &
                       this%memoryPath)
-    call mem_allocate(this%rlskstp, 1, 'RLSKSTP', this%memoryPath)
     call mem_allocate(this%rptname, LENBOUNDNAME, this%nreleasepoints, &
                       'RPTNAME', this%memoryPath)
 
     ! Initialize arrays
-    this%rlskstp(1) = 1 ! single release in first time step by default
     do nps = 1, this%nreleasepoints
       this%rptm(nps) = DZERO
     end do
@@ -240,17 +235,10 @@ contains
   subroutine prp_allocate_scalars(this)
     class(PrtPrpType) :: this
 
-    ! Allocate release time selection
-    allocate (this%releasetimes)
-    call this%releasetimes%init()
-
-    ! call standard BndType allocate scalars
+    ! Allocate parent's scalars
     call this%BndType%allocate_scalars()
 
     ! Allocate scalars for this type
-    call mem_allocate(this%rlsall, 'RLSALL', this%memoryPath)
-    call mem_allocate(this%rlsfirst, 'RLSFIRST', this%memoryPath)
-    call mem_allocate(this%rlstimes, 'RELEASETIME', this%memoryPath)
     call mem_allocate(this%ilocalz, 'ILOCALZ', this%memoryPath)
     call mem_allocate(this%iextend, 'IEXTEND', this%memoryPath)
     call mem_allocate(this%offset, 'OFFSET', this%memoryPath)
@@ -259,7 +247,7 @@ contains
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
-    call mem_allocate(this%nreleasepoints, 'NPOINTS', this%memoryPath)
+    call mem_allocate(this%nreleasepoints, 'NRELEASEPOINTS', this%memoryPath)
     call mem_allocate(this%nreleasetimes, 'NRELEASETIMES', this%memoryPath)
     call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
     call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
@@ -268,13 +256,12 @@ contains
     call mem_allocate(this%irlstls, 'IRLSTLS', this%memoryPath)
     call mem_allocate(this%ifrctrn, 'IFRCTRN', this%memoryPath)
     call mem_allocate(this%iexmeth, 'IEXMETH', this%memoryPath)
-    call mem_allocate(this%extol, 'IEXTOL', this%memoryPath)
+    call mem_allocate(this%extol, 'EXTOL', this%memoryPath)
+    call mem_allocate(this%rttol, 'RTTOL', this%memoryPath)
+    call mem_allocate(this%rtfreq, 'RTFREQ', this%memoryPath)
     call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! Set values
-    this%rlsall = .false.
-    this%rlsfirst = .false.
-    this%rlstimes = .false.
     this%ilocalz = 0
     this%iextend = 0
     this%offset = DZERO
@@ -293,7 +280,10 @@ contains
     this%ifrctrn = 0
     this%iexmeth = 0
     this%extol = DZERO
-    this%foundtol = .false. ! exit_solve_tolerance is a required option
+    this%rttol = DSAME * DEP9
+    this%rtfreq = DZERO
+    this%foundtol = .false.
+
   end subroutine prp_allocate_scalars
 
   !> @ brief Allocate and read period data
@@ -313,125 +303,79 @@ contains
     do n = 1, this%nreleasepoints
       this%nodelist(n) = this%rptnode(n)
     end do
-    ! if (this%imover /= 0) then
-    !   allocate(this%pakmvrobj)
-    !   call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
-    ! endif
   end subroutine prp_ar
 
-  !> @brief Advance a time step and release particles if appropriate.
-  !!
-  !! Releases may be scheduled via a global RELEASETIME, or within a
-  !! stress period via ALL, FIRST, FREQUENCY or STEPS (with optional
-  !! FRACTION). If no release option is specified, a single release
-  !! is conducted at the first moment of the first time step of the
-  !! first stress period.
-  !<
+  !> @brief Advance a time step and release particles if scheduled.
   subroutine prp_ad(this)
-    ! modules
-    use TdisModule, only: kstp, totimc, delt
-    ! dummy
     class(PrtPrpType) :: this
-    ! local
     integer(I4B) :: ip, it
-    integer(I4B) :: nparticles
-    integer(I4B) :: nreleasetimes
-    real(DP) :: trelease
 
-    ! Check if there's a release this time step, return early if not.
-    if (.not. ( &
-        ! all time steps?
-        this%rlsall .or. &
-        ! first time step?
-        (this%rlsfirst .and. kstp == 1) .or. &
-        ! specified time steps?
-        any(this%rlskstp == kstp) .or. &
-        ! specified release times?
-        this%rlstimes)) return
+    ! Notes
+    ! -----
+    ! Each release point can be thought of as
+    ! a gumball machine with infinite supply:
+    ! a point can release an arbitrary number
+    ! of particles, but only one at any time.
+    ! Coincident release times are merged to
+    ! a single time by the release scheduler.
 
-    ! Reset mass for this time step.
+    ! Reset mass accumulators for this time step.
     do ip = 1, this%nreleasepoints
       this%rptm(ip) = DZERO
     end do
 
-    ! Count release times and particles to be released.
-    if (this%rlstimes) then
-      nreleasetimes = size(this%releasetimes%times)
-    else
-      nreleasetimes = 1
-    end if
-    nparticles = this%nreleasepoints * nreleasetimes
+    ! Advance the release schedule and check if
+    ! any releases will be made this time step.
+    call this%schedule%advance()
+    if (.not. this%schedule%any()) return
 
-    ! Resize particle store if another set
-    ! of particles will exceed its capacity.
-    if ((this%nparticles + nparticles) > size(this%particles%irpt)) &
-      call this%particles%resize( &
-      size(this%particles%irpt) + nparticles, &
+    ! Log the schedule to the list file.
+    call this%log_release()
+
+    ! Expand the particle store. We know from the
+    ! schedule how many particles will be released.
+    call this%particles%resize( &
+      this%particles%num_stored() + &
+      (this%nreleasepoints * this%schedule%count()), &
       this%memoryPath)
 
-    ! Release a particle from each point for each
-    ! release time within the current time step.
+    ! Release a particle from each point for
+    ! each release time in the current step.
     do ip = 1, this%nreleasepoints
-      do it = 1, nreleasetimes
-        if (this%rlstimes) then
-          ! If this is an explicitly specified release time,
-          ! make sure it falls within the current time step.
-          ! If not, warn and don't release the particle.
-          trelease = this%releasetimes%times(it)
-          if (trelease < totimc .or. trelease >= (totimc + delt)) &
-            cycle
-        else
-          ! Reference time is timestep start, optional offset
-          trelease = totimc + this%offset * delt
-        end if
-        call this%release(ip, trelease)
+      do it = 1, this%schedule%count()
+        call this%release(ip, this%schedule%times(it))
       end do
     end do
   end subroutine prp_ad
 
-  subroutine release(this, ip, trelease)
-    ! dummy
+  !> @brief Log the release scheduled for this time step.
+  subroutine log_release(this)
     class(PrtPrpType), intent(inout) :: this !< prp
-    integer(I4B), intent(in) :: ip !< particle index
-    real(DP), intent(in) :: trelease !< release time
-    ! local
-    integer(I4B) :: irow, icol, ilay, icpl
-    integer(I4B) :: ic, icu
-    integer(I4B) :: np
-    real(DP) :: x, y, z
-    real(DP) :: top, bot, hds
-    real(DP), allocatable :: polyverts(:, :)
-    character(len=LINELENGTH) :: errmsg
-    type(ParticleType), pointer :: particle !< particle
-
-    ! Increment particle release count
-    np = this%nparticles + 1
-    this%nparticles = np
-
-    ! Get cell number
-    ic = this%rptnode(ip)
-
-    ! Load coordinates and transform if needed
-    x = this%rptx(ip)
-    y = this%rpty(ip)
-    if (this%ilocalz > 0) then
-      top = this%fmi%dis%top(ic)
-      bot = this%fmi%dis%bot(ic)
-      hds = this%fmi%gwfhead(ic)
-      z = bot + this%rptz(ip) * (hds - bot)
-    else
-      z = this%rptz(ip)
+    if (this%iprpak > 0) then
+      write (this%iout, "(1x,/1x,a,1x,i0)") &
+        'PARTICLE RELEASE FOR PRP', this%ibcnum
+      call this%schedule%log(this%iout)
     end if
+  end subroutine log_release
 
-    ! Calculate user node number
-    icu = this%dis%get_nodeuser(ic)
+  !> @brief Verify that the release point is in the cell.
+  !!
+  !! Terminate with an error if the release point lies outside the
+  !! given cell, or if the point is above or below the grid top or
+  !! bottom, respectively.
+  !<
+  subroutine validate_release_point(this, ic, x, y, z)
+    class(PrtPrpType), intent(inout) :: this !< this instance
+    integer(I4B), intent(in) :: ic !< cell index
+    real(DP), intent(in) :: x, y, z !< release point
+    ! local
+    real(DP), allocatable :: polyverts(:, :)
 
-    ! Check release point is within the specified cell
-    ! and not above/below grid top/bottom respectively
     call this%fmi%dis%get_polyverts(ic, polyverts)
     if (.not. point_in_polygon(x, y, polyverts)) then
       write (errmsg, '(a,g0,a,g0,a,i0)') &
-        'Error: release point (x=', x, ', y=', y, ') is not in cell ', icu
+        'Error: release point (x=', x, ', y=', y, ') is not in cell ', &
+        this%dis%get_nodeuser(ic)
       call store_error(errmsg, terminate=.false.)
       call store_error_unit(this%inunit, terminate=.true.)
     end if
@@ -448,6 +392,56 @@ contains
       call store_error(errmsg, terminate=.false.)
       call store_error_unit(this%inunit, terminate=.true.)
     end if
+    deallocate (polyverts)
+  end subroutine validate_release_point
+
+  !> Release a particle at the specified time.
+  !!
+  !! Releasing a particle entails validating the particle's
+  !! coordinates and settings, transforming its coordinates
+  !! if needed, initializing the particle's initial tracking
+  !! time to the given release time, storing the particle in
+  !! the particle store (from which the PRT model will later
+  !! retrieve it, apply the tracking method, and check it in
+  !! again), and accumulating the particle's mass (the total
+  !! mass released from each release point is calculated for
+  !! budget reporting).
+  !<
+  subroutine release(this, ip, trelease)
+    ! dummy
+    class(PrtPrpType), intent(inout) :: this !< this instance
+    integer(I4B), intent(in) :: ip !< particle index
+    real(DP), intent(in) :: trelease !< release time
+    ! local
+    integer(I4B) :: irow, icol, ilay, icpl
+    integer(I4B) :: ic, icu
+    integer(I4B) :: np
+    real(DP) :: x, y, z
+    real(DP) :: top, bot, hds
+    type(ParticleType), pointer :: particle
+
+    ! Increment cumulative particle count
+    np = this%nparticles + 1
+    this%nparticles = np
+
+    ! Get reduced and user node numbers
+    ic = this%rptnode(ip)
+    icu = this%dis%get_nodeuser(ic)
+
+    ! Load coordinates and transform if needed
+    x = this%rptx(ip)
+    y = this%rpty(ip)
+    if (this%ilocalz > 0) then
+      top = this%fmi%dis%top(ic)
+      bot = this%fmi%dis%bot(ic)
+      hds = this%fmi%gwfhead(ic)
+      z = bot + this%rptz(ip) * (hds - bot)
+    else
+      z = this%rptz(ip)
+    end if
+
+    ! Make sure release point is in the grid/cell
+    call this%validate_release_point(ic, x, y, z)
 
     ! Initialize the particle
     call create_particle(particle)
@@ -502,11 +496,11 @@ contains
     particle%iextend = this%iextend
     particle%extol = this%extol
 
-    ! Save particle to the particle store
+    ! Store the particle's state and deallocate it
     call this%particles%save_particle(particle, np)
     deallocate (particle)
 
-    ! Add particle mass for release point
+    ! Accumulate particle mass for release point
     this%rptm(ip) = this%rptm(ip) + DONE
 
   end subroutine release
@@ -514,21 +508,17 @@ contains
   !> @ brief Read and prepare period data for particle input
   subroutine prp_rp(this)
     ! modules
-    use TdisModule, only: kper, nper, nstp
+    use TdisModule, only: kper, nper
     use InputOutputModule, only: urword
     ! dummy variables
     class(PrtPrpType), intent(inout) :: this
     ! local variables
     integer(I4B) :: ierr
-    integer(I4B) :: n, i
-    integer(I4B) :: lloc, istart, istop, ival
-    real(DP) :: dval
-    logical(LGP) :: isfound
-    logical(LGP) :: endOfBlock
-    logical(LGP) :: use_last
-    logical(LGP) :: noperiodblocks
-    character(len=LINELENGTH) :: keyword
-    character(len=:), allocatable :: line
+    logical(LGP) :: is_found
+    logical(LGP) :: end_of_block
+    logical(LGP) :: no_blocks
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH), allocatable :: lines(:)
     ! formats
     character(len=*), parameter :: fmtblkerr = &
                       "('Looking for BEGIN PERIOD iper.  &
@@ -541,17 +531,17 @@ contains
                                    "(6x,50(f10.3,' '))"
 
     ! Set ionper to the stress period number for which a new block of data
-    !    will be read.
+    ! will be read.
     if (this%inunit == 0) return
 
     ! get stress period data
-    noperiodblocks = .false.
+    no_blocks = .false.
     if (this%ionper < kper) then
       ! get period block
-      call this%parser%GetBlock('PERIOD', isfound, ierr, &
+      call this%parser%GetBlock('PERIOD', is_found, ierr, &
                                 supportOpenClose=.true., &
                                 blockRequired=.false.)
-      if (isfound) then
+      if (is_found) then
         ! read ionper and check for increasing period numbers
         call this%read_check_ionper()
       else
@@ -559,7 +549,7 @@ contains
         if (ierr < 0) then
           if (kper == 1) then
             ! End of file found; no period data for the simulation.
-            noperiodblocks = .true.
+            no_blocks = .true.
           else
             ! End of file found; no more period data.
             this%ionper = nper + 1
@@ -573,97 +563,34 @@ contains
       end if
     end if
 
-    ! If no period data for the simulation default to single
-    !    release at beginning of first period's first time step.
-    !    Otherwise read release timing settings from the period
-    !    data block of the package input file.
-    if (noperiodblocks) then
+    ! If no period data for the simulation and no specified
+    ! release times, default to a single release time at the
+    ! start of first period's first time step. Otherwise read
+    ! release timing settings from the period data block of the
+    ! package input file.
+    if (no_blocks .and. .not. this%schedule%time_select%any()) then
       if (kper == 1) then
-        call mem_reallocate(this%rlskstp, 1, &
-                            "RLSKSTP", this%memoryPath)
-        this%rlsfirst = .true.
-        use_last = .false.
+        allocate (lines(1))
+        line = "FIRST"
+        lines(1) = line
+        print *, lines
+        call this%schedule%advance(lines=lines)
       end if
       ! If the current stress period matches the
-      !    block we are reading continue parsing it
+      ! block we are reading continue parsing it
     else if (this%ionper == kper) then
-      use_last = .false.
+      allocate (lines(0))
       recordloop: do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('ALL')
-          this%rlsall = .true.
-        case ('STEPS')
-          call mem_reallocate(this%rlskstp, 0, &
-                              "RLSKSTP", this%memoryPath)
-          call this%parser%GetRemainingLine(line)
-          lloc = 1
-          stepslistsearch: do
-            call urword(line, lloc, istart, istop, 2, ival, dval, -1, 0)
-            if (ival > 0) then
-              n = size(this%rlskstp)
-              call mem_reallocate(this%rlskstp, n + 1, &
-                                  'RLSKSTP', this%memoryPath)
-              this%rlskstp(n + 1) = ival
-              cycle stepslistsearch
-            end if
-            exit stepslistsearch
-          end do stepslistsearch
-        case ('FIRST')
-          this%rlsfirst = .true.
-        case ('FREQUENCY')
-          ival = this%parser%GetInteger()
-          if (ival < 0) then
-            errmsg = "FREQUENCY must be non-negative"
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit(terminate=.true.)
-          end if
-          call mem_reallocate(this%rlskstp, 0, 'RLSKSTP', this%memoryPath)
-          do i = 1, nstp(this%ionper)
-            if (mod(i, ival) == 0) then
-              n = size(this%rlskstp)
-              call mem_reallocate(this%rlskstp, n + 1, &
-                                  'RLSKSTP', this%memoryPath)
-              this%rlskstp(n + 1) = i
-            end if
-          end do
-        case ('FRACTION')
-          dval = this%parser%GetDouble()
-          this%offset = dval
-        case default
-          write (errmsg, '(2a)') &
-            'Looking for ALL, STEPS, FIRST, FREQUENCY, or FRACTION. Found: ', &
-            trim(adjustl(keyword))
-          call store_error(errmsg, terminate=.TRUE.)
-        end select
+        call this%parser%GetNextLine(end_of_block)
+        if (end_of_block) exit recordloop
+        call this%parser%GetCurrentLine(line)
+        call ExpandArray(lines)
+        lines(size(lines)) = line
       end do recordloop
-    else
-      ! else repeat period settings
-      use_last = .true.
+      call this%schedule%advance(lines=lines)
+      deallocate (lines)
     end if
 
-    ! write settings to list file
-    if (this%iprpak > 0) then
-      if (.not. any(this%rlskstp > 0)) then
-        write (this%iout, "(1x,/1x,a)") 'NO PARTICLE RELEASES IN THIS STRESS '// &
-          'PERIOD'
-      else if (use_last) then
-        write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
-          'FROM LAST STRESS PERIOD'
-      else
-        ! write particle release setting
-        write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE:'
-        if (any(this%rlskstp > 0)) then
-          n = size(this%rlskstp)
-          if (n > 0) write (this%iout, fmt_steps, advance='no') this%rlskstp
-        end if
-        write (this%iout, "(1x,a)", advance='no') 'AT OFFSET'
-        write (this%iout, fmt_fracs) (/this%offset/)
-        write (this%iout, '(A)')
-      end if
-    end if
   end subroutine prp_rp
 
   !> @ brief Calculate flow between package and model.
@@ -722,7 +649,7 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
 
     ! Store obs type and assign procedure pointer
-    !    for to-mvr observation type.
+    ! for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
   end subroutine prp_df_obs
@@ -814,6 +741,16 @@ contains
         call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
       found = .true.
       this%foundtol = .true.
+    case ('RELEASE_TIME_TOLERANCE')
+      this%rttol = this%parser%GetDouble()
+      if (this%rttol <= DZERO) &
+        call store_error('RELEASE_TIME_TOLERANCE MUST BE POSITIVE')
+      found = .true.
+    case ('RELEASE_TIME_FREQUENCY')
+      this%rtfreq = this%parser%GetDouble()
+      if (this%rtfreq <= DZERO) &
+        call store_error('RELEASE_TIME_FREQUENCY MUST BE POSITIVE')
+      found = .true.
     case ('DEV_FORCETERNARY')
       call this%parser%DevOpt()
       this%ifrctrn = 1
@@ -830,6 +767,17 @@ contains
     case default
       found = .false.
     end select
+
+    ! Catch unrecognized options
+    if (.not. found) then
+      errmsg = "UNKNOWN PRP OPTION '"//trim(keyword)//"'."
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end if
+
+    ! Create release schedule now that we know
+    ! the coincident release time tolerance
+    this%schedule => create_release_schedule(tol=this%rttol)
 
   end subroutine prp_options
 
@@ -884,9 +832,10 @@ contains
     ! read packagedata and releasetimes blocks
     call this%prp_read_packagedata()
     call this%prp_read_releasetimes()
+    call this%prp_load_releasetimefrequency()
   end subroutine prp_read_dimensions
 
-  !> @brief Read the packagedata for this package
+  !> @brief Load package data (release points).
   subroutine prp_read_packagedata(this)
     ! dummy
     class(PrtPrpType), intent(inout) :: this
@@ -911,7 +860,7 @@ contains
       "('end time (', G0, ') must be greater than or equal to the              &
      &begin time (', G0, ').')"
 
-    ! allocate and initialize temporary variables
+    ! allocate temporary variables
     allocate (noder(this%nreleasepoints))
     allocate (x(this%nreleasepoints))
     allocate (y(this%nreleasepoints))
@@ -1026,6 +975,7 @@ contains
     deallocate (nboundchk)
   end subroutine prp_read_packagedata
 
+  !> @brief Load explicitly specified release times.
   subroutine prp_read_releasetimes(this)
     ! dummy
     class(PrtPrpType), intent(inout) :: this
@@ -1033,6 +983,7 @@ contains
     integer(I4B) :: i, ierr
     logical(LGP) :: eob, found, success
     real(DP) :: t
+    real(DP), allocatable :: times(:)
 
     ! get releasetimes block
     call this%parser%GetBlock('RELEASETIMES', found, ierr, &
@@ -1049,13 +1000,10 @@ contains
       call this%parser%StoreErrorUnit(terminate=.true.)
     end if
 
-    ! enable user-specified release times
-    this%rlstimes = .true.
+    ! allocate times array
+    allocate (times(this%nreleasetimes))
 
-    ! allocate time selection
-    call this%releasetimes%expand(this%nreleasetimes)
-
-    ! read the block
+    ! read times from the block
     write (this%iout, '(/1x,a)') &
       'PROCESSING '//trim(adjustl(this%text))//' RELEASETIMES'
     do i = 1, this%nreleasetimes
@@ -1067,16 +1015,55 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit(terminate=.true.)
       end if
-      this%releasetimes%times(i) = t
+      times(i) = t
     end do
 
+    ! register times with the release schedule
+    call this%schedule%time_select%extend(times)
+
     ! make sure times strictly increase
-    if (.not. this%releasetimes%increasing()) then
-      errmsg = "RELEASETIMES must strictly increase"
+    if (.not. this%schedule%time_select%increasing()) then
+      errmsg = "Release times must strictly increase"
       call store_error(errmsg)
       call this%parser%StoreErrorUnit(terminate=.true.)
     end if
 
+    ! deallocate
+    deallocate (times)
+
   end subroutine prp_read_releasetimes
+
+  !> @brief Load regularly spaced release times if configured.
+  subroutine prp_load_releasetimefrequency(this)
+    ! modules
+    use TdisModule, only: totalsimtime
+    ! dummy
+    class(PrtPrpType), intent(inout) :: this
+    ! local
+    real(DP), allocatable :: times(:)
+
+    ! check if a release time frequency is configured
+    if (this%rtfreq <= DZERO) return
+
+    ! create array of regularly-spaced release times
+    times = arange( &
+            start=DZERO, &
+            stop=totalsimtime, &
+            step=this%rtfreq)
+
+    ! register times with release schedule
+    call this%schedule%time_select%extend(times)
+
+    ! make sure times strictly increase
+    if (.not. this%schedule%time_select%increasing()) then
+      errmsg = "Release times must strictly increase"
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit(terminate=.true.)
+    end if
+
+    ! deallocate
+    deallocate (times)
+
+  end subroutine prp_load_releasetimefrequency
 
 end module PrtPrpModule

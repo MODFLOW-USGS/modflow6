@@ -1,7 +1,7 @@
 """
 Test cases exercising release timing option.
-including package-level RELEASETIME options,
-as well as period-block release settings.
+including RELEASETIMES block release options
+as well as period-block release options.
 
 The grid is a 10x10 square with a single layer,
 the same flow system shown on the FloPy readme.
@@ -36,40 +36,35 @@ from prt_test_utils import (
 simname = "prtrelt"
 cases = [
     # options block options
-    f"{simname}sgl",  # RELEASETIMES block, 0.5
-    f"{simname}dbl",  # RELEASETIMES block, 0.5 and 0.6
-    f"{simname}open",  # RELEASETIMES block, 0.5 and 0.6, OPEN/CLOSE
+    f"{simname}sgl",  # RELEASETIMES block: 0.5
+    f"{simname}dbl",  # RELEASETIMES block: 0.5 and 0.6
+    f"{simname}open",  # RELEASETIMES block: 0.5 and 0.6, OPEN/CLOSE
     # period block options
-    f"{simname}all",  # ALL FRACTION 0.5
-    f"{simname}frst",  # FIRST FRACTION 0.5
-    f"{simname}stps",  # STEPS 1 FRACTION 0.5
-    f"{simname}freq",  # FREQUENCY 1
+    f"{simname}all",  # ALL
+    f"{simname}frac",  # ALL FRACTION 0.5, expect removal warning
+    f"{simname}frst",  # FIRST
+    f"{simname}stps",  # STEPS 1
+    f"{simname}freq",  # FREQUENCY 1 and RELEASE_TIME_FREQUENCY 0.2
+    # both releasetimes block and period block options
+    f"{simname}both",  # RELEASETIMES block: 0.1; also FIRST
+    f"{simname}dupe",  # RELEASETIMES block: 0.0: also FIRST, expect consolidation
+    # test an absurdly high RELEASE_TIME_TOLERANCE
+    f"{simname}tol",
 ]
 
 
-def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
-    if "sgl" in name or "dbl" in name or "open" in name:
+def get_perioddata(name, periods=1) -> Optional[dict]:
+    if "sgl" in name or "dbl" in name or "open" in name or "tol" in name:
         return None
 
-    # Flopy expects each period block setting
-    # value as a separate tuple to be written
-    # to separate lines in period block e.g.
-    #
-    # BEGIN period  1
-    #   ALL
-    #   FRACTION       0.50000000
-    # END period  1
-    #
-    # MF6 is fine with the two settings sharing
-    # the same line but when a keystring option
-    # may take multiple values flopy wants them
-    # on separate lines.
-
     opt = []
-    if "frst" in name:
+    if "frst" in name or "both" in name or "dupe" in name:
         opt.append(("FIRST",))
     elif "all" in name:
         opt.append(("ALL",))
+    elif "frac" in name:
+        opt.append(("ALL",))
+        opt.append(("FRACTION", 0.5))
     elif "stps" in name:
         opt.append(("STEPS", 1))
     elif "freq" in name:
@@ -77,16 +72,13 @@ def get_perioddata(name, periods=1, fraction=None) -> Optional[dict]:
     else:
         opt.append(None)
 
-    if fraction is not None:
-        opt.append(("FRACTION", fraction))
-
     if opt[0] is None:
         raise ValueError(f"Invalid period option: {name}")
 
     return {i: opt for i in range(periods)}
 
 
-def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
+def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -138,15 +130,18 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
     # create prp package
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
-    pdat = get_perioddata(prt_name, fraction=fraction)
-    # fraction 0.5 equiv. to release time 0.5 since 1 period 1 step with length 1
+    pdat = get_perioddata(prt_name)
     releasetimes = (
-        [(fraction,)]
-        if "sgl" in prt_name
+        [(0.0,)]
+        if ("sgl" in name or "dupe" in name)
         else (
-            [(fraction,), (fraction + 0.1,)]
-            if "dbl" in prt_name or "open" in prt_name
-            else None
+            [(0.1,)]
+            if "both" in name
+            else (
+                [(0.0,), (0.1,)]
+                if ("dbl" in name or "open" in name or "tol" in name)
+                else None
+            )
         )
     )
     releasetimes_path = prt_ws / "releasetimes.txt"
@@ -167,17 +162,25 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6, fraction=None):
             1
             if "sgl" in prt_name
             else 2
-            if ("dbl" in name or "open" in name)
+            if ("dbl" in name or "open" in name or "tol" in name)
             else None
         ),
         releasetimes=f"open/close {releasetimes_path.name}"
         if "open" in name
         else releasetimes
-        if releasetimes
+        if (
+            "sgl" in name
+            or "dbl" in name
+            or "both" in name
+            or "dupe" in name
+            or "tol" in name
+        )
         else None,
+        release_time_frequency=0.2 if "freq" in name else None,
         print_input=True,
         exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
+        release_time_tolerance=0.2 if "tol" in name else None,
     )
 
     # create output control package
@@ -245,7 +248,7 @@ def build_mp7_sim(name, ws, mp7, gwf):
     return mp
 
 
-def build_models(idx, test, fraction):
+def build_models(test):
     gwf_sim = FlopyReadmeCase.get_gwf_sim(
         test.name, test.workspace, test.targets["mf6"]
     )
@@ -254,7 +257,6 @@ def build_models(idx, test, fraction):
         test.workspace,
         test.workspace / "prt",
         test.targets["mf6"],
-        fraction,
     )
     mp7_sim = build_mp7_sim(
         test.name,
@@ -309,11 +311,12 @@ def plot_output(grid, head, spdis, mf6_pls, mp7_pls, fpath):
     plt.savefig(fpath)
 
 
-def check_output(idx, test, fraction, snapshot):
+def check_output(test, snapshot):
     from flopy.plot.plotutil import to_mp7_pathlines
 
     name = test.name
     ws = test.workspace
+
     prt_ws = test.workspace / "prt"
     mp7_ws = test.workspace / "mp7"
     gwf_name = get_model_name(name, "gwf")
@@ -346,16 +349,12 @@ def check_output(idx, test, fraction, snapshot):
     assert list_file.is_file()
     lines = open(list_file).readlines()
     lines = [l.strip() for l in lines]
-    if "sgl" in name or "dbl" in name or "open" in name:
-        assert (
-            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.000"
-            in lines
-        )
-    elif "frst" in name or "all" in name or "stps" in name or "freq" in name:
-        assert (
-            "PARTICLE RELEASE:      TIME STEP(S) 1  AT OFFSET           0.500"
-            in lines
-        )
+    if "frac" in name:
+        # FRACTION no longer supported
+        return
+    else:
+        li = lines.index("PARTICLE RELEASE FOR PRP 1")
+        assert "RELEASE SCHEDULE:" in lines[li + 1]
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -368,7 +367,7 @@ def check_output(idx, test, fraction, snapshot):
     mp7_pls["k"] = mp7_pls["k"] + 1
 
     # apply reference time to mp7 results (mp7 reports relative times)
-    mp7_pls["time"] = mp7_pls["time"] + fraction
+    mp7_pls["time"] = mp7_pls["time"]
 
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
@@ -443,27 +442,40 @@ def check_output(idx, test, fraction, snapshot):
     del mp7_pls["yloc"]
     del mp7_pls["zloc"]
 
-    # compare mf6 / mp7 pathline data
-    if "dbl" in name or "open" in name:
+    # compare mf6 / mp7 pathline data. the cases with
+    # 2 release times should have output size doubled
+    # too. the cases with just 1 release time should
+    # match the mp7 results. the "dupe" case should
+    # also match mp7 results because the duplicated
+    # release time should be consolidated into one,
+    # as should the "tol" case for similar reasons.
+    # the "freq" case uses both time step frequency
+    # in the period block and RELEASE_TIME_FREQUENCY
+    # in the options block, setting the former to 1
+    # and the latter to 0.2, so we expect 5 times as
+    # many particles (first time t=0 is deduplicated)
+    if "dbl" in name or "open" in name or "both" in name:
         assert len(mf6_pls) == 2 * len(mp7_pls)
-        # todo check for double mass
+        # todo check mass
+    elif "freq" in name:
+        assert len(mf6_pls) == 5 * len(mp7_pls)
+        # todo check mass
     else:
         assert mf6_pls.shape == mp7_pls.shape
         assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
 @requires_pkg("syrupy")
-@pytest.mark.parametrize("idx, name", enumerate(cases))
-@pytest.mark.parametrize("fraction", [0.5])
-def test_mf6model(
-    idx, name, function_tmpdir, targets, fraction, array_snapshot
-):
+@pytest.mark.parametrize("name", cases)
+def test_mf6model(name, function_tmpdir, targets, array_snapshot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda t: build_models(idx, t, fraction),
-        check=lambda t: check_output(idx, t, fraction, array_snapshot),
+        build=lambda t: build_models(t),
+        check=lambda t: check_output(t, array_snapshot),
         targets=targets,
         compare=None,
+        # expect case using FRACTION to fail
+        xfail=[False, True, False] if "frac" in name else False,
     )
     test.run()

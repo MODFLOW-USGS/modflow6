@@ -13,7 +13,9 @@ contains
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
                 new_unittest("is_increasing", test_is_increasing), &
-                new_unittest("slice", test_slice) &
+                new_unittest("select", test_select), &
+                new_unittest("extend_and_sort", &
+                             test_extend_and_sort) &
                 ]
   end subroutine collect_timeselect
 
@@ -21,13 +23,14 @@ contains
     type(error_type), allocatable, intent(out) :: error
     type(TimeSelectType) :: ts
 
+    call ts%init()
     call ts%expand(3)
 
     ! increasing
     ts%times = (/0.0_DP, 1.0_DP, 2.0_DP/)
     call check(error, ts%increasing())
 
-    ! not decreasing
+    ! not decreasing (duplicates)
     ts%times = (/0.0_DP, 0.0_DP, 2.0_DP/)
     call check(error,.not. ts%increasing())
 
@@ -36,11 +39,12 @@ contains
     call check(error,.not. ts%increasing())
   end subroutine
 
-  subroutine test_slice(error)
+  subroutine test_select(error)
     type(error_type), allocatable, intent(out) :: error
     type(TimeSelectType) :: ts
     logical(LGP) :: changed
 
+    call ts%init()
     call ts%expand(3)
     ts%times = (/0.0_DP, 1.0_DP, 2.0_DP/)
     call check( &
@@ -107,5 +111,19 @@ contains
       "lb ub eq slice failed, got [" &
       //to_string(ts%selection(1))//","//to_string(ts%selection(2))//"]")
 
-  end subroutine test_slice
+  end subroutine test_select
+
+  subroutine test_extend_and_sort(error)
+    type(error_type), allocatable, intent(out) :: error
+    type(TimeSelectType) :: ts
+    real(DP) :: a(3)
+
+    a = (/0.0_DP, 2.0_DP, 1.0_DP/)
+
+    call ts%init()
+    call ts%extend(a)
+    call check(error, ts%increasing())
+
+  end subroutine test_extend_and_sort
+
 end module TestTimeSelect
