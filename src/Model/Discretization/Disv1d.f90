@@ -404,7 +404,7 @@ contains
       call mem_allocate(this%fdc, this%nodesuser, &
                         'FDC', this%memoryPath)
       call mem_allocate(this%cellxy, 2, this%nodesuser, &
-                        'CELLXYZ', this%memoryPath)
+                        'CELLXY', this%memoryPath)
     end if
     !
     ! -- initialize all cells to be active (idomain = 1)
