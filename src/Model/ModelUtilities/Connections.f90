@@ -1040,8 +1040,8 @@ contains
     ! -- fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
-    
-    allocate(cell_length(this%nodes))
+
+    allocate (cell_length(this%nodes))
     do nu = 1, size(reach_length)
       nr = nu
       if (nrsize > 0) nr = nodereduced(nu)
@@ -1053,7 +1053,7 @@ contains
     ! todo: need to handle cell center shifted from center of reach
     call fill_disv1d_symarrays(this%ia, this%ja, this%jas, cell_length, &
                                this%ihc, this%cl1, this%cl2)
-    deallocate(cell_length)
+    deallocate (cell_length)
     !
     ! -- Fill symmetric discretization arrays (ihc,cl1,cl2,hwva,anglex)
     ! do n = 1, this%nodes

@@ -1,6 +1,6 @@
 """
 
-Test the disv1d to ensure that it supports IDOMAIN and writes a valid binary 
+Test the disv1d to ensure that it supports IDOMAIN and writes a valid binary
 grid file.
 
 """
@@ -26,9 +26,9 @@ for j in range(nreach):
     cell2d.append([j, 0.5, 2, j, j + 1])
 nodes = len(cell2d)
 nvert = len(vertices)
-xorigin = 100.
-yorigin = 200.
-angrot = 25.
+xorigin = 100.0
+yorigin = 200.0
+angrot = 25.0
 
 idomain = np.ones((nodes,), dtype=int)
 idomain[3:6] = 0
@@ -102,7 +102,7 @@ def add_chf_model_disv1d(sim):
         yorigin=yorigin,
         angrot=angrot,
     )
- 
+
     dfw = flopy.mf6.ModflowChfdfw(
         chf,
         print_flows=True,
