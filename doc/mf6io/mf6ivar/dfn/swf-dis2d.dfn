@@ -90,7 +90,7 @@ description is the row spacing in the column direction.
 default_value 1.0
 
 block griddata
-name botm
+name bottom
 type double precision
 shape (ncol, nrow)
 reader readarray

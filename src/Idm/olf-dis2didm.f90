@@ -22,7 +22,7 @@ module OlfDis2DInputModule
     logical :: ncol = .false.
     logical :: delr = .false.
     logical :: delc = .false.
-    logical :: botm = .false.
+    logical :: bottom = .false.
     logical :: idomain = .false.
   end type OlfDis2dParamFoundType
 
@@ -215,13 +215,13 @@ module OlfDis2DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    olfdis2d_botm = InputParamDefinitionType &
+    olfdis2d_bottom = InputParamDefinitionType &
     ( &
     'OLF', & ! component
     'DIS2D', & ! subcomponent
     'GRIDDATA', & ! block
-    'BOTM', & ! tag name
-    'BOTM', & ! fortran variable
+    'BOTTOM', & ! tag name
+    'BOTTOM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
     'cell bottom elevation', & ! longname
@@ -263,7 +263,7 @@ module OlfDis2DInputModule
     olfdis2d_ncol, &
     olfdis2d_delr, &
     olfdis2d_delc, &
-    olfdis2d_botm, &
+    olfdis2d_bottom, &
     olfdis2d_idomain &
     ]
 

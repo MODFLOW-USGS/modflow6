@@ -119,7 +119,7 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsolf, [olf.name])
 
-    botm = land_surface.reshape((nrow, ncol))
+    bottom = land_surface.reshape((nrow, ncol))
     dis = flopy.mf6.ModflowOlfdis2D(
         olf,
         export_array_ascii=True,
@@ -127,7 +127,7 @@ def build_models(idx, test):
         ncol=ncol,
         delr=dx,
         delc=dx,
-        botm=botm,
+        bottom=bottom,
         xorigin=-810,
     )
 
@@ -153,7 +153,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowOlfic(
         olf,
         export_array_ascii=True,
-        strt=botm,
+        strt=bottom,
     )
 
     # output control
@@ -272,7 +272,7 @@ def check_output(idx, test):
 
     # ensure export array is working properly
     flist = [
-        "dis2d.botm",
+        "dis2d.bottom",
         "dis2d.delc",
         "dis2d.delr",
         "dfw.manningsn",

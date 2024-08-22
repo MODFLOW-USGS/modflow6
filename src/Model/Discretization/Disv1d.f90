@@ -138,9 +138,6 @@ contains
       call this%disv1d_load()
     end if
 
-    ! create connectivity using vertices and cell2d
-    call this%create_connections()
-
     ! finalize the grid
     call this%grid_finalize()
 
@@ -402,11 +399,11 @@ contains
     !
     ! -- Allocate vertices array
     if (this%nvert > 0) then
-      call mem_allocate(this%vertices, 3, this%nvert, &
+      call mem_allocate(this%vertices, 2, this%nvert, &
                         'VERTICES', this%memoryPath)
       call mem_allocate(this%fdc, this%nodesuser, &
                         'FDC', this%memoryPath)
-      call mem_allocate(this%cellxy, 3, this%nodesuser, &
+      call mem_allocate(this%cellxy, 2, this%nodesuser, &
                         'CELLXYZ', this%memoryPath)
     end if
     !
@@ -720,7 +717,7 @@ contains
       end do
 
       ! find x, y position of point on line
-      do ixy = 1, 3
+      do ixy = 1, 2
         cellxy(ixy, n) = (DONE - fd) * vertices(ixy, iv0) + &
                          fd * vertices(ixy, iv1)
       end do
@@ -738,6 +735,11 @@ contains
     class(Disv1dType) :: this
     ! local
     integer(I4B) :: node, noder, k
+    ! format
+    character(len=*), parameter :: fmtnr = &
+      "(/1x, 'The specified IDOMAIN results in a reduced number of cells.',&
+      &/1x, 'Number of user nodes: ',I0,&
+      &/1X, 'Number of nodes in solution: ', I0, //)"
 
     ! count active cells
     this%nodes = 0
@@ -750,12 +752,11 @@ contains
       call store_error('Model does not have any active nodes.  Make sure &
                        &IDOMAIN has some values greater than zero.')
       call store_error_filename(this%input_fname)
-      call ustop()
     end if
 
-    if (count_errors() > 0) then
-      call store_error_filename(this%input_fname)
-      call ustop()
+    ! Write message if reduced grid
+    if (this%nodes < this%nodesuser) then
+      write (this%iout, fmtnr) this%nodesuser, this%nodes
     end if
 
     ! Array size is now known, so allocate
@@ -772,8 +773,6 @@ contains
         if (this%idomain(k) > 0) then
           this%nodereduced(node) = noder
           noder = noder + 1
-        elseif (this%idomain(k) < 0) then
-          this%nodereduced(node) = -1
         else
           this%nodereduced(node) = 0
         end if
@@ -794,15 +793,18 @@ contains
       end do
     end if
 
-    ! Copy bottom into bot
+    ! Move bottom into bot and put length into disbase%area
+    ! and set x and y center coordinates
     do node = 1, this%nodesuser
-      this%bot(node) = this%bottom(node)
+      noder = node
+      if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
+      if (noder <= 0) cycle
+      this%bot(noder) = this%bottom(node)
+      this%area(noder) = this%length(node)
     end do
 
-    ! Assign area in DisBaseType as length
-    do node = 1, this%nodesuser
-      this%area(node) = this%length(node)
-    end do
+    ! create connectivity using vertices and cell2d
+    call this%create_connections()
 
     ! -- Return
     return
@@ -836,19 +838,19 @@ contains
   end subroutine allocate_arrays
 
   subroutine create_connections(this)
-    ! -- modules
-    ! -- dummy
+    ! modules
+    ! dummy
     class(Disv1dType) :: this
-    ! -- local
+    ! local
     integer(I4B) :: nrsize
-    !
-    ! -- create and fill the connections object
+
+    ! create and fill the connections object
     nrsize = 0
     if (this%nodes < this%nodesuser) nrsize = this%nodes
-    !
-    ! -- Allocate connections object
+
+    ! Allocate connections object
     allocate (this%con)
-    !
+
     ! Build connectivity based on vertices
     call this%con%disv1dconnections_verts(this%name_model, this%nodes, &
                                           this%nodesuser, nrsize, this%nvert, &

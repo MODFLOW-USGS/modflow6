@@ -988,8 +988,9 @@ contains
     integer(I4B), dimension(:), allocatable :: itemp
     integer(I4B), dimension(:), allocatable :: iavertcells
     integer(I4B), dimension(:), allocatable :: javertcells
+    real(DP), dimension(:), allocatable :: cell_length
     type(sparsematrix) :: sparse, vertcellspm
-    integer(I4B) :: n, m, i, j, ierror
+    integer(I4B) :: nu, nr, i, j, ierror
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
@@ -1005,9 +1006,9 @@ contains
     do i = 1, nvert
       itemp(i) = 4
     end do
-    call vertcellspm%init(nvert, nodes, itemp)
+    call vertcellspm%init(nvert, nodesuser, itemp)
     deallocate (itemp)
-    do j = 1, nodes
+    do j = 1, nodesuser
       do i = iavert(j), iavert(j + 1) - 1
         call vertcellspm%addconnection(javert(i), j, 1)
       end do
@@ -1019,10 +1020,8 @@ contains
     call vertcellspm%destroy()
     !
     ! -- Call routine to build a sparse matrix of the connections
-    call vertexconnectl(this%nodes, nrsize, 6, nodes, sparse, &
+    call vertexconnectl(this%nodes, nrsize, 6, nodesuser, sparse, &
                         iavertcells, javertcells, nodereduced)
-    n = sparse%nnz
-    m = this%nodes
     this%nja = sparse%nnz
     this%njas = (this%nja - this%nodes) / 2
     !
@@ -1041,12 +1040,20 @@ contains
     ! -- fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
+    
+    allocate(cell_length(this%nodes))
+    do nu = 1, size(reach_length)
+      nr = nu
+      if (nrsize > 0) nr = nodereduced(nu)
+      if (nr <= 0) cycle
+      cell_length(nr) = reach_length(nu)
+    end do
 
     ! Fill disv1d symmetric arrays
     ! todo: need to handle cell center shifted from center of reach
-    call fill_disv1d_symarrays(this%ia, this%ja, this%jas, reach_length, &
+    call fill_disv1d_symarrays(this%ia, this%ja, this%jas, cell_length, &
                                this%ihc, this%cl1, this%cl2)
-
+    deallocate(cell_length)
     !
     ! -- Fill symmetric discretization arrays (ihc,cl1,cl2,hwva,anglex)
     ! do n = 1, this%nodes
@@ -1069,12 +1076,12 @@ contains
 
   !> @brief Fill symmetric connection arrays for disv1d
   !<
-  subroutine fill_disv1d_symarrays(ia, ja, jas, reach_length, ihc, cl1, cl2)
+  subroutine fill_disv1d_symarrays(ia, ja, jas, cell_length, ihc, cl1, cl2)
     ! dummy
     integer(I4B), dimension(:), intent(in) :: ia !< csr pointer array
     integer(I4B), dimension(:), intent(in) :: ja !< csr array
     integer(I4B), dimension(:), intent(in) :: jas !< csr symmetric array
-    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
+    real(DP), dimension(:), intent(in) :: cell_length !< length of each cell (active cells only)
     integer(I4B), dimension(:), intent(out) :: ihc !< horizontal connection flag
     real(DP), dimension(:), intent(out) :: cl1 !< distance from n to shared face with m
     real(DP), dimension(:), intent(out) :: cl2 !< distance from m to shared face with n
@@ -1085,14 +1092,14 @@ contains
     integer(I4B) :: isympos
 
     ! loop through and set array values
-    do n = 1, size(reach_length)
+    do n = 1, size(cell_length)
       do ipos = ia(n) + 1, ia(n + 1) - 1
         m = ja(ipos)
         if (m < n) cycle
         isympos = jas(ipos)
         ihc(isympos) = 1
-        cl1(isympos) = DHALF * reach_length(n)
-        cl2(isympos) = DHALF * reach_length(m)
+        cl1(isympos) = DHALF * cell_length(n)
+        cl2(isympos) = DHALF * cell_length(m)
       end do
     end do
   end subroutine fill_disv1d_symarrays
@@ -1394,7 +1401,7 @@ contains
     end do
     call sparse%init(nodes, nodes, rowmaxnnz)
     deallocate (rowmaxnnz)
-    do nr = 1, nodes
+    do nr = 1, nodeuser
       !
       ! -- Process diagonal
       mr = nr

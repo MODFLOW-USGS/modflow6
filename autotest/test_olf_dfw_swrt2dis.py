@@ -73,9 +73,9 @@ def build_models(idx, test):
 
     nrow = 11
     ncol = 11
-    botm = np.empty((nrow, ncol), dtype=float)
+    bottom = np.empty((nrow, ncol), dtype=float)
     for i in range(nrow):
-        botm[i, :] = np.linspace(1.05, 0.05, nrow)
+        bottom[i, :] = np.linspace(1.05, 0.05, nrow)
 
     dis = flopy.mf6.ModflowOlfdis2D(
         olf,
@@ -83,7 +83,7 @@ def build_models(idx, test):
         ncol=ncol,
         delr=dx,
         delc=dx,
-        botm=botm,
+        bottom=bottom,
     )
 
     dfw = flopy.mf6.ModflowOlfdfw(
@@ -206,7 +206,7 @@ def check_output(idx, test):
 
     # at end of simulation, water depth should be 1.0 for all reaches
     olf = mfsim.get_model(olfname)
-    depth = stage_all[-1] - olf.dis.botm.array
+    depth = stage_all[-1] - olf.dis.bottom.array
     assert np.allclose(
         depth, 1.0
     ), f"Simulated depth at end should be 1, but found {depth}"

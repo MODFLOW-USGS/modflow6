@@ -92,7 +92,7 @@ def add_olf_model_dis2d(sim):
         ncol=ncol,
         delr=dx,
         delc=dx,
-        botm=botm,
+        bottom=botm,
         idomain=idomain,
         xorigin=xorigin,
         yorigin=yorigin,
@@ -147,10 +147,10 @@ def add_olf_model_disv2d(sim):
         ncol,
         dx,
         dx,
-        1.0, # top
-        0., # botm
-        0., # xoffset
-        0., # yoffset
+        1.0,  # top
+        0.0,  # botm
+        0.0,  # xoffset
+        0.0,  # yoffset
     )
 
     _ = disvkwargs.pop("top")
@@ -165,7 +165,7 @@ def add_olf_model_disv2d(sim):
         xorigin=xorigin,
         yorigin=yorigin,
         angrot=angrot,
-        **disvkwargs
+        **disvkwargs,
     )
 
     dfw = flopy.mf6.ModflowOlfdfw(
@@ -206,13 +206,13 @@ def add_olf_model_disv2d(sim):
     return
 
 
-def make_plot(test, mfsim, stage):
+def make_plot(test, mfsim, stage, idx):
     print("making plots...")
     import matplotlib.pyplot as plt
 
     olf = mfsim.olf[0]
     pmv = flopy.plot.PlotMapView(model=olf)
-    pmv.plot_array(stage)
+    pmv.plot_array(stage, masked_values=[3e30])
     pmv.plot_grid()
 
     fname = test.workspace / "results.png"
@@ -248,7 +248,10 @@ def check_grb_disv2d(fpth):
     assert grb.grid_type == "DISV2D", "grb grid type not DISV2D"
     assert grb.ncells == ncpl, "grb ncells is incorrect"
     assert grb._datadict["NODES"] == 96, f"grb nodes is incorrect"
-    assert grb.verts.shape[0] == (nrow + 1) * (ncol + 1), f"grb nvert is incorrect"
+    assert grb.verts.shape == (
+        (nrow + 1) * (ncol + 1),
+        2,
+    ), f"vertices shape is incorrect"
     assert grb.nja == 432, f"nja in grb file is not 432"
     assert grb.xorigin == xorigin, f"xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, f"yorigin in grb file is not correct"
@@ -256,6 +259,22 @@ def check_grb_disv2d(fpth):
     assert np.allclose(
         grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
     ), "grb botm not correct"
+    cellx, celly = np.meshgrid(
+        np.linspace(dx / 2, ncol * dx - dx / 2, ncol),
+        np.linspace(dx * nrow - dx / 2.0, dx / 2, nrow),
+    )
+    assert np.allclose(
+        grb._datadict["CELLX"], cellx.flatten()
+    ), "cellx is not right"
+    assert np.allclose(
+        grb._datadict["CELLY"], celly.flatten()
+    ), "celly is not right"
+    assert (
+        grb._datadict["IAVERT"].shape[0] == ncpl + 1
+    ), "iavert size not right"
+    assert (
+        grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
+    ), "javert size not right"
     assert (
         grb.ia.shape[0] == grb.ncells + 1
     ), "ia in grb file is not correct size"
@@ -284,15 +303,16 @@ def check_output(idx, test):
     fpth = test.workspace / f"{modelname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage = sobj.get_data().reshape((nrow, ncol))
-    assert np.allclose(stage[idomain==0], 3.e30), "stage should have nodata values where idomain is zero"
-    assert stage[idomain==1].max() == 1.0, "maximum stage should be 1.0"
-    assert stage[idomain==1].min() == 0.5, "minimum stage should be 0.5"
+    assert np.allclose(
+        stage[idomain == 0], 3.0e30
+    ), "stage should have nodata values where idomain is zero"
+    assert stage[idomain == 1].max() == 1.0, "maximum stage should be 1.0"
+    assert stage[idomain == 1].min() == 0.5, "minimum stage should be 0.5"
 
     makeplot = False
     if makeplot:
         # PlotMapView not working yet for dis2d
-        make_plot(test, mfsim, stage)
-
+        make_plot(test, mfsim, stage.flatten(), idx)
 
 
 @pytest.mark.developmode

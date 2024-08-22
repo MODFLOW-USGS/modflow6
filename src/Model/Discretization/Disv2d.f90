@@ -332,7 +332,7 @@ contains
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
     !
     if (found%nodes) then
-      write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodes
+      write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodesuser
     end if
     !
     if (found%nvert) then
