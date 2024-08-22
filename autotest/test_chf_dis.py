@@ -6,7 +6,6 @@ grid file.
 """
 
 import flopy
-from flopy.utils.gridutil import get_disv_kwargs
 import numpy as np
 import pytest
 from framework import TestFramework
@@ -158,15 +157,15 @@ def check_grb_disv1d(fpth):
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     assert grb.grid_type == "DISV1D", "grb grid type not DISV1D"
     assert grb.ncells == nodes, "grb ncells is incorrect"
-    assert grb._datadict["NCELLS"] == nodes, f"grb nodes is incorrect"
+    assert grb._datadict["NCELLS"] == nodes, "grb nodes is incorrect"
     assert grb.verts.shape == (
         nodes + 1,
         2,
-    ), f"vertices shape is incorrect"
-    assert grb.nja == 14, f"nja in grb file is not 14"
-    assert grb.xorigin == xorigin, f"xorigin in grb file is not correct"
-    assert grb.yorigin == yorigin, f"yorigin in grb file is not correct"
-    assert grb.angrot == angrot, f"angrot in grb file is not correct"
+    ), "vertices shape is incorrect"
+    assert grb.nja == 14, "nja in grb file is not 14"
+    assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
+    assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
+    assert grb.angrot == angrot, "angrot in grb file is not correct"
     assert np.allclose(
         grb.bot.reshape((nodes,)), np.zeros((nodes,))
     ), "grb botm not correct"

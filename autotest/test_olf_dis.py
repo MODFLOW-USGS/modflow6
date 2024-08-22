@@ -6,9 +6,9 @@ IDOMAIN and have valid binary grid files.
 """
 
 import flopy
-from flopy.utils.gridutil import get_disv_kwargs
 import numpy as np
 import pytest
+from flopy.utils.gridutil import get_disv_kwargs
 from framework import TestFramework
 
 cases = [
@@ -223,12 +223,12 @@ def check_grb_dis2d(fpth):
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     assert grb.grid_type == "DIS2D", "grb grid type not DIS2D"
     assert grb.ncells == nrow * ncol, "grb ncells is incorrect"
-    assert grb.nrow == nrow, f"nrow in grb file is not 10"
-    assert grb.ncol == ncol, f"ncol in grb file is not 10"
-    assert grb.nja == 432, f"nja in grb file is not 432"
-    assert grb.xorigin == xorigin, f"xorigin in grb file is not correct"
-    assert grb.yorigin == yorigin, f"yorigin in grb file is not correct"
-    assert grb.angrot == angrot, f"angrot in grb file is not correct"
+    assert grb.nrow == nrow, "nrow in grb file is not 10"
+    assert grb.ncol == ncol, "ncol in grb file is not 10"
+    assert grb.nja == 432, "nja in grb file is not 432"
+    assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
+    assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
+    assert grb.angrot == angrot, "angrot in grb file is not correct"
     assert np.allclose(grb.delr, dx * np.ones((ncol))), "grb delr not correct"
     assert np.allclose(grb.delc, dx * np.ones((nrow))), "grb delc not correct"
     assert np.allclose(
@@ -247,15 +247,15 @@ def check_grb_disv2d(fpth):
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     assert grb.grid_type == "DISV2D", "grb grid type not DISV2D"
     assert grb.ncells == ncpl, "grb ncells is incorrect"
-    assert grb._datadict["NODES"] == 96, f"grb nodes is incorrect"
+    assert grb._datadict["NODES"] == 96, "grb nodes is incorrect"
     assert grb.verts.shape == (
         (nrow + 1) * (ncol + 1),
         2,
-    ), f"vertices shape is incorrect"
-    assert grb.nja == 432, f"nja in grb file is not 432"
-    assert grb.xorigin == xorigin, f"xorigin in grb file is not correct"
-    assert grb.yorigin == yorigin, f"yorigin in grb file is not correct"
-    assert grb.angrot == angrot, f"angrot in grb file is not correct"
+    ), "vertices shape is incorrect"
+    assert grb.nja == 432, "nja in grb file is not 432"
+    assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
+    assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
+    assert grb.angrot == angrot, "angrot in grb file is not correct"
     assert np.allclose(
         grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
     ), "grb botm not correct"
