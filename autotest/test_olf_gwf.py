@@ -88,7 +88,7 @@ def add_olf_model(sim):
         ncol=ncol,
         delr=dx,
         delc=dx,
-        botm=botm,
+        bottom=botm,
     )
 
     dfw = flopy.mf6.ModflowOlfdfw(

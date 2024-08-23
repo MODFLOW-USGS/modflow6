@@ -1,8 +1,8 @@
 module ConnectionsModule
 
   use ArrayReadersModule, only: ReadArray
-  use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME, LENMEMPATH, DHALF
+  use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: LENMODELNAME, LENMEMPATH, DHALF, DONE
   use MessageModule, only: write_message
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
@@ -954,21 +954,20 @@ contains
 
   !> @brief Fill the connections object for a disv1d package from vertices
   !!
-  !! todo: Still need to handle hwva
-  !! todo: Only unreduced disv1d grids are allowed at the moment
+  !! Note that nothing is done for hwva
   !!
   !<
   subroutine disv1dconnections_verts(this, name_model, nodes, nodesuser, &
                                      nrsize, nvert, &
                                      vertices, iavert, javert, &
-                                     cellxyz, cellfdc, nodereduced, nodeuser, &
+                                     cellxy, cellfdc, nodereduced, nodeuser, &
                                      reach_length)
-    ! -- modules
+    ! modules
     use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
     use SparseModule, only: sparsematrix
     use GeomUtilModule, only: get_node
     use MemoryManagerModule, only: mem_reallocate
-    ! -- dummy
+    ! dummy
     class(ConnectionsType) :: this
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: nodes
@@ -978,36 +977,35 @@ contains
     real(DP), dimension(3, nvert), intent(in) :: vertices
     integer(I4B), dimension(:), intent(in) :: iavert
     integer(I4B), dimension(:), intent(in) :: javert
-    real(DP), dimension(3, nodesuser), intent(in) :: cellxyz
-    !integer(I4B), dimension(2, nodesuser), intent(in) :: centerverts
+    real(DP), dimension(2, nodesuser), intent(in) :: cellxy
     real(DP), dimension(nodesuser), intent(in) :: cellfdc
     integer(I4B), dimension(:), intent(in) :: nodereduced
     integer(I4B), dimension(:), intent(in) :: nodeuser
     real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
-    ! -- local
+    ! local
     integer(I4B), dimension(:), allocatable :: itemp
     integer(I4B), dimension(:), allocatable :: iavertcells
     integer(I4B), dimension(:), allocatable :: javertcells
     type(sparsematrix) :: sparse, vertcellspm
-    integer(I4B) :: n, m, i, j, ierror
-    !
-    ! -- Allocate scalars
+    integer(I4B) :: i, j, ierror
+
+    ! Allocate scalars
     call this%allocate_scalars(name_model)
-    !
-    ! -- Set scalars
+
+    ! Set scalars
     this%nodes = nodes
     this%ianglex = 1
-    !
-    ! -- Create a sparse matrix array with a row for each vertex.  The columns
-    !    in the sparse matrix contains the cells that include that vertex.
-    !    This array will be used to determine cell connectivity.
+
+    ! Create a sparse matrix array with a row for each vertex.  The columns
+    ! in the sparse matrix contains the cells that include that vertex.
+    ! This array will be used to determine cell connectivity.
     allocate (itemp(nvert))
     do i = 1, nvert
       itemp(i) = 4
     end do
-    call vertcellspm%init(nvert, nodes, itemp)
+    call vertcellspm%init(nvert, nodesuser, itemp)
     deallocate (itemp)
-    do j = 1, nodes
+    do j = 1, nodesuser
       do i = iavert(j), iavert(j + 1) - 1
         call vertcellspm%addconnection(javert(i), j, 1)
       end do
@@ -1017,82 +1015,118 @@ contains
     allocate (javertcells(vertcellspm%nnz))
     call vertcellspm%filliaja(iavertcells, javertcells, ierror)
     call vertcellspm%destroy()
-    !
-    ! -- Call routine to build a sparse matrix of the connections
-    call vertexconnectl(this%nodes, nrsize, 6, nodes, sparse, &
+
+    ! Call routine to build a sparse matrix of the connections
+    call vertexconnectl(this%nodes, nrsize, 6, nodesuser, sparse, &
                         iavertcells, javertcells, nodereduced)
-    n = sparse%nnz
-    m = this%nodes
     this%nja = sparse%nnz
     this%njas = (this%nja - this%nodes) / 2
-    !
-    ! -- cleanup memory
-    deallocate (iavertcells)
-    deallocate (javertcells)
-    !
-    ! -- Allocate index arrays of size nja and symmetric arrays
+
+    ! Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
-    !
-    ! -- Fill the IA and JA arrays from sparse, then destroy sparse
+
+    ! Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%sort()
     call sparse%filliaja(this%ia, this%ja, ierror)
     call sparse%destroy()
-    !
-    ! -- fill the isym and jas arrays
+
+    ! fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
 
-    ! Fill disv1d symmetric arrays
-    ! todo: need to handle cell center shifted from center of reach
+    ! fill the ihc, cl1, and cl2 arrays
     call fill_disv1d_symarrays(this%ia, this%ja, this%jas, reach_length, &
-                               this%ihc, this%cl1, this%cl2)
+                               this%ihc, this%cl1, this%cl2, &
+                               nrsize, nodereduced, nodeuser, cellfdc, &
+                               iavert, javert, iavertcells, javertcells)
 
-    !
-    ! -- Fill symmetric discretization arrays (ihc,cl1,cl2,hwva,anglex)
-    ! do n = 1, this%nodes
-    !   do ipos = this%ia(n) + 1, this%ia(n + 1) - 1
-    !     m = this%ja(ipos)
-    !     if(m < n) cycle
-    !     call geol%cprops(n, m, this%hwva(this%jas(ipos)),                     &
-    !                      this%cl1(this%jas(ipos)), this%cl2(this%jas(ipos)))
-    !   enddo
-    ! enddo
+    ! cleanup memory
+    deallocate (iavertcells)
+    deallocate (javertcells)
 
-    !
-    ! -- If reduced system, then need to build iausr and jausr, otherwise point
-    !    them to ia and ja.
+    ! If reduced system, then need to build iausr and jausr, otherwise point
+    ! them to ia and ja.
     call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
-    !
-    ! -- Return
-    return
+
   end subroutine disv1dconnections_verts
 
   !> @brief Fill symmetric connection arrays for disv1d
   !<
-  subroutine fill_disv1d_symarrays(ia, ja, jas, reach_length, ihc, cl1, cl2)
+  subroutine fill_disv1d_symarrays(ia, ja, jas, cell_length, ihc, cl1, cl2, &
+                                   nrsize, nodereduced, nodeuser, fdc, &
+                                   iavert, javert, iavertcells, javertcells)
     ! dummy
     integer(I4B), dimension(:), intent(in) :: ia !< csr pointer array
     integer(I4B), dimension(:), intent(in) :: ja !< csr array
     integer(I4B), dimension(:), intent(in) :: jas !< csr symmetric array
-    real(DP), dimension(:), intent(in) :: reach_length !< length of each reach
+    real(DP), dimension(:), intent(in) :: cell_length !< length of each cell (all cells)
     integer(I4B), dimension(:), intent(out) :: ihc !< horizontal connection flag
     real(DP), dimension(:), intent(out) :: cl1 !< distance from n to shared face with m
     real(DP), dimension(:), intent(out) :: cl2 !< distance from m to shared face with n
+    integer(I4B), intent(in) :: nrsize !< great than zero indicated reduced nodes present
+    integer(I4B), dimension(:), intent(in) :: nodereduced !< map user node to reduced node number
+    integer(I4B), dimension(:), intent(in) :: nodeuser !< map user reduced node to user node number
+    real(DP), dimension(:), intent(in) :: fdc !< fractional distance along cell to reach cell center
+    integer(I4B), dimension(:), intent(in) :: iavert ! csr index array of size (nodeuser + 1) for javert
+    integer(I4B), dimension(:), intent(in) :: javert ! csr array containing vertex numbers that define each cell
+    integer(I4B), dimension(:), intent(in) :: iavertcells ! csr index array of size (nvert + 1) for javert
+    integer(I4B), dimension(:), intent(in) :: javertcells ! csr array containing cells numbers that referenced for a vertex
+
     ! local
-    integer(I4B) :: n
-    integer(I4B) :: m
+    integer(I4B) :: nr, nu
+    integer(I4B) :: mr, mu
     integer(I4B) :: ipos
     integer(I4B) :: isympos
+    real(DP) :: f
 
     ! loop through and set array values
-    do n = 1, size(reach_length)
-      do ipos = ia(n) + 1, ia(n + 1) - 1
-        m = ja(ipos)
-        if (m < n) cycle
+    do nu = 1, size(cell_length)
+
+      ! find reduced node number and cycle if cell does not exist
+      nr = nu
+      if (nrsize > 0) nr = nodereduced(nu)
+      if (nr <= 0) cycle
+
+      ! visit each cell connected to reduced cell nr
+      do ipos = ia(nr) + 1, ia(nr + 1) - 1
+
+        ! process upper triangle by skipping mr cells less than nr
+        mr = ja(ipos)
+        if (mr < nr) cycle
+
+        mu = mr
+        if (nrsize > 0) mu = nodeuser(mr)
+
         isympos = jas(ipos)
         ihc(isympos) = 1
-        cl1(isympos) = DHALF * reach_length(n)
-        cl2(isympos) = DHALF * reach_length(m)
+
+        ! if cell m is connected to the downstream end of cell n, then use
+        ! 1 - fdc times the cell length, otherwise use fdc * length
+        if (fdc(nu) == DHALF) then
+          f = DHALF
+        else
+          if (connected_down_n(nu, mu, iavert, javert, iavertcells, &
+                               javertcells)) then
+            f = (DONE - fdc(nu))
+          else
+            f = fdc(nu)
+          end if
+        end if
+        cl1(isympos) = f * cell_length(nu)
+
+        ! do the opposite for the cl2 distance as it is relative to m
+        if (fdc(mu) == DHALF) then
+          f = DHALF
+        else
+          if (connected_down_n(mu, nu, iavert, javert, iavertcells, &
+                               javertcells)) then
+            f = (DONE - fdc(mu))
+          else
+            f = fdc(mu)
+          end if
+        end if
+        cl2(isympos) = f * cell_length(mu)
+
       end do
     end do
   end subroutine fill_disv1d_symarrays
@@ -1370,43 +1404,42 @@ contains
   subroutine vertexconnectl(nodes, nrsize, maxnnz, nodeuser, sparse, &
                             iavertcells, javertcells, &
                             nodereduced)
-    ! -- modules
+    ! modules
     use SparseModule, only: sparsematrix
     use GeomUtilModule, only: get_node
-    ! -- dummy
-    integer(I4B), intent(in) :: nodes
-    integer(I4B), intent(in) :: nrsize
-    integer(I4B), intent(in) :: maxnnz
-    integer(I4B), intent(in) :: nodeuser
-    type(SparseMatrix), intent(inout) :: sparse
-    integer(I4B), dimension(:), intent(in) :: nodereduced
-    integer(I4B), dimension(:), intent(in) :: iavertcells
-    integer(I4B), dimension(:), intent(in) :: javertcells
-    ! -- local
+    ! dummy
+    integer(I4B), intent(in) :: nodes !< number of active nodes
+    integer(I4B), intent(in) :: nrsize !< if > 0 then reduced grid
+    integer(I4B), intent(in) :: maxnnz !< max number of non zeros
+    integer(I4B), intent(in) :: nodeuser !< number of user nodes
+    type(SparseMatrix), intent(inout) :: sparse !< sparse matrix object
+    integer(I4B), dimension(:), intent(in) :: nodereduced !< map from user to reduced node
+    integer(I4B), dimension(:), intent(in) :: iavertcells !< csr ia index array for vertices
+    integer(I4B), dimension(:), intent(in) :: javertcells !< csr list of cells that use each vertex
+    ! local
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     integer(I4B) :: i, k, nr, mr, nvert
     integer(I4B) :: con
-    !
-    ! -- Allocate and fill the ia and ja arrays
+
+    !  Setup a sparse object
     allocate (rowmaxnnz(nodes))
     do i = 1, nodes
       rowmaxnnz(i) = maxnnz
     end do
     call sparse%init(nodes, nodes, rowmaxnnz)
     deallocate (rowmaxnnz)
-    do nr = 1, nodes
-      !
-      ! -- Process diagonal
+
+    ! Fill the sparse diagonal
+    do nr = 1, nodeuser
       mr = nr
       if (nrsize > 0) mr = nodereduced(mr)
       if (mr <= 0) cycle
       call sparse%addconnection(mr, mr, 1)
     end do
-    !
-    ! -- Go through each vertex and connect up all the cells that use
-    !    this vertex in their definition.
-    nvert = size(iavertcells) - 1
 
+    ! Go through each vertex and connect up all the cells that use
+    ! this vertex in their definition.
+    nvert = size(iavertcells) - 1
     do i = 1, nvert
       ! loop through cells that share the vertex
       do k = iavertcells(i), iavertcells(i + 1) - 2
@@ -1423,9 +1456,7 @@ contains
         end do
       end do
     end do
-    !
-    ! -- return
-    return
+
   end subroutine vertexconnectl
 
   !> @brief routine to set a value in the mask array (which has the same shape
@@ -1484,5 +1515,38 @@ contains
     ! -- Return
     return
   end subroutine iac_to_ia
+
+  !> @brief Is cell m is connected to the downstream end of cell n
+  !<
+  function connected_down_n(nu, mu, iavert, javert, iavertcells, javertcells) &
+    result(connected_down)
+    ! dummy
+    integer(I4B), intent(in) :: nu ! user nodenumber for cell n
+    integer(I4B), intent(in) :: mu ! user nodenumber for connected cell m
+    integer(I4B), dimension(:), intent(in) :: iavert ! csr index array of size (nodeuser + 1) for javert
+    integer(I4B), dimension(:), intent(in) :: javert ! csr array containing vertex numbers that define each cell
+    integer(I4B), dimension(:), intent(in) :: iavertcells ! csr index array of size (nvert + 1) for javert
+    integer(I4B), dimension(:), intent(in) :: javertcells ! csr array containing cells numbers that referenced for a vertex
+    ! return
+    logical(LGP) :: connected_down
+    ! - local
+    integer(I4B) :: ipos
+    integer(I4B) :: ivert_down
+
+    ! ivert_down is the last vertex for node nu; the last vertex is considered
+    ! to be the dowstream end of node nu
+    ivert_down = javert(iavert(nu + 1) - 1)
+
+    ! look through vertex ivert_down, and see if mu is in it; if so, then
+    ! that means mu is connected to the downstream end of nu
+    connected_down = .false.
+    do ipos = iavertcells(ivert_down), iavertcells(ivert_down + 1) - 1
+      if (javertcells(ipos) == mu) then
+        connected_down = .true.
+        exit
+      end if
+    end do
+
+  end function connected_down_n
 
 end module ConnectionsModule

@@ -22,7 +22,7 @@ module ChfDis2DInputModule
     logical :: ncol = .false.
     logical :: delr = .false.
     logical :: delc = .false.
-    logical :: botm = .false.
+    logical :: bottom = .false.
     logical :: idomain = .false.
   end type ChfDis2dParamFoundType
 
@@ -215,13 +215,13 @@ module ChfDis2DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    chfdis2d_botm = InputParamDefinitionType &
+    chfdis2d_bottom = InputParamDefinitionType &
     ( &
     'CHF', & ! component
     'DIS2D', & ! subcomponent
     'GRIDDATA', & ! block
-    'BOTM', & ! tag name
-    'BOTM', & ! fortran variable
+    'BOTTOM', & ! tag name
+    'BOTTOM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
     'cell bottom elevation', & ! longname
@@ -263,7 +263,7 @@ module ChfDis2DInputModule
     chfdis2d_ncol, &
     chfdis2d_delr, &
     chfdis2d_delc, &
-    chfdis2d_botm, &
+    chfdis2d_bottom, &
     chfdis2d_idomain &
     ]
 

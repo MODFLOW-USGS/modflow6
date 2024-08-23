@@ -22,7 +22,7 @@ module SwfDis2DInputModule
     logical :: ncol = .false.
     logical :: delr = .false.
     logical :: delc = .false.
-    logical :: botm = .false.
+    logical :: bottom = .false.
     logical :: idomain = .false.
   end type SwfDis2dParamFoundType
 
@@ -215,13 +215,13 @@ module SwfDis2DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdis2d_botm = InputParamDefinitionType &
+    swfdis2d_bottom = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DIS2D', & ! subcomponent
     'GRIDDATA', & ! block
-    'BOTM', & ! tag name
-    'BOTM', & ! fortran variable
+    'BOTTOM', & ! tag name
+    'BOTTOM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
     'cell bottom elevation', & ! longname
@@ -263,7 +263,7 @@ module SwfDis2DInputModule
     swfdis2d_ncol, &
     swfdis2d_delr, &
     swfdis2d_delc, &
-    swfdis2d_botm, &
+    swfdis2d_bottom, &
     swfdis2d_idomain &
     ]
 
