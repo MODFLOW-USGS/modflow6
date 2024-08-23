@@ -1,7 +1,9 @@
 """
 
-Test the disv1d to ensure that it supports IDOMAIN and writes a valid binary
-grid file.
+Test the fdc input parameter for disv1d to shift the node location along the
+cell.  Use a 2 cell model and assign different roughness values for cell 1
+and cell 2.  Fix the head in both cells and make a hand calculation of the flow.
+Compare the hand calculation of flow with the simulated flow.
 
 """
 
@@ -11,18 +13,19 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "chf-disv1d",
+    "chf-dis-fdc",
 ]
 
 # grid size
 dx = 1000.0
-nreach = 9
+nreach = 2
 total_length = dx * nreach
 vertices = []
 vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
 cell2d = []
+fdc = [0.0, 1.0]
 for j in range(nreach):
-    cell2d.append([j, 0.5, 2, j, j + 1])
+    cell2d.append([j, fdc[j], 2, j, j + 1])
 nodes = len(cell2d)
 nvert = len(vertices)
 xorigin = 100.0
@@ -31,6 +34,9 @@ angrot = 25.0
 
 idomain = np.ones((nodes,), dtype=int)
 idomain[3:6] = 0
+h0 = 0.5
+h1 = 1.0
+rough = [0.035, 0.35]
 
 
 def build_models(idx, test):
@@ -108,7 +114,7 @@ def add_chf_model_disv1d(sim):
         save_flows=True,
         length_conversion=1.0,
         time_conversion=86400.0,
-        manningsn=0.035,
+        manningsn=rough,
         idcxs=None,
     )
 
@@ -134,7 +140,7 @@ def add_chf_model_disv1d(sim):
         maxbound=1,
         print_input=True,
         print_flows=True,
-        stress_period_data=[(0, 0.5), (nodes - 1, 1.0)],
+        stress_period_data=[(0, h0), (nodes - 1, h1)],
     )
 
     return
@@ -162,14 +168,16 @@ def check_grb_disv1d(fpth):
         nodes + 1,
         2,
     ), "vertices shape is incorrect"
-    assert grb.nja == 14, "nja in grb file is not 14"
+    assert grb.nja == 4, "nja in grb file is not 4"
     assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
     assert grb.angrot == angrot, "angrot in grb file is not correct"
     assert np.allclose(
         grb.bot.reshape((nodes,)), np.zeros((nodes,))
     ), "grb botm not correct"
-    cellx = np.linspace(dx / 2, nreach * dx - dx / 2, nreach)
+    cellx = np.array(
+        [0.0, 2 * dx]
+    )  # node centers pushed all the way to left and right
     celly = np.zeros(nreach)
     assert np.allclose(
         grb._datadict["CELLX"], cellx.flatten()
@@ -198,20 +206,56 @@ def check_output(idx, test):
     modelname = "channel"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    chf = mfsim.get_model(modelname)
 
-    # read the binary grid file
+    # check binary grid file
     fpth = test.workspace / f"{modelname}.disv1d.grb"
     check_grb_disv1d(fpth)
 
     # read binary stage file
-    fpth = test.workspace / f"{modelname}.stage"
-    sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
-    stage = sobj.get_data().reshape((nodes,))
-    assert np.allclose(
-        stage[idomain == 0], 3.0e30
-    ), "stage should have nodata values where idomain is zero"
+    stage = chf.output.stage().get_data().reshape((nodes,))
     assert stage[idomain == 1].max() == 1.0, "maximum stage should be 1.0"
     assert stage[idomain == 1].min() == 0.5, "minimum stage should be 0.5"
+
+    # extract the simulated flow from the budget file
+    fpth = test.workspace / f"{modelname}.bud"
+    sobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    flowjaface = sobj.get_data(text="FLOW-JA-FACE")[-1].flatten()
+    flow_sim = flowjaface[1]
+
+    # make an independent calculate of the flow between two constant head
+    # cells
+    def get_cond_n(depth, width, rough, dhds):
+        unitconv = 86400.0
+        a = depth * width
+        rh = depth
+        conveyance = a * rh ** (2.0 / 3.0) / rough
+        dhds_sqr = dhds**0.5
+        c = unitconv * conveyance / dx / dhds_sqr
+        return c
+
+    cln = 1000.0
+    clm = 1000.0
+    dhds = abs(h1 - h0) / (cln + clm)
+    depth_n = h0 - 0.0
+    depth_m = h1 - 0.0
+    if h0 > h1:
+        depth_m = depth_n
+    else:
+        depth_n = depth_m
+
+    width = 50.0
+    rough_n, rough_m = rough
+    cn = get_cond_n(depth_n, width, rough_n, dhds)
+    cm = get_cond_n(depth_m, width, rough_m, dhds)
+    cond = cn * cm / (cn + cm)
+    flow = cond * (h1 - h0)
+    print(f"{cn=} {cm=} {cond=}")
+    print(f"Known flow is {flow} cubic meters per seconds")
+    print(f"Simulated flow is {flow_sim} cubic meters per seconds")
+    assert np.allclose(
+        flow, flow_sim
+    ), "known flow and simulated flow not the same"
 
     makeplot = False
     if makeplot:

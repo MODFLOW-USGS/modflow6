@@ -311,7 +311,6 @@ def check_output(idx, test):
 
     makeplot = False
     if makeplot:
-        # PlotMapView not working yet for dis2d
         make_plot(test, mfsim, stage.flatten(), idx)
 
 
