@@ -20,10 +20,10 @@ module Disv1dModule
 
   type, extends(DisBaseType) :: Disv1dType
     integer(I4B), pointer :: nvert => null() !< number of x,y vertices
-    real(DP), dimension(:), pointer, contiguous :: length => null() !< length of each reach
+    real(DP), dimension(:), pointer, contiguous :: length => null() !< length of each reach (of size nodesuser)
     real(DP), dimension(:), pointer, contiguous :: width => null() !< reach width
     real(DP), dimension(:), pointer, contiguous :: bottom => null() !< reach bottom elevation
-    integer(I4B), dimension(:), pointer, contiguous :: idomain => null() !< idomain (nodes)
+    integer(I4B), dimension(:), pointer, contiguous :: idomain => null() !< idomain (of size nodesuser)
     real(DP), dimension(:, :), pointer, contiguous :: vertices => null() !< cell vertices stored as 2d array with columns of x, y
     real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() !< reach midpoints stored as 2d array with columns of x, y
     real(DP), dimension(:), pointer, contiguous :: fdc => null() !< fdc stored as array
@@ -71,7 +71,6 @@ module Disv1dModule
     logical :: angrot = .false.
     logical :: nodes = .false.
     logical :: nvert = .false.
-    logical :: length = .false.
     logical :: width = .false.
     logical :: bottom = .false.
     logical :: idomain = .false.
@@ -440,32 +439,24 @@ contains
   end subroutine log_dimensions
 
   subroutine source_griddata(this)
-    ! -- modules
+    ! modules
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
-    ! -- dummy
+    ! dummy
     class(Disv1dType) :: this
-    ! -- locals
+    ! locals
     character(len=LENMEMPATH) :: idmMemoryPath
     type(DisFoundType) :: found
-    ! -- formats
-    !
-    ! -- set memory path
+    ! formats
+
+    ! set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
-    !
-    ! -- update defaults with idm sourced values
-    call mem_set_value(this%length, 'LENGTH', idmMemoryPath, &
-                       found%length)
+
     call mem_set_value(this%width, 'WIDTH', idmMemoryPath, &
                        found%width)
     call mem_set_value(this%bottom, 'BOTTOM', idmMemoryPath, &
                        found%bottom)
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
-
-    if (.not. found%length) then
-      write (errmsg, '(a)') 'Error in GRIDDATA block: LENGTH not found.'
-      call store_error(errmsg)
-    end if
 
     if (.not. found%width) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: WIDTH not found.'
@@ -481,13 +472,11 @@ contains
       call store_error_filename(this%input_fname)
     end if
 
-    ! -- log simulation values
+    ! log simulation values
     if (this%iout > 0) then
       call this%log_griddata(found)
     end if
-    !
-    ! -- Return
-    return
+
   end subroutine source_griddata
 
   !> @brief Write griddata found to list file
@@ -497,10 +486,6 @@ contains
     type(DisFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-
-    if (found%length) then
-      write (this%iout, '(4x,a)') 'LENGTH set from input file'
-    end if
 
     if (found%width) then
       write (this%iout, '(4x,a)') 'WIDTH set from input file'
@@ -606,13 +591,19 @@ contains
       do i = 1, this%nodesuser
         this%fdc(i) = fdc(i)
       end do
-      call calculate_cellxy(this%vertices, this%fdc, this%iavert, &
-                            this%javert, this%cellxy)
     else
       call store_error('Required fdc array not found.')
     end if
-    !
-    ! -- log
+
+    ! calculate length from vertices
+    call calculate_cell_length(this%vertices, this%iavert, this%javert, &
+                               this%length)
+
+    ! calculate cellxy from vertices and fdc
+    call calculate_cellxy(this%vertices, this%fdc, this%iavert, &
+                          this%javert, this%length, this%cellxy)
+
+    ! log
     if (this%iout > 0) then
       write (this%iout, '(1x,a)') 'Setting Discretization CELL1D'
       write (this%iout, '(1x,a,/)') 'End Setting Discretization CELL1D'
@@ -667,12 +658,13 @@ contains
 
   !> @brief Calculate x, y, coordinates of reach midpoint
   !<
-  subroutine calculate_cellxy(vertices, fdc, iavert, javert, cellxy)
+  subroutine calculate_cellxy(vertices, fdc, iavert, javert, length, cellxy)
     ! -- dummy
     real(DP), dimension(:, :), intent(in) :: vertices !< 2d array of vertices with x, y as columns
     real(DP), dimension(:), intent(in) :: fdc !< fractional distance to reach midpoint (normally 0.5)
     integer(I4B), dimension(:), intent(in) :: iavert !< csr mapping of vertices to cell reaches
     integer(I4B), dimension(:), intent(in) :: javert !< csr mapping of vertices to cell reaches
+    real(DP), dimension(:), intent(in) :: length !< vector of cell lengths
     real(DP), dimension(:, :), intent(inout) :: cellxy !< 2d array of reach midpoint with x, y as columns
     ! -- local
     integer(I4B) :: nodes !< number of nodes
@@ -681,7 +673,6 @@ contains
     integer(I4B) :: iv0 !< index for line reach start
     integer(I4B) :: iv1 !< index for linen reach end
     integer(I4B) :: ixy !< x, y column index
-    real(DP) :: length !< reach length = sum of individual line reaches
     real(DP) :: fd0 !< fractional distance to start of this line reach
     real(DP) :: fd1 !< fractional distance to end of this line reach
     real(DP) :: fd !< fractional distance where midpoint (defined by fdc) is located
@@ -690,20 +681,13 @@ contains
     nodes = size(iavert) - 1
     do n = 1, nodes
 
-      ! calculate length of this reach
-      length = DZERO
-      do j = iavert(n), iavert(n + 1) - 2
-        length = length + &
-                 calcdist(vertices, javert(j), javert(j + 1))
-      end do
-
       ! find vertices that span midpoint
       iv0 = 0
       iv1 = 0
       fd0 = DZERO
       do j = iavert(n), iavert(n + 1) - 2
         d = calcdist(vertices, javert(j), javert(j + 1))
-        fd1 = fd0 + d / length
+        fd1 = fd0 + d / length(n)
 
         ! if true, then we know the midpoint is some fractional distance (fd)
         ! from vertex j to vertex j + 1
@@ -724,6 +708,33 @@ contains
 
     end do
   end subroutine calculate_cellxy
+
+  !> @brief Calculate x, y, coordinates of reach midpoint
+  !<
+  subroutine calculate_cell_length(vertices, iavert, javert, length)
+    ! -- dummy
+    real(DP), dimension(:, :), intent(in) :: vertices !< 2d array of vertices with x, y as columns
+    integer(I4B), dimension(:), intent(in) :: iavert !< csr mapping of vertices to cell reaches
+    integer(I4B), dimension(:), intent(in) :: javert !< csr mapping of vertices to cell reaches
+    real(DP), dimension(:), intent(inout) :: length !< 2d array of reach midpoint with x, y as columns
+    ! -- local
+    integer(I4B) :: nodes !< number of nodes
+    integer(I4B) :: n !< node index
+    integer(I4B) :: j !< vertex index
+    real(DP) :: dlen !< length
+
+    nodes = size(iavert) - 1
+    do n = 1, nodes
+
+      ! calculate length of this reach
+      dlen = DZERO
+      do j = iavert(n), iavert(n + 1) - 2
+        dlen = dlen + calcdist(vertices, javert(j), javert(j + 1))
+      end do
+      length(n) = dlen
+
+    end do
+  end subroutine calculate_cell_length
 
   !> @brief Finalize grid construction
   !<

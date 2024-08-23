@@ -80,7 +80,6 @@ def build_models(idx, test):
         chf,
         nodes=nodes,
         nvert=nvert,
-        length=dx,
         width=40.0,
         bottom=z,
         idomain=1,

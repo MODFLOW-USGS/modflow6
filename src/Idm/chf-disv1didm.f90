@@ -20,7 +20,6 @@ module ChfDisv1DInputModule
     logical :: export_ascii = .false.
     logical :: nodes = .false.
     logical :: nvert = .false.
-    logical :: length = .false.
     logical :: width = .false.
     logical :: bottom = .false.
     logical :: idomain = .false.
@@ -179,24 +178,6 @@ module ChfDisv1DInputModule
     '', & ! shape
     'number of columns', & ! longname
     .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
-    chfdisv1d_length = InputParamDefinitionType &
-    ( &
-    'CHF', & ! component
-    'DISV1D', & ! subcomponent
-    'GRIDDATA', & ! block
-    'LENGTH', & ! tag name
-    'LENGTH', & ! fortran variable
-    'DOUBLE1D', & ! type
-    'NODES', & ! shape
-    'length', & ! longname
-    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -394,7 +375,6 @@ module ChfDisv1DInputModule
     chfdisv1d_export_ascii, &
     chfdisv1d_nodes, &
     chfdisv1d_nvert, &
-    chfdisv1d_length, &
     chfdisv1d_width, &
     chfdisv1d_bottom, &
     chfdisv1d_idomain, &

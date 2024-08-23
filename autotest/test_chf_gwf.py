@@ -92,7 +92,6 @@ def add_chf_model(sim):
         chf,
         nodes=nodes,
         nvert=nvert,
-        length=dx,
         width=50.0,
         bottom=0.0,
         idomain=1,

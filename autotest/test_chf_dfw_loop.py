@@ -225,7 +225,6 @@ def build_models(idx, test):
         chf,
         nodes=nodes,
         nvert=nvert,
-        length=reach_length,
         width=1.0,
         bottom=reach_bottom,
         idomain=1,
@@ -420,7 +419,7 @@ def make_plot(test):
     pmv = flopy.plot.PlotMapView(model=chf, ax=ax)
     pmv.plot_grid()
     vertices = chf.disv1d.vertices.get_data()
-    ax.plot(vertices["xv"], vertices["yv"], 'bo')
+    ax.plot(vertices["xv"], vertices["yv"], "bo")
     for iv, x, y in vertices:
         ax.text(x, y, f"{iv + 1}")
     fname = ws / "grid.png"

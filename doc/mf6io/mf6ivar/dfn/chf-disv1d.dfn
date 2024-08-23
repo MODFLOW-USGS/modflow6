@@ -70,17 +70,6 @@ description is the total number of (x, y, z) vertex pairs used to characterize t
 # --------------------- swf disv1d griddata ---------------------
 
 block griddata
-name length
-type double precision
-shape (nodes)
-valid
-reader readarray
-layered false
-optional
-longname length
-description length for each one-dimensional cell
-
-block griddata
 name width
 type double precision
 shape (nodes)

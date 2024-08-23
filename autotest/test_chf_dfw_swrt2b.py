@@ -98,7 +98,6 @@ def build_models(idx, test):
         chf,
         nodes=nodes,
         nvert=nvert,
-        length=dx,
         width=dx,
         bottom=reach_bottom,
         idomain=1,

@@ -89,7 +89,6 @@ def build_models(idx, test):
         export_array_ascii=True,
         nodes=nodes,
         nvert=nvert,
-        length=dx,
         width=dx,
         bottom=reach_bottom,
         idomain=1,
@@ -226,7 +225,6 @@ def check_output(idx, test):
 
     # ensure export array is working properly
     flist = [
-        "disv1d.length",
         "disv1d.width",
         "disv1d.bottom",
         "disv1d.idomain",
