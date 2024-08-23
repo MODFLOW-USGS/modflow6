@@ -22,11 +22,11 @@ nreach = 2
 total_length = dx * nreach
 vertices = []
 vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
-cell2d = []
+cell1d = []
 fdc = [0.0, 1.0]
 for j in range(nreach):
-    cell2d.append([j, fdc[j], 2, j, j + 1])
-nodes = len(cell2d)
+    cell1d.append([j, fdc[j], 2, j, j + 1])
+nodes = len(cell1d)
 nvert = len(vertices)
 xorigin = 100.0
 yorigin = 200.0
@@ -102,7 +102,7 @@ def add_chf_model_disv1d(sim):
         bottom=0.0,
         idomain=idomain,
         vertices=vertices,
-        cell2d=cell2d,
+        cell1d=cell1d,
         xorigin=xorigin,
         yorigin=yorigin,
         angrot=angrot,
@@ -152,7 +152,7 @@ def make_plot(test, mfsim, stage, idx):
 
     chf = mfsim.chf[0]
     pmv = flopy.plot.PlotMapView(model=chf)
-    pmv.plot_array(stage, masked_values=[3e30])
+    pmv.plot_array(stage, masked_values=[3e30])  # not working yet
     pmv.plot_grid()
 
     fname = test.workspace / "results.png"

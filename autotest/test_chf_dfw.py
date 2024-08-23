@@ -57,10 +57,10 @@ def build_models(idx, test):
     total_length = dx * nreach
     vertices = []
     vertices = [[j, j * dx, 0.0] for j in range(nreach + 1)]
-    cell2d = []
+    cell1d = []
     for j in range(nreach):
-        cell2d.append([j, 0.5, 2, j, j + 1])
-    nodes = len(cell2d)
+        cell1d.append([j, 0.5, 2, j, j + 1])
+    nodes = len(cell1d)
     nvert = len(vertices)
 
     disv1d = flopy.mf6.ModflowChfdisv1D(
@@ -72,7 +72,7 @@ def build_models(idx, test):
         bottom=0.0,
         idomain=1,
         vertices=vertices,
-        cell2d=cell2d,
+        cell1d=cell1d,
     )
 
     dfw = flopy.mf6.ModflowChfdfw(

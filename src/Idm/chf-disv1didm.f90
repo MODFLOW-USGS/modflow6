@@ -27,7 +27,7 @@ module ChfDisv1DInputModule
     logical :: iv = .false.
     logical :: xv = .false.
     logical :: yv = .false.
-    logical :: icell2d = .false.
+    logical :: icell1d = .false.
     logical :: fdc = .false.
     logical :: ncvert = .false.
     logical :: icvert = .false.
@@ -312,16 +312,16 @@ module ChfDisv1DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    chfdisv1d_icell2d = InputParamDefinitionType &
+    chfdisv1d_icell1d = InputParamDefinitionType &
     ( &
     'CHF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
-    'ICELL2D', & ! tag name
-    'ICELL2D', & ! fortran variable
+    'CELL1D', & ! block
+    'ICELL1D', & ! tag name
+    'ICELL1D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
-    'cell2d number', & ! longname
+    'cell1d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,7 +334,7 @@ module ChfDisv1DInputModule
     ( &
     'CHF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'FDC', & ! tag name
     'FDC', & ! fortran variable
     'DOUBLE', & ! type
@@ -352,7 +352,7 @@ module ChfDisv1DInputModule
     ( &
     'CHF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'NCVERT', & ! tag name
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
@@ -370,7 +370,7 @@ module ChfDisv1DInputModule
     ( &
     'CHF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'ICVERT', & ! tag name
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
@@ -401,7 +401,7 @@ module ChfDisv1DInputModule
     chfdisv1d_iv, &
     chfdisv1d_xv, &
     chfdisv1d_yv, &
-    chfdisv1d_icell2d, &
+    chfdisv1d_icell1d, &
     chfdisv1d_fdc, &
     chfdisv1d_ncvert, &
     chfdisv1d_icvert &
@@ -426,16 +426,16 @@ module ChfDisv1DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    chfdisv1d_cell2d = InputParamDefinitionType &
+    chfdisv1d_cell1d = InputParamDefinitionType &
     ( &
     'CHF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
-    'CELL2D', & ! tag name
-    'CELL2D', & ! fortran variable
-    'RECARRAY ICELL2D FDC NCVERT ICVERT', & ! type
+    'CELL1D', & ! block
+    'CELL1D', & ! tag name
+    'CELL1D', & ! fortran variable
+    'RECARRAY ICELL1D FDC NCVERT ICVERT', & ! type
     'NODES', & ! shape
-    'cell2d data', & ! longname
+    'cell1d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -447,7 +447,7 @@ module ChfDisv1DInputModule
     chf_disv1d_aggregate_definitions(*) = &
     [ &
     chfdisv1d_vertices, &
-    chfdisv1d_cell2d &
+    chfdisv1d_cell1d &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
@@ -478,7 +478,7 @@ module ChfDisv1DInputModule
     .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
-    'CELL2D', & ! blockname
+    'CELL1D', & ! blockname
     .true., & ! required
     .true., & ! aggregate
     .false. & ! block_variable

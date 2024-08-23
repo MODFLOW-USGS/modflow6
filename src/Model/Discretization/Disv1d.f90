@@ -45,7 +45,7 @@ module Disv1dModule
     procedure :: source_dimensions
     procedure :: source_griddata
     procedure :: source_vertices
-    procedure :: source_cell2d
+    procedure :: source_cell1d
     procedure :: log_options
     procedure :: log_dimensions
     procedure :: log_griddata
@@ -78,7 +78,7 @@ module Disv1dModule
     logical :: iv = .false.
     logical :: xv = .false.
     logical :: yv = .false.
-    logical :: icell2d = .false.
+    logical :: icell1d = .false.
     logical :: fdc = .false.
     logical :: ncvert = .false.
     logical :: icvert = .false.
@@ -268,7 +268,7 @@ contains
     ! If vertices provided by user, read and store vertices
     if (this%nvert > 0) then
       call this%source_vertices()
-      call this%source_cell2d()
+      call this%source_cell1d()
     end if
 
   end subroutine disv1d_load
@@ -383,7 +383,7 @@ contains
     if (this%nvert < 1) then
       call store_warning( &
         'NVERT was not specified or was specified as zero.  The &
-        &VERTICES and CELL2D blocks will not be read for the DISV1D6 &
+        &VERTICES and CELL1D blocks will not be read for the DISV1D6 &
         &Package in model '//trim(this%memoryPath)//'.')
     end if
     !
@@ -562,10 +562,10 @@ contains
     return
   end subroutine source_vertices
 
-  !> @brief Copy cell2d information from input data context
+  !> @brief Copy cell1d information from input data context
   !! to model context
   !<
-  subroutine source_cell2d(this)
+  subroutine source_cell1d(this)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
@@ -575,7 +575,7 @@ contains
     class(Disv1dType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
+    integer(I4B), dimension(:), contiguous, pointer :: icell1d => null()
     integer(I4B), dimension(:), contiguous, pointer :: ncvert => null()
     integer(I4B), dimension(:), contiguous, pointer :: icvert => null()
     real(DP), dimension(:), contiguous, pointer :: fdc => null()
@@ -586,14 +586,14 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DISV1D', idm_context)
     !
     ! -- set pointers to input path ncvert and icvert
-    call mem_setptr(icell2d, 'ICELL2D', idmMemoryPath)
+    call mem_setptr(icell1d, 'ICELL1D', idmMemoryPath)
     call mem_setptr(ncvert, 'NCVERT', idmMemoryPath)
     call mem_setptr(icvert, 'ICVERT', idmMemoryPath)
     !
     ! --
-    if (associated(icell2d) .and. associated(ncvert) &
+    if (associated(icell1d) .and. associated(ncvert) &
         .and. associated(icvert)) then
-      call this%define_cellverts(icell2d, ncvert, icvert)
+      call this%define_cellverts(icell1d, ncvert, icvert)
     else
       call store_error('Required cell vertex arrays not found.')
     end if
@@ -614,24 +614,24 @@ contains
     !
     ! -- log
     if (this%iout > 0) then
-      write (this%iout, '(1x,a)') 'Setting Discretization CELL2D'
-      write (this%iout, '(1x,a,/)') 'End Setting Discretization CELL2D'
+      write (this%iout, '(1x,a)') 'Setting Discretization CELL1D'
+      write (this%iout, '(1x,a,/)') 'End Setting Discretization CELL1D'
     end if
     !
     ! -- Return
     return
-  end subroutine source_cell2d
+  end subroutine source_cell1d
 
   !> @brief Construct the iavert and javert integer vectors which
   !! are compressed sparse row index arrays that relate the vertices
   !! to reaches
   !<
-  subroutine define_cellverts(this, icell2d, ncvert, icvert)
+  subroutine define_cellverts(this, icell1d, ncvert, icvert)
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(Disv1dType) :: this
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icell2d
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icell1d
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: ncvert
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icvert
     ! -- locals
@@ -645,7 +645,7 @@ contains
     ! -- add sparse matrix connections from input memory paths
     icv_idx = 1
     do i = 1, this%nodesuser
-      if (icell2d(i) /= i) call store_error('ICELL2D input sequence violation.')
+      if (icell1d(i) /= i) call store_error('ICELL1D input sequence violation.')
       do j = 1, ncvert(i)
         call vert_spm%addconnection(i, icvert(icv_idx), 0)
         if (j == 1) then
@@ -803,7 +803,7 @@ contains
       this%area(noder) = this%length(node)
     end do
 
-    ! create connectivity using vertices and cell2d
+    ! create connectivity using vertices and cell1d
     call this%create_connections()
 
     ! -- Return
@@ -1119,7 +1119,7 @@ contains
     call mem_deallocate(this%bottom)
     call mem_deallocate(this%idomain)
     !
-    ! -- cdl hack for arrays for vertices and cell2d blocks
+    ! -- cdl hack for arrays for vertices and cell1d blocks
     if (deallocate_vertices) then
       call mem_deallocate(this%vertices)
       call mem_deallocate(this%fdc)

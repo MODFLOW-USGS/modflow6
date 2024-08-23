@@ -82,7 +82,7 @@ def build_models(idx, test):
         [19, 3000.0, 2500.0],
     ]
 
-    cell2d = [
+    cell1d = [
         [0, 0.5, 2, 0, 1],
         [1, 0.5, 2, 1, 2],
         [2, 0.5, 2, 2, 3],
@@ -218,7 +218,7 @@ def build_models(idx, test):
         (608400, 0, 0),
     ]
 
-    nodes = len(cell2d)
+    nodes = len(cell1d)
     nvert = len(vertices)
 
     disv1d = flopy.mf6.ModflowChfdisv1D(
@@ -230,7 +230,7 @@ def build_models(idx, test):
         bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
-        cell2d=cell2d,
+        cell1d=cell1d,
     )
 
     stage0 = np.array(14 * [3] + 4 * [2])
@@ -411,6 +411,19 @@ def make_plot(test):
     plt.ylabel("flow, in cubic meters per second")
     plt.legend()
     fname = ws / f"{name}.obs.2.png"
+    plt.savefig(fname)
+
+    fig = plt.figure(figsize=(6, 6))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlim(-100, 6100)
+    ax.set_ylim(-100, 6100)
+    pmv = flopy.plot.PlotMapView(model=chf, ax=ax)
+    pmv.plot_grid()
+    vertices = chf.disv1d.vertices.get_data()
+    ax.plot(vertices["xv"], vertices["yv"], 'bo')
+    for iv, x, y in vertices:
+        ax.text(x, y, f"{iv + 1}")
+    fname = ws / "grid.png"
     plt.savefig(fname)
 
     return

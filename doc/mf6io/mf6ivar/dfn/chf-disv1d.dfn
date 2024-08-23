@@ -155,29 +155,29 @@ optional false
 longname y-coordinate for vertex
 description is the y-coordinate for the vertex.
 
-# --------------------- swf disv1d cell2d ---------------------
+# --------------------- swf disv1d cell1d ---------------------
 
-block cell2d
-name cell2d
-type recarray icell2d fdc ncvert icvert
+block cell1d
+name cell1d
+type recarray icell1d fdc ncvert icvert
 shape (nodes)
 reader urword
 optional false
-longname cell2d data
+longname cell1d data
 description
 
-block cell2d
-name icell2d
+block cell1d
+name icell1d
 type integer
 in_record true
 tagged false
 reader urword
 optional false
-longname cell2d number
-description is the cell2d number.  Records in the cell2d block must be listed in consecutive order from the first to the last.
+longname cell1d number
+description is the cell1d number.  Records in the cell1d block must be listed in consecutive order from the first to the last.
 numeric_index true
 
-block cell2d
+block cell1d
 name fdc
 type double precision
 in_record true
@@ -187,7 +187,7 @@ optional false
 longname fractional distance to the cell center
 description is the fractional distance to the cell center. FDC is relative to the first vertex in the ICVERT array. In most cases FDC should be 0.5, which would place the center of the line segment that defines the cell. If the value of FDC is 1, the cell center would located at the last vertex. FDC values of 0 and 1 can be used to place the node at either end of the cell which can be useful for cells with boundary conditions.
 
-block cell2d
+block cell1d
 name ncvert
 type integer
 in_record true
@@ -197,7 +197,7 @@ optional false
 longname number of cell vertices
 description is the number of vertices required to define the cell.  There may be a different number of vertices for each cell.
 
-block cell2d
+block cell1d
 name icvert
 type integer
 shape (ncvert)
