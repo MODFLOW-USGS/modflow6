@@ -195,6 +195,9 @@ contains
     this%ia => this%dis%con%ia
     this%ja => this%dis%con%ja
     !
+    ! -- Define shared data (cpw, rhow, latent heat of vaporization)
+    call this%gwecommon%gweshared_dat_df(this%neq)
+    !
     ! -- Allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
     !

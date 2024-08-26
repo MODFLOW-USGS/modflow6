@@ -7,6 +7,7 @@ module GweInputDataModule
   private
   public :: GweInputDataType
   public :: gweshared_dat_cr
+  public :: gweshared_dat_df
   public :: set_gwe_dat_ptrs
 
   !> Data for sharing among multiple packages.  Originally read in from
@@ -30,11 +31,13 @@ module GweInputDataModule
   contains
 
     ! public
+    procedure, public :: gweshared_dat_df
     procedure, public :: set_gwe_dat_ptrs
     procedure, public :: gweshared_dat_da
     ! private
-    procedure, private :: set_gwe_scalar_ptrs
-    procedure, private :: set_gwe_array_ptrs
+    procedure, private :: allocate_shared_vars
+    procedure, private :: set_gwe_shared_scalars
+    procedure, private :: set_gwe_shared_arrays
 
   end type GweInputDataType
 
@@ -43,14 +46,54 @@ contains
   !> @brief Allocate the shared data
   !<
   subroutine gweshared_dat_cr(gwe_dat)
-    ! modules
     ! dummy
     type(GweInputDataType), pointer :: gwe_dat !< the input data block
 
-    ! create the object
+    ! Create the object
     allocate (gwe_dat)
 
   end subroutine gweshared_dat_cr
+
+  !> @brief Define the shared data
+  !<
+  subroutine gweshared_dat_df(this, nodes)
+    ! dummy
+    class(GweInputDataType) :: this !< the input data block
+    integer(I4B), intent(in) :: nodes
+
+    ! allocate variables
+    call this%allocate_shared_vars(nodes)
+
+  end subroutine gweshared_dat_df
+
+  !> @brief Define the information this object holds
+  !!
+  !! Allocate strings for storing label names
+  !! Intended to be analogous to allocate_scalars()
+  !<
+  subroutine allocate_shared_vars(this, nodes)
+    ! dummy
+    class(GweInputDataType) :: this !< TspLabelsType object
+    integer(I4B), intent(in) :: nodes
+    ! local
+    integer(I4B) :: i
+
+    allocate (this%gwecpw)
+    allocate (this%gwerhow)
+    allocate (this%gwelatheatvap)
+    allocate (this%gwerhos(nodes))
+    allocate (this%gwecps(nodes))
+
+    ! initialize values
+    this%gwecpw = 4.184e3 !< J/(kg*C) @ 20C
+    this%gwerhow = DEP3 !< kg/m3 @ 20C
+    this%gwelatheatvap = 2.4535e6 !< J/kg @ 20C
+    do i = 1, nodes
+      this%gwecps(i) = DZERO
+      this%gwerhos(i) = DZERO
+    end do
+
+  end subroutine allocate_shared_vars
 
   !> @brief Allocate and read data from EST
   !!
@@ -61,20 +104,21 @@ contains
   !! separate class
   !<
   subroutine set_gwe_dat_ptrs(this, gwerhow, gwecpw, gwelatheatvap, &
-                              gwerhos, gwecps)
+                              gwerhos, gwecps, nodes)
     ! dummy
     class(GweInputDataType) :: this !< the input data block
-    real(DP), intent(in), pointer :: gwerhow !< ptr to density of water specified in EST
-    real(DP), intent(in), pointer :: gwecpw !< ptr to heat capacity of water specified in EST
-    real(DP), intent(in), pointer :: gwelatheatvap !< ptr to latent heat of vaporization specified in EST
+    real(DP), intent(in) :: gwerhow !< ptr to density of water specified in EST
+    real(DP), intent(in) :: gwecpw !< ptr to heat capacity of water specified in EST
+    real(DP), intent(in) :: gwelatheatvap !< ptr to latent heat of vaporization specified in EST
     real(DP), dimension(:), pointer, contiguous :: gwerhos !< ptr to sptially-variably density of aquifer material specified in EST
     real(DP), dimension(:), pointer, contiguous :: gwecps !< ptr to sptially-variably heat capacity of aquifer material specified in EST
+    integer(I4B), intent(in) :: nodes
 
     ! allocate scalars
-    call this%set_gwe_scalar_ptrs(gwerhow, gwecpw, gwelatheatvap)
+    call this%set_gwe_shared_scalars(gwerhow, gwecpw, gwelatheatvap)
 
     ! allocate arrays
-    call this%set_gwe_array_ptrs(gwerhos, gwecps)
+    call this%set_gwe_shared_arrays(gwerhos, gwecps, nodes)
 
   end subroutine set_gwe_dat_ptrs
 
@@ -86,60 +130,65 @@ contains
   !! simulating evaporation will need access to latent heat of
   !! of vaporization.
   !<
-  subroutine set_gwe_scalar_ptrs(this, gwerhow, gwecpw, gwelatheatvap)
+  subroutine set_gwe_shared_scalars(this, gwerhow, gwecpw, gwelatheatvap)
     ! dummy
     class(GweInputDataType) :: this !< GweInputDataType object
-    real(DP), pointer, intent(in) :: gwerhow !< density of water
-    real(DP), pointer, intent(in) :: gwecpw !< mass-based heat capacity of water
-    real(DP), pointer, intent(in), optional :: gwelatheatvap !< latent heat of vaporization
+    real(DP), intent(in) :: gwerhow
+    real(DP), intent(in) :: gwecpw
+    real(DP), intent(in), optional :: gwelatheatvap
 
-    ! set the pointers
-    ! fixed density of water to be used by GWE (vs GWT-based density)
-    this%gwerhow => gwerhow
+    ! fixed density of water to be used by GWE
+    this%gwerhow = gwerhow
     ! spatially constant heat capacity of water   ! kluge note: "specific heat" (which is heat capacity per unit mass) is probably the more correct term
-    this%gwecpw => gwecpw
+    this%gwecpw = gwecpw
     ! latent heat of vaporization
     if (present(gwelatheatvap)) then
-      this%gwelatheatvap => gwelatheatvap
+      this%gwelatheatvap = gwelatheatvap
     end if
 
-  end subroutine set_gwe_scalar_ptrs
+  end subroutine set_gwe_shared_scalars
 
   !> @brief Set pointers to data arrays read by the EST package
   !! for use by other packages
   !!
-  !! Set pointers to GWE-related arrays for use by multiple packages
+  !! Set pointers to GWE-related arrays for use
+  !! by multiple packages.
   !<
-  subroutine set_gwe_array_ptrs(this, gwerhos, gwecps)
+  subroutine set_gwe_shared_arrays(this, gwerhos, gwecps, nodes)
     ! dummy
     class(GweInputDataType) :: this !< GweInputDataType object
     real(DP), dimension(:), pointer, contiguous, intent(in) :: gwerhos
     real(DP), dimension(:), pointer, contiguous, intent(in) :: gwecps
+    integer(I4B), intent(in) :: nodes
 
-    ! set the pointers
-    ! spatially-variable density of aquifer solid material
-    this%gwerhos => gwerhos
-    ! spatially-variable heat capacity of aquifer solid material
-    this%gwecps => gwecps
+    ! local
+    integer(I4B) :: i
 
-  end subroutine set_gwe_array_ptrs
+    do i = 1, nodes
+      ! spatially-variable density of aquifer solid material
+      this%gwerhos(i) = gwerhos(i)
+      ! spatially-variable heat capacity of aquifer solid material
+      this%gwecps(i) = gwecps(i)
+    end do
+
+  end subroutine set_gwe_shared_arrays
 
   !> @ brief Deallocate memory
   !!
-  !!  Set pointers to null
+  !!  Deallocate GWE shared data array memory
   !<
   subroutine gweshared_dat_da(this)
     ! dummy
     class(GweInputDataType) :: this !< the input data block
 
     ! scalars
-    this%gwelatheatvap => null()
-    this%gwerhow => null()
-    this%gwecpw => null()
+    deallocate (this%gwelatheatvap)
+    deallocate (this%gwerhow)
+    deallocate (this%gwecpw)
 
     ! arrays
-    this%gwerhos => null()
-    this%gwecps => null()
+    deallocate (this%gwerhos)
+    deallocate (this%gwecps)
 
   end subroutine gweshared_dat_da
 

@@ -150,7 +150,7 @@ contains
     !
     ! -- set data required by other packages
     call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%latheatvap, &
-                                         this%rhos, this%cps)
+                                         this%rhos, this%cps, dis%nodes)
     !
     ! -- Return
     return
