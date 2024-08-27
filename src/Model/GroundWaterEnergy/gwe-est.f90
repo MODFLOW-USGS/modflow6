@@ -772,12 +772,12 @@ contains
                                         this%parser%iuactive, this%decay, &
                                         aname(2))
           lname(2) = .true.
-        case ('CPS')
+        case ('HEAT_CAPACITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%cps, &
                                         aname(3))
           lname(3) = .true.
-        case ('RHOS')
+        case ('DENSITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%rhos, &
                                         aname(4))
@@ -801,11 +801,11 @@ contains
       call store_error(errmsg)
     end if
     if (.not. lname(3)) then
-      write (errmsg, '(a)') 'CPS not specified in griddata block.'
+      write (errmsg, '(a)') 'HEAT_CAPACITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
     if (.not. lname(4)) then
-      write (errmsg, '(a)') 'RHOS not specified in griddata block.'
+      write (errmsg, '(a)') 'DENSITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
     !
