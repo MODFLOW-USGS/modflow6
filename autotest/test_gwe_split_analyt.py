@@ -270,8 +270,8 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
         heat_capacity_water=Cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=Cps,
-        rhos=rhos,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
     )
 
     # Constant temperature goes on the left side of the left model

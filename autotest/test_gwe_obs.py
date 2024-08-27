@@ -135,6 +135,8 @@ dispersivity = 0.0  # dispersion (remember, 1D model)
 # GWE related parameters
 rhow = 1000.0
 cpw = 4183.0
+cps = 760.0
+rhos = 1500.0
 lhv = 2454.0
 
 # Set solver parameter values (and related)
@@ -343,8 +345,8 @@ def build_gwe_model(sim, gwename, idx):
         heat_capacity_water=cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=760.0,
-        rhos=1500.0,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST",
         filename=f"{gwename}.est",
     )

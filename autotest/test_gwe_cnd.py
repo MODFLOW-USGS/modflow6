@@ -93,6 +93,8 @@ dmcoef = 3.2519e-7  # Molecular diffusion coefficient
 cpw = 4183.0
 rhow = 1000.0
 lhv = 2454.0
+cps = 760.0
+rhos = 1500.0
 
 # Set solver parameter values (and related)
 nouter, ninner = 100, 300
@@ -307,8 +309,8 @@ def build_models(idx, test):
         heat_capacity_water=cpw,
         density_water=rhow,
         porosity=prsity,
-        cps=760.0,
-        rhos=1500.0,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         filename=f"{gwename}.est",
     )
 
