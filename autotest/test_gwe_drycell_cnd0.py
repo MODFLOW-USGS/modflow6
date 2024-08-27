@@ -76,6 +76,9 @@ botm = np.array(botm)
 rhow = 1000.0
 cpw = 4183.0
 lhv = 2454.0
+cps=760.0
+rhos=1500.0
+
 
 # Head input
 left_hd = 15.0
@@ -291,8 +294,8 @@ def build_models(idx, test):
         heat_capacity_water=cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=760.0,
-        rhos=1500.0,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST-2",
         filename=f"{gwename1}.est",
     )

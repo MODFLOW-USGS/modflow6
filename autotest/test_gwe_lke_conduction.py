@@ -576,7 +576,7 @@ def build_models(idx, test):
         heat_capacity_water=Cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        heat_capcity_solid=Cps,
+        heat_capacity_solid=Cps,
         density_solid=rhos,
         pname="MST-1",
         filename=f"{gwename}.mst",
