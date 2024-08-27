@@ -299,8 +299,8 @@ contains
 
     ! -- Set a pointer in the interface model to the gwecommon data
     if (this%gweModel%inest > 0) then
-      this%gweInterfaceModel%gwecommon%gwecpw = this%gweModel%gwecommon%gwecpw
-      this%gweInterfaceModel%gwecommon%gwerhow = this%gweModel%gwecommon%gwerhow
+      this%gweInterfaceModel%gwecommon%gwecpw => this%gweModel%gwecommon%gwecpw
+      this%gweInterfaceModel%gwecommon%gwerhow => this%gweModel%gwecommon%gwerhow
     end if
 
     !-- Set the equation scaling factor in the interface model to that of
