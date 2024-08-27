@@ -208,7 +208,7 @@ type integer
 reader urword
 optional false
 longname number of particle release times
-description is the number of particle release times specified in the RELEASETIMES block. This is not necessarily the total number of release times; release times are the union of RELEASETIMES and PERIOD block RELEASESETTING selections.
+description is the number of particle release times specified in the RELEASETIMES block. This is not necessarily the total number of release times; release times are the union of RELEASE_TIME_FREQUENCY, RELEASETIMES block, and PERIOD block RELEASESETTING selections.
 
 # --------------------- prt prp packagedata ---------------------
 
