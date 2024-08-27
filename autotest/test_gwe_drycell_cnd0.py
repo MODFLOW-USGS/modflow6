@@ -76,8 +76,8 @@ botm = np.array(botm)
 rhow = 1000.0
 cpw = 4183.0
 lhv = 2454.0
-cps=760.0
-rhos=1500.0
+cps = 760.0
+rhos = 1500.0
 
 
 # Head input
