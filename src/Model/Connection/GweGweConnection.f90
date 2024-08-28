@@ -93,24 +93,24 @@ contains
     character(len=LENCOMPONENTNAME) :: name
     class(*), pointer :: objPtr
     logical(LGP) :: write_ifmodel_listfile = .false.
-    
+
     objPtr => model
     this%gweModel => CastAsGweModel(objPtr)
     objPtr => gweEx
     this%gweExchange => CastAsGweExchange(objPtr)
-    
+
     if (gweEx%v_model1%is_local .and. gweEx%v_model2%is_local) then
       this%owns_exchange = associated(model, gweEx%model1)
     else
       this%owns_exchange = .true.
     end if
-    
+
     if (gweEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWECON1_', gweEx%id
     else
       write (name, '(a,i0)') 'GWECON2_', gweEx%id
     end if
-    
+
     ! .lst file for interface model
     if (write_ifmodel_listfile) then
       fname = trim(name)//'.im.lst'
@@ -119,21 +119,21 @@ contains
         trim(this%gweModel%name), 'from exchange ', &
         trim(gweEx%name)
     end if
-    
+
     ! first call base constructor
     call this%SpatialModelConnectionType%spatialConnection_ctor(model, &
                                                                 gweEx, &
                                                                 name)
-    
+
     call this%allocate_scalars()
     this%typename = 'GWE-GWE'
     this%iIfaceAdvScheme = 0
     this%iIfaceXt3d = 0
     this%exgflowSign = 1
-    
+
     allocate (this%gweInterfaceModel)
     this%interface_model => this%gweInterfaceModel
-    
+
   end subroutine gweGweConnection_ctor
 
   !> @brief Allocate scalar variables for this connection
@@ -141,11 +141,11 @@ contains
   subroutine allocate_scalars(this)
     ! dummy
     class(GweGweConnectionType) :: this !< the connection
-    
+
     call mem_allocate(this%iIfaceAdvScheme, 'IADVSCHEME', this%memoryPath)
     call mem_allocate(this%iIfaceXt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%exgflowSign, 'EXGFLOWSIGN', this%memoryPath)
-    
+
   end subroutine allocate_scalars
 
   !> @brief define the GWE-GWE connection
@@ -159,7 +159,7 @@ contains
     ! determine advection scheme (the GWE-GWE exchange
     !    has been read at this point)
     this%iIfaceAdvScheme = this%gweExchange%iAdvScheme
-    
+
     ! determine xt3d setting on interface
     this%iIfaceXt3d = this%gweExchange%ixt3d
 
@@ -211,14 +211,14 @@ contains
   subroutine cfg_dist_vars(this)
     ! dummy
     class(GweGweConnectionType) :: this !< the connection
-    
+
     call this%cfg_dv('X', '', SYNC_NDS, &
                      (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
     call this%cfg_dv('IBOUND', '', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
-    
+
     if (this%gweInterfaceModel%cnd%idisp > 0) then
       call this%cfg_dv('ALH', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
       call this%cfg_dv('ALV', 'CND', SYNC_NDS, (/STG_BFR_CON_AR/))
@@ -238,7 +238,7 @@ contains
     if (this%gweModel%incnd > 0 .and. this%gweModel%inest > 0) then
       call this%cfg_dv('POROSITY', 'EST', SYNC_NDS, (/STG_AFT_CON_AR/))
     end if
-    
+
   end subroutine cfg_dist_vars
 
   !> @brief Allocate array variables for this connection
@@ -258,10 +258,10 @@ contains
     class(GweGweConnectionType) :: this !< the connection
     ! local
     logical(LGP) :: hasAdv, hasCnd
-    
+
     hasAdv = this%gweModel%inadv > 0
     hasCnd = this%gweModel%incnd > 0
-    
+
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
         this%exg_stencil_depth = 2
@@ -270,7 +270,7 @@ contains
         end if
       end if
     end if
-    
+
     if (hasCnd) then
       if (this%iIfaceXt3d > 0) then
         this%exg_stencil_depth = 2
@@ -279,7 +279,7 @@ contains
         end if
       end if
     end if
-    
+
   end subroutine setGridExtent
 
   !> @brief allocate and read/set the connection's data structures
@@ -336,7 +336,7 @@ contains
     ! we cannot validate this (yet) in parallel mode
     if (.not. this%gweExchange%v_model1%is_local) return
     if (.not. this%gweExchange%v_model2%is_local) return
-    
+
     ! check specific cross-interface options/values that should be the same
     call this%validateGweExchange()
 
@@ -350,7 +350,7 @@ contains
         &and the other one is not'
       call store_error(errmsg)
     end if
-    
+
     if ((this%gweExchange%gwemodel1%incnd > 0 .and. &
          this%gweExchange%gwemodel2%incnd == 0) .or. &
         (this%gweExchange%gwemodel2%incnd > 0 .and. &
@@ -360,39 +360,39 @@ contains
         &and the other one is not'
       call store_error(errmsg)
     end if
-    
+
     ! abort on errors
     if (count_errors() > 0) then
       write (errmsg, '(a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
-    
+
   end subroutine validateConnection
 
   subroutine gwegwecon_rp(this)
     ! dummy
     class(GweGweConnectionType) :: this !< the connection
-    
+
     ! call exchange rp routines
     if (this%owns_exchange) then
       call this%gweExchange%exg_rp()
     end if
-    
+
   end subroutine gwegwecon_rp
 
   !> @brief Advance this connection
   !<
   subroutine gwegwecon_ad(this)
-    
+
     class(GweGweConnectionType) :: this !< this connection
-    
+
     ! recalculate conduction ellipse
     if (this%gweInterfaceModel%incnd > 0) call this%gweInterfaceModel%cnd%cnd_ad()
-    
+
     if (this%owns_exchange) then
       call this%gweExchange%exg_ad()
     end if
-    
+
   end subroutine gwegwecon_ad
 
   subroutine gwegwecon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
@@ -402,10 +402,10 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
-    
+
     call this%SpatialModelConnectionType%spatialcon_fc( &
       kiter, matrix_sln, rhs_sln, inwtflag)
-    
+
     ! _fc the movers through the exchange
     if (this%owns_exchange) then
       if (this%gweExchange%inmvt > 0) then
@@ -413,7 +413,7 @@ contains
                                          this%gweExchange%gwemodel2%x)
       end if
     end if
-    
+
   end subroutine gwegwecon_fc
 
   subroutine gwegwecon_cq(this, icnvg, isuppress_output, isolnid)
@@ -422,10 +422,10 @@ contains
     integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
     integer(I4B), intent(in) :: isolnid !< solution id
-    
+
     call this%gweInterfaceModel%model_cq(icnvg, isuppress_output)
     call this%setFlowToExchange()
-    
+
   end subroutine gwegwecon_cq
 
   !> @brief Set the flows (flowja from interface model) to the
@@ -439,11 +439,11 @@ contains
     integer(I4B) :: i
     class(GweExchangeType), pointer :: gweEx
     type(IndexMapSgnType), pointer :: map
-    
+
     if (this%owns_exchange) then
       gweEx => this%gweExchange
       map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
-      
+
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
@@ -451,7 +451,7 @@ contains
           this%gweInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
-    
+
   end subroutine setFlowToExchange
 
   subroutine gwegwecon_bd(this, icnvg, isuppress_output, isolnid)
@@ -462,26 +462,26 @@ contains
     integer(I4B), intent(inout) :: icnvg !< convergence flag
     integer(I4B), intent(in) :: isuppress_output !< suppress output when =1
     integer(I4B), intent(in) :: isolnid !< solution id
-    
+
     ! call exchange budget routine, also calls _bd
     !    for movers.
     if (this%owns_exchange) then
       call this%gweExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
-    
+
   end subroutine gwegwecon_bd
 
   subroutine gwegwecon_ot(this)
     ! dummy
     class(GweGweConnectionType) :: this !< the connection
-    
+
     ! call exg_ot() here as it handles all output processing
     !    based on gweExchange%simvals(:), which was correctly
     !    filled from gwegwecon
     if (this%owns_exchange) then
       call this%gweExchange%exg_ot()
     end if
-    
+
   end subroutine gwegwecon_ot
 
   !> @brief Validate the exchange, intercepting those
@@ -495,10 +495,10 @@ contains
     use SimVariablesModule, only: errmsg
     use SimModule, only: store_error
     use GweEstModule, only: GweEstType
-    
+
     ! dummy
     class(GweGweConnectionType) :: this !< this connection
-    
+
     ! local
     class(GweExchangeType), pointer :: gweEx
     class(*), pointer :: modelPtr
@@ -517,7 +517,7 @@ contains
     gweModel1 => CastAsGweModel(modelPtr)
     modelPtr => this%gweExchange%model2
     gweModel2 => CastAsGweModel(modelPtr)
-    
+
     ! check that EST package usage is the same on both side of the interface
     if ((gweModel1%inest > 0 .and. gweModel2%inest == 0) .or. &
         (gweModel1%inest == 0 .and. gweModel2%inest > 0)) then
@@ -526,14 +526,14 @@ contains
         'interface model for exchange ', &
         trim(gweEx%name)
       call store_error(errmsg)
-        end if
+    end if
 
     ! conduction options need to be the same in both model
     if ((gweModel1%cnd%ixt3d > 0 .and. gweModel2%cnd%ixt3d == 0) .or. &
         (gweModel1%cnd%ixt3d == 0 .and. gweModel2%cnd%ixt3d > 0)) then
       write (errmsg, '(2a)') 'Use of XT3D to calculate conduction should '// &
         'be the same in both models, either both use XT3D or neither for '// &
-        ' exchange '//  trim(gweEx%name)
+        ' exchange '//trim(gweEx%name)
       call store_error(errmsg)
     end if
 
@@ -551,7 +551,7 @@ contains
     !end if
     if (.not. compatible) then
       write (errmsg, '(6a)') 'Energy storage and transfer (EST) packages ', &
-        'in model '// trim(gweEx%model1%name), ' and ', &
+        'in model '//trim(gweEx%model1%name), ' and ', &
         trim(gweEx%model2%name), &
         ' should be equivalent to construct an '// &
         ' interface model for exchange ', &
@@ -568,32 +568,32 @@ contains
     class(GweGweConnectionType) :: this !< the connection
     ! local
     logical(LGP) :: isOpen
-    
+
     ! scalars
     call mem_deallocate(this%iIfaceAdvScheme)
     call mem_deallocate(this%iIfaceXt3d)
     call mem_deallocate(this%exgflowSign)
-    
+
     ! arrays
     call mem_deallocate(this%exgflowjaGwe)
-    
+
     ! interface model
     call this%gweInterfaceModel%model_da()
     deallocate (this%gweInterfaceModel)
-    
+
     ! dealloc base
     call this%spatialcon_da()
-    
+
     inquire (this%iout, opened=isOpen)
     if (isOpen) then
       close (this%iout)
     end if
-    
+
     ! we need to deallocate the exchange we own:
     if (this%owns_exchange) then
       call this%gweExchange%exg_da()
     end if
-    
+
   end subroutine gwegwecon_da
 
   !> @brief Cast to GweGweConnectionType
@@ -604,15 +604,15 @@ contains
     class(*), pointer, intent(inout) :: obj !< object to be cast
     ! return
     class(GweGweConnectionType), pointer :: res !< the GweGweConnection
-    
+
     res => null()
     if (.not. associated(obj)) return
-    
+
     select type (obj)
     class is (GweGweConnectionType)
       res => obj
     end select
-    
+
   end function CastAsGweGweConnection
 
 end module
