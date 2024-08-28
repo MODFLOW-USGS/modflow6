@@ -492,7 +492,7 @@ contains
   !<
   subroutine validateGweExchange(this)
     ! modules
-    use SimVariablesModule, only: errmsg, simulation_mode
+    use SimVariablesModule, only: errmsg
     use SimModule, only: store_error
     use GweEstModule, only: GweEstType
     
