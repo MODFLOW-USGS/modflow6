@@ -336,8 +336,8 @@ def build_models(idx, test, ener_input):
         heat_capacity_water=Cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=Cps,
-        rhos=rhos,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
         pname="EST-1",
         filename=f"{gwename}.est",
     )

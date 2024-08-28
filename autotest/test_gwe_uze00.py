@@ -104,6 +104,11 @@ strt_temp = 10.0
 scheme = "UPSTREAM"
 dispersivity = 0.0
 prsity = 0.2
+rhow = 1000.0
+cpw = 4183.0
+lhv = 2500.0
+cps = 760.0
+rhos = 1500.0
 
 # transient uzf info
 # iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
@@ -340,9 +345,6 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport mass storage package
-    rhow = 1000.0
-    cpw = 4183.0
-    lhv = 2500.0
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
@@ -350,8 +352,8 @@ def build_models(idx, test):
         heat_capacity_water=cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=760.0,
-        rhos=1500.0,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST",
         filename=f"{gwename}.est",
     )

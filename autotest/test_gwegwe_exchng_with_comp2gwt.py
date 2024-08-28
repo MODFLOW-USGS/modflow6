@@ -582,8 +582,8 @@ def add_upper_gwemodel(sim, scheme):
         heat_capacity_water=cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=cps,
-        rhos=rhos,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST-UP",
         filename=f"{mname}.est",
     )
@@ -660,8 +660,8 @@ def add_lower_gwemodel(sim, scheme):
         heat_capacity_water=cpw,
         density_water=rhow,
         latent_heat_vaporization=lhv,
-        cps=cps,
-        rhos=rhos,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST-LO",
         filename=f"{mname}.est",
     )
