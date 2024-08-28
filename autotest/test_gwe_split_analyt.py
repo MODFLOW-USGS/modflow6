@@ -154,7 +154,7 @@ def calc_ener_input(primer_val):
     return ener_add_rate
 
 
-# Define function to solve analytical solution
+# Instatiate model to compare against analytical solution
 def assemble_half_model(sim, gwfname, gwfpath, side="right"):
     # Create GWF model
     gwf = flopy.mf6.MFModel(
@@ -409,12 +409,12 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
-    # Create gw3 model
+    # Create first gwe model
     gwe1 = get_gwe_model(
         idx, sim, "energy1", "energy1", ener_input, side="left"
     )
 
-    # Create gwe model
+    # Create second gwe model
     gwe2 = get_gwe_model(
         idx, sim, "energy2", "energy2", ener_input, side="right"
     )
