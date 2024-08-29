@@ -194,19 +194,20 @@ endif
 
 # GCC profile options need to be netcdf aware due to HDF5 issue
 if fc_id == 'gcc'
-  if with_netcdf and build_machine.system() == 'darwin'
+  #if with_netcdf and build_machine.system() == 'darwin'
+  if with_netcdf
     # HDF5 1.14.3 invalid fpe trap issue: https://github.com/HDFGroup/hdf5/issues/3831
     if profile == 'release'
       compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero']
     elif profile == 'develop'
       compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero']
     endif
-  else
-    if profile == 'release'
-      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
-    elif profile == 'develop'
-      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
-    endif
+  #else
+  #  if profile == 'release'
+  #    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
+  #  elif profile == 'develop'
+  #    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+  #  endif
   endif
 endif
 
