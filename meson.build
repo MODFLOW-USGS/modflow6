@@ -201,6 +201,12 @@ if fc_id == 'gcc'
     elif profile == 'develop'
       compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero']
     endif
+  else
+    if profile == 'release'
+      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
+    elif profile == 'develop'
+      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+    endif
   endif
 endif
 
