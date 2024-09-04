@@ -624,7 +624,7 @@ contains
 
   end subroutine gwt_ot_flow
 
-  !> @brief GWT model dependent variable outpu
+  !> @brief GWT model dependent variable output
   !<
   subroutine gwt_ot_dv(this, idvsave, idvprint, ipflag)
     class(GwtModelType) :: this
