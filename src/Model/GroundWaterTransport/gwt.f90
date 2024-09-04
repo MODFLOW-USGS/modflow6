@@ -54,7 +54,8 @@ module GwtModule
     procedure :: model_cc => gwt_cc
     procedure :: model_cq => gwt_cq
     procedure :: model_bd => gwt_bd
-    procedure :: model_ot => gwt_ot
+    procedure :: tsp_ot_flow => gwt_ot_flow
+    procedure :: tsp_ot_dv => gwt_ot_dv
     procedure :: model_da => gwt_da
     procedure :: model_bdentry => gwt_bdentry
     procedure :: allocate_scalars
@@ -603,32 +604,41 @@ contains
     return
   end subroutine gwt_bd
 
-  !> @brief Print and/or save model output
+  !> @brief GWT model output routine
   !!
-  !! Call the parent class output routine
+  !! Save and print flows
   !<
-  subroutine gwt_ot(this)
-    ! -- dummy
+  subroutine gwt_ot_flow(this, icbcfl, ibudfl, icbcun)
+    ! dummy
     class(GwtModelType) :: this
-    ! -- local
-    integer(I4B) :: icbcfl
-    integer(I4B) :: icbcun
-    !
-    !
-    ! -- Initialize
-    icbcfl = 0
-    !
-    ! -- Because mst belongs to gwt, call mst_ot_flow directly (and not from parent)
-    if (this%oc%oc_save('BUDGET')) icbcfl = 1
-    icbcun = this%oc%oc_save_unit('BUDGET')
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    ! local
+
+    ! call GWT flow output routines
     if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
-    !
-    ! -- Call parent class _ot routines.
-    call this%tsp_ot(this%inmst)
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot
+
+    ! call general transport model flow routines
+    call this%TransportModelType%tsp_ot_flow(icbcfl, ibudfl, icbcun)
+
+  end subroutine gwt_ot_flow
+
+  !> @brief GWT model dependent variable outpu
+  !<
+  subroutine gwt_ot_dv(this, idvsave, idvprint, ipflag)
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B), intent(inout) :: ipflag
+
+    ! call GWT dependent variable output routines
+    if (this%inmst > 0) call this%mst%mst_ot_dv(idvsave)
+
+    ! call general transport model dependent variable output routines
+    call this%TransportModelType%tsp_ot_dv(idvsave, idvprint, ipflag)
+
+  end subroutine gwt_ot_dv
 
   !> @brief Deallocate
   !!
