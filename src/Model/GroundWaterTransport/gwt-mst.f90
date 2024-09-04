@@ -1036,10 +1036,6 @@ contains
     if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
-
-      ! TODO: NEED TO CALCULATE csrb somehow and somewhere
-
-      ! write sorbate concentration to binary file
       if (this%ioutsorbate /= 0) then
         ibinun = this%ioutsorbate
         call this%dis%record_array(this%csrb, this%iout, iprint, ibinun, &
