@@ -10,7 +10,8 @@
 module GwtMstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
+  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, MAXCHARLEN, &
+                             MNORMAL, LINELENGTH, DHNOFLO
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -52,11 +53,13 @@ module GwtMstModule
     !
     ! -- sorption
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
+    integer(I4B), pointer :: ioutsorbate => null() !< unit number for sorbate concentration output
     real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of mobile domain; mass of mobile domain solid per aquifer volume
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< kd distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: sp2 => null() !< second sorption parameter
     real(DP), dimension(:), pointer, contiguous :: ratesrb => null() !< rate of sorption
     real(DP), dimension(:), pointer, contiguous :: ratedcys => null() !< rate of sorbed mass decay
+    real(DP), dimension(:), pointer, contiguous :: csrb => null() !< sorbate concentration
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
@@ -75,8 +78,10 @@ module GwtMstModule
     procedure :: mst_cq_dcy
     procedure :: mst_cq_srb
     procedure :: mst_cq_dcy_srb
+    procedure :: mst_calc_csrb
     procedure :: mst_bd
     procedure :: mst_ot_flow
+    procedure :: mst_ot_dv
     procedure :: mst_da
     procedure :: allocate_scalars
     procedure :: addto_volfracim
@@ -590,6 +595,11 @@ contains
       call this%mst_cq_dcy_srb(nodes, cnew, cold, flowja)
     end if
     !
+    ! -- calculate csrb
+    if (this%isrb /= 0) then
+      call this%mst_calc_csrb(cnew)
+    end if
+    !
     ! -- Return
     return
   end subroutine mst_cq
@@ -867,10 +877,36 @@ contains
     return
   end subroutine mst_cq_dcy_srb
 
+  !> @ brief Calculate sorbed concentration
+  !<
+  subroutine mst_calc_csrb(this, cnew)
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), intent(in), dimension(:) :: cnew !< concentration at end of this time step
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: distcoef
+    real(DP) :: csrb
+
+    ! Calculate sorbed concentration
+    do n = 1, size(cnew)
+      csrb = DZERO
+      if (this%ibound(n) > 0) then
+        distcoef = this%distcoef(n)
+        if (this%isrb == 1) then
+          csrb = cnew(n) * distcoef
+        else if (this%isrb == 2) then
+          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+        else if (this%isrb == 3) then
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+        end if
+      end if
+      this%csrb(n) = csrb
+    end do
+
+  end subroutine mst_calc_csrb
+
   !> @ brief Calculate budget terms for package
-  !!
-  !!  Method to calculate budget terms for the package.
-  !!
   !<
   subroutine mst_bd(this, isuppress_output, model_budget)
     ! -- modules
@@ -974,6 +1010,42 @@ contains
     return
   end subroutine mst_ot_flow
 
+  !> @brief Save sorbate concentration array to binary file
+  !<
+  subroutine mst_ot_dv(this, idvsave)
+    ! -- dummy
+    class(GwtMstType) :: this
+    integer(I4B), intent(in) :: idvsave
+    ! -- local
+    character(len=1) :: cdatafmp = ' ', editdesc = ' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint
+    integer(I4B) :: nvaluesp
+    integer(I4B) :: nwidthp
+    real(DP) :: dinact
+
+    ! Set unit number for sorbate output
+    if (this%ioutsorbate /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    end if
+    if (idvsave == 0) ibinun = 0
+
+    ! save sorbate concentration array
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      if (this%ioutsorbate /= 0) then
+        ibinun = this%ioutsorbate
+        call this%dis%record_array(this%csrb, this%iout, iprint, ibinun, &
+                                   '         SORBATE', cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+      end if
+    end if
+
+  end subroutine mst_ot_dv
+
   !> @ brief Deallocate
   !!
   !!  Method to deallocate memory for the package.
@@ -998,10 +1070,12 @@ contains
       call mem_deallocate(this%decaylast)
       call mem_deallocate(this%decayslast)
       call mem_deallocate(this%isrb)
+      call mem_deallocate(this%ioutsorbate)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%sp2)
       call mem_deallocate(this%ratesrb)
+      call mem_deallocate(this%csrb)
       call mem_deallocate(this%ratedcys)
       this%ibound => null()
       this%fmi => null()
@@ -1033,10 +1107,12 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
+    call mem_allocate(this%ioutsorbate, 'IOUTSORBATE', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     !
     ! -- Initialize
     this%isrb = 0
+    this%ioutsorbate = 0
     this%idcy = 0
     !
     ! -- Return
@@ -1093,10 +1169,12 @@ contains
       call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, 1, 'RATESRB', this%memoryPath)
+      call mem_allocate(this%csrb, 1, 'CSRB', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, nodes, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%memoryPath)
+      call mem_allocate(this%csrb, nodes, 'CSRB', this%memoryPath)
       if (this%isrb == 1) then
         call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       else
@@ -1120,6 +1198,7 @@ contains
       this%bulk_density(n) = DZERO
       this%distcoef(n) = DZERO
       this%ratesrb(n) = DZERO
+      this%csrb(n) = DZERO
     end do
     do n = 1, size(this%sp2)
       this%sp2(n) = DZERO
@@ -1140,11 +1219,13 @@ contains
   !<
   subroutine read_options(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     ! -- local
     character(len=LINELENGTH) :: keyword, keyword2
+    character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -1161,6 +1242,9 @@ contains
       &"(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
       &"(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
+    character(len=*), parameter :: fmtfileout = &
+      "(4x,'MST ',1x,a,1x,' WILL BE SAVED TO FILE: ',a,/4x,&
+      &'OPENED ON UNIT: ',I7)"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -1197,6 +1281,20 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('SORBATE')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ioutsorbate = getunit()
+            call openfile(this%ioutsorbate, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE', mode_opt=MNORMAL)
+            write (this%iout, fmtfileout) &
+              'SORBATE', fname, this%ioutsorbate
+          else
+            errmsg = 'Optional SORBATE keyword must be '// &
+                     'followed by FILEOUT.'
+            call store_error(errmsg)
+          end if
         case default
           write (errmsg, '(a,a)') 'Unknown MST option: ', trim(keyword)
           call store_error(errmsg)

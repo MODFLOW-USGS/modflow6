@@ -50,7 +50,7 @@ module GweModule
     procedure :: model_cc => gwe_cc
     procedure :: model_cq => gwe_cq
     procedure :: model_bd => gwe_bd
-    procedure :: model_ot => gwe_ot
+    procedure :: tsp_ot_flow => gwe_ot_flow
     procedure :: model_da => gwe_da
     procedure :: model_bdentry => gwe_bdentry
     procedure :: allocate_scalars
@@ -568,32 +568,22 @@ contains
     return
   end subroutine gwe_bd
 
-  !> @brief GWE Model Output
+  !> @brief GWE model output routine
   !!
-  !! This subroutine calls the parent class output routine.
+  !! Save and print flows
   !<
-  subroutine gwe_ot(this)
-    ! -- dummy
+  subroutine gwe_ot_flow(this, icbcfl, ibudfl, icbcun)
+    ! dummy
     class(GweModelType) :: this
-    ! -- local
-    integer(I4B) :: icbcfl
-    integer(I4B) :: icbcun
-    ! -- formats
-    !
-    ! -- Initialize
-    icbcfl = 0
-    !
-    ! -- Because est belongs to gwe, call est_ot_flow directly (and not from parent)
-    if (this%oc%oc_save('BUDGET')) icbcfl = 1
-    icbcun = this%oc%oc_save_unit('BUDGET')
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    ! local
+
     if (this%inest > 0) call this%est%est_ot_flow(icbcfl, icbcun)
-    !
-    ! -- Call parent class _ot routines.
-    call this%tsp_ot(this%inest)
-    !
-    ! -- Return
-    return
-  end subroutine gwe_ot
+    call this%TransportModelType%tsp_ot_flow(icbcfl, ibudfl, icbcun)
+
+  end subroutine gwe_ot_flow
 
   !> @brief Deallocate
   !!

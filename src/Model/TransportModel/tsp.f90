@@ -68,15 +68,15 @@ module TransportModelModule
     procedure, public :: tsp_cc
     procedure, public :: tsp_cq
     procedure, public :: tsp_bd
-    procedure, public :: tsp_ot
+    procedure, public :: model_ot => tsp_ot
+    procedure, public :: tsp_ot_flow
+    procedure, public :: tsp_ot_dv
     procedure, public :: allocate_tsp_scalars
     procedure, public :: set_tsp_labels
     procedure, public :: ftype_check
     ! -- private
     procedure, private :: tsp_ot_obs
-    procedure, private :: tsp_ot_flow
     procedure, private :: tsp_ot_flowja
-    procedure, private :: tsp_ot_dv
     procedure, private :: tsp_ot_bdsummary
     procedure, private :: create_tsp_packages
     procedure, private :: log_namfile_options
@@ -304,12 +304,11 @@ contains
   !!
   !! Generalized transport model output
   !<
-  subroutine tsp_ot(this, inmst)
+  subroutine tsp_ot(this)
     ! -- modules
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(TransportModelType) :: this
-    integer(I4B), intent(in) :: inmst
     ! -- local
     integer(I4B) :: idvsave
     integer(I4B) :: idvprint
@@ -343,7 +342,7 @@ contains
     call this%tsp_ot_obs()
     !
     ! -- Save and print flows
-    call this%tsp_ot_flow(icbcfl, ibudfl, icbcun, inmst)
+    call this%tsp_ot_flow(icbcfl, ibudfl, icbcun)
     !
     ! -- Save and print dependent variables
     call this%tsp_ot_dv(idvsave, idvprint, ipflag)
@@ -389,13 +388,12 @@ contains
   !!
   !! Save and print flows
   !<
-  subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun, inmst)
+  subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun)
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: inmst
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -479,7 +477,7 @@ contains
     return
   end subroutine tsp_ot_flowja
 
-  !> @brief Generalized tranpsort model output routine
+  !> @brief Generalized transport model output routine
   !!
   !! Loop through attached packages saving and printing dependent variables
   !<
