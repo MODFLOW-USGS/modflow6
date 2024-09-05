@@ -619,7 +619,7 @@ contains
     ! call GWT flow output routines
     if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
 
-    ! call general transport model flow routines
+    ! call general transport model flow output routines
     call this%TransportModelType%tsp_ot_flow(icbcfl, ibudfl, icbcun)
 
   end subroutine gwt_ot_flow
