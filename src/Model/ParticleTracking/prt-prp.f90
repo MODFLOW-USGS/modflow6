@@ -563,22 +563,21 @@ contains
       end if
     end if
 
-    ! If no period data for the simulation and no specified
-    ! release times, default to a single release time at the
-    ! start of first period's first time step. Otherwise read
-    ! release timing settings from the period data block of the
-    ! package input file.
-    if (no_blocks .and. .not. this%schedule%time_select%any()) then
-      if (kper == 1) then
-        allocate (lines(1))
-        line = "FIRST"
-        lines(1) = line
-        print *, lines
-        call this%schedule%advance(lines=lines)
-      end if
-      ! If the current stress period matches the
-      ! block we are reading continue parsing it
+    ! If the user hasn't provided any release settings (neither
+    ! explicit release times, release time frequency, or period
+    ! block release settings), default to a single release at the
+    ! start of the first period's first time step.
+    if (no_blocks .and. &
+        kper == 1 .and. &
+        size(this%schedule%time_select%times) == 0) then
+      allocate (lines(1))
+      line = "FIRST"
+      lines(1) = line
+      call this%schedule%advance(lines=lines)
     else if (this%ionper == kper) then
+      ! If the current stress period matches the
+      ! block we are reading, parse the setting
+      ! and register it with the schedule.
       allocate (lines(0))
       recordloop: do
         call this%parser%GetNextLine(end_of_block)
@@ -587,7 +586,8 @@ contains
         call ExpandArray(lines)
         lines(size(lines)) = line
       end do recordloop
-      call this%schedule%advance(lines=lines)
+      if (size(lines) > 0) &
+        call this%schedule%advance(lines=lines)
       deallocate (lines)
     end if
 
