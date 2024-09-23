@@ -261,7 +261,8 @@
 		<Filter Name="GroundWaterFlow">
 		<Filter Name="submodules">
 		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-constant.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-steady.f90"/></Filter>
+		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-steady.f90"/>
+	    <File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-transient.f90"/></Filter>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-api.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-buy.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-chd.f90"/>
@@ -288,10 +289,6 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-wel.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\TvBase.f90"/></Filter>
-		<Filter Name="submodules">
-		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-steady.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-steady.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-transient.f90"/></Filter></Filter>
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-cnc.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt-dsp.f90"/>
