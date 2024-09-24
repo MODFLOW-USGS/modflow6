@@ -4395,9 +4395,9 @@ contains
 
   !> @brief Check storage weight
     !!
-    !! Method to check specified data for a SFR package. This method
-    !! also creates the tables used to print input data, if this
-    !! option in enabled in the SFR package.
+    !! Method to check the kinematic storage weight for a SFR package.
+    !! If the kinematic storage weight has not been set it is set to
+    !! the default value.
     !!
   !<
   subroutine sfr_check_storage_weight(this)
