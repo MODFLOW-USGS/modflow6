@@ -98,7 +98,7 @@ contains
   end if
 
   ! calculate maximum wave speed and courant number
-  q = qc + qlat - qgwf 
+  q = qc + qlat - qgwf
   call this%sfr_calc_reach_depth(n, q, d)
   a = this%calc_area_wet(n, d)
   if (d > DZERO) then
