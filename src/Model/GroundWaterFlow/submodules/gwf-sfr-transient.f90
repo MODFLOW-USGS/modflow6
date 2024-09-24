@@ -52,13 +52,13 @@ contains
   real(DP) :: dd2
 
   weight = this%storage_weight
-  dq = this%deps !DEM6 !DEM4 !this%deps
-  qtol = dq * DTWO !1e-9 !dq * DTWO
+  dq = this%deps
+  qtol = dq * DTWO
 
   celerity = DZERO
   qgwf = DZERO
 
-  qlat = (qr + qro - qe) / this%length(n)
+  qlat = qr + qro - qe
 
   this%usinflow(n) = qu + qi + qfrommvr
 
@@ -98,7 +98,7 @@ contains
   end if
 
   ! calculate maximum wave speed and courant number
-  q = qc + qlat - qgwf
+  q = qc + qlat - qgwf 
   call this%sfr_calc_reach_depth(n, q, d)
   a = this%calc_area_wet(n, d)
   if (d > DZERO) then
@@ -107,7 +107,10 @@ contains
     a2 = this%calc_area_wet(n, d2)
     celerity = (q2 - q) / (a2 - a)
     courant = celerity * delt / this%length(n)
+    ! write(*,*) this%length(n), courant * delt
   end if
+
+  qlat = qlat / this%length(n)
 
   number_picard = this%maxsfrpicard
   if (igwfconn == 1) then
@@ -162,7 +165,7 @@ contains
                                           qsrc, this%length(n), weight, delt, &
                                           courant)
 
-      if (abs(delq) < qtol) then ! .and. abs(residual_final) < qtol) then
+      if (abs(delq) < qtol .and. abs(residual_final) < qtol) then
         exit newton
       end if
 
