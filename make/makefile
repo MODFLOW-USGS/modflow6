@@ -505,7 +505,7 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
-$(OBJDIR)/GwfSfrStatic.o \
+$(OBJDIR)/GwfSfrCommon.o \
 $(OBJDIR)/gwf-sfr-transient.o \
 $(OBJDIR)/gwf-sfr-steady.o \
 $(OBJDIR)/gwf-sfr-constant.o \
