@@ -208,7 +208,10 @@ contains
     ! -- modules
     class(BoundListInputType), intent(inout) :: this !< BoundListInputType
     !
+    ! -- deallocate tsmanager
+    call this%tsmanager%da()
     deallocate (this%tsmanager)
+    nullify (this%tsmanager)
     !
     ! -- deallocate StructArray
     call destructStructArray(this%structarray)

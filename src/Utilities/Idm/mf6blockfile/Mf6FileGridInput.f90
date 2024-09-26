@@ -237,7 +237,10 @@ contains
     ! -- modules
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
+    ! -- deallocate tasmanager
+    call this%tasmanager%da()
     deallocate (this%tasmanager)
+    nullify (this%tasmanager)
     !
     ! -- return
     return

@@ -102,6 +102,7 @@ contains
 
   subroutine mt_deallocate(this)
     class(MemoryType) :: this
+    integer(I4B) :: n
 
     if (associated(this%strsclr)) then
       if (this%master) deallocate (this%strsclr)
@@ -159,7 +160,12 @@ contains
     end if
 
     if (associated(this%acharstr1d)) then
-      if (this%master) deallocate (this%acharstr1d)
+      if (this%master) then
+        do n = 1, size(this%acharstr1d)
+          call this%acharstr1d(n)%destroy()
+        end do
+        deallocate (this%acharstr1d)
+      end if
       nullify (this%acharstr1d)
     end if
   end subroutine mt_deallocate
