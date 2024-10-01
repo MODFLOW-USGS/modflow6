@@ -1,25 +1,31 @@
 """
-Test the nonlinear isotherms (Freundlich and Langmuir) in the IST Package 
-using a one-dimensional flow problem.
-with dual-domain transport.  Flow is from left to right with
-constant concentration equal to 1.0 for first 20 days and then
-set to 0.0 for next 30 days.
+Test the immobile domain isotherms (Freundlich and Langmuir) in the IST Package
+using a one-dimensional flow problem.  Compare the simulated sorbate
+concentrations output from the model with sorbate concentrations calculated
+in this script using python.  Problem is adapted from test_gwt_ist02.py.
 """
 
-import pathlib as pl
 import os
+import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
 
-cases = ["ist03"]
+cases = ["ist03a", "ist03b", "ist03c"]
+sorption_idx = ["LINEAR", "FREUNDLICH", "LANGMUIR"]
+distcoef_idx = [0.1, 0.1, 0.1]
+sp2_idx = [None, 0.7, 0.7]
+
 nlay, nrow, ncol = 1, 1, 300
-distcoef = 0.1
-sp2 = 0.7
+
 
 def build_models(idx, test):
+    sorption = sorption_idx[idx]
+    distcoef = distcoef_idx[idx]
+    sp2 = sp2_idx[idx]
+
     perlen = [20.0, 30.0]
     nper = len(perlen)
     nstp = [100, 100]
@@ -181,7 +187,7 @@ def build_models(idx, test):
     mst = flopy.mf6.ModflowGwtmst(
         gwt,
         sorbate_filerecord=f"{gwtname}.mst.csrb",
-        sorption="FREUNDLICH",
+        sorption=sorption,
         porosity=porositym,
         bulk_density=bulk_density,
         distcoef=distcoef,
@@ -191,7 +197,7 @@ def build_models(idx, test):
     # immobile storage and transfer
     ist = flopy.mf6.ModflowGwtist(
         gwt,
-        sorption="FREUNDLICH",
+        sorption=sorption,
         save_flows=True,
         cim_filerecord=f"{gwtname}.ist.ucn",
         sorbate_filerecord=f"{gwtname}.ist.csrb",
@@ -319,30 +325,49 @@ def check_output(idx, test):
     assert os.path.isfile(fname), f"file not found: {fname}"
     simvals = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
-    sim = test.sims[idx]
+    sim = test.sims[0]
     gwt = sim.gwt[0]
     mst = gwt.mst
     ist = gwt.ist
     conc = gwt.output.concentration().get_alldata().reshape(200, 300)
     csrb = mst.output.sorbate().get_alldata().reshape(200, 300)
     cim = ist.output.cim().get_alldata().reshape(200, 300)
-    cimsrb = mst.output.sorbate().get_alldata().reshape(200, 300)
+    cimsrb = ist.output.sorbate().get_alldata().reshape(200, 300)
 
     # check conc and csrb
-    csrb_answer = np.where(conc > 0, distcoef * conc ** sp2, 0)
+    sorption = sorption_idx[idx]
+    distcoef = distcoef_idx[idx]
+    sp2 = sp2_idx[idx]
+    if sorption == "LINEAR":
+        csrb_answer = np.where(conc > 0, distcoef * conc, 0)
+    if sorption == "FREUNDLICH":
+        csrb_answer = np.where(conc > 0, distcoef * conc**sp2, 0)
+    if sorption == "LANGMUIR":
+        csrb_answer = np.where(
+            conc > 0, distcoef * sp2 * conc / (1 + distcoef * conc), 0
+        )
     if not np.allclose(csrb[:, 1:], csrb_answer[:, 1:]):
         diff = csrb - csrb_answer
         print("min and max difference")
+        print(diff)
         print(diff.min(), diff.max())
         assert False, "csrb not consistent with known answer"
 
     # check cim and cimsrb
-    cimsrb_answer = np.where(cim > 0, distcoef * cim ** sp2, 0)
+    if sorption == "LINEAR":
+        cimsrb_answer = np.where(cim > 0, distcoef * cim, 0)
+    if sorption == "FREUNDLICH":
+        cimsrb_answer = np.where(cim > 0, distcoef * cim**sp2, 0)
+    if sorption == "LANGMUIR":
+        cimsrb_answer = np.where(
+            cim > 0, distcoef * sp2 * cim / (1 + distcoef * cim), 0
+        )
     if not np.allclose(cimsrb[:, 1:], cimsrb_answer[:, 1:]):
         diff = cimsrb - cimsrb_answer
         print("min and max difference")
         print(diff.min(), diff.max())
         assert False, "cimsrb not consistent with known answer"
+
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
