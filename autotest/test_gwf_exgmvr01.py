@@ -12,9 +12,8 @@ The final split model look like:
 
 import flopy
 import numpy as np
-import pytest
 import pandas as pd
-
+import pytest
 from framework import TestFramework
 
 cases = ["gwf_exgmvr01"]
