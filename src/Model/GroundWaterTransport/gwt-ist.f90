@@ -692,19 +692,18 @@ contains
   !> @ brief Output immobile domain aqueous concentration.
   !<
   subroutine output_immobile_concentration(this, idvsave, idvprint)
-    ! -- modules
+    ! modules
     use TdisModule, only: kstp, endofperiod
-    ! -- dummy variables
+    ! dummy variables
     class(GwtIstType) :: this !< BndType object
     integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
     integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
-    ! -- local
+    ! local
     integer(I4B) :: ipflg
     integer(I4B) :: ibinun
     !
-    ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
-    !    cim should be written to a binary file if a binary file is open
-    !    for it.
+    ! Save cim to a binary file. ibinun is a flag where 1 indicates that
+    ! cim should be written to a binary file if a binary file is open for it.
     ipflg = 0
     ibinun = 1
     if (idvsave == 0) ibinun = 0
@@ -713,7 +712,7 @@ contains
                            iprint_opt=0, isav_opt=ibinun)
     end if
     !
-    ! -- Print immobile domain concentrations to listing file
+    ! Print immobile domain concentrations to listing file
     if (idvprint /= 0) then
       call this%ocd%ocd_ot(ipflg, kstp, endofperiod, this%iout, &
                            iprint_opt=idvprint, isav_opt=0)
@@ -724,22 +723,19 @@ contains
   !> @ brief Output immobile domain sorbate concentration.
   !<
   subroutine output_immobile_sorbate_concentration(this, idvsave, idvprint)
-    ! -- modules
-    use TdisModule, only: kstp, endofperiod
-    ! -- dummy variables
+    ! modules
+    ! dummy
     class(GwtIstType) :: this !< BndType object
     integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
     integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
-    ! -- local
+    ! local
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
-    integer(I4B) :: ipflg
     integer(I4B) :: ibinun
     integer(I4B) :: iprint, nvaluesp, nwidthp
     real(DP) :: dinact
-    !
-    ! -- Save cimsrb to a binary file. ibinun is a flag where 1 indicates that
-    !    cim should be written to a binary file if a binary file is open
-    !    for it.
+
+    ! Save cimsrb to a binary file. ibinun is a flag where 1 indicates that
+    ! cim should be written to a binary file if a binary file is open for it.
     ! Set unit number for sorbate output
     if (this%ioutsorbate /= 0) then
       ibinun = 1
