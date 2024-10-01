@@ -267,7 +267,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(sim):
+def make_plot(sim, plot_title):
     print("making plots...")
     name = sim.name
     ws = sim.workspace
@@ -307,14 +307,20 @@ def make_plot(sim):
     plt.xlabel("time, in days")
     plt.ylabel("concentration")
     plt.legend()
+    plt.title(plot_title)
     fname = os.path.join(ws, gwtname + ".png")
     plt.savefig(fname)
 
 
 def check_output(idx, test):
-    makeplot = True
+    sorption = sorption_idx[idx]
+    distcoef = distcoef_idx[idx]
+    sp2 = sp2_idx[idx]
+
+    makeplot = False
     if makeplot:
-        make_plot(test)
+        plot_title = sorption
+        make_plot(test, plot_title)
 
     name = test.name
     gwtname = "gwt_" + name
@@ -335,9 +341,6 @@ def check_output(idx, test):
     cimsrb = ist.output.sorbate().get_alldata().reshape(200, 300)
 
     # check conc and csrb
-    sorption = sorption_idx[idx]
-    distcoef = distcoef_idx[idx]
-    sp2 = sp2_idx[idx]
     if sorption == "LINEAR":
         csrb_answer = np.where(conc > 0, distcoef * conc, 0)
     if sorption == "FREUNDLICH":
