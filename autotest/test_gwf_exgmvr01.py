@@ -297,11 +297,11 @@ def check_output(idx, test):
 
     # check mover CSV output
     fpth = ws / "left-right.mvr.bud.csv"
-    df =  pd.read_csv(fpth)
+    df = pd.read_csv(fpth)
 
     for diff in df["PERCENT_DIFFERENCE"].iloc:
         assert abs(diff) < 1e-05, "no mass balance on the exchange mover"
-    
+
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
