@@ -725,7 +725,6 @@ contains
     use OpenSpecModule, only: access, form
     use SimModule, only: store_error, store_error_unit
     use InputOutputModule, only: urword, getunit, openfile
-    use SimVariablesModule, only: proc_id
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
