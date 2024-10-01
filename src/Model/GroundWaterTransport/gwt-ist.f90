@@ -59,12 +59,14 @@ module GwtIstModule
     integer(I4B), pointer :: icimout => null() !< unit number for binary cim output
     integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: ioutsorbate => null() !< unit number for sorbate concentration output
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on); only linear is supported in ist
     integer(I4B), pointer :: kiter => null() !< picard iteration counter
     real(DP), pointer, contiguous :: cim(:) => null() !< concentration for immobile domain
     real(DP), pointer, contiguous :: cimnew(:) => null() !< immobile concentration at end of current time step
     real(DP), pointer, contiguous :: cimold(:) => null() !< immobile concentration at end of last time step
+    real(DP), pointer, contiguous :: cimsrb(:) => null() !< sorbate concentration in immobile domain
     real(DP), pointer, contiguous :: zetaim(:) => null() !< mass transfer rate to immobile domain
     real(DP), pointer, contiguous :: porosity(:) => null() !< immobile domain porosity defined as volume of immobile voids per volume of immobile domain
     real(DP), pointer, contiguous :: volfrac(:) => null() !< volume fraction of the immobile domain defined as volume of immobile domain per aquifer volume
@@ -88,12 +90,15 @@ module GwtIstModule
     procedure :: bnd_bd => ist_bd
     procedure :: bnd_ot_model_flows => ist_ot_model_flows
     procedure :: bnd_ot_dv => ist_ot_dv
+    procedure :: output_immobile_concentration
+    procedure :: output_immobile_sorbate_concentration
     procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
     procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
     procedure :: read_dimensions => ist_read_dimensions
     procedure :: read_options
     procedure :: get_thetaim
+    procedure :: ist_calc_csrb
     procedure, private :: ist_allocate_arrays
     procedure, private :: read_data
 
@@ -200,7 +205,7 @@ contains
     if (this%isrb /= this%mst%isrb) then
       call store_error('Sorption is active for the IST Package but it is not &
         &compatible with the sorption option selected for the MST Package.  &
-        &If sorption is active for the IST Package, then then same type of &
+        &If sorption is active for the IST Package, then the same type of &
         &sorption (LINEAR, FREUNDLICH, or LANGMUIR) must &
         &be specified in the options block of the MST Package.')
     end if
@@ -541,7 +546,41 @@ contains
 
     end do
 
+    ! calculate csrb
+    if (this%isrb /= 0) then
+      call this%ist_calc_csrb(this%cimnew)
+    end if
+
   end subroutine ist_cq
+
+  !> @ brief Calculate immobile sorbed concentration
+  !<
+  subroutine ist_calc_csrb(this, cim)
+    ! -- dummy
+    class(GwtIstType) :: this !< GwtMstType object
+    real(DP), intent(in), dimension(:) :: cim !< immobile domain aqueous concentration at end of this time step
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: distcoef
+    real(DP) :: csrb
+
+    ! Calculate sorbed concentration
+    do n = 1, size(cim)
+      csrb = DZERO
+      if (this%ibound(n) > 0) then
+        distcoef = this%distcoef(n)
+        if (this%isrb == 1) then
+          csrb = cim(n) * distcoef
+        else if (this%isrb == 2) then
+          csrb = get_freundlich_conc(cim(n), distcoef, this%sp2(n))
+        else if (this%isrb == 3) then
+          csrb = get_langmuir_conc(cim(n), distcoef, this%sp2(n))
+        end if
+      end if
+      this%cimsrb(n) = csrb
+    end do
+
+  end subroutine ist_calc_csrb
 
   !> @ brief Add package flows to model budget.
   !!
@@ -637,10 +676,22 @@ contains
     return
   end subroutine ist_ot_model_flows
 
-  !> @ brief Output immobile domain concentration.
-  !!
+  !> @ brief Output dependent variables.
   !<
   subroutine ist_ot_dv(this, idvsave, idvprint)
+    ! dummy variables
+    class(GwtIstType) :: this !< BndType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
+
+    call this%output_immobile_concentration(idvsave, idvprint)
+    call this%output_immobile_sorbate_concentration(idvsave, idvprint)
+
+  end subroutine ist_ot_dv
+
+  !> @ brief Output immobile domain aqueous concentration.
+  !<
+  subroutine output_immobile_concentration(this, idvsave, idvprint)
     ! -- modules
     use TdisModule, only: kstp, endofperiod
     ! -- dummy variables
@@ -667,7 +718,49 @@ contains
       call this%ocd%ocd_ot(ipflg, kstp, endofperiod, this%iout, &
                            iprint_opt=idvprint, isav_opt=0)
     end if
-  end subroutine ist_ot_dv
+
+  end subroutine output_immobile_concentration
+
+  !> @ brief Output immobile domain sorbate concentration.
+  !<
+  subroutine output_immobile_sorbate_concentration(this, idvsave, idvprint)
+    ! -- modules
+    use TdisModule, only: kstp, endofperiod
+    ! -- dummy variables
+    class(GwtIstType) :: this !< BndType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
+    ! -- local
+    character(len=1) :: cdatafmp = ' ', editdesc = ' '
+    integer(I4B) :: ipflg
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint, nvaluesp, nwidthp
+    real(DP) :: dinact
+    !
+    ! -- Save cimsrb to a binary file. ibinun is a flag where 1 indicates that
+    !    cim should be written to a binary file if a binary file is open
+    !    for it.
+    ! Set unit number for sorbate output
+    if (this%ioutsorbate /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    end if
+    if (idvsave == 0) ibinun = 0
+
+    ! save sorbate concentration array
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      if (this%ioutsorbate /= 0) then
+        ibinun = this%ioutsorbate
+        call this%dis%record_array(this%cimsrb, this%iout, iprint, ibinun, &
+                                   '         SORBATE', cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+      end if
+    end if
+
+  end subroutine output_immobile_sorbate_concentration
 
   !> @ brief Output IST package budget summary.
   !!
@@ -719,12 +812,14 @@ contains
       call mem_deallocate(this%icimout)
       call mem_deallocate(this%ibudgetout)
       call mem_deallocate(this%ibudcsv)
+      call mem_deallocate(this%ioutsorbate)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%kiter)
       call mem_deallocate(this%cim)
       call mem_deallocate(this%cimnew)
       call mem_deallocate(this%cimold)
+      call mem_deallocate(this%cimsrb)
       call mem_deallocate(this%zetaim)
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%volfrac)
@@ -775,6 +870,7 @@ contains
     call mem_allocate(this%icimout, 'ICIMOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
+    call mem_allocate(this%ioutsorbate, 'IOUTSORBATE', this%memoryPath)
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     call mem_allocate(this%kiter, 'KITER', this%memoryPath)
@@ -783,6 +879,7 @@ contains
     this%icimout = 0
     this%ibudgetout = 0
     this%ibudcsv = 0
+    this%ioutsorbate = 0
     this%isrb = 0
     this%idcy = 0
     this%kiter = 0
@@ -824,10 +921,13 @@ contains
       call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
+      call mem_allocate(this%cimsrb, 1, 'SORBATE', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, this%dis%nodes, 'BULK_DENSITY', &
                         this%memoryPath)
       call mem_allocate(this%distcoef, this%dis%nodes, 'DISTCOEF', &
+                        this%memoryPath)
+      call mem_allocate(this%cimsrb, this%dis%nodes, 'SORBATE', &
                         this%memoryPath)
       if (this%isrb == 1) then
         call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
@@ -864,6 +964,7 @@ contains
     do n = 1, size(this%bulk_density)
       this%bulk_density(n) = DZERO
       this%distcoef(n) = DZERO
+      this%cimsrb(n) = DZERO
     end do
     do n = 1, size(this%sp2)
       this%sp2(n) = DZERO
@@ -993,6 +1094,20 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('SORBATE')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ioutsorbate = getunit()
+            call openfile(this%ioutsorbate, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE', mode_opt=MNORMAL)
+            write (this%iout, fmtistbin) &
+              'SORBATE', fname, this%ioutsorbate
+          else
+            errmsg = 'Optional SORBATE keyword must be '// &
+                     'followed by FILEOUT.'
+            call store_error(errmsg)
+          end if
         case default
           write (errmsg, '(a,a)') 'Unknown IST option: ', &
             trim(keyword)

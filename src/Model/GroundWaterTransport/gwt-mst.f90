@@ -962,7 +962,6 @@ contains
     integer(I4B), intent(in) :: icbcun !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact

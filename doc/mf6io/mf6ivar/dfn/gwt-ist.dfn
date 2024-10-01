@@ -218,6 +218,39 @@ optional false
 longname write format
 description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
 
+block options
+name sorbate_filerecord
+type record sorbate fileout sorbatefile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name sorbate
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname sorbate keyword
+description keyword to specify that record corresponds to immobile sorbate concentration.
+
+block options
+name sorbatefile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the output file to write immobile sorbate concentration information.  Immobile sorbate concentrations will be written whenever aqueous immobile concentrations are saved, as determined by settings in the Output Control option.
+
 # --------------------- gwt ist griddata ---------------------
 
 block griddata
