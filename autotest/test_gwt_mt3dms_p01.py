@@ -417,7 +417,7 @@ def p01mf6(
     if zeta is not None:
         ist = flopy.mf6.ModflowGwtist(
             gwt,
-            sorption=True,
+            sorption="LINEAR",
             first_order_decay=first_order_decay,
             zero_order_decay=zero_order_decay,
             bulk_density=rhob,

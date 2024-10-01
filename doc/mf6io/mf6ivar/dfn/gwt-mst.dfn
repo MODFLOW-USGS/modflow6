@@ -126,7 +126,7 @@ reader readarray
 layered true
 optional true
 longname distribution coefficient
-description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef is not required unless the SORPTION keyword is specified.
+description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  If the Freunchlich isotherm is specified, then discoef is the Freundlich constant.  If the Langmuir isotherm is specified, then distcoef is the Langmuir constant.  distcoef is not required unless the SORPTION keyword is specified.
 
 block griddata
 name sp2
@@ -136,5 +136,5 @@ reader readarray
 layered true
 optional true
 longname second sorption parameter
-description is the exponent for the Freundlich isotherm and the sorption capacity for the Langmuir isotherm.
+description is the exponent for the Freundlich isotherm and the sorption capacity for the Langmuir isotherm.  sp2 is not required unless the SORPTION keyword is specified in the options block.  If the SORPTION keyword is not specified in the options block, sp2 will have no effect on simulation results. 
 

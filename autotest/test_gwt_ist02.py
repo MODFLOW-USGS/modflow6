@@ -249,7 +249,7 @@ def build_models(idx, test):
     cim_filerecord = f"{gwtname}.ist.ucn"
     ist = flopy.mf6.ModflowGwtist(
         gwt,
-        sorption=True,
+        sorption="LINEAR",
         save_flows=True,
         cim_filerecord=cim_filerecord,
         cim=0.0,
