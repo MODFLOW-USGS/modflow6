@@ -1471,6 +1471,7 @@ contains
     call exg_mvr_cr(this%mvr, this%name, this%inmvr, iout, dis)
     this%mvr%model1 => this%v_model1
     this%mvr%model2 => this%v_model2
+    this%mvr%suppress_fileout = this%is_datacopy
     !
     ! -- Return
     return

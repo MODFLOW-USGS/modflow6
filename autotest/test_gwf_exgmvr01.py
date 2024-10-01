@@ -13,6 +13,8 @@ The final split model look like:
 import flopy
 import numpy as np
 import pytest
+import pandas as pd
+
 from framework import TestFramework
 
 cases = ["gwf_exgmvr01"]
@@ -257,6 +259,7 @@ def build_exchanges(sim):
         modelnames=True,
         maxmvr=maxmvr,
         print_flows=True,
+        budgetcsv_filerecord="left-right.mvr.bud.csv",
         maxpackages=maxpackages,
         packages=mvrpack_sim,
         perioddata=mvrspd,
@@ -293,6 +296,13 @@ def check_output(idx, test):
 
     assert np.allclose(single_stage, stage), "sfr stages are not equal"
 
+    # check mover CSV output
+    fpth = ws / "left-right.mvr.bud.csv"
+    df =  pd.read_csv(fpth)
+
+    for diff in df["PERCENT_DIFFERENCE"].iloc:
+        assert abs(diff) < 1e-05, "no mass balance on the exchange mover"
+    
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):

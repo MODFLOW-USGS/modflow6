@@ -146,6 +146,7 @@ module GwfMvrModule
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
+    logical(LGP) :: suppress_fileout = .false. !< flag to disable (budget, budget csv) output file
 
   contains
     procedure :: mvr_init
@@ -724,6 +725,7 @@ contains
     use OpenSpecModule, only: access, form
     use SimModule, only: store_error, store_error_unit
     use InputOutputModule, only: urword, getunit, openfile
+    use SimVariablesModule, only: proc_id
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -749,6 +751,7 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('BUDGET')
+          if (this%suppress_fileout) cycle
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
@@ -762,6 +765,7 @@ contains
                              &BE FOLLOWED BY FILEOUT')
           end if
         case ('BUDGETCSV')
+          if (this%suppress_fileout) cycle
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
