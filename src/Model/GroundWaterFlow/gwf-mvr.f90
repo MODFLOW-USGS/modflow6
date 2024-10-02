@@ -146,7 +146,7 @@ module GwfMvrModule
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
-    logical(LGP) :: suppress_fileout = .false. !< flag to disable (budget, budget csv) output file
+    logical(LGP) :: suppress_fileout = .false. !< flag to disable output file (budget, budget csv)
 
   contains
     procedure :: mvr_init
