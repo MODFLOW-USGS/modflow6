@@ -1,0 +1,93 @@
+The Groundwater Transport (GWT) Model \citep{modflow6gwt} in \mf was designed to simulate a range of solute-transport processes including the sorption and desorption of solute mass within aquifer material.  For the mobile domain, sorption can be represented using a linear isotherm as well as the nonlinear Freundlich and Langmuir isotherms.  For the ``immobile'' domain, the GWT model was limited to representing linear isotherms only.  The program checked to make sure that if sorption was represented in the immobile domain that sorption in the mobile domain was represented using a linear isotherm.  As reported by \mf users, there is a need to support nonlinear sorption isotherms for mobile-immobile domain simulations.  The purpose of this chapter is to describe the mathematical approach that was used to implement the nonlinear Freundlich and Langmuir isotherms to represent sorption in the immobile domain. There is still a requirement to use consistent sorption approaches in both the mobile and immobile domains, but with these changes, any of the three sorption isotherms can now be used as long as the same isotherm is used for both the mobile and immobile domains.
+
+Chapter \ref{ch:sorption} of this document presents a revised parameterization of the mobile and immobile domains.  Included in Chapter 9 is the revised form of the partial differential equation governing solute mass within an immobile domain (equation \ref{eqn:gwtistpde}).  Equation~\ref{eqn:gwtistpde} is reproduced here as,
+
+\begin{equation}
+\label{eqn:gwtistpde2}
+\begin{split}
+\theta_{im} \frac{\partial C_{im} }{\partial t} + \hat{f}_{im} \rho_{b,im} \frac{\partial \overline{C}_{im}}{\partial t} = 
+- \lambda_{1,im} \theta_{im} C_{im} - \lambda_{2,im}  \hat{f}_{im} \rho_{b,im} \overline{C}_{im} \\
+- \gamma_{1,im} \theta_{im} - \gamma_{2,im} \hat{f}_{im} \rho_{b,im} 
++ \zeta_{im} S_w \left ( C - C_{im} \right ),
+\end{split}
+\end{equation}
+
+\noindent where 
+$\theta_{im}$ is the effective porosity in the immobile domain defined as volume of voids participating in immobile-domain transport per unit volume of immobile domain $im$ ($L^3/L^3$),
+$C_{im}$ is an immobile-domain volumetric concentration of solute expressed as mass of dissolved solute per unit volume of fluid in immobile domain $im$ ($M/L^3$),
+$t$ is time ($T$),
+$\hat{f}_{im}$ is the volume fraction of the immobile domain defined as the volume of mobile domain $im$ per volume of aquifer ($L^3/L^3$),
+$\rho_{b,im}$ is the bulk density of aquifer material in the immobile domain defined as mass of solid aquifer material per unit volume of immobile domain $im$ ($M/L^3$), 
+$\overline{C}_{im}$ is the mass-fraction concentration of sorbate (sorbed solute) expressed as mass of sorbate per unit mass of solid aquifer material in the immobile domain ($M/M$), 
+$\lambda_{1,im}$ is the first-order reaction rate coefficient for dissolved solute in the immobile domain ($1/T$), 
+$\lambda_{2,im}$ is the first-order reaction rate coefficient for sorbate in the immobile domain ($1/T$), 
+$\gamma_{1,im}$ is the zero-order reaction rate coefficient for dissolved solute in the immobile domain ($ML^{-3}T^{-1}$), 
+$\gamma_{2,im}$ is the zero-order reaction rate coefficient for sorbate in the immobile domain ($M M^{-1}T^{-1}$), 
+$\zeta_{im}$ is the rate coefficient for the transfer of mass between the mobile domain and immobile domain $im$ ($1/T$),
+$S_w$ is the water saturation defined as the volume of water per volume of voids ($L^3/L^3$), 
+and $C$ is the mobile-domain volumetric concentration of solute expressed as mass of dissolved solute per unit volume of mobile-domain fluid ($M/L^3$).
+
+The GWT Model documentation report \citep{modflow6gwt} describes the approach for including the effects of an immobile domain on solute transport.   The approach is described in \cite{zheng2002} and involves discretizing the solute balance equation for the immobile domain.  \cite{modflow6gwt} present a form of the discretized balance equation in their equation 7--4.  That balance equation was based on a linear sorption isotherm and included the outdated parameterization, which was revised according to the approach described in Chapter \ref{ch:sorption}.  The following is a discretized form of equation~\ref{eqn:gwtistpde2} and includes a more general representation of the sorption isotherm as well as the updated parameterization described in Chapter \ref{ch:sorption}:
+
+\begin{equation}
+\label{eqn:imdomain2}
+\begin{split}
+\frac{\theta_{im} V_{cell}}{\Delta t} C_{im}^{t + \Delta t} - 
+\frac{\theta_{im} V_{cell}}{\Delta t} C_{im}^t 
++ \frac{\hat{f}_{im} \rho_{b,im} V_{cell}}{\Delta t} \frac{\partial \overline{C}_{im}}{\partial C_{im}} C_{im}^{t + \Delta t}
+-  \frac{\hat{f}_{im} \rho_{b,im} V_{cell}}{\Delta t} \frac{\partial \overline{C}_{im}}{\partial C_{im}} C_{im}^{t} \\
+= \\
+- \lambda_{1,im} \theta_{im} V_{cell} C_{im}^{t + \Delta t}
+- \lambda_{2,im} \hat{f}_{im} V_{cell} \rho_{b,im} \frac{\partial \overline{C}_{im}}{\partial C_{im}} C_{im}^{t + \Delta t} \\
+- \gamma_{1,im} \theta_{im} V_{cell}  
+- \gamma_{2,im} \hat{f}_{im} \rho_{b,im} V_{cell} \\
++ V_{cell} S_w^{t + \Delta t}  \zeta_{im} C^{t + \Delta t}
+- V_{cell} S_w^{t + \Delta t}  \zeta_{im} C_{im}^{t + \Delta t} ,
+\end{split}
+\end{equation}
+
+\noindent where $V_{cell}$ is the volume of the model cell and $\frac{\partial \overline{C}_{im}}{\partial C_{im}}$ is a sorption term that describes how the sorbate concentration changes in response to changes in the dissolved immobile domain concentration.
+
+The $\frac{\partial \overline{C}_{im}}{\partial C_{im}}$ term in equation~\ref{eqn:imdomain2} can be determined from the mathematical expression used for the different isotherms.   Mathematical expressions for the linear, Freundlich, and Langmuir isotherms, written in terms of immobile domain concentrations with subscript $im$, are
+
+\begin{equation}
+\label{eqn:linear}
+\overline{C}_{im} = K_d C_{im},
+\end{equation}
+
+\begin{equation}
+\label{eqn:freundlich}
+\overline{C}_{im} = K_f C_{im}^a,
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:langmuir}
+\overline{C}_{im} = \frac{K_l \overline{S} C_{im}}{1 + K_l C_{im}},
+\end{equation}
+
+\noindent where $K_d$ is the linear distribution coefficient ($L^3/M$), $K_f$ is the Freundlich constant $(L^3 / M)^a$, $a$ is the dimensionless Freundlich exponent, $K_l$ is the Langmuir constant $(L^3 / M)$ and $\overline{S}$ is the total concentration of sorption sites available $(M/M)$.
+
+By differentiating equations \ref{eqn:linear} to \ref{eqn:langmuir}, expressions for $\frac{\partial \overline{C}_{im}}{\partial C_{im}}$ can be written as
+
+\begin{equation}
+\label{eqn:lineardcbardc}
+\frac{\partial \overline{C}_{im}}{\partial C_{im}} = K_d,
+\end{equation}
+
+\begin{equation}
+\label{eqn:freundlichdcbardc}
+\frac{\partial \overline{C}_{im}}{\partial C_{im}} = a K_f C_{im}^{a - 1},
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:langmuirdcbardc}
+\frac{\partial \overline{C}_{im}}{\partial C_{im}} = \frac{K_l \overline{S}}{\left ( 1 + K_l C_{im} \right )^2},
+\end{equation}
+
+\noindent for the linear, Freundlich, and Langmuir isotherms, respectively.  
+
+Unlike the linear isotherm, the Freundlich and Langmuir isotherms have a nonlinear relation to $C_{im}$.  In order to calculate a value for $\frac{\partial \overline{C}_{im}}{\partial C_{im}}$ in equations~\ref{eqn:freundlichdcbardc} and \ref{eqn:langmuirdcbardc}, the $C_{im}$ value used in these equations is approximated as the arithmetic average of $C_{im}^{t}$ and the value of $C_{im}^{t + \Delta t}$ from the previous outer iteration.  Use of a previous iterate in these nonlinear calculations for $\frac{\partial \overline{C}_{im}}{\partial C_{im}}$ may cause convergence problems for some applications, compared to use of the linear expression, which does not depend on $C_{im}$.  
