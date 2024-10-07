@@ -405,7 +405,7 @@ contains
     do irow = 1, this%nrow
       do ipos = this%ia_local(irow), this%ia_local(irow + 1) - 1
         icol = this%ja_local(ipos)
-        call MatGetValues(local_mat, 1, irow - 1, 1, icol - 1, val, ierr)
+        call MatGetValues(local_mat, 1, [irow - 1], 1, [icol - 1], [val], ierr)
         CHKERRQ(ierr)
         this%amat_local(ipos) = val
       end do
