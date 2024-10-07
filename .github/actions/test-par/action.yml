@@ -48,27 +48,13 @@ runs:
         sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
         sudo make all
 
-    - name: Build modflow6 (Linux)
-      if: runner.os == 'Linux'
+    - name: Build modflow6
       shell: bash
       working-directory: modflow6
       run: |
         pixi run setup -Dparallel=true builddir
         pixi run build builddir
         pixi run test builddir
-    
-    - name: Build modflow6 (macOS)
-      if: runner.os == 'macOS'
-      shell: bash
-      working-directory: modflow6
-      run: |
-        pixi run setup -Dparallel=true -Ddebug=true builddir
-        pixi run build builddir
-        pixi run test builddir
-      
-    - name: Setup tmate session
-      if: runner.os == 'macOS'  
-      uses: mxschmitt/action-tmate@v3
 
     - name: Show Meson logs
       if: failure()
