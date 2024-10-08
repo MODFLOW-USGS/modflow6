@@ -24,7 +24,7 @@ runs:
       with:
         repository: petsc/petsc
         path: petsc
-        ref: release-3.21
+        ref: release
 
     - name: Configure environment
       if: runner.os == 'Linux'
