@@ -11,14 +11,6 @@ longname activate reach storage
 description keyword that activates storage contributions to the stream-flow routing package continuity equation.
 
 block options
-name storage_weight
-type double precision
-reader urword
-optional true
-longname reach storage time weighting
-description real number value that defines the time weighting factor used to calculate the change in channel storage. STORAGE\_WEIGHT must have a value between 0.5 and 1. Default STORAGE\_WEIGHT value is 0.5.
-
-block options
 name auxiliary
 type string
 shape (naux)
@@ -342,6 +334,14 @@ reader urword
 optional true
 longname time conversion factor
 description real value that is used to convert user-specified Manning's roughness coefficients from seconds to model time units. TIME\_CONVERSION should be set to 1.0, 60.0, 3,600.0, 86,400.0, and 31,557,600.0 when using time units (TIME\_UNITS) of seconds, minutes, hours, days, or years in the simulation, respectively. TIME\_CONVERSION does not need to be specified if TIME\_UNITS are seconds.
+
+block options
+name dev_storage_weight
+type double precision
+reader urword
+optional true
+longname reach storage time weighting
+description real number value that defines the time weighting factor used to calculate the change in channel storage. STORAGE\_WEIGHT must have a value between 0.5 and 1. Default STORAGE\_WEIGHT value is 1.
 
 
 # --------------------- gwf sfr dimensions ---------------------
