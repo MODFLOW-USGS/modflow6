@@ -73,9 +73,7 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install netcdf-fortran
-        brew install gcc@13
         nc-config --all
         nf-config
 
