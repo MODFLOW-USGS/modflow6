@@ -11,11 +11,20 @@ runs:
         version: 13
 
     - name: Checkout PETSc
+      if: runner.os == 'Linux'
       uses: actions/checkout@v4
       with:
         repository: petsc/petsc
         path: petsc
         ref: release
+        
+    - name: Checkout PETSc
+      if: runner.os == 'macOS'
+      uses: actions/checkout@v4
+      with:
+        repository: petsc/petsc
+        path: petsc
+        ref: release-3.21
 
     - name: Configure environment
       if: runner.os == 'Linux'
@@ -37,7 +46,7 @@ runs:
       working-directory: petsc
       run: |
         sudo wget -P $GITHUB_WORKSPACE/petsc https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.2.tar.gz
-        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz
+        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz --with-debugging=0
         sudo make all
 
     - name: Configure PETSc
@@ -64,9 +73,7 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install netcdf-fortran
-        brew install gcc@13
         nc-config --all
         nf-config
 

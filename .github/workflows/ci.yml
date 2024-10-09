@@ -502,7 +502,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+        os: [ ubuntu-22.04, macos-13, windows-2022 ]
     defaults:
       run:
         shell: bash
@@ -530,6 +530,15 @@ jobs:
         working-directory: modflow6
         run: pixi run install
 
+      - name: Set LDFLAGS (macOS)
+        if: matrix.os == 'macos-13'
+        run: |
+          os_ver=$(sw_vers -productVersion | cut -d'.' -f1)
+          if (( "$os_ver" > 12 )); then
+            ldflags="$LDFLAGS -Wl,-ld_classic"
+            echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
+          fi
+
       - name: Test parallel MF6
         if: runner.os != 'Windows'
         uses: ./modflow6/.github/actions/test-par
@@ -555,7 +564,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12 ]
+        os: [ ubuntu-22.04, macos-13 ]
     defaults:
       run:
         shell: bash
@@ -580,6 +589,15 @@ jobs:
       - name: Install additional netcdf testing packages
         working-directory: modflow6
         run: pixi run pip install xugrid xarray netcdf4
+
+      - name: Set LDFLAGS (macOS)
+        if: matrix.os == 'macos-13'
+        run: |
+          os_ver=$(sw_vers -productVersion | cut -d'.' -f1)
+          if (( "$os_ver" > 12 )); then
+            ldflags="$LDFLAGS -Wl,-ld_classic"
+            echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
+          fi
 
       - name: Test extended MF6
         uses: ./modflow6/.github/actions/test-extended
