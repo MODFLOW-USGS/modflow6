@@ -1,4 +1,4 @@
-\begin{thebibliography}{30}
+\begin{thebibliography}{31}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doiagency}[1]{doi:\discretionary{}{}{}#1}\else
@@ -190,6 +190,10 @@ Zhang, Y., King, M.J., and Datta-Gupta, A., 2012, Robust streamline tracing
 \bibitem[{Zheng(2010)}]{zheng2010supplemental}
 Zheng, C., 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical Report
   Prepared for the U.S. Army Corps of Engineers, 51 p.}
+
+\bibitem[{Zheng and Bennett(2002)}]{zheng2002}
+Zheng, C., and Bennett, G.D., 2002, Applied contaminant transport modeling, 2nd
+  edition: New York, New York, Wiley-Interscience, 560~p.
 
 \bibitem[{Zheng and Wang(1999)}]{zheng1999mt3dms}
 Zheng, C., and Wang, P.P., 1999, MT3DMS---A modular three-dimensional

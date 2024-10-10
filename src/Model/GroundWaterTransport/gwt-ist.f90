@@ -14,13 +14,16 @@
 module GwtIstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, LENFTYPE, &
+  use ConstantsModule, only: DONE, DZERO, DHALF, LENFTYPE, &
                              LENPACKAGENAME, &
                              LENBUDTXT, DHNOFLO
   use BndModule, only: BndType
   use BudgetModule, only: BudgetType
   use TspFmiModule, only: TspFmiType
-  use GwtMstModule, only: GwtMstType, get_zero_order_decay
+  use GwtMstModule, only: GwtMstType, get_zero_order_decay, &
+                          get_freundlich_conc, get_freundlich_derivative, &
+                          get_langmuir_conc, get_langmuir_derivative, &
+                          get_freundlich_kd, get_langmuir_kd
   use OutputControlDataModule, only: OutputControlDataType
   use MatrixBaseModule
   !
@@ -57,17 +60,20 @@ module GwtIstModule
     integer(I4B), pointer :: icimout => null() !< unit number for binary cim output
     integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: ioutsorbate => null() !< unit number for sorbate concentration output
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on); only linear is supported in ist
     integer(I4B), pointer :: kiter => null() !< picard iteration counter
     real(DP), pointer, contiguous :: cim(:) => null() !< concentration for immobile domain
     real(DP), pointer, contiguous :: cimnew(:) => null() !< immobile concentration at end of current time step
     real(DP), pointer, contiguous :: cimold(:) => null() !< immobile concentration at end of last time step
+    real(DP), pointer, contiguous :: cimsrb(:) => null() !< sorbate concentration in immobile domain
     real(DP), pointer, contiguous :: zetaim(:) => null() !< mass transfer rate to immobile domain
     real(DP), pointer, contiguous :: porosity(:) => null() !< immobile domain porosity defined as volume of immobile voids per volume of immobile domain
     real(DP), pointer, contiguous :: volfrac(:) => null() !< volume fraction of the immobile domain defined as volume of immobile domain per aquifer volume
     real(DP), pointer, contiguous :: bulk_density(:) => null() !< bulk density of immobile domain defined as mass of solids in immobile domain per volume of immobile domain
     real(DP), pointer, contiguous :: distcoef(:) => null() !< distribution coefficient
+    real(DP), pointer, contiguous :: sp2(:) => null() !< second sorption parameter
     real(DP), pointer, contiguous :: decay(:) => null() !< first or zero order rate constant for liquid
     real(DP), pointer, contiguous :: decaylast(:) => null() !< decay rate used for last iteration (needed for zero order decay)
     real(DP), pointer, contiguous :: decayslast(:) => null() !< sorbed decay rate used for last iteration (needed for zero order decay)
@@ -85,12 +91,15 @@ module GwtIstModule
     procedure :: bnd_bd => ist_bd
     procedure :: bnd_ot_model_flows => ist_ot_model_flows
     procedure :: bnd_ot_dv => ist_ot_dv
+    procedure :: output_immobile_concentration
+    procedure :: output_immobile_sorbate_concentration
     procedure :: bnd_ot_bdsummary => ist_ot_bdsummary
     procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
     procedure :: read_dimensions => ist_read_dimensions
     procedure :: read_options
     procedure :: get_thetaim
+    procedure :: ist_calc_csrb
     procedure, private :: ist_allocate_arrays
     procedure, private :: read_data
 
@@ -197,7 +206,8 @@ contains
     if (this%isrb /= this%mst%isrb) then
       call store_error('Sorption is active for the IST Package but it is not &
         &compatible with the sorption option selected for the MST Package.  &
-        &If sorption is active for the IST Package, then SORPTION LINEAR must &
+        &If sorption is active for the IST Package, then the same type of &
+        &sorption (LINEAR, FREUNDLICH, or LANGMUIR) must &
         &be specified in the options block of the MST Package.')
     end if
     if (count_errors() > 0) then
@@ -259,20 +269,17 @@ contains
   end subroutine ist_ad
 
   !> @ brief Fill coefficient method for package
-  !!
-  !!  Method to calculate and fill coefficients for the package.
-  !!
   !<
   subroutine ist_fc(this, rhs, ia, idxglo, matrix_sln)
-    ! -- modules
+    ! modules
     use TdisModule, only: delt
-    ! -- dummy
+    ! dummy
     class(GwtIstType) :: this !< GwtIstType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
     class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
-    ! -- local
+    ! local
     integer(I4B) :: n, idiag
     real(DP) :: tled
     real(DP) :: hhcof, rrhs
@@ -280,7 +287,8 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: kd
+    real(DP) :: kdnew
+    real(DP) :: kdold
     real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
@@ -292,37 +300,40 @@ contains
     real(DP) :: cimsrbold
     real(DP) :: cimsrbnew
     real(DP), dimension(9) :: ddterm
-    !
-    ! -- set variables
+
+    ! set variables
     tled = DONE / delt
     this%kiter = this%kiter + 1
-    !
-    ! -- loop through and calculate immobile domain contribution to hcof and rhs
+
+    ! loop through each node and calculate immobile domain contribution
+    ! to hcof and rhs
     do n = 1, this%dis%nodes
-      !
-      ! -- skip if transport inactive
+
+      ! skip if transport inactive
       if (this%ibound(n) <= 0) cycle
-      !
-      ! -- calculate new and old water volumes
+
+      ! calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       thetaim = this%get_thetaim(n)
       idiag = ia(n)
-      !
-      ! -- set exchange coefficient
+
+      ! set exchange coefficient
       zetaim = this%zetaim(n)
-      !
-      ! -- Add dual domain mass transfer contributions to rhs and hcof
-      kd = DZERO
+
+      ! Add dual domain mass transfer contributions to rhs and hcof
+      ! dcimsrbdc = DZERO
+      kdnew = DZERO
+      kdold = DZERO
       volfracim = DZERO
       rhobim = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
-      !
-      ! -- setup decay variables
+
+      ! set variables for decay of aqueous solute
       if (this%idcy == 1) lambda1im = this%decay(n)
       if (this%idcy == 2) then
         gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n), &
@@ -330,16 +341,48 @@ contains
                                         this%cimnew(n), delt)
         this%decaylast(n) = gamma1im
       end if
-      !
-      ! -- setup sorption variables
+
+      ! setup sorption variables
       if (this%isrb > 0) then
-        kd = this%distcoef(n)
+
+        ! initialize sorption variables
         volfracim = this%volfrac(n)
         rhobim = this%bulk_density(n)
-        if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-        if (this%idcy == 2) then
-          cimsrbold = this%cimold(n) * kd
-          cimsrbnew = this%cimnew(n) * kd
+
+        ! set isotherm dependent sorption variables
+        select case (this%isrb)
+        case (1)
+          ! linear
+          kdnew = this%distcoef(n)
+          kdold = this%distcoef(n)
+          cimsrbnew = this%cimnew(n) * kdnew
+          cimsrbold = this%cimold(n) * kdold
+        case (2)
+          ! freundlich
+          kdnew = get_freundlich_kd(this%cimnew(n), this%distcoef(n), &
+                                    this%sp2(n))
+          kdold = get_freundlich_kd(this%cimold(n), this%distcoef(n), &
+                                    this%sp2(n))
+          cimsrbnew = get_freundlich_conc(this%cimnew(n), this%distcoef(n), &
+                                          this%sp2(n))
+          cimsrbold = get_freundlich_conc(this%cimold(n), this%distcoef(n), &
+                                          this%sp2(n))
+        case (3)
+          ! langmuir
+          kdnew = get_langmuir_kd(this%cimnew(n), this%distcoef(n), &
+                                  this%sp2(n))
+          kdold = get_langmuir_kd(this%cimold(n), this%distcoef(n), &
+                                  this%sp2(n))
+          cimsrbnew = get_langmuir_conc(this%cimnew(n), this%distcoef(n), &
+                                        this%sp2(n))
+          cimsrbold = get_langmuir_conc(this%cimold(n), this%distcoef(n), &
+                                        this%sp2(n))
+        end select
+
+        ! set decay of sorbed solute parameters
+        if (this%idcy == 1) then
+          lambda2im = this%decay_sorbed(n)
+        else if (this%idcy == 2) then
           gamma2im = get_zero_order_decay(this%decay_sorbed(n), &
                                           this%decayslast(n), &
                                           this%kiter, cimsrbold, &
@@ -347,39 +390,34 @@ contains
           this%decayslast(n) = gamma2im
         end if
       end if
-      !
-      ! -- calculate the terms and then get the hcof and rhs contributions
+
+      ! calculate dual domain terms and get the hcof and rhs contributions
       call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                      volfracim, rhobim, kd, lambda1im, lambda2im, &
+                      volfracim, rhobim, kdnew, kdold, lambda1im, lambda2im, &
                       gamma1im, gamma2im, zetaim, ddterm, f)
       cimold = this%cimold(n)
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
-      !
-      ! -- update solution accumulators
+
+      ! update solution accumulators
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
-      !
+
     end do
-    !
-    ! -- Return
-    return
+
   end subroutine ist_fc
 
   !> @ brief Calculate package flows.
-  !!
-  !!  Calculate the flow between connected package control volumes.
-  !!
   !<
   subroutine ist_cq(this, x, flowja, iadv)
-    ! -- modules
+    ! modules
     use TdisModule, only: delt
     use ConstantsModule, only: DZERO
-    ! -- dummy
+    ! dummy
     class(GwtIstType), intent(inout) :: this !< GwtIstType object
     real(DP), dimension(:), intent(in) :: x !< current dependent-variable value
     real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow between two connected control volumes
     integer(I4B), optional, intent(in) :: iadv !< flag that indicates if this is an advance package
-    ! -- local
+    ! local
     integer(I4B) :: idiag
     integer(I4B) :: n
     real(DP) :: rate
@@ -388,7 +426,8 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: kd
+    real(DP) :: kdnew
+    real(DP) :: kdold
     real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
@@ -401,33 +440,34 @@ contains
     real(DP) :: cimsrbold
     real(DP) :: cimsrbnew
     real(DP), dimension(9) :: ddterm
-    ! -- formats
-    !
-    ! -- initialize
+    ! formats
+
+    ! initialize
     this%budterm(:, :) = DZERO
-    !
-    ! -- Calculate immobile domain transfer rate
+
+    ! Calculate immobile domain transfer rate
     do n = 1, this%dis%nodes
-      !
-      ! -- skip if transport inactive
+
+      ! skip if transport inactive
       rate = DZERO
       cimnew = DZERO
       if (this%ibound(n) > 0) then
-        !
-        ! -- calculate new and old water volumes
+
+        ! calculate new and old water volumes
         vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
         swtpdt = this%fmi%gwfsat(n)
         swt = this%fmi%gwfsatold(n, delt)
         thetaim = this%get_thetaim(n)
-        !
-        ! -- set exchange coefficient
+
+        ! set exchange coefficient
         zetaim = this%zetaim(n)
-        !
-        ! -- Calculate exchange with immobile domain
+
+        ! Calculate exchange with immobile domain
         rate = DZERO
         hhcof = DZERO
         rrhs = DZERO
-        kd = DZERO
+        kdnew = DZERO
+        kdold = DZERO
         volfracim = DZERO
         rhobim = DZERO
         lambda1im = DZERO
@@ -439,50 +479,118 @@ contains
           gamma1im = get_zero_order_decay(this%decay(n), this%decaylast(n), 0, &
                                           this%cimold(n), this%cimnew(n), delt)
         end if
+
+        ! setup sorption variables
         if (this%isrb > 0) then
-          kd = this%distcoef(n)
+
+          ! initialize sorption variables
           volfracim = this%volfrac(n)
           rhobim = this%bulk_density(n)
-          if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
-          if (this%idcy == 2) then
-            cimsrbold = this%cimold(n) * kd
-            cimsrbnew = this%cimnew(n) * kd
+
+          ! set isotherm dependent sorption variables
+          select case (this%isrb)
+          case (1)
+            ! linear
+            kdnew = this%distcoef(n)
+            kdold = this%distcoef(n)
+            cimsrbnew = this%cimnew(n) * kdnew
+            cimsrbold = this%cimold(n) * kdold
+          case (2)
+            ! freundlich
+            kdnew = get_freundlich_kd(this%cimnew(n), this%distcoef(n), &
+                                      this%sp2(n))
+            kdold = get_freundlich_kd(this%cimold(n), this%distcoef(n), &
+                                      this%sp2(n))
+            cimsrbnew = get_freundlich_conc(this%cimnew(n), this%distcoef(n), &
+                                            this%sp2(n))
+            cimsrbold = get_freundlich_conc(this%cimold(n), this%distcoef(n), &
+                                            this%sp2(n))
+          case (3)
+            ! langmuir
+            kdnew = get_langmuir_kd(this%cimnew(n), this%distcoef(n), &
+                                    this%sp2(n))
+            kdold = get_langmuir_kd(this%cimold(n), this%distcoef(n), &
+                                    this%sp2(n))
+            cimsrbnew = get_langmuir_conc(this%cimnew(n), this%distcoef(n), &
+                                          this%sp2(n))
+            cimsrbold = get_langmuir_conc(this%cimold(n), this%distcoef(n), &
+                                          this%sp2(n))
+          end select
+
+          ! set decay of sorbed solute parameters
+          if (this%idcy == 1) then
+            lambda2im = this%decay_sorbed(n)
+          else if (this%idcy == 2) then
             gamma2im = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, cimsrbold, &
                                             cimsrbnew, delt)
           end if
         end if
-        !
-        ! -- calculate the terms and then get the hcof and rhs contributions
+
+        ! calculate the terms and then get the hcof and rhs contributions
         call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        volfracim, rhobim, kd, lambda1im, lambda2im, &
+                        volfracim, rhobim, kdnew, kdold, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
         cimold = this%cimold(n)
         call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
-        !
-        ! -- calculate rate from hcof and rhs
+
+        ! calculate rate from hcof and rhs
         rate = hhcof * x(n) - rrhs
-        !
-        ! -- calculate immobile domain concentration
+
+        ! calculate immobile domain concentration
         cimnew = get_ddconc(ddterm, f, cimold, x(n))
-        !
-        ! -- accumulate the budget terms
+
+        ! accumulate the budget terms
         call accumulate_budterm(this%budterm, ddterm, cimnew, cimold, x(n), &
                                 this%idcy)
       end if
-      !
-      ! -- store rate and add to flowja
+
+      ! store rate and add to flowja
       this%strg(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
-      !
-      ! -- store immobile domain concentration
+
+      ! store immobile domain concentration
       this%cimnew(n) = cimnew
-      !
+
     end do
-    return
+
+    ! calculate csrb
+    if (this%isrb /= 0) then
+      call this%ist_calc_csrb(this%cimnew)
+    end if
+
   end subroutine ist_cq
+
+  !> @ brief Calculate immobile sorbed concentration
+  !<
+  subroutine ist_calc_csrb(this, cim)
+    ! -- dummy
+    class(GwtIstType) :: this !< GwtMstType object
+    real(DP), intent(in), dimension(:) :: cim !< immobile domain aqueous concentration at end of this time step
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: distcoef
+    real(DP) :: csrb
+
+    ! Calculate sorbed concentration
+    do n = 1, size(cim)
+      csrb = DZERO
+      if (this%ibound(n) > 0) then
+        distcoef = this%distcoef(n)
+        if (this%isrb == 1) then
+          csrb = cim(n) * distcoef
+        else if (this%isrb == 2) then
+          csrb = get_freundlich_conc(cim(n), distcoef, this%sp2(n))
+        else if (this%isrb == 3) then
+          csrb = get_langmuir_conc(cim(n), distcoef, this%sp2(n))
+        end if
+      end if
+      this%cimsrb(n) = csrb
+    end do
+
+  end subroutine ist_calc_csrb
 
   !> @ brief Add package flows to model budget.
   !!
@@ -578,23 +686,34 @@ contains
     return
   end subroutine ist_ot_model_flows
 
-  !> @ brief Output immobile domain concentration.
-  !!
+  !> @ brief Output dependent variables.
   !<
   subroutine ist_ot_dv(this, idvsave, idvprint)
-    ! -- modules
-    use TdisModule, only: kstp, endofperiod
-    ! -- dummy variables
+    ! dummy variables
     class(GwtIstType) :: this !< BndType object
     integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
     integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
-    ! -- local
+
+    call this%output_immobile_concentration(idvsave, idvprint)
+    call this%output_immobile_sorbate_concentration(idvsave, idvprint)
+
+  end subroutine ist_ot_dv
+
+  !> @ brief Output immobile domain aqueous concentration.
+  !<
+  subroutine output_immobile_concentration(this, idvsave, idvprint)
+    ! modules
+    use TdisModule, only: kstp, endofperiod
+    ! dummy variables
+    class(GwtIstType) :: this !< BndType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
+    ! local
     integer(I4B) :: ipflg
     integer(I4B) :: ibinun
     !
-    ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
-    !    cim should be written to a binary file if a binary file is open
-    !    for it.
+    ! Save cim to a binary file. ibinun is a flag where 1 indicates that
+    ! cim should be written to a binary file if a binary file is open for it.
     ipflg = 0
     ibinun = 1
     if (idvsave == 0) ibinun = 0
@@ -603,12 +722,51 @@ contains
                            iprint_opt=0, isav_opt=ibinun)
     end if
     !
-    ! -- Print immobile domain concentrations to listing file
+    ! Print immobile domain concentrations to listing file
     if (idvprint /= 0) then
       call this%ocd%ocd_ot(ipflg, kstp, endofperiod, this%iout, &
                            iprint_opt=idvprint, isav_opt=0)
     end if
-  end subroutine ist_ot_dv
+
+  end subroutine output_immobile_concentration
+
+  !> @ brief Output immobile domain sorbate concentration.
+  !<
+  subroutine output_immobile_sorbate_concentration(this, idvsave, idvprint)
+    ! modules
+    ! dummy
+    class(GwtIstType) :: this !< BndType object
+    integer(I4B), intent(in) :: idvsave !< flag and unit number for dependent-variable output
+    integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
+    ! local
+    character(len=1) :: cdatafmp = ' ', editdesc = ' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint, nvaluesp, nwidthp
+    real(DP) :: dinact
+
+    ! Save cimsrb to a binary file. ibinun is a flag where 1 indicates that
+    ! cim should be written to a binary file if a binary file is open for it.
+    ! Set unit number for sorbate output
+    if (this%ioutsorbate /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    end if
+    if (idvsave == 0) ibinun = 0
+
+    ! save sorbate concentration array
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      if (this%ioutsorbate /= 0) then
+        ibinun = this%ioutsorbate
+        call this%dis%record_array(this%cimsrb, this%iout, iprint, ibinun, &
+                                   '         SORBATE', cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+      end if
+    end if
+
+  end subroutine output_immobile_sorbate_concentration
 
   !> @ brief Output IST package budget summary.
   !!
@@ -660,17 +818,20 @@ contains
       call mem_deallocate(this%icimout)
       call mem_deallocate(this%ibudgetout)
       call mem_deallocate(this%ibudcsv)
+      call mem_deallocate(this%ioutsorbate)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%isrb)
       call mem_deallocate(this%kiter)
       call mem_deallocate(this%cim)
       call mem_deallocate(this%cimnew)
       call mem_deallocate(this%cimold)
+      call mem_deallocate(this%cimsrb)
       call mem_deallocate(this%zetaim)
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%volfrac)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
+      call mem_deallocate(this%sp2)
       call mem_deallocate(this%decay)
       call mem_deallocate(this%decaylast)
       call mem_deallocate(this%decayslast)
@@ -715,6 +876,7 @@ contains
     call mem_allocate(this%icimout, 'ICIMOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
+    call mem_allocate(this%ioutsorbate, 'IOUTSORBATE', this%memoryPath)
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     call mem_allocate(this%kiter, 'KITER', this%memoryPath)
@@ -723,6 +885,7 @@ contains
     this%icimout = 0
     this%ibudgetout = 0
     this%ibudcsv = 0
+    this%ioutsorbate = 0
     this%isrb = 0
     this%idcy = 0
     this%kiter = 0
@@ -763,11 +926,20 @@ contains
     if (this%isrb == 0) then
       call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
+      call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
+      call mem_allocate(this%cimsrb, 1, 'SORBATE', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, this%dis%nodes, 'BULK_DENSITY', &
                         this%memoryPath)
       call mem_allocate(this%distcoef, this%dis%nodes, 'DISTCOEF', &
                         this%memoryPath)
+      call mem_allocate(this%cimsrb, this%dis%nodes, 'SORBATE', &
+                        this%memoryPath)
+      if (this%isrb == 1) then
+        call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
+      else
+        call mem_allocate(this%sp2, this%dis%nodes, 'SP2', this%memoryPath)
+      end if
     end if
     if (this%idcy == 0) then
       call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
@@ -794,6 +966,14 @@ contains
       this%porosity(n) = DZERO
       this%zetaim(n) = DZERO
       this%volfrac(n) = DZERO
+    end do
+    do n = 1, size(this%bulk_density)
+      this%bulk_density(n) = DZERO
+      this%distcoef(n) = DZERO
+      this%cimsrb(n) = DZERO
+    end do
+    do n = 1, size(this%sp2)
+      this%sp2(n) = DZERO
     end do
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
@@ -825,6 +1005,7 @@ contains
     class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: sorption
     character(len=LINELENGTH) :: fname
     character(len=:), allocatable :: keyword2
     integer(I4B) :: ierr
@@ -834,8 +1015,12 @@ contains
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisrb = &
+    character(len=*), parameter :: fmtlinear = &
       &"(4x,'LINEAR SORPTION IS SELECTED. ')"
+    character(len=*), parameter :: fmtfreundlich = &
+      &"(4x,'FREUNDLICH SORPTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtlangmuir = &
+      &"(4x,'LANGMUIR SORPTION IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy1 = &
       &"(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
@@ -890,15 +1075,49 @@ contains
             call store_error('Optional BUDGETCSV keyword must be followed by &
               &FILEOUT')
           end if
-        case ('SORBTION', 'SORPTION')
-          this%isrb = 1
-          write (this%iout, fmtisrb)
+        case ('SORBTION')
+          call store_error('SORBTION is not a valid option.  Use &
+                           &SORPTION instead.')
+          call this%parser%StoreErrorUnit()
+        case ('SORPTION')
+          call this%parser%GetStringCaps(sorption)
+          select case (sorption)
+          case ('LINEAR', '')
+            this%isrb = 1
+            write (this%iout, fmtlinear)
+          case ('FREUNDLICH')
+            this%isrb = 2
+            write (this%iout, fmtfreundlich)
+          case ('LANGMUIR')
+            this%isrb = 3
+            write (this%iout, fmtlangmuir)
+          case default
+            call store_error('Unknown sorption type was specified ' &
+                             & //'('//trim(adjustl(sorption))//').'// &
+                             &' Sorption must be specified as LINEAR, &
+                             &FREUNDLICH, or LANGMUIR.')
+            call this%parser%StoreErrorUnit()
+          end select
         case ('FIRST_ORDER_DECAY')
           this%idcy = 1
           write (this%iout, fmtidcy1)
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('SORBATE')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ioutsorbate = getunit()
+            call openfile(this%ioutsorbate, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE', mode_opt=MNORMAL)
+            write (this%iout, fmtistbin) &
+              'SORBATE', fname, this%ioutsorbate
+          else
+            errmsg = 'Optional SORBATE keyword must be '// &
+                     'followed by FILEOUT.'
+            call store_error(errmsg)
+          end if
         case default
           write (errmsg, '(a,a)') 'Unknown IST option: ', &
             trim(keyword)
@@ -946,8 +1165,8 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(8) :: lname
-    character(len=24), dimension(8) :: aname
+    logical, dimension(9) :: lname
+    character(len=24), dimension(9) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'            BULK DENSITY'/
@@ -958,6 +1177,7 @@ contains
     data aname(6)/'  FIRST ORDER TRANS RATE'/
     data aname(7)/'IMMOBILE DOMAIN POROSITY'/
     data aname(8)/'IMMOBILE VOLUME FRACTION'/
+    data aname(9)/'   SECOND SORPTION PARAM'/
     !
     ! -- initialize
     isfound = .false.
@@ -1025,6 +1245,14 @@ contains
                                         this%parser%iuactive, this%volfrac, &
                                         aname(8))
           lname(8) = .true.
+        case ('SP2')
+          if (this%isrb < 2) &
+            call mem_reallocate(this%sp2, this%dis%nodes, 'SP2', &
+                                trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%sp2, &
+                                        aname(9))
+          lname(9) = .true.
         case ('THETAIM')
           write (errmsg, '(a)') &
             'THETAIM is no longer supported. See Chapter 9 in &
@@ -1058,6 +1286,12 @@ contains
           &GRIDDATA block.'
         call store_error(errmsg)
       end if
+      if (this%isrb > 1 .and. .not. lname(9)) then
+        write (errmsg, '(a)') 'Nonlinear sorption is active but SP2 &
+          &not specified.  SP2 must be specified in GRIDDATA block when &
+          &FREUNDLICH or LANGMUIR sorption is active.'
+        call store_error(errmsg)
+      end if
     else
       if (lname(1)) then
         write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
@@ -1068,6 +1302,10 @@ contains
         write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
           &distribution coefficient was specified.  DISTCOEF will have &
           &no affect on simulation results.'
+      end if
+      if (lname(9)) then
+        write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
+          &SP2 was specified.  SP2 will have no affect on simulation results.'
       end if
     end if
     !
@@ -1169,7 +1407,8 @@ contains
   !!
   !<
   subroutine get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        volfracim, rhobim, kd, lambda1im, lambda2im, &
+                        volfracim, rhobim, kdnew, kdold, &
+                        lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
     real(DP), intent(in) :: thetaim !< immobile domain porosity
@@ -1178,7 +1417,8 @@ contains
     real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
     real(DP), intent(in) :: volfracim !< volume fraction of immobile domain
     real(DP), intent(in) :: rhobim !< bulk density for the immobile domain (fim * rhob)
-    real(DP), intent(in) :: kd !< distribution coefficient for linear isotherm
+    real(DP), intent(in) :: kdnew !< effective distribution coefficient for new time
+    real(DP), intent(in) :: kdold !< effective distribution coefficient for old time
     real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
     real(DP), intent(in) :: lambda2im !< first-order decay rate in sorbed phase
     real(DP), intent(in) :: gamma1im !< zero-order decay rate in aqueous phase
@@ -1198,10 +1438,10 @@ contains
     !    information guide (mf6suptechinfo.pdf)
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
-    ddterm(3) = volfracim * rhobim * vcell * kd * tled
-    ddterm(4) = volfracim * rhobim * vcell * kd * tled
+    ddterm(3) = volfracim * rhobim * vcell * kdnew * tled
+    ddterm(4) = volfracim * rhobim * vcell * kdold * tled
     ddterm(5) = thetaim * lambda1im * vcell
-    ddterm(6) = lambda2im * volfracim * rhobim * kd * vcell
+    ddterm(6) = lambda2im * volfracim * rhobim * kdnew * vcell
     ddterm(7) = thetaim * gamma1im * vcell
     ddterm(8) = gamma2im * volfracim * rhobim * vcell
     ddterm(9) = vcell * swtpdt * zetaim

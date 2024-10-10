@@ -962,7 +962,6 @@ contains
     integer(I4B), intent(in) :: icbcun !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
@@ -1224,7 +1223,8 @@ contains
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     ! -- local
-    character(len=LINELENGTH) :: keyword, keyword2
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: sorption
     character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1232,7 +1232,7 @@ contains
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisrb = &
+    character(len=*), parameter :: fmtlinear = &
       &"(4x,'LINEAR SORPTION IS ACTIVE. ')"
     character(len=*), parameter :: fmtfreundlich = &
       &"(4x,'FREUNDLICH SORPTION IS ACTIVE. ')"
@@ -1261,19 +1261,28 @@ contains
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
-        case ('SORBTION', 'SORPTION')
-          this%isrb = 1
-          call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) == 'LINEAR') this%isrb = 1
-          if (trim(adjustl(keyword2)) == 'FREUNDLICH') this%isrb = 2
-          if (trim(adjustl(keyword2)) == 'LANGMUIR') this%isrb = 3
-          select case (this%isrb)
-          case (1)
-            write (this%iout, fmtisrb)
-          case (2)
+        case ('SORBTION')
+          call store_error('SORBTION is not a valid option.  Use &
+                           &SORPTION instead.')
+          call this%parser%StoreErrorUnit()
+        case ('SORPTION')
+          call this%parser%GetStringCaps(sorption)
+          select case (sorption)
+          case ('LINEAR', '')
+            this%isrb = 1
+            write (this%iout, fmtlinear)
+          case ('FREUNDLICH')
+            this%isrb = 2
             write (this%iout, fmtfreundlich)
-          case (3)
+          case ('LANGMUIR')
+            this%isrb = 3
             write (this%iout, fmtlangmuir)
+          case default
+            call store_error('Unknown sorption type was specified ' &
+                             & //'('//trim(adjustl(sorption))//').'// &
+                             &' Sorption must be specified as LINEAR, &
+                             &FREUNDLICH, or LANGMUIR.')
+            call this%parser%StoreErrorUnit()
           end select
         case ('FIRST_ORDER_DECAY')
           this%idcy = 1
@@ -1639,6 +1648,42 @@ contains
     end if
     return
   end function
+
+  !> @ brief Get effective Freundlich distribution coefficient
+  !<
+  function get_freundlich_kd(conc, kf, a) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kf !< freundlich constant
+    real(DP), intent(in) :: a !< freundlich exponent
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = kf * conc**(a - DONE)
+    else
+      kd = DZERO
+    end if
+    return
+  end function get_freundlich_kd
+
+  !> @ brief Get effective Langmuir distribution coefficient
+  !<
+  function get_langmuir_kd(conc, kl, sbar) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kl !< langmuir constant
+    real(DP), intent(in) :: sbar !< langmuir sorption sites
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = (kl * sbar) / (DONE + kl * conc)
+    else
+      kd = DZERO
+    end if
+    return
+  end function get_langmuir_kd
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!

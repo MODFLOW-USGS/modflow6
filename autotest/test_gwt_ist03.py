@@ -1,84 +1,31 @@
 """
-Test the IST Package with a one-dimensional flow problem
-with dual-domain transport.  Flow is from left to right with
-constant concentration equal to 1.0 for first 20 days and then
-set to 0.0 for next 30 days.  The results are compared to
-the results of an MT3D simulation sent by Sorab Panday.  The MT3D
-results had many transport time steps, but they were interpolated
-onto an even 1-day interval.  The mf6 results are also
-interpolated onto the 1-day interval for comparison.  The test
-passes if the difference in simulated concentration in column 300
-between mf6 and mt3d is less than 0.05.
+Test the immobile domain isotherms (Freundlich and Langmuir) in the IST Package
+using a one-dimensional flow problem.  Compare the simulated sorbate
+concentrations output from the model with sorbate concentrations calculated
+in this script using python.  Problem is adapted from test_gwt_ist02.py.
 """
 
 import os
+import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
 
-cases = ["ist02"]
-nlay, nrow, ncol = 1, 1, 300
+cases = ["ist03a", "ist03b", "ist03c"]
+sorption_idx = ["LINEAR", "FREUNDLICH", "LANGMUIR"]
+distcoef_idx = [0.1, 0.1, 0.1]
+sp2_idx = [None, 0.7, 0.7]
 
-mt3d_times = np.arange(1.0, 51.0, 1.0)
-mt3d_conc = np.array(
-    [
-        0.000000e00,
-        2.060000e-25,
-        7.220000e-10,
-        9.541440e-04,
-        8.276250e-02,
-        2.328700e-01,
-        3.536184e-01,
-        4.644795e-01,
-        5.631907e-01,
-        6.484800e-01,
-        7.204300e-01,
-        7.799700e-01,
-        8.284300e-01,
-        8.673400e-01,
-        8.982000e-01,
-        9.224300e-01,
-        9.412600e-01,
-        9.557800e-01,
-        9.668900e-01,
-        9.753300e-01,
-        9.817000e-01,
-        9.864900e-01,
-        9.900600e-01,
-        9.917600e-01,
-        9.119200e-01,
-        7.632500e-01,
-        6.435600e-01,
-        5.334700e-01,
-        4.353300e-01,
-        3.504500e-01,
-        2.788000e-01,
-        2.194700e-01,
-        1.711600e-01,
-        1.323600e-01,
-        1.015800e-01,
-        7.741230e-02,
-        5.860264e-02,
-        4.411496e-02,
-        3.302846e-02,
-        2.460321e-02,
-        1.824100e-02,
-        1.346449e-02,
-        9.894626e-03,
-        7.245270e-03,
-        5.285890e-03,
-        3.843070e-03,
-        2.784940e-03,
-        2.011888e-03,
-        1.448659e-03,
-        1.040850e-03,
-    ]
-)
+nlay, nrow, ncol = 1, 1, 300
 
 
 def build_models(idx, test):
+    sorption = sorption_idx[idx]
+    distcoef = distcoef_idx[idx]
+    sp2 = sp2_idx[idx]
+
     perlen = [20.0, 30.0]
     nper = len(perlen)
     nstp = [100, 100]
@@ -239,25 +186,28 @@ def build_models(idx, test):
     porosityim = thetaim / volfracim
     mst = flopy.mf6.ModflowGwtmst(
         gwt,
-        sorption="LINEAR",
+        sorbate_filerecord=f"{gwtname}.mst.csrb",
+        sorption=sorption,
         porosity=porositym,
         bulk_density=bulk_density,
-        distcoef=0.1,
+        distcoef=distcoef,
+        sp2=sp2,
     )
 
     # immobile storage and transfer
-    cim_filerecord = f"{gwtname}.ist.ucn"
     ist = flopy.mf6.ModflowGwtist(
         gwt,
-        sorption="LINEAR",
+        sorption=sorption,
         save_flows=True,
-        cim_filerecord=cim_filerecord,
+        cim_filerecord=f"{gwtname}.ist.ucn",
+        sorbate_filerecord=f"{gwtname}.ist.csrb",
         cim=0.0,
         porosity=porosityim,
         volfrac=volfracim,
         bulk_density=bulk_density,
         zetaim=0.1,
-        distcoef=0.1,
+        distcoef=distcoef,
+        sp2=sp2,
     )
 
     # cnc
@@ -317,7 +267,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(sim):
+def make_plot(sim, plot_title):
     print("making plots...")
     name = sim.name
     ws = sim.workspace
@@ -331,23 +281,46 @@ def make_plot(sim):
     obs_names = output.obs_names
     data = output.obs(f=obs_names[0]).data
 
+    # mobile aqueous sorbed concentrations
+    fpth = pl.Path(ws) / f"{gwtname}.mst.csrb"
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="SORBATE")
+    csrb = cobj.get_alldata().reshape(200, 300)
+
+    # immobile aqueous
+    fpth = pl.Path(ws) / f"{gwtname}.ist.ucn"
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="CIM")
+    cim = cobj.get_alldata().reshape(200, 300)
+
+    # immobile sorbed
+    fpth = pl.Path(ws) / f"{gwtname}.ist.csrb"
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="SORBATE")
+    cimsrb = cobj.get_alldata().reshape(200, 300)
+
     import matplotlib.pyplot as plt
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(6, 3))
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(data["totim"], data["(1-1-300)"], "k-", label="mf6")
-    ax.plot(mt3d_times, mt3d_conc, "ko", label="mt3d")
+    ax.plot(data["totim"], data["(1-1-300)"], "k-", label="mobile aqueous")
+    ax.plot(data["totim"], csrb[:, 299], "b-", label="mobile sorbate")
+    ax.plot(data["totim"], cim[:, 299], "k--", label="immobile aqueous")
+    ax.plot(data["totim"], cimsrb[:, 299], "b--", label="immobile sorbate")
     plt.xlabel("time, in days")
-    plt.ylabel("concentration, dimensionless")
+    plt.ylabel("concentration")
     plt.legend()
+    plt.title(plot_title)
     fname = os.path.join(ws, gwtname + ".png")
     plt.savefig(fname)
 
 
 def check_output(idx, test):
+    sorption = sorption_idx[idx]
+    distcoef = distcoef_idx[idx]
+    sp2 = sp2_idx[idx]
+
     makeplot = False
     if makeplot:
-        make_plot(test)
+        plot_title = sorption
+        make_plot(test, plot_title)
 
     name = test.name
     gwtname = "gwt_" + name
@@ -358,21 +331,45 @@ def check_output(idx, test):
     assert os.path.isfile(fname), f"file not found: {fname}"
     simvals = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
-    # interpolate mf6 results to same times as mt3d
-    mf6conc_interp = np.interp(
-        mt3d_times, simvals["time"], simvals["(1-1-300)"]
-    )
+    sim = test.sims[0]
+    gwt = sim.gwt[0]
+    mst = gwt.mst
+    ist = gwt.ist
+    conc = gwt.output.concentration().get_alldata().reshape(200, 300)
+    csrb = mst.output.sorbate().get_alldata().reshape(200, 300)
+    cim = ist.output.cim().get_alldata().reshape(200, 300)
+    cimsrb = ist.output.sorbate().get_alldata().reshape(200, 300)
 
-    # calculate difference between mf6 and mt3d
-    atol = 0.05
-    diff = mf6conc_interp - mt3d_conc
-    success = True
-    print("index mf6 mt3d diff")
-    for i in range(mf6conc_interp.shape[0]):
-        print(f"{i} {mf6conc_interp[i]:.3f} {mt3d_conc[i]:.3f} {diff[i]:.3f}")
-        if abs(diff[i]) > atol:
-            success = False
-    assert success, "Conc difference between mf6 and mt3d > 0.05"
+    # check conc and csrb
+    if sorption == "LINEAR":
+        csrb_answer = np.where(conc > 0, distcoef * conc, 0)
+    if sorption == "FREUNDLICH":
+        csrb_answer = np.where(conc > 0, distcoef * conc**sp2, 0)
+    if sorption == "LANGMUIR":
+        csrb_answer = np.where(
+            conc > 0, distcoef * sp2 * conc / (1 + distcoef * conc), 0
+        )
+    if not np.allclose(csrb[:, 1:], csrb_answer[:, 1:]):
+        diff = csrb - csrb_answer
+        print("min and max difference")
+        print(diff)
+        print(diff.min(), diff.max())
+        assert False, "csrb not consistent with known answer"
+
+    # check cim and cimsrb
+    if sorption == "LINEAR":
+        cimsrb_answer = np.where(cim > 0, distcoef * cim, 0)
+    if sorption == "FREUNDLICH":
+        cimsrb_answer = np.where(cim > 0, distcoef * cim**sp2, 0)
+    if sorption == "LANGMUIR":
+        cimsrb_answer = np.where(
+            cim > 0, distcoef * sp2 * cim / (1 + distcoef * cim), 0
+        )
+    if not np.allclose(cimsrb[:, 1:], cimsrb_answer[:, 1:]):
+        diff = cimsrb - cimsrb_answer
+        print("min and max difference")
+        print(diff.min(), diff.max())
+        assert False, "cimsrb not consistent with known answer"
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
