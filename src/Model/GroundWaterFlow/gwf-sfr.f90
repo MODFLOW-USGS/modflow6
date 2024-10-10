@@ -752,17 +752,6 @@ contains
       this%istorage = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' REACH STORAGE IS ACTIVE.'
-    case ('STORAGE_WEIGHT')
-      r = this%parser%GetDouble()
-      if (r < DHALF .or. r > DONE) then
-        write (errmsg, '(a,g0,a)') &
-          "STORAGE_WEIGHT SPECIFIED TO BE '", r, &
-          "' BUT CANNOT BE LESS THAN 0.5 OR GREATER THAN 1.0"
-        call store_error(errmsg)
-      else
-        this%storage_weight = r
-        write (this%iout, fmtstoweight) this%storage_weight
-      end if
     case ('PRINT_STAGE')
       this%iprhed = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
@@ -867,6 +856,17 @@ contains
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING &
         &STAGES AND FLOWS WILL NOT BE MADE'
+    case ('DEV_STORAGE_WEIGHT')
+      r = this%parser%GetDouble()
+      if (r < DHALF .or. r > DONE) then
+        write (errmsg, '(a,g0,a)') &
+          "STORAGE_WEIGHT SPECIFIED TO BE '", r, &
+          "' BUT CANNOT BE LESS THAN 0.5 OR GREATER THAN 1.0"
+        call store_error(errmsg)
+      else
+        this%storage_weight = r
+        write (this%iout, fmtstoweight) this%storage_weight
+      end if
       !
       ! -- no valid options found
     case default
@@ -4411,7 +4411,7 @@ contains
     ! -- set storage weight if it has not been defined yet
     if (this%istorage == 1) then
       if (this%storage_weight == DNODATA) then
-        this%storage_weight = DHALF
+        this%storage_weight = DONE
         write (this%iout, fmtweight) &
           trim(adjustl(this%packName)), this%storage_weight
       end if

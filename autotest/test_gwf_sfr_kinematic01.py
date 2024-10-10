@@ -127,7 +127,7 @@ def build_models(idx, test):
         gwf,
         print_flows=True,
         storage=True,
-        storage_weight=storage_weights[idx],
+        dev_storage_weight=storage_weights[idx],
         nreaches=nreaches,
         packagedata=pak_data,
         connectiondata=[(0,)],
