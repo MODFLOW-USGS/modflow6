@@ -1223,7 +1223,8 @@ contains
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     ! -- local
-    character(len=LINELENGTH) :: keyword, keyword2
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: sorption
     character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1231,7 +1232,7 @@ contains
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisrb = &
+    character(len=*), parameter :: fmtlinear = &
       &"(4x,'LINEAR SORPTION IS ACTIVE. ')"
     character(len=*), parameter :: fmtfreundlich = &
       &"(4x,'FREUNDLICH SORPTION IS ACTIVE. ')"
@@ -1260,19 +1261,28 @@ contains
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
-        case ('SORBTION', 'SORPTION')
-          this%isrb = 1
-          call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) == 'LINEAR') this%isrb = 1
-          if (trim(adjustl(keyword2)) == 'FREUNDLICH') this%isrb = 2
-          if (trim(adjustl(keyword2)) == 'LANGMUIR') this%isrb = 3
-          select case (this%isrb)
-          case (1)
-            write (this%iout, fmtisrb)
-          case (2)
+        case ('SORBTION')
+          call store_error('SORBTION is not a valid option.  Use &
+                           &SORPTION instead.')
+          call this%parser%StoreErrorUnit()
+      case ('SORPTION')
+        call this%parser%GetStringCaps(sorption)
+          select case (sorption)
+          case ('LINEAR', '')
+            this%isrb = 1
+            write (this%iout, fmtlinear)
+          case ('FREUNDLICH')
+            this%isrb = 2
             write (this%iout, fmtfreundlich)
-          case (3)
+          case ('LANGMUIR')
+            this%isrb = 3
             write (this%iout, fmtlangmuir)
+          case default
+            call store_error('Unknown sorption type was specified ' &
+                             & //'('//trim(adjustl(sorption))//').'// &
+                             &' Sorption must be specified as LINEAR, &
+                             &FREUNDLICH, or LANGMUIR.')
+            call this%parser%StoreErrorUnit()
           end select
         case ('FIRST_ORDER_DECAY')
           this%idcy = 1

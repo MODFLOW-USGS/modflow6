@@ -1075,7 +1075,11 @@ contains
             call store_error('Optional BUDGETCSV keyword must be followed by &
               &FILEOUT')
           end if
-        case ('SORBTION', 'SORPTION')
+        case ('SORBTION')
+            call store_error('SORBTION is not a valid option.  Use &
+                             &SORPTION instead.')
+            call this%parser%StoreErrorUnit()
+        case ('SORPTION')
           call this%parser%GetStringCaps(sorption)
           select case (sorption)
           case ('LINEAR', '')
