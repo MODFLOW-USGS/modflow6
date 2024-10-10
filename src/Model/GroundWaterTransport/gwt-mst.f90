@@ -1639,6 +1639,42 @@ contains
     return
   end function
 
+  !> @ brief Get effective Freundlich distribution coefficient
+  !<
+  function get_freundlich_kd(conc, kf, a) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kf !< freundlich constant
+    real(DP), intent(in) :: a !< freundlich exponent
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = kf * conc**(a - DONE)
+    else
+      kd = DZERO
+    end if
+    return
+  end function get_freundlich_kd
+
+  !> @ brief Get effective Langmuir distribution coefficient
+  !<
+  function get_langmuir_kd(conc, kl, sbar) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kl !< langmuir constant
+    real(DP), intent(in) :: sbar !< langmuir sorption sites
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = (kl * sbar) / (DONE + kl * conc)
+    else
+      kd = DZERO
+    end if
+    return
+  end function get_langmuir_kd
+
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
   !!  Function to calculate the zero-order decay rate from the user specified

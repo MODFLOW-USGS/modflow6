@@ -22,7 +22,8 @@ module GwtIstModule
   use TspFmiModule, only: TspFmiType
   use GwtMstModule, only: GwtMstType, get_zero_order_decay, &
                           get_freundlich_conc, get_freundlich_derivative, &
-                          get_langmuir_conc, get_langmuir_derivative
+                          get_langmuir_conc, get_langmuir_derivative, &
+                          get_freundlich_kd, get_langmuir_kd
   use OutputControlDataModule, only: OutputControlDataType
   use MatrixBaseModule
   !
@@ -286,7 +287,8 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: dcimsrbdc
+    real(DP) :: kdnew
+    real(DP) :: kdold
     real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
@@ -295,7 +297,6 @@ contains
     real(DP) :: gamma2im
     real(DP) :: cimold
     real(DP) :: f
-    real(DP) :: cimavg
     real(DP) :: cimsrbold
     real(DP) :: cimsrbnew
     real(DP), dimension(9) :: ddterm
@@ -322,7 +323,9 @@ contains
       zetaim = this%zetaim(n)
 
       ! Add dual domain mass transfer contributions to rhs and hcof
-      dcimsrbdc = DZERO
+      ! dcimsrbdc = DZERO
+      kdnew = DZERO
+      kdold = DZERO
       volfracim = DZERO
       rhobim = DZERO
       lambda1im = DZERO
@@ -350,23 +353,26 @@ contains
         select case (this%isrb)
         case (1)
           ! linear
-          dcimsrbdc = this%distcoef(n)
-          cimsrbold = this%cimold(n) * this%distcoef(n)
-          cimsrbnew = this%cimnew(n) * this%distcoef(n)
+          kdnew = this%distcoef(n)
+          kdold = this%distcoef(n)
+          cimsrbnew = this%cimnew(n) * kdnew
+          cimsrbold = this%cimold(n) * kdold
         case (2)
           ! freundlich
-          cimavg = DHALF * (this%cimnew(n) + this%cimold(n))
-          dcimsrbdc = get_freundlich_derivative(cimavg, this%distcoef(n), &
-                                                this%sp2(n))
+          kdnew = get_freundlich_kd(this%cimnew(n), this%distcoef(n), &
+                                    this%sp2(n))
+          kdold = get_freundlich_kd(this%cimold(n), this%distcoef(n), &
+                                    this%sp2(n))
           cimsrbnew = get_freundlich_conc(this%cimnew(n), this%distcoef(n), &
                                           this%sp2(n))
           cimsrbold = get_freundlich_conc(this%cimold(n), this%distcoef(n), &
                                           this%sp2(n))
         case (3)
           ! langmuir
-          cimavg = DHALF * (this%cimnew(n) + this%cimold(n))
-          dcimsrbdc = get_langmuir_derivative(cimavg, this%distcoef(n), &
-                                              this%sp2(n))
+          kdnew = get_langmuir_kd(this%cimnew(n), this%distcoef(n), &
+                                  this%sp2(n))
+          kdold = get_langmuir_kd(this%cimold(n), this%distcoef(n), &
+                                  this%sp2(n))
           cimsrbnew = get_langmuir_conc(this%cimnew(n), this%distcoef(n), &
                                         this%sp2(n))
           cimsrbold = get_langmuir_conc(this%cimold(n), this%distcoef(n), &
@@ -387,7 +393,7 @@ contains
 
       ! calculate dual domain terms and get the hcof and rhs contributions
       call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                      volfracim, rhobim, dcimsrbdc, lambda1im, lambda2im, &
+                      volfracim, rhobim, kdnew, kdold, lambda1im, lambda2im, &
                       gamma1im, gamma2im, zetaim, ddterm, f)
       cimold = this%cimold(n)
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -420,14 +426,14 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: dcimsrbdc
+    real(DP) :: kdnew
+    real(DP) :: kdold
     real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
     real(DP) :: lambda2im
     real(DP) :: gamma1im
     real(DP) :: gamma2im
-    real(DP) :: cimavg
     real(DP) :: cimnew
     real(DP) :: cimold
     real(DP) :: f
@@ -460,7 +466,8 @@ contains
         rate = DZERO
         hhcof = DZERO
         rrhs = DZERO
-        dcimsrbdc = DZERO
+        kdnew = DZERO
+        kdold = DZERO
         volfracim = DZERO
         rhobim = DZERO
         lambda1im = DZERO
@@ -484,23 +491,26 @@ contains
           select case (this%isrb)
           case (1)
             ! linear
-            dcimsrbdc = this%distcoef(n)
-            cimsrbold = this%cimold(n) * this%distcoef(n)
-            cimsrbnew = this%cimnew(n) * this%distcoef(n)
+            kdnew = this%distcoef(n)
+            kdold = this%distcoef(n)
+            cimsrbnew = this%cimnew(n) * kdnew
+            cimsrbold = this%cimold(n) * kdold
           case (2)
             ! freundlich
-            cimavg = DHALF * (this%cimnew(n) + this%cimold(n))
-            dcimsrbdc = get_freundlich_derivative(cimavg, this%distcoef(n), &
-                                                  this%sp2(n))
+            kdnew = get_freundlich_kd(this%cimnew(n), this%distcoef(n), &
+                                      this%sp2(n))
+            kdold = get_freundlich_kd(this%cimold(n), this%distcoef(n), &
+                                      this%sp2(n))
             cimsrbnew = get_freundlich_conc(this%cimnew(n), this%distcoef(n), &
                                             this%sp2(n))
             cimsrbold = get_freundlich_conc(this%cimold(n), this%distcoef(n), &
                                             this%sp2(n))
           case (3)
             ! langmuir
-            cimavg = DHALF * (this%cimnew(n) + this%cimold(n))
-            dcimsrbdc = get_langmuir_derivative(cimavg, this%distcoef(n), &
-                                                this%sp2(n))
+            kdnew = get_langmuir_kd(this%cimnew(n), this%distcoef(n), &
+                                    this%sp2(n))
+            kdold = get_langmuir_kd(this%cimold(n), this%distcoef(n), &
+                                    this%sp2(n))
             cimsrbnew = get_langmuir_conc(this%cimnew(n), this%distcoef(n), &
                                           this%sp2(n))
             cimsrbold = get_langmuir_conc(this%cimold(n), this%distcoef(n), &
@@ -520,7 +530,7 @@ contains
 
         ! calculate the terms and then get the hcof and rhs contributions
         call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        volfracim, rhobim, dcimsrbdc, lambda1im, lambda2im, &
+                        volfracim, rhobim, kdnew, kdold, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
         cimold = this%cimold(n)
         call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -1393,7 +1403,8 @@ contains
   !!
   !<
   subroutine get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        volfracim, rhobim, dcbardc, lambda1im, lambda2im, &
+                        volfracim, rhobim, kdnew, kdold, &
+                        lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
     real(DP), intent(in) :: thetaim !< immobile domain porosity
@@ -1402,7 +1413,8 @@ contains
     real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
     real(DP), intent(in) :: volfracim !< volume fraction of immobile domain
     real(DP), intent(in) :: rhobim !< bulk density for the immobile domain (fim * rhob)
-    real(DP), intent(in) :: dcbardc !< distribution coefficient for linear isotherm
+    real(DP), intent(in) :: kdnew !< effective distribution coefficient for new time
+    real(DP), intent(in) :: kdold !< effective distribution coefficient for old time
     real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
     real(DP), intent(in) :: lambda2im !< first-order decay rate in sorbed phase
     real(DP), intent(in) :: gamma1im !< zero-order decay rate in aqueous phase
@@ -1422,10 +1434,10 @@ contains
     !    information guide (mf6suptechinfo.pdf)
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
-    ddterm(3) = volfracim * rhobim * vcell * dcbardc * tled
-    ddterm(4) = volfracim * rhobim * vcell * dcbardc * tled
+    ddterm(3) = volfracim * rhobim * vcell * kdnew * tled
+    ddterm(4) = volfracim * rhobim * vcell * kdold * tled
     ddterm(5) = thetaim * lambda1im * vcell
-    ddterm(6) = lambda2im * volfracim * rhobim * dcbardc * vcell
+    ddterm(6) = lambda2im * volfracim * rhobim * kdnew * vcell
     ddterm(7) = thetaim * gamma1im * vcell
     ddterm(8) = gamma2im * volfracim * rhobim * vcell
     ddterm(9) = vcell * swtpdt * zetaim
