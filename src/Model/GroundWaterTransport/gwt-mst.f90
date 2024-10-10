@@ -1265,8 +1265,8 @@ contains
           call store_error('SORBTION is not a valid option.  Use &
                            &SORPTION instead.')
           call this%parser%StoreErrorUnit()
-      case ('SORPTION')
-        call this%parser%GetStringCaps(sorption)
+        case ('SORPTION')
+          call this%parser%GetStringCaps(sorption)
           select case (sorption)
           case ('LINEAR', '')
             this%isrb = 1
