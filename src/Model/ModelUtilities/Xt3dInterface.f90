@@ -1150,7 +1150,7 @@ contains
   !> @brief Allocate and populate iallpc array. Set lamatsaved.
   subroutine xt3d_iallpc(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_deallocate
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate
     ! -- dummy
     class(Xt3dType) :: this
     ! -- local
@@ -1212,8 +1212,9 @@ contains
     end if
     !
     if (.not. this%lamatsaved) then
-      call mem_deallocate(this%iallpc)
-      call mem_allocate(this%iallpc, 0, 'IALLPC', this%memoryPath)
+      ! there are no permanently confined connections so deallocate iallpc
+      ! in order to save memory
+      call mem_reallocate(this%iallpc, 0, 'IALLPC', this%memoryPath)
     end if
     !
     ! -- Return
