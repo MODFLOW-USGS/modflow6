@@ -311,8 +311,6 @@ contains
 
     obj_ptr => model_list%GetItem(idx)
     v_model => cast_as_virtual_model(obj_ptr)
-    return
-
   end function get_virtual_model_from_list
 
   function cast_as_virtual_model(obj_ptr) result(v_model)

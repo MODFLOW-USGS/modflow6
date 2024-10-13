@@ -178,9 +178,6 @@ contains
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
-    !
-    ! -- Return
-    return
   end subroutine disv2d_da
 
   ! !> @brief Deallocate variables

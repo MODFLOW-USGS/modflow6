@@ -47,8 +47,6 @@ CONTAINS
     do j = n - 1, 1, -1
       x(j) = x(j) - w(j + 1) * x(j + 1)
     end do
-    ! -- return
-    return
   end subroutine ims_misc_thomas
 
 END MODULE IMSLinearMisc

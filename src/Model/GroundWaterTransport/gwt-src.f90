@@ -79,9 +79,6 @@ contains
     !
     ! -- Store the appropriate label based on the dependent variable
     srcobj%depvartype = depvartype
-    !
-    ! -- return
-    return
   end subroutine src_create
 
   !> @brief Deallocate memory
@@ -96,9 +93,6 @@ contains
     call this%BndType%bnd_da()
     !
     ! -- scalars
-    !
-    ! -- Return
-    return
   end subroutine src_da
 
   !> @brief Allocate scalars
@@ -116,9 +110,6 @@ contains
     ! -- allocate the object and assign values to object variables
     !
     ! -- Set values
-    !
-    ! -- Return
-    return
   end subroutine src_allocate_scalars
 
   !> @brief Formulate the HCOF and RHS terms
@@ -148,9 +139,6 @@ contains
       q = this%bound(1, i)
       this%rhs(i) = -q
     end do
-    !
-    ! -- Return
-    return
   end subroutine src_cf
 
   !> @brief Add matrix terms related to specified mass source loading
@@ -185,9 +173,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine src_fc
 
   !> @brief Define list labels
@@ -216,9 +201,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- Return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -234,9 +216,6 @@ contains
     class(GwtSrcType) :: this
     !
     src_obs_supported = .true.
-    !
-    ! -- Return
-    return
   end function src_obs_supported
 
   !> @brief Define observations
@@ -259,9 +238,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- Return
-    return
   end subroutine src_df_obs
 
   !> @brief Procedure related to time series
@@ -286,9 +262,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine src_rp_ts
 
 end module GwtSrcModule

@@ -78,9 +78,6 @@ contains
     packobj%ncolbnd = 2
     packobj%iscloc = 2
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- return
-    return
   end subroutine api_create
 
   !> @ brief Read additional options for package
@@ -105,9 +102,6 @@ contains
       ! -- No options found
       found = .false.
     end select
-    !
-    ! -- return
-    return
   end subroutine api_options
 
   !> @ brief Read and prepare stress period data for package
@@ -120,9 +114,6 @@ contains
   subroutine api_rp(this)
     ! -- dummy variables
     class(ApiType), intent(inout) :: this
-    !
-    ! -- return
-    return
   end subroutine api_rp
 
   !> @ brief Fill A and r for the package
@@ -163,9 +154,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, qusr)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine api_fc
 
   ! -- Procedures related to observations
@@ -182,9 +170,6 @@ contains
     !
     ! -- set variables
     api_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function api_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -206,9 +191,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- return
-    return
   end subroutine api_df_obs
 
 end module apimodule

@@ -116,9 +116,6 @@ contains
       call pobj%source_crosssectiondata()
 
     end if
-
-    ! -- Return
-    return
   end subroutine cxs_cr
 
   !> @ brief Allocate scalars
@@ -142,8 +139,6 @@ contains
     ! -- initialize
     this%nsections = 0
     this%npoints = 0
-
-    return
   end subroutine allocate_scalars
 
   !> @brief Copy options from IDM into package
@@ -171,9 +166,6 @@ contains
     if (this%iout > 0) then
       call this%log_options(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_options
 
   !> @brief Write user options to list file
@@ -232,9 +224,6 @@ contains
     if (this%iout > 0) then
       call this%log_dimensions(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_dimensions
 
   !> @brief Write user options to list file
@@ -293,9 +282,6 @@ contains
     do n = 1, this%nsections + 1
       this%iacross(n) = 0
     end do
-
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Copy options from IDM into package
@@ -340,9 +326,6 @@ contains
     !
     ! -- Calculate the iacross index array using nxspoints
     call calc_iacross(this%nxspoints, this%iacross)
-    !
-    ! -- Return
-    return
   end subroutine source_packagedata
 
   !> @brief Calculate index pointer array iacross from nxspoints
@@ -428,9 +411,6 @@ contains
     if (this%iout > 0) then
       call this%log_crosssectiondata(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_crosssectiondata
 
   !> @brief Write user packagedata to list file
@@ -519,8 +499,6 @@ contains
       write (this%iout, *) 'Done processing information for cross section ', idcxs
 
     end if
-
-    return
   end subroutine write_cxs_table
 
   !> @brief deallocate memory
@@ -553,9 +531,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine cxs_da
 
   subroutine get_cross_section_info(this, idcxs, i0, i1, npts, icalcmeth)
@@ -592,7 +567,6 @@ contains
         icalcmeth = 0 ! sum q by cross section segments
       end if
     end if
-    return
   end subroutine get_cross_section_info
 
   function get_area(this, idcxs, width, depth) result(area)

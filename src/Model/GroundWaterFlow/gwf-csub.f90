@@ -350,9 +350,6 @@ contains
     !
     ! -- Initialize block parser
     call csubobj%parser%Initialize(csubobj%inunit, csubobj%iout)
-    !
-    ! -- return
-    return
   end subroutine csub_cr
 
   !> @ brief Allocate and read method for package
@@ -593,9 +590,6 @@ contains
         this%cg_theta(node) = this%cg_thetaini(node)
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_ar
 
   !> @ brief Read options for package
@@ -1034,9 +1028,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine read_options
 
   !> @ brief Read dimensions for package
@@ -1106,9 +1097,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-    !
-    ! -- return
-    return
   end subroutine csub_read_dimensions
 
   !> @ brief Allocate scalars
@@ -1223,9 +1211,6 @@ contains
     this%icellf = 0
     this%ninterbeds = 0
     this%gwfiss0 = 0
-    !
-    ! -- return
-    return
   end subroutine csub_allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -1401,10 +1386,6 @@ contains
       this%nodelistsig0(n) = 0
       this%sig0(n) = DZERO
     end do
-    !
-    ! -- return
-    return
-
   end subroutine csub_allocate_arrays
 
   !> @ brief Read packagedata for package
@@ -1859,9 +1840,6 @@ contains
         call store_error(errmsg)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_read_packagedata
 
   !> @ brief Final processing for package
@@ -2273,9 +2251,6 @@ contains
     deallocate (imap_sel)
     deallocate (locs)
     deallocate (pctcomp_arr)
-    !
-    ! -- return
-    return
   end subroutine csub_fp
 
   !> @ brief Deallocate package memory
@@ -2496,9 +2471,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- return
-    return
   end subroutine csub_da
 
   !> @ brief Read and prepare stress period data for package
@@ -2659,9 +2631,6 @@ contains
     !
     ! -- read observations
     call this%csub_rp_obs()
-    !
-    ! -- return
-    return
   end subroutine csub_rp
 
   !> @ brief Advance the package
@@ -2782,9 +2751,6 @@ contains
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
     call this%obs%obs_ad()
-    !
-    ! -- return
-    return
   end subroutine csub_ad
 
   !> @ brief Fill A and r for the package
@@ -2898,9 +2864,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_fc
 
   !> @ brief Fill Newton-Raphson terms in A and r for the package
@@ -3002,9 +2965,6 @@ contains
         end do
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_fn
 
   !> @ brief Initialize optional tables
@@ -3249,9 +3209,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_cc
 
   !> @ brief Calculate flows for package
@@ -3551,10 +3508,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
-
   end subroutine csub_cq
 
   !> @ brief Model budget calculation for package
@@ -3689,9 +3642,6 @@ contains
                                  budtxt(4), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_save_model_flows
 
 !> @ brief Save and print dependent values for package
@@ -3956,9 +3906,6 @@ contains
         write (this%iout, fmtnconv) this%idb_nconv_count(1)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_ot_dv
 
   !> @ brief Calculate the stress for model cells
@@ -4091,10 +4038,6 @@ contains
       es = this%cg_gs(node) - phead
       this%cg_es(node) = es
     end do
-    !
-    ! -- return
-    return
-
   end subroutine csub_cg_calc_stress
 
   !> @ brief Check effective stress values
@@ -4158,10 +4101,6 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
-
   end subroutine csub_cg_chk_stress
 
   !> @ brief Update no-delay material properties
@@ -4200,9 +4139,6 @@ contains
       this%thick(i) = thick
       this%theta(i) = theta
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_nodelay_update
 
   !> @ brief Calculate no-delay interbed storage coefficients
@@ -4313,10 +4249,6 @@ contains
     ! -- save ske and sk
     this%ske(ib) = rho1
     this%sk(ib) = rho2
-    !
-    ! -- return
-    return
-
   end subroutine csub_nodelay_fc
 
   !> @ brief Calculate no-delay interbed compaction
@@ -4362,10 +4294,6 @@ contains
     else
       comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
     end if
-    !
-    ! -- return
-    return
-
   end subroutine csub_nodelay_calc_comp
 
   !> @ brief Set initial states for the package
@@ -4752,9 +4680,6 @@ contains
     if (this%lhead_based .EQV. .TRUE.) then
       this%iupdatestress = 0
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_set_initial_state
 
   !> @ brief Formulate the coefficients for coarse-grained materials
@@ -4820,9 +4745,6 @@ contains
       ! -- calculate and apply the flow correction term
       rhs = rhs - rho1 * snnew * (hcell - hbar)
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_cg_fc
 
   !> @ brief Formulate coarse-grained Newton-Raphson terms
@@ -4896,9 +4818,6 @@ contains
       ! -- calculate rhs term
       rhs = hcof * hcell
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_cg_fn
 
   !> @ brief Formulate the coefficients for a interbed
@@ -4985,9 +4904,6 @@ contains
       rhs = rhs * f
       hcof = -hcof * f
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_interbed_fc
 
   !> @ brief Formulate the coefficients for a interbed
@@ -5080,9 +4996,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_interbed_fn
 
   !> @ brief Calculate Sske for a cell
@@ -5139,9 +5052,6 @@ contains
       call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, f)
     end if
     sske = f * this%cg_ske_cr(n)
-    !
-    ! -- return
-    return
   end subroutine csub_cg_calc_sske
 
   !> @ brief Calculate coarse-grained compaction in a cell
@@ -5173,9 +5083,6 @@ contains
     !
     ! - calculate compaction
     comp = hcof * hcell - rhs
-    !
-    ! -- return
-    return
   end subroutine csub_cg_calc_comp
 
   !> @ brief Update coarse-grained material properties
@@ -5215,9 +5122,6 @@ contains
       this%cg_thick(node) = thick
       this%cg_theta(node) = theta
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_cg_update
 
   !> @ brief Formulate coarse-grained water compressibility coefficients
@@ -5273,9 +5177,6 @@ contains
     !
     ! -- calculate rhs term
     rhs = -wc0 * snold * hcellold
-    !
-    ! -- return
-    return
   end subroutine csub_cg_wcomp_fc
 
   !> @ brief Formulate coarse-grained water compressibility coefficients
@@ -5338,9 +5239,6 @@ contains
     !
     ! -- calculate rhs term
     rhs = hcof * hcell
-    !
-    ! -- return
-    return
   end subroutine csub_cg_wcomp_fn
 
   !> @ brief Formulate no-delay interbed water compressibility coefficients
@@ -5391,9 +5289,6 @@ contains
     wc = f * this%theta(ib) * this%thick(ib)
     hcof = -wc * snnew
     rhs = -wc0 * snold * hcellold
-    !
-    ! -- return
-    return
   end subroutine csub_nodelay_wcomp_fc
 
   !> @ brief Formulate no-delay interbed water compressibility coefficients
@@ -5454,9 +5349,6 @@ contains
     !
     ! -- set rhs
     rhs = hcof * hcell
-    !
-    ! -- return
-    return
   end subroutine csub_nodelay_wcomp_fn
 
   !> @brief Calculate the void ratio
@@ -5473,9 +5365,6 @@ contains
     real(DP) :: void_ratio
     ! -- calculate void ratio
     void_ratio = theta / (DONE - theta)
-    !
-    ! -- return
-    return
   end function csub_calc_void_ratio
 
   !> @brief Calculate the porosity
@@ -5493,9 +5382,6 @@ contains
     !
     ! -- calculate theta
     theta = void_ratio / (DONE + void_ratio)
-    !
-    ! -- return
-    return
   end function csub_calc_theta
 
   !> @brief Calculate the interbed thickness
@@ -5518,9 +5404,6 @@ contains
     if (idelay /= 0) then
       thick = thick * this%rnb(ib)
     end if
-    !
-    ! -- return
-    return
   end function csub_calc_interbed_thickness
 
   !> @brief Calculate the cell node
@@ -5550,9 +5433,6 @@ contains
       v = zbar
     end if
     znode = DHALF * (v + bottom)
-    !
-    ! -- return
-    return
   end function csub_calc_znode
 
   !> @brief Calculate the effective stress at elevation z
@@ -5575,9 +5455,6 @@ contains
     !
     ! -- adjust effective stress to vertical node position
     es = es0 - (z - z0) * (this%sgs(node) - DONE)
-    !
-    ! -- return
-    return
   end function csub_calc_adjes
 
   !> @brief Check delay interbed head
@@ -5626,9 +5503,6 @@ contains
         exit idelaycells
       end if
     end do idelaycells
-    !
-    ! -- return
-    return
   end subroutine csub_delay_head_check
 
   !> @brief Calculate cell saturation
@@ -5665,9 +5539,6 @@ contains
     if (this%ieslag /= 0) then
       snold = snnew
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_calc_sat
 
   !> @brief Calculate the saturation derivative
@@ -5694,9 +5565,6 @@ contains
     else
       satderv = DZERO
     end if
-    !
-    ! -- return
-    return
   end function csub_calc_sat_derivative
 
   !> @brief Calculate specific storage coefficient factor
@@ -5738,9 +5606,6 @@ contains
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_calc_sfacts
 
   !> @brief Calculate new material properties
@@ -5772,9 +5637,6 @@ contains
     void_ratio = void_ratio + strain * (DONE + void_ratio)
     theta = this%csub_calc_theta(void_ratio)
     thick = thick - comp
-    !
-    ! -- return
-    return
   end subroutine csub_adj_matprop
 
   !> @brief Solve delay interbed continuity equation
@@ -5865,9 +5727,6 @@ contains
         dhmax0 = dhmax
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_delay_sln
 
   !> @brief Calculate delay interbed znode and z relative to interbed center
@@ -5929,10 +5788,6 @@ contains
       this%dbrelz(n, idelay) = zr
       zr = zr - dz
     end do
-    !
-    ! -- return
-    return
-
   end subroutine csub_delay_init_zcell
 
   !> @brief Calculate delay interbed stress values
@@ -6009,9 +5864,6 @@ contains
       this%dbgeo(n, idelay) = sigma
       this%dbes(n, idelay) = sigma - phead
     end do
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_stress
 
   !> @brief Calculate delay interbed cell storage coefficients
@@ -6117,9 +5969,6 @@ contains
         ssk = f * this%ci(ib)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_ssksske
 
   !> @brief Assemble delay interbed coefficients
@@ -6157,10 +6006,6 @@ contains
       this%dbad(n) = aii
       this%dbrhs(n) = r
     end do
-    !
-    ! -- return
-    return
-
   end subroutine csub_delay_assemble
 
   !> @brief Assemble delay interbed standard formulation coefficients
@@ -6292,10 +6137,6 @@ contains
     wc0 = dz0 * wcf * theta0
     aii = aii - dsn * wc
     r = r - dsn0 * wc0 * h0
-    !
-    ! -- return
-    return
-
   end subroutine csub_delay_assemble_fc
 
   !> @brief Assemble delay interbed Newton-Raphson formulation coefficients
@@ -6460,10 +6301,6 @@ contains
     ! -- add newton-raphson water compressibility terms
     aii = aii + wcderv
     r = r - qwc + wcderv * h
-    !
-    ! -- return
-    return
-
   end subroutine csub_delay_assemble_fn
 
   !> @brief Calculate delay interbed saturation
@@ -6504,9 +6341,6 @@ contains
     if (this%ieslag /= 0) then
       snold = snnew
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_sat
 
   !> @brief Calculate the delay interbed cell saturation derivative
@@ -6538,9 +6372,6 @@ contains
     else
       satderv = DZERO
     end if
-    !
-    ! -- return
-    return
   end function csub_delay_calc_sat_derivative
 
   !> @brief Calculate delay interbed storage change
@@ -6627,9 +6458,6 @@ contains
     ! -- save ske and sk
     this%ske(ib) = ske
     this%sk(ib) = sk
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_dstor
 
   !> @brief Calculate delay interbed water compressibility
@@ -6681,9 +6509,6 @@ contains
         dwc = dwc + v * tled
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_wcomp
 
   !> @brief Calculate delay interbed compaction
@@ -6768,9 +6593,6 @@ contains
     comp = comp * this%rnb(ib)
     compi = compi * this%rnb(ib)
     compe = compe * this%rnb(ib)
-    !
-    ! -- return
-    return
   end subroutine csub_delay_calc_comp
 
   !> @brief Update delay interbed material properties
@@ -6846,9 +6668,6 @@ contains
     end if
     this%thick(ib) = tthick
     this%theta(ib) = wtheta
-    !
-    ! -- return
-    return
   end subroutine csub_delay_update
 
   !> @brief Calculate delay interbed contribution to the cell
@@ -6885,9 +6704,6 @@ contains
       rhs = rhs - c2 * this%dbh(this%ndelaycells, idelay)
       hcof = c1 + c2
     end if
-    !
-    ! -- return
-    return
   end subroutine csub_delay_fc
 
   !> @brief Calculate the flow from delay interbed top or bottom
@@ -6912,9 +6728,6 @@ contains
     idelay = this%idelay(ib)
     c = DTWO * this%kv(ib) / this%dbdzini(n, idelay)
     q = c * (hcell - this%dbh(n, idelay))
-    !
-    ! -- return
-    return
   end function csub_calc_delay_flow
 
   !
@@ -6932,9 +6745,6 @@ contains
     !
     ! -- initialize variables
     csub_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function csub_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -7122,8 +6932,6 @@ contains
     !    for delay-flowbot observation type.
     call this%obs%StoreObsType('delay-flowbot', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
-    !
-    return
   end subroutine csub_df_obs
 
   !> @brief Set the observations for this time step
@@ -7342,8 +7150,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    return
   end subroutine csub_bd_obs
 
   !> @brief Read and prepare the observations
@@ -7510,10 +7316,8 @@ contains
         call store_error_unit(this%inunit)
       end if
     end if
-    !
-    !
-    return
   end subroutine csub_rp_obs
+
   !
   ! -- Procedures related to observations (NOT type-bound)
 
@@ -7595,9 +7399,6 @@ contains
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
-    !
-    ! -- return
-    return
   end subroutine csub_process_obsID
 
   !> @ brief Define the list label for the package
@@ -7626,9 +7427,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
 end module GwfCsubModule

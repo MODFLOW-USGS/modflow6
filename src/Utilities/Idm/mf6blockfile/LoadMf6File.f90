@@ -112,9 +112,6 @@ contains
     !
     ! -- finalize static load
     call this%finalize()
-    !
-    ! --return
-    return
   end subroutine load
 
   !> @brief init
@@ -153,9 +150,6 @@ contains
     ! -- log lst file header
     call idm_log_header(this%mf6_input%component_name, &
                         this%mf6_input%subcomponent_name, this%iout)
-    !
-    ! -- return
-    return
   end subroutine init
 
   !> @brief load a single block
@@ -189,9 +183,6 @@ contains
     call this%block_post_process(iblk)
     !
     deallocate (this%block_tags)
-    !
-    ! --return
-    return
   end subroutine load_block
 
   !> @brief finalize
@@ -215,9 +206,6 @@ contains
     ! -- close logging block
     call idm_log_close(this%mf6_input%component_name, &
                        this%mf6_input%subcomponent_name, this%iout)
-    !
-    ! -- return
-    return
   end subroutine finalize
 
   !> @brief Post parse block handling
@@ -280,9 +268,6 @@ contains
       end if
     case default
     end select
-    !
-    ! -- return
-    return
   end subroutine block_post_process
 
   !> @brief parse block
@@ -353,9 +338,6 @@ contains
         call this%parse_block(iblk, .true.)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine parse_block
 
   subroutine parse_io_tag(this, iblk, pkgtype, which, tag)
@@ -379,9 +361,6 @@ contains
     !
     ! -- load io tag
     call load_io_tag(this%parser, idt, this%mf6_input%mempath, which, this%iout)
-    !
-    ! -- return
-    return
   end subroutine parse_io_tag
 
   subroutine parse_keyword_tag(this, iblk, tag, idt)
@@ -447,9 +426,6 @@ contains
         call this%parser%DevOpt()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine parse_keyword_tag
 
   !> @brief load an individual input record into memory
@@ -538,9 +514,6 @@ contains
     !
     call expandarray(this%block_tags)
     this%block_tags(size(this%block_tags)) = trim(idt%tagname)
-    !
-    ! -- return
-    return
   end subroutine parse_tag
 
   function block_index_dfn(this, iblk) result(idt)
@@ -571,9 +544,6 @@ contains
     idt%tagname = varname
     idt%mf6varname = varname
     idt%datatype = 'INTEGER'
-    !
-    ! -- return
-    return
   end function block_index_dfn
 
   !> @brief parse a structured array record into memory manager
@@ -697,9 +667,6 @@ contains
     !
     ! -- clean up
     call block_params%destroy()
-    !
-    ! -- return
-    return
   end subroutine parse_structarray_block
 
   !> @brief load type keyword
@@ -1283,9 +1250,6 @@ contains
     if (ibinary == 0) then
       call parser%line_reader%bkspc(parser%getunit())
     end if
-    !
-    ! -- return
-    return
   end function read_control_record
 
 end module LoadMf6FileModule

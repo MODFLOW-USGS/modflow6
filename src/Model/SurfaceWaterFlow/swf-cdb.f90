@@ -118,9 +118,6 @@ contains
     !
     ! -- store unit conversion
     cdbobj%gravconv = DGRAVITY * lengthconv * timeconv**2
-    !
-    ! -- return
-    return
   end subroutine cdb_create
 
   !> @ brief Allocate scalars
@@ -143,9 +140,6 @@ contains
     !
     ! -- Set values
     this%gravconv = DZERO
-    !
-    ! -- return
-    return
   end subroutine cdb_allocate_scalars
 
   !> @ brief Allocate arrays
@@ -174,9 +168,6 @@ contains
                      'IDCXS', this%input_mempath)
     call mem_checkin(this%width, 'WIDTH', this%memoryPath, &
                      'WIDTH', this%input_mempath)
-    !
-    ! -- return
-    return
   end subroutine cdb_allocate_arrays
 
   !> @ brief Deallocate package memory
@@ -199,9 +190,6 @@ contains
     !
     ! -- scalars
     call mem_deallocate(this%gravconv)
-    !
-    ! -- return
-    return
   end subroutine cdb_da
 
   !> @ brief Source additional options for package
@@ -228,9 +216,6 @@ contains
     !
     ! -- log SWF specific options
     call this%log_cdb_options(found)
-    !
-    ! -- return
-    return
   end subroutine cdb_options
 
   !> @ brief Log SWF specific package options
@@ -255,9 +240,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- return
-    return
   end subroutine log_cdb_options
 
   !> @ brief SWF read and prepare
@@ -278,9 +260,6 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-    !
-    ! -- return
-    return
   end subroutine cdb_rp
 
   !> @ brief Formulate the package hcof and rhs terms.
@@ -333,8 +312,6 @@ contains
       this%rhs(i) = -q + derv * this%xnew(node)
 
     end do
-    !
-    return
   end subroutine cdb_cf
 
   !> @brief Calculate critical depth boundary flow
@@ -404,9 +381,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine cdb_fc
 
   !> @ brief Define the list label for the package
@@ -435,9 +409,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -456,9 +427,6 @@ contains
     !
     ! -- set boolean
     cdb_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function cdb_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -480,9 +448,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- return
-    return
   end subroutine cdb_df_obs
 
   !> @brief Save observations for the package
@@ -530,9 +495,6 @@ contains
         call this%obs%SaveOneSimval(obsrv, DNODATA)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine cdb_bd_obs
 
   ! -- Procedure related to time series
@@ -560,9 +522,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine cdb_rp_ts
 
   !> @ brief Return a bound value
@@ -592,9 +551,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-    !
-    ! -- return
-    return
   end function cdb_bound_value
 
 end module SwfCdbModule

@@ -248,9 +248,6 @@ contains
     if (icountcmd > 0) then
       call write_message('')
     end if
-    !
-    ! -- return
-    return
   end subroutine GetCommandLineArguments
 
   !> @brief Write command line argument usage
@@ -306,9 +303,6 @@ contains
       'retrieve program information'
     call write_message(line)
     call write_message('', fmt=OPTIONSFMT)
-    !
-    ! -- return
-    return
   end subroutine write_usage
 
 end module CommandArguments

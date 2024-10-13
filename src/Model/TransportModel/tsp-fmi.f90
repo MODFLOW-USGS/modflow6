@@ -102,9 +102,6 @@ contains
     !
     ! -- Store pointer to governing equation scale factor
     fmiobj%eqnsclfac => eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine fmi_cr
 
   !> @brief Read and prepare
@@ -134,9 +131,6 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_rp
 
   !> @brief Advance routine for FMI object
@@ -187,9 +181,6 @@ contains
     if (this%idryinactive /= 0) then
       call this%set_active_status(cnew)
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_ad
 
   !> @brief Calculate coefficients and fill matrix and rhs terms associated
@@ -221,9 +212,6 @@ contains
         call matrix_sln%add_value_pos(idiag_sln, qcorr)
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_fc
 
   !> @brief Calculate flow correction
@@ -256,9 +244,6 @@ contains
         flowja(idiag) = flowja(idiag) + rate
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_cq
 
   !> @brief Calculate budget terms associated with FMI object
@@ -280,9 +265,6 @@ contains
       call rate_accumulator(this%flowcorrect, rin, rout)
       call model_budget%addentry(rin, rout, delt, budtxt(2), isuppress_output)
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_bd
 
   !> @brief Save budget terms associated with FMI object
@@ -321,9 +303,6 @@ contains
                                  budtxt(2), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Return
-    return
   end subroutine fmi_ot_flow
 
   !> @brief Deallocate variables
@@ -377,9 +356,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_da
 
   !> @ brief Allocate scalars
@@ -405,9 +381,6 @@ contains
     !
     ! -- Initialize
     this%iflowerr = 0
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_allocate_scalars
 
   !> @ brief Allocate arrays for FMI object
@@ -436,9 +409,6 @@ contains
     do n = 1, size(this%flowcorrect)
       this%flowcorrect(n) = DZERO
     end do
-    !
-    ! -- return
-    return
   end subroutine gwtfmi_allocate_arrays
 
   !> @brief Set gwt transport cell status
@@ -523,9 +493,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_active_status
 
   !> @brief Calculate the previous saturation level
@@ -553,9 +520,6 @@ contains
     if (this%igwfstrgss /= 0) vold = vold + this%gwfstrgss(n) * delt
     if (this%igwfstrgsy /= 0) vold = vold + this%gwfstrgsy(n) * delt
     satold = vold / vcell
-    !
-    ! -- Return
-    return
   end function gwfsatold
 
   !> @brief Read options from input file
@@ -604,9 +568,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF FMI OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_read_options
 
   !> @brief Read PACKAGEDATA block
@@ -737,9 +698,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF FMI PACKAGEDATA'
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_read_packagedata
 
   !> @brief Set the pointer to a budget object
@@ -765,9 +723,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_aptbudobj_pointer
 
   !> @brief Initialize the groundwater flow terms based on the budget file
@@ -870,9 +825,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine initialize_gwfterms_from_bfr
 
   !> @brief Initialize groundwater flow terms from the groundwater budget
@@ -942,9 +894,6 @@ contains
         iterm = iterm + 1
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine initialize_gwfterms_from_gwfbndlist
 
   !> @brief Initialize an array for storing PackageBudget objects.
@@ -984,9 +933,6 @@ contains
       write (memPath, '(a, i0)') trim(this%memoryPath)//'-FT', n
       call this%gwfpackages(n)%initialize(memPath)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_allocate_gwfpackages
 
   !> @brief Deallocate memory
@@ -1004,9 +950,6 @@ contains
     do n = 1, this%nflowpack
       call this%gwfpackages(n)%da()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwtfmi_deallocate_gwfpackages
 
 end module TspFmiModule

@@ -167,9 +167,6 @@ contains
     allocate (this%component_types(0))
     allocate (this%subcomponent_types(0))
     allocate (this%filenames(0))
-    !
-    ! -- return
-    return
   end subroutine subpkg_create
 
   !> @brief create a new package type
@@ -232,9 +229,6 @@ contains
     ! -- allocate and initialize filename for subpackage
     call mem_allocate(input_fname, LINELENGTH, 'INPUT_FNAME', subpkg_mempath)
     input_fname = filename
-    !
-    ! -- return
-    return
   end subroutine subpkg_add
 
   !> @brief create a new package type
@@ -250,9 +244,6 @@ contains
     deallocate (this%component_types)
     deallocate (this%subcomponent_types)
     deallocate (this%filenames)
-    !
-    ! -- return
-    return
   end subroutine subpkg_destroy
 
   !> @brief initialize static package loader
@@ -344,9 +335,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine create_subpkg_list
 
   subroutine static_destroy(this)
@@ -404,9 +392,6 @@ contains
     !
     ! -- set readasarrays
     this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
-    !
-    ! -- return
-    return
   end subroutine dynamic_init
 
   !> @brief dynamic package loader define
@@ -612,9 +597,6 @@ contains
     !
     obj => model_dynamic
     call list%Add(obj)
-    !
-    ! -- return
-    return
   end subroutine AddDynamicModelToList
 
   !> @brief get model dynamic packages object from list
@@ -639,9 +621,6 @@ contains
         res => obj
       end select
     end if
-    !
-    ! -- return
-    return
   end function GetDynamicModelFromList
 
 end module InputLoadTypeModule

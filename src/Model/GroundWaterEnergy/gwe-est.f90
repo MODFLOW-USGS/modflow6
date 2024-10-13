@@ -111,9 +111,6 @@ contains
     !
     ! -- Initialize block parser
     call estobj%parser%Initialize(estobj%inunit, estobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine est_cr
 
   !> @ brief Allocate and read method for package
@@ -151,9 +148,6 @@ contains
     ! -- set data required by other packages
     call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%latheatvap, &
                                          this%rhos, this%cps)
-    !
-    ! -- Return
-    return
   end subroutine est_ar
 
   !> @ brief Fill coefficient method for package
@@ -183,9 +177,6 @@ contains
       call this%est_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_fc
 
   !> @ brief Fill storage coefficient method for package
@@ -234,9 +225,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_fc_sto
 
   !> @ brief Fill decay coefficient method for package
@@ -297,9 +285,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_fc_dcy
 
   !> @ brief Calculate flows for package
@@ -323,9 +308,6 @@ contains
     if (this%idcy /= 0) then
       call this%est_cq_dcy(nodes, cnew, cold, flowja)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_cq
 
   !> @ brief Calculate storage terms for package
@@ -378,9 +360,6 @@ contains
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_cq_sto
 
   !> @ brief Calculate decay terms for package
@@ -436,9 +415,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_cq_dcy
 
   !> @ brief Calculate budget terms for package
@@ -468,9 +444,6 @@ contains
       call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                  isuppress_output, rowlabel=this%packName)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_bd
 
   !> @ brief Output flow terms for package
@@ -515,9 +488,6 @@ contains
                                    budtxt(2), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_ot_flow
 
   !> @brief Deallocate memory
@@ -551,9 +521,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine est_da
 
   !> @ brief Allocate scalar variables for package
@@ -581,9 +548,6 @@ contains
     this%rhow = DZERO
     this%latheatvap = DZERO
     this%idcy = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -630,9 +594,6 @@ contains
       this%ratedcy(n) = DZERO
       this%decaylast(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read options for package
@@ -715,9 +676,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF ENERGY STORAGE AND TRANSFER OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read data for package
@@ -831,9 +789,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
@@ -879,7 +834,6 @@ contains
       end if
       decay_rate = max(decay_rate, DZERO)
     end if
-    return
   end function get_zero_order_decay
 
 end module GweEstModule

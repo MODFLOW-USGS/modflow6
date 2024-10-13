@@ -111,9 +111,6 @@ contains
     ! -- Store pointer to labels associated with the current model so that the
     !    package has access to the corresponding dependent variable type
     ssmobj%depvartype = depvartype
-    !
-    ! -- Return
-    return
   end subroutine ssm_cr
 
   !> @ brief Define SSM Package
@@ -127,9 +124,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
-    !
-    ! -- Return
-    return
   end subroutine ssm_df
 
   !> @ brief Allocate and read SSM Package
@@ -181,9 +175,6 @@ contains
     !
     ! -- setup the output table
     call this%pak_setup_outputtab()
-    !
-    ! -- Return
-    return
   end subroutine ssm_ar
 
   !> @ brief Read and prepare this SSM Package
@@ -209,9 +200,6 @@ contains
         call ssmiptr%spc_rp()
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_rp
 
   !> @ brief Advance the SSM Package
@@ -256,9 +244,6 @@ contains
                             this%fmi%gwfpackages(ip)%budtxt)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_ad
 
   !> @ brief Calculate the SSM mass flow rate and hcof and rhs values
@@ -357,9 +342,6 @@ contains
     if (present(rrate)) rrate = hcoftmp * ctmp - rhstmp
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
-    !
-    ! -- Return
-    return
   end subroutine ssm_term
 
   !> @ brief Provide bound concentration (or temperature) and mixed flag
@@ -397,9 +379,6 @@ contains
       conc = this%ssmivec(ipackage)%get_value(ientry, nbound_flow)
       if (isrctype == 4) lauxmixed = .true.
     end select
-    !
-    ! -- Return
-    return
   end subroutine get_ssm_conc
 
   !> @ brief Fill coefficients
@@ -441,9 +420,6 @@ contains
       end do
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_fc
 
   !> @ brief Calculate flow
@@ -480,9 +456,6 @@ contains
       end do
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_cq
 
   !> @ brief Calculate the global SSM budget terms
@@ -536,9 +509,6 @@ contains
                                  this%fmi%gwfpackages(ip)%budtxt, &
                                  isuppress_output, rowlabel=rowlabel)
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_bd
 
   !> @ brief Output flows
@@ -667,9 +637,6 @@ contains
         write (this%iout, '(1x)')
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine ssm_ot_flow
 
   !> @ brief Deallocate
@@ -716,9 +683,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine ssm_da
 
   !> @ brief Allocate scalars
@@ -739,9 +703,6 @@ contains
     !
     ! -- Initialize
     this%nbound = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays
@@ -770,9 +731,6 @@ contains
     !
     ! -- Allocate the ssmivec array
     allocate (this%ssmivec(nflowpack))
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read package options
@@ -820,9 +778,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF SSM OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read package data
@@ -838,9 +793,6 @@ contains
     !
     ! -- read and process optional FILEINPUT block
     call this%read_sources_fileinput()
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Read SOURCES block
@@ -938,9 +890,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_sources_aux
 
   !> @ brief Read FILEINPUT block
@@ -1053,9 +1002,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_sources_fileinput
 
   !> @ brief Set iauxpak array value for package ip
@@ -1097,9 +1043,6 @@ contains
     this%iauxpak(ip) = iaux
     write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
       iaux, ' IN PACKAGE ', trim(packname)
-    !
-    ! -- Return
-    return
   end subroutine set_iauxpak
 
   !> @ brief Set ssmivec array value for package ip
@@ -1133,9 +1076,6 @@ contains
     write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
       trim(filename), ' TO SET ', trim(this%depvartype), &
       'S FOR PACKAGE ', trim(packname)
-    !
-    ! -- Return
-    return
   end subroutine set_ssmivec
 
   !> @ brief Setup the output table
@@ -1181,9 +1121,6 @@ contains
       !  call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
       !end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine pak_setup_outputtab
 
 end module TspSsmModule

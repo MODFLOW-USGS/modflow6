@@ -152,9 +152,6 @@ contains
     ! -- Point IST specific variables
     istobj%fmi => fmi
     istobj%mst => mst
-    !
-    ! -- return
-    return
   end subroutine ist_create
 
   !> @ brief Allocate and read method for package
@@ -213,9 +210,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine ist_ar
 
   !> @ brief Read and prepare method for package
@@ -228,9 +222,6 @@ contains
     class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     ! -- format
-    !
-    ! -- return
-    return
   end subroutine ist_rp
 
   !> @ brief Advance the ist package
@@ -264,8 +255,6 @@ contains
         this%cimnew(n) = this%cimold(n)
       end do
     end if
-    !
-    return
   end subroutine ist_ad
 
   !> @ brief Fill coefficient method for package
@@ -613,7 +602,6 @@ contains
     call rate_accumulator(this%strg(:), ratin, ratout)
     call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
-    return
   end subroutine ist_bd
 
   !> @ brief Output model flow terms.
@@ -681,9 +669,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine ist_ot_model_flows
 
   !> @ brief Output dependent variables.
@@ -799,7 +784,6 @@ contains
     !
     ! -- Write budget csv
     call this%budget%writecsv(totim)
-    return
   end subroutine ist_ot_bdsummary
 
   !> @ brief Deallocate package memory
@@ -851,9 +835,6 @@ contains
     !
     ! -- deallocate parent
     call this%BndType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine ist_da
 
   !> @ brief Allocate package scalars
@@ -893,9 +874,6 @@ contains
     ! -- Create the ocd object, which is used to manage printing and saving
     !    of the immobile domain concentrations
     call ocd_cr(this%ocd)
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -985,9 +963,6 @@ contains
     !
     ! -- Set pointers
     this%ocd%dis => this%dis
-    !
-    ! -- return
-    return
   end subroutine ist_allocate_arrays
 
   !> @ brief Read options for package
@@ -1128,9 +1103,6 @@ contains
       write (this%iout, '(1x,a)') 'END OF IMMOBILE STORAGE AND TRANSFER &
                                 &OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read dimensions for package
@@ -1143,9 +1115,6 @@ contains
     class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     ! -- format
-    !
-    ! -- return
-    return
   end subroutine ist_read_dimensions
 
   !> @ brief Read data for package
@@ -1374,9 +1343,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Return thetaim
@@ -1393,9 +1359,6 @@ contains
     real(DP) :: thetaim
     !
     thetaim = this%volfrac(node) * this%porosity(node)
-    !
-    ! -- Return
-    return
   end function get_thetaim
 
   !> @ brief Calculate immobile domain equation terms
@@ -1448,9 +1411,6 @@ contains
     !
     ! -- calculate denominator term, f
     f = ddterm(1) + ddterm(3) + ddterm(5) + ddterm(6) + ddterm(9)
-    !
-    ! -- Return
-    return
   end subroutine get_ddterm
 
   !> @ brief Calculate the hcof and rhs terms for immobile domain
@@ -1475,9 +1435,6 @@ contains
     rhs = (ddterm(2) + ddterm(4)) * cimold - ddterm(7) - ddterm(8)
     rhs = rhs * ddterm(9) / f
     rhs = -rhs
-    !
-    ! -- Return
-    return
   end subroutine get_hcofrhs
 
   !> @ brief Calculate the immobile domain concentration
@@ -1499,9 +1456,6 @@ contains
     cimnew = (ddterm(2) + ddterm(4)) * cimold + ddterm(9) * cnew - ddterm(7) &
              - ddterm(8)
     cimnew = cimnew / f
-    !
-    ! -- Return
-    return
   end function get_ddconc
 
   !> @ brief Calculate the immobile domain budget terms
@@ -1581,9 +1535,6 @@ contains
       budterm(2, i) = budterm(2, i) - rate
     end if
     !
-    !
-    ! -- Return
-    return
   end subroutine accumulate_budterm
 
 end module GwtIstModule

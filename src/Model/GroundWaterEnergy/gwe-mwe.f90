@@ -148,9 +148,6 @@ contains
     mweobj%depvartype = dvt
     mweobj%depvarunit = dvu
     mweobj%depvarunitabbrev = dvua
-    !
-    ! -- Return
-    return
   end subroutine mwe_create
 
   !> @brief Find corresponding mwe package
@@ -267,9 +264,6 @@ contains
     !
     ! -- Streambed conduction term
     this%idxbudmwcd = this%idxbudgwf
-    !
-    ! -- Return
-    return
   end subroutine find_mwe_package
 
   !> @brief Add matrix terms related to MWE
@@ -369,9 +363,6 @@ contains
         call matrix_sln%add_value_pos(ipossymoffd, ctherm)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine mwe_fc_expanded
 
   !> @brief Add terms specific to multi-aquifer wells to the explicit multi-
@@ -416,9 +407,6 @@ contains
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine mwe_solve
 
   !> @brief Function to return the number of budget terms just for this package
@@ -437,9 +425,6 @@ contains
     if (this%idxbudrtmv /= 0) nbudterms = nbudterms + 1
     if (this%idxbudfrtm /= 0) nbudterms = nbudterms + 1
     if (this%idxbudmwcd /= 0) nbudterms = nbudterms + 1
-    !
-    ! -- Return
-    return
   end function mwe_get_nbudterms
 
   !> @brief Set up the budget object that stores all the mwe flows
@@ -533,9 +518,6 @@ contains
       n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
-    !
-    ! -- Return
-    return
   end subroutine mwe_setup_budobj
 
   !> @brief Copy flow terms into this%budobj
@@ -630,9 +612,6 @@ contains
         flowja(idiag) = flowja(idiag) - q
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine mwe_fill_budobj
 
   !> @brief Allocate scalars specific to the multi-aquifer well energy
@@ -660,9 +639,6 @@ contains
     this%idxbudrtmv = 0
     this%idxbudfrtm = 0
     this%idxbudmwcd = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays specific to the streamflow mass transport (SFT)
@@ -686,9 +662,6 @@ contains
     do n = 1, this%ncv
       this%temprate(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine mwe_allocate_arrays
 
   !> @brief Deallocate memory associated with MWE package
@@ -711,9 +684,6 @@ contains
     !
     ! -- Deallocate scalars in TspAptType
     call this%TspAptType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine mwe_da
 
   !> @brief Thermal transport matrix term(s) associated with a user-specified
@@ -749,9 +719,6 @@ contains
     if (present(rrate)) rrate = qbnd * ctmp * this%eqnsclfac
     if (present(rhsval)) rhsval = r * this%eqnsclfac
     if (present(hcofval)) hcofval = h * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine mwe_rate_term
 
   !> @brief Thermal transport matrix term(s) associated with a flowing-
@@ -777,9 +744,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine mwe_fwrt_term
 
   !> @brief Thermal transport matrix term(s) associated with pumped-water-
@@ -805,9 +769,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine mwe_rtmv_term
 
   !> @brief Thermal transport matrix term(s) associated with the flowing-
@@ -833,9 +794,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine mwe_frtm_term
 
   !> @brief Observations
@@ -901,9 +859,6 @@ contains
     !    for observation type.
     call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Return
-    return
   end subroutine mwe_df_obs
 
   !> @brief Process package specific obs
@@ -929,9 +884,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine mwe_rp_obs
 
   !> @brief Calculate observation value and pass it back to APT
@@ -967,9 +919,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine mwe_bd_obs
 
   !> @brief Sets the stress period attributes for keyword use.
@@ -1010,9 +959,6 @@ contains
     end select
     !
 999 continue
-    !
-    ! -- Return
-    return
   end subroutine mwe_set_stressperiod
 
 end module GweMweModule
