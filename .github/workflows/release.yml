@@ -118,7 +118,7 @@ jobs:
         run: pixi run install
 
       - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: modflow6/environment.yml
           cache-downloads: true
@@ -380,7 +380,7 @@ jobs:
         run: sudo ./install.sh --all-users
 
       - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: modflow6/environment.yml
           cache-downloads: true
@@ -523,7 +523,7 @@ jobs:
           path: modflow6-examples
 
       - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: modflow6/environment.yml
           cache-downloads: true
