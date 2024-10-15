@@ -467,16 +467,23 @@ mf6_external = static_library('mf6_external', external_libraries)
 
 message('MODFLOW 6 executable name: ' + buildname)
 
-if build_machine.system() == 'windows' and with_petsc
-  mf6core = static_library('mf6core', 
-                           modflow_sources, 
-                           dependencies:  dependencies, 
-                           link_with: [mf6_external], 
-                           include_directories: petsc_incdir)
+if build_machine.system() == 'windows' and (with_petsc or with_netcdf)
+  if is_extended_build
+    incdir = petsc_incdir + netcdf_incdir
+  elif with_petsc
+    incdir = petsc_incdir
+  elif with_netcdf
+    incdir = netcdf_incdir
+  endif
+  mf6core = static_library('mf6core',
+                           modflow_sources,
+                           dependencies:  dependencies,
+                           link_with: [mf6_external],
+                           include_directories: incdir)
   mf6exe = executable(buildname,
-                      'mf6.f90', 
+                      'mf6.f90',
                       link_with: [mf6core],
-                      dependencies: dependencies, 
+                      dependencies: dependencies,
                       install: true)
 else
   mf6core = static_library('mf6core', 
