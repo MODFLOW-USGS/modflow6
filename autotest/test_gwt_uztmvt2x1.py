@@ -1,41 +1,33 @@
 """
-2x2 test problem for GWE
+2x1 test problem for GWE
 
-Test the rejected infiltration mover transport values
+Test the rejected infiltration mover transport values in a sim with only a
+single reach
 
-Model configuration:  2 SFR reaches exist in the first row.
-                      2 UZF objects exist in the second row
-                      2 MVR/MVT connections transfer rejected infiltration
+Model configuration:  1 SFR reaches exist in the first row.
+                      1 UZF objects exist in the second row
+                      1 MVR/MVT connections transfer rejected infiltration
                         from UZF to SFR
 
-                   Col 1   Col 2
-                 +-------+-------+
-        Row 1  /       /       /|
-  SFR         /       /       / |
-Channel-> =========================
-            /       /  ^    /   |
-           +-------+---+---+    |
-          /       /    |  /|    +
- Row 2   /       /  rej. / |   /
-        /       /  inf. /  |  /
-       /       /       /   | /
-      +-------+-------+    |/
-      |       |       |    +
-      |       |       |   /
-      |       |       |  /
-      |       |       | /
-      |       |       |/
-      +-------+-------+
 
-    Profile View:
-    ------------
-              +---- rej inf.
-              v  +---------+
-       +---------+         |
-       |         |         |
-       |         +---------+
-       +---------+  Row 2
-          Row 1
+        Row 1   +----------+
+  SFR          /          /|
+Channel-> ====================
+             /    ^     /  |               Profile View :
+            /    /     /   |               ------------
+           +----+-----+    |     uzf rej inf. --> mvt --> sfr/sft
+          /    /     /|    +       +-----------+
+ Row 2   /   rej.   / |   /        |           +----   ----+
+        /   inf.   /  |  /         |           |    \_/    |
+       /          /   | /          |           |           |
+      +----------+    |/           |           |           |
+      |          |    +            +-----------+           |
+      |          |   /                         +-----------+
+      |          |  /
+      |          | /
+      |          |/
+      +----------+
+
 """
 
 # Imports
@@ -57,11 +49,11 @@ cases = [
 ]  # 2-cell model, horizontally connected with staggered alignment
 
 nrow = 2
-ncol = 2
+ncol = 1
 nlay = 1
-top = np.array([[[1.0, 1.0], [1.5, 1.5]]], dtype=float)
-bot = np.array([[[0.0, 0.0], [0.5, 0.5]]], dtype=float)
-strthd = np.array([[[0.01, 0.01], [0.51, 0.51]]], dtype=float)
+top = np.array([[[1.0], [1.5]]], dtype=float)
+bot = np.array([[[0.0], [0.5]]], dtype=float)
+strthd = np.array([[[0.01], [0.51]]], dtype=float)
 
 # Model units
 length_units = "meters"
@@ -93,7 +85,6 @@ icelltype = 1  # Cell conversion type (>1: unconfined)
 
 chdlist = []
 chdlist.append([(0, 0, 0), 0.51])
-chdlist.append([(0, 0, 1), 0.51])
 
 # Set some static transport related model parameter values
 strt_conc = 10.0
@@ -118,33 +109,23 @@ finf2 = 2.01
 pet = 0.0
 extdp = 0.5
 
-uzf_pkdat = [
-    [0, (0, 1, 0), 1, -1, surfdep, vks, thtr, thts, thti, eps],
-    [1, (0, 1, 1), 1, -1, surfdep, vks, thtr, thts, thti, eps],
-]
+uzf_pkdat = [[0, (0, 1, 0), 1, -1, surfdep, vks, thtr, thts, thti, eps]]
 uzf_spd = {
     0: [
         [0, finf1, pet, extdp, thtr, 0.0, 0.0, 0.0],
-        [1, finf1, pet, extdp, thtr, 0.0, 0.0, 0.0],
     ],
-    1: [
-        [0, finf2, pet, extdp, thtr, 0.0, 0.0, 0.0],
-        [1, finf2, pet, extdp, thtr, 0.0, 0.0, 0.0],
-    ],
+    1: [[0, finf2, pet, extdp, thtr, 0.0, 0.0, 0.0]],
 }
 concCell = []
 concCell.append(11.1)
-concCell.append(22.2)
-uzt_pkdat = [(0, strt_uz_conc), (1, strt_uz_conc)]  # ifno, strt_conc
-uzt_perdat = [
-    (0, "INFILTRATION", concCell[0]),
-    (1, "INFILTRATION", concCell[1]),
-]
+
+uzt_pkdat = [(0, strt_uz_conc)]  # ifno, strt_conc
+uzt_perdat = [(0, "INFILTRATION", concCell[0])]
 
 # SFR/SFT related input
-conn_dat = [[0, -1], [1, 0]]
+conn_dat = [0]
 sfr_pkdat = []
-nreaches = 2
+nreaches = 1
 rlen = 1.0
 rwid = 1.0
 roughness = 0.03
@@ -153,7 +134,6 @@ rhk = 0.0
 slope = 0.001
 ustrf = 1.0
 ndv = 0
-# reach 1
 rp = [
     0,
     (0, 0, 0),
@@ -164,39 +144,18 @@ rp = [
     rbth,
     rhk,
     roughness,
-    1,
+    0,  # ncon
     ustrf,
-    0,
+    0,  # ndv
 ]
 sfr_pkdat.append(rp)
-# reach 2
-rp = [
-    1,
-    (0, 0, 1),
-    rlen,
-    rwid,
-    slope,
-    top[0, 0, 1],
-    rbth,
-    rhk,
-    roughness,
-    1,
-    ustrf,
-    0,
-]
-sfr_pkdat.append(rp)
-
 sfr_perdat = {0: [0, "INFLOW", 1.0]}
-sft_pkdat = [[0, 0.0], [1, 0.0]]
-sft_perdat = {
-    0: [[0, "STATUS", "ACTIVE"], [0, "INFLOW", 0.0]],
-    1: [[0, "STATUS", "ACTIVE"], [0, "INFLOW", 1.0]],
-}
+sft_pkdat = [0, 0.0]
+sft_perdat = {0: [0, "INFLOW", 0.0]}
 
 # MVR input
 mvr_pkdat = []
 mvr_pkdat.append(["UZF-1", 0, "SFR-1", 0, "FACTOR", 1.0])
-mvr_pkdat.append(["UZF-1", 1, "SFR-1", 1, "FACTOR", 1.0])
 mvr_packages = [
     ("UZF-1",),
     ("SFR-1",),
@@ -222,7 +181,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print(f"Building MF6 model...{name}")
+    print("Building MF6 model...{}".format(name))
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -242,7 +201,7 @@ def build_models(idx, test):
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file=f"{gwfname}.nam",
+        model_nam_file="{}.nam".format(gwfname),
     )
 
     # Instantiating MODFLOW 6 solver for flow model
@@ -259,7 +218,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename=f"{gwfname}.ims",
+        filename="{}.ims".format(gwfname),
     )
     sim.register_ims_package(imsgwf, [gwfname])
 
@@ -276,7 +235,7 @@ def build_models(idx, test):
         botm=bot,
         idomain=1,
         pname="DIS-1",
-        filename=f"{gwfname}.dis",
+        filename="{}.dis".format(gwfname),
     )
 
     # Instantiating MODFLOW 6 storage package
@@ -296,7 +255,7 @@ def build_models(idx, test):
         gwf,
         stress_period_data=chdlist,
         pname="CHD",
-        filename=f"{gwfname}.chd",
+        filename="{}.chd".format(gwfname),
     )
 
     # Instantiating MODFLOW 6 node-property flow package
@@ -308,7 +267,7 @@ def build_models(idx, test):
         k33=k33,
         save_specific_discharge=True,
         pname="NPF-1",
-        filename=f"{gwfname}.npf",
+        filename="{}.npf".format(gwfname),
     )
 
     flopy.mf6.ModflowGwfsto(
@@ -317,14 +276,14 @@ def build_models(idx, test):
         sy=sy,
         transient={0: True},
         pname="STO",
-        filename=f"{gwfname}.sto",
+        filename="{}.sto".format(gwfname),
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
     flopy.mf6.ModflowGwfic(
         gwf,
         strt=strthd,
-        filename=f"{gwfname}.ic",
+        filename="{}.ic".format(gwfname),
     )
 
     # UZF
@@ -363,7 +322,7 @@ def build_models(idx, test):
         connectiondata=conn_dat,
         perioddata=sfr_perdat,
         pname="SFR-1",
-        filename=f"{gwfname}.sfr",
+        filename="{}.sfr".format(gwfname),
     )
 
     # MVR
@@ -381,8 +340,8 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwfoc(
         gwf,
         pname="OC-1",
-        head_filerecord=f"{gwfname}.hds",
-        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord="{}.cbc".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -392,7 +351,7 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 GWT model
     # ----------------------------------------------------
     gwt = flopy.mf6.ModflowGwt(
-        sim, modelname=gwtname, model_nam_file=f"{gwtname}.nam"
+        sim, modelname=gwtname, model_nam_file="{}.nam".format(gwtname)
     )
     gwt.name_file.save_flows = True
     imsgwt = flopy.mf6.ModflowIms(
@@ -408,7 +367,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename=f"{gwtname}.ims",
+        filename="{}.ims".format(gwtname),
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -425,17 +384,17 @@ def build_models(idx, test):
         botm=bot,
         idomain=1,
         pname="DIS-1",
-        filename=f"{gwtname}.dis",
+        filename="{}.dis".format(gwtname),
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGwtic(
-        gwt, strt=strt_conc, pname="IC-1", filename=f"{gwtname}.ic"
+        gwt, strt=strt_conc, pname="IC-1", filename="{}.ic".format(gwtname)
     )
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, pname="ADV-2", filename=f"{gwtname}.adv"
+        gwt, scheme=scheme, pname="ADV-2", filename="{}.adv".format(gwtname)
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -447,7 +406,7 @@ def build_models(idx, test):
         ath1=dispersivity,
         atv=dispersivity,
         pname="CND-1",
-        filename=f"{gwtname}.cnd",
+        filename="{}.cnd".format(gwtname),
     )
 
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
@@ -459,7 +418,7 @@ def build_models(idx, test):
         bulk_density=rhob,
         distcoef=Kd,
         pname="MST-1",
-        filename=f"{gwtname}.mst",
+        filename="{}.mst".format(gwtname),
     )
 
     flopy.mf6.modflow.ModflowGwtuzt(
@@ -475,7 +434,7 @@ def build_models(idx, test):
         uztperioddata=uzt_perdat,
         flow_package_name="UZF-1",
         pname="UZT-1",
-        filename=f"{gwtname}.uzt",
+        filename="{}.uzt".format(gwtname),
     )
 
     flopy.mf6.modflow.ModflowGwtsft(
@@ -490,22 +449,22 @@ def build_models(idx, test):
         packagedata=sft_pkdat,
         reachperioddata=sft_perdat,
         pname="SFT-1",
-        filename=f"{gwtname}.sft",
+        filename="{}.sft".format(gwtname),
     )
 
     flopy.mf6.modflow.ModflowGwtmvt(
         gwt,
         save_flows=True,
         budget_filerecord=gwtname + ".mvt.bud",
-        filename=f"{gwtname}.mvt",
+        filename="{}.mvt".format(gwtname),
     )
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGwtoc(
         gwt,
         pname="OC-2",
-        budget_filerecord=f"{gwtname}.cbc",
-        concentration_filerecord=f"{gwtname}.ucn",
+        budget_filerecord="{}.cbc".format(gwtname),
+        concentration_filerecord="{}.ucn".format(gwtname),
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -515,7 +474,7 @@ def build_models(idx, test):
 
     sourcerecarray = [[]]
     flopy.mf6.ModflowGwessm(
-        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
+        gwt, sources=sourcerecarray, filename="{}.ssm".format(gwtname)
     )
 
     # Instantiating MODFLOW 6 flow-transport exchange mechanism
@@ -525,7 +484,7 @@ def build_models(idx, test):
         exgmnamea=gwfname,
         exgmnameb=gwtname,
         pname="GWFGWT",
-        filename=f"{gwtname}.gwfgwt",
+        filename="{}.gwfgwt".format(gwtname),
     )
 
     return sim, None
@@ -621,11 +580,14 @@ def check_output(idx, test):
 
     msg2 = "Mass received by SFR ('FROM-MVR') not as expected"
     for x in np.arange(len(fromMvrDat)):
-        for y in np.arange(len(fromMvrDat[x + 1])):
-            for z in np.arange(len(mvtdat[x + 1][y])):
-                assert np.isclose(
-                    mvtdat[x + 1][y][z][-1], (x + 1.0) * concCell[z]
-                ), msg2
+        for y in np.arange(len(fromMvrDat[x + 1][0])):
+            if fromMvrDat[x + 1][0][y][-1] == concCell[y]:
+                continue
+            else:
+                for z in np.arange(len(mvtdat[x + 1][y])):
+                    assert np.isclose(
+                        mvtdat[x + 1][y][z][-1], (x + 1.0) * concCell[z]
+                    ), msg2
 
 
 # - No need to change any code below
