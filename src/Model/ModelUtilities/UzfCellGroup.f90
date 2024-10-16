@@ -890,7 +890,7 @@ contains
   !> @brief Square-wave ET function with smoothing at extinction depth
   !<
   function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-    ! -- Return
+    ! -- return
     real(DP) :: etfunc_nlin
     ! -- dummy
     real(DP), intent(in) :: s
@@ -911,7 +911,7 @@ contains
     range = DEM3 * x
     call sCubic(depth, range, det, scale)
     etgw = etgw * scale
-    trhs = -etgw
+    trhs = etgw
     det = -det * etgw
     etfunc_nlin = etgw
     !
