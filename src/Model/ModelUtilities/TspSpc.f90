@@ -369,7 +369,6 @@ contains
     else
       value = this%dblvec(ientry)
     end if
-    return
   end function get_value
 
   !> @ brief Read and prepare
@@ -592,8 +591,6 @@ contains
       end select
 
     end do
-    !
-    return
   end subroutine spc_rp_array
 
   !> @ brief Advance
@@ -706,7 +703,6 @@ contains
                                          this%depvarname)
 
     end select
-    return
   end subroutine set_value
 
   !> @ brief check_flow_package
