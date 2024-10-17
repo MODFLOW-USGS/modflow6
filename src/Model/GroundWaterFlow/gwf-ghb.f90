@@ -76,9 +76,6 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- Return
-    return
   end subroutine ghb_create
 
   !> @brief Deallocate memory
@@ -95,9 +92,6 @@ contains
     ! -- arrays
     call mem_deallocate(this%bhead, 'BHEAD', this%memoryPath)
     call mem_deallocate(this%cond, 'COND', this%memoryPath)
-    !
-    ! -- Return
-    return
   end subroutine ghb_da
 
   !> @brief Set options specific to GhbType
@@ -120,9 +114,6 @@ contains
     !
     ! -- log ghb specific options
     call this%log_ghb_options(found)
-    !
-    ! -- Return
-    return
   end subroutine ghb_options
 
   !> @brief Log options specific to GhbType
@@ -145,9 +136,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- Return
-    return
   end subroutine log_ghb_options
 
   !> @brief Allocate arrays
@@ -172,9 +160,6 @@ contains
                      'BHEAD', this%input_mempath)
     call mem_checkin(this%cond, 'COND', this%memoryPath, &
                      'COND', this%input_mempath)
-    !
-    ! -- Return
-    return
   end subroutine ghb_allocate_arrays
 
   !> @brief Read and prepare
@@ -199,9 +184,6 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-    !
-    ! -- Return
-    return
   end subroutine ghb_rp
 
   !> @brief Check ghb boundary condition data
@@ -254,9 +236,6 @@ contains
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)
     end if
-    !
-    ! -- Return
-    return
   end subroutine ghb_ck
 
   !> @brief Formulate the HCOF and RHS terms
@@ -283,9 +262,6 @@ contains
       this%hcof(i) = -this%cond_mult(i)
       this%rhs(i) = -this%cond_mult(i) * this%bhead(i)
     end do
-    !
-    ! -- Return
-    return
   end subroutine ghb_cf
 
   !> @brief Copy rhs and hcof into solution rhs and amat
@@ -322,9 +298,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, qghb)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine ghb_fc
 
   !> @brief Define the list heading that is written to iout when PRINT_INPUT
@@ -351,9 +324,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- Return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -368,9 +338,6 @@ contains
     class(GhbType) :: this
     !
     ghb_obs_supported = .true.
-    !
-    ! -- Return
-    return
   end function ghb_obs_supported
 
   !> @brief Store observation type supported by GHB package
@@ -391,9 +358,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- Return
-    return
   end subroutine ghb_df_obs
 
   !> @brief Store user-specified conductance for GHB boundary type
@@ -408,9 +372,6 @@ contains
     do n = 1, this%nbound
       this%condinput(n) = this%cond_mult(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine ghb_store_user_cond
 
   !> @brief Apply multiplier to GHB conductance if option AUXMULTCOL is used
@@ -429,9 +390,6 @@ contains
     else
       cond = this%cond(row)
     end if
-    !
-    ! -- Return
-    return
   end function cond_mult
 
   !> @brief Return requested boundary value
@@ -457,9 +415,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-    !
-    ! -- Return
-    return
   end function ghb_bound_value
 
 end module ghbmodule

@@ -260,9 +260,6 @@ contains
     !
     call write_message(line)
     call write_listfile_header(iout)
-    !
-    ! -- return
-    return
   end subroutine create_lstfile
 
   !> @brief Create simulation input context
@@ -291,9 +288,6 @@ contains
     !
     ! -- load in scope exchanges
     call load_exchanges(iout)
-    !
-    ! -- return
-    return
   end subroutine static_input_load
 
   !> @brief Define the simulation
@@ -653,9 +647,6 @@ contains
       call converge_reset()
 
     end if
-    !
-    ! -- return
-    return
   end subroutine sim_step_retry
 
   !> @brief Finalize time step
@@ -742,10 +733,6 @@ contains
     !
     ! -- Check if we're done
     call converge_check(hasConverged)
-    !
-    ! -- return
-    return
-
   end function Mf6FinalizeTimestep
 
 end module Mf6CoreModule

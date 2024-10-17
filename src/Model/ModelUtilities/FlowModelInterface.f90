@@ -126,9 +126,6 @@ contains
     !    transport model since conduction will still be simulated.
     !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
     this%idryinactive = idryinactive
-    !
-    ! -- Return
-    return
   end subroutine fmi_df
 
   !> @brief Allocate the package
@@ -145,9 +142,6 @@ contains
     !
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
-    !
-    ! -- Return
-    return
   end subroutine fmi_ar
 
   !> @brief Deallocate variables
@@ -192,9 +186,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine fmi_da
 
   !> @brief Allocate scalars
@@ -231,9 +222,6 @@ contains
     this%iumvr = 0
     this%nflowpack = 0
     this%idryinactive = 1
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays
@@ -294,9 +282,6 @@ contains
       !    connected GWF model, so allocate gwfpackages to zero
       if (this%inunit == 0) call this%allocate_gwfpackages(this%nflowpack)
     end if
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Read options from input file
@@ -336,9 +321,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF FMI OPTIONS'
     end if
-    !
-    ! -- return
-    return
   end subroutine read_options
 
   !> @brief Read packagedata block from input file
@@ -436,9 +418,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF FMI PACKAGEDATA'
     end if
-    !
-    ! -- return
-    return
   end subroutine read_packagedata
 
   !> @brief Initialize the budget file reader
@@ -836,9 +815,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine initialize_gwfterms_from_bfr
 
   !> @brief Initialize gwf terms from a GWF exchange
@@ -902,7 +878,6 @@ contains
         iterm = iterm + 1
       end if
     end do
-    return
   end subroutine initialize_gwfterms_from_gwfbndlist
 
   !> @brief Allocate budget packages
@@ -940,9 +915,6 @@ contains
       write (memPath, '(a, i0)') trim(this%memoryPath)//'-FT', n
       call this%gwfpackages(n)%initialize(memPath)
     end do
-    !
-    ! -- return
-    return
   end subroutine allocate_gwfpackages
 
   !> @brief Deallocate memory in the gwfpackages array
@@ -958,9 +930,6 @@ contains
     do n = 1, this%nflowpack
       call this%gwfpackages(n)%da()
     end do
-    !
-    ! -- return
-    return
   end subroutine deallocate_gwfpackages
 
   !> @brief Find the package index for the package with the given name
@@ -985,9 +954,6 @@ contains
       call store_error('Error in get_package_index.  Could not find '//name, &
                        terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine get_package_index
 
 end module FlowModelInterfaceModule

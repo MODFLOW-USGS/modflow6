@@ -101,9 +101,6 @@ contains
     call mem_deallocate(this%ihc)
     call mem_deallocate(this%cl1)
     call mem_deallocate(this%cl2)
-    !
-    ! -- Return
-    return
   end subroutine con_da
 
   !> @brief Allocate scalars for ConnectionsType
@@ -129,9 +126,6 @@ contains
     this%nja = 0
     this%njas = 0
     this%ianglex = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays for ConnectionsType
@@ -157,9 +151,6 @@ contains
     ! -- let mask point to ja, which is always nonzero,
     !    until someone decides to do a 'set_mask'
     this%mask => this%ja
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Finalize connection data
@@ -320,9 +311,6 @@ contains
         this%anglex(n) = DNODATA
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine con_finalize
 
   !> @brief Read and process IAC and JA from an an input block called
@@ -444,9 +432,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_connectivity_from_block
 
   !> @brief Using a vector of cell lengths, calculate the cl1 and cl2 arrays.
@@ -468,9 +453,6 @@ contains
         this%cl2(this%jas(ii)) = fleng(m) * DHALF
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_cl1_cl2_from_fleng
 
   !> @brief Construct the connectivity arrays for a structured
@@ -711,9 +693,6 @@ contains
     !    them to ia and ja.
     nodesuser = nlay * nrow * ncol
     call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
-    !
-    ! -- Return
-    return
   end subroutine disconnections
 
   !> @brief Construct the connectivity arrays using cell disv information
@@ -812,9 +791,6 @@ contains
     !    them to ia and ja.
     nodesuser = nlay * ncpl
     call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
-    !
-    ! -- Return
-    return
   end subroutine disvconnections
 
   !> @brief Construct the connectivity arrays using disu information.  Grid
@@ -947,9 +923,6 @@ contains
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
     !    them to ia and ja.
     call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
-    !
-    ! -- Return
-    return
   end subroutine disuconnections
 
   !> @brief Fill the connections object for a disv1d package from vertices
@@ -1178,9 +1151,6 @@ contains
       call mem_setptr(this%iausr, 'IA', this%memoryPath)
       call mem_setptr(this%jausr, 'JA', this%memoryPath)
     end if
-    !
-    ! -- Return
-    return
   end subroutine iajausr
 
   !> @brief Get the index in the JA array corresponding to the connection
@@ -1226,7 +1196,6 @@ contains
     ! -- If execution reaches here, no connection exists
     !    between nodes of interest.
     getjaindex = 0 ! indicates no connection exists
-    return
   end function getjaindex
 
   !> @brief Function to fill the isym array
@@ -1257,9 +1226,6 @@ contains
         end if
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine fillisym
 
   !> @brief Function to fill the jas array
@@ -1297,9 +1263,6 @@ contains
         end if
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine filljas
 
   !> @brief Routine to make cell connections from vertices
@@ -1393,9 +1356,6 @@ contains
         end do
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine vertexconnect
 
   !> @brief Routine to make cell connections from vertices
@@ -1483,9 +1443,6 @@ contains
     !
     ! -- set the mask value
     this%mask(ipos) = maskVal
-    !
-    ! -- Return
-    return
   end subroutine set_mask
 
   !> @brief Convert an iac array into an ia array
@@ -1511,9 +1468,6 @@ contains
       ia(n) = ia(n - 1) + 1
     end do
     ia(1) = 1
-    !
-    ! -- Return
-    return
   end subroutine iac_to_ia
 
   !> @brief Is cell m is connected to the downstream end of cell n

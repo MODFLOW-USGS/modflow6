@@ -82,9 +82,6 @@ contains
     !    for the budget calculations, and for accessing the latent heat of
     !    vaporization for evaporative cooling.
     eslobj%gwecommon => gwecommon
-    !
-    ! -- Return
-    return
   end subroutine esl_create
 
   !> @brief Deallocate memory
@@ -97,9 +94,6 @@ contains
     !
     ! -- Deallocate parent package
     call this%BndType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine esl_da
 
   !> @brief Allocate scalars
@@ -118,9 +112,6 @@ contains
     ! -- allocate the object and assign values to object variables
     !
     ! -- Set values
-    !
-    ! -- Return
-    return
   end subroutine esl_allocate_scalars
 
   !> @brief Formulate the HCOF and RHS terms
@@ -150,9 +141,6 @@ contains
       q = this%bound(1, i)
       this%rhs(i) = -q
     end do
-    !
-    ! -- Return
-    return
   end subroutine esl_cf
 
   !> @brief Add matrix terms related to specified energy source loading
@@ -187,9 +175,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine esl_fc
 
   !> @brief Define list labels
@@ -217,9 +202,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- Return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -236,9 +218,6 @@ contains
     class(GweEslType) :: this
     !
     esl_obs_supported = .true.
-    !
-    ! -- Return
-    return
   end function esl_obs_supported
 
   !> @brief Define observations
@@ -261,9 +240,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- Return
-    return
   end subroutine esl_df_obs
 
   !> @brief Procedure related to time series
@@ -288,9 +264,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine esl_rp_ts
 
 end module GweEslModule

@@ -205,9 +205,6 @@ contains
     !
     ! -- create model packages
     call this%create_packages()
-    !
-    ! -- return
-    return
   end subroutine gwf_cr
 
   !> @brief Define packages of the model
@@ -251,9 +248,6 @@ contains
     !
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWF', this%dis)
-    !
-    ! -- return
-    return
   end subroutine gwf_df
 
   !> @brief Add the internal connections of this model to the sparse matrix
@@ -282,9 +276,6 @@ contains
     !
     ! -- If GNC is active, then add the gnc connections to sparse
     if (this%ingnc > 0) call this%gnc%gnc_ac(sparse)
-    !
-    ! -- return
-    return
   end subroutine gwf_ac
 
   !> @brief Map the positions of this models connections in the
@@ -314,9 +305,6 @@ contains
     ! -- For implicit gnc, need to store positions of gnc connections
     !    in solution matrix connection
     if (this%ingnc > 0) call this%gnc%gnc_mc(matrix_sln)
-    !
-    ! -- return
-    return
   end subroutine gwf_mc
 
   !> @brief GroundWater Flow Model Allocate and Read
@@ -362,9 +350,6 @@ contains
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
       if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_ar
 
   !> @brief GroundWater Flow Model Read and Prepare
@@ -401,9 +386,6 @@ contains
     !
     ! -- Check for steady state period
     call this%steady_period_check()
-    !
-    ! -- Return
-    return
   end subroutine gwf_rp
 
   !> @brief GroundWater Flow Model Time Step Advance
@@ -457,9 +439,6 @@ contains
     !
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
-    !
-    ! -- return
-    return
   end subroutine gwf_ad
 
   !> @brief GroundWater Flow Model calculate coefficients
@@ -480,9 +459,6 @@ contains
       call packobj%bnd_cf()
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_cf
 
   !> @brief GroundWater Flow Model fill coefficients
@@ -576,9 +552,6 @@ contains
         call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, matrix_sln)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_fc
 
   !> @brief GroundWater Flow Model Final Convergence Check for Boundary Packages
@@ -618,9 +591,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cc(innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_cc
 
   !> @brief check if pseudo-transient continuation factor should be used
@@ -644,9 +614,6 @@ contains
         iptc = this%npf%inewton
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_ptcchk
 
   !> @brief calculate maximum pseudo-transient continuation factor
@@ -717,9 +684,6 @@ contains
     if (iptc == 0) then
       if (iptct > 0) iptc = 1
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_ptc
 
   !> @brief under-relaxation
@@ -767,9 +731,6 @@ contains
         end if
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_nur
 
   !> @brief Groundwater flow model calculate flow
@@ -814,9 +775,6 @@ contains
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
       call packobj%bnd_cq(this%x, this%flowja)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwf_cq
 
   !> @brief GroundWater Flow Model Budget
@@ -863,9 +821,6 @@ contains
         call this%npf%calc_spdis(this%flowja)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwf_bd
 
   !> @brief GroundWater Flow Model Output
@@ -923,9 +878,6 @@ contains
     if (this%icnvg == 0) then
       write (this%iout, fmtnocnvg) kstp, kper
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwf_ot
 
   !> @brief GroundWater Flow Model output observations
@@ -1036,9 +988,6 @@ contains
     !
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
-    !
-    ! -- Return
-    return
   end subroutine gwf_ot_dv
 
   !> @brief Groundwater Flow Model output budget summary
@@ -1086,8 +1035,6 @@ contains
     if (this%incsub > 0) then
       call this%csub%csub_fp()
     end if
-    !
-    return
   end subroutine gwf_fp
 
   !> @brief Deallocate
@@ -1163,9 +1110,6 @@ contains
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
-    !
-    ! -- return
-    return
   end subroutine gwf_da
 
   !> @brief GroundWater Flow Model Budget Entry
@@ -1184,9 +1128,6 @@ contains
     character(len=*), intent(in) :: rowlabel
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
-    !
-    ! -- return
-    return
   end subroutine gwf_bdentry
 
   !> @brief return 1 if any package causes the matrix to be asymmetric.
@@ -1218,9 +1159,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       if (packobj%iasym /= 0) iasym = 1
     end do
-    !
-    ! -- return
-    return
   end function gwf_get_iasym
 
   !> @brief Allocate memory for non-allocatable members
@@ -1263,9 +1201,6 @@ contains
     this%inobs = 0
     this%iss = 1 !default is steady-state (i.e., no STO package)
     this%inewtonur = 0 !default is to not use newton bottom head dampening
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @brief Create boundary condition packages for this model
@@ -1354,9 +1289,6 @@ contains
       end if
     end do
     call AddBndToList(this%bndlist, packobj)
-    !
-    ! -- return
-    return
   end subroutine package_create
 
   !> @brief Check to make sure required input files have been specified
@@ -1392,9 +1324,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%filename)
     end if
-    !
-    ! -- return
-    return
   end subroutine ftype_check
 
   !> @brief Cast to GWF model
@@ -1410,8 +1339,6 @@ contains
     class is (GwfModelType)
       gwfModel => model
     end select
-    return
-
   end function CastAsGwfModel
 
   !> @brief Source package info and begin to process
@@ -1466,9 +1393,6 @@ contains
       ! -- cleanup
       deallocate (bndpkgs)
     end if
-    !
-    ! -- return
-    return
   end subroutine create_bndpkgs
 
   !> @brief Source package info and begin to process
@@ -1599,9 +1523,6 @@ contains
     call this%ftype_check(indis)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-    !
-    ! -- return
-    return
   end subroutine create_packages
 
   !> @brief Write model namfile options to list file
@@ -1665,7 +1586,6 @@ contains
         call store_warning(warnmsg)
       end if
     end if
-    return
   end subroutine steady_period_check
 
 end module GwfModule

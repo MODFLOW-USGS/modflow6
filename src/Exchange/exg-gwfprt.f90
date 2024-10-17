@@ -69,9 +69,6 @@ contains
     !
     ! -- set model pointers
     call exchange%set_model_pointers()
-    !
-    ! -- return
-    return
   end subroutine gwfprt_cr
 
   subroutine set_model_pointers(this)
@@ -117,9 +114,6 @@ contains
     ! -- Set a pointer to the GWF bndlist.  This will allow the transport model
     !    to look through the flow packages and establish a link to GWF flows
     prtmodel%fmi%gwfbndlist => gwfmodel%bndlist
-    !
-    ! -- return
-    return
   end subroutine set_model_pointers
 
   subroutine exg_df(this)
@@ -178,9 +172,6 @@ contains
       call prtmodel%fmi%gwfpackages(ip)%set_auxname(packobj%naux, &
                                                     packobj%auxname)
     end do
-    !
-    ! -- return
-    return
   end subroutine exg_df
 
   subroutine exg_ar(this)
@@ -273,9 +264,6 @@ contains
     !
     call mem_deallocate(this%m1id)
     call mem_deallocate(this%m2id)
-    !
-    ! -- return
-    return
   end subroutine exg_da
 
   subroutine allocate_scalars(this)
@@ -289,9 +277,6 @@ contains
     call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
     this%m1id = 0
     this%m2id = 0
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   subroutine gwfbnd2prtfmi(this)
@@ -343,9 +328,6 @@ contains
         iterm = iterm + 1
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine gwfbnd2prtfmi
 
 end module GwfPrtExchangeModule

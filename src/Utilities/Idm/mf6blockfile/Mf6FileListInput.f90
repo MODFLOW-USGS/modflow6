@@ -113,9 +113,6 @@ contains
     !
     ! -- finalize input context setup
     call this%bound_context%allocate_arrays()
-    !
-    ! -- return
-    return
   end subroutine bndlist_init
 
   subroutine bndlist_df(this)
@@ -125,9 +122,6 @@ contains
     !
     ! -- define tsmanager
     call this%tsmanager%tsmanager_df()
-    !
-    ! -- return
-    return
   end subroutine bndlist_df
 
   subroutine bndlist_ad(this)
@@ -136,9 +130,6 @@ contains
     !
     ! -- advance timeseries
     call this%tsmanager%ad()
-    !
-    ! -- return
-    return
   end subroutine bndlist_ad
 
   subroutine bndlist_reset(this)
@@ -147,9 +138,6 @@ contains
     !
     ! -- reset tsmanager
     call this%tsmanager%reset(this%mf6_input%subcomponent_name)
-    !
-    ! -- return
-    return
   end subroutine bndlist_reset
 
   subroutine bndlist_rp(this, parser)
@@ -199,9 +187,6 @@ contains
     ! -- close logging statement
     call idm_log_close(this%mf6_input%component_name, &
                        this%mf6_input%subcomponent_name, this%iout)
-    !
-    ! -- return
-    return
   end subroutine bndlist_rp
 
   subroutine bndlist_destroy(this)
@@ -214,9 +199,6 @@ contains
     call destructStructArray(this%structarray)
     !
     call this%bound_context%destroy()
-    !
-    ! -- return
-    return
   end subroutine bndlist_destroy
 
   subroutine bndlist_ts_link_bnd(this, structvector, ts_strloc)
@@ -258,9 +240,6 @@ contains
         tsLinkBnd%BndName = boundname
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine bndlist_ts_link_bnd
 
   subroutine bndlist_ts_link_aux(this, structvector, ts_strloc)
@@ -303,9 +282,6 @@ contains
       end if
       !
     end if
-    !
-    ! -- return
-    return
   end subroutine bndlist_ts_link_aux
 
   subroutine bndlist_ts_update(this, structarray)
@@ -340,9 +316,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_name)
     end if
-    !
-    ! -- return
-    return
   end subroutine bndlist_ts_update
 
   subroutine bndlist_ts_link(this, structvector, ts_strloc)
@@ -365,9 +338,6 @@ contains
       !
     case default
     end select
-    !
-    ! -- return
-    return
   end subroutine bndlist_ts_link
 
   subroutine bndlist_create_structarray(this)
@@ -402,9 +372,6 @@ contains
       if (idt%mf6varname == 'BOUNDNAME') this%iboundname = icol
       !
     end do
-    !
-    ! -- return
-    return
   end subroutine bndlist_create_structarray
 
 end module Mf6FileListInputModule

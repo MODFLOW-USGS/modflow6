@@ -69,9 +69,6 @@ contains
     advobj%iout = iout
     advobj%fmi => fmi
     advobj%eqnsclfac => eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine adv_cr
 
   !> @brief Define ADV object
@@ -104,9 +101,6 @@ contains
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
-    !
-    ! -- Return
-    return
   end subroutine adv_df
 
   !> @brief Allocate and read method for package
@@ -125,9 +119,6 @@ contains
     ! -- adv pointers to arguments that were passed in
     this%dis => dis
     this%ibound => ibound
-    !
-    ! -- Return
-    return
   end subroutine adv_ar
 
   !> @brief  Calculate maximum time step length
@@ -235,9 +226,6 @@ contains
         call this%advtvd(n, cnew, rhs)
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine adv_fc
 
   !> @brief  Calculate TVD
@@ -266,9 +254,6 @@ contains
         rhs(m) = rhs(m) + qtvd
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine advtvd
 
   !> @brief  Calculate TVD
@@ -337,9 +322,6 @@ contains
         qtvd = qtvd * this%eqnsclfac
       end if
     end if
-    !
-    ! -- Return
-    return
   end function advqtvd
 
   !> @brief Calculate advection contribution to flowja
@@ -373,9 +355,6 @@ contains
     !
     ! -- TVD
     if (this%iadvwt == 2) call this%advtvd_bd(cnew, flowja)
-    !
-    ! -- Return
-    return
   end subroutine adv_cq
 
   !> @brief Add TVD contribution to flowja
@@ -401,9 +380,6 @@ contains
         end if
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine advtvd_bd
 
   !> @brief Deallocate memory
@@ -427,9 +403,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine adv_da
 
   !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
@@ -455,9 +428,6 @@ contains
     !
     ! -- Advection creates an asymmetric coefficient matrix
     this%iasym = 1
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Read options
@@ -525,9 +495,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF ADVECTION OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Advection weight
@@ -569,9 +536,6 @@ contains
         omega = DONE
       end if
     end select
-    !
-    ! -- return
-    return
   end function adv_weight
 
 end module TspAdvModule

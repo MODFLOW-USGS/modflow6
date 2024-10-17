@@ -88,9 +88,6 @@ contains
     !
     ! -- cleanup
     deallocate (parser)
-    !
-    ! -- return
-    return
   end subroutine input_load
 
   !> @brief static loader init
@@ -146,9 +143,6 @@ contains
       call input_load(this%input_name, this%mf6_input, &
                       this%component_input_name, iout, this%nc_vars)
     end if
-    !
-    ! -- return
-    return
   end function static_load
 
   !> @brief static loader destroy
@@ -200,9 +194,6 @@ contains
     !
     ! -- allocate and initialize loader
     call this%create_loader()
-    !
-    ! -- return
-    return
   end subroutine dynamic_init
 
   !> @brief define routine for dynamic loader
@@ -215,9 +206,6 @@ contains
     !
     ! -- read first ionper
     call this%read_ionper()
-    !
-    ! -- return
-    return
   end subroutine dynamic_df
 
   !> @brief advance routine for dynamic loader
@@ -227,9 +215,6 @@ contains
     !
     ! -- invoke loader advance
     call this%rp_loader%ad()
-    !
-    ! -- return
-    return
   end subroutine dynamic_ad
 
   !> @brief read and prepare routine for dynamic loader
@@ -256,9 +241,6 @@ contains
     else
       this%ionper = nper + 1
     end if
-    !
-    ! -- return
-    return
   end subroutine dynamic_rp
 
   !> @brief dynamic loader read ionper of next period block
@@ -307,9 +289,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine dynamic_read_ionper
 
   !> @brief allocate a dynamic loader based on load context
@@ -347,9 +326,6 @@ contains
                               this%iperblock, &
                               this%parser, &
                               this%iout)
-    !
-    ! -- return
-    return
   end subroutine dynamic_create_loader
 
   !> @brief dynamic loader destroy
@@ -373,9 +349,6 @@ contains
     !
     ! -- deallocate input context
     call this%DynamicPkgLoadType%destroy()
-    !
-    ! -- return
-    return
   end subroutine dynamic_destroy
 
   !> @brief open a model package files
@@ -408,9 +381,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(component_fname)
     end if
-    !
-    ! -- return
-    return
   end function open_mf6file
 
 end module IdmMf6FileModule

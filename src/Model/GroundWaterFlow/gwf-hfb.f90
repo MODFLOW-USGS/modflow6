@@ -88,9 +88,6 @@ contains
     !
     ! -- Initialize block parser
     call hfbobj%parser%Initialize(hfbobj%inunit, hfbobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine hfb_cr
 
   !> @brief Allocate and read
@@ -145,9 +142,6 @@ contains
       write (this%iout, '(/1x,a,a)') 'Viscosity active in ', &
         trim(this%filtyp)//' Package calculations: '//trim(adjustl(this%packName))
     end if
-    !
-    ! -- Return
-    return
   end subroutine hfb_ar
 
   !> @brief Check for new HFB stress period data
@@ -204,9 +198,6 @@ contains
     else
       write (this%iout, fmtlsp) 'HFB'
     end if
-    !
-    ! -- Return
-    return
   end subroutine hfb_rp
 
   !> @brief Fill matrix terms
@@ -354,9 +345,6 @@ contains
       end if
       !
     end if
-    !
-    ! -- Return
-    return
   end subroutine hfb_fc
 
   !> @brief flowja will automatically include the effects of the hfb for
@@ -459,9 +447,6 @@ contains
       end if
       !
     end if
-    !
-    ! -- Return
-    return
   end subroutine hfb_cq
 
   !> @brief Deallocate memory
@@ -505,9 +490,6 @@ contains
     this%bot => null()
     this%hwva => null()
     this%vsc => null()
-    !
-    ! -- Return
-    return
   end subroutine hfb_da
 
   !> @brief Allocate package scalars
@@ -532,9 +514,6 @@ contains
     this%maxhfb = 0
     this%nhfb = 0
     this%ivsc = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate package arrays
@@ -558,9 +537,6 @@ contains
     do ihfb = 1, this%maxhfb
       this%idxloc(ihfb) = 0
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Read a hfb options block
@@ -601,9 +577,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF HFB OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @brief Read the dimensions for this package
@@ -654,9 +627,6 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_dimensions
 
   !> @brief Read HFB period block
@@ -732,9 +702,6 @@ contains
       ' HFBs READ FOR STRESS PERIOD ', kper
     call this%check_data()
     write (this%iout, '(1x,a)') 'END READING HFB DATA'
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @brief Check for hfb's between two unconnected cells and write a warning
@@ -796,9 +763,6 @@ contains
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)
     end if
-    !
-    ! -- Return
-    return
   end subroutine check_data
 
   !> @brief Reset condsat to its value prior to being modified by hfb's
@@ -814,9 +778,6 @@ contains
       ipos = this%idxloc(ihfb)
       this%condsat(this%jas(ipos)) = this%csatsav(ihfb)
     end do
-    !
-    ! -- Return
-    return
   end subroutine condsat_reset
 
   !> @brief Modify condsat
@@ -868,9 +829,6 @@ contains
         this%condsat(this%jas(ipos)) = cond
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine condsat_modify
 
 end module GwfHfbModule

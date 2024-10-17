@@ -67,9 +67,6 @@ contains
     if (iout > 0) &
       write (iout, '(a, i0, a)') 'Detected ', this%nlay, &
       ' unique records in binary file.'
-    !
-    ! -- return
-    return
   end subroutine initialize
 
   !< @brief read record
@@ -126,9 +123,6 @@ contains
         this%endoffile = .true.
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine read_record
 
   !< @brief finalize
@@ -137,9 +131,6 @@ contains
     class(HeadFileReaderType) :: this
     close (this%inunit)
     if (allocated(this%head)) deallocate (this%head)
-    !
-    ! -- return
-    return
   end subroutine finalize
 
 end module HeadFileReaderModule

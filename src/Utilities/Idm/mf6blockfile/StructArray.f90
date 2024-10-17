@@ -186,9 +186,6 @@ contains
     else
       this%startidx(icol) = this%startidx(icol - 1) + this%numcols(icol - 1)
     end if
-    !
-    ! -- return
-    return
   end subroutine mem_create_vector
 
   function count(this)
@@ -235,9 +232,6 @@ contains
     !
     sv%memtype = 1
     sv%int1d => int1d
-    !
-    ! -- return
-    return
   end subroutine allocate_int_type
 
   !> @brief allocate double input type
@@ -265,9 +259,6 @@ contains
     !
     sv%memtype = 2
     sv%dbl1d => dbl1d
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl_type
 
   !> @brief allocate charstr input type
@@ -291,9 +282,6 @@ contains
     !
     sv%memtype = 3
     sv%charstr1d => charstr1d
-    !
-    ! -- return
-    return
   end subroutine allocate_charstr_type
 
   !> @brief allocate int1d input type
@@ -379,9 +367,6 @@ contains
       ! -- set pointer to dynamic shape
       call mem_setptr(sv%intvector_shape, sv%idt%shape, this%mempath)
     end if
-    !
-    ! -- return
-    return
   end subroutine allocate_int1d_type
 
   !> @brief allocate dbl1d input type
@@ -440,9 +425,6 @@ contains
                & unsupported shape "'//trim(sv%idt%shape)//'".'
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl1d_type
 
   subroutine load_deferred_vector(this, icol)
@@ -579,9 +561,6 @@ contains
                &unsupported memtype.'
       call store_error(errmsg, terminate=.TRUE.)
     end select
-    !
-    ! -- return
-    return
   end subroutine load_deferred_vector
 
   !> @brief load deferred vectors into managed memory
@@ -624,9 +603,6 @@ contains
         call this%load_deferred_vector(icol)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine memload_vectors
 
   !> @brief log information about the StructArrayType
@@ -688,9 +664,6 @@ contains
       end select
       !
     end do
-    !
-    ! -- return
-    return
   end subroutine log_structarray_vars
 
   !> @brief reallocate local memory for deferred vectors if necessary
@@ -794,9 +767,6 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
-    !
-    ! -- return
-    return
   end subroutine check_reallocate
 
   subroutine write_struct_vector(this, parser, sv_col, irow, timeseries, &
@@ -892,9 +862,6 @@ contains
       end do
       !
     end select
-    !
-    ! -- return
-    return
   end subroutine write_struct_vector
 
   !> @brief read from the block parser to fill the StructArrayType
@@ -947,9 +914,6 @@ contains
     if (iout > 0) then
       call this%log_structarray_vars(iout)
     end if
-    !
-    ! -- return
-    return
   end function read_from_parser
 
   !> @brief read from binary input to fill the StructArrayType
@@ -1068,9 +1032,6 @@ contains
     if (iout > 0) then
       call this%log_structarray_vars(iout)
     end if
-    !
-    ! -- return
-    return
   end function read_from_binary
 
 end module StructArrayModule

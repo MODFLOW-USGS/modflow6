@@ -134,9 +134,6 @@ contains
     !
     ! -- Create model packages
     call this%create_packages(indis)
-    !
-    ! -- Return
-    return
   end subroutine gwe_cr
 
   !> @brief Define packages of the GWE model
@@ -193,9 +190,6 @@ contains
     !
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWE', this%dis)
-    !
-    ! -- Return
-    return
   end subroutine gwe_df
 
   !> @brief Add the internal connections of this model to the sparse matrix
@@ -220,9 +214,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ac(this%moffset, sparse)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_ac
 
   !> @brief Map the positions of the GWE model connections in the numerical
@@ -247,9 +238,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_mc
 
   !> @brief GWE Model Allocate and Read
@@ -295,9 +283,6 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_ar
 
   !> @brief GWE Model Read and Prepare
@@ -328,9 +313,6 @@ contains
       call packobj%bnd_rp()
       call packobj%bnd_rp_obs()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_rp
 
   !> @brief GWE Model Time Step Advance
@@ -384,9 +366,6 @@ contains
     !
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
-    !
-    ! -- Return
-    return
   end subroutine gwe_ad
 
   !> @brief GWE Model calculate coefficients
@@ -407,9 +386,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cf()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_cf
 
   !> @brief GWE Model fill coefficients
@@ -454,9 +430,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_fc
 
   !> @brief GWE Model Final Convergence Check
@@ -477,9 +450,6 @@ contains
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
-    !
-    ! -- Return
-    return
   end subroutine gwe_cc
 
   !> @brief GWE Model calculate flow
@@ -526,9 +496,6 @@ contains
     !    This results in the flow residual being stored in the diagonal
     !    position for each cell.
     call csr_diagsum(this%dis%con%ia, this%flowja)
-    !
-    ! -- Return
-    return
   end subroutine gwe_cq
 
   !> @brief GWE Model Budget
@@ -563,9 +530,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwe_bd
 
   !> @brief GWE model output routine
@@ -648,9 +612,6 @@ contains
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
-    !
-    ! -- Return
-    return
   end subroutine gwe_da
 
   !> @brief GroundWater Energy Transport Model Budget Entry
@@ -670,9 +631,6 @@ contains
     character(len=*), intent(in) :: rowlabel
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
-    !
-    ! -- Return
-    return
   end subroutine gwe_bdentry
 
   !> @brief return 1 if any package causes the matrix to be asymmetric.
@@ -703,9 +661,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       if (packobj%iasym /= 0) iasym = 1
     end do
-    !
-    ! -- Return
-    return
   end function gwe_get_iasym
 
   !> Allocate memory for non-allocatable members
@@ -730,9 +685,6 @@ contains
     !
     this%inest = 0
     this%incnd = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Create boundary condition packages for this model
@@ -811,9 +763,6 @@ contains
       end if
     end do
     call AddBndToList(this%bndlist, packobj)
-    !
-    ! -- Return
-    return
   end subroutine package_create
 
   !> @brief Cast to GweModelType
@@ -830,9 +779,6 @@ contains
     type is (GweModelType)
       gwemodel => model
     end select
-    !
-    ! -- Return
-    return
   end function CastAsGweModel
 
   !> @brief Source package info and begin to process
@@ -887,9 +833,6 @@ contains
       ! -- Cleanup
       deallocate (bndpkgs)
     end if
-    !
-    ! -- Return
-    return
   end subroutine create_bndpkgs
 
   !> @brief Source package info and begin to process
@@ -968,9 +911,6 @@ contains
     call this%ftype_check(indis, this%inest)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-    !
-    ! -- Return
-    return
   end subroutine create_gwe_packages
 
 end module GweModule

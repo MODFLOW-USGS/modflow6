@@ -74,9 +74,6 @@ contains
       pkgtypes = [PRT_BASEPKG, PRT_MULTIPKG]
     case default
     end select
-    !
-    ! -- return
-    return
   end subroutine supported_model_packages
 
   !> @brief Is the package multi-instance
@@ -146,9 +143,6 @@ contains
       !
     case default
     end select
-    !
-    ! -- return
-    return
   end function multi_package_type
 
 end module ModelPackageInputModule

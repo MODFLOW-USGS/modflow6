@@ -79,9 +79,6 @@ contains
     !
     ! -- set model pointers
     call exchange%set_model_pointers()
-    !
-    ! -- Return
-    return
   end subroutine gwfgwt_cr
 
   !> @brief Allocate and read
@@ -130,9 +127,6 @@ contains
     ! -- Set a pointer to the GWF bndlist.  This will allow the transport model
     !    to look through the flow packages and establish a link to GWF flows
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
-    !
-    ! -- Return
-    return
   end subroutine set_model_pointers
 
   !> @brief Define the GwfGwt Exchange object
@@ -183,9 +177,6 @@ contains
     if (gwtmodel%indsp > 0) then
       gwfmodel%npf%icalcspdis = 1
     end if
-    !
-    ! -- Return
-    return
   end subroutine exg_df
 
   !> @brief Allocate and read
@@ -281,9 +272,6 @@ contains
     !
     ! -- connect Connections
     call this%gwfconn2gwtconn(gwfmodel, gwtmodel)
-    !
-    ! -- Return
-    return
   end subroutine exg_ar
 
   !> @brief Link GWT connections to GWF connections or exchanges
@@ -428,9 +416,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%filename)
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwfconn2gwtconn
 
   !> @brief Links a GWT connection to its GWF counterpart
@@ -472,9 +457,6 @@ contains
     !   gwtConn%gwtModel%name, &
     !   gwtConn%conc, &
     !   gwtConn%icbound)
-    !
-    ! -- Return
-    return
   end subroutine link_connections
 
   !> @brief Deallocate memory
@@ -487,9 +469,6 @@ contains
     !
     call mem_deallocate(this%m1_idx)
     call mem_deallocate(this%m2_idx)
-    !
-    ! -- Return
-    return
   end subroutine exg_da
 
   !> @brief Allocate package scalars
@@ -504,9 +483,6 @@ contains
     call mem_allocate(this%m2_idx, 'M2ID', this%memoryPath)
     this%m1_idx = 0
     this%m2_idx = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Call routines in FMI that will set pointers to the necessary flow
@@ -558,9 +534,6 @@ contains
         iterm = iterm + 1
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwfbnd2gwtfmi
 
 end module GwfGwtExchangeModule

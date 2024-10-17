@@ -91,9 +91,6 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- Return
-    return
   end subroutine rch_create
 
   !> @brief Allocate scalar members
@@ -112,9 +109,6 @@ contains
     ! -- Set values
     this%fixed_cell = .false.
     this%read_as_arrays = .false.
-    !
-    ! -- Return
-    return
   end subroutine rch_allocate_scalars
 
   !> @brief Allocate package arrays
@@ -136,9 +130,6 @@ contains
     ! -- checkin recharge input context pointer
     call mem_checkin(this%recharge, 'RECHARGE', this%memoryPath, &
                      'RECHARGE', this%input_mempath)
-    !
-    ! -- Return
-    return
   end subroutine rch_allocate_arrays
 
   !> @brief Source options specific to RchType
@@ -175,9 +166,6 @@ contains
     !
     ! -- log rch params
     call this%log_rch_options(found_fixed_cell, found_readasarrays)
-    !
-    ! -- Return
-    return
   end subroutine rch_source_options
 
   !> @brief Log options specific to RchType
@@ -209,9 +197,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- Return
-    return
   end subroutine log_rch_options
 
   !> @brief Source the dimensions for this package
@@ -244,9 +229,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-    !
-    ! -- Return
-    return
   end subroutine rch_source_dimensions
 
   !> @brief Part of allocate and read
@@ -258,9 +240,6 @@ contains
     if (this%read_as_arrays) then
       call this%default_nodelist()
     end if
-    !
-    ! -- Return
-    return
   end subroutine rch_read_initial_attr
 
   !> @brief Read and Prepare
@@ -295,9 +274,6 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-    !
-    ! -- Return
-    return
   end subroutine rch_rp
 
   !> @brief Store nodelist in nodesontop
@@ -318,9 +294,6 @@ contains
     do n = 1, this%nbound
       this%nodesontop(n) = this%nodelist(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_nodesontop
 
   !> @brief Formulate the HCOF and RHS terms
@@ -377,9 +350,6 @@ contains
         cycle
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine rch_cf
 
   !> @brief Copy rhs and hcof into solution rhs and amat
@@ -408,9 +378,6 @@ contains
       ipos = ia(n)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
-    !
-    ! -- Return
-    return
   end subroutine rch_fc
 
   !> @brief Deallocate memory
@@ -431,9 +398,6 @@ contains
     ! -- arrays
     if (associated(this%nodesontop)) deallocate (this%nodesontop)
     call mem_deallocate(this%recharge, 'RECHARGE', this%memoryPath)
-    !
-    ! -- Return
-    return
   end subroutine rch_da
 
   !> @brief Define the list heading that is written to iout when PRINT_INPUT
@@ -461,9 +425,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- Return
-    return
   end subroutine rch_define_listlabel
 
   !> @brief Assign default nodelist when READASARRAYS is specified.
@@ -505,9 +466,6 @@ contains
     ! -- if fixed_cell option not set, then need to store nodelist
     !    in the nodesontop array
     if (.not. this%fixed_cell) call this%set_nodesontop()
-    !
-    ! -- Return
-    return
   end subroutine default_nodelist
 
   ! -- Procedures related to observations
@@ -522,9 +480,6 @@ contains
     class(RchType) :: this
     !
     rch_obs_supported = .true.
-    !
-    ! -- Return
-    return
   end function rch_obs_supported
 
   !> @brief Implements bnd_df_obs
@@ -541,9 +496,6 @@ contains
     !
     call this%obs%StoreObsType('rch', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- Return
-    return
   end subroutine rch_df_obs
 
   !> @brief Return requested boundary value
@@ -571,9 +523,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-    !
-    ! -- Return
-    return
   end function rch_bound_value
 
   !> @brief Update the nodelist based on IRCH input
@@ -618,9 +567,6 @@ contains
       call dis%nlarray_to_nodelist(irch, nodelist, &
                                    maxbound, nbound, aname)
     end if
-    !
-    ! -- Return
-    return
   end subroutine nodelist_update
 
 end module RchModule

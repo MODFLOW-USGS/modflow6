@@ -144,9 +144,6 @@ contains
     !
     ! -- create model packages
     call this%create_tsp_packages(indis)
-    !
-    ! -- Return
-    return
   end subroutine tsp_cr
 
   !> @brief Generalized transport model define model
@@ -158,9 +155,6 @@ contains
   subroutine tsp_df(this)
     ! -- dummy
     class(TransportModelType) :: this
-    !
-    ! -- Return
-    return
   end subroutine tsp_df
 
   !> @brief Generalized transport model add connections
@@ -174,9 +168,6 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     type(sparsematrix), intent(inout) :: sparse
-    !
-    ! -- Return
-    return
   end subroutine tsp_ac
 
   !> @brief Generalized transport model map coefficients
@@ -189,9 +180,6 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
-    !
-    ! -- Return
-    return
   end subroutine tsp_mc
 
   !> @brief Generalized transport model allocate and read
@@ -203,9 +191,6 @@ contains
   subroutine tsp_ar(this)
     ! -- dummy
     class(TransportModelType) :: this
-    !
-    ! -- Return
-    return
   end subroutine tsp_ar
 
   !> @brief Generalized transport model read and prepare
@@ -216,9 +201,6 @@ contains
   subroutine tsp_rp(this)
     ! -- dummy
     class(TransportModelType) :: this
-    !
-    ! -- Return
-    return
   end subroutine tsp_rp
 
   !> @brief Generalized transport model time step advance
@@ -229,9 +211,6 @@ contains
   subroutine tsp_ad(this)
     ! -- dummy
     class(TransportModelType) :: this
-    !
-    ! -- Return
-    return
   end subroutine tsp_ad
 
   !> @brief Generalized transport model fill coefficients
@@ -245,9 +224,6 @@ contains
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
-    !
-    ! -- Return
-    return
   end subroutine tsp_fc
 
   !> @brief Generalized transport model final convergence check
@@ -265,9 +241,6 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
-    !
-    ! -- Return
-    return
   end subroutine tsp_cc
 
   !> @brief Generalized transport model calculate flows
@@ -280,9 +253,6 @@ contains
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-    !
-    ! -- Return
-    return
   end subroutine tsp_cq
 
   !> @brief Generalized transport model budget
@@ -295,9 +265,6 @@ contains
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-    !
-    ! -- Return
-    return
   end subroutine tsp_bd
 
   !> @brief Generalized transport model output routine
@@ -358,9 +325,6 @@ contains
     if (this%icnvg == 0) then
       write (this%iout, fmtnocnvg) kstp, kper
     end if
-    !
-    ! -- Return
-    return
   end subroutine tsp_ot
 
   !> @brief Generalized transport model output routine
@@ -472,9 +436,6 @@ contains
     if (ibinun /= 0) then
       call this%dis%record_connection_array(flowja, ibinun, this%iout)
     end if
-    !
-    ! -- Return
-    return
   end subroutine tsp_ot_flowja
 
   !> @brief Generalized transport model output routine
@@ -497,9 +458,6 @@ contains
     !
     ! -- Save head and print head
     call this%oc%oc_ot(ipflag)
-    !
-    ! -- Return
-    return
   end subroutine tsp_ot_dv
 
   !> @brief Generalized tranpsort model output budget summary
@@ -534,9 +492,6 @@ contains
     !
     ! -- Write to budget csv
     call this%budget%writecsv(totim)
-    !
-    ! -- Return
-    return
   end subroutine tsp_ot_bdsummary
 
   !> @brief Allocate scalar variables for transport model
@@ -571,9 +526,6 @@ contains
     this%inoc = 0
     this%inobs = 0
     this%eqnsclfac = DZERO
-    !
-    ! -- Return
-    return
   end subroutine allocate_tsp_scalars
 
   !> @brief Define the labels corresponding to the flavor of
@@ -600,9 +552,6 @@ contains
     !
     ! -- Set the units abbreviation
     this%depvarunitabbrev = depvarunitabbrev
-    !
-    ! -- Return
-    return
   end subroutine set_tsp_labels
 
   !> @brief Deallocate memory
@@ -625,9 +574,6 @@ contains
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%eqnsclfac)
-    !
-    ! -- Return
-    return
   end subroutine tsp_da
 
   !> @brief Generalized tranpsort model routine
@@ -667,9 +613,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%filename)
     end if
-    !
-    ! -- Return
-    return
   end subroutine ftype_check
 
   !> @brief Write model name file options to list file
@@ -709,9 +652,6 @@ contains
     end if
     !
     write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
-    !
-    ! -- Return
-    return
   end subroutine log_namfile_options
 
   !> @brief Source package info and begin to process
@@ -817,9 +757,6 @@ contains
                 this%eqnsclfac, this%depvartype)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs, this%depvartype)
-    !
-    ! -- Return
-    return
   end subroutine create_tsp_packages
 
 end module TransportModelModule

@@ -154,9 +154,6 @@ contains
     sfeobj%depvartype = dvt
     sfeobj%depvarunit = dvu
     sfeobj%depvarunitabbrev = dvua
-    !
-    ! -- Return
-    return
   end subroutine sfe_create
 
   !> @brief Find corresponding sfe package
@@ -276,9 +273,6 @@ contains
     !
     ! -- Streambed conduction term
     this%idxbudsbcd = this%idxbudgwf
-    !
-    ! -- Return
-    return
   end subroutine find_sfe_package
 
   !> @brief Add matrix terms related to SFE
@@ -389,9 +383,6 @@ contains
         call matrix_sln%add_value_pos(ipossymoffd, ctherm)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine sfe_fc_expanded
 
   !> @ brief Add terms specific to sfr to the explicit sfe solve
@@ -445,9 +436,6 @@ contains
     end if
     !
     ! Note: explicit streambed conduction terms???
-    !
-    ! -- Return
-    return
   end subroutine sfe_solve
 
   !> @brief Function to return the number of budget terms just for this package.
@@ -468,9 +456,6 @@ contains
     !    5. ext-outflow
     !    6. streambed-cond
     nbudterms = 6
-    !
-    ! -- Return
-    return
   end function sfe_get_nbudterms
 
   !> @brief Set up the budget object that stores all the sfe flows
@@ -571,9 +556,6 @@ contains
       n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
-    !
-    ! -- Return
-    return
   end subroutine sfe_setup_budobj
 
   !> @brief Copy flow terms into this%budobj
@@ -673,9 +655,6 @@ contains
         flowja(idiag) = flowja(idiag) - q
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine sfe_fill_budobj
 
   !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
@@ -705,9 +684,6 @@ contains
     this%idxbudiflw = 0
     this%idxbudoutf = 0
     this%idxbudsbcd = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays specific to the streamflow energy transport (SFE)
@@ -737,9 +713,6 @@ contains
       this%temproff(n) = DZERO
       this%tempiflw(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine sfe_allocate_arrays
 
   !> @brief Deallocate memory
@@ -766,9 +739,6 @@ contains
     !
     ! -- Deallocate scalars in TspAptType
     call this%TspAptType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine sfe_da
 
   !> @brief Rain term
@@ -793,9 +763,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac ! kluge note: think about budget / sensible heat issue
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine sfe_rain_term
 
   !> @brief Evaporative term
@@ -822,9 +789,6 @@ contains
     !!if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine sfe_evap_term
 
   !> @brief Runoff term
@@ -849,9 +813,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine sfe_roff_term
 
   !> @brief Inflow Term
@@ -880,9 +841,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine sfe_iflw_term
 
   !> @brief Outflow term
@@ -910,9 +868,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine sfe_outf_term
 
   !> @brief Observations
@@ -986,9 +941,6 @@ contains
     !    for ext-outflow observation type.
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Return
-    return
   end subroutine sfe_df_obs
 
   !> @brief Process package specific obs
@@ -1019,9 +971,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine sfe_rp_obs
 
   !> @brief Calculate observation value and pass it back to APT
@@ -1061,9 +1010,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine sfe_bd_obs
 
   !> @brief Sets the stress period attributes for keyword use.
@@ -1141,9 +1087,6 @@ contains
     end select
     !
 999 continue
-    !
-    ! -- Return
-    return
   end subroutine sfe_set_stressperiod
 
 end module GweSfeModule

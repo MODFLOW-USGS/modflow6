@@ -48,9 +48,6 @@ contains
     case default
       sourcetype = 'MF6FILE'
     end select
-    !
-    ! -- return
-    return
   end function package_source_type
 
   !> @brief component from package or model type
@@ -89,9 +86,6 @@ contains
         'IDP input error, unrecognized component: "'//trim(component)//'"'
       call store_error(errmsg, .true.)
     end if
-    !
-    ! -- return
-    return
   end function idm_component_type
 
   !> @brief component from package or model type
@@ -129,9 +123,6 @@ contains
         subcomponent_type(idx:idx) = subcomponent(i:i)
       end if
     end do
-    !
-    ! -- return
-    return
   end function idm_subcomponent_type
 
   !> @brief model package subcomponent name
@@ -162,9 +153,6 @@ contains
       !
       subcomponent_name = subcomponent_type
     end if
-    !
-    ! -- return
-    return
   end function idm_subcomponent_name
 
   !> @brief input file extension
@@ -194,9 +182,6 @@ contains
     if (idx > 0) then
       ext = filename(idx + 1:len_trim(filename))
     end if
-    !
-    ! -- return
-    return
   end function file_ext
 
   subroutine get_shape_from_string(shape_string, array_shape, memoryPath)
@@ -221,9 +206,6 @@ contains
       call mem_setptr(int_ptr, array_shape_string(i), memoryPath)
       array_shape(i) = int_ptr
     end do
-    !
-    ! -- return
-    return
   end subroutine get_shape_from_string
 
   subroutine get_layered_shape(mshape, nlay, layer_shape)
@@ -427,9 +409,6 @@ contains
     ! -- allocate and set distype in model input context
     call mem_allocate(distype, 'DISENUM', model_mempath)
     distype = dis_type
-    !
-    ! -- return
-    return
   end subroutine set_model_shape
 
   function ifind_charstr(array, str)
@@ -456,9 +435,6 @@ contains
         exit findloop
       end if
     end do findloop
-    !
-    ! -- return
-    return
   end function ifind_charstr
 
   !> @brief enforce and set a single input filename provided via FILEIN keyword
@@ -505,9 +481,6 @@ contains
       found = .true.
       !
     end if
-    !
-    ! -- return
-    return
   end function filein_fname
 
   !> @brief store an error for input exceeding internal name length
@@ -534,9 +507,6 @@ contains
     !
     ! -- set truncated name
     mf6_name = trim(input_str)
-    !
-    ! -- return
-    return
   end subroutine inlen_check
 
 end module SourceCommonModule

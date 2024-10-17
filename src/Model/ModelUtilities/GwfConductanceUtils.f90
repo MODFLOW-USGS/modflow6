@@ -368,7 +368,6 @@ contains
       end if
       res = DHALF * (thksatn + thksatm)
     end if
-    return
   end function thksatnm
 
   !> @brief Calculate the thickness fraction for staggered grids

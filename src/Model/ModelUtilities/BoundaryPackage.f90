@@ -225,9 +225,6 @@ contains
       call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
       call this%bnd_df_obs()
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_df
 
   !> @ brief Add boundary package connection to matrix
@@ -245,9 +242,6 @@ contains
     class(BndType), intent(inout) :: this !< BndType object
     integer(I4B), intent(in) :: moffset !< solution matrix model offset
     type(sparsematrix), intent(inout) :: sparse !< sparse object
-    !
-    ! -- return
-    return
   end subroutine bnd_ac
 
   !> @ brief Map boundary package connection to matrix
@@ -262,9 +256,6 @@ contains
     class(BndType), intent(inout) :: this !< BndType object
     integer(I4B), intent(in) :: moffset !< solution matrix model offset
     class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
-    !
-    ! -- return
-    return
   end subroutine bnd_mc
 
   !> @ brief Allocate and read method for boundary package
@@ -294,9 +285,6 @@ contains
       allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%maxbound, 0, this%memoryPath)
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_ar
 
   !> @ brief Allocate and read method for package
@@ -394,9 +382,6 @@ contains
     else
       write (this%iout, fmtlsp) trim(this%filtyp)
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_rp
 
   !> @ brief Advance the boundary package
@@ -425,8 +410,6 @@ contains
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
     call this%obs%obs_ad()
-    !
-    return
   end subroutine bnd_ad
 
   !> @ brief Check boundary package period data
@@ -441,9 +424,6 @@ contains
     !
     ! -- check stress period data
     ! -- each package must override generic functionality
-    !
-    ! -- return
-    return
   end subroutine bnd_ck
 
   !> @ brief Reset bnd package before formulating
@@ -470,9 +450,6 @@ contains
     class(BndType) :: this !< BndType object
     !
     ! -- bnd has no cf routine
-    !
-    ! -- return
-    return
   end subroutine bnd_cf
 
   !> @ brief Copy hcof and rhs terms into solution.
@@ -502,9 +479,6 @@ contains
       ipos = ia(n)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
-    !
-    ! -- return
-    return
   end subroutine bnd_fc
 
   !> @ brief Add Newton-Raphson terms for package into solution.
@@ -525,9 +499,6 @@ contains
     !
     ! -- No addition terms for Newton-Raphson with constant conductance
     !    boundary conditions
-    !
-    ! -- return
-    return
   end subroutine bnd_fn
 
   !> @ brief Apply Newton-Raphson under-relaxation for package.
@@ -552,9 +523,6 @@ contains
     ! -- local variables
     !
     ! -- Newton-Raphson under-relaxation
-    !
-    ! -- return
-    return
   end subroutine bnd_nur
 
   !> @ brief Convergence check for package.
@@ -580,9 +548,6 @@ contains
     real(DP), intent(inout) :: dpak !< maximum dependent variable change
     !
     ! -- No addition convergence check for boundary conditions
-    !
-    ! -- return
-    return
   end subroutine bnd_cc
 
   !> @ brief Calculate advanced package flows.
@@ -621,9 +586,6 @@ contains
     if (imover == 1) then
       call this%bnd_cq_simtomvr(flowja)
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_cq
 
   !> @ brief Calculate simrate.
@@ -669,9 +631,6 @@ contains
         !
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_cq_simrate
 
   !> @ brief Calculate flow to the mover.
@@ -739,9 +698,6 @@ contains
         !
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_cq_simtomvr
 
   !> @ brief Add package flows to model budget.
@@ -778,9 +734,6 @@ contains
       call model_budget%addentry(ratin, ratout, delt, text, &
                                  isuppress_output, this%packName)
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_bd
 
   !> @ brief Output advanced package flow terms.
@@ -797,9 +750,6 @@ contains
     integer(I4B), intent(in) :: ibudfl !< flag indication if cell-by-cell data should be saved
     !
     ! -- override for advanced packages
-    !
-    ! -- return
-    return
   end subroutine bnd_ot_package_flows
 
   !> @ brief Output advanced package dependent-variable terms.
@@ -816,9 +766,6 @@ contains
     integer(I4B), intent(in) :: idvprint !< flag indicating if dependent-variable should be written to the model listing file
     !
     ! -- override for advanced packages
-    !
-    ! -- return
-    return
   end subroutine bnd_ot_dv
 
   !> @ brief Output advanced package budget summary.
@@ -837,9 +784,6 @@ contains
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     ! -- override for advanced packages
-    !
-    ! -- return
-    return
   end subroutine bnd_ot_bdsummary
 
   !> @ brief Output package flow terms.
@@ -904,9 +848,6 @@ contains
                                   this%auxname, this%auxvar, this%iout, &
                                   this%inamedbound, this%boundname)
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_ot_model_flows
 
   !> @ brief Deallocate package memory
@@ -999,9 +940,6 @@ contains
     !
     ! -- Deallocate parent object
     call this%NumericalPackageType%da()
-    !
-    ! -- return
-    return
   end subroutine bnd_da
 
   !> @ brief Allocate package scalars
@@ -1078,9 +1016,6 @@ contains
     call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
     this%inewton = imodelnewton
     imodelnewton => null()
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -1188,9 +1123,6 @@ contains
     !
     ! -- setup the output table
     call this%pak_setup_outputtab()
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Allocate and initialize select package members
@@ -1203,9 +1135,6 @@ contains
   subroutine pack_initialize(this)
     ! -- dummy variables
     class(BndType) :: this !< BndType object
-    !
-    ! -- return
-    return
   end subroutine pack_initialize
 
   !> @ brief Set pointers to model variables
@@ -1229,8 +1158,6 @@ contains
     this%xnew => xnew
     this%xold => xold
     this%flowja => flowja
-    !
-    ! -- return
   end subroutine set_pointers
 
   !> @ brief Read additional options for package
@@ -1436,9 +1363,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine bnd_read_options
 
   !> @ brief Read dimensions for package
@@ -1501,9 +1425,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-    !
-    ! -- return
-    return
   end subroutine bnd_read_dimensions
 
   !> @ brief Store user-specified conductances when vsc is active
@@ -1530,9 +1451,6 @@ contains
     do l = 1, nlist
       condinput(l) = rlist(2, l)
     end do
-    !
-    ! -- return
-    return
   end subroutine bnd_store_user_cond
 
   !> @ brief Read initial parameters for package
@@ -1545,9 +1463,6 @@ contains
   subroutine bnd_read_initial_attr(this)
     ! -- dummy
     class(BndType), intent(inout) :: this !< BndType object
-    !
-    ! -- return
-    return
   end subroutine bnd_read_initial_attr
 
   !> @ brief Read additional options for package
@@ -1565,9 +1480,6 @@ contains
     !
     ! Return with found = .false.
     found = .false.
-    !
-    ! -- return
-    return
   end subroutine bnd_options
 
   !> @ brief Copy boundnames into boundnames_cst
@@ -1589,9 +1501,6 @@ contains
         this%boundname_cst(i) = this%boundname(i)
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine copy_boundname
 
   !> @ brief Setup output table for package
@@ -1635,9 +1544,6 @@ contains
                                               alignment=TABLEFT)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine pak_setup_outputtab
 
   !> @ brief Define the list label for the package
@@ -1649,9 +1555,6 @@ contains
   subroutine define_listlabel(this)
     ! -- dummy variables
     class(BndType), intent(inout) :: this !< BndType object
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -1673,9 +1576,6 @@ contains
     !
     ! -- initialize return variables
     supported = .false.
-    !
-    ! -- return
-    return
   end function bnd_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -1691,9 +1591,6 @@ contains
     class(BndType) :: this !< BndType object
     !
     ! -- do nothing here. Override as needed.
-    !
-    ! -- return
-    return
   end subroutine bnd_df_obs
 
   !> @brief Read and prepare observations for a package
@@ -1756,8 +1653,6 @@ contains
     if (count_errors() > 0) then
       call store_error_unit(this%inunit)
     end if
-    !
-    return
   end subroutine bnd_rp_obs
 
   !> @brief Save observations for the package
@@ -1803,9 +1698,6 @@ contains
         call this%obs%SaveOneSimval(obsrv, DNODATA)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine bnd_bd_obs
 
   !> @brief Output observations for the package
@@ -1820,9 +1712,6 @@ contains
     !
     ! -- call the observation output method
     call this%obs%obs_ot()
-    !
-    ! -- return
-    return
   end subroutine bnd_ot_obs
 
   ! -- Procedures related to time series
@@ -1837,9 +1726,6 @@ contains
   subroutine bnd_rp_ts(this)
     ! -- dummy variables
     class(BndType), intent(inout) :: this
-    !
-    ! -- return
-    return
   end subroutine bnd_rp_ts
 
   ! -- Procedures related to casting
@@ -1864,9 +1750,6 @@ contains
     class is (BndType)
       res => obj
     end select
-    !
-    ! -- return
-    return
   end function CastAsBndClass
 
   !> @brief Add boundary to package list
@@ -1883,9 +1766,6 @@ contains
     !
     obj => bnd
     call list%Add(obj)
-    !
-    ! -- return
-    return
   end subroutine AddBndToList
 
   !> @brief Get boundary from package list
@@ -1906,9 +1786,6 @@ contains
     ! -- get the package from the list
     obj => list%GetItem(idx)
     res => CastAsBndClass(obj)
-    !
-    ! -- return
-    return
   end function GetBndFromList
 
   !> @brief Save and/or print flows for a package
@@ -2066,9 +1943,6 @@ contains
       end if
 
     end if
-    !
-    ! -- return
-    return
   end subroutine save_print_model_flows
 
   !> @brief Activate viscosity terms
@@ -2100,9 +1974,6 @@ contains
     !    boundary package.
     write (this%iout, '(/1x,a,a)') 'VISCOSITY ACTIVE IN ', &
       trim(this%filtyp)//' PACKAGE CALCULATIONS: '//trim(adjustl(this%packName))
-    !
-    ! -- return
-    return
   end subroutine bnd_activate_viscosity
 
 end module BndModule

@@ -130,9 +130,6 @@ contains
       end if
       ! end if
     end do
-    !
-    ! -- Return
-    return
   end function calc_visc
 
   !> @ brief Create a new package object
@@ -161,9 +158,6 @@ contains
     !
     ! -- Initialize block parser
     call vscobj%parser%Initialize(vscobj%inunit, vscobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine vsc_cr
 
   !> @ brief Define viscosity package options and dimensions
@@ -210,9 +204,6 @@ contains
       ! set from input data instead
       call this%set_packagedata(vsc_input)
     end if
-    !
-    ! -- Return
-    return
   end subroutine vsc_df
 
   !> @ brief Allocate and read method for viscosity package
@@ -230,9 +221,6 @@ contains
     !
     ! -- Set pointers to npf variables
     call this%set_npf_pointers()
-    !
-    ! -- Return
-    return
   end subroutine vsc_ar
 
   !> @brief Activate viscosity in advanced packages
@@ -302,9 +290,6 @@ contains
       !
       ! -- nothing
     end select
-    !
-    ! -- Return
-    return
   end subroutine vsc_ar_bnd
 
   !> @brief Set pointers to NPF variables
@@ -330,9 +315,6 @@ contains
     call mem_setptr(this%kchangeper, 'KCHANGEPER', npfMemoryPath)
     call mem_setptr(this%kchangestp, 'KCHANGESTP', npfMemoryPath)
     call mem_setptr(this%nodekchange, 'NODEKCHANGE', npfMemoryPath)
-    !
-    ! -- Return
-    return
   end subroutine set_npf_pointers
 
   !> @ brief Read new period data in viscosity package
@@ -366,9 +348,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine vsc_rp
 
   !> @ brief Advance the viscosity package
@@ -382,9 +361,6 @@ contains
     !
     ! -- update viscosity using the latest concentration/temperature
     call this%vsc_calcvisc()
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad
 
   !> @brief Advance the boundary packages when viscosity is active
@@ -476,9 +452,6 @@ contains
     !
     ! -- deallocate
     deallocate (locconc)
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad_bnd
 
   !> @brief advance ghb while accounting for viscosity
@@ -550,9 +523,6 @@ contains
       end select
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad_standard_bnd
 
   !> @brief Update sfr-related viscosity ratios
@@ -607,9 +577,6 @@ contains
         packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad_sfr
 
   !> @brief Update lak-related viscosity ratios
@@ -664,9 +631,6 @@ contains
         packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad_lak
 
   !> @brief Update maw-related viscosity ratios
@@ -721,9 +685,6 @@ contains
         packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine vsc_ad_maw
 
   !> @brief Apply viscosity to the conductance term
@@ -744,9 +705,6 @@ contains
     !
     ! -- calculate new conductance here
     updatedcond = vscratio * spcfdcond
-    !
-    ! -- Return
-    return
   end function update_bnd_cond
 
   !> @brief calculate and return the viscosity ratio
@@ -759,9 +717,6 @@ contains
     real(DP) :: viscratio
     !
     viscratio = viscref / bndvisc
-    !
-    ! -- Return
-    return
   end function calc_vsc_ratio
 
   !> @ brief Calculate the boundary viscosity
@@ -808,9 +763,6 @@ contains
       ! -- neither of the above, so assign as viscref
       viscbnd = viscref
     end if
-    !
-    ! -- Return
-    return
   end function calc_bnd_viscosity
 
   !> @brief Calculate the viscosity ratio
@@ -838,9 +790,6 @@ contains
       cellid = n
     end if
     call this%calc_q_visc(cellid, viscratio)
-    !
-    ! -- Return
-    return
   end subroutine get_visc_ratio
 
   !> @brief Account for viscosity in the aquiferhorizontal flow barriers
@@ -863,9 +812,6 @@ contains
     !
     ! -- Calculate the viscosity ratio for the
     viscratio = calc_vsc_ratio(this%viscref, visc)
-    !
-    ! -- Return
-    return
   end subroutine calc_q_visc
 
   !> @brief Appled the viscosity ratio (mu_o/mu) to the hydraulic conductivity
@@ -895,9 +841,6 @@ contains
     !
     ! -- Flag kchange
     call this%vsc_set_changed_at(kper, kstp)
-    !
-    ! -- Return
-    return
   end subroutine update_k_with_vsc
 
   !> @brief Mark K changes as having occurred at (kper, kstp)
@@ -913,9 +856,6 @@ contains
     !
     this%kchangeper = kper
     this%kchangestp = kstp
-    !
-    ! -- Return
-    return
   end subroutine vsc_set_changed_at
 
   !> @ brief Output viscosity package dependent-variable terms.
@@ -955,9 +895,6 @@ contains
                                    nwidthp, editdesc, dinact)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine vsc_ot_dv
 
   !> @ brief Deallocate viscosity package memory
@@ -1005,9 +942,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine vsc_da
 
   !> @ brief Read dimensions
@@ -1056,9 +990,6 @@ contains
       call store_error('NVISCSPECIES must be greater than zero.')
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_dimensions
 
   !> @ brief Read data for package
@@ -1163,9 +1094,6 @@ contains
     deallocate (itemp)
     !
     write (this%iout, '(/,1x,a)') 'End of VSC PACKAGEDATA block'
-    !
-    ! -- Return
-    return
   end subroutine read_packagedata
 
   !> @brief Sets package data instead of reading from file
@@ -1183,9 +1111,6 @@ contains
       this%cmodelname(ispec) = input_data%cmodelname(ispec)
       this%cauxspeciesname(ispec) = input_data%cauxspeciesname(ispec)
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_packagedata
 
   !> @brief Calculate fluid viscosity
@@ -1215,9 +1140,6 @@ contains
                                this%cviscref, this%ctemp, this%a2, &
                                this%a3, this%a4)
     end do
-    !
-    ! -- Return
-    return
   end subroutine vsc_calcvisc
 
   !> @ brief Allocate scalars
@@ -1259,9 +1181,6 @@ contains
     this%A4 = 133.15_DP
     !
     this%nviscspecies = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays
@@ -1301,9 +1220,6 @@ contains
       this%cmodelname(i) = ''
       this%cauxspeciesname(i) = ''
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read Options block
@@ -1449,9 +1365,6 @@ contains
     end if
     !
     write (this%iout, '(/,1x,a)') 'end of VSC options block'
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @brief Sets options as opposed to reading them from a file
@@ -1462,9 +1375,6 @@ contains
     type(GwfVscInputDataType), intent(in) :: input_data !< the input data to be set
     !
     this%viscref = input_data%viscref
-    !
-    ! -- Return
-    return
   end subroutine set_options
 
   !> @ brief Set pointers to concentration(s)
@@ -1495,9 +1405,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_concentration_pointer
 
 end module GwfVscModule

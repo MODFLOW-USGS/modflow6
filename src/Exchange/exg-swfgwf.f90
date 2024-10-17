@@ -191,9 +191,6 @@ contains
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_ac
 
   !> @ brief Map connections
@@ -216,9 +213,6 @@ contains
       this%idxglo(n) = matrix_sln%get_position(iglo, jglo)
       this%idxsymglo(n) = matrix_sln%get_position(jglo, iglo)
     end do
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_mc
 
   !> @ brief Fill coefficients
@@ -328,9 +322,6 @@ contains
     !
     ! -- add exchange flows to model's flowja diagonal
     call this%swf_gwf_add_to_flowja()
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_cq
 
   !> @ brief Deallocate
@@ -364,9 +355,6 @@ contains
     call mem_deallocate(this%ifixedcond)
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%inobs)
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_da
 
   !> @ brief Allocate scalars
@@ -394,9 +382,6 @@ contains
     this%ifixedcond = 0
     this%nexg = 0
     this%inobs = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate array data, using the number of
@@ -413,9 +398,6 @@ contains
     call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
     call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
     call mem_allocate(this%simvals, this%nexg, 'SIMVALS', this%memoryPath)
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief
@@ -443,9 +425,6 @@ contains
                       model%dis%mshape(3))
     end if
     noder = model%dis%get_nodenumber(node, 0)
-    !
-    ! -- return
-    return
   end function noder
 
   !> @brief
@@ -476,9 +455,6 @@ contains
       write (cellstr, fmtndim3) cellid(1), cellid(2), cellid(3)
     case default
     end select
-    !
-    ! -- return
-    return
   end function cellstr
 
   !> @brief Calculate flow rates for the exchanges and store them in a member
@@ -510,9 +486,6 @@ contains
       end if
       this%simvals(iexg) = rrate
     end do
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_calc_simvals
 
   !> @ brief Calculate flow
@@ -584,9 +557,6 @@ contains
 
     ! Calculate conductance
     get_cond = smooth_factor * this%bedleak(iexg) * area
-
-    ! -- Return
-    return
   end function get_cond
 
   !> @ brief Get wetted perimeter for swf channel model
@@ -642,9 +612,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_add_to_flowja
 
   !> @ brief Budget
@@ -688,9 +655,6 @@ contains
     ! -- Add any flows from one model into a constant head in another model
     !    as a separate budget term called FLOW-JA-FACE-CHD
     call this%swf_gwf_chd_bd()
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_bd
 
   !> @ brief swf-gwf-chd-bd
@@ -753,9 +717,6 @@ contains
       budterm(2, 1) = ratout
       call this%gwfmodel%model_bdentry(budterm, budtxt, this%name)
     end if
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_chd_bd
 
   !> @ brief Budget save
@@ -787,9 +748,6 @@ contains
     if (this%inobs /= 0) then
       call this%swf_gwf_save_simvals()
     end if
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_bdsav
 
   ! subroutine swf_gwf_bdsav_model(this, model, neighbor_name)
@@ -994,9 +952,6 @@ contains
     !
     ! -- OBS output
     call this%obs%obs_ot()
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_ot
 
   !> @ brief Save simulated flow observations
@@ -1043,9 +998,6 @@ contains
         end do
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine swf_gwf_save_simvals
 
   !> @brief Should return true when the exchange should be added to the
@@ -1069,9 +1021,6 @@ contains
         is_connected = .true.
       end if
     end select
-    !
-    ! -- Return
-    return
   end function
 
 end module SwfGwfExchangeModule

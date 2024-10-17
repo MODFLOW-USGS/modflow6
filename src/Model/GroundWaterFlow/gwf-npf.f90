@@ -183,9 +183,6 @@ contains
       ! -- Print a message identifying the node property flow package.
       write (iout, fmtheader) input_mempath
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_cr
 
   !> @brief Define the NPF package instance
@@ -244,9 +241,6 @@ contains
                        '.  The XT3D option cannot be used with the GNC &
                        &Package.', terminate=.TRUE.)
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_df
 
   !> @brief Add connections for extended neighbors to the sparse matrix
@@ -261,9 +255,6 @@ contains
     !
     ! -- Add extended neighbors (neighbors of neighbors)
     if (this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse)
-    !
-    ! -- Return
-    return
   end subroutine npf_ac
 
   !> @brief Map connections and construct iax, jax, and idxglox
@@ -275,9 +266,6 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     !
     if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
-    !
-    ! -- Return
-    return
   end subroutine npf_mc
 
   !> @brief Allocate and read this NPF instance
@@ -350,9 +338,6 @@ contains
     if (this%intvk /= 0) then
       call this%tvk%ar(this%dis)
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_ar
 
   !> @brief Read and prepare method for package
@@ -368,9 +353,6 @@ contains
     if (this%intvk /= 0) then
       call this%tvk%rp()
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_rp
 
   !> @brief Advance
@@ -437,9 +419,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_ad
 
   !> @brief Routines associated fill coefficients
@@ -470,9 +449,6 @@ contains
         this%sat(n) = satn
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine npf_cf
 
   !> @brief Formulate coefficients
@@ -577,9 +553,6 @@ contains
       end do
       !
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_fc
 
   !> @brief Fill newton terms
@@ -704,9 +677,6 @@ contains
       end do
       !
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_fn
 
   !> @brief Under-relaxation
@@ -750,9 +720,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine npf_nur
 
   !> @brief Calculate flowja
@@ -783,9 +750,6 @@ contains
       end do
       !
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_cq
 
   !> @brief Fractional cell saturation
@@ -809,9 +773,6 @@ contains
       thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn, &
                                     this%satomega)
     end if
-    !
-    ! -- Return
-    return
   end subroutine sgwf_npf_thksat
 
   !> @brief Flow between two cells
@@ -883,9 +844,6 @@ contains
     !
     ! -- Calculate flow positive into cell n
     qnm = condnm * (hmtemp - hntemp)
-    !
-    ! -- Return
-    return
   end subroutine sgwf_npf_qcalc
 
   !> @brief Record flowja and calculate specific discharge if requested
@@ -923,9 +881,6 @@ contains
     if (this%isavsat /= 0) then
       if (ibinun /= 0) call this%sav_sat(ibinun)
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_save_model_flows
 
   !> @brief Print budget
@@ -965,9 +920,6 @@ contains
         write (this%iout, '(a)') trim(line)
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine npf_print_model_flows
 
   !> @brief Deallocate variables
@@ -1151,9 +1103,6 @@ contains
     !
     ! -- If newton is on, then NPF creates asymmetric matrix
     this%iasym = this%inewton
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Store backup copy of hydraulic conductivity when the VSC
@@ -1182,9 +1131,6 @@ contains
       this%k22input(n) = this%k22(n)
       this%k33input(n) = this%k33(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine store_original_k_arrays
 
   !> @brief Allocate npf arrays
@@ -1244,9 +1190,6 @@ contains
                   '                     K33', '                     K22', &
                   '                  WETDRY', '                  ANGLE1', &
                   '                  ANGLE2', '                  ANGLE3']
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Log npf options sourced from the input mempath
@@ -1316,9 +1259,6 @@ contains
       write (this%iout, '(4x,a,i5)') &
       'Head rewet equation (IHDWET) has been set to: ', this%ihdwet
     write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
-    !
-    ! -- Return
-    return
   end subroutine log_options
 
   !> @brief Update simulation options from input mempath
@@ -1395,9 +1335,6 @@ contains
     if (this%iout > 0) then
       call this%log_options(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_options
 
   !> @brief Set options in the NPF object
@@ -1416,9 +1353,6 @@ contains
     this%wetfct = options%wetfct
     this%iwetit = options%iwetit
     this%ihdwet = options%ihdwet
-    !
-    ! -- Return
-    return
   end subroutine set_options
 
   !> @brief Check for conflicting NPF options
@@ -1481,9 +1415,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- Return
-    return
   end subroutine check_options
 
   !> @brief Write dimensions to list file
@@ -1534,9 +1465,6 @@ contains
     end if
     !
     write (this%iout, '(1x,a,/)') 'End Setting NPF Griddata'
-    !
-    ! -- Return
-    return
   end subroutine log_griddata
 
   !> @brief Update simulation griddata from input mempath
@@ -1626,9 +1554,6 @@ contains
     if (this%iout > 0) then
       call this%log_griddata(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_griddata
 
   !> @brief Initialize and check NPF data
@@ -1782,9 +1707,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- Return
-    return
   end subroutine prepcheck
 
   !> @brief preprocess the NPF input data
@@ -1992,9 +1914,6 @@ contains
     !
     ! -- nullify unneeded gwf pointers
     this%igwfnewtonur => null()
-    !
-    ! -- Return
-    return
   end subroutine preprocess_input
 
   !> @brief Calculate CONDSAT array entries for the given node
@@ -2089,9 +2008,6 @@ contains
       end if
       this%condsat(jj) = csat
     end do
-    !
-    ! -- Return
-    return
   end subroutine calc_condsat
 
   !> @brief Calculate initial saturation for the given node
@@ -2112,8 +2028,6 @@ contains
     if (this%ibound(n) /= 0 .and. this%ithickstartflag(n) /= 0) then
       call this%thksat(n, this%ic%strt(n), satn)
     end if
-    !
-    return
   end function calc_initial_sat
 
   !> @brief Perform wetting and drying
@@ -2215,9 +2129,6 @@ contains
     do n = 1, this%dis%nodes
       if (this%ibound(n) == 30000) this%ibound(n) = 1
     end do
-    !
-    ! -- Return
-    return
   end subroutine sgwf_npf_wetdry
 
   !> @brief Determine if a cell should rewet
@@ -2283,9 +2194,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine rewet_check
 
   !> @brief Print wet/dry message
@@ -2331,9 +2239,6 @@ contains
         (acnvrt(l), trim(adjustl(nodcnvrt(l))), l=1, ncnvrt)
       ncnvrt = 0
     end if
-    !
-    ! -- Return
-    return
   end subroutine sgwf_npf_wdmsg
 
   !> @brief Calculate the effective hydraulic conductivity for the n-m connection
@@ -2421,9 +2326,6 @@ contains
       end if
       !
     end if
-    !
-    ! -- Return
-    return
   end function hy_eff
 
   !> @brief Calculate the 3 components of specific discharge at the cell center
@@ -2718,9 +2620,6 @@ contains
     deallocate (wiz)
     deallocate (bix)
     deallocate (biy)
-    !
-    ! -- Return
-    return
   end subroutine calc_spdis
 
   !> @brief Save specific discharge in binary format to ibinun
@@ -2749,9 +2648,6 @@ contains
       call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux, &
                                           this%spdis(:, n))
     end do
-    !
-    ! -- Return
-    return
   end subroutine sav_spdis
 
   !> @brief Save saturation in binary format to ibinun
@@ -2781,9 +2677,6 @@ contains
       a(1) = this%sat(n)
       call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux, a)
     end do
-    !
-    ! -- Return
-    return
   end subroutine sav_sat
 
   !> @brief Reserve space for nedges cells that have an edge on them.
@@ -2797,9 +2690,6 @@ contains
     integer(I4B), intent(in) :: nedges
     !
     this%nedges = this%nedges + nedges
-    !
-    ! -- Return
-    return
   end subroutine increase_edge_count
 
   !> @brief Provide the npf package with edge properties
@@ -2831,9 +2721,6 @@ contains
     ! -- If this is the last edge, then the next call must be starting a new
     !    edge properties assignment loop, so need to reset lastedge to 0
     if (this%lastedge == this%nedges) this%lastedge = 0
-    !
-    ! -- Return
-    return
   end subroutine set_edge_properties
 
   !> Calculate saturated thickness between cell n and m
@@ -2861,9 +2748,6 @@ contains
                             this%dis%top(m), &
                             this%dis%bot(n), &
                             this%dis%bot(m))
-    !
-    ! -- Return
-    return
   end function calcSatThickness
 
 end module GwfNpfModule

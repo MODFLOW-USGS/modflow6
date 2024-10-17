@@ -85,9 +85,6 @@ contains
     else
       call this%add_ts_strloc(token, structarray_col, col, row)
     end if
-    !
-    ! -- return
-    return
   end function sv_read_token
 
   subroutine sv_add_ts_strloc(this, token, structarray_col, col, row)
@@ -110,9 +107,6 @@ contains
     !
     obj => str_field
     call this%ts_strlocs%Add(obj)
-    !
-    ! -- return
-    return
   end subroutine sv_add_ts_strloc
 
   function sv_get_ts_strloc(this, idx) result(res)
@@ -134,9 +128,6 @@ contains
         res => obj
       end select
     end if
-    !
-    ! -- return
-    return
   end function sv_get_ts_strloc
 
   !> @brief

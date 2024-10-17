@@ -37,9 +37,6 @@ contains
     !
     ! -- Source simulation nam input context and create objects
     call source_simulation_nam()
-    !
-    ! -- Return
-    return
   end subroutine simulation_cr
 
   !> @brief Deallocate simulation variables
@@ -57,9 +54,6 @@ contains
     !
     deallocate (model_names)
     deallocate (model_loc_idx)
-    !
-    ! -- Return
-    return
   end subroutine simulation_da
 
   !> @brief Source the simulation name file
@@ -94,9 +88,6 @@ contains
     !
     ! -- Go through each solution and assign exchanges accordingly
     call assign_exchanges()
-    !
-    ! -- Return
-    return
   end subroutine source_simulation_nam
 
   !> @brief Set the simulation options
@@ -161,9 +152,6 @@ contains
       !
       write (iout, '(1x,a)') 'END OF SIMULATION OPTIONS'
     end if
-    !
-    ! -- return
-    return
   end subroutine options_create
 
   !> @brief Set the timing module to be used for the simulation
@@ -199,9 +187,6 @@ contains
     end if
     !
     write (iout, '(1x,a)') 'END OF SIMULATION TIMING'
-    !
-    ! -- return
-    return
   end subroutine timing_create
 
   !> @brief Set the models to be used for the simulation
@@ -355,9 +340,6 @@ contains
         'No MODELS assigned to process ', proc_id
       call store_error(errmsg, terminate)
     end if
-    !
-    ! -- return
-    return
   end subroutine models_create
 
   !> @brief Set the exchanges to be used for the simulation
@@ -508,9 +490,6 @@ contains
     !
     ! -- close exchange logging block
     write (iout, '(1x,a)') 'END OF SIMULATION EXCHANGES'
-    !
-    ! -- return
-    return
   end subroutine exchanges_create
 
   !> @brief Check a solution_group to be used for the simulation
@@ -546,9 +525,6 @@ contains
         call store_error(errmsg, terminate)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine solution_group_check
 
   !> @brief Set the solution_groups to be used for the simulation
@@ -744,9 +720,6 @@ contains
     if (solutiongrouplist%Count() == 0) then
       call store_error('There are no solution groups.', terminate)
     end if
-    !
-    ! -- return
-    return
   end subroutine solution_groups_create
 
   !> @brief Check for dangling models, and break with
@@ -838,9 +811,6 @@ contains
         call store_error(errmsg, terminate)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine check_model_name
 
 end module SimulationCreateModule

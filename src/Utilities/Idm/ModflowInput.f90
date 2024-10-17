@@ -107,9 +107,6 @@ contains
                                subcomponent_type)
     case default
     end select
-    !
-    ! -- return
-    return
   end function update_sc_type
 
   function read_as_arrays(filetype, filename, component_type, subcomponent_type) &
@@ -159,9 +156,6 @@ contains
     end if
     !
     call parser%clear()
-    !
-    ! -- return
-    return
   end function read_as_arrays
 
 end module ModflowInputModule

@@ -37,9 +37,6 @@ contains
     !
     ! -- open netcdf file
     call nf_verify(nf90_open(nc_fname, NF90_NOWRITE, ncid), nc_fname)
-    !
-    ! -- return
-    return
   end function nc_fopen
 
   !> @brief Close netcdf file
@@ -51,9 +48,6 @@ contains
     !
     ! -- close netcdf file
     call nf_verify(nf90_close(ncid), nc_fname)
-    !
-    ! -- return
-    return
   end subroutine nc_fclose
 
   !> @brief error check a netcdf-fortran interface call
@@ -118,9 +112,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(nc_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nf_verify
 
 end module NetCDFCommonModule

@@ -77,9 +77,6 @@ contains
     call memtab%add_term(cmem)
     call memtab%add_term(this%isize)
     call memtab%add_term(cptr)
-    !
-    ! -- return
-    return
   end subroutine table_entry
 
   function mt_associated(this) result(al)

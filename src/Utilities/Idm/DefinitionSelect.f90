@@ -65,9 +65,6 @@ contains
     ! -- cleanup
     if (allocated(param_cols)) deallocate (param_cols)
     if (allocated(parse_str)) deallocate (parse_str)
-    !
-    ! -- return
-    return
   end subroutine idt_parse_rectype
 
   !> @brief return input definition type datatype
@@ -89,9 +86,6 @@ contains
     else
       datatype = idt%datatype
     end if
-    !
-    ! -- return
-    return
   end function idt_datatype
 
   !> @brief Return parameter definition
@@ -131,9 +125,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(filename)
     end if
-    !
-    ! -- return
-    return
   end function get_param_definition_type
 
   !> @brief Return aggregate definition
@@ -167,9 +158,6 @@ contains
         '", subcomponent="', trim(subcomponent_type), '".'
       call store_error(errmsg, .true.)
     end if
-    !
-    ! -- return
-    return
   end function get_aggregate_definition_type
 
   !> @brief Return aggregate definition
