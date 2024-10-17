@@ -1,0 +1,64 @@
+name: Test NetCDF MF6
+description: Build and test NetCDF MODFLOW 6
+runs:
+  using: "composite"
+  steps:
+
+    - name: Setup GNU Fortran
+      uses: fortran-lang/setup-fortran@v1
+      with:
+        compiler: gcc
+        version: 13
+
+    - name: Install netcdf
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install build-essential \
+          libnetcdf-dev \
+          libnetcdff-dev \
+          netcdf-bin
+        nc-config --all
+        nf-config --all
+
+    - name: Install netcdf
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install netcdf-fortran
+        nc-config --all
+        nf-config
+
+    - name: Build modflow6
+      shell: bash
+      working-directory: modflow6
+      run: |
+        pixi run setup -Dnetcdf=true builddir
+        pixi run build builddir
+        pixi run test builddir
+
+    - name: Show Meson logs
+      if: failure()
+      shell: bash
+      working-directory: modflow6
+      run: cat builddir/meson-logs/meson-log.txt
+
+    - name: Update flopy
+      shell: bash
+      working-directory: modflow6
+      run: pixi run update-flopy
+
+    - name: Get executables
+      shell: bash
+      working-directory: modflow6
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: pixi run get-exes
+
+    - name: Test programs
+      shell: bash
+      working-directory: modflow6
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: pixi run autotest --netcdf -k "test_netcdf"

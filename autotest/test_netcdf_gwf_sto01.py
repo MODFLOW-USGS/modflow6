@@ -3,7 +3,6 @@ NetCDF export test version of test_gwf_sto01.
 """
 
 import os
-import subprocess
 
 import flopy
 import numpy as np
@@ -72,9 +71,7 @@ def check_output(idx, test, export, gridded_input):
         # re-run the simulation with model netcdf input
         input_fname = "gwf_sto01.nc"
         nc_fname = f"gwf_sto01.{export}.nc"
-        subprocess.run(
-            ["mv", test.workspace / input_fname, test.workspace / nc_fname]
-        )
+        os.rename(test.workspace / input_fname, test.workspace / nc_fname)
 
         with open(test.workspace / "gwf_sto01.nam", "w") as f:
             f.write("BEGIN options\n")

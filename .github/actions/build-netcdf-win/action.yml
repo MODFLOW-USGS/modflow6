@@ -1,0 +1,59 @@
+name: Build NetCDF (Windows)
+description: Build NetCDF on Windows
+runs:
+  using: "composite"
+  steps:
+
+    - name: Convert line endings
+      shell: cmd
+      run: |
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\compile_netcdf.bat" "%TEMP%\compile_netcdf.bat"
+
+    - name: Hide Strawberry programs
+      shell: bash
+      run: |
+        mkdir "$RUNNER_TEMP/strawberry"
+        mv /c/Strawberry/c/bin/gmake "$RUNNER_TEMP/strawberry/gmake"
+        mv /c/Strawberry/perl/bin/pkg-config "$RUNNER_TEMP/strawberry/pkg-config"
+        mv /c/Strawberry/perl/bin/pkg-config.bat "$RUNNER_TEMP/strawberry/pkg-config.bat"
+
+    - name: Get date
+      id: get-date
+      shell: bash
+      run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
+
+    - name: Get specific version CMake, 3.28.0-msvc1
+      uses: lukka/get-cmake@latest
+      with:
+        cmakeVersion: latest
+        ninjaVersion: latest
+
+    - name: Setup oneAPI
+      uses: ./modflow6/.github/actions/setup-par-oneapi
+
+    - name: Setup 7-zip
+      uses: milliewalky/setup-7-zip@v1
+
+    - name: Download NetCDF-C
+      shell: bash
+      run: |
+        mkdir netcdf
+        mkdir netcdf/netCDF4.9.2-NC4-64
+        cd netcdf/netCDF4.9.2-NC4-64
+        curl https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe -O -J
+        7z x netCDF4.9.2-NC4-64.exe -aou
+
+    - name: Download NetCDF-Fortran
+      shell: bash
+      run: |
+        cd netcdf
+        mkdir netcdf-fortran-4.6.1_build
+        cd netcdf-fortran-4.6.1_build
+        curl https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip -O -J
+        unzip netcdf-fortran-4.6.1.zip
+        mkdir build
+
+    - name: Build NetCDF
+      shell: cmd
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\compile_netcdf.bat"
