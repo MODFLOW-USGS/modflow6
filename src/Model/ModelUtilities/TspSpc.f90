@@ -1,15 +1,16 @@
-!> @brief This module contains the GwtSpc Module
+!> @brief This module contains the TspSpc Module
 !!
 !! This module contains the code for reading and storing a
-!! generic input file of source and sink concentrations.
-!!
+!! generic input file of source and sink concentrations or
+!! temperatures.
 !<
-module GwtSpcModule
+module TspSpcModule
 
   use KindModule, only: DP, LGP, I4B
   use ConstantsModule, only: LENPACKAGENAME, LENMODELNAME, &
                              LENMEMPATH, DZERO, LENFTYPE, &
-                             LINELENGTH, TABLEFT, TABCENTER
+                             LINELENGTH, TABLEFT, TABCENTER, &
+                             LENVARNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
   use MemoryHelperModule, only: create_mem_path
@@ -18,28 +19,29 @@ module GwtSpcModule
   use TimeSeriesManagerModule, only: TimeSeriesManagerType, tsmanager_cr
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, &
                                           tasmanager_cr
+  use InputOutputModule, only: str_pad_left
   use TableModule, only: TableType, table_cr
 
   implicit none
   private
-  public :: GwtSpcType
+  public :: TspSpcType
 
   character(len=LENFTYPE) :: ftype = 'SPC'
-  character(len=LENPACKAGENAME) :: text = 'STRESS PACK CONC'
+  character(len=LENPACKAGENAME) :: text = 'STRESS PACK COMP'
 
   !> @brief Derived type for managing SPC input
   !!
   !! This derived type will read and process an SPC input file,
-  !! make time series interpolations, and provide concentrations to
-  !! the SSM package that correspond to an individual GWF stress
-  !! package.
-  !!
+  !! make time series interpolations, and provide concentrations or
+  !! temperatures to the SSM package that correspond to an individual
+  !! GWF stress package.
   !<
-  type :: GwtSpcType
+  type :: TspSpcType
 
     character(len=LENMODELNAME) :: name_model = '' !< the name of the model that contains this package
     character(len=LENPACKAGENAME) :: packName = '' !< name of the package
     character(len=LENPACKAGENAME) :: packNameFlow = '' !< name of the corresponding flow package
+    character(len=LENVARNAME) :: depvarname = '' !< name of the dependent variable (CONCENTRATION or TEMPERATURE)
     character(len=LENMEMPATH) :: memoryPath = '' !< the location in the memory manager where the variables are stored
     integer(I4B), pointer :: id => null() !< id number for this spc package
     integer(I4B), pointer :: inunit => null() !< unit number for input
@@ -73,7 +75,7 @@ module GwtSpcModule
     procedure :: read_check_ionper
     procedure :: check_flow_package
 
-  end type GwtSpcType
+  end type TspSpcType
 
 contains
 
@@ -84,15 +86,17 @@ contains
   !! and allocating memory.
   !!
   !<
-  subroutine initialize(this, dis, id, inunit, iout, name_model, packNameFlow)
+  subroutine initialize(this, dis, id, inunit, iout, name_model, packNameFlow, &
+                        dvn)
     ! -- dummy variables
-    class(GwtSpcType) :: this !<  GwtSpcType
+    class(TspSpcType) :: this !<  TspSpcType
     class(DisBaseType), pointer, intent(in) :: dis !<  discretization package
     integer(I4B), intent(in) :: id !<  id number for this spc package
     integer(I4B), intent(in) :: inunit !<  unit number for input
     integer(I4B), intent(in) :: iout !<  unit number for output
     character(len=*), intent(in) :: name_model !<  character string containing model name
     character(len=*), intent(in) :: packNameflow !<  character string containing name of corresponding flow package
+    character(len=*), intent(in) :: dvn !<  dependent variable name (CONCENTRATION or TEMPERATURE)
     ! -- local
     !
     ! -- construct the memory path
@@ -108,6 +112,7 @@ contains
     this%inunit = inunit
     this%iout = iout
     this%packNameFlow = packNameFlow
+    this%depvarname = dvn
     !
     ! -- set pointers
     this%dis => dis
@@ -149,7 +154,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(GwtSpcType) :: this !< GwtSpcType object
+    class(TspSpcType) :: this !< TspSpcType object
     !
     ! -- allocate scalars in memory manager
     call mem_allocate(this%id, 'ID', this%memoryPath)
@@ -187,7 +192,7 @@ contains
   subroutine read_options(this)
     ! -- modules
     ! -- dummy
-    class(GwtSpcType) :: this
+    class(TspSpcType) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword, fname
     integer(I4B) :: ierr
@@ -262,7 +267,7 @@ contains
   !<
   subroutine read_dimensions(this)
     ! -- dummy variables
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     ! -- local variables
     character(len=LINELENGTH) :: keyword
     logical(LGP) :: isfound
@@ -322,7 +327,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
-    class(GwtSpcType) :: this !< GwtSpcType object
+    class(TspSpcType) :: this !< TspSpcType object
     ! -- local
     integer(I4B) :: i
     !
@@ -344,7 +349,7 @@ contains
   !!
   !<
   function get_value(this, ientry, nbound_flow) result(value)
-    class(GwtSpcType) :: this !< GwtSpcType object
+    class(TspSpcType) :: this !< TspSpcType object
     integer(I4B), intent(in) :: ientry !< index of the data to return
     integer(I4B), intent(in) :: nbound_flow !< size of bound list in flow package
     real(DP) :: value
@@ -392,7 +397,7 @@ contains
     ! -- modules
     use TdisModule, only: kper, nper
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     ! -- local
     character(len=LINELENGTH) :: line
     logical :: isfound
@@ -471,7 +476,7 @@ contains
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     ! -- local
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: title
@@ -536,11 +541,11 @@ contains
   !!
   !<
   subroutine spc_rp_array(this, line)
-    use ConstantsModule, only: LENTIMESERIESNAME
+    use ConstantsModule, only: LENTIMESERIESNAME, LENANAME
     use SimModule, only: store_error
     use ArrayHandlersModule, only: ifind
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     character(len=LINELENGTH), intent(inout) :: line
     ! -- local
     integer(I4B) :: n
@@ -548,7 +553,7 @@ contains
     integer(I4B) :: jauxcol, ivarsread
     integer(I4B), dimension(:), allocatable, target :: nodelist
     character(len=LENTIMESERIESNAME) :: tasName
-    character(len=24), dimension(1) :: aname
+    character(len=LENANAME) :: aname
     character(len=LINELENGTH) :: keyword
     logical :: endOfBlock
     logical :: convertFlux
@@ -556,9 +561,8 @@ contains
     ! -- these time array series pointers need to be non-contiguous
     !    because a slice of bound is passed
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
-    ! -- formats
-    ! -- data
-    data aname(1)/'           CONCENTRATION'/
+    !
+    write (aname, '(a)') str_pad_left(this%depvarname, LENANAME)
     !
     ! -- Initialize
     jauxcol = 0
@@ -577,7 +581,7 @@ contains
       !
       ! -- Parse the keywords
       select case (keyword)
-      case ('CONCENTRATION')
+      case ('CONCENTRATION', 'TEMPERATURE')
         !
         ! -- Look for keyword TIMEARRAYSERIES and time-array series
         !    name on line, following RECHARGE
@@ -591,19 +595,20 @@ contains
           convertflux = .false.
           call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
                                            this%iprpak, tasName, &
-                                           'CONCENTRATION', &
+                                           this%depvarname, &
                                            convertFlux, nodelist, &
                                            this%parser%iuactive)
         else
           !
           ! -- Read the concentration array
           call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
-                                         this%maxbound, 1, aname(1), &
+                                         this%maxbound, 1, aname, &
                                          this%parser%iuactive, this%iout)
         end if
         !
       case default
-        call store_error('Looking for CONCENTRATION.  Found: '//trim(line))
+        call store_error('Looking for component name, either CONCENTRATION &
+                         &or TEMPERATURE.  Found: '//trim(line))
         call this%parser%StoreErrorUnit()
       end select
 
@@ -621,7 +626,7 @@ contains
   subroutine spc_ad(this, nbound_flowpack, budtxt)
     ! -- modules
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     integer(I4B), intent(in) :: nbound_flowpack
     character(len=*), intent(in) :: budtxt
     ! -- local
@@ -646,7 +651,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy variables
-    class(GwtSpcType) :: this !< GwtSpcType object
+    class(TspSpcType) :: this !< TspSpcType object
     !
     ! -- deallocate arrays in memory manager
     call mem_deallocate(this%dblvec)
@@ -682,7 +687,7 @@ contains
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy variables
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     !
     ! -- save last value and read period number
     this%lastonper = this%ionper
@@ -712,7 +717,7 @@ contains
     ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     integer(I4B), intent(in) :: ival
     ! -- local
     character(len=LINELENGTH) :: keyword
@@ -722,13 +727,13 @@ contains
     ! -- read remainder of variables on the line
     call this%parser%GetStringCaps(keyword)
     select case (keyword)
-    case ('CONCENTRATION')
+    case ('CONCENTRATION', 'TEMPERATURE')
       call this%parser%GetString(text)
       jj = 1 ! For CONCENTRATION
       bndElem => this%dblvec(ival)
       call read_value_or_time_series_adv(text, ival, jj, bndElem, this%packName, &
                                          'BND', this%tsManager, this%iprpak, &
-                                         'CONCENTRATION')
+                                         this%depvarname)
 
     end select
     return
@@ -743,7 +748,7 @@ contains
   subroutine check_flow_package(this, nbound_flowpack, budtxt)
     ! -- modules
     ! -- dummy
-    class(GwtSpcType), intent(inout) :: this !< GwtSpcType object
+    class(TspSpcType), intent(inout) :: this !< TspSpcType object
     integer(I4B), intent(in) :: nbound_flowpack
     character(len=*), intent(in) :: budtxt
     ! -- local
@@ -801,4 +806,4 @@ contains
     return
   end subroutine check_flow_package
 
-end module GwtSpcModule
+end module TspSpcModule

@@ -18,7 +18,7 @@ module TspSsmModule
   use TspFmiModule, only: TspFmiType
   use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
-  use GwtSpcModule, only: GwtSpcType
+  use TspSpcModule, only: TspSpcType
   use MatrixBaseModule
 
   implicit none
@@ -38,12 +38,12 @@ module TspSsmModule
 
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
-    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration/temperature
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
-    type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
+    type(TspSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration or temperature objects
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     character(len=LENVARNAME) :: depvartype = ''
 
@@ -190,15 +190,15 @@ contains
   !!
   !! This routine is called from gwt_rp().  It is called at the beginning of
   !! each stress period.  If any SPC input files are used to provide source
-  !! and sink concentrations, then period blocks for the current stress period
-  !! are read.
+  !! and sink concentrations (or temperatures), then period blocks for the
+  !! current stress period are read.
   !<
   subroutine ssm_rp(this)
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     ! -- formats
     !
     ! -- Call the rp method on any ssm input files
@@ -219,15 +219,16 @@ contains
   !! This routine is called from gwt_ad().  It is called at the beginning of
   !! each time step.  The total number of flow boundaries is counted and stored
   !! in this%nbound.  Also, if any SPC input files are used to provide source
-  !! and sink concentrations and time series are referenced in those files,
-  !! then ssm concenrations must be interpolated for the time step.
+  !! and sink concentrations (or temperatures) and time series are referenced
+  !! in those files, then ssm concenrations must be interpolated for the time
+  !! step.
   !<
   subroutine ssm_ad(this)
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     integer(I4B) :: i
     integer(I4B) :: node
     !
@@ -276,7 +277,7 @@ contains
     real(DP), intent(out), optional :: rrate !< calculated mass flow rate
     real(DP), intent(out), optional :: rhsval !< calculated rhs value
     real(DP), intent(out), optional :: hcofval !< calculated hcof value
-    real(DP), intent(out), optional :: cssm !< calculated source concentration depending on flow direction
+    real(DP), intent(out), optional :: cssm !< calculated source concentration/temperature depending on flow direction
     real(DP), intent(out), optional :: qssm !< water flow rate into model cell from boundary package
     ! -- local
     logical(LGP) :: lauxmixed
@@ -307,10 +308,10 @@ contains
       !    of hcof, rhs, and rate
       if (.not. lauxmixed) then
         !
-        ! -- If qbnd is positive, then concentration represents the inflow
-        !    concentration.  If qbnd is negative, then the outflow concentration
-        !    (or temperature) is set equal to the simulated cell's concentration
-        !    (or temperature).
+        ! -- If qbnd is positive, then concentration (or temperature) represents
+        !    the inflow concentration (or temperature).  If qbnd is negative,
+        !    then the outflow concentration (or temperature) is set equal to the
+        !    simulated cell's concentration (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs
         else
@@ -323,10 +324,11 @@ contains
       else
         !
         ! -- lauxmixed value indicates that this is a mixed sink type where
-        !    the concentration value represents the injected concentration (or
-        !    temperature) if qbnd is positive. If qbnd is negative, then the
-        !    withdrawn water is equal to the minimum of the aux concentration
-        !    (or temperature) and the cell concentration (or temperature).
+        !    the concentration (or temperature) value represents the injected
+        !    concentration (or temperature) if qbnd is positive. If qbnd is
+        !    negative, then the withdrawn water is equal to the minimum of the
+        !    aux concentration (or temperature) and the cell concentration
+        !    (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs (ctmp is aux value)
         else
@@ -376,7 +378,7 @@ contains
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     integer(I4B), intent(in) :: nbound_flow !< size of flow package bound list
-    real(DP), intent(out) :: conc !< user-specified concentration for this bound
+    real(DP), intent(out) :: conc !< user-specified concentration/temperature for this bound
     logical(LGP), intent(out) :: lauxmixed !< user-specified flag for marking this as a mixed boundary
     ! -- local
     integer(I4B) :: isrctype
@@ -681,7 +683,7 @@ contains
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     !
     ! -- Deallocate the ssmi objects if package was active
     if (this%inunit > 0) then
@@ -1115,7 +1117,7 @@ contains
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
     character(len=LINELENGTH) :: filename
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     integer(I4B) :: inunit
     !
     ! -- read file name
@@ -1126,7 +1128,7 @@ contains
     ! -- Create the SPC file object
     ssmiptr => this%ssmivec(ip)
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
-                            trim(packname))
+                            trim(packname), this%depvartype)
     !
     write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
       trim(filename), ' TO SET ', trim(this%depvartype), &

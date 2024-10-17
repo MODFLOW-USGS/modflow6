@@ -11,7 +11,6 @@ module GweCtpModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use InputOutputModule, only: str_pad_left
   use MatrixBaseModule
   !
   implicit none
