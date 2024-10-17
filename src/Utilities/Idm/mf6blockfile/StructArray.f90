@@ -90,7 +90,8 @@ contains
     !
     ! -- set rows if known or set deferred
     struct_array%nrow = nrow
-    if (struct_array%nrow == 0) then
+    if (struct_array%nrow == -1) then
+      struct_array%nrow = 0
       struct_array%deferred_shape = .true.
     end if
     !
