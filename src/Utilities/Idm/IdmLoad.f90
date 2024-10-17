@@ -583,7 +583,7 @@ contains
     return
   end subroutine dynamic_da
 
-  !> @brief return sim input context PRINT_INTPUT value
+  !> @brief return sim input context PRINT_INPUT value
   !<
   function input_param_log() result(paramlog)
     use MemoryHelperModule, only: create_mem_path

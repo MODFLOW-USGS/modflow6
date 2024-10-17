@@ -13,10 +13,8 @@ import pytest
 from framework import TestFramework
 from test_gwf_disv import cases
 
-try:
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xugrid not found", allow_module_level=True)
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 wkt = (
     'PROJCS["NAD83 / UTM zone 18N", '

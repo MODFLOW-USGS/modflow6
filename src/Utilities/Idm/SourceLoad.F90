@@ -21,7 +21,8 @@ module SourceLoadModule
   public :: open_source_file
   public :: load_modelnam, load_simnam, load_simtdis
   public :: remote_model_ndim
-  public :: export_cr, export_post_step, export_da
+  public :: export_cr, export_da
+  public :: export_post_prepare, export_post_step
   public :: nc_close
   public :: netcdf_context
 
@@ -65,7 +66,7 @@ contains
     ! -- initialize loader
     call loader%init(mf6_input, component_name, component_fname, input_fname)
     !
-    ! -- initialize loader netcdf variables structure
+    ! -- initialize loader netcdf variables data structure
     if (present(nc_vars)) then
       call nc_vars%create_varlists(component_name, sc_name, loader%nc_vars)
     else
@@ -362,6 +363,14 @@ contains
     end if
   end subroutine export_cr
 
+  !> @brief model exports post prepare step actions
+  !<
+  subroutine export_post_prepare()
+    ! -- modules
+    use ModelExportModule, only: modelexports_post_prepare
+    call modelexports_post_prepare()
+  end subroutine export_post_prepare
+
   !> @brief model exports post step actions
   !<
   subroutine export_post_step()
@@ -406,7 +415,7 @@ contains
 #if defined(__WITH_NETCDF__)
     use NCContextBuildModule, only: open_ncfile, create_netcdf_context
 #endif
-    ! -- drummy
+    ! -- dummy
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: modelname

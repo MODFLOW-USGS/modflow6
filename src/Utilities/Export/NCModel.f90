@@ -9,23 +9,42 @@ module NCModelExportModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME, &
-                             LENMEMPATH, LENBIGLINE, DIS, DISU, DISV
+                             LENMEMPATH, LENBIGLINE, LENVARNAME, DIS, DISU, DISV
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
+  use InputLoadTypeModule, only: ModelDynamicPkgsType
+  use ModflowInputModule, only: ModflowInputType
+  use BoundInputContextModule, only: ReadStateVarType, rsv_name
+  use ListModule, only: ListType
 
   implicit none
   private
   public :: NCBaseModelExportType, NCModelExportType
   public :: NCExportAnnotation
+  public :: ExportPackageType
   public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_UGRID
+  public :: export_longname
 
   !> @brief netcdf export types enumerator
   !<
   ENUM, BIND(C)
     ENUMERATOR :: NETCDF_UNDEF = 0 !< undefined netcdf export type
-    ENUMERATOR :: NETCDF_STRUCTURED = 1 !< netcdf structrured export
-    ENUMERATOR :: NETCDF_UGRID = 2 !< netcdf mesh export
+    ENUMERATOR :: NETCDF_UGRID = 1 !< netcdf mesh export
+    ENUMERATOR :: NETCDF_STRUCTURED = 2 !< netcdf structrured export
   END ENUM
+
+  type :: ExportPackageType
+    type(ModflowInputType) :: mf6_input !< description of modflow6 input
+    character(len=LINELENGTH), dimension(:), allocatable :: param_names !< dynamic param tagnames
+    type(ReadStateVarType), dimension(:), allocatable :: param_reads !< param read states
+    integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< model shape
+    integer(I4B), pointer :: iper !< most recent package rp load
+    integer(I4B) :: iper_export !< most recent period of netcdf package export
+    integer(I4B) :: nparam !< number of in scope params
+  contains
+    procedure :: init => epkg_init
+    procedure :: destroy => epkg_destroy
+  end type ExportPackageType
 
   !> @brief netcdf export attribute annotations
   !<
@@ -45,11 +64,12 @@ module NCModelExportModule
   !> @brief base class for an export model
   !<
   type :: NCModelExportType
+    type(ListType) :: pkglist
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
     character(len=LINELENGTH) :: nc_fname !< name of netcdf export file
-    character(len=LINELENGTH) :: gridmap_name = 'projection' !< name of grid mapping variable
+    character(len=LINELENGTH) :: gridmap_name !< name of grid mapping variable
     character(len=LINELENGTH) :: mesh_name = 'mesh' !< name of mesh container variable
     character(len=LENMEMPATH) :: dis_mempath !< discretization input mempath
     character(len=LENMEMPATH) :: ncf_mempath !< netcdf utility package input mempath
@@ -70,6 +90,8 @@ module NCModelExportModule
     logical(LGP) :: chunking_active !< have chunking parameters been provided
   contains
     procedure :: init => export_init
+    procedure :: get => export_get
+    procedure :: input_attribute
     procedure :: destroy => export_destroy
   end type NCModelExportType
 
@@ -77,24 +99,94 @@ module NCModelExportModule
   !<
   type, abstract, extends(NCModelExportType) :: NCBaseModelExportType
   contains
-    procedure(model_define_if), deferred :: df
-    procedure(model_step_if), deferred :: step
+    procedure :: export_input
+    procedure(model_define), deferred :: df
+    procedure(model_step), deferred :: step
+    procedure(package_export), deferred :: package_step
+    procedure(package_export_ilayer), deferred :: package_step_ilayer
   end type NCBaseModelExportType
 
   !> @brief abstract interfaces for model netcdf export type
   !<
   abstract interface
-    subroutine model_define_if(this)
+    subroutine model_define(this)
       import NCBaseModelExportType
       class(NCBaseModelExportType), intent(inout) :: this
     end subroutine
-    subroutine model_step_if(this)
+    subroutine model_step(this)
       import NCBaseModelExportType
       class(NCBaseModelExportType), intent(inout) :: this
+    end subroutine
+    subroutine package_export(this, export_pkg)
+      import NCBaseModelExportType, ExportPackageType
+      class(NCBaseModelExportType), intent(inout) :: this
+      class(ExportPackageType), intent(in) :: export_pkg
+    end subroutine
+    subroutine package_export_ilayer(this, export_pkg, ilayer_varname, &
+                                     ilayer)
+      import NCBaseModelExportType, ExportPackageType, I4B
+      class(NCBaseModelExportType), intent(inout) :: this
+      class(ExportPackageType), intent(in) :: export_pkg
+      character(len=*), intent(in) :: ilayer_varname
+      integer(I4B), intent(in) :: ilayer
     end subroutine
   end interface
 
 contains
+
+  !> @brief initialize dynamic package export object
+  !<
+  subroutine epkg_init(this, mf6_input, mshape, param_names, &
+                       nparam)
+    use SimVariablesModule, only: idm_context
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use MemoryHelperModule, only: create_mem_path
+    ! -- dummy
+    class(ExportPackageType), intent(inout) :: this
+    type(ModflowInputType), intent(in) :: mf6_input
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: mshape !< model shape
+    character(len=LINELENGTH), dimension(:), allocatable, &
+      intent(in) :: param_names
+    integer(I4B), intent(in) :: nparam
+    integer(I4B) :: n
+    character(len=LENVARNAME) :: rs_varname
+    character(len=LENMEMPATH) :: input_mempath
+    integer(I4B), pointer :: rsvar
+    !
+    this%mf6_input = mf6_input
+    this%mshape => mshape
+    this%nparam = nparam
+    this%iper_export = 0
+    !
+    input_mempath = create_mem_path(component=mf6_input%component_name, &
+                                    subcomponent=mf6_input%subcomponent_name, &
+                                    context=idm_context)
+    !
+    ! -- allocate param arrays
+    allocate (this%param_names(nparam))
+    allocate (this%param_reads(nparam))
+    !
+    ! -- set param arrays
+    do n = 1, nparam
+      this%param_names(n) = param_names(n)
+      rs_varname = rsv_name(param_names(n))
+      call mem_setptr(rsvar, rs_varname, mf6_input%mempath)
+      this%param_reads(n)%invar => rsvar
+    end do
+    !
+    ! -- set pointer to loaded input period
+    call mem_setptr(this%iper, 'IPER', mf6_input%mempath)
+  end subroutine epkg_init
+
+  !> @brief destroy dynamic package export object
+  !<
+  subroutine epkg_destroy(this)
+    use InputDefinitionModule, only: InputParamDefinitionType
+    ! -- dummy
+    class(ExportPackageType), intent(inout) :: this
+    if (allocated(this%param_names)) deallocate (this%param_names)
+  end subroutine epkg_destroy
 
   !> @brief set netcdf file scoped attributes
   !<
@@ -197,7 +289,7 @@ contains
     this%modeltype = modeltype
     this%modelfname = modelfname
     this%nc_fname = trim(modelname)//'.nc'
-    call lowcase(this%nc_fname)
+    this%gridmap_name = ''
     this%ncf_mempath = ''
     this%ogc_wkt = ''
     this%datetime = ''
@@ -212,6 +304,8 @@ contains
     this%chunk_time = -1
     this%iout = iout
     this%chunking_active = .false.
+    !
+    call lowcase(this%nc_fname)
     !
     ! -- set file scoped attributes
     call this%annotation%set(modelname, modeltype, modelfname, nctype)
@@ -260,6 +354,10 @@ contains
                          found%chunk_time)
     end if
     !
+    if (found%ogc_wkt) then
+      this%gridmap_name = 'projection'
+    end if
+    !
     ! -- ATTR_OFF turns off modflow 6 input attributes
     if (found%attr_off) then
       this%input_attr = 0
@@ -278,12 +376,121 @@ contains
     this%totnstp = sum(nstp)
   end subroutine export_init
 
+  !> @brief retrieve dynamic export object from package list
+  !<
+  function export_get(this, idx) result(res)
+    use ListModule, only: ListType
+    class(NCModelExportType), intent(inout) :: this
+    integer(I4B), intent(in) :: idx
+    class(ExportPackageType), pointer :: res
+    class(*), pointer :: obj
+    !
+    nullify (res)
+    obj => this%pkglist%GetItem(idx)
+    if (associated(obj)) then
+      select type (obj)
+      class is (ExportPackageType)
+        res => obj
+      end select
+    end if
+  end function export_get
+
+  !> @brief build modflow6_input attribute string
+  !<
+  function input_attribute(this, pkgname, idt) result(attr)
+    use InputOutputModule, only: lowcase
+    use MemoryHelperModule, only: memPathSeparator
+    use InputDefinitionModule, only: InputParamDefinitionType
+    class(NCModelExportType), intent(inout) :: this
+    character(len=*), intent(in) :: pkgname
+    type(InputParamDefinitionType), pointer, intent(in) :: idt
+    character(len=LINELENGTH) :: attr
+    !
+    attr = ''
+    !
+    if (this%input_attr > 0) then
+      attr = trim(this%modelname)//memPathSeparator//trim(pkgname)// &
+             memPathSeparator//trim(idt%mf6varname)
+    end if
+  end function input_attribute
+
+  !> @brief build netcdf variable longname
+  !<
+  function export_longname(longname, pkgname, tagname, layer, iper) result(lname)
+    use InputOutputModule, only: lowcase
+    character(len=*), intent(in) :: longname
+    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: tagname
+    integer(I4B), intent(in) :: layer
+    integer(I4B), optional, intent(in) :: iper
+    character(len=LINELENGTH) :: lname
+    character(len=LINELENGTH) :: pname, vname
+    !
+    pname = pkgname
+    vname = tagname
+    call lowcase(pname)
+    call lowcase(vname)
+    if (longname == '') then
+      lname = trim(pname)//' '//trim(vname)
+    else
+      lname = longname
+    end if
+    if (layer > 0) then
+      write (lname, '(a,i0)') trim(lname)//' layer=', layer
+    end if
+    if (present(iper)) then
+      if (iper > 0) then
+        write (lname, '(a,i0)') trim(lname)//' period=', iper
+      end if
+    end if
+  end function export_longname
+
+  !> @brief netcdf dynamic package period export
+  !<
+  subroutine export_input(this)
+    use TdisModule, only: kper
+    use ArrayHandlersModule, only: ifind
+    class(NCBaseModelExportType), intent(inout) :: this
+    integer(I4B) :: idx, ilayer
+    class(ExportPackageType), pointer :: export_pkg
+    character(len=LENVARNAME) :: ilayer_varname
+    !
+    do idx = 1, this%pkglist%Count()
+      !
+      export_pkg => this%get(idx)
+      ! -- last loaded data is not current period
+      if (export_pkg%iper /= kper) cycle
+      ! -- period input already exported
+      if (export_pkg%iper_export >= export_pkg%iper) cycle
+      ! -- set exported iper
+      export_pkg%iper_export = export_pkg%iper
+      !
+      ! -- initialize ilayer
+      ilayer = 0
+      !
+      ! -- set expected ilayer index variable name
+      ilayer_varname = 'I'//trim(export_pkg%mf6_input%subcomponent_type(1:3))
+      !
+      ! -- is ilayer variable in param name list
+      ilayer = ifind(export_pkg%param_names, ilayer_varname)
+      !
+      ! -- layer index variable is required to be first defined in period block
+      if (ilayer == 1) then
+        call this%package_step_ilayer(export_pkg, ilayer_varname, ilayer)
+      else
+        call this%package_step(export_pkg)
+      end if
+      !
+    end do
+  end subroutine export_input
+
   !> @brief destroy model netcdf export object
   !<
   subroutine export_destroy(this)
     use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     class(NCModelExportType), intent(inout) :: this
+    !
     ! -- override in derived class
     deallocate (this%deflate)
     deallocate (this%shuffle)

@@ -20,6 +20,7 @@ module BoundInputContextModule
   private
   public :: BoundInputContextType
   public :: ReadStateVarType
+  public :: rsv_name
 
   !> @brief Pointer type for read state variable
   !<
@@ -357,18 +358,9 @@ contains
     character(len=*), intent(in) :: mf6varname
     ! -- local
     character(len=LENVARNAME) :: varname
-    integer(I4B) :: ilen
     integer(I4B), pointer :: intvar
-    character(len=2) :: prefix = 'IN'
     !
-    ! -- assign first column as the block number
-    ilen = len_trim(mf6varname)
-    !
-    if (ilen > (LENVARNAME - len(prefix))) then
-      varname = prefix//mf6varname(1:(LENVARNAME - len(prefix)))
-    else
-      varname = prefix//trim(mf6varname)
-    end if
+    varname = rsv_name(mf6varname)
     !
     call mem_allocate(intvar, varname, this%mf6_input%mempath)
     intvar = -1
@@ -423,5 +415,30 @@ contains
     ! -- return
     return
   end subroutine bound_params
+
+  !> @brief create read state variable name
+  !!
+  !<
+  function rsv_name(mf6varname) result(varname)
+    ! -- modules
+    use ConstantsModule, only: LENVARNAME
+    ! -- dummy
+    character(len=*), intent(in) :: mf6varname
+    ! -- local
+    character(len=LENVARNAME) :: varname
+    integer(I4B) :: ilen
+    character(len=2) :: prefix = 'IN'
+    !
+    ilen = len_trim(mf6varname)
+    !
+    if (ilen > (LENVARNAME - len(prefix))) then
+      varname = prefix//mf6varname(1:(LENVARNAME - len(prefix)))
+    else
+      varname = prefix//trim(mf6varname)
+    end if
+    !
+    ! -- return
+    return
+  end function rsv_name
 
 end module BoundInputContextModule

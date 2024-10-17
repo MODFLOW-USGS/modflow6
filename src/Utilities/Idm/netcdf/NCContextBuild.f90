@@ -73,11 +73,13 @@ contains
     character(len=NETCDF_ATTR_STRLEN) :: input_str
     character(len=LENCOMPONENTNAME) :: c_name, sc_name
     character(len=LINELENGTH) :: mempath, varname
-    integer(I4B) :: layer, mf6_layer
+    integer(I4B) :: layer, period, iaux, mf6_layer, mf6_period, mf6_iaux
     logical(LGP) :: success
     !
     ! -- initialize
     layer = -1
+    period = -1
+    iaux = -1
     varname = ''
     c_name = ''
     sc_name = ''
@@ -104,8 +106,20 @@ contains
           layer = mf6_layer
         end if
         !
+        ! -- check for optional period attribute
+        if (nf90_get_att(nc_vars%ncid, varid, &
+                         'modflow6_iper', mf6_period) == NF90_NOERR) then
+          period = mf6_period
+        end if
+        !
+        ! -- check for optional period attribute
+        if (nf90_get_att(nc_vars%ncid, varid, &
+                         'modflow6_iaux', mf6_iaux) == NF90_NOERR) then
+          iaux = mf6_iaux
+        end if
+        !
         ! -- add the variable to netcdf description
-        call nc_vars%add(sc_name, varname, layer, varid)
+        call nc_vars%add(sc_name, varname, layer, period, iaux, varid)
       else
         errmsg = 'NetCDF variable invalid modflow6_input attribute: "'// &
                  trim(input_str)//'".'
