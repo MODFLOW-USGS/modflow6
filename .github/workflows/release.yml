@@ -417,7 +417,7 @@ jobs:
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Download pre-built binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: bin-${{ steps.ostag.outputs.ostag }}
           path: bin
@@ -562,7 +562,7 @@ jobs:
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           path: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
       
