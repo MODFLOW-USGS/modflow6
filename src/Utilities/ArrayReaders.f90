@@ -141,8 +141,6 @@ contains
       call print_array_int(iarr, aname, iout, jj, 1, k, prfmt, ncpl, ndig, &
                            prowcolnum)
     end if
-    !
-    return
   end subroutine read_array_int1d
 
   subroutine read_array_int2d(iu, iarr, aname, ndim, jj, ii, iout, k)
@@ -234,8 +232,6 @@ contains
       call print_array_int(iarr, aname, iout, jj, ii, k, prfmt, ncpl, &
                            ndig, prowcolnum)
     end if
-    !
-    return
   end subroutine read_array_int2d
 
   subroutine read_array_int3d(iu, iarr, aname, ndim, ncol, nrow, nlay, iout, &
@@ -259,7 +255,6 @@ contains
       end if
       call read_array_int2d(iu, iarr(:, :, kk), aname, ndim, ncol, nrow, iout, k)
     end do
-    return
   end subroutine read_array_int3d
 
   subroutine read_array_int3d_all(iu, iarr, aname, ndim, nvals, iout)
@@ -272,8 +267,6 @@ contains
     ! -- local
     !
     call read_array_int1d(iu, iarr, aname, ndim, nvals, iout, 0)
-    !
-    return
   end subroutine read_array_int3d_all
 
   subroutine read_array_int1d_layered(iu, iarr, aname, ndim, ncol, nrow, &
@@ -288,8 +281,6 @@ contains
     ! -- local
     !
     call read_array_int3d(iu, iarr, aname, ndim, ncol, nrow, nlay, iout, k1, k2)
-    !
-    return
   end subroutine read_array_int1d_layered
 
   ! -- Procedures that are part of ReadArray interface (floating-point data)
@@ -387,8 +378,6 @@ contains
       call print_array_dbl(darr, aname, iout, jj, 1, k, prfmt, ncpl, ndig, &
                            prowcolnum)
     end if
-    !
-    return
   end subroutine read_array_dbl1d
 
   subroutine read_array_dbl2d(iu, darr, aname, ndim, jj, ii, iout, k)
@@ -481,8 +470,6 @@ contains
       call print_array_dbl(darr, aname, iout, jj, ii, k, prfmt, ncpl, &
                            ndig, prowcolnum)
     end if
-    !
-    return
   end subroutine read_array_dbl2d
 
   subroutine read_array_dbl3d(iu, darr, aname, ndim, ncol, nrow, nlay, iout, &
@@ -507,8 +494,6 @@ contains
       end if
       call read_array_dbl2d(iu, darr(:, :, kk), aname, ndim, ncol, nrow, iout, k)
     end do
-    !
-    return
   end subroutine read_array_dbl3d
 
   subroutine read_array_dbl3d_all(iu, darr, aname, ndim, nvals, iout)
@@ -521,8 +506,6 @@ contains
     ! -- local
     !
     call read_array_dbl1d(iu, darr, aname, ndim, nvals, iout, 0)
-    !
-    return
   end subroutine read_array_dbl3d_all
 
   subroutine read_array_dbl1d_layered(iu, darr, aname, ndim, ncol, nrow, &
@@ -537,8 +520,6 @@ contains
     ! -- local
     !
     call read_array_dbl3d(iu, darr, aname, ndim, ncol, nrow, nlay, iout, k1, k2)
-    !
-    return
   end subroutine read_array_dbl1d_layered
 
   ! -- Utility procedures
@@ -588,8 +569,6 @@ contains
     ! -- Read (BINARY) and IPRN options from array control record,
     !    and open an OPEN/CLOSE file if specified.
     call read_control_2(iu, iout, fname, line, icol, locat, iclose, iprn)
-    !
-    return
   end subroutine read_control_int
 
   subroutine read_control_dbl(iu, iout, aname, locat, cnstnt, &
@@ -638,8 +617,6 @@ contains
     ! -- Read (BINARY) and IPRN options from array control record,
     !    and open an OPEN/CLOSE file if specified.
     call read_control_2(iu, iout, fname, line, icol, locat, iclose, iprn)
-    !
-    return
   end subroutine read_control_dbl
 
   subroutine read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
@@ -684,8 +661,6 @@ contains
       call store_error(errmsg)
       call store_error_unit(iu)
     end if
-    !
-    return
   end subroutine read_control_1
 
   subroutine read_control_2(iu, iout, fname, line, icol, &
@@ -750,8 +725,6 @@ contains
         end if
       end if
     end if
-    !
-    return
   end subroutine read_control_2
 
   subroutine build_format_int(iprn, prfmt, prowcolnum, ncpl, ndig)
@@ -806,8 +779,6 @@ contains
     !
     call BuildIntFormat(ncpl, nwidp, prfmt, prowcolnum)
     ndig = nwidp + 1
-    !
-    return
   end subroutine build_format_int
 
   subroutine build_format_dbl(iprn, prfmt, prowcolnum, ncpl, ndig)
@@ -948,8 +919,6 @@ contains
     end if
     !
     ndig = nwidp + 1
-    !
-    return
   end subroutine build_format_dbl
 
   subroutine print_array_int(iarr, aname, iout, jj, ii, k, prfmt, &
@@ -996,8 +965,6 @@ contains
       ! -- Write array values, without row numbers
       write (iout, prfmt) (iarr(j, 1), j=1, jj)
     end if
-    !
-    return
   end subroutine print_array_int
 
   subroutine print_array_dbl(darr, aname, iout, jj, ii, k, prfmt, &
@@ -1044,8 +1011,6 @@ contains
       ! -- Write array values, without row numbers
       write (iout, prfmt) (darr(j, 1), j=1, jj)
     end if
-    !
-    return
   end subroutine print_array_dbl
 
   subroutine read_binary_header(locat, iout, arrname, nval)
@@ -1086,9 +1051,6 @@ contains
     !
     ! -- Assign the number of values that follow the header
     nval = m1 * m2
-    !
-    ! -- return
-    return
   end subroutine read_binary_header
 
   !> @ brief Check the binary data size
@@ -1123,9 +1085,6 @@ contains
       call store_error_unit(locat)
       isok = .FALSE.
     end if
-    !
-    ! -- return
-    return
   end function check_binary_size
 
 end module ArrayReadersModule

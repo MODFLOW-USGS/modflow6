@@ -156,9 +156,6 @@ contains
     if (found) then
       var_type = mt%memtype
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_type
 
   !> @ brief Get the variable rank
@@ -195,9 +192,6 @@ contains
       if (associated(mt%astr1d)) rank = 1
       if (associated(mt%acharstr1d)) rank = 1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_rank
 
   !> @ brief Get the memory size of a single element of the stored variable
@@ -223,9 +217,6 @@ contains
     if (found) then
       size = mt%element_size
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_elem_size
 
   !> @ brief Get the variable memory shape
@@ -263,9 +254,6 @@ contains
     else
       mem_shape(1) = -1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_shape
 
   !> @ brief Get the number of elements for this variable
@@ -296,9 +284,6 @@ contains
     if (found) then
       isize = mt%isize
     end if
-    !
-    ! -- return
-    return
   end subroutine get_isize
 
   !> @ brief Get a memory type entry from the memory list
@@ -331,9 +316,6 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine get_from_memorystore
 
   !> @brief Issue allocation error message and stop program execution
@@ -398,9 +380,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_logical
 
   !> @brief Allocate a character string
@@ -450,9 +429,6 @@ contains
     !
     ! -- add defined length string to the memory manager list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_str
 
   !> @brief Allocate a 1-dimensional defined length string array
@@ -519,9 +495,6 @@ contains
     !
     ! -- add deferred length character array to the memory manager list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_str1d
 
   !> @brief Allocate a 1-dimensional array of deferred-length CharacterStringType
@@ -579,9 +552,6 @@ contains
     !
     ! -- add deferred length character array to the memory manager list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_charstr1d
 
   !> @brief Allocate a integer scalar
@@ -620,9 +590,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_int
 
   !> @brief Allocate a 1-dimensional integer array
@@ -666,9 +633,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_int1d
 
   !> @brief Allocate a 2-dimensional integer array
@@ -713,8 +677,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
   end subroutine allocate_int2d
 
   !> @brief Allocate a 3-dimensional integer array
@@ -761,9 +723,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_int3d
 
   !> @brief Allocate a real scalar
@@ -802,9 +761,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl
 
   !> @brief Allocate a 1-dimensional real array
@@ -848,9 +804,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl1d
 
   !> @brief Allocate a 2-dimensional real array
@@ -895,9 +848,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl2d
 
   !> @brief Allocate a 3-dimensional real array
@@ -944,9 +894,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine allocate_dbl3d
 
   !> @brief Check in an existing 1d integer array with a new address (name + path)
@@ -986,9 +933,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine checkin_int1d
 
   !> @brief Check in an existing 2d integer array with a new address (name + path)
@@ -1029,9 +973,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine checkin_int2d
 
   !> @brief Check in an existing 1d double precision array with a new address (name + path)
@@ -1071,9 +1012,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine checkin_dbl1d
 
   !> @brief Check in an existing 2d double precision array with a new address (name + path)
@@ -1114,9 +1052,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine checkin_dbl2d
 
   !> @brief Check in an existing 1d CharacterStringType array with a new address (name + path)
@@ -1158,9 +1093,6 @@ contains
     !
     ! -- add memory type to the memory list
     call memorystore%add(mt)
-    !
-    ! -- return
-    return
   end subroutine checkin_charstr1d
 
   !> @brief Reallocate a 1-dimensional defined length string array
@@ -1242,9 +1174,6 @@ contains
                "mem_allocate instead."
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine reallocate_str1d
 
   !> @brief Reallocate a 1-dimensional deferred length string array
@@ -1332,9 +1261,6 @@ contains
                "mem_allocate instead."
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine reallocate_charstr1d
 
   !> @brief Reallocate a 1-dimensional integer array
@@ -1377,9 +1303,6 @@ contains
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
-    !
-    ! -- return
-    return
   end subroutine reallocate_int1d
 
   !> @brief Reallocate a 2-dimensional integer array
@@ -1427,9 +1350,6 @@ contains
     mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
-    !
-    ! -- return
-    return
   end subroutine reallocate_int2d
 
   !> @brief Reallocate a 1-dimensional real array
@@ -1473,9 +1393,6 @@ contains
     mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
-    !
-    ! -- return
-    return
   end subroutine reallocate_dbl1d
 
   !> @brief Reallocate a 2-dimensional real array
@@ -1523,9 +1440,6 @@ contains
     mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
-    !
-    ! -- return
-    return
   end subroutine reallocate_dbl2d
 
   !> @brief Set pointer to a logical scalar
@@ -1540,9 +1454,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%logicalsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_logical
 
   !> @brief Set pointer to integer scalar
@@ -1557,9 +1468,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%intsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_int
 
   !> @brief Set pointer to 1d integer array
@@ -1574,9 +1482,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint1d
-    !
-    ! -- return
-    return
   end subroutine setptr_int1d
 
   !> @brief Set pointer to 2d integer array
@@ -1591,9 +1496,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint2d
-    !
-    ! -- return
-    return
   end subroutine setptr_int2d
 
   !> @brief Set pointer to 3d integer array
@@ -1608,9 +1510,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint3d
-    !
-    ! -- return
-    return
   end subroutine setptr_int3d
 
   !> @brief Set pointer to a real scalar
@@ -1625,9 +1524,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%dblsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl
 
   !> @brief Set pointer to a 1d real array
@@ -1642,9 +1538,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl1d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl1d
 
   !> @brief Set pointer to a 2d real array
@@ -1659,9 +1552,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl2d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl2d
 
   !> @brief Set pointer to a 3d real array
@@ -1676,9 +1566,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl3d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl3d
 
   !> @brief Set pointer to a string (scalar)
@@ -1693,9 +1580,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     asrt => mt%strsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_str
 
   !> @brief Set pointer to a fixed-length string array
@@ -1711,9 +1595,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     astr1d => mt%astr1d
-    !
-    ! -- return
-    return
   end subroutine setptr_str1d
 
   !> @brief Set pointer to an array of CharacterStringType
@@ -1729,9 +1610,6 @@ contains
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
     acharstr1d => mt%acharstr1d
-    !
-    ! -- return
-    return
   end subroutine setptr_charstr1d
 
   !> @brief Make a copy of a 1-dimensional integer array
@@ -1760,9 +1638,6 @@ contains
     do n = 1, size(mt%aint1d)
       aint(n) = mt%aint1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_int1d
 
   !> @brief Make a copy of a 2-dimensional integer array
@@ -1798,9 +1673,6 @@ contains
         aint(j, i) = mt%aint2d(j, i)
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_int2d
 
   !> @brief Make a copy of a 1-dimensional real array
@@ -1829,9 +1701,6 @@ contains
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_dbl1d
 
   !> @brief Make a copy of a 2-dimensional real array
@@ -1867,9 +1736,6 @@ contains
         adbl(j, i) = mt%adbl2d(j, i)
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_dbl2d
 
   !> @brief Copy values from a 1-dimensional real array in the memory
@@ -1887,9 +1753,6 @@ contains
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copy_dbl1d
 
   !> @brief Set the pointer for an integer scalar to
@@ -1921,9 +1784,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int
 
   !> @brief Set the pointer for a 1-dimensional integer array to
@@ -1955,9 +1815,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int1d
 
   !> @brief Set the pointer for a 2-dimensional integer array to
@@ -1993,9 +1850,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int2d
 
   !> @brief Set the pointer for a 1-dimensional real array to
@@ -2027,9 +1881,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_dbl1d
 
   !> @brief Set the pointer for a 2-dimensional real array to
@@ -2065,9 +1916,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_dbl2d
 
   !> @brief Deallocate a variable-length character string
@@ -2106,9 +1954,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_str
 
   !> @brief Deallocate an array of defined-length character strings
@@ -2150,9 +1995,6 @@ contains
         nullify (astr1d)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_str1d
 
   !> @brief Deallocate an array of deferred-length character strings
@@ -2196,9 +2038,6 @@ contains
         nullify (astr1d)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_charstr1d
 
   !> @brief Deallocate a logical scalar
@@ -2231,9 +2070,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_logical
 
   !> @brief Deallocate a integer scalar
@@ -2265,9 +2101,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int
 
   !> @brief Deallocate a real scalar
@@ -2299,9 +2132,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl
 
   !> @brief Deallocate a 1-dimensional integer array
@@ -2342,9 +2172,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int1d
 
   !> @brief Deallocate a 2-dimensional integer array
@@ -2385,9 +2212,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int2d
 
   !> @brief Deallocate a 3-dimensional integer array
@@ -2428,9 +2252,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int3d
 
   !> @brief Deallocate a 1-dimensional real array
@@ -2471,9 +2292,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl1d
 
   !> @brief Deallocate a 2-dimensional real array
@@ -2514,9 +2332,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl2d
 
   !> @brief Deallocate a 3-dimensional real array
@@ -2557,9 +2372,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl3d
 
   !> @brief Set the memory print option
@@ -2587,7 +2399,6 @@ contains
     case default
       error_msg = "Unknown memory print option '"//trim(keyword)//"."
     end select
-    return
   end subroutine mem_set_print_option
 
   !> @brief Create a table if memory_print_option is 'SUMMARY'
@@ -2635,9 +2446,6 @@ contains
     ! -- total memory allocated
     text = 'TOTAL'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
-    !
-    ! -- return
-    return
   end subroutine mem_summary_table
 
   !> @brief Create a table if memory_print_option is 'ALL'
@@ -2679,9 +2487,6 @@ contains
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
     call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
-    !
-    ! -- return
-    return
   end subroutine mem_detailed_table
 
   !> @brief Write a row for the memory_print_option 'SUMMARY' table
@@ -2703,9 +2508,6 @@ contains
     call memtab%add_term(rint)
     call memtab%add_term(rreal)
     call memtab%add_term(bytes)
-    !
-    ! -- return
-    return
   end subroutine mem_summary_line
 
   !> @brief Determine appropriate memory unit and conversion factor
@@ -2737,9 +2539,6 @@ contains
       fact = DEM9
       cunits = 'GIGABYTES'
     end if
-    !
-    ! -- return
-    return
   end subroutine mem_units
 
   !> @brief Create and fill a table with the total allocated memory
@@ -2815,9 +2614,6 @@ contains
     !
     ! -- deallocate table
     call mem_cleanup_table()
-    !
-    ! -- return
-    return
   end subroutine mem_summary_total
 
   !> @brief Generic function to clean a memory manager table
@@ -2829,9 +2625,6 @@ contains
     call memtab%table_da()
     deallocate (memtab)
     nullify (memtab)
-    !
-    ! -- return
-    return
   end subroutine mem_cleanup_table
 
   !> @brief Write memory manager memory usage based on the
@@ -2933,9 +2726,6 @@ contains
     !
     ! -- Write total memory allocation
     call mem_summary_total(iout, simbytes)
-    !
-    ! -- return
-    return
   end subroutine mem_write_usage
 
   subroutine mem_print_detailed(iout)
@@ -3024,9 +2814,6 @@ contains
     if (count_errors() > 0) then
       call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine mem_da
 
   !> @brief Create a array with unique first components from all memory paths.
@@ -3065,9 +2852,6 @@ contains
         cunique(size(cunique)) = context_component
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine mem_unique_origins
 
 end module MemoryManagerModule

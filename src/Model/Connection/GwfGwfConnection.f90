@@ -298,8 +298,6 @@ contains
     if (this%owns_exchange) then
       call this%gwfExchange%exg_rp()
     end if
-
-    return
   end subroutine gwfgwfcon_rp
 
   !> @brief Advance this connection
@@ -722,7 +720,6 @@ contains
     class is (GwfGwfConnectionType)
       res => obj
     end select
-    return
   end function CastAsGwfGwfConnection
 
 end module GwfGwfConnectionModule

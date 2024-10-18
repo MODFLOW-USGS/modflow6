@@ -123,9 +123,6 @@ contains
     !
     ! -- Initialize block parser
     call mstobj%parser%Initialize(mstobj%inunit, mstobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine mst_cr
 
   !> @ brief Allocate and read method for package
@@ -160,9 +157,6 @@ contains
     !
     ! -- read the data block
     call this%read_data()
-    !
-    ! -- Return
-    return
   end subroutine mst_ar
 
   !> @ brief Fill coefficient method for package
@@ -204,9 +198,6 @@ contains
       call this%mst_fc_dcy_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                cnew, kiter)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_fc
 
   !> @ brief Fill storage coefficient method for package
@@ -254,9 +245,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_sto
 
   !> @ brief Fill decay coefficient method for package
@@ -315,9 +303,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_dcy
 
   !> @ brief Fill sorption coefficient method for package
@@ -377,9 +362,6 @@ contains
       rhs(n) = rhs(n) + rrhs
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_srb
 
   !> @ brief Calculate sorption terms
@@ -454,7 +436,6 @@ contains
                + term * cbaravg * (swnew - swold)
       end if
     end if
-    return
   end subroutine mst_srb_term
 
   !> @ brief Fill sorption-decay coefficient method for package
@@ -557,9 +538,6 @@ contains
       rhs(n) = rhs(n) + rrhs
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_dcy_srb
 
   !> @ brief Calculate flows for package
@@ -599,9 +577,6 @@ contains
     if (this%isrb /= 0) then
       call this%mst_calc_csrb(cnew)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_cq
 
   !> @ brief Calculate storage terms for package
@@ -651,9 +626,6 @@ contains
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_sto
 
   !> @ brief Calculate decay terms for package
@@ -709,9 +681,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_dcy
 
   !> @ brief Calculate sorption terms for package
@@ -769,9 +738,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_srb
 
   !> @ brief Calculate decay-sorption terms for package
@@ -872,9 +838,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_dcy_srb
 
   !> @ brief Calculate sorbed concentration
@@ -945,9 +908,6 @@ contains
       call model_budget%addentry(rin, rout, delt, budtxt(4), &
                                  isuppress_output, rowlabel=this%packName)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_bd
 
   !> @ brief Output flow terms for package
@@ -1004,9 +964,6 @@ contains
                                    budtxt(4), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_ot_flow
 
   !> @brief Save sorbate concentration array to binary file
@@ -1084,9 +1041,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine mst_da
 
   !> @ brief Allocate scalar variables for package
@@ -1113,9 +1067,6 @@ contains
     this%isrb = 0
     this%ioutsorbate = 0
     this%idcy = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -1206,9 +1157,6 @@ contains
       this%ratedcys(n) = DZERO
       this%decayslast(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read options for package
@@ -1312,9 +1260,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read data for package
@@ -1512,9 +1457,6 @@ contains
     do n = 1, size(this%porosity)
       this%thetam(n) = this%porosity(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Add volfrac values to volfracim
@@ -1541,9 +1483,6 @@ contains
     do n = 1, this%dis%nodes
       this%thetam(n) = this%get_volfracm(n) * this%porosity(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine addto_volfracim
 
   !> @ brief Return mobile domain volume fraction
@@ -1560,9 +1499,6 @@ contains
     real(DP) :: volfracm
     !
     volfracm = DONE - this%volfracim(node)
-    !
-    ! -- Return
-    return
   end function get_volfracm
 
   !> @ brief Calculate sorption concentration using Freundlich
@@ -1583,7 +1519,6 @@ contains
     else
       cbar = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption concentration using Langmuir
@@ -1604,7 +1539,6 @@ contains
     else
       cbar = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption derivative using Freundlich
@@ -1625,7 +1559,6 @@ contains
     else
       derv = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption derivative using Langmuir
@@ -1646,7 +1579,6 @@ contains
     else
       derv = DZERO
     end if
-    return
   end function
 
   !> @ brief Get effective Freundlich distribution coefficient
@@ -1664,7 +1596,6 @@ contains
     else
       kd = DZERO
     end if
-    return
   end function get_freundlich_kd
 
   !> @ brief Get effective Langmuir distribution coefficient
@@ -1682,7 +1613,6 @@ contains
     else
       kd = DZERO
     end if
-    return
   end function get_langmuir_kd
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
@@ -1728,7 +1658,6 @@ contains
       end if
       decay_rate = max(decay_rate, DZERO)
     end if
-    return
   end function get_zero_order_decay
 
 end module GwtMstModule

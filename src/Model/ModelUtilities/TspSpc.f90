@@ -140,9 +140,6 @@ contains
     ! -- Now that time series are read, call define
     call this%tsmanager%tsmanager_df()
     call this%tasmanager%tasmanager_df()
-    !
-    ! -- return
-    return
   end subroutine initialize
 
   !> @ brief Allocate package scalars
@@ -179,9 +176,6 @@ contains
     this%lastonper = 0
     this%iprpak = 0
     this%readasarrays = .false.
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Read options for package
@@ -255,9 +249,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF SPC OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read dimensions for package
@@ -313,9 +304,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine read_dimensions
 
   !> @ brief Allocate package arrays
@@ -338,9 +326,6 @@ contains
     do i = 1, this%maxbound
       this%dblvec(i) = DZERO
     end do
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Get the data value from this package
@@ -384,7 +369,6 @@ contains
     else
       value = this%dblvec(ientry)
     end if
-    return
   end function get_value
 
   !> @ brief Read and prepare
@@ -462,9 +446,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine spc_rp
 
   !> @ brief spc_rp_list
@@ -530,9 +511,6 @@ contains
     if (this%iprpak /= 0) then
       call this%inputtab%finalize_table()
     end if
-    !
-    ! -- return
-    return
   end subroutine spc_rp_list
 
   !> @ brief spc_rp_array
@@ -613,8 +591,6 @@ contains
       end select
 
     end do
-    !
-    return
   end subroutine spc_rp_array
 
   !> @ brief Advance
@@ -637,9 +613,6 @@ contains
     !
     ! -- Check flow package consistency
     call this%check_flow_package(nbound_flowpack, budtxt)
-    !
-    ! -- return
-    return
   end subroutine spc_ad
 
   !> @ brief Deallocate variables
@@ -670,9 +643,6 @@ contains
     call this%TsManager%da()
     deallocate (this%TsManager)
     nullify (this%TsManager)
-    !
-    ! -- return
-    return
   end subroutine spc_da
 
   !> @ brief Check ionper
@@ -702,9 +672,6 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine read_check_ionper
 
   !> @ brief Set the data value from the input file
@@ -736,7 +703,6 @@ contains
                                          this%depvarname)
 
     end select
-    return
   end subroutine set_value
 
   !> @ brief check_flow_package
@@ -801,9 +767,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end select
-    !
-    ! -- return
-    return
   end subroutine check_flow_package
 
 end module TspSpcModule

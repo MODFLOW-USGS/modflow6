@@ -83,9 +83,6 @@ contains
     if (inats > 0) then
       call ats_cr(inats, nper)
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_cr
 
   !> @brief Set kstp and kper
@@ -148,9 +145,6 @@ contains
         write (iout, fmtspits) nstp(kper), tsmult(kper)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_counters
 
   !> @brief Set time step length
@@ -208,9 +202,6 @@ contains
     if (endofperiod .and. kper == nper) then
       endofsimulation = .true.
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_timestep
 
   !> @brief Reset delt and update timing variables and indicators
@@ -250,9 +241,6 @@ contains
       endofsimulation = .true.
       totim = totalsimtime
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_delt_reset
 
   !> @brief Set time step length
@@ -278,9 +266,6 @@ contains
     else
       delt = tsmult(kper) * delt
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_delt
 
   !> @brief Print simulation time
@@ -352,9 +337,6 @@ contains
       write (iout, fmtpertm) persec, permn, perhr, perdy, peryr
       write (iout, fmttottm) totsec, totmn, tothr, totdy, totyr
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_ot
 
   !> @brief Deallocate memory
@@ -395,9 +377,6 @@ contains
     call mem_deallocate(perlen)
     call mem_deallocate(nstp)
     call mem_deallocate(tsmult)
-    !
-    ! -- Return
-    return
   end subroutine tdis_da
 
   !> @brief Source the timing discretization options
@@ -471,9 +450,6 @@ contains
     end if
     !
     write (iout, '(1x,a)') 'END OF TDIS OPTIONS'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_options
 
   !> @brief Allocate tdis scalars
@@ -526,9 +502,6 @@ contains
     pertimsav = DZERO
     totalsimtime = DZERO
     datetime0 = ''
-    !
-    ! -- Return
-    return
   end subroutine tdis_allocate_scalars
 
   !> @brief Allocate tdis arrays
@@ -540,9 +513,6 @@ contains
     call mem_allocate(perlen, nper, 'PERLEN', 'TDIS')
     call mem_allocate(nstp, nper, 'NSTP', 'TDIS')
     call mem_allocate(tsmult, nper, 'TSMULT', 'TDIS')
-    !
-    ! -- Return
-    return
   end subroutine tdis_allocate_arrays
 
   !> @brief Source dimension NPER
@@ -570,9 +540,6 @@ contains
     end if
     !
     write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_dimensions
 
   !> @brief Source timing information
@@ -617,9 +584,6 @@ contains
     end do
     !
     write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_timing
 
   !> @brief Check the tdis timing information
@@ -708,8 +672,6 @@ contains
       tstart = tend
       !
     end do
-    ! -- Return
-    return
   end subroutine check_tdis_timing
 
 end module TdisModule

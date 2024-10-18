@@ -328,9 +328,6 @@ contains
     packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- return
-    return
   end subroutine sfr_create
 
   !> @ brief Allocate scalars
@@ -402,9 +399,6 @@ contains
     this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
-    !
-    ! -- return
-    return
   end subroutine sfr_allocate_scalars
 
   !> @ brief Allocate arrays
@@ -614,9 +608,6 @@ contains
     !
     ! -- allocate viscratios to size 0
     call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
-    !
-    ! -- return
-    return
   end subroutine sfr_allocate_arrays
 
   !> @ brief Read dimensions for package
@@ -706,9 +697,6 @@ contains
     !
     ! -- setup the stage table object
     call this%sfr_setup_tableobj()
-    !
-    ! -- return
-    return
   end subroutine sfr_read_dimensions
 
   !> @ brief Read additional options for package
@@ -874,9 +862,6 @@ contains
       ! -- No options found
       found = .false.
     end select
-    !
-    ! -- return
-    return
   end subroutine sfr_options
 
   !> @ brief Allocate and read method for package
@@ -945,9 +930,6 @@ contains
       allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ar
 
   !> @ brief Read packagedata for the package
@@ -1199,9 +1181,6 @@ contains
     if (this%naux > 0) then
       deallocate (caux)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_packagedata
 
   !> @ brief Read crosssection block for the package
@@ -1341,9 +1320,6 @@ contains
       deallocate (cross_data)
       nullify (cross_data)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_crossection
 
   !> @ brief Read connectiondata for the package
@@ -1622,9 +1598,6 @@ contains
     if (istat == 0) then
       deallocate (order)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_connectiondata
 
   !> @ brief Read diversions for the package
@@ -1825,9 +1798,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_diversions
 
   !> @ brief Read initialstages data for the package
@@ -2109,9 +2079,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_rp
 
   !> @ brief Advance the package
@@ -2181,9 +2148,6 @@ contains
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
     call this%obs%obs_ad()
-    !
-    ! -- return
-    return
   end subroutine sfr_ad
 
   !> @ brief Formulate the package hcof and rhs terms.
@@ -2213,9 +2177,6 @@ contains
       this%igwfnode(n) = igwfnode
       this%nodelist(n) = igwfnode
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_cf
 
   !> @ brief Copy hcof and rhs terms into solution.
@@ -2317,9 +2278,6 @@ contains
       ipos = ia(node)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(n))
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_fc
 
   !> @ brief Add Newton-Raphson terms for package into solution.
@@ -2371,9 +2329,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_fn
 
   !> @ brief Convergence check for package.
@@ -2577,9 +2532,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_cc
 
   !> @ brief Calculate package flows.
@@ -2658,9 +2610,6 @@ contains
     !
     ! -- fill the budget object
     call this%sfr_fill_budobj()
-    !
-    ! -- return
-    return
   end subroutine sfr_cq
 
   !> @ brief Output package flow terms.
@@ -2715,9 +2664,6 @@ contains
         call this%budobj%write_flowtable(this%dis, kstp, kper)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_package_flows
 
   !> @ brief Output package dependent-variable terms.
@@ -2831,9 +2777,6 @@ contains
         end if
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_dv
 
   !> @ brief Output advanced package budget summary.
@@ -2852,9 +2795,6 @@ contains
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_bdsummary
 
   !> @ brief Deallocate package memory
@@ -2994,9 +2934,6 @@ contains
     !
     ! -- call base BndType deallocate
     call this%BndType%bnd_da()
-    !
-    ! -- return
-    return
   end subroutine sfr_da
 
   !> @ brief Define the list label for the package
@@ -3025,9 +2962,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   !
@@ -3047,9 +2981,6 @@ contains
     !
     ! -- set boolean
     sfr_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function sfr_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -3147,9 +3078,6 @@ contains
     !    for wetted-width observation type.
     call this%obs%StoreObsType('wet-width', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
-    !
-    ! -- return
-    return
   end subroutine sfr_df_obs
 
   !> @brief Save observations for the package
@@ -3243,9 +3171,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_bd_obs
 
   !> @brief Read and prepare observations for a package
@@ -3354,9 +3279,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_rp_obs
 
   !
@@ -3397,9 +3319,6 @@ contains
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
-    !
-    ! -- return
-    return
   end subroutine sfr_process_obsID
 
   !
@@ -3600,9 +3519,6 @@ contains
         trim(keyword)//'.'
       call store_error(errmsg)
     end select
-    !
-    ! -- return
-    return
   end subroutine sfr_set_stressperiod
 
   !> @brief Solve reach continuity equation
@@ -3852,9 +3768,6 @@ contains
         this%divq(jpos) = DZERO
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_update_flows
 
   !> @brief Adjust runoff and evaporation
@@ -3930,9 +3843,6 @@ contains
     !
     ! -- limit downstream flow to a positive value
     if (qd < DEM30) qd = DZERO
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qd
 
   !> @brief Calculate sum of sources
@@ -3982,9 +3892,6 @@ contains
     !
     ! -- adjust runoff or evaporation if sum of sources is negative
     call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qsource
 
   !> @brief Calculate streamflow
@@ -4055,9 +3962,6 @@ contains
       ! -- calculate stream flow
       qman = sat * qman
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qman
 
   !> @brief Calculate reach-aquifer exchange
@@ -4127,9 +4031,6 @@ contains
     ! -- Set gwfhcof and gwfrhs if present
     if (present(gwfhcof)) gwfhcof = gwfhcof0
     if (present(gwfrhs)) gwfrhs = gwfrhs0
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qgwf
 
   !> @brief Determine if a reach is connected to a gwf cell
@@ -4197,9 +4098,6 @@ contains
         cond = this%hk(n) * vscratio * this%length(n) * wp / this%bthick(n)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_cond
 
   !> @brief Calculate diversion flow
@@ -4258,9 +4156,6 @@ contains
     ! -- update upstream from for downstream reaches
     qd = qd - v
     qdiv = v
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_div
 
   !> @brief Calculate the depth at the midpoint
@@ -4296,9 +4191,6 @@ contains
     else
       d1 = DZERO
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_reach_depth
 
   !> @brief Calculate the depth at the midpoint of a irregular cross-section
@@ -4348,9 +4240,6 @@ contains
         exit nriter
       end if
     end do nriter
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_xs_depth
 
   !> @brief Check unit conversion data
@@ -4388,9 +4277,6 @@ contains
           trim(adjustl(this%packName)), this%unitconv
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_check_conversion
 
   !> @brief Check storage weight
@@ -4535,9 +4421,6 @@ contains
         call this%inputtab%add_term(this%ustrf(n))
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_reaches
 
   !> @brief Check connection data
@@ -4816,9 +4699,6 @@ contains
         end do
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_check_connections
 
   !> @brief Check diversions data
@@ -4926,9 +4806,6 @@ contains
         end if
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_diversions
 
   !> @brief Check initial stage data
@@ -5190,9 +5067,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_ustrf
 
   !> @brief Setup budget object for package
@@ -5409,9 +5283,6 @@ contains
     if (this%iprflow /= 0) then
       call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_setup_budobj
 
   !> @brief Copy flow terms into budget object for package
@@ -5645,9 +5516,6 @@ contains
     !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
-    !
-    ! -- return
-    return
   end subroutine sfr_fill_budobj
 
   !> @brief Setup stage table object for package
@@ -5725,9 +5593,6 @@ contains
       text = 'STREAMBED GRADIENT'
       call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_setup_tableobj
 
   ! -- reach geometry functions
@@ -5759,9 +5624,6 @@ contains
     else
       calc_area_wet = this%station(i0) * depth
     end if
-    !
-    ! -- return
-    return
   end function calc_area_wet
 
   !> @brief Calculate wetted perimeter
@@ -5791,9 +5653,6 @@ contains
     else
       calc_perimeter_wet = this%station(i0) ! no depth dependence in original implementation
     end if
-    !
-    ! -- return
-    return
   end function calc_perimeter_wet
 
   !> @brief Calculate maximum surface area
@@ -5823,9 +5682,6 @@ contains
       top_width = this%station(i0)
     end if
     calc_surface_area = top_width * this%length(n)
-    !
-    ! -- return
-    return
   end function calc_surface_area
 
   !> @brief Calculate wetted surface area
@@ -5846,9 +5702,6 @@ contains
     ! -- Calculate wetted surface area
     top_width = this%calc_top_width_wet(n, depth)
     calc_surface_area_wet = top_width * this%length(n)
-    !
-    ! -- return
-    return
   end function calc_surface_area_wet
 
   !> @brief Calculate wetted top width
@@ -5882,9 +5735,6 @@ contains
     else
       calc_top_width_wet = sat * this%station(i0)
     end if
-    !
-    ! -- return
-    return
   end function calc_top_width_wet
 
   !> @brief Activate density terms
@@ -5912,9 +5762,6 @@ contains
     end do
     write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR SFR &
       &PACKAGE: '//trim(adjustl(this%packName))
-    !
-    ! -- return
-    return
   end subroutine sfr_activate_density
 
   !> @brief Activate viscosity terms
@@ -5943,9 +5790,6 @@ contains
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &
       &PACKAGE: '//trim(adjustl(this%packName))
-    !
-    ! -- return
-    return
   end subroutine sfr_activate_viscosity
 
   !> @brief Calculate density terms
@@ -6044,9 +5888,6 @@ contains
         flow = flow + d2
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calculate_density_exchange
 
 end module SfrModule

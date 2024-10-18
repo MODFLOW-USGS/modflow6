@@ -46,9 +46,6 @@ contains
     !
     ! -- Initialize block parser
     call ocobj%parser%Initialize(inunit, iout)
-    !
-    ! -- Return
-    return
   end subroutine oc_cr
 
   !> @ brief Allocate and read SwfOcType
@@ -92,9 +89,6 @@ contains
     if (this%inunit > 0) then
       call this%read_options()
     end if
-    !
-    ! -- Return
-    return
   end subroutine oc_ar
 
 end module SwfOcModule

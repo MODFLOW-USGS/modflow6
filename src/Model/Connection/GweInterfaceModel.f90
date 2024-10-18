@@ -100,9 +100,6 @@ contains
     call cnd_cr(this%cnd, this%name, '', -cnd_unit, this%iout, this%fmi, &
                 this%ieqnsclfac, this%gwecommon)
     call tsp_obs_cr(this%obs, inobs, this%depvartype)
-    !
-    ! -- Return
-    return
   end subroutine gweifmod_cr
 
   !> @brief Allocate scalars associated with the interface model object
@@ -117,9 +114,6 @@ contains
     call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%ieqnsclfac, 'IEQNSCLFAC', this%memoryPath)
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate a Flow Model Interface (FMI) object for the interface model
@@ -136,9 +130,6 @@ contains
                       this%fmi%memoryPath)
     call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', &
                       this%fmi%memoryPath)
-    !
-    ! -- Return
-    return
   end subroutine allocate_fmi
 
   !> @brief Define the GWE interface model
@@ -197,9 +188,6 @@ contains
     !
     ! -- Allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-    !
-    ! -- Return
-    return
   end subroutine gweifmod_df
 
   !> @brief Override allocate and read the GWE interface model and its packages
@@ -216,9 +204,6 @@ contains
     if (this%incnd > 0) then
       call this%cnd%cnd_ar(this%ibound, this%est%porosity)
     end if
-    !
-    ! -- Return
-    return
   end subroutine gweifmod_ar
 
   !> @brief Clean up resources
@@ -263,9 +248,6 @@ contains
     !
     ! -- base
     call this%NumericalModelType%model_da()
-    !
-    ! -- Return
-    return
   end subroutine gweifmod_da
 
 end module GweInterfaceModelModule

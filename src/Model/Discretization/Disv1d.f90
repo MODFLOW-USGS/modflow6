@@ -121,9 +121,6 @@ contains
       end if
 
     end if
-    !
-    ! -- Return
-    return
   end subroutine disv1d_cr
 
   !> @brief Define the discretization
@@ -249,9 +246,6 @@ contains
     ! -- Initialize
     this%nvert = 0
     this%ndim = 1
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   subroutine disv1d_load(this)
@@ -306,9 +300,6 @@ contains
     if (this%iout > 0) then
       call this%log_options(found)
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_options
 
   !> @brief Write user options to list file
@@ -413,9 +404,6 @@ contains
       this%bottom(n) = DZERO
       this%idomain(n) = 1
     end do
-    !
-    ! -- Return
-    return
   end subroutine source_dimensions
 
   !> @brief Write dimensions to list file
@@ -542,9 +530,6 @@ contains
       write (this%iout, '(1x,a)') 'Setting Discretization Vertices'
       write (this%iout, '(1x,a,/)') 'End setting discretization vertices'
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_vertices
 
   !> @brief Copy cell1d information from input data context
@@ -608,9 +593,6 @@ contains
       write (this%iout, '(1x,a)') 'Setting Discretization CELL1D'
       write (this%iout, '(1x,a,/)') 'End Setting Discretization CELL1D'
     end if
-    !
-    ! -- Return
-    return
   end subroutine source_cell1d
 
   !> @brief Construct the iavert and javert integer vectors which
@@ -651,9 +633,6 @@ contains
     call mem_allocate(this%javert, vert_spm%nnz, 'JAVERT', this%memoryPath)
     call vert_spm%filliaja(this%iavert, this%javert, ierr)
     call vert_spm%destroy()
-    !
-    ! -- Return
-    return
   end subroutine define_cellverts
 
   !> @brief Calculate x, y, coordinates of reach midpoint
@@ -816,9 +795,6 @@ contains
 
     ! create connectivity using vertices and cell1d
     call this%create_connections()
-
-    ! -- Return
-    return
   end subroutine grid_finalize
 
   subroutine allocate_arrays(this)
@@ -843,9 +819,6 @@ contains
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   subroutine create_connections(this)
@@ -993,9 +966,6 @@ contains
     !
     ! -- Close the file
     close (iunit)
-    !
-    ! -- return
-    return
   end subroutine write_grb
 
   !>
@@ -1023,9 +993,6 @@ contains
     else
       nodenumber = this%nodereduced(nodeu)
     end if
-    !
-    ! -- return
-    return
   end function get_nodenumber_idx1
 
   subroutine nodeu_to_string(this, nodeu, str)
@@ -1038,9 +1005,6 @@ contains
     !
     write (nstr, '(i0)') nodeu
     str = '('//trim(adjustl(nstr))//')'
-    !
-    ! -- return
-    return
   end subroutine nodeu_to_string
 
   !>
@@ -1099,10 +1063,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- return
-    return
-
   end function nodeu_from_string
 
   subroutine disv1d_da(this)
@@ -1141,9 +1101,6 @@ contains
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
-    !
-    ! -- Return
-    return
   end subroutine disv1d_da
 
   !> @brief Record a double precision array
@@ -1238,9 +1195,6 @@ contains
       call ubdsv1(kstp, kper, aname, -idataun, dtemp, ncol, nrow, nlay, &
                   iout, delt, pertim, totim)
     end if
-    !
-    ! -- return
-    return
   end subroutine record_array
 
   !> @brief Record list header using ubdsv06
@@ -1274,9 +1228,6 @@ contains
     call ubdsv06(kstp, kper, text, textmodel, textpackage, dstmodel, dstpackage, &
                  ibdchn, naux, auxtxt, ncol, nrow, nlay, &
                  nlist, iout, delt, pertim, totim)
-    !
-    ! -- return
-    return
   end subroutine record_srcdst_list_header
 
   !> @ brief Calculate the flow width between two cells

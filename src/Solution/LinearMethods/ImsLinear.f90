@@ -336,10 +336,7 @@ CONTAINS
     END IF
     !
     ! -- ALLOCATE MEMORY FOR STORING ITERATION CONVERGENCE DATA
-    !
-    ! -- RETURN
-    RETURN
-  END SUBROUTINE imslinear_ar
+  end SUBROUTINE imslinear_ar
 
   !> @ brief Write summary of settings
     !!
@@ -448,9 +445,6 @@ CONTAINS
         END DO
       END IF
     end if
-    !
-    ! -- return
-    return
   end subroutine imslinear_summary
 
   !> @ brief Allocate and initialize scalars
@@ -491,9 +485,6 @@ CONTAINS
     this%njlu = 0
     this%njw = 0
     this%nwlu = 0
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Deallocate memory
@@ -558,9 +549,6 @@ CONTAINS
     nullify (this%amat)
     nullify (this%rhs)
     nullify (this%x)
-    !
-    ! -- return
-    return
   end subroutine imslinear_da
 
   !> @ brief Set default settings
@@ -617,10 +605,7 @@ CONTAINS
       this%DROPTOL = DEM4
       this%NORTH = 2
     END SELECT
-    !
-    ! -- return
-    RETURN
-  END SUBROUTINE imslinear_set_input
+  end SUBROUTINE imslinear_set_input
 
   !> @ brief Base linear accelerator subroutine
     !!
@@ -762,9 +747,6 @@ CONTAINS
     ! -- SET IMS INNER ITERATION NUMBER (IN_ITER) TO NUMBER OF
     !       IMSLINEAR INNER ITERATIONS (innerit)
     IN_ITER = innerit
-    !
-    ! -- RETURN
-    RETURN
-  END SUBROUTINE imslinear_ap
+  end SUBROUTINE imslinear_ap
 
 END MODULE IMSLinearModule

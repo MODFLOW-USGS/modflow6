@@ -57,9 +57,6 @@ contains
     !
     ! -- initialize storage to TRANSIENT (model iss=0)
     this%storage = 'TRANSIENT'
-    !
-    ! -- return
-    return
   end subroutine sto_init
 
   subroutine sto_rp(this, parser)
@@ -104,9 +101,6 @@ contains
     ! -- close logging statement
     call idm_log_close(this%mf6_input%component_name, &
                        this%mf6_input%subcomponent_name, this%iout)
-    !
-    ! -- return
-    return
   end subroutine sto_rp
 
   subroutine sto_destroy(this)

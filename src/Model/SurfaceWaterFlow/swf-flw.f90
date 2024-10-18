@@ -95,9 +95,6 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     packobj%ictMemPath = ''
-    !
-    ! -- return
-    return
   end subroutine flw_create
 
   !> @ brief Allocate scalars
@@ -120,9 +117,6 @@ contains
     !
     ! -- Set values
     ! none for this package
-    !
-    ! -- return
-    return
   end subroutine flw_allocate_scalars
 
   !> @ brief Allocate arrays
@@ -148,9 +142,6 @@ contains
     ! -- checkin q array input context pointer
     call mem_checkin(this%q, 'Q', this%memoryPath, &
                      'Q', this%input_mempath)
-    !
-    ! -- return
-    return
   end subroutine flw_allocate_arrays
 
   !> @ brief Deallocate package memory
@@ -169,9 +160,6 @@ contains
     !
     ! -- scalars
     call mem_deallocate(this%q, 'Q', this%memoryPath)
-    !
-    ! -- return
-    return
   end subroutine flw_da
 
   !> @ brief Source additional options for package
@@ -198,9 +186,6 @@ contains
     !
     ! -- log SWF specific options
     call this%log_flw_options(found)
-    !
-    ! -- return
-    return
   end subroutine flw_options
 
   !> @ brief Log SWF specific package options
@@ -225,9 +210,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- return
-    return
   end subroutine log_flw_options
 
   !> @ brief SWF read and prepare
@@ -248,9 +230,6 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-    !
-    ! -- return
-    return
   end subroutine flw_rp
 
   !> @ brief Formulate the package hcof and rhs terms.
@@ -280,8 +259,6 @@ contains
       q = this%q_mult(i)
       this%rhs(i) = -q
     end do
-    !
-    return
   end subroutine flw_cf
 
   !> @ brief Copy hcof and rhs terms into solution.
@@ -320,9 +297,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine flw_fc
 
   !> @ brief Define the list label for the package
@@ -351,9 +325,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -372,9 +343,6 @@ contains
     !
     ! -- set boolean
     flw_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function flw_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -396,9 +364,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- return
-    return
   end subroutine flw_df_obs
 
   !> @brief Save observations for the package
@@ -446,9 +411,6 @@ contains
         call this%obs%SaveOneSimval(obsrv, DNODATA)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine flw_bd_obs
 
   ! -- Procedure related to time series
@@ -476,9 +438,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine flw_rp_ts
 
   function q_mult(this, row) result(q)
@@ -495,9 +454,6 @@ contains
     else
       q = this%q(row)
     end if
-    !
-    ! -- return
-    return
   end function q_mult
 
   !> @ brief Return a bound value
@@ -525,9 +481,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-    !
-    ! -- return
-    return
   end function flw_bound_value
 
 end module SwfFlwModule

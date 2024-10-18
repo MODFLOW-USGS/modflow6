@@ -73,9 +73,6 @@ contains
     else
       call this%set_filtered_list()
     end if
-    !
-    ! --return
-    return
   end subroutine init
 
   !> @brief destroy
@@ -88,9 +85,6 @@ contains
     !
     ! -- deallocate
     if (allocated(this%params)) deallocate (this%params)
-    !
-    ! --return
-    return
   end subroutine destroy
 
   !> @brief array based input dynamic param filter
@@ -155,9 +149,6 @@ contains
     !
     ! -- cleanup
     deallocate (idt_idxs)
-    !
-    ! -- return
-    return
   end subroutine set_filtered_grid
 
   !> @brief create array of in scope list input columns
@@ -233,9 +224,6 @@ contains
     !
     ! -- cleanup
     deallocate (ra_cols)
-    !
-    ! -- return
-    return
   end subroutine set_filtered_list
 
   !> @brief allocate and set input array to filtered param set
@@ -259,9 +247,6 @@ contains
     do n = 1, nparam
       params(n) = this%params(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine package_params
 
   !> @brief allocate character string type array
@@ -405,9 +390,6 @@ contains
         !call store_error_filename(sourcename)
       end select
     end if
-    !
-    ! -- return
-    return
   end function pkg_param_in_scope
 
 end module DynamicPackageParamsModule

@@ -44,9 +44,6 @@ contains
     else
       w = stations(1)
     end if
-    !
-    ! -- return
-    return
   end function get_saturated_topwidth
 
   !> @brief Calculate the wetted top width for a reach
@@ -77,9 +74,6 @@ contains
     do n = 1, npts - 1
       w = w + widths(n)
     end do
-    !
-    ! -- return
-    return
   end function get_wetted_topwidth
 
   !> @brief Calculate wetted vertical height
@@ -112,9 +106,6 @@ contains
         vwf = heights(n + 2) - heights(n + 1)
       end if
     end if
-    !
-    ! -- return
-    return
   end function get_wet_vert_face
 
   !> @brief Calculate the wetted perimeter for a reach
@@ -145,9 +136,6 @@ contains
     do n = 1, npts - 1
       p = p + perimeters(n)
     end do
-    !
-    ! -- return
-    return
   end function get_wetted_perimeter
 
   !> @brief Calculate the cross-sectional area for a reach
@@ -178,9 +166,6 @@ contains
     do n = 1, npts - 1
       a = a + areas(n)
     end do
-    !
-    ! -- return
-    return
   end function get_cross_section_area
 
   !> @brief Calculate the hydraulic radius for a reach
@@ -231,9 +216,6 @@ contains
       ! -- calculate the hydraulic radius
       r = a / p
     end if
-    !
-    ! -- return
-    return
   end function get_hydraulic_radius
 
   !> @brief Calculate the manning's discharge for a reach
@@ -300,9 +282,6 @@ contains
       end do
       q = conv_fact * conveyance * sqrt(slope)
     end if
-    !
-    ! -- return
-    return
   end function get_mannings_section
 
   ! -- private functions and subroutines
@@ -343,9 +322,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine determine_vert_neighbors
 
   !> @brief Calculate the wetted perimeters for each line segment
@@ -427,9 +403,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine get_wetted_perimeters
 
   !> @brief Calculate the cross-sectional areas for each line segment
@@ -490,9 +463,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine get_cross_section_areas
 
   !> @brief Calculate the wetted top widths for each line segment
@@ -533,9 +503,6 @@ contains
       ! -- calculate the wetted top width for the segment
       w(n) = x1 - x0
     end do
-    !
-    ! -- return
-    return
   end subroutine get_wetted_topwidths
 
   !> @brief Calculate the station values for the wetted portion of the cross-section
@@ -599,9 +566,6 @@ contains
       x0 = xt0
       x1 = xt1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_wetted_station
 
 end module GwfSfrCrossSectionUtilsModule

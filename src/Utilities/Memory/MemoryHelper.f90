@@ -151,9 +151,6 @@ contains
         res = mem_path(:idx)
       end if
     end if
-
-    return
-
   end function get_mem_path_context
 
   !> @brief Remove the context from the memory path

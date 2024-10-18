@@ -118,9 +118,6 @@ contains
     if (iout > 0) &
       write (iout, '(a, i0, a)') 'Detected ', this%nbudterms, &
       ' unique flow terms in budget file.'
-    !
-    ! -- return
-    return
   end subroutine initialize
 
   !< @brief read record
@@ -225,9 +222,6 @@ contains
         this%endoffile = .true.
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine read_record
 
   !< @brief finalize
@@ -241,9 +235,6 @@ contains
     if (allocated(this%nodedst)) deallocate (this%nodedst)
     if (allocated(this%flow)) deallocate (this%flow)
     if (allocated(this%auxvar)) deallocate (this%auxvar)
-    !
-    ! -- return
-    return
   end subroutine finalize
 
 end module BudgetFileReaderModule

@@ -97,9 +97,6 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- Return
-    return
   end subroutine evt_create
 
   !> @brief Allocate package scalar members
@@ -128,9 +125,6 @@ contains
     this%fixed_cell = .false.
     this%read_as_arrays = .false.
     this%surfratespecified = .false.
-    !
-    ! -- Return
-    return
   end subroutine evt_allocate_scalars
 
   !> @brief Allocate package arrays
@@ -184,9 +178,6 @@ contains
                          'PETM0', this%input_mempath)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine evt_allocate_arrays
 
   !> @brief Source options specific to EvtType
@@ -235,9 +226,6 @@ contains
     ! -- log evt specific options
     call this%evt_log_options(found_fixed_cell, found_readasarrays, &
                               found_surfratespec)
-    !
-    ! -- Return
-    return
   end subroutine evt_source_options
 
   !> @brief Source options specific to EvtType
@@ -284,9 +272,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- Return
-    return
   end subroutine evt_log_options
 
   !> @brief Source the dimensions for this package
@@ -358,9 +343,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-    !
-    ! -- Return
-    return
   end subroutine evt_source_dimensions
 
   !> @brief Part of allocate and read
@@ -374,9 +356,6 @@ contains
     if (this%read_as_arrays) then
       call this%default_nodelist()
     end if
-    !
-    ! -- Return
-    return
   end subroutine evt_read_initial_attr
 
   !> @brief Read and Prepare
@@ -416,9 +395,6 @@ contains
     !
     ! -- copy nodelist to nodesontop if not fixed cell
     if (.not. this%fixed_cell) call this%set_nodesontop()
-    !
-    ! -- Return
-    return
   end subroutine evt_rp
 
   !> @brief Subroutine to check pxdp
@@ -482,9 +458,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- Return
-    return
   end subroutine check_pxdp
 
   !> @brief Store nodelist in nodesontop
@@ -504,9 +477,6 @@ contains
     do n = 1, this%nbound
       this%nodesontop(n) = this%nodelist(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_nodesontop
 
   !> @brief Formulate the HCOF and RHS terms
@@ -646,9 +616,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine evt_cf
 
   !> @brief Copy rhs and hcof into solution rhs and amat
@@ -677,9 +644,6 @@ contains
       ipos = ia(n)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
-    !
-    ! -- Return
-    return
   end subroutine evt_fc
 
   !> @brief Deallocate
@@ -716,9 +680,6 @@ contains
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine evt_da
 
   !> @brief Define the list heading that is written to iout when PRINT_INPUT
@@ -770,9 +731,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- Return
-    return
   end subroutine evt_define_listlabel
 
   !> @brief Assign default nodelist when READASARRAYS is specified.
@@ -817,9 +775,6 @@ contains
     ! -- if fixed_cell option not set, then need to store nodelist
     !    in the nodesontop array
     if (.not. this%fixed_cell) call this%set_nodesontop()
-    !
-    ! -- Return
-    return
   end subroutine default_nodelist
 
   ! -- Procedures related to observations
@@ -833,9 +788,6 @@ contains
     class(EvtType) :: this
     !
     evt_obs_supported = .true.
-    !
-    ! -- Return
-    return
   end function evt_obs_supported
 
   !> @brief Store observation type supported by EVT package
@@ -850,9 +802,6 @@ contains
     !
     call this%obs%StoreObsType('evt', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- Return
-    return
   end subroutine evt_df_obs
 
   !> @brief Return requested boundary value
@@ -916,9 +865,6 @@ contains
       end if
       !
     end select
-    !
-    ! -- Return
-    return
   end function evt_bound_value
 
   !> @brief Update the nodelist based on IEVT input
@@ -960,9 +906,6 @@ contains
       call dis%nlarray_to_nodelist(ievt, nodelist, &
                                    maxbound, nbound, aname)
     end if
-    !
-    ! -- Return
-    return
   end subroutine nodelist_update
 
 end module EvtModule
