@@ -469,7 +469,7 @@ message('MODFLOW 6 executable name: ' + buildname)
 
 if build_machine.system() == 'windows' and (with_petsc or with_netcdf)
   if is_extended_build
-    incdir = petsc_incdir + netcdf_incdir
+    incdir = include_directories(extended_incdir)
   elif with_petsc
     incdir = petsc_incdir
   elif with_netcdf

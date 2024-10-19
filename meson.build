@@ -138,9 +138,8 @@ petsc_compiled_abs = petsc_dir_abs / petsc_arch
 # windows options for netcdf
 netcdf_dir_rel = '..' /'netcdf'
 netcdf_dir_abs = meson.project_source_root() / '..' / 'netcdf'
-message('NetCDF dir abs: ', netcdf_dir_abs)
 netcdfc_build = 'netCDF4.9.2-NC4-64'
-netcdff_build = 'netcdf-fortran-4.6.1_build' / 'build'
+netcdff_build = 'netcdf-fortran-4.6.1' / 'build'
 netcdfc_compiled_rel = netcdf_dir_rel / netcdfc_build
 netcdfc_compiled_abs = netcdf_dir_abs / netcdfc_build
 netcdff_compiled_rel = netcdf_dir_rel / netcdff_build
@@ -156,6 +155,7 @@ endif
 # lists for parallel dependencies and compiler arguments
 dependencies = [ ]
 extra_cmp_args = [ ]
+extended_incdir = [ ]
 
 # load petsc, mpi, and netcdf dependencies/libraries
 if is_parallel_build or is_extended_build
@@ -198,8 +198,12 @@ if is_netcdf_build
         netcdfc_compiled_rel / 'include',
         netcdff_compiled_rel / 'fortran'
       ])
+      extended_incdir += [
+        '..' / netcdfc_compiled_rel / 'include',
+        '..' / netcdff_compiled_rel / 'fortran'
+      ]
       netcdff_libdir = netcdff_compiled_abs / 'fortran'
-      lnetcdff = fc.find_library('netcdff', dirs: netcdff_libdir, required : true)
+      lnetcdff = fc.find_library('netcdff', dirs: netcdff_libdir, static: false, required : true)
       dependencies += [ lnetcdff ]
     endif
   endif
@@ -231,6 +235,7 @@ add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'for
 if is_parallel_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir_rel / 'include', petsc_compiled_rel / 'include'])
+  extended_incdir += ['..' / petsc_dir_rel / 'include', '..' / petsc_compiled_rel / 'include']
   petsc_src = petsc_dir_abs / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
                   petsc_src / 'dm/f90-mod/petscdmmod.F90',

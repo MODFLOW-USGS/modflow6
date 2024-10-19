@@ -555,7 +555,7 @@ jobs:
           path: modflow6/autotest/.failed
 
   netcdf_test:
-    name: NetCDF executable testing
+    name: NetCDF testing
     needs:
       - lint
       - build
@@ -615,7 +615,7 @@ jobs:
           path: modflow6/autotest/.failed
 
   extended_test:
-    name: Extended executable testing
+    name: Extended testing
     needs:
       - lint
       - build
@@ -624,7 +624,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-13 ]
+        os: [ ubuntu-22.04, macos-13, windows-2022 ]
     defaults:
       run:
         shell: bash
@@ -660,7 +660,12 @@ jobs:
           fi
 
       - name: Test extended MF6
+        if: runner.os != 'Windows'
         uses: ./modflow6/.github/actions/test-extended
+
+      - name: Test extended MF6
+        if: runner.os == 'Windows'
+        uses: ./modflow6/.github/actions/test-extended-win
 
       - name: Upload failed test output
         if: failure()

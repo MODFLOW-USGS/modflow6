@@ -7,10 +7,8 @@ runs:
     - name: Build modflow6
       shell: cmd
       run: |
-        echo "%PKG_CONFIG_PATH%"
-        echo "%PATH%"
         unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\compile_modflow6_netcdf.bat" "%TEMP%\compile_modflow6_netcdf.bat"
-        "%ONEAPI_ROOT%\setvars.bat" intel64 ninja && "%TEMP%\compile_modflow6_netcdf.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\compile_modflow6_netcdf.bat"
 
     - name: Show Meson logs
       if: failure()

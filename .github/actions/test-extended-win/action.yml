@@ -1,14 +1,11 @@
-name: Test NetCDF MF6 (Windows)
-description: Build and test NetCDF MODFLOW 6 on Windows
+name: Test extended MF6 (Windows)
+description: Build and test extended MODFLOW 6 on Windows
 runs:
   using: "composite"
   steps:
 
-    - name: Build MF6 NetCDF
-      uses: ./modflow6/.github/actions/build-netcdf-win
-
-    - name: Build MF6 NetCDF
-      uses: ./modflow6/.github/actions/build-netcdf-mf6
+    - name: Build MF6 parallel
+      uses: ./modflow6/.github/actions/build-extended-win
 
     - name: Update flopy
       working-directory: modflow6
@@ -25,9 +22,28 @@ runs:
     - name: Convert unix2dos
       shell: cmd
       run: |
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_parallel.bat" "%TEMP%\test_modflow6_parallel.bat"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_serial.bat" "%TEMP%\test_modflow6_serial.bat"
         unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_netcdf.bat" "%TEMP%\test_modflow6_netcdf.bat"
 
-    - name: Test programs
+    - name: Test programs (parallel)
+      if: github.ref_name != 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
+
+    - name: Test programs (parallel)
+      if: github.ref_name == 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+        MARKERS: not developmode
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
+
+    - name: Test programs (netcdf)
       if: github.ref_name != 'master'
       shell: cmd
       env:
@@ -35,7 +51,7 @@ runs:
       run: |
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_netcdf.bat"
 
-    - name: Test programs
+    - name: Test programs (netcdf)
       if: github.ref_name == 'master'
       shell: cmd
       env:
@@ -43,6 +59,23 @@ runs:
         MARKERS: not developmode
       run: |
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_netcdf.bat"
+
+    - name: Test programs (serial)
+      if: github.ref_name != 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
+
+    - name: Test programs (serial)
+      if: github.ref_name == 'master'
+      shell: cmd
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+        MARKERS: not developmode
+      run: |
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
 
     - name: Copy deps to bin dir
       working-directory: modflow6/bin
@@ -69,6 +102,7 @@ runs:
         copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_bstrap_proxy.exe" .
         copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_pmi_proxy.exe" .
         copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_service.exe" .
+        copy "%GITHUB_WORKSPACE%\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
         copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\hdf5.dll" .
         copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\hdf5_hl.dll" .
         copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\libcurl.dll" .
@@ -79,5 +113,5 @@ runs:
     - name: Upload binaries
       uses: actions/upload-artifact@v3
       with:
-        name: bin-netcdf
+        name: bin-ext
         path: modflow6/bin
