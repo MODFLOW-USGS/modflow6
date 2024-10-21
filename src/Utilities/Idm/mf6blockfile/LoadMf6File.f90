@@ -602,7 +602,7 @@ contains
       call mem_setptr(nrow, idt%shape, this%mf6_input%mempath)
       nrows = nrow
     else
-      nrows = 0
+      nrows = -1
     end if
     !
     ! -- create a structured array
