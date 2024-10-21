@@ -120,13 +120,13 @@ module NCModelExportModule
     subroutine package_export(this, export_pkg)
       import NCBaseModelExportType, ExportPackageType
       class(NCBaseModelExportType), intent(inout) :: this
-      class(ExportPackageType), intent(in) :: export_pkg
+      class(ExportPackageType), pointer, intent(in) :: export_pkg
     end subroutine
     subroutine package_export_ilayer(this, export_pkg, ilayer_varname, &
                                      ilayer)
       import NCBaseModelExportType, ExportPackageType, I4B
       class(NCBaseModelExportType), intent(inout) :: this
-      class(ExportPackageType), intent(in) :: export_pkg
+      class(ExportPackageType), pointer, intent(in) :: export_pkg
       character(len=*), intent(in) :: ilayer_varname
       integer(I4B), intent(in) :: ilayer
     end subroutine
