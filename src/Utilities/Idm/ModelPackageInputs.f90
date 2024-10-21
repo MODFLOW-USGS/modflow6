@@ -181,7 +181,13 @@ contains
     !
     ! -- set pkgname if empty
     if (this%pkgnames(this%pnum) == '') then
-      write (pname, '(a,i0)') trim(this%subcomponent_type)//'-', this%pnum
+      if (multi_pkg_type(mtype_component, &
+                         this%subcomponent_type, &
+                         filetype)) then
+        write (pname, '(a,i0)') trim(this%subcomponent_type)//'-', this%pnum
+      else
+        write (pname, '(a,i0)') trim(this%subcomponent_type)
+      end if
       this%pkgnames(this%pnum) = pname
     end if
     !

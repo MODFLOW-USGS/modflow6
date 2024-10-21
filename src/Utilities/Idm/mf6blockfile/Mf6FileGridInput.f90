@@ -153,11 +153,12 @@ contains
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     type(BlockParserType), pointer, intent(inout) :: parser
     ! -- local
-    logical(LGP) :: endOfBlock
+    logical(LGP) :: endOfBlock, netcdf
     character(len=LINELENGTH) :: keyword, param_tag
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iaux, iparam
     character(len=LENTIMESERIESNAME) :: tas_name
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
     !
     ! -- reset for this period
     call this%reset()
@@ -170,6 +171,7 @@ contains
     do
       ! -- initialize
       iaux = 0
+      netcdf = .false.
       !
       ! -- read next line
       call parser%GetNextLine(endOfBlock)
@@ -190,11 +192,12 @@ contains
                                        this%mf6_input%subcomponent_type, &
                                        'PERIOD', param_tag, this%input_name)
       !
-      ! -- look for TAS keyword if tas is active
-      if (this%tas_active /= 0) then
-        call parser%GetStringCaps(keyword)
-        !
-        if (keyword == 'TIMEARRAYSERIES') then
+      ! -- look for TAS and NetCDF keywords
+      call parser%GetStringCaps(keyword)
+      !
+      if (keyword == 'TIMEARRAYSERIES') then
+        if (this%tas_active /= 0) then
+          !
           call parser%GetStringCaps(tas_name)
           !
           if (param_tag == 'AUX') then
@@ -210,15 +213,31 @@ contains
           !
           ! -- cycle to next input param
           cycle
+        else
+          ! TODO: throw error
         end if
         !
+      else if (keyword == 'NETCDF') then
+        netcdf = .true.
       end if
       !
       ! -- read and load the parameter
-      call this%param_load(parser, idt%datatype, idt%mf6varname, idt%tagname, &
-                           idt%shape, this%mf6_input%mempath, iaux)
+      call this%param_load(parser, idt, this%mf6_input%mempath, netcdf, iaux)
       !
     end do
+    !
+    ! -- check if layer index variable was read
+    ! TODO: assumes layer index variable is always in scope
+    if (this%param_reads(1)%invar == 0) then
+      ! -- set to default of 1 without updating invar
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', this%param_names(1), &
+                                       this%input_name)
+      call mem_setptr(int1d, idt%mf6varname, this%mf6_input%mempath)
+      int1d = 1
+    end if
     !
     !
     if (this%tas_active /= 0) then
@@ -322,9 +341,9 @@ contains
     return
   end subroutine bndgrid_params_alloc
 
-  subroutine bndgrid_param_load(this, parser, datatype, varname, &
-                                tagname, shapestr, mempath, iaux)
+  subroutine bndgrid_param_load(this, parser, idt, mempath, netcdf, iaux)
     ! -- modules
+    use TdisModule, only: kper
     use MemoryManagerModule, only: mem_setptr
     use ArrayHandlersModule, only: ifind
     use InputDefinitionModule, only: InputParamDefinitionType
@@ -332,15 +351,14 @@ contains
     use Double1dReaderModule, only: read_dbl1d
     use Double2dReaderModule, only: read_dbl2d
     use Integer1dReaderModule, only: read_int1d
+    use LoadNCInputModule, only: netcdf_read_array
     use IdmLoggerModule, only: idm_log_var
     ! -- dummy
     class(BoundGridInputType), intent(inout) :: this !< BoundGridInputType
     type(BlockParserType), intent(in) :: parser
-    character(len=*), intent(in) :: datatype
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: shapestr
+    type(InputParamDefinitionType), intent(in) :: idt
     character(len=*), intent(in) :: mempath
+    logical(LGP), intent(in) :: netcdf
     integer(I4B), intent(in) :: iaux
     ! -- local
     integer(I4B), dimension(:), pointer, contiguous :: int1d
@@ -348,42 +366,59 @@ contains
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: iparam, n
     !
-    select case (datatype)
+    select case (idt%datatype)
     case ('INTEGER1D')
       !
-      call mem_setptr(int1d, varname, mempath)
-      call read_int1d(parser, int1d, varname)
-      call idm_log_var(int1d, tagname, mempath, this%iout)
+      call mem_setptr(int1d, idt%mf6varname, mempath)
+      if (netcdf) then
+        call netcdf_read_array(int1d, this%bound_context%mshape, idt, &
+                               this%mf6_input, this%nc_vars, this%input_name, &
+                               this%iout, kper)
+      else
+        call read_int1d(parser, int1d, idt%mf6varname)
+      end if
+      call idm_log_var(int1d, idt%tagname, mempath, this%iout)
       !
     case ('DOUBLE1D')
       !
-      call mem_setptr(dbl1d, varname, mempath)
-      call read_dbl1d(parser, dbl1d, varname)
-      call idm_log_var(dbl1d, tagname, mempath, this%iout)
+      call mem_setptr(dbl1d, idt%mf6varname, mempath)
+      if (netcdf) then
+        call netcdf_read_array(dbl1d, this%bound_context%mshape, idt, &
+                               this%mf6_input, this%nc_vars, this%input_name, &
+                               this%iout, kper)
+      else
+        call read_dbl1d(parser, dbl1d, idt%mf6varname)
+      end if
+      call idm_log_var(dbl1d, idt%tagname, mempath, this%iout)
       !
     case ('DOUBLE2D')
       !
-      call mem_setptr(dbl2d, varname, mempath)
+      call mem_setptr(dbl2d, idt%mf6varname, mempath)
       allocate (dbl1d(this%bound_context%ncpl))
-      call read_dbl1d(parser, dbl1d, varname)
+      if (netcdf) then
+        call netcdf_read_array(dbl1d, this%bound_context%mshape, idt, &
+                               this%mf6_input, this%nc_vars, this%input_name, &
+                               this%iout, kper, iaux)
+      else
+        call read_dbl1d(parser, dbl1d, idt%mf6varname)
+      end if
       do n = 1, this%bound_context%ncpl
         dbl2d(iaux, n) = dbl1d(n)
       end do
-      call idm_log_var(dbl1d, tagname, mempath, this%iout)
+      call idm_log_var(dbl1d, idt%tagname, mempath, this%iout)
       deallocate (dbl1d)
       !
     case default
       !
       errmsg = 'IDM unimplemented. Mf6FileGridInput::param_load &
-               &datatype='//trim(datatype)
+               &datatype='//trim(idt%datatype)
       call store_error(errmsg)
       call store_error_filename(this%input_name)
       !
     end select
     !
-    iparam = ifind(this%param_names, varname)
-    !
     ! -- if param is tracked set read state
+    iparam = ifind(this%param_names, idt%tagname)
     if (iparam > 0) then
       this%param_reads(iparam)%invar = 1
     end if

@@ -11,11 +11,8 @@ import pytest
 from framework import TestFramework
 from test_gwf_sto01 import cases
 
-try:
-    import xarray as xa
-    import xugrid as xu
-except ImportError:
-    pytest.skip("xarray and xugrid not found", allow_module_level=True)
+xa = pytest.importorskip("xarray")
+xu = pytest.importorskip("xugrid")
 
 htol = [None for _ in range(len(cases))]
 
