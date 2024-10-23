@@ -800,7 +800,7 @@ contains
       trhs = DZERO
       thcof = DZERO
     end if
-end subroutine gwseep
+  end subroutine gwseep
 
   !> @brief Calculate gwf et using residual uzf pet
   !<
