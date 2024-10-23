@@ -6,7 +6,7 @@ module UzfCellGroupModule
                              DTWO, DTHREE, DEP20
   use SmoothingModule
   use TdisModule, only: ITMUNI, delt, kper
-  use UzfETUtilModule, only: etfunc_lin
+  use UzfETUtilModule, only: etfunc_lin, etfunc_nlin
 
   implicit none
   private
@@ -800,7 +800,7 @@ contains
       trhs = DZERO
       thcof = DZERO
     end if
-  end subroutine gwseep
+end subroutine gwseep
 
   !> @brief Calculate gwf et using residual uzf pet
   !<
@@ -838,35 +838,6 @@ contains
     this%gwet(icell) = trhs - (thcof * hgwf)
     ! write(99,*)'in group', icell, this%gwet(icell)
   end subroutine simgwet
-
-  !> @brief Square-wave ET function with smoothing at extinction depth
-  !<
-  function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-    ! -- return
-    real(DP) :: etfunc_nlin
-    ! -- dummy
-    real(DP), intent(in) :: s
-    real(DP), intent(in) :: x
-    real(DP), intent(in) :: c
-    real(DP), intent(inout) :: det
-    real(DP), intent(inout) :: trhs
-    real(DP), intent(inout) :: thcof
-    real(DP), intent(in) :: hgwf
-    ! -- local
-    real(DP) :: etgw
-    real(DP) :: range
-    real(DP) :: depth, scale
-    !
-    depth = hgwf - (s - x)
-    if (depth < DZERO) depth = DZERO
-    etgw = c
-    range = DEM3 * x
-    call sCubic(depth, range, det, scale)
-    etgw = etgw * scale
-    trhs = etgw
-    det = -det * etgw
-    etfunc_nlin = etgw
-  end function etfunc_nlin
 
   !> @brief Calculate recharge due to a rise in the gwf head
   !<
