@@ -1,15 +1,17 @@
 module UzfETUtilModule
   use KindModule, only: DP
-  use ConstantsModule, only: DZERO, DONE, DEM4
+  use ConstantsModule, only: DZERO, DONE, DEM3, DEM4
   use SmoothingModule, only: sCubic
 
   implicit none
   private
-  public :: etfunc_lin, calc_lin_scaling_fac
+  public :: etfunc_lin
+  public :: etfunc_nlin
+  public :: calc_lin_scaling_fac
 
 contains
 
-  !> @brief Calculate gwf et using linear ET function from mf-2005
+  !> @brief Calculate gwf ET using linear decay ET function from mf-2005
   !<
   function etfunc_lin(efflndsrf, extdp, resid_pet, deriv_et, trhs, thcof, &
                       hgwf, celtop, celbot)
@@ -69,6 +71,36 @@ contains
     etfunc_lin = etgw
     !
   end function etfunc_lin
+
+  !> @brief Calculate gwf ET using a square decay ET function with smoothing
+  !! at the specified extinction depth
+  !<
+  function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
+    ! -- return
+    real(DP) :: etfunc_nlin
+    ! -- dummy
+    real(DP), intent(in) :: s
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: c
+    real(DP), intent(inout) :: det
+    real(DP), intent(inout) :: trhs
+    real(DP), intent(inout) :: thcof
+    real(DP), intent(in) :: hgwf
+    ! -- local
+    real(DP) :: etgw
+    real(DP) :: range
+    real(DP) :: depth, scale
+    !
+    depth = hgwf - (s - x)
+    if (depth < DZERO) depth = DZERO
+    etgw = c
+    range = DEM3 * x
+    call sCubic(depth, range, det, scale)
+    etgw = etgw * scale
+    trhs = etgw
+    det = -det * etgw
+    etfunc_nlin = etgw
+  end function etfunc_nlin
 
   !> @brief Calculate the linear scaling factor
   !<
