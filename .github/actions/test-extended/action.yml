@@ -3,7 +3,6 @@ description: Build and test Extended MODFLOW 6
 runs:
   using: "composite"
   steps:
-
     - name: Setup GNU Fortran
       uses: fortran-lang/setup-fortran@v1
       with:
@@ -17,14 +16,14 @@ runs:
         repository: petsc/petsc
         path: petsc
         ref: release
-        
+
     - name: Checkout PETSc
       if: runner.os == 'macOS'
       uses: actions/checkout@v4
       with:
         repository: petsc/petsc
         path: petsc
-        ref: release-3.21
+        ref: v3.22.1
 
     - name: Configure environment
       if: runner.os == 'Linux'
