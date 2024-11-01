@@ -125,7 +125,7 @@ if is_extended_build
 elif is_parallel_build
   message('Parallel build:', is_parallel_build)
 elif is_netcdf_build
-  message('Netcdf build:', is_netcdf_build)
+  message('NetCDF build:', is_netcdf_build)
 endif
 
 # windows options for petsc

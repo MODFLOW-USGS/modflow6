@@ -32,9 +32,8 @@ runs:
     - name: Download NetCDF-Fortran
       shell: bash
       run: |
-        cd netcdf
-        mkdir -p netcdf-fortran-4.6.1/build
-        cd netcdf-fortran-4.6.1
+        mkdir -p netcdf/netcdf-fortran-4.6.1/build
+        cd netcdf/netcdf-fortran-4.6.1
         curl https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip -O -J
         unzip netcdf-fortran-4.6.1.zip
 
