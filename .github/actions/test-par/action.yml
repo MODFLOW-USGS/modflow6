@@ -53,7 +53,7 @@ runs:
       shell: bash
       working-directory: petsc
       run: |
-        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
+        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=yes
         sudo make all
 
     - name: Build modflow6
