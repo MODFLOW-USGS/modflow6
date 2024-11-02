@@ -48,7 +48,7 @@ runs:
         sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz --with-debugging=0
         sudo make all
 
-    - name: Configure PETSc
+    - name: Configure PETSc (modified)
       if: runner.os == 'macOS'
       shell: bash
       working-directory: petsc
