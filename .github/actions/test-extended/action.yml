@@ -3,7 +3,6 @@ description: Build and test Extended MODFLOW 6
 runs:
   using: "composite"
   steps:
-
     - name: Setup GNU Fortran
       uses: fortran-lang/setup-fortran@v1
       with:
@@ -17,44 +16,27 @@ runs:
         repository: petsc/petsc
         path: petsc
         ref: release
-        
+
     - name: Checkout PETSc
       if: runner.os == 'macOS'
       uses: actions/checkout@v4
       with:
         repository: petsc/petsc
         path: petsc
-        ref: release-3.21
+        ref: v3.22.1
 
     - name: Configure environment
-      if: runner.os == 'Linux'
       shell: bash
       run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
-        echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
-
-    - name: Configure environment
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/lib/pkgconfig" >> $GITHUB_ENV
-        echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc/bin" >> $GITHUB_PATH
+        echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-gcc-opt/lib/pkgconfig" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/petsc/arch-gcc-opt/bin" >> $GITHUB_PATH
 
     - name: Configure PETSc
-      if: runner.os == 'Linux'
       shell: bash
       working-directory: petsc
       run: |
         sudo wget -P $GITHUB_WORKSPACE/petsc https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.2.tar.gz
-        sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz --with-debugging=0
-        sudo make all
-
-    - name: Configure PETSc
-      if: runner.os == 'macOS'
-      shell: bash
-      working-directory: petsc
-      run: |
-        sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc --download-fblaslapack --download-openmpi --with-debugging=0
+        sudo ./configure PETSC_ARCH=arch-gcc-opt --download-fblaslapack --download-openmpi=$GITHUB_WORKSPACE/petsc/openmpi-5.0.2.tar.gz --with-debugging=0
         sudo make all
 
     - name: Install netcdf
