@@ -45,6 +45,7 @@
 		\item The PRT model's particle release point (PRP) package's FRACTION period-block release time setting has been removed. Period-block release settings can now be used only to release particles at the beginning of specified time steps, as is the case for period-block timing settings in the output control (OC) packages for all models. For fine control over release timing, specify times explicitly using the RELEASETIMES block.
 		\item The Stress Package Concentration (SPC) utility available with the SSM Package is now the referred to as the Stress Package Component utility in the MF6IO guide.  Additionally, some relatively minor refactoring of the code facilitates use of the SPC utility with the GWE model type so that TEMPERATURE arrays may be read by the utility.  The SPC acronym was maintained to preserve backward compatibility.
 		\item The GWF-GWF Exchange has been fixed to support the configuration of the Mover package (MVR) also in cases where the number of exchanges equals zero (NEXG = 0). In earlier versions this has caused MODFLOW to terminate with an error.
+		\item A PRT bug was fixed in which array-based input read from the RCH (recharge) or EVT (evapotranspiration) packages could fail to be processed correctly by the PRT FMI (flow model interface) package, causing a crash.
 		
 	\end{itemize}
 
