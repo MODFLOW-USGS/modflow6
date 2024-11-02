@@ -93,14 +93,16 @@ contains
     !
     ! -- Arrays
     call mem_deallocate(this%ia)
-    call mem_deallocate(this%ja)
-    call mem_deallocate(this%isym)
-    call mem_deallocate(this%jas)
-    call mem_deallocate(this%hwva)
-    call mem_deallocate(this%anglex)
-    call mem_deallocate(this%ihc)
-    call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)
+    if (size(this%ja) > 0) then
+      call mem_deallocate(this%ja)
+      call mem_deallocate(this%isym)
+      call mem_deallocate(this%jas)
+      call mem_deallocate(this%hwva)
+      call mem_deallocate(this%anglex)
+      call mem_deallocate(this%ihc)
+      call mem_deallocate(this%cl1)
+      call mem_deallocate(this%cl2)
+    end if
   end subroutine con_da
 
   !> @brief Allocate scalars for ConnectionsType
