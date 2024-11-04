@@ -118,6 +118,7 @@ contains
     real(DP) :: pET !< potential evapotranspiration
     real(DP) :: trhs !< total uzf rhs contribution to GWF model
     real(DP) :: thcof !< total uzf hcof contribution to GWF model
+    real(DP) :: celtop !< elevation of the top of the cell
 
     ! water table exactly in the middle of the extinction depth, should return pET
     deriv_et = DZERO
@@ -125,6 +126,7 @@ contains
     pET = DEM1
     trhs = DZERO
     thcof = DZERO
+    celtop = DTWO
     hgwf = 1.5_DP
     deriv_et = DZERO
     trhs = DZERO
