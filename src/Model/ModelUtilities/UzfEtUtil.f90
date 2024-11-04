@@ -20,7 +20,7 @@ contains
     ! dummy
     real(DP), intent(in) :: efflndsrf !< effective land surface elevation after subtracting off 0.5*surfdep
     real(DP), intent(in) :: extdp !< extinction depth
-    real(DP), intent(in) :: resid_pet !< residual pET remaining after applying actual ET from unsaturated zone
+    real(DP), intent(in) :: resid_pet !< residual pET remaining after subtracting simulated ET in the unsaturated zone
     real(DP), intent(inout) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
     real(DP), intent(inout) :: trhs !< total uzf rhs contribution to GWF model
     real(DP), intent(inout) :: thcof !< total uzf hcof contribution to GWF model
@@ -75,30 +75,30 @@ contains
   !> @brief Calculate gwf ET using a square decay ET function with smoothing
   !! at the specified extinction depth
   !<
-  function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
+  function etfunc_nlin(efflndsrf, extdp, resid_pet, deriv_et, trhs, thcof, hgwf)
     ! -- return
     real(DP) :: etfunc_nlin
     ! -- dummy
-    real(DP), intent(in) :: s
-    real(DP), intent(in) :: x
-    real(DP), intent(in) :: c
-    real(DP), intent(inout) :: det
-    real(DP), intent(inout) :: trhs
-    real(DP), intent(inout) :: thcof
-    real(DP), intent(in) :: hgwf
+    real(DP), intent(in) :: efflndsrf !< effective land surface elevation after subtracting off 0.5*surfdep
+    real(DP), intent(in) :: extdp !< extinction depth
+    real(DP), intent(in) :: resid_pet !< residual pET remaining after subtracting simulated ET in the unsaturated zone
+    real(DP), intent(inout) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
+    real(DP), intent(inout) :: trhs !< total uzf rhs contribution to GWF model
+    real(DP), intent(inout) :: thcof !< total uzf hcof contribution to GWF model
+    real(DP), intent(in) :: hgwf !< calculated groundwater head
     ! -- local
     real(DP) :: etgw
     real(DP) :: range
     real(DP) :: depth, scale
     !
-    depth = hgwf - (s - x)
+    depth = hgwf - (efflndsrf - extdp)
     if (depth < DZERO) depth = DZERO
-    etgw = c
-    range = DEM3 * x
-    call sCubic(depth, range, det, scale)
+    etgw = resid_pet
+    range = DEM3 * extdp
+    call sCubic(depth, range, deriv_et, scale)
     etgw = etgw * scale
     trhs = etgw
-    det = -det * etgw
+    deriv_et = -deriv_et * etgw
     etfunc_nlin = etgw
   end function etfunc_nlin
 

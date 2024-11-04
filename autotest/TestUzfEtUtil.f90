@@ -5,7 +5,7 @@ module TestUzfEtUtil
   use MathUtilModule, only: is_close
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
-  use UzfETUtilModule, only: etfunc_lin, calc_lin_scaling_fac
+  use UzfETUtilModule, only: etfunc_lin, etfunc_nlin, calc_lin_scaling_fac
 
   implicit none
   private
@@ -18,7 +18,8 @@ contains
     testsuite = [ &
                 new_unittest("etfunc_lin", test_etfunc_lin), &
                 new_unittest("calc_lin_scaling_fac", &
-                             test_calc_lin_scaling_fac) &
+                             test_calc_lin_scaling_fac), &
+                new_unittest("etfunc_nlin", test_etfunc_nlin), &
                 ]
   end subroutine collect_uzfetutil
 
@@ -106,5 +107,34 @@ contains
     call check(error, is_close(rate, pET))
     if (allocated(error)) return
   end subroutine test_etfunc_lin
+  
+  subroutine test_etfunc_nlin(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP) :: rate !< calculated pET rate
+    ! local
+    real(DP) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
+    real(DP) :: extdp !< extinction depth
+    real(DP) :: hgwf !< groundwater head
+    real(DP) :: pET !< potential evapotranspiration
+    real(DP) :: trhs !< total uzf rhs contribution to GWF model
+    real(DP) :: thcof !< total uzf hcof contribution to GWF model
+  
+    ! water table exactly in the middle of the extinction depth, should return pET
+    deriv_et = DZERO
+    extdp = DONE
+    pET = DEM1
+    trhs = DZERO
+    thcof = DZERO
+    celtop = DTWO
+    celbot = DZERO
+    hgwf = 1.5_DP
+    deriv_et = DZERO
+    trhs = DZERO
+    thcof = DZERO
+    rate = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate, pET))
+    if (allocated(error)) return
+    
+  end subroutine test_etfunc_nlin
 
 end module TestUzfEtUtil
