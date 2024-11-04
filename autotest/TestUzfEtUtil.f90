@@ -107,7 +107,7 @@ contains
     call check(error, is_close(rate, pET))
     if (allocated(error)) return
   end subroutine test_etfunc_lin
-  
+
   subroutine test_etfunc_nlin(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP) :: rate !< calculated pET rate
@@ -118,15 +118,13 @@ contains
     real(DP) :: pET !< potential evapotranspiration
     real(DP) :: trhs !< total uzf rhs contribution to GWF model
     real(DP) :: thcof !< total uzf hcof contribution to GWF model
-  
+
     ! water table exactly in the middle of the extinction depth, should return pET
     deriv_et = DZERO
     extdp = DONE
     pET = DEM1
     trhs = DZERO
     thcof = DZERO
-    celtop = DTWO
-    celbot = DZERO
     hgwf = 1.5_DP
     deriv_et = DZERO
     trhs = DZERO
@@ -134,7 +132,7 @@ contains
     rate = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
     call check(error, is_close(rate, pET))
     if (allocated(error)) return
-    
+
   end subroutine test_etfunc_nlin
 
 end module TestUzfEtUtil
