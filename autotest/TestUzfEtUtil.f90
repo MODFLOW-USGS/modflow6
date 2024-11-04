@@ -112,6 +112,7 @@ contains
   subroutine test_etfunc_nlin(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP) :: rate1, rate2 !< calculated pET rates
+    real(DP) :: range !< value used for smoothing bottom of square_gwet interval
     ! local
     real(DP) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
     real(DP) :: extdp !< extinction depth
