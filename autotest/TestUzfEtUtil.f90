@@ -19,7 +19,7 @@ contains
                 new_unittest("etfunc_lin", test_etfunc_lin), &
                 new_unittest("calc_lin_scaling_fac", &
                              test_calc_lin_scaling_fac), &
-                new_unittest("etfunc_nlin", test_etfunc_nlin), &
+                new_unittest("etfunc_nlin", test_etfunc_nlin) &
                 ]
   end subroutine collect_uzfetutil
 
