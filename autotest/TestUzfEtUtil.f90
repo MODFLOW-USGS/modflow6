@@ -1,7 +1,7 @@
 module TestUzfEtUtil
 
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, DONE, DTWO, DEM1, DHALF, D1P1, &
+  use ConstantsModule, only: DZERO, DONE, DTWO, DEM1, DEM3, DHALF, D1P1, &
                              DFIVETHIRDS, DSIX
   use MathUtilModule, only: is_close
   use testdrive, only: check, error_type, new_unittest, test_failed, &
