@@ -1,7 +1,8 @@
 module TestUzfEtUtil
 
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DZERO, DONE, DTWO, DEM1, DHALF, D1P1, DSIX
+  use ConstantsModule, only: DZERO, DONE, DTWO, DEM1, DHALF, D1P1, &
+                             DFIVETHIRDS, DSIX
   use MathUtilModule, only: is_close
   use testdrive, only: check, error_type, new_unittest, test_failed, &
                        to_string, unittest_type
@@ -110,7 +111,7 @@ contains
 
   subroutine test_etfunc_nlin(error)
     type(error_type), allocatable, intent(out) :: error
-    real(DP) :: rate !< calculated pET rate
+    real(DP) :: rate1, rate2 !< calculated pET rates
     ! local
     real(DP) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
     real(DP) :: extdp !< extinction depth
@@ -131,9 +132,34 @@ contains
     deriv_et = DZERO
     trhs = DZERO
     thcof = DZERO
-    rate = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    call check(error, is_close(rate, pET))
+    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate1, pET))
     if (allocated(error)) return
+
+    ! similar to previous check, but testing a different groundwater depth
+    hgwf = DFIVETHIRDS
+    deriv_et = DZERO
+    trhs = DZERO
+    thcof = DZERO
+    rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate1, rate2))
+    if (allocated(error)) return
+
+    ! even with the SQUARE_GWET function, there is smoothing close to the extinction depth
+    ! the following tests that the smoothing near the EXTDP scales pET by half
+    range = DEM3 * extdp ! an intermediate calc
+    hgwf = celtop - extdp + (range * DHALF)
+    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate1, pET * DHALF))
+    ! however, if water table is above the calculated "range", there should be no scaling
+    hgwf = celtop - extdp + (range * DONE)
+    rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate2, rate1 * DTWO))
+
+    ! when water table is at the extinction depth, should be no gwet
+    hgwf = celtop - extdp
+    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate1, DZERO))
 
   end subroutine test_etfunc_nlin
 
