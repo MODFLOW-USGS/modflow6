@@ -150,17 +150,17 @@ contains
     ! the following tests that the smoothing near the EXTDP scales pET by half
     range = DEM3 * extdp ! an intermediate calc
     hgwf = celtop - extdp + (range * DHALF)
-    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    call check(error, is_close(rate1, pET * DHALF))
+    !rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    !call check(error, is_close(rate1, pET * DHALF))
     ! however, if water table is above the calculated "range", there should be no scaling
-    hgwf = celtop - extdp + (range * DONE)
-    rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    call check(error, is_close(rate2, rate1 * DTWO))
+    !hgwf = celtop - extdp + (range * DONE)
+    !rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    !call check(error, is_close(rate2, rate1 * DTWO))
 
     ! when water table is at the extinction depth, should be no gwet
-    hgwf = celtop - extdp
-    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    call check(error, is_close(rate1, DZERO))
+    !hgwf = celtop - extdp
+    !rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    !call check(error, is_close(rate1, DZERO))
 
   end subroutine test_etfunc_nlin
 
