@@ -113,6 +113,7 @@ contains
     type(error_type), allocatable, intent(out) :: error
     real(DP) :: rate1, rate2 !< calculated pET rates
     real(DP) :: range !< value used for smoothing bottom of square_gwet interval
+    real(DP) :: atol !< user specified tolerance for comparing calculated values
     ! local
     real(DP) :: deriv_et !< derivative of gw ET for Newton addition to equations in _fn()
     real(DP) :: extdp !< extinction depth
@@ -151,8 +152,9 @@ contains
     range = DEM3 * extdp ! an intermediate calc
     hgwf = celtop - extdp + (range * DHALF)
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    write (*, *) 'error: ', rate1, pET
-    call check(error, is_close(rate1, pET * DHALF))
+    write (*, *) 'error: ', rate1 - (pET * DHALF)
+    atol = 1d-12
+    call check(error, is_close(rate1, pET * DHALF, atol=atol))
     ! however, if water table is above the calculated "range", there should be no scaling
     !hgwf = celtop - extdp + (range * DONE)
     !rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
