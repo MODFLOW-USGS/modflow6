@@ -136,7 +136,7 @@ contains
     ! -- check character length
     lenc = len(array)
     if (lenc>MAXCHARLEN) then
-      ! Can't use store_error or ustop here because SimModule
+      ! Can't use store_error or ustop here because SimPHMFModule
       ! is dependent on ArrayHandlersModule.
       write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
       write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
@@ -218,7 +218,7 @@ contains
     !
     ! -- Error reporting
     99 continue
-      ! Can't use store_error or ustop here because SimModule
+      ! Can't use store_error or ustop here because SimPHMFModule
       ! is dependent on ArrayHandlersModule.
       write(iout,*)'Error encountered while trying to increase array size:'
       write(iout,'(a)')trim(ermsg)
@@ -266,7 +266,7 @@ contains
     !
     ! -- Error reporting
     99 continue
-      ! Can't use store_error or ustop here because SimModule
+      ! Can't use store_error or ustop here because SimPHMFModule
       ! is dependent on ArrayHandlersModule.
       write(iout,*)'Error encountered while trying to increase array size:'
       write(iout,'(a)')trim(ermsg)
@@ -308,7 +308,7 @@ contains
     ! -- check character length
     lenc = len(array)
     if (lenc>MAXCHARLEN) then
-      ! Can't use store_error or ustop here because SimModule
+      ! Can't use store_error or ustop here because SimPHMFModule
       ! is dependent on ArrayHandlersModule.
       write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
       write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
