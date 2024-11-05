@@ -152,13 +152,14 @@ contains
     range = DEM3 * extdp ! an intermediate calc
     hgwf = celtop - extdp + (range * DHALF)
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    write (*, *) 'error: ', rate1 - (pET * DHALF)
     atol = 1d-12
     call check(error, is_close(rate1, pET * DHALF, atol=atol))
-    ! however, if water table is above the calculated "range", there should be no scaling
-    !hgwf = celtop - extdp + (range * DONE)
-    !rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    !call check(error, is_close(rate2, rate1 * DTWO))
+    ! however, if water table is above (or in this case, at) the calculated "range",
+    ! there should be no scaling
+    hgwf = celtop - extdp + (range * DONE)
+    rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    write (*, *) 'error: ', rate2 - (rate1 * DTWO)
+    call check(error, is_close(rate2, rate1 * DTWO, atol=atol))
 
     ! when water table is at the extinction depth, should be no gwet
     !hgwf = celtop - extdp
