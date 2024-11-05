@@ -124,6 +124,7 @@ contains
     real(DP) :: celtop !< elevation of the top of the cell
 
     ! water table exactly in the middle of the extinction depth, should return pET
+    atol = 1d-12
     deriv_et = DZERO
     extdp = DONE
     pET = DEM1
@@ -134,6 +135,7 @@ contains
     deriv_et = DZERO
     trhs = DZERO
     thcof = DZERO
+
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
     call check(error, is_close(rate1, pET))
     if (allocated(error)) return
@@ -152,7 +154,6 @@ contains
     range = DEM3 * extdp ! an intermediate calc
     hgwf = celtop - extdp + (range * DHALF)
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    atol = 1d-12
     call check(error, is_close(rate1, pET * DHALF, atol=atol))
     ! however, if water table is above (or in this case, at) the calculated "range",
     ! there should be no scaling
@@ -164,7 +165,6 @@ contains
     ! in no gwet
     hgwf = celtop - extdp
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    write (*, *) 'error: ', rate1 - DZERO
     call check(error, is_close(rate1, DZERO, atol=atol))
 
   end subroutine test_etfunc_nlin
