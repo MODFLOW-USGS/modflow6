@@ -161,10 +161,11 @@ contains
     write (*, *) 'error: ', rate2 - (rate1 * DTWO)
     call check(error, is_close(rate2, rate1 * DTWO, atol=atol))
 
-    ! when water table is at the extinction depth, should be no gwet
-    !hgwf = celtop - extdp
-    !rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    !call check(error, is_close(rate1, DZERO))
+    ! when water table is at the extinction depth, scaling of gwet should result
+    ! in no gwet
+    hgwf = celtop - extdp
+    rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    call check(error, is_close(rate1, DZERO))
 
   end subroutine test_etfunc_nlin
 
