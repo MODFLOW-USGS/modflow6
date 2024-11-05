@@ -101,6 +101,7 @@ endif
 # parallel build options
 is_extended_build = get_option('extended')
 is_parallel_build = get_option('parallel') or is_extended_build
+is_netcdf_build = get_option('netcdf') or is_extended_build
 is_cray = get_option('cray')
 is_mpich = get_option('mpich')
 if is_cray and build_machine.system() != 'linux'
@@ -123,6 +124,8 @@ if is_extended_build
   message('Extended build:', is_extended_build)
 elif is_parallel_build
   message('Parallel build:', is_parallel_build)
+elif is_netcdf_build
+  message('NetCDF build:', is_netcdf_build)
 endif
 
 # windows options for petsc
@@ -132,8 +135,18 @@ petsc_arch = 'arch-mswin-c-opt'
 petsc_compiled_rel = petsc_dir_rel / petsc_arch
 petsc_compiled_abs = petsc_dir_abs / petsc_arch
 
+# windows options for netcdf
+netcdf_dir_rel = '..' /'netcdf'
+netcdf_dir_abs = meson.project_source_root() / '..' / 'netcdf'
+netcdfc_build = 'netCDF4.9.2-NC4-64'
+netcdff_build = 'netcdf-fortran-4.6.1' / 'build'
+netcdfc_compiled_rel = netcdf_dir_rel / netcdfc_build
+netcdfc_compiled_abs = netcdf_dir_abs / netcdfc_build
+netcdff_compiled_rel = netcdf_dir_rel / netcdff_build
+netcdff_compiled_abs = netcdf_dir_abs / netcdff_build
+
 # on windows only with intel
-if build_machine.system() == 'windows' and is_extended_build
+if build_machine.system() == 'windows' and is_parallel_build
   if fc_id != 'intel-cl'
     error('Parallel build on Windows only with intel compiler. Terminating...')
   endif
@@ -142,6 +155,7 @@ endif
 # lists for parallel dependencies and compiler arguments
 dependencies = [ ]
 extra_cmp_args = [ ]
+extended_incdir = [ ]
 
 # load petsc, mpi, and netcdf dependencies/libraries
 if is_parallel_build or is_extended_build
@@ -171,25 +185,28 @@ else
   with_mpi = false
 endif
 
-if is_extended_build
-  # find netcdf
-  if build_machine.system() != 'windows'
-    netcdff = dependency('netcdf', language : 'fortran', required : false)
-  else
-    # For CI testing only; Windows not yet supported
-    nc_dir = meson.project_source_root() / '..' / 'ncf' / 'netcdf-fortran-4.6.1' / 'fortran'
-    netcdff = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
-    #nc_incdir = include_directories([ nc_dir ])
-  endif
+# find netcdf
+with_netcdf = false
+if is_netcdf_build
+  netcdff = dependency('netcdf', language : 'fortran', static: false, required : true)
   if netcdff.found()
     with_netcdf = true
     extra_cmp_args += [ '-D__WITH_NETCDF__' ]
     dependencies += [ netcdff ]
-  else
-    with_netcdf = false
+    if build_machine.system() == 'windows'
+      netcdf_incdir = include_directories([
+        netcdfc_compiled_rel / 'include',
+        netcdff_compiled_rel / 'fortran'
+      ])
+      extended_incdir += [
+        '..' / netcdfc_compiled_rel / 'include',
+        '..' / netcdff_compiled_rel / 'fortran'
+      ]
+      netcdff_libdir = netcdff_compiled_abs / 'fortran'
+      lnetcdff = fc.find_library('netcdff', dirs: netcdff_libdir, static: false, required : true)
+      dependencies += [ lnetcdff ]
+    endif
   endif
-else
-  with_netcdf = false
 endif
 
 # GCC profile options need to be netcdf aware due to HDF5 issue
@@ -218,6 +235,7 @@ add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'for
 if is_parallel_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir_rel / 'include', petsc_compiled_rel / 'include'])
+  extended_incdir += ['..' / petsc_dir_rel / 'include', '..' / petsc_compiled_rel / 'include']
   petsc_src = petsc_dir_abs / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
                   petsc_src / 'dm/f90-mod/petscdmmod.F90',
