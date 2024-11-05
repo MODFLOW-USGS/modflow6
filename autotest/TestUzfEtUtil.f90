@@ -151,6 +151,7 @@ contains
     range = DEM3 * extdp ! an intermediate calc
     hgwf = celtop - extdp + (range * DHALF)
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
+    write(*, *) rate1, pET
     call check(error, is_close(rate1, pET * DHALF))
     ! however, if water table is above the calculated "range", there should be no scaling
     !hgwf = celtop - extdp + (range * DONE)
