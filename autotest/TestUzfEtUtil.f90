@@ -165,7 +165,7 @@ contains
     hgwf = celtop - extdp
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
     write (*, *) 'error: ', rate1 - DZERO
-    call check(error, is_close(rate1, DZERO), atol=atol)
+    call check(error, is_close(rate1, DZERO, atol=atol))
 
   end subroutine test_etfunc_nlin
 
