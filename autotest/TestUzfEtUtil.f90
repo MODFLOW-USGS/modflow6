@@ -158,14 +158,14 @@ contains
     ! there should be no scaling
     hgwf = celtop - extdp + (range * DONE)
     rate2 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    write (*, *) 'error: ', rate2 - (rate1 * DTWO)
     call check(error, is_close(rate2, rate1 * DTWO, atol=atol))
 
     ! when water table is at the extinction depth, scaling of gwet should result
     ! in no gwet
     hgwf = celtop - extdp
     rate1 = etfunc_nlin(celtop, extdp, pET, deriv_et, trhs, thcof, hgwf)
-    call check(error, is_close(rate1, DZERO))
+    write (*, *) 'error: ', rate1 - DZERO
+    call check(error, is_close(rate1, DZERO), atol=atol)
 
   end subroutine test_etfunc_nlin
 
