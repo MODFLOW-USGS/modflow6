@@ -35,9 +35,9 @@ $(OBJDIR)/Message.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
+$(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/GlobalVariables.o \
-$(OBJDIR)/SimPHMF.o \
 $(OBJDIR)/KeyValueNode.o \
 $(OBJDIR)/Iterator.o \
 $(OBJDIR)/InputOutput.o \
@@ -49,11 +49,12 @@ $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
 $(OBJDIR)/PtrHashTableIterator.o \
 $(OBJDIR)/Memory.o \
+$(OBJDIR)/GlobalVariables.o \
 $(OBJDIR)/PtrHashTable.o \
 $(OBJDIR)/MemoryContainerIterator.o \
+$(OBJDIR)/SimPHMF.o \
 $(OBJDIR)/ListNode.o \
 $(OBJDIR)/MemoryStore.o \
-$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
 $(OBJDIR)/Utilities.o \

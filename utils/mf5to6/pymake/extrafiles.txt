@@ -15,6 +15,7 @@
 ../../../src/Utilities/GeomUtil.f90
 ../../../src/Utilities/InputOutput.f90
 ../../../src/Utilities/Iterator.f90
+../../../src/Utilities/Sim.f90
 ../../../src/Utilities/KeyValueList.f90
 ../../../src/Utilities/KeyValueListIterator.f90
 ../../../src/Utilities/KeyValueNode.f90
