@@ -122,7 +122,7 @@ contains
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
     if (nvals /= size(this%int1d)) then
       errmsg = 'Unexpected size for binary input array '// &
-        trim(this%array_name)//'. '
+               trim(this%array_name)//'. '
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
