@@ -92,6 +92,12 @@ contains
     integer(I4B) :: nvals
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
+    if (nvals /= size(this%dbl2d)) then
+      errmsg = 'Unexpected size for binary input array '// &
+        trim(this%array_name)//'. '
+      call store_error(errmsg)
+      call store_error_unit(this%input_unit)
+    end if
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
       ((this%dbl2d(j, i), j=1, size(this%dbl2d, dim=1)), &
        i=1, size(this%dbl2d, dim=2))
