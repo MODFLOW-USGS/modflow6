@@ -149,7 +149,7 @@ contains
     !
     ! -- create the netcdf file
     call nf_verify(nf90_create(this%nc_fname, &
-                               IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
+                               IAND(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
                    this%nc_fname)
   end subroutine dis_export_init
 
