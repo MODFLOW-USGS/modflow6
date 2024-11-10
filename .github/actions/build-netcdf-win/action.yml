@@ -26,7 +26,7 @@ runs:
       run: |
         mkdir -p netcdf/netCDF4.9.2-NC4-64
         cd netcdf/netCDF4.9.2-NC4-64
-        curl https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe -O -J
+        curl -O "https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe"
         7z x netCDF4.9.2-NC4-64.exe -aou
 
     - name: Download NetCDF-Fortran
@@ -34,7 +34,7 @@ runs:
       run: |
         mkdir -p netcdf/netcdf-fortran-4.6.1/build
         cd netcdf/netcdf-fortran-4.6.1
-        curl https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip -O -J
+        curl -O "https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip"
         unzip netcdf-fortran-4.6.1.zip
 
     - name: Build NetCDF
