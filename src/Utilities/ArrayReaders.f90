@@ -16,6 +16,17 @@ module ArrayReadersModule
   private
   public :: ReadArray
   public :: read_binary_header
+  public :: BINARY_INT_BYTES
+  public :: BINARY_DOUBLE_BYTES
+  public :: BINARY_HEADER_BYTES
+
+  integer(I4B), parameter :: BINARY_CHAR_BYTES = 1
+  integer(I4B), parameter :: BINARY_INT_BYTES = 4
+  integer(I4B), parameter :: BINARY_DOUBLE_BYTES = 8
+  integer(I4B), parameter :: BINARY_HEADER_BYTES = &
+                             (5 * BINARY_INT_BYTES) + & !< kstp, kper, msize1, msize2, msize3
+                             (2 * BINARY_DOUBLE_BYTES) + & !< pertim, totim
+                             (16 * BINARY_CHAR_BYTES) !< array text
 
   interface ReadArray
     module procedure &
