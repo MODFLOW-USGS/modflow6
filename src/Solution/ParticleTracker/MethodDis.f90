@@ -10,7 +10,6 @@ module MethodDisModule
   use ParticleModule
   use PrtFmiModule, only: PrtFmiType
   use DisModule, only: DisType
-  use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: get_ijk, get_jk
   implicit none
 
@@ -133,15 +132,17 @@ contains
       ! -- If cell is active but dry, Initialize instant pass-to-bottom method
       if (this%fmi%ibdgwfsat0(ic) == 0) then
         call method_cell_ptb%init( &
+          fmi=this%fmi, &
           cell=this%cell, &
-          trackfilectl=this%trackfilectl, &
+          trackctl=this%trackctl, &
           tracktimes=this%tracktimes)
         submethod => method_cell_ptb
       else
         ! -- Otherwise initialize Pollock's method
         call method_cell_plck%init( &
+          fmi=this%fmi, &
           cell=this%cell, &
-          trackfilectl=this%trackfilectl, &
+          trackctl=this%trackctl, &
           tracktimes=this%tracktimes)
         submethod => method_cell_plck
       end if
