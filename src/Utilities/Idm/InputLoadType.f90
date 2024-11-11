@@ -276,8 +276,6 @@ contains
         exit
       end if
     end do
-    !
-    return
   end subroutine static_init
 
   !> @brief create the subpackage list
@@ -347,8 +345,6 @@ contains
       deallocate (this%nc_vars)
       nullify (this%nc_vars)
     end if
-    !
-    return
   end subroutine static_destroy
 
   !> @brief initialize dynamic package loader
@@ -402,7 +398,6 @@ contains
     !
     ! override in derived type
     !
-    return
   end subroutine dynamic_df
 
   !> @brief dynamic package loader advance
@@ -413,7 +408,6 @@ contains
     !
     ! override in derived type
     !
-    return
   end subroutine dynamic_ad
 
   !> @brief dynamic package loader destroy
@@ -436,8 +430,6 @@ contains
     call memorystore_remove(this%mf6_input%component_name, &
                             this%mf6_input%subcomponent_name, &
                             idm_context)
-    !
-    return
   end subroutine dynamic_destroy
 
   !> @brief model dynamic packages init
@@ -459,8 +451,6 @@ contains
     this%nc_fname = nc_fname
     this%ncid = ncid
     this%iout = iout
-    !
-    return
   end subroutine dynamicpkgs_init
 
   !> @brief add package to model dynamic packages list
@@ -473,8 +463,6 @@ contains
     !
     obj => dynamic_pkg
     call this%pkglist%add(obj)
-    !
-    return
   end subroutine dynamicpkgs_add
 
   !> @brief retrieve package from model dynamic packages list
@@ -495,8 +483,6 @@ contains
         res => obj
       end select
     end if
-    !
-    return
   end function dynamicpkgs_get
 
   !> @brief read and prepare model dynamic packages
@@ -516,8 +502,6 @@ contains
     end do
     !
     call idm_log_period_close(this%iout)
-    !
-    return
   end subroutine dynamicpkgs_rp
 
   !> @brief define model dynamic packages
@@ -532,8 +516,6 @@ contains
       dynamic_pkg => this%get(n)
       call dynamic_pkg%df()
     end do
-    !
-    return
   end subroutine dynamicpkgs_df
 
   !> @brief advance model dynamic packages
@@ -548,8 +530,6 @@ contains
       dynamic_pkg => this%get(n)
       call dynamic_pkg%ad()
     end do
-    !
-    return
   end subroutine dynamicpkgs_ad
 
   !> @brief get size of model dynamic packages list
@@ -560,8 +540,6 @@ contains
     integer(I4B) :: size
     !
     size = this%pkglist%Count()
-    !
-    return
   end function dynamicpkgs_size
 
   !> @brief destroy model dynamic packages object
@@ -581,8 +559,6 @@ contains
     end do
     !
     call this%pkglist%Clear()
-    !
-    return
   end subroutine dynamicpkgs_destroy
 
   !> @brief add model dynamic packages object to list

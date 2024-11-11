@@ -111,9 +111,6 @@ contains
       multi_pkg = multi_package_type(mtype_component, ptype_component, pkgtype)
       !
     end if
-    !
-    ! -- return
-    return
   end function multi_pkg_type
 
   !> @brief create a new package type
@@ -138,9 +135,6 @@ contains
     allocate (this%pkgnames(0))
     allocate (this%mempaths(0))
     allocate (this%inunits(0))
-    !
-    ! -- return
-    return
   end subroutine pkgtype_create
 
   !> @brief add a new package instance to this package type
@@ -212,9 +206,6 @@ contains
       ! -- set mempath empty
       this%mempaths(this%pnum) = ''
     end if
-    !
-    ! -- return
-    return
   end subroutine pkgtype_add
 
   !> @brief deallocate object
@@ -230,9 +221,6 @@ contains
     deallocate (this%pkgnames)
     deallocate (this%inunits)
     deallocate (this%mempaths)
-    !
-    ! -- return
-    return
   end subroutine pkgtype_destroy
 
   !> @brief initialize model package inputs object
@@ -278,9 +266,6 @@ contains
     !
     ! build descriptions of packages
     call this%addpkgs()
-    !
-    ! -- return
-    return
   end subroutine modelpkgs_init
 
   !> @brief create the package type list
@@ -353,9 +338,6 @@ contains
     ! -- cleanup
     deallocate (cunit_idxs)
     deallocate (indx)
-    !
-    ! -- return
-    return
   end subroutine modelpkgs_create
 
   !> @brief add a model package instance to package type list
@@ -380,9 +362,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine modelpkgs_add
 
   !> @brief build the type list with all model package instances
@@ -427,9 +406,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%modelfname)
     end if
-    !
-    ! --
-    return
   end subroutine modelpkgs_addpkgs
 
   !> @brief get package instance count and verify base or multi of each
@@ -438,7 +414,6 @@ contains
     ! -- modules
     ! -- dummy
     class(ModelPackageInputsType) :: this
-    !
     ! -- return
     integer(I4B) :: pnum
     ! -- local
@@ -469,9 +444,6 @@ contains
       ! -- add to package count
       pnum = pnum + this%pkglist(n)%pnum
     end do
-    !
-    ! -- return
-    return
   end function modelpkgs_pkgcount
 
   !> @brief load package descriptors to managed memory
@@ -516,9 +488,6 @@ contains
         this%inunits(idx) = this%pkglist(n)%inunits(m)
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine modelpkgs_memload
 
   !> @brief deallocate object
@@ -537,9 +506,6 @@ contains
     !
     deallocate (this%pkglist)
     deallocate (this%cunit)
-    !
-    ! -- return
-    return
   end subroutine modelpkgs_destroy
 
 end module ModelPackageInputsModule

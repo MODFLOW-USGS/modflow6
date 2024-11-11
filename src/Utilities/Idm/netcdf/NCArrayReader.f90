@@ -44,9 +44,6 @@ contains
     case default
       layered = .false.
     end select
-    !
-    ! -- return
-    return
   end function is_layered
 
   !> @brief Load NetCDF integer 1D array
@@ -79,9 +76,6 @@ contains
       call load_integer1d_type(int1d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_int1d
 
   !> @brief Load NetCDF integer 2D array
@@ -109,9 +103,6 @@ contains
       call load_integer2d_type(int2d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_int2d
 
   !> @brief Load NetCDF integer 3D array
@@ -139,9 +130,6 @@ contains
       call load_integer3d_type(int3d, mf6_input, mshape, idt, nc_vars, &
                                varid, input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_int3d
 
   !> @brief Load NetCDF double 1D array
@@ -185,9 +173,6 @@ contains
                                 varid, input_fname)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_dbl1d
 
   !> @brief Load NetCDF double 2D array
@@ -215,9 +200,6 @@ contains
       call load_double2d_type(dbl2d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_dbl2d
 
   !> @brief Load NetCDF double 3D array
@@ -245,9 +227,6 @@ contains
       call load_double3d_type(dbl3d, mf6_input, mshape, idt, nc_vars, &
                               varid, input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nc_array_load_dbl3d
 
   !> @brief load type 1d integer
@@ -296,9 +275,6 @@ contains
       ! -- read and set data
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d), nc_vars%nc_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine load_integer1d_type
 
   !> @brief load type 1d integer layered
@@ -333,9 +309,6 @@ contains
                      nc_vars%nc_fname)
       index_start = index_stop + 1
     end do
-    !
-    ! -- return
-    return
   end subroutine load_integer1d_layered
 
   !> @brief load type 2d integer
@@ -366,9 +339,6 @@ contains
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d_ptr), &
                      nc_vars%nc_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine load_integer2d_type
 
   !> @brief load type 2d integer layered
@@ -406,9 +376,6 @@ contains
                        nc_vars%nc_fname)
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine load_integer2d_layered
 
   !> @brief load type 3d integer
@@ -426,8 +393,6 @@ contains
     ! -- local
     !
     call nf_verify(nf90_get_var(nc_vars%ncid, varid, int3d), nc_vars%nc_fname)
-    !
-    return
   end subroutine load_integer3d_type
 
   !> @brief load type 3d integer layered
@@ -463,9 +428,6 @@ contains
                      nc_vars%nc_fname)
       index_start = index_stop + 1
     end do
-    !
-    ! -- return
-    return
   end subroutine load_integer3d_layered
 
   !> @brief load type 1d double
@@ -514,9 +476,6 @@ contains
       ! -- read and set data
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d), nc_vars%nc_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine load_double1d_type
 
   !> @brief load type 1d double
@@ -624,9 +583,6 @@ contains
                      nc_vars%nc_fname)
       index_start = index_stop + 1
     end do
-    !
-    ! -- return
-    return
   end subroutine load_double1d_layered
 
   !> @brief load type 1d double layered
@@ -674,9 +630,6 @@ contains
     !
     ! -- cleanup
     deallocate (dbl1d_ptr)
-    !
-    ! -- return
-    return
   end subroutine load_double1d_layered_spd
 
   !> @brief load type 2d double
@@ -707,9 +660,6 @@ contains
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d_ptr), &
                      nc_vars%nc_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine load_double2d_type
 
   !> @brief load type 2d double layered
@@ -747,9 +697,6 @@ contains
                        nc_vars%nc_fname)
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine load_double2d_layered
 
   !> @brief load type 3d double
@@ -767,8 +714,6 @@ contains
     ! -- local
     !
     call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl3d), nc_vars%nc_fname)
-    !
-    return
   end subroutine load_double3d_type
 
   !> @brief load type 3d double layered
@@ -803,9 +748,6 @@ contains
                      nc_vars%nc_fname)
       index_start = index_stop + 1
     end do
-    !
-    ! -- return
-    return
   end subroutine load_double3d_layered
 
 end module NCArrayReaderModule

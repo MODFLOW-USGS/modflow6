@@ -81,9 +81,6 @@ contains
     !
     ! -- create the dynamic package input context
     call this%allocate_scalars()
-    !
-    ! --return
-    return
   end subroutine create
 
   !> @brief create boundary input context
@@ -136,9 +133,6 @@ contains
     ! -- initialize package params object
     call this%package_params%init(this%mf6_input, 'PERIOD', this%readasarrays, &
                                   this%naux, this%inamedbound)
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @brief allocate_arrays
@@ -173,9 +167,6 @@ contains
     !
     ! -- set pointer to AUXVAR
     call mem_setptr(this%auxvar, 'AUXVAR', this%mf6_input%mempath)
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
   subroutine list_params_create(this, params, nparam, input_name)
@@ -246,9 +237,6 @@ contains
         call store_error_filename(input_name)
       end select
     end do
-    !
-    ! -- return
-    return
   end subroutine list_params_create
 
   !> @brief allocate dfn array input period block parameters
@@ -302,9 +290,6 @@ contains
         end select
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine array_params_create
 
   !> @brief destroy boundary input context
@@ -334,9 +319,6 @@ contains
     nullify (this%boundname_cst)
     nullify (this%auxvar)
     nullify (this%mshape)
-    !
-    ! --return
-    return
   end subroutine destroy
 
   !> @brief allocate a read state variable
@@ -364,9 +346,6 @@ contains
     !
     call mem_allocate(intvar, varname, this%mf6_input%mempath)
     intvar = -1
-    !
-    ! -- return
-    return
   end function rsv_alloc
 
   !> @brief allocate and set input array to filtered param set
@@ -411,9 +390,6 @@ contains
         call this%list_params_create(params, nparam, input_name)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine bound_params
 
   !> @brief create read state variable name
@@ -436,9 +412,6 @@ contains
     else
       varname = prefix//trim(mf6varname)
     end if
-    !
-    ! -- return
-    return
   end function rsv_name
 
 end module BoundInputContextModule

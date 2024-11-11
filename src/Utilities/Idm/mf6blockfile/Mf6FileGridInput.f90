@@ -115,9 +115,6 @@ contains
     !
     ! -- allocate memory for storing TAS strings
     call this%tas_arrays_alloc()
-    !
-    ! -- return
-    return
   end subroutine bndgrid_init
 
   subroutine bndgrid_df(this)
@@ -126,9 +123,6 @@ contains
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     call this%tasmanager%tasmanager_df()
-    !
-    ! -- return
-    return
   end subroutine bndgrid_df
 
   subroutine bndgrid_ad(this)
@@ -136,9 +130,6 @@ contains
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     call this%tasmanager%ad()
-    !
-    ! -- return
-    return
   end subroutine bndgrid_ad
 
   subroutine bndgrid_rp(this, parser)
@@ -247,9 +238,6 @@ contains
     ! -- log lst file header
     call idm_log_close(this%mf6_input%component_name, &
                        this%mf6_input%subcomponent_name, this%iout)
-    !
-    ! -- return
-    return
   end subroutine bndgrid_rp
 
   subroutine bndgrid_destroy(this)
@@ -257,9 +245,6 @@ contains
     class(BoundGridInputType), intent(inout) :: this !< Mf6FileGridInputType
     !
     deallocate (this%tasmanager)
-    !
-    ! -- return
-    return
   end subroutine bndgrid_destroy
 
   subroutine bndgrid_reset(this)
@@ -288,9 +273,6 @@ contains
         this%bound_context%auxvar(n, m) = DZERO
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine bndgrid_reset
 
   subroutine init_charstr1d(this, varname, input_name)
@@ -336,9 +318,6 @@ contains
       this%param_reads(iparam)%invar => intvar
       this%param_reads(iparam)%invar = 0
     end do
-    !
-    ! -- return
-    return
   end subroutine bndgrid_params_alloc
 
   subroutine bndgrid_param_load(this, parser, idt, mempath, netcdf, iaux)
@@ -422,9 +401,6 @@ contains
     if (iparam > 0) then
       this%param_reads(iparam)%invar = 1
     end if
-    !
-    ! -- return
-    return
   end subroutine bndgrid_param_load
 
   subroutine bndgrid_tas_arrays_alloc(this)
@@ -452,9 +428,6 @@ contains
                         'PARAMTASNAME', this%mf6_input%mempath)
       !
     end if
-    !
-    ! -- return
-    return
   end subroutine bndgrid_tas_arrays_alloc
 
   ! FLUX and SFAC are handled in model context
@@ -520,9 +493,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine bndgrid_tas_links_create
 
 end module Mf6FileGridInputModule

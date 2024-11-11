@@ -680,7 +680,6 @@ contains
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = 1
     call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
-    return
   end subroutine load_keyword_type
 
   !> @brief load type string
@@ -706,7 +705,6 @@ contains
       call parser%GetString(cstr, (.not. idt%preserve_case))
       call idm_log_var(cstr, idt%tagname, memoryPath, iout)
     end select
-    return
   end subroutine load_string_type
 
   !> @brief load io tag
@@ -740,7 +738,6 @@ contains
     else if (which == 'FILEOUT') then
       call load_string_type(parser, idt, memoryPath, iout)
     end if
-    return
   end subroutine load_io_tag
 
   !> @brief load aux variable names
@@ -776,7 +773,6 @@ contains
     end do
     deallocate (line)
     deallocate (caux)
-    return
   end subroutine load_auxvar_names
 
   !> @brief load type integer
@@ -790,7 +786,6 @@ contains
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = parser%GetInteger()
     call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
-    return
   end subroutine load_integer_type
 
   !> @brief load type 1d integer
@@ -850,8 +845,6 @@ contains
         call idm_export(int1d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_integer1d_type
 
   !> @brief load type 2d integer
@@ -908,8 +901,6 @@ contains
         call idm_export(int2d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_integer2d_type
 
   !> @brief load type 3d integer
@@ -971,8 +962,6 @@ contains
         call idm_export(int3d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_integer3d_type
 
   !> @brief load type double
@@ -986,7 +975,6 @@ contains
     call mem_allocate(dblvar, idt%mf6varname, memoryPath)
     dblvar = parser%GetDouble()
     call idm_log_var(dblvar, idt%tagname, memoryPath, iout)
-    return
   end subroutine load_double_type
 
   !> @brief load type 1d double
@@ -1045,8 +1033,6 @@ contains
         call idm_export(dbl1d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_double1d_type
 
   !> @brief load type 2d double
@@ -1103,8 +1089,6 @@ contains
         call idm_export(dbl2d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_double2d_type
 
   !> @brief load type 3d double
@@ -1166,8 +1150,6 @@ contains
         call idm_export(dbl3d, idt%tagname, mf6_input%mempath, idt%shape, iout)
       end if
     end if
-
-    return
   end subroutine load_double3d_type
 
   function read_control_record(parser, oc_inunit, iout) result(ibinary)

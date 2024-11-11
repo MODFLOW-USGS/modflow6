@@ -267,9 +267,6 @@ contains
     !
     ! -- synchronize file
     call nf_verify(nf90_sync(this%ncid), this%nc_fname)
-    !
-    ! -- return
-    return
   end subroutine package_step_ilayer
 
   !> @brief netcdf export package dynamic input

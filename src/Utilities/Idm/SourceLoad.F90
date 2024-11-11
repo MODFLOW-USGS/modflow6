@@ -72,9 +72,6 @@ contains
     else
       call loader%nc_vars%init(component_name)
     end if
-    !
-    ! -- return
-    return
   end function create_input_loader
 
   !> @brief allocate source model package static loader
@@ -101,9 +98,6 @@ contains
         '" not currently supported.'
       call store_error(errmsg, .true.)
     end select
-    !
-    ! -- return
-    return
   end function package_loader
 
   function open_source_file(pkgtype, filename, modelfname, iout) result(fd)
@@ -127,9 +121,6 @@ contains
       fd = open_mf6file(pkgtype, filename, modelfname, iout)
     case default
     end select
-    !
-    ! -- return
-    return
   end function open_source_file
 
   subroutine load_modelnam(mtype, mfname, mname, iout)
@@ -155,9 +146,6 @@ contains
       call input_load(mfname, mf6_input, simfile, iout)
     case default
     end select
-    !
-    ! -- return
-    return
   end subroutine load_modelnam
 
   subroutine load_simnam()
@@ -194,9 +182,6 @@ contains
         call input_load(hpc6_filename, hpc_input, simfile, iout)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine load_simnam
 
   subroutine load_simtdis()
@@ -251,9 +236,6 @@ contains
       case default
       end select
     end if
-    !
-    ! -- return
-    return
   end subroutine load_simtdis
 
   function remote_model_ndim(mtype, mfname) result(ncelldim)
@@ -335,9 +317,6 @@ contains
       !
     case default
     end select
-    !
-    ! -- return
-    return
   end function remote_model_ndim
 
   !> @brief create model exports list
@@ -401,8 +380,6 @@ contains
       call nc_fclose(ncid, nc_fname)
 #endif
     end if
-    !
-    return
   end subroutine nc_close
 
   !> @brief create model netcdf context
@@ -457,9 +434,6 @@ contains
       ncid = 0
       call nc_vars%init(modelname, '', ncid, '')
     end if
-    !
-    ! -- return
-    return
   end function netcdf_context
 
 end module SourceLoadModule

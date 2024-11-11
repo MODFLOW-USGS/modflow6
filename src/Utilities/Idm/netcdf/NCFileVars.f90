@@ -70,9 +70,6 @@ contains
     !
     ! -- set modelname
     this%modelname = modelname
-    !
-    ! -- return
-    return
   end subroutine ncvars_init
 
   !> @brief return a netcdf variable id for a package tagname
@@ -145,9 +142,6 @@ contains
         call store_error(errmsg, .true.)
       end if
     end if
-    !
-    ! -- return
-    return
   end function ncvars_varid
 
   !> @brief destroy netcdf package variable lists
@@ -168,9 +162,6 @@ contains
     end do
     !
     call this%nc_vars%Clear()
-    !
-    ! -- return
-    return
   end subroutine ncvars_destroy
 
   !> @brief initialize netcdf model variable description type
@@ -206,9 +197,6 @@ contains
     this%grid = grid
     this%nc_fname = nc_fname
     this%ncid = ncid
-    !
-    ! -- return
-    return
   end subroutine fv_init
 
   !> @brief add netcdf modflow6 input variable to list
@@ -239,9 +227,6 @@ contains
     !
     obj => invar
     call this%mf6invar%Add(obj)
-    !
-    ! -- return
-    return
   end subroutine fv_add
 
   !> @brief destroy netcdf model variable description type
@@ -260,8 +245,6 @@ contains
     end do
     !
     call this%mf6invar%Clear()
-    !
-    return
   end subroutine fv_destroy
 
   !> @brief create list of variables that correspond to a package
@@ -301,9 +284,6 @@ contains
     nc_vars%ncid => this%ncid
     nc_vars%nc_fname => this%nc_fname
     nc_vars%grid => this%grid
-    !
-    ! -- return
-    return
   end subroutine create_varlists
 
   !> @brief get modflow6 input variable description at position idx
@@ -327,9 +307,6 @@ contains
         res => obj
       end select
     end if
-    !
-    ! -- return
-    return
   end function ncvar_get
 
 end module NCFileVarsModule

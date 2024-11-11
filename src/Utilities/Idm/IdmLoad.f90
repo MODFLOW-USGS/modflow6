@@ -43,9 +43,6 @@ contains
       model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
       call model_dynamic_input%df()
     end do
-    !
-    ! -- return
-    return
   end subroutine idm_df
 
   !> @brief load package dynamic data for period
@@ -59,9 +56,6 @@ contains
       model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
       call model_dynamic_input%rp()
     end do
-    !
-    ! -- return
-    return
   end subroutine idm_rp
 
   !> @brief advance package dynamic data for period steps
@@ -75,9 +69,6 @@ contains
       model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
       call model_dynamic_input%ad()
     end do
-    !
-    ! -- return
-    return
   end subroutine idm_ad
 
   !> @brief idm deallocate routine
@@ -114,9 +105,6 @@ contains
     call memorystore_remove('SIM', 'TDIS', idm_context)
     call memorystore_remove('SIM', 'NAM', idm_context)
     call memorystore_remove(component='SIM', context=idm_context)
-    !
-    ! -- return
-    return
   end subroutine idm_da
 
   !> @brief load an integrated model package from supported source
@@ -181,9 +169,6 @@ contains
     ! -- cleanup
     call static_loader%destroy()
     deallocate (static_loader)
-    !
-    ! -- return
-    return
   end subroutine input_load
 
   !> @brief load integrated model package files
@@ -236,9 +221,6 @@ contains
     call nc_vars%destroy()
     deallocate (nc_vars)
     nullify (nc_vars)
-    !
-    ! -- return
-    return
   end subroutine load_model_pkgs
 
   !> @brief load model namfiles and model package files
@@ -315,9 +297,6 @@ contains
         deallocate (model_pkg_inputs)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine load_models
 
   !> @brief load exchange files
@@ -482,9 +461,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine load_exchanges
 
   !> @brief MODFLOW 6 mfsim.nam input load routine
@@ -504,9 +480,6 @@ contains
     !
     ! -- memload summary info
     call simnam_load_dim()
-    !
-    ! --return
-    return
   end subroutine simnam_load
 
   !> @brief MODFLOW 6 tdis input load routine
@@ -516,9 +489,6 @@ contains
     !
     ! -- load sim tdis file
     call load_simtdis()
-    !
-    ! --return
-    return
   end subroutine simtdis_load
 
   !> @brief retrieve list of model dynamic loaders
@@ -555,9 +525,6 @@ contains
                                     nc_fname, ncid, iout)
       call AddDynamicModelToList(model_dynamic_pkgs, model_dynamic_input)
     end if
-    !
-    ! -- return
-    return
   end function dynamic_model_pkgs
 
   !> @brief deallocate all model dynamic loader collections
@@ -578,9 +545,6 @@ contains
     end do
     !
     call model_dynamic_pkgs%Clear()
-    !
-    ! -- return
-    return
   end subroutine dynamic_da
 
   !> @brief return sim input context PRINT_INPUT value
@@ -597,9 +561,6 @@ contains
     simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
     call mem_setptr(p, 'PRINT_INPUT', simnam_mempath)
     paramlog = p
-    !
-    ! -- return
-    return
   end function input_param_log
 
   !> @brief load simulation summary info to input context
@@ -636,9 +597,6 @@ contains
     ! -- set values
     nummodels = size(mtypes)
     numexchanges = size(etypes)
-    !
-    ! -- return
-    return
   end subroutine simnam_load_dim
 
   !> @brief set sim nam input context default integer value
@@ -672,9 +630,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(simfile)
     end select
-    !
-    ! -- return
-    return
   end subroutine allocate_simnam_int
 
   !> @brief MODFLOW 6 mfsim.nam parameter allocate and set
@@ -725,9 +680,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(simfile)
     end select
-    !
-    ! -- return
-    return
   end subroutine allocate_simnam_param
 
   !> @brief MODFLOW 6 mfsim.nam input context parameter allocation
@@ -764,9 +716,6 @@ contains
         !
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine simnam_allocate
 
 end module IdmLoadModule

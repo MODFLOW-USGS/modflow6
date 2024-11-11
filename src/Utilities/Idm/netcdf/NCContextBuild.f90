@@ -48,9 +48,6 @@ contains
     !
     ! -- open
     ncid = nc_fopen(nc_fname, iout)
-    !
-    ! -- return
-    return
   end function open_ncfile
 
   !> @brief add a package input variable to nc_vars structure
@@ -127,9 +124,6 @@ contains
         call store_error_filename(nc_vars%nc_fname)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine add_package_var
 
   !> @brief verify global attribute modflow6_grid is present and return value
@@ -162,9 +156,6 @@ contains
       call store_error_filename(nc_fname)
       !
     end if
-    !
-    ! -- return
-    return
   end function verify_global_attr
 
   !> @brief create internal description of modflow6 input variables in netcdf file
@@ -209,9 +200,6 @@ contains
     !
     ! -- cleanup
     deallocate (varids)
-    !
-    ! -- return
-    return
   end subroutine create_netcdf_context
 
 end module NCContextBuildModule

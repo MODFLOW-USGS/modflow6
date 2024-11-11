@@ -146,8 +146,6 @@ contains
     end do
     !
     call this%ts_strlocs%Clear()
-    !
-    return
   end subroutine sv_clear
 
 end module StructVectorModule

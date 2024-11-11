@@ -231,8 +231,6 @@ contains
       layer_shape(1) = mshape(3) ! ncol
       layer_shape(2) = mshape(2) ! nrow
     end if
-
-    return
   end subroutine get_layered_shape
 
   !> @brief routine for setting the model shape
