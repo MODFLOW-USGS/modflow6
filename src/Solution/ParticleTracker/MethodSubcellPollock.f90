@@ -5,7 +5,6 @@ module MethodSubcellPollockModule
   use SubcellRectModule, only: SubcellRectType, create_subcell_rect
   use ParticleModule, only: ParticleType
   use PrtFmiModule, only: PrtFmiType
-  use TrackModule, only: TrackFileControlType
   use BaseDisModule, only: DisBaseType
   use CellModule, only: CellType
   use ConstantsModule, only: DZERO, DONE

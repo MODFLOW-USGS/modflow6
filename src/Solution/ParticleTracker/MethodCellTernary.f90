@@ -8,7 +8,6 @@ module MethodCellTernaryModule
   use CellDefnModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
-  use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: area
   use ConstantsModule, only: DZERO, DONE, DTWO
   implicit none
@@ -88,9 +87,10 @@ contains
       call this%load_subcell(particle, subcell)
     end select
     call method_subcell_tern%init( &
+      fmi=this%fmi, &
       cell=this%cell, &
       subcell=this%subcell, &
-      trackfilectl=this%trackfilectl, &
+      trackctl=this%trackctl, &
       tracktimes=this%tracktimes)
     submethod => method_subcell_tern
   end subroutine load_mct
@@ -156,21 +156,18 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! Update particle state, checking whether any reporting or
-    ! termination conditions apply
+    ! Update particle state, return early if done advancing
     call this%update(particle, this%cell%defn)
-
-    ! Return early if particle is done advancing
     if (.not. particle%advancing) return
 
     ! If the particle is above the top of the cell (presumed water table)
-    ! pass it vertically and instantaneously to the cell top and save the
-    ! particle state to file
+    ! pass it vertically and instantaneously to the top
     if (particle%z > this%cell%defn%top) then
       particle%z = this%cell%defn%top
-      call this%save(particle, reason=1) ! reason=1: cell transition
+      call this%save(particle, reason=1)
     end if
 
+    ! (Re)allocate type-bound arrays
     select type (cell => this%cell)
     type is (CellPolyType)
       ! Number of vertices
@@ -216,10 +213,10 @@ contains
       this%yvertnext = cshift(this%yvert, 1)
     end select
 
-    ! Calculate vertex velocities
+    ! Calculate vertex velocities.
     call this%vertvelo()
 
-    ! Track across subcells
+    ! Track the particle across the cell.
     call this%track(particle, 2, tmax)
 
   end subroutine apply_mct

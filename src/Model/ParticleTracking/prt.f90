@@ -19,7 +19,8 @@ module PrtModule
   use BudgetModule, only: BudgetType
   use ListModule, only: ListType
   use ParticleModule, only: ParticleType, create_particle
-  use TrackModule, only: TrackFileControlType, TrackFileType
+  use TrackFileModule, only: TrackFileType
+  use TrackControlModule, only: TrackControlType
   use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryManagerModule, only: mem_allocate
   use MethodModule, only: MethodType
@@ -43,7 +44,7 @@ module PrtModule
     type(PrtOcType), pointer :: oc => null() ! output control package
     type(BudgetType), pointer :: budget => null() ! budget object
     class(MethodType), pointer :: method => null() ! tracking method
-    type(TrackFileControlType), pointer :: trackfilectl ! track file control
+    type(TrackControlType), pointer :: trackctl ! track control
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inmip => null() ! unit number MIP
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
@@ -143,7 +144,7 @@ contains
     this%memoryPath = create_mem_path(modelname)
 
     ! -- Allocate track control object
-    allocate (this%trackfilectl)
+    allocate (this%trackctl)
 
     ! -- Allocate scalars and add model to basemodellist
     call this%allocate_scalars(modelname)
@@ -249,7 +250,7 @@ contains
       select type (packobj)
       type is (PrtPrpType)
         call packobj%prp_set_pointers(this%ibound, this%mip%izone, &
-                                      this%trackfilectl)
+                                      this%trackctl)
       end select
       ! -- Read and allocate package
       call packobj%bnd_ar()
@@ -260,7 +261,7 @@ contains
     type is (DisType)
       call method_dis%init( &
         fmi=this%fmi, &
-        trackfilectl=this%trackfilectl, &
+        trackctl=this%trackctl, &
         izone=this%mip%izone, &
         flowja=this%flowja, &
         porosity=this%mip%porosity, &
@@ -270,7 +271,7 @@ contains
     type is (DisvType)
       call method_disv%init( &
         fmi=this%fmi, &
-        trackfilectl=this%trackfilectl, &
+        trackctl=this%trackctl, &
         izone=this%mip%izone, &
         flowja=this%flowja, &
         porosity=this%mip%porosity, &
@@ -281,10 +282,10 @@ contains
 
     ! -- Initialize track output files and reporting options
     if (this%oc%itrkout > 0) &
-      call this%trackfilectl%init_track_file(this%oc%itrkout)
+      call this%trackctl%init_track_file(this%oc%itrkout)
     if (this%oc%itrkcsv > 0) &
-      call this%trackfilectl%init_track_file(this%oc%itrkcsv, csv=.true.)
-    call this%trackfilectl%set_track_events( &
+      call this%trackctl%init_track_file(this%oc%itrkcsv, csv=.true.)
+    call this%trackctl%set_track_events( &
       this%oc%trackrelease, &
       this%oc%trackexit, &
       this%oc%tracktimestep, &
@@ -742,7 +743,7 @@ contains
     call mem_deallocate(this%ratesto)
 
     ! -- Track file control
-    deallocate (this%trackfilectl)
+    deallocate (this%trackctl)
 
     ! -- Parent type
     call this%NumericalModelType%model_da()
@@ -912,12 +913,12 @@ contains
 
         ! -- Initialize PRP-specific track files, if enabled
         if (packobj%itrkout > 0) then
-          call this%trackfilectl%init_track_file( &
+          call this%trackctl%init_track_file( &
             packobj%itrkout, &
             iprp=iprp)
         end if
         if (packobj%itrkcsv > 0) then
-          call this%trackfilectl%init_track_file( &
+          call this%trackctl%init_track_file( &
             packobj%itrkcsv, &
             csv=.true., &
             iprp=iprp)
