@@ -23,10 +23,11 @@ module ArrayReadersModule
   integer(I4B), parameter :: BINARY_CHAR_BYTES = 1
   integer(I4B), parameter :: BINARY_INT_BYTES = 4
   integer(I4B), parameter :: BINARY_DOUBLE_BYTES = 8
+  integer(I4B), parameter :: BINARY_STRLEN = 16
   integer(I4B), parameter :: BINARY_HEADER_BYTES = &
                              (5 * BINARY_INT_BYTES) + & !< kstp, kper, msize1, msize2, msize3
                              (2 * BINARY_DOUBLE_BYTES) + & !< pertim, totim
-                             (16 * BINARY_CHAR_BYTES) !< array text
+                             (BINARY_STRLEN * BINARY_CHAR_BYTES) !< array text
 
   interface ReadArray
     module procedure &
@@ -1034,7 +1035,7 @@ contains
     integer(I4B) :: istat
     integer(I4B) :: kstp, kper, m1, m2, m3
     real(DP) :: pertim, totim
-    character(len=16) :: text
+    character(len=BINARY_STRLEN) :: text
     character(len=MAXCHARLEN) :: ermsgr
     character(len=*), parameter :: fmthdr = &
       "(/,1X,'HEADER FROM BINARY FILE HAS FOLLOWING ENTRIES',&
