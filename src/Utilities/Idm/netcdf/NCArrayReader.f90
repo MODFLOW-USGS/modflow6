@@ -35,7 +35,6 @@ contains
   function is_layered(grid) result(layered)
     character(len=*), intent(in) :: grid
     logical(LGP) :: layered
-    !
     select case (grid)
     case ('LAYERED MESH')
       layered = .true.
@@ -58,12 +57,11 @@ contains
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
     integer(I4B), optional, intent(in) :: kper
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     layered = (idt%layered .and. is_layered(nc_vars%grid))
-    !
+
     if (layered) then
       call load_integer1d_layered(int1d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
@@ -89,12 +87,11 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     layered = (idt%layered .and. is_layered(nc_vars%grid))
-    !
+
     if (layered) then
       call load_integer2d_layered(int2d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
@@ -116,12 +113,11 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     layered = (idt%layered .and. is_layered(nc_vars%grid))
-    !
+
     if (layered) then
       call load_integer3d_layered(int3d, mf6_input, mshape, idt, nc_vars, &
                                   input_fname)
@@ -145,16 +141,15 @@ contains
     integer(I4B), intent(in) :: iout
     integer(I4B), optional, intent(in) :: kper
     integer(I4B), optional, intent(in) :: iaux
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     if (present(kper)) then
       layered = (kper > 0 .and. is_layered(nc_vars%grid))
     else
       layered = (idt%layered .and. is_layered(nc_vars%grid))
     end if
-    !
+
     if (layered) then
       if (present(kper)) then
         call load_double1d_layered_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
@@ -186,12 +181,11 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     layered = (idt%layered .and. is_layered(nc_vars%grid))
-    !
+
     if (layered) then
       call load_double2d_layered(dbl2d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
@@ -213,12 +207,11 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
     integer(I4B), intent(in) :: iout
-    ! -- local
     integer(I4B) :: varid
     logical(LGP) :: layered
-    !
+
     layered = (idt%layered .and. is_layered(nc_vars%grid))
-    !
+
     if (layered) then
       call load_double3d_layered(dbl3d, mf6_input, mshape, idt, nc_vars, &
                                  input_fname)
@@ -233,7 +226,6 @@ contains
   !<
   subroutine load_integer1d_type(int1d, mf6_input, mshape, idt, nc_vars, &
                                  varid, input_fname)
-    ! -- dummy
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: int1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -241,19 +233,17 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B), dimension(:, :, :), contiguous, pointer :: int3d_ptr
     integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr
     integer(I4B) :: nvals
-    !
-    ! -- initialize
+
+    ! initialize
     nvals = 0
-    !
+
     if (idt%shape == 'NODES') then
-      ! -- set number of values
+      ! set number of values
       nvals = product(mshape)
-      !
       if (size(mshape) == 3) then
         int3d_ptr(1:mshape(3), 1:mshape(2), 1:mshape(1)) => int1d(1:nvals)
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, int3d_ptr), &
@@ -266,13 +256,11 @@ contains
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d), nc_vars%nc_fname)
       end if
     else
-      ! -- interpret shape
+      ! interpret shape
       call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
-      !
-      ! -- set nvals
+      ! set nvals
       nvals = array_shape(1)
-      !
-      ! -- read and set data
+      ! read and set data
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int1d), nc_vars%nc_fname)
     end if
   end subroutine load_integer1d_type
@@ -281,20 +269,18 @@ contains
   !<
   subroutine load_integer1d_layered(int1d, mf6_input, mshape, idt, nc_vars, &
                                     input_fname)
-    ! -- dummy
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: int1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: nlay, varid
     integer(I4B) :: k, ncpl
     integer(I4B) :: index_start, index_stop
     integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr
-    !
+
     nullify (int1d_ptr)
 
     call get_layered_shape(mshape, nlay, layer_shape)
@@ -315,7 +301,6 @@ contains
   !<
   subroutine load_integer2d_type(int2d, mf6_input, mshape, idt, nc_vars, varid, &
                                  input_fname)
-    ! -- dummy
     integer(I4B), dimension(:, :), contiguous, pointer, intent(in) :: int2d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -323,13 +308,12 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B) :: ncpl, nlay
-    !
+
     nullify (int1d_ptr)
-    !
+
     if (nc_vars%grid == 'STRUCTURED') then
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, int2d), nc_vars%nc_fname)
     else if (nc_vars%grid == 'LAYERED MESH') then
@@ -345,19 +329,17 @@ contains
   !<
   subroutine load_integer2d_layered(int2d, mf6_input, mshape, idt, nc_vars, &
                                     input_fname)
-    ! -- dummy
     integer(I4B), dimension(:, :), contiguous, pointer, intent(in) :: int2d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: k
     integer(I4B) :: ncpl, nlay, varid
     integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr
-    !
+
     nullify (int1d_ptr)
 
     if (size(mshape) == 3) then
@@ -382,7 +364,6 @@ contains
   !<
   subroutine load_integer3d_type(int3d, mf6_input, mshape, idt, nc_vars, varid, &
                                  input_fname)
-    ! -- dummy
     integer(I4B), dimension(:, :, :), contiguous, pointer, intent(in) :: int3d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -390,8 +371,6 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
-    !
     call nf_verify(nf90_get_var(nc_vars%ncid, varid, int3d), nc_vars%nc_fname)
   end subroutine load_integer3d_type
 
@@ -399,27 +378,23 @@ contains
   !<
   subroutine load_integer3d_layered(int3d, mf6_input, mshape, idt, nc_vars, &
                                     input_fname)
-    ! -- dummy
     integer(I4B), dimension(:, :, :), contiguous, pointer, intent(in) :: int3d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: k !, i, j
     integer(I4B) :: ncpl, nlay, varid
     integer(I4B) :: index_start, index_stop
     integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr
-    !
+
     nullify (int1d_ptr)
     index_start = 1
-    !
     call get_layered_shape(mshape, nlay, layer_shape)
-    !
     ncpl = product(layer_shape)
-    !
+
     do k = 1, nlay
       varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
@@ -434,7 +409,6 @@ contains
   !<
   subroutine load_double1d_type(dbl1d, mf6_input, mshape, idt, nc_vars, &
                                 varid, input_fname)
-    ! -- dummy
     real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -442,19 +416,17 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: array_shape
     real(DP), dimension(:, :, :), contiguous, pointer :: dbl3d_ptr
     real(DP), dimension(:, :), contiguous, pointer :: dbl2d_ptr
     integer(I4B) :: nvals
-    !
-    ! -- initialize
+
+    ! initialize
     nvals = 0
-    !
+
     if (idt%shape == 'NODES') then
-      ! -- set number of values
+      ! set number of values
       nvals = product(mshape)
-      !
       if (size(mshape) == 3) then
         dbl3d_ptr(1:mshape(3), 1:mshape(2), 1:mshape(1)) => dbl1d(1:nvals)
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl3d_ptr), &
@@ -467,13 +439,11 @@ contains
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d), nc_vars%nc_fname)
       end if
     else
-      ! -- interpret shape
+      ! interpret shape
       call get_shape_from_string(idt%shape, array_shape, mf6_input%mempath)
-      !
-      ! -- set nvals
+      ! set nvals
       nvals = array_shape(1)
-      !
-      ! -- read and set data
+      ! read and set data
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl1d), nc_vars%nc_fname)
     end if
   end subroutine load_double1d_type
@@ -483,7 +453,6 @@ contains
   subroutine load_double1d_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
                                iper, input_fname, iaux)
     use ConstantsModule, only: DNODATA
-    ! -- dummy
     real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -492,21 +461,20 @@ contains
     integer(I4B), intent(in) :: iper
     character(len=*), intent(in) :: input_fname
     integer(I4B), optional, intent(in) :: iaux
-    ! -- local
     real(DP), dimension(:, :, :), contiguous, pointer :: dbl3d
     integer(I4B) :: nvals, varid
     integer(I4B) :: n, i, j, k
-    !
-    ! -- initialize
+
+    ! initialize
     nvals = 0
-    !
-    ! -- set varid
+
+    ! set varid
     if (present(iaux)) then
       varid = nc_vars%varid(idt%mf6varname, period=iper, iaux=iaux)
     else
       varid = nc_vars%varid(idt%mf6varname, period=iper)
     end if
-    !
+
     if (idt%shape == 'NODES') then
       ! TODO future support
       write (errmsg, '(a)') &
@@ -517,12 +485,9 @@ contains
     else if (idt%shape == 'NCPL' .or. idt%shape == 'NAUX NCPL') then
 
       if (size(mshape) == 3) then
-        !
         allocate (dbl3d(mshape(3), mshape(2), mshape(1)))
-        !
         call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl3d), &
                        nc_vars%nc_fname)
-        !
         n = 0
         do k = 1, size(dbl3d, dim=3)
           do i = 1, size(dbl3d, dim=2)
@@ -554,27 +519,23 @@ contains
   !<
   subroutine load_double1d_layered(dbl1d, mf6_input, mshape, idt, nc_vars, &
                                    input_fname)
-    ! -- dummy
     real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: nlay, varid
     integer(I4B) :: k, ncpl
     integer(I4B) :: index_start, index_stop
     real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
-    !
+
     nullify (dbl1d_ptr)
     index_start = 1
-    !
     call get_layered_shape(mshape, nlay, layer_shape)
-    !
     ncpl = product(layer_shape)
-    !
+
     do k = 1, nlay
       varid = nc_vars%varid(idt%mf6varname, layer=k)
       index_stop = index_start + ncpl - 1
@@ -590,7 +551,6 @@ contains
   subroutine load_double1d_layered_spd(dbl1d, mf6_input, mshape, idt, nc_vars, &
                                        iper, input_fname, iaux)
     use ConstantsModule, only: DNODATA
-    ! -- dummy
     real(DP), dimension(:), contiguous, pointer, intent(in) :: dbl1d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -599,18 +559,16 @@ contains
     integer(I4B), intent(in) :: iper
     character(len=*), intent(in) :: input_fname
     integer(I4B), optional, intent(in) :: iaux
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: nlay, varid
     integer(I4B) :: k, n, ncpl
     integer(I4B) :: index_start, index_stop
     real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
-    !
+
     call get_layered_shape(mshape, nlay, layer_shape)
-    !
     ncpl = product(layer_shape)
     allocate (dbl1d_ptr(ncpl))
-    !
+
     do k = 1, nlay
       index_start = 1
       index_stop = index_start + ncpl - 1
@@ -627,8 +585,8 @@ contains
         end if
       end do
     end do
-    !
-    ! -- cleanup
+
+    ! cleanup
     deallocate (dbl1d_ptr)
   end subroutine load_double1d_layered_spd
 
@@ -636,7 +594,6 @@ contains
   !<
   subroutine load_double2d_type(dbl2d, mf6_input, mshape, idt, nc_vars, varid, &
                                 input_fname)
-    ! -- dummy
     real(DP), dimension(:, :), contiguous, pointer, intent(in) :: dbl2d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -644,13 +601,12 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
     real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
     integer(I4B), dimension(:), allocatable :: array_shape
     integer(I4B) :: ncpl, nlay
-    !
+
     nullify (dbl1d_ptr)
-    !
+
     if (nc_vars%grid == 'STRUCTURED') then
       call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl2d), nc_vars%nc_fname)
     else if (nc_vars%grid == 'LAYERED MESH') then
@@ -666,19 +622,17 @@ contains
   !<
   subroutine load_double2d_layered(dbl2d, mf6_input, mshape, idt, nc_vars, &
                                    input_fname)
-    ! -- dummy
     real(DP), dimension(:, :), contiguous, pointer, intent(in) :: dbl2d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: k
     integer(I4B) :: ncpl, nlay, varid
     real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
-    !
+
     nullify (dbl1d_ptr)
 
     if (size(mshape) == 3) then
@@ -703,7 +657,6 @@ contains
   !<
   subroutine load_double3d_type(dbl3d, mf6_input, mshape, idt, nc_vars, varid, &
                                 input_fname)
-    ! -- dummy
     real(DP), dimension(:, :, :), contiguous, pointer, intent(in) :: dbl3d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
@@ -711,7 +664,6 @@ contains
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: input_fname
-    ! -- local
     !
     call nf_verify(nf90_get_var(nc_vars%ncid, varid, dbl3d), nc_vars%nc_fname)
   end subroutine load_double3d_type
@@ -720,20 +672,18 @@ contains
   !<
   subroutine load_double3d_layered(dbl3d, mf6_input, mshape, idt, nc_vars, &
                                    input_fname)
-    ! -- dummy
     real(DP), dimension(:, :, :), contiguous, pointer, intent(in) :: dbl3d
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     type(InputParamDefinitionType), intent(in) :: idt
     type(NCPackageVarsType), pointer, intent(in) :: nc_vars
     character(len=*), intent(in) :: input_fname
-    ! -- local
     integer(I4B), dimension(:), allocatable :: layer_shape
     integer(I4B) :: k !, i, j
     integer(I4B) :: ncpl, nlay, varid
     integer(I4B) :: index_start, index_stop
     real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
-    !
+
     nullify (dbl1d_ptr)
 
     call get_layered_shape(mshape, nlay, layer_shape)

@@ -26,43 +26,39 @@ contains
   !> @brief allocate and set RECARRAY, KEYSTRING or RECORD param list
   !<
   subroutine idt_parse_rectype(idt, cols, ncol)
-    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use InputOutputModule, only: parseline
-    ! -- dummy
     type(InputParamDefinitionType), pointer, intent(in) :: idt
     character(len=LINELENGTH), dimension(:), allocatable, &
       intent(inout) :: cols
     integer(I4B), intent(inout) :: ncol
-    ! -- local
     character(len=:), allocatable :: parse_str
     character(len=LINELENGTH), dimension(:), allocatable :: param_cols
     integer(I4B) :: param_ncol, n
-    !
-    ! -- initialize
+
+    ! initialize
     if (allocated(cols)) deallocate (cols)
     ncol = 0
-    !
-    ! -- split definition
+
+    ! split definition
     parse_str = trim(idt%datatype)//' '
     call parseline(parse_str, param_ncol, param_cols)
-    !
+
     if (param_ncol > 1) then
       if (param_cols(1) == 'RECARRAY' .or. &
           param_cols(1) == 'KEYSTRING' .or. &
           param_cols(1) == 'RECORD') then
-        ! -- exclude 1st column
+        ! exclude 1st column
         allocate (cols(param_ncol - 1))
         do n = 2, param_ncol
           cols(n - 1) = param_cols(n)
         end do
-        !
-        ! -- set ncol
+        ! set ncol
         ncol = param_ncol - 1
       end if
     end if
-    !
-    ! -- cleanup
+
+    ! cleanup
     if (allocated(param_cols)) deallocate (param_cols)
     if (allocated(parse_str)) deallocate (parse_str)
   end subroutine idt_parse_rectype
@@ -70,13 +66,9 @@ contains
   !> @brief return input definition type datatype
   !<
   function idt_datatype(idt) result(datatype)
-    ! -- modules
     use ConstantsModule, only: LINELENGTH
-    ! -- dummy
     type(InputParamDefinitionType), pointer, intent(in) :: idt
-    ! -- result
     character(len=LINELENGTH) :: datatype
-    !
     if (idt%datatype(1:9) == 'KEYSTRING') then
       datatype = 'KEYSTRING'
     else if (idt%datatype(1:8) == 'RECARRAY') then
@@ -104,7 +96,7 @@ contains
     type(InputParamDefinitionType), pointer :: idt !< corresponding InputParameterDefinitionType for this tag
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
-    !
+
     nullify (idt)
     do i = 1, size(input_definition_types)
       tmp_ptr => input_definition_types(i)
@@ -116,7 +108,7 @@ contains
         exit
       end if
     end do
-    !
+
     if (.not. associated(idt)) then
       write (errmsg, '(a,a,a,a,a)') &
         'Input file tag not found: "', trim(tagname), &
@@ -139,7 +131,7 @@ contains
     type(InputParamDefinitionType), pointer :: idt !< corresponding InputParameterDefinitionType for this block
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
-    !
+
     nullify (idt)
     do i = 1, size(input_definition_types)
       tmp_ptr => input_definition_types(i)
@@ -150,7 +142,7 @@ contains
         exit
       end if
     end do
-    !
+
     if (.not. associated(idt)) then
       write (errmsg, '(a,a,a,a,a,a,a)') &
         'Idm aggregate definition not found: ', trim(blockname), &
@@ -178,42 +170,41 @@ contains
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
     character(len=:), allocatable :: parse_str
-    !
-    ! -- initialize to deallocated
+
+    ! initialize to deallocated
     if (allocated(words)) deallocate (words)
-    !
-    ! -- return all tokens of multi-record type that matches the first
-    ! -- tag following the expected first token "RECORD"
+
+    ! return all tokens of multi-record type that matches the first
+    ! tag following the expected first token "RECORD"
     do i = 1, size(input_definition_types)
-      !
-      ! -- initialize
+
+      ! initialize
       nwords = 0
-      !
-      ! -- set ptr to current definition
+
+      ! set ptr to current definition
       tmp_ptr => input_definition_types(i)
-      !
-      ! -- match for definition to split
+
+      ! match for definition to split
       if (tmp_ptr%component_type == component_type .and. &
           tmp_ptr%subcomponent_type == subcomponent_type .and. &
           idt_datatype(tmp_ptr) == 'RECORD') then
-        !
-        ! -- set split string
+
+        ! set split string
         parse_str = trim(input_definition_types(i)%datatype)//' '
-        !
-        ! -- split
+
+        ! split
         call parseline(parse_str, nwords, words)
-        !
-        ! -- check for match and manage memory
+
+        ! check for match and manage memory
         if (nwords >= 2) then
           if (words(1) == 'RECORD' .and. words(2) == tagname) then
             exit
           end if
         end if
-        !
-        ! -- deallocate
+
+        ! deallocate
         if (allocated(parse_str)) deallocate (parse_str)
         if (allocated(words)) deallocate (words)
-        !
       end if
     end do
   end subroutine split_record_definition

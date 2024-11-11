@@ -59,7 +59,6 @@ contains
     integer(I4B) :: n
     type(ExportModelType), pointer :: export_model
     active = .false.
-    !
     do n = 1, export_models%Count()
       export_model => get_export_model(n)
       if (export_model%nctype /= NETCDF_UNDEF) then
@@ -87,39 +86,38 @@ contains
     character(len=LINELENGTH) :: exportstr
     integer(I4B) :: n
     logical(LGP) :: found
-    !
+
     do n = 1, model_dynamic_pkgs%Count()
-      !
-      ! -- allocate and initialize
+      ! allocate and initialize
       allocate (export_model)
-      !
-      ! -- set pointer to dynamic input model instance
+
+      ! set pointer to dynamic input model instance
       model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
-      !
-      ! --set input mempaths
+
+      ! set input mempaths
       modelnam_mempath = &
         create_mem_path(component=model_dynamic_input%modelname, &
                         subcomponent='NAM', context=idm_context)
       model_mempath = create_mem_path(component=model_dynamic_input%modelname, &
                                       context=idm_context)
-      ! -- set pointer to dis enum type
+      ! set pointer to dis enum type
       call mem_setptr(disenum, 'DISENUM', model_mempath)
-      !
-      ! --  initialize model
+
+      ! initialize model
       call export_model%init(model_dynamic_input, disenum, iout)
-      !
-      ! -- update EXPORT_NETCDF string if provided
+
+      ! update EXPORT_NETCDF string if provided
       call mem_set_value(exportstr, 'EXPORT_NETCDF', modelnam_mempath, found)
       if (found) then
         if (exportstr == 'STRUCTURED') then
           export_model%nctype = NETCDF_STRUCTURED
         else
-          ! -- mesh export is default
+          ! mesh export is default
           export_model%nctype = NETCDF_UGRID
         end if
       end if
-      !
-      ! -- add model to list
+
+      ! add model to list
       call add_export_model(export_model)
     end do
   end subroutine modelexports_create
@@ -127,11 +125,9 @@ contains
   !> @brief export model list post prepare step
   !!
   subroutine modelexports_post_prepare()
-    ! -- local variables
     class(*), pointer :: obj
     class(ExportModelType), pointer :: export_model
     integer(I4B) :: n
-    !
     do n = 1, export_models%Count()
       obj => export_models%GetItem(n)
       if (associated(obj)) then
@@ -147,11 +143,9 @@ contains
   !> @brief export model list post step
   !!
   subroutine modelexports_post_step()
-    ! -- local variables
     class(*), pointer :: obj
     class(ExportModelType), pointer :: export_model
     integer(I4B) :: n
-    !
     do n = 1, export_models%Count()
       obj => export_models%GetItem(n)
       if (associated(obj)) then
@@ -167,11 +161,9 @@ contains
   !> @brief destroy export model list
   !!
   subroutine modelexports_destroy()
-    ! -- local variables
     class(*), pointer :: obj
     class(ExportModelType), pointer :: export_model
     integer(I4B) :: n
-    !
     do n = 1, export_models%Count()
       obj => export_models%GetItem(n)
       if (associated(obj)) then
@@ -197,7 +189,6 @@ contains
     type(ModelDynamicPkgsType), pointer, intent(in) :: loaders
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: iout
-    !
     this%loaders => loaders
     this%modelname = loaders%modelname
     this%modeltype = loaders%modeltype
@@ -205,7 +196,6 @@ contains
     this%nctype = NETCDF_UNDEF
     this%disenum = disenum
     this%iout = iout
-    !
     nullify (this%nc_export)
   end subroutine init
 
@@ -214,7 +204,6 @@ contains
   !<
   subroutine post_prepare(this)
     class(ExportModelType), intent(inout) :: this
-    !
     if (associated(this%nc_export)) then
       call this%nc_export%export_input()
     end if
@@ -225,7 +214,6 @@ contains
   !<
   subroutine post_step(this)
     class(ExportModelType), intent(inout) :: this
-    !
     if (associated(this%nc_export)) then
       call this%nc_export%step()
     end if
@@ -236,7 +224,6 @@ contains
   !<
   subroutine destroy(this)
     class(ExportModelType), intent(inout) :: this
-    !
     if (associated(this%nc_export)) then
       call this%nc_export%destroy()
       deallocate (this%nc_export)
@@ -248,11 +235,8 @@ contains
   !!
   !<
   subroutine add_export_model(export_model)
-    ! -- dummy variables
     type(ExportModelType), pointer, intent(inout) :: export_model
-    ! -- local variables
     class(*), pointer :: obj
-    !
     obj => export_model
     call export_models%Add(obj)
   end subroutine add_export_model
@@ -261,16 +245,12 @@ contains
   !!
   !<
   function get_export_model(idx) result(res)
-    ! -- dummy variables
     integer(I4B), intent(in) :: idx !< package number
-    ! -- local variables
     class(ExportModelType), pointer :: res
     class(*), pointer :: obj
-    !
-    ! -- initialize res
+    ! initialize res
     nullify (res)
-    !
-    ! -- get the object from the list
+    ! get the object from the list
     obj => export_models%GetItem(idx)
     if (associated(obj)) then
       select type (obj)

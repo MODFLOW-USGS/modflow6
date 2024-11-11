@@ -33,17 +33,11 @@ contains
   !!
   !<
   function package_source_type(sourcename) result(sourcetype)
-    ! -- modules
     use InputOutputModule, only: upcase
-    ! -- dummy
     character(len=*), intent(in) :: sourcename
-    ! -- result
     character(len=LENPACKAGENAME) :: sourcetype
-    ! -- local
     character(len=LENPACKAGENAME) :: ext
-    !
     ext = file_ext(sourcename)
-    !
     select case (ext)
     case default
       sourcetype = 'MF6FILE'
@@ -59,19 +53,15 @@ contains
   !!
   !<
   function idm_component_type(component) result(component_type)
-    ! -- modules
     use IdmDfnSelectorModule, only: idm_component
-    ! -- dummy
     character(len=*), intent(in) :: component
-    ! -- return
     character(len=LENCOMPONENTNAME) :: component_type
-    ! -- local
     integer(I4B) :: i, ilen, idx
-    !
-    ! -- initialize
+
+    ! initialize
     component_type = ''
     idx = 0
-    !
+
     ilen = len_trim(component)
     do i = 1, ilen
       if (component(i:i) == '6' .or. component(i:i) == '-') then
@@ -80,7 +70,7 @@ contains
         component_type(idx:idx) = component(i:i)
       end if
     end do
-    !
+
     if (.not. idm_component(component_type)) then
       write (errmsg, '(a)') &
         'IDP input error, unrecognized component: "'//trim(component)//'"'
@@ -98,23 +88,19 @@ contains
   !<
   function idm_subcomponent_type(component, subcomponent) &
     result(subcomponent_type)
-    ! -- modules
-    ! -- dummy
     character(len=*), intent(in) :: component !< component, e.g. GWF6
     character(len=*), intent(in) :: subcomponent !< subcomponent, e.g. CHD6
-    ! -- return
     character(len=LENCOMPONENTNAME) :: subcomponent_type
-    ! -- local
     character(len=LENCOMPONENTNAME) :: component_type
     integer(I4B) :: i, ilen, idx
-    !
-    ! -- initialize
+
+    ! initialize
     subcomponent_type = ''
     idx = 0
-    !
-    ! -- verify component
+
+    ! verify component
     component_type = idm_component_type(component)
-    !
+
     ilen = len_trim(subcomponent)
     do i = 1, ilen
       if (subcomponent(i:i) == '6' .or. subcomponent(i:i) == '-') then
@@ -134,23 +120,15 @@ contains
   !<
   function idm_subcomponent_name(component_type, subcomponent_type, sc_name) &
     result(subcomponent_name)
-    ! -- modules
     use IdmDfnSelectorModule, only: idm_multi_package
-    ! -- dummy
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: sc_name
-    ! -- return
     character(len=LENPACKAGENAME) :: subcomponent_name
-    ! -- local
-    !
     subcomponent_name = ''
-    !
     if (idm_multi_package(component_type, subcomponent_type)) then
-      !
       subcomponent_name = sc_name
     else
-      !
       subcomponent_name = subcomponent_type
     end if
   end function idm_subcomponent_name
@@ -162,23 +140,15 @@ contains
   !!
   !<
   function file_ext(filename) result(ext)
-    ! -- modules
     use IdmDfnSelectorModule, only: idm_multi_package
-    ! -- dummy
     character(len=*), intent(in) :: filename
-    ! -- return
     character(len=LENPACKAGETYPE) :: ext
-    ! -- local
     integer(I4B) :: idx
-    !
-    ! -- initialize
+    ! initialize
     ext = ''
     idx = 0
-    !
-    ! -- identify '.' character position from back of string
+    ! identify '.' character position from back of string
     idx = index(filename, '.', back=.true.)
-    !
-    !
     if (idx > 0) then
       ext = filename(idx + 1:len_trim(filename))
     end if
@@ -195,13 +165,13 @@ contains
     integer(I4B), pointer :: int_ptr
     character(len=16), dimension(:), allocatable :: array_shape_string
     character(len=:), allocatable :: shape_string_copy
-    !
-    ! -- parse the string into multiple words
+
+    ! parse the string into multiple words
     shape_string_copy = trim(shape_string)//' '
     call ParseLine(shape_string_copy, ndim, array_shape_string)
     allocate (array_shape(ndim))
-    !
-    ! -- find shape in memory manager and put into array_shape
+
+    ! find shape in memory manager and put into array_shape
     do i = 1, ndim
       call mem_setptr(int_ptr, array_shape_string(i), memoryPath)
       array_shape(i) = int_ptr
@@ -255,39 +225,37 @@ contains
     integer(I4B), pointer :: ncelldim
     integer(I4B), pointer :: distype
     integer(I4B) :: dim1_size, dim2_size, dim3_size, dis_type
-    !
-    ! -- initialize dis_type
+
+    ! initialize dis_type
     dis_type = DISUNDEF
-    !
-    ! -- allocate and set model shape in model input context
+
+    ! allocate and set model shape in model input context
     select case (ftype)
     case ('DIS6')
-      !
-      ! -- set dis_type
+      ! set dis_type
       dis_type = DIS
-      !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NROW', dis_mempath, dim2_size)
       call get_isize('NCOL', dis_mempath, dim3_size)
-      !
+
       if (dim1_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NLAY" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim2_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NROW" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim3_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NCOL" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim1_size >= 1 .and. dim2_size >= 1 .and. dim3_size >= 1) then
         call mem_allocate(model_shape, 3, 'MODEL_SHAPE', model_mempath)
         call mem_setptr(ndim1, 'NLAY', dis_mempath)
@@ -297,27 +265,24 @@ contains
       else
         call store_error_filename(fname)
       end if
-      !
     case ('DIS2D6')
-      !
-      ! -- set dis_type
+      ! set dis_type
       dis_type = DIS2D
-      !
       call get_isize('NROW', dis_mempath, dim1_size)
       call get_isize('NCOL', dis_mempath, dim2_size)
-      !
+
       if (dim1_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NROW" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim2_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NCOL" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim1_size >= 1 .and. dim2_size >= 1) then
         call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
         call mem_setptr(ndim1, 'NROW', dis_mempath)
@@ -326,27 +291,24 @@ contains
       else
         call store_error_filename(fname)
       end if
-      !
     case ('DISV6')
-      !
-      ! -- set dis_type
+      ! set dis_type
       dis_type = DISV
-      !
       call get_isize('NLAY', dis_mempath, dim1_size)
       call get_isize('NCPL', dis_mempath, dim2_size)
-      !
+
       if (dim1_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NLAY" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim2_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NCPL" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim1_size >= 1 .and. dim2_size >= 1) then
         call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
         call mem_setptr(ndim1, 'NLAY', dis_mempath)
@@ -356,15 +318,14 @@ contains
         call store_error_filename(fname)
       end if
     case ('DISV2D6')
-      !
       call get_isize('NODES', dis_mempath, dim1_size)
-      !
+
       if (dim1_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NODES" not found.'
         call store_error(errmsg)
       end if
-      !
+
       if (dim1_size >= 1) then
         call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
         call mem_setptr(ndim1, 'NODES', dis_mempath)
@@ -373,23 +334,22 @@ contains
         call store_error_filename(fname)
       end if
     case ('DISU6', 'DISV1D6')
-      !
-      ! -- set dis_type
+      ! set dis_type
       if (ftype == 'DISU6') then
         dis_type = DISU
       else if (ftype == 'DISV1D6') then
         dis_type = DISV1D
       end if
-      !
+
       call get_isize('NODES', dis_mempath, dim1_size)
-      !
+
       if (dim1_size <= 0) then
         write (errmsg, '(a)') &
           'Required input dimension "NODES" not found.'
         call store_error(errmsg)
         call store_error_filename(fname)
       end if
-      !
+
       call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
       call mem_setptr(ndim1, 'NODES', dis_mempath)
       model_shape = [ndim1]
@@ -399,33 +359,25 @@ contains
       call store_error(errmsg)
       call store_error_filename(fname)
     end select
-    !
-    ! -- allocate and set ncelldim in model input context
+
+    ! allocate and set ncelldim in model input context
     call mem_allocate(ncelldim, 'NCELLDIM', model_mempath)
     ncelldim = size(model_shape)
-    !
-    ! -- allocate and set distype in model input context
+
+    ! allocate and set distype in model input context
     call mem_allocate(distype, 'DISENUM', model_mempath)
     distype = dis_type
   end subroutine set_model_shape
 
   function ifind_charstr(array, str)
     use CharacterStringModule, only: CharacterStringType
-    ! -- Find the first array element containing str
-    ! -- Return -1 if not found.
     implicit none
-    ! -- return
     integer(I4B) :: ifind_charstr
-    ! -- dummy
     type(CharacterStringType), dimension(:), intent(in) :: array
     character(len=*) :: str
     character(len=LINELENGTH) :: compare_str
-    ! -- local
     integer(I4B) :: i
-    !
-    ! -- initialize
     ifind_charstr = -1
-    !
     findloop: do i = 1, size(array)
       compare_str = array(i)
       if (compare_str == str) then
@@ -457,27 +409,24 @@ contains
     type(CharacterStringType), dimension(:), pointer, &
       contiguous :: fnames
     integer(I4B) :: isize
-    !
-    ! -- initialize
+
+    ! initialize
     found = .false.
     filename = ''
-    !
+
     call get_isize(tagname, input_mempath, isize)
-    !
+
     if (isize > 0) then
-      !
       if (isize /= 1) then
         errmsg = 'Multiple FILEIN keywords detected for tag "'//trim(tagname)// &
                  '" in OPTIONS block. Only one entry allowed.'
         call store_error(errmsg)
         call store_error_filename(input_fname)
       end if
-      !
+
       call mem_setptr(fnames, tagname, input_mempath)
-      !
       filename = fnames(1)
       found = .true.
-      !
     end if
   end function filein_fname
 
@@ -491,8 +440,8 @@ contains
     character(len=*), intent(in) :: name_type
     character(len=LINELENGTH) :: input_str
     integer(I4B) :: ilen
-    !
-    ! -- initialize
+
+    ! initialize
     mf6_name = ''
     input_str = input_name
     ilen = len_trim(input_str)
@@ -502,8 +451,8 @@ contains
         maxlen, ') for '//trim(name_type)//'.'
       call store_error(errmsg)
     end if
-    !
-    ! -- set truncated name
+
+    ! set truncated name
     mf6_name = trim(input_str)
   end subroutine inlen_check
 
