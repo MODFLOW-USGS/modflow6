@@ -125,7 +125,7 @@ contains
     integer(I4B) :: file_sz
     expected_sz = BINARY_HEADER_BYTES + (size(this%int1d) * BINARY_INT_BYTES)
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
-    INQUIRE (unit=this%input_unit, size=file_sz)
+    inquire (unit=this%input_unit, size=file_sz)
     if (expected_sz /= file_sz) then
       write (errmsg, '(a,i0,a,i0,a)') &
         'Unexpected file size for binary input array '// &
