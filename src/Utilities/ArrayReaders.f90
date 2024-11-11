@@ -16,6 +16,7 @@ module ArrayReadersModule
   private
   public :: ReadArray
   public :: read_binary_header
+  public :: check_binary_filesize
   public :: BINARY_INT_BYTES
   public :: BINARY_DOUBLE_BYTES
   public :: BINARY_HEADER_BYTES
@@ -1064,6 +1065,26 @@ contains
     ! -- Assign the number of values that follow the header
     nval = m1 * m2
   end subroutine read_binary_header
+
+  subroutine check_binary_filesize(locat, expected_size, arrname)
+    ! -- dummy
+    integer(I4B), intent(in) :: locat
+    integer(I4B), intent(in) :: expected_size
+    character(len=*), intent(in) :: arrname
+    ! -- local
+    integer(I4B) :: file_size
+    !
+    inquire (unit=locat, size=file_size)
+    !
+    if (expected_size /= file_size) then
+      write (errmsg, '(a,i0,a,i0,a)') &
+        'Unexpected file size for binary input array '// &
+        trim(arrname)//'. Expected=', expected_size, &
+        '/Found=', file_size, ' bytes.'
+      call store_error(errmsg)
+      call store_error_unit(locat)
+    end if
+  end subroutine check_binary_filesize
 
   !> @ brief Check the binary data size
   !!

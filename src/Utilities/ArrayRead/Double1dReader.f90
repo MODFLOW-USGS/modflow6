@@ -6,6 +6,7 @@ module Double1dReaderModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_unit
   use ArrayReadersModule, only: read_binary_header, &
+                                check_binary_filesize, &
                                 BINARY_DOUBLE_BYTES, &
                                 BINARY_HEADER_BYTES
   use ArrayReaderBaseModule, only: ArrayReaderBaseType
@@ -89,19 +90,10 @@ contains
     integer(I4B) :: i
     integer(I4B) :: nvals
     integer(I4B) :: istat
-    integer(I4B) :: expected_sz
-    integer(I4B) :: file_sz
-    expected_sz = BINARY_HEADER_BYTES + (size(this%dbl1d) * BINARY_DOUBLE_BYTES)
+    integer(I4B) :: expected_size
+    expected_size = BINARY_HEADER_BYTES + (size(this%dbl1d) * BINARY_DOUBLE_BYTES)
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
-    inquire (unit=this%input_unit, size=file_sz)
-    if (expected_sz /= file_sz) then
-      write (errmsg, '(a,i0,a,i0,a)') &
-        'Unexpected file size for binary input array '// &
-        trim(this%array_name)//'. Expected=', expected_sz, &
-        '/Found=', file_sz, ' bytes.'
-      call store_error(errmsg)
-      call store_error_unit(this%input_unit)
-    end if
+    call check_binary_filesize(this%input_unit, expected_size, this%array_name)
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
       (this%dbl1d(i), i=1, size(this%dbl1d))
     if (istat /= 0) then
