@@ -161,9 +161,7 @@ def check_output(idx, test):
         assert (
             stage[idx, 2] == HDRY
         ), f"reach 3 stage is not HDRY in stress period {idx + 1}"
-    assert (
-        stage[1, 1] == HNOFLO
-    ), "reach 4 stage is not HNOFLO in stress period 2"
+    assert stage[1, 1] == HNOFLO, "reach 4 stage is not HNOFLO in stress period 2"
 
     bobj = sfr.output.budget()
     data_names = (
@@ -179,9 +177,7 @@ def check_output(idx, test):
     )
     for name in data_names:
         v = bobj.get_data(text=name, totim=2.0)[0]
-        assert (
-            v["q"][1] == 0.0
-        ), f"{name} flow for reach 2 is not zero ({v['q'][1]})"
+        assert v["q"][1] == 0.0, f"{name} flow for reach 2 is not zero ({v['q'][1]})"
 
     # skip GWF for reach 3 since it is not connected
     # to a GWF cell (data_names[0])

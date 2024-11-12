@@ -152,14 +152,10 @@ for i in np.arange(nrow):
             # Check to see if two touching cells in adjacent models are both active
             # Check
             if idomain_ur[0, i, j] > 0 and idomain_ll[0, i + 1, j] > 0:
-                exgdata.append(
-                    ((0, i, j), (0, i + 1, j), 1, 5, 5, 10, 270.0, 10.0)
-                )
+                exgdata.append(((0, i, j), (0, i + 1, j), 1, 5, 5, 10, 270.0, 10.0))
         if j < (ncol - 1):
             if idomain_ur[0, i, j + 1] > 0 and idomain_ll[0, i, j] > 0:
-                exgdata.append(
-                    ((0, i, j + 1), (0, i, j), 1, 5, 5, 10, 180.0, 10.0)
-                )
+                exgdata.append(((0, i, j + 1), (0, i, j), 1, 5, 5, 10, 180.0, 10.0))
 
 
 # Boundary conditions
@@ -248,9 +244,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # add both solutions to the simulation
     add_flow(sim)
@@ -590,18 +584,14 @@ def add_upper_gwemodel(sim, scheme):
 
     # Instantiating MODFLOW 6 heat transport source-sink mixing package
     sourcerecarray = [("WEL-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename=f"{mname}.ssm"
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=sourcerecarray, filename=f"{mname}.ssm")
 
     # Instantiating MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
         budget_filerecord=f"{mname}.cbc",
         temperature_filerecord=f"{mname}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -668,9 +658,7 @@ def add_lower_gwemodel(sim, scheme):
 
     # Instantiating MODFLOW 6 heat transport source-sink mixing package
     sourcerecarray = [("CHD-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename=f"{mname}.ssm"
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=sourcerecarray, filename=f"{mname}.ssm")
 
     # Instantiating MODFLOW 6 heat transport output control package
     # flopy.mf6.ModflowGweoc(
@@ -687,9 +675,7 @@ def add_lower_gwemodel(sim, scheme):
         gwe,
         budget_filerecord=f"{mname}.cbc",
         temperature_filerecord=f"{mname}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -804,17 +790,13 @@ def add_upper_gwtmodel(sim, scheme):
 
     # Instantiating MODFLOW 6 source-sink mixing package transport
     sourcerecarray = [("WEL-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename=f"{mname}.ssm"
-    )
+    flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray, filename=f"{mname}.ssm")
 
     flopy.mf6.ModflowGwtoc(
         gwt,
         budget_filerecord=f"{mname}.cbc",
         concentration_filerecord=f"{mname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -877,18 +859,14 @@ def add_lower_gwtmodel(sim, scheme):
 
     # Instantiating MODFLOW 6 solute transport source-sink mixing package
     sourcerecarray = [("CHD-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename=f"{mname}.ssm"
-    )
+    flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray, filename=f"{mname}.ssm")
 
     # Instantiating MODFLOW 6 solute transport output control package
     flopy.mf6.ModflowGwtoc(
         gwt,
         budget_filerecord=f"{mname}.cbc",
         concentration_filerecord=f"{mname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )

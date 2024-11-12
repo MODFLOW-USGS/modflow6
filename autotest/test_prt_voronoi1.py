@@ -102,9 +102,7 @@ def build_gwf_sim(name, ws, targets):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwf_name, save_flows=True)
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -118,9 +116,7 @@ def build_gwf_sim(name, ws, targets):
     )
     if "wel" in name:
         # k, j, q
-        wells = [
-            (0, c, 0.5 * (-1 if "welp" in name else 1)) for c in well_cells
-        ]
+        wells = [(0, c, 0.5 * (-1 if "welp" in name else 1)) for c in well_cells]
         wel = flopy.mf6.ModflowGwfwel(
             gwf,
             maxbound=len(wells),
@@ -190,9 +186,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
     disv = flopy.mf6.ModflowGwfdisv(
         prt, nlay=nlay, **grid.get_disv_gridprops(), top=top, botm=botm
@@ -349,9 +343,7 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
     def get_meshes(model, pathlines):
         vtk = Vtk(model=model, binary=False, smooth=False)
         vtk.add_model(model)
-        vtk.add_pathline_points(
-            to_mp7_pathlines(pathlines.to_records(index=False))
-        )
+        vtk.add_pathline_points(to_mp7_pathlines(pathlines.to_records(index=False)))
         grid_mesh, path_mesh = vtk.to_pyvista()
         grid_mesh.rotate_x(-100, point=axes.origin, inplace=True)
         grid_mesh.rotate_z(90, point=axes.origin, inplace=True)
@@ -399,24 +391,18 @@ def check_output(idx, test, snapshot):
     # have moved vertically. round for cross-platform error.
     # skip macos-14 in CI because grid is slightly different
     if not (is_in_ci() and system() == "Darwin" and processor() == "arm"):
-        assert snapshot == endpts.drop("name", axis=1).round(1).to_records(
-            index=False
-        )
+        assert snapshot == endpts.drop("name", axis=1).round(1).to_records(index=False)
 
     # plot results if enabled
     plot = False
     if plot:
-        plot_output(
-            name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png"
-        )
+        plot_output(name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png")
 
 
 @requires_pkg("syrupy")
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(
-    idx, name, function_tmpdir, targets, benchmark, array_snapshot
-):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,

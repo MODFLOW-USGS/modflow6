@@ -417,8 +417,7 @@ def check_output(idx, test):
         comp = comp.sum(axis=0)
         zdis = zdis[0]
         assert np.allclose(comp, zdis), (
-            "sum of compaction is not equal to the "
-            + f"z-displacement at time {totim}"
+            "sum of compaction is not equal to the " + f"z-displacement at time {totim}"
         )
 
 

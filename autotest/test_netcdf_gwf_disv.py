@@ -51,9 +51,7 @@ def build_models(idx, test, export, gridded_input):
     name = cases[idx]
 
     # netcdf config
-    ncf = flopy.mf6.ModflowUtlncf(
-        gwf.disv, ogc_wkt=wkt, filename=f"{name}.disv.ncf"
-    )
+    ncf = flopy.mf6.ModflowUtlncf(gwf.disv, ogc_wkt=wkt, filename=f"{name}.disv.ncf")
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -188,9 +186,7 @@ def check_output(idx, test, export, gridded_input):
             for l in range(nlay):
                 assert np.allclose(
                     np.array(rec[l]).flatten(),
-                    xds[f"head_l{l+1}"][timestep, :]
-                    .fillna(1.00000000e30)
-                    .data,
+                    xds[f"head_l{l+1}"][timestep, :].fillna(1.00000000e30).data,
                 ), f"NetCDF-Headfile comparison failure in timestep {timestep+1}"
             timestep += 1
 

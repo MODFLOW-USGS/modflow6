@@ -24,9 +24,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    gwf_sim = HorizontalCase.get_gwf_sim(
-        test.name, test.workspace, test.targets["mf6"]
-    )
+    gwf_sim = HorizontalCase.get_gwf_sim(test.name, test.workspace, test.targets["mf6"])
     prt_sim = build_prt_sim(
         test.name,
         test.workspace,

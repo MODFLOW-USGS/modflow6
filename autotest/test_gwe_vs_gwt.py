@@ -145,9 +145,7 @@ def build_models(idx, test):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
@@ -204,14 +202,10 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 storage package (steady flow conditions, so no actual storage, using to print values in .lst file)
-    flopy.mf6.ModflowGwfsto(
-        gwf, ss=0, sy=0, pname="STO-1", filename=f"{gwfname}.sto"
-    )
+    flopy.mf6.ModflowGwfsto(gwf, ss=0, sy=0, pname="STO-1", filename=f"{gwfname}.sto")
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, pname="IC-1", filename=f"{gwfname}.ic"
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, pname="IC-1", filename=f"{gwfname}.ic")
 
     # Instantiating MODFLOW 6 constant head package
     flopy.mf6.ModflowGwfchd(
@@ -291,9 +285,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 heat transport initial temperatures
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, pname="IC-1", filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, pname="IC-1", filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 heat transport advection package
     if mixelm >= 0:
@@ -341,9 +333,7 @@ def build_models(idx, test):
         gwe,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -404,9 +394,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGwtic(
-        gwt, strt=strt_temp, pname="IC-1", filename=f"{gwtname}.ic"
-    )
+    flopy.mf6.ModflowGwtic(gwt, strt=strt_temp, pname="IC-1", filename=f"{gwtname}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGwtadv(
@@ -448,9 +436,7 @@ def build_models(idx, test):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -478,9 +464,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
     try:
         # load temperatures
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         temps = tobj.get_alldata()
     except:
         assert False, f'could not load temperature data from "{fpth}"'
@@ -488,9 +472,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         # load temperatures (though stored as "concentrations")
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc = cobj.get_alldata()
     except:
         assert False, f'could not load concentration data from "{fpth}"'

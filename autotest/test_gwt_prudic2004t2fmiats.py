@@ -39,9 +39,7 @@ def run_flow_model(dir, exe):
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=wsf, exe_name=exe)
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 1, 1.0)]
     nper = len(tdis_rc)
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
 
@@ -109,18 +107,14 @@ def run_flow_model(dir, exe):
         gwf,
         budget_filerecord=f"{gwfname}.bud",
         head_filerecord=f"{gwfname}.hds",
-        headprintrecord=[
-            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
     rch_on = True
     if rch_on:
-        rch = flopy.mf6.ModflowGwfrcha(
-            gwf, recharge={0: 4.79e-3}, pname="RCH-1"
-        )
+        rch = flopy.mf6.ModflowGwfrcha(gwf, recharge={0: 4.79e-3}, pname="RCH-1")
 
     chdlist = []
     fname = os.path.join(model_path, "chd.dat")
@@ -138,9 +132,7 @@ def run_flow_model(dir, exe):
                     float(hd),
                 ]
             )
-    chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdlist, pname="CHD-1"
-    )
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist, pname="CHD-1")
 
     rivlist = []
     fname = os.path.join(model_path, "riv.dat")
@@ -388,9 +380,7 @@ def run_flow_model(dir, exe):
         fname = os.path.join(wsf, fname)
         lkstage = None
         if os.path.isfile(fname):
-            lksobj = flopy.utils.HeadFile(
-                fname, precision="double", text="stage"
-            )
+            lksobj = flopy.utils.HeadFile(fname, precision="double", text="stage")
             lkstage = lksobj.get_data().flatten()
             lksobj.file.close()
 
@@ -399,9 +389,7 @@ def run_flow_model(dir, exe):
         fname = os.path.join(wsf, fname)
         sfstage = None
         if os.path.isfile(fname):
-            bobj = flopy.utils.HeadFile(
-                fname, precision="double", text="stage"
-            )
+            bobj = flopy.utils.HeadFile(fname, precision="double", text="stage")
             sfstage = bobj.get_data().flatten()
             bobj.file.close()
 
@@ -629,18 +617,14 @@ def run_transport_model(dir, exe):
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(wst, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
     lkaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
 
     fname = gwtname + ".sft.bin"
     fname = os.path.join(wst, fname)
-    bobj = flopy.utils.HeadFile(
-        fname, precision="double", text="concentration"
-    )
+    bobj = flopy.utils.HeadFile(fname, precision="double", text="concentration")
     sfaconc = bobj.get_alldata()[:, 0, 0, :]
     times = bobj.times
     bobj.file.close()
@@ -845,9 +829,7 @@ def run_transport_model(dir, exe):
             all_found = False
             print(f"text not found in mfsim.lst: {stxt}")
         print(msg)
-    assert (
-        all_found
-    ), "One or more required text strings not found in mfsim.lst"
+    assert all_found, "One or more required text strings not found in mfsim.lst"
 
 
 @pytest.mark.slow

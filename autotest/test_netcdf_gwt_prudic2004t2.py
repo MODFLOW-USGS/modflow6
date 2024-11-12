@@ -155,9 +155,7 @@ def check_output(idx, test, export, gridded_input):
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
-                    xds["concentration"][timestep, :]
-                    .fillna(1.00000000e30)
-                    .data,
+                    xds["concentration"][timestep, :].fillna(1.00000000e30).data,
                 ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
                 timestep += 1
 

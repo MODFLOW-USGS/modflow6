@@ -487,9 +487,7 @@ def get_regression_files(
             for extension in extensions:
                 if file_name.lower().endswith(extension):
                     files0.append(fpth0)
-                    fpth1 = os.path.join(
-                        workspace, "mf6_regression", file_name
-                    )
+                    fpth1 = os.path.join(workspace, "mf6_regression", file_name)
                     files1.append(fpth1)
                     break
     return files0, files1
@@ -579,9 +577,7 @@ def setup_model(namefile, dst, remove_existing=True, extrafiles=None):
             print(f"{srcf} does not exist")
 
 
-def setup_mf6(
-    src, dst, mfnamefile="mfsim.nam", extrafiles=None, remove_existing=True
-):
+def setup_mf6(src, dst, mfnamefile="mfsim.nam", extrafiles=None, remove_existing=True):
     """
     Setup an MF6 simulation test, copying input files from the source
     to the destination workspace.
@@ -664,9 +660,7 @@ def setup_mf6(
     return mf6inp, mf6outp
 
 
-def setup_mf6_comparison(
-    src, dst, cmp_exe="mf6", overwrite=True, verbose=False
-):
+def setup_mf6_comparison(src, dst, cmp_exe="mf6", overwrite=True, verbose=False):
     """Setup an output comparison for MODFLOW 6 simulation.
 
     Parameters

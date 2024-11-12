@@ -327,9 +327,7 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
         gwe,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -354,9 +352,7 @@ def build_models(idx, test):
 
     # Build MODFLOW 6 files
     ws = test.workspace
-    sim = flopy.mf6.MFSimulation(
-        sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws)
 
     # Create tdis package
     tdis_rc = []
@@ -374,9 +370,7 @@ def build_models(idx, test):
     gwf2 = assemble_half_model(sim, "flow2", "flow2", side="right")
 
     # Add the exchange data
-    exgdata = [
-        ((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2, delr / 2, delc, 0.0, delr)
-    ]
+    exgdata = [((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2, delr / 2, delc, 0.0, delr)]
     flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -410,14 +404,10 @@ def build_models(idx, test):
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
     # Create first gwe model
-    gwe1 = get_gwe_model(
-        idx, sim, "energy1", "energy1", ener_input, side="left"
-    )
+    gwe1 = get_gwe_model(idx, sim, "energy1", "energy1", ener_input, side="left")
 
     # Create second gwe model
-    gwe2 = get_gwe_model(
-        idx, sim, "energy2", "energy2", ener_input, side="right"
-    )
+    gwe2 = get_gwe_model(idx, sim, "energy2", "energy2", ener_input, side="right")
 
     # Create GWE GWE exchange
     flopy.mf6.ModflowGwegwe(
@@ -543,9 +533,7 @@ def check_output(idx, test):
     gwename = "energy1"
     fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
     try:
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         sim_temps_l = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -553,9 +541,7 @@ def check_output(idx, test):
     gwename = "energy2"
     fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
     try:
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         sim_temps_r = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'

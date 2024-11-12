@@ -48,9 +48,7 @@ def build_models(idx, test):
         outer_dvclose=1.0e-7,
         inner_dvclose=1.0e-8,
     )
-    chf = flopy.mf6.ModflowChf(
-        sim, modelname=name, save_flows=True, print_flows=True
-    )
+    chf = flopy.mf6.ModflowChf(sim, modelname=name, save_flows=True, print_flows=True)
 
     dx = 1000.0
     nreach = 3

@@ -135,9 +135,7 @@ def test_sim_errors(function_tmpdir, targets):
     with pytest.raises(RuntimeError):
         # verify that the correct number of errors are reported
         chdkwargs = {}
-        chdkwargs["stress_period_data"] = {
-            0: [[(0, 0, 0), 0.0] for i in range(10)]
-        }
+        chdkwargs["stress_period_data"] = {0: [[(0, 0, 0), 0.0] for i in range(10)]}
         sim = get_minimal_gwf_simulation(
             str(function_tmpdir), exe=mf6, chdkwargs=chdkwargs
         )
@@ -154,9 +152,7 @@ def test_sim_maxerrors(function_tmpdir, targets):
         simnamefilekwargs = {}
         simnamefilekwargs["maxerrors"] = 5
         chdkwargs = {}
-        chdkwargs["stress_period_data"] = {
-            0: [[(0, 0, 0), 0.0] for i in range(10)]
-        }
+        chdkwargs["stress_period_data"] = {0: [[(0, 0, 0), 0.0] for i in range(10)]}
         sim = get_minimal_gwf_simulation(
             str(function_tmpdir),
             exe=mf6,
@@ -177,9 +173,7 @@ def test_disu_errors(function_tmpdir, targets):
     mf6 = targets["mf6"]
 
     with pytest.raises(RuntimeError):
-        disukwargs = get_disu_kwargs(
-            3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
-        )
+        disukwargs = get_disu_kwargs(3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3])
         top = disukwargs["top"]
         bot = disukwargs["bot"]
         top[9] = 2.0
@@ -195,8 +189,7 @@ def test_disu_errors(function_tmpdir, targets):
             "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",
             "-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be",
             "below cell 1.",
-            "UNIT ERROR REPORT:"
-            "1. ERROR OCCURRED WHILE READING FILE './test.disu'",
+            "UNIT ERROR REPORT:1. ERROR OCCURRED WHILE READING FILE './test.disu'",
         ]
         run_mf6_error(str(function_tmpdir), mf6, err_str)
 

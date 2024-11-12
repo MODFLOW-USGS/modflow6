@@ -170,21 +170,13 @@ def check_grb_disv1d(fpth):
     ), "grb botm not correct"
     cellx = np.linspace(dx / 2, nreach * dx - dx / 2, nreach)
     celly = np.zeros(nreach)
-    assert np.allclose(
-        grb._datadict["CELLX"], cellx.flatten()
-    ), "cellx is not right"
-    assert np.allclose(
-        grb._datadict["CELLY"], celly.flatten()
-    ), "celly is not right"
-    assert (
-        grb._datadict["IAVERT"].shape[0] == nodes + 1
-    ), "iavert size not right"
+    assert np.allclose(grb._datadict["CELLX"], cellx.flatten()), "cellx is not right"
+    assert np.allclose(grb._datadict["CELLY"], celly.flatten()), "celly is not right"
+    assert grb._datadict["IAVERT"].shape[0] == nodes + 1, "iavert size not right"
     assert (
         grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
     ), "javert size not right"
-    assert (
-        grb.ia.shape[0] == grb.ncells + 1
-    ), "ia in grb file is not correct size"
+    assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
     assert np.allclose(
         grb.idomain.reshape((nodes,)), idomain.reshape((nodes,))

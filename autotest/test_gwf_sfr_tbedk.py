@@ -176,9 +176,7 @@ def check_output(idx, test):
     obs_data = sfr.output.obs().get_data()
     o1 = obs_data["GWFR1"]
     o2 = obs_data["GWFR2"][::-1]
-    assert np.allclose(
-        o1, o2
-    ), f"GWFR1 ({o1}) not equal to reversed GWFR2 ({o2})"
+    assert np.allclose(o1, o2), f"GWFR1 ({o1}) not equal to reversed GWFR2 ({o2})"
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

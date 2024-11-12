@@ -121,9 +121,7 @@ def revert_files(app, example):
                     with open(fpth, "w") as f:
                         for line in lines:
                             if replace[0] in line.lower():
-                                line = line.lower().replace(
-                                    replace[0], replace[1]
-                                )
+                                line = line.lower().replace(replace[0], replace[1])
                             f.write(line)
 
 
@@ -179,9 +177,7 @@ def run_function(id, app, example):
     )
 
 
-def run_model(
-    current_app: PathLike, previous_app: PathLike, model_path: PathLike
-):
+def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLike):
     current_app = Path(current_app).expanduser().absolute()
     previous_app = Path(previous_app).expanduser().absolute()
     model_path = Path(model_path).expanduser().absolute()
@@ -314,9 +310,7 @@ def write_results(
         line += f"| Current Version {current_v} "
         line += f"| Previous Version {previous_v} "
         line += "| Percent difference |\n"
-        line += (
-            "| :---------- | :----------: | :----------: | :----------: |\n"
-        )
+        line += "| :---------- | :----------: | :----------: | :----------: |\n"
         f.write(line)
 
         # write benchmark data
@@ -350,9 +344,7 @@ def run_benchmarks(
     output_path = Path(output_path).expanduser().absolute()
 
     example_dirs = get_model_paths(examples_path, excluded=excluded)
-    assert any(
-        example_dirs
-    ), "No example model paths found, have models been built?"
+    assert any(example_dirs), "No example model paths found, have models been built?"
 
     # results_path = output_path / _markdown_file_name
     # if results_path.is_file():
@@ -373,9 +365,7 @@ def run_benchmarks(
 
     if not previous_exe.is_file():
         version, download_path = download_previous_version(output_path)
-        print(
-            f"Rebuilding latest MODFLOW 6 release {version} in development mode"
-        )
+        print(f"Rebuilding latest MODFLOW 6 release {version} in development mode")
         meson_build(
             project_path=download_path,
             build_path=build_path,
@@ -472,19 +462,13 @@ if __name__ == "__main__":
     build_path = Path(args.build_path)
     current_bin_path = Path(args.current_bin_path)
     previous_bin_path = Path(args.previous_bin_path)
-    output_path = (
-        Path(args.output_path) if args.output_path else Path(os.getcwd())
-    )
+    output_path = Path(args.output_path) if args.output_path else Path(os.getcwd())
     examples_repo_path = (
-        Path(args.examples_repo_path)
-        if args.examples_repo_path
-        else EXAMPLES_REPO_PATH
+        Path(args.examples_repo_path) if args.examples_repo_path else EXAMPLES_REPO_PATH
     )
 
     output_path.mkdir(parents=True, exist_ok=True)
-    assert (
-        examples_repo_path.is_dir()
-    ), f"Examples repo not found: {examples_repo_path}"
+    assert examples_repo_path.is_dir(), f"Examples repo not found: {examples_repo_path}"
 
     run_benchmarks(
         build_path=build_path,

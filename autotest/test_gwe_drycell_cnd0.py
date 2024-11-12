@@ -130,9 +130,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
@@ -311,9 +309,7 @@ def build_models(idx, test):
         pname="OC-2",
         budget_filerecord=f"{gwename1}.cbc",
         temperature_filerecord=f"{gwename1}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -353,9 +349,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
     try:
         # load temperatures
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         conc1 = cobj.get_alldata()
     except:
         assert False, f'could not load temperature data from "{fpth}"'
@@ -394,22 +388,14 @@ def check_output(idx, test):
 
     # The 'pass-through' cell (layer 1, row 1, column 4 - see diagram at top
     # of script) should be warming more than its two neighbors to the right.
-    msg4 = (
-        "Pass through cell should be warming up at a higher rate than "
-        "the dry cells."
-    )
+    msg4 = "Pass through cell should be warming up at a higher rate than the dry cells."
     assert np.all(conc1[:, 0, 0, 3] > conc1[:, 0, 0, 4]), msg4
 
     # Pass through cell should not be as warm as the cell from which it
     # receives water, since that cell will have already robbed the water
     # passing through of some of its heat
-    msg5 = (
-        "Pass through cell should not be as warm as its neighbor to "
-        "the left"
-    )
-    assert np.all(
-        np.round(conc1[:, 0, 0, 3] - conc1[:, 0, 0, 2], 8) <= 0
-    ), msg5
+    msg5 = "Pass through cell should not be as warm as its neighbor to the left"
+    assert np.all(np.round(conc1[:, 0, 0, 3] - conc1[:, 0, 0, 2], 8) <= 0), msg5
 
 
 # - No need to change any code below

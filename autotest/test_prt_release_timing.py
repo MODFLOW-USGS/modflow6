@@ -116,9 +116,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # convert mp7 particledata to prt release points
     partdata = get_partdata(prt.modelgrid, FlopyReadmeCase.releasepts_mp7)
@@ -395,8 +393,7 @@ def check_output(test, snapshot):
     ]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
 
@@ -419,9 +416,7 @@ def check_output(test, snapshot):
         )
 
     # compare pathlines with snapshot
-    assert snapshot == mf6_pls.drop("name", axis=1).round(3).to_records(
-        index=False
-    )
+    assert snapshot == mf6_pls.drop("name", axis=1).round(3).to_records(index=False)
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)

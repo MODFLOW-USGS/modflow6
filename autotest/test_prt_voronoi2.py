@@ -139,21 +139,15 @@ def build_prt_sim(name, gwf_ws, prt_ws, targets, cell_ids):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
     disv = flopy.mf6.ModflowGwfdisv(
         prt, nlay=nlay, **grid.get_disv_gridprops(), top=top, botm=botm
     )
     flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
 
-    sddata = flopy.modpath.CellDataType(
-        columncelldivisions=1, rowcelldivisions=1
-    )
-    data = flopy.modpath.NodeParticleData(
-        subdivisiondata=sddata, nodes=[release_cells]
-    )
+    sddata = flopy.modpath.CellDataType(columncelldivisions=1, rowcelldivisions=1)
+    data = flopy.modpath.NodeParticleData(subdivisiondata=sddata, nodes=[release_cells])
     prpdata = list(data.to_prp(prt.modelgrid))
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
@@ -198,9 +192,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, targets, cell_ids):
 
 
 def build_models(idx, test):
-    gwf_sim, gwf_cell_ids = build_gwf_sim(
-        test.name, test.workspace, test.targets
-    )
+    gwf_sim, gwf_cell_ids = build_gwf_sim(test.name, test.workspace, test.targets)
     gwt_sim, gwt_cell_ids = build_gwt_sim(
         test.name, test.workspace, test.workspace / "gwt", test.targets
     )
@@ -248,9 +240,7 @@ def check_output(idx, test):
         # plt.clabel(headctr)
         # plt.colorbar(headmesh, shrink=0.25, ax=ax, label="Head", location="right")
         concmesh = pmv.plot_array(conc, cmap="jet")
-        concctr = pmv.contour_array(
-            conc, levels=(0.0001, 0.001, 0.01, 0.1), colors="y"
-        )
+        concctr = pmv.contour_array(conc, levels=(0.0001, 0.001, 0.01, 0.1), colors="y")
         plt.clabel(concctr)
         plt.colorbar(
             concmesh,
@@ -301,9 +291,7 @@ def check_output(idx, test):
         def get_meshes(model, pathlines):
             vtk = Vtk(model=model, binary=False, smooth=False)
             vtk.add_model(model)
-            vtk.add_pathline_points(
-                to_mp7_pathlines(pathlines.to_records(index=False))
-            )
+            vtk.add_pathline_points(to_mp7_pathlines(pathlines.to_records(index=False)))
             grid_mesh, path_mesh = vtk.to_pyvista()
             grid_mesh.rotate_x(-100, point=axes.origin, inplace=True)
             grid_mesh.rotate_z(90, point=axes.origin, inplace=True)

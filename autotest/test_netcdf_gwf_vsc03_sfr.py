@@ -195,9 +195,7 @@ def check_output(idx, test, export, gridded_input):
                     assert np.allclose(
                         np.array(rec[l]).flatten(),
                         # xds[f"head_l{l+1}"][timestep, :].data,
-                        xds[f"head_l{l+1}"][timestep, :]
-                        .fillna(1.00000000e30)
-                        .data,
+                        xds[f"head_l{l+1}"][timestep, :].fillna(1.00000000e30).data,
                     ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
                 timestep += 1
             elif export == "structured":

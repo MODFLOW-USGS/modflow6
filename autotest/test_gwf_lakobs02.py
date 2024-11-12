@@ -48,9 +48,7 @@ def build_models(idx, test):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name
-    )  # , newtonoptions="newton")
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)  # , newtonoptions="newton")
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,

@@ -113,9 +113,7 @@ def write_md(memvar_list, fmd):
             varname,
             dims,
         ) = l
-        write_md_record(
-            fmd, source_name, current_module, typename, varname, dims
-        )
+        write_md_record(fmd, source_name, current_module, typename, varname, dims)
     return
 
 
@@ -156,9 +154,7 @@ def write_tex_header(f):
         "\\caption{List of variables stored in memory manager } \\tabularnewline \n\n"
     )
     f.write("\\hline\n\\hline\n")
-    f.write(
-        "\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n"
-    )
+    f.write("\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n")
     f.write("\\hline\n\\endfirsthead\n\n\n")
 
     f.write("\captionsetup{textformat=simple}\n")
@@ -168,16 +164,12 @@ def write_tex_header(f):
     )
 
     f.write("\n\\hline\n\\hline\n")
-    f.write(
-        "\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n"
-    )
+    f.write("\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n")
     f.write("\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n")
 
 
 def write_tex_footer(f):
-    f.write(
-        "\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n"
-    )
+    f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")
     f.close()
     return
 

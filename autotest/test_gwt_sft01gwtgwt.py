@@ -176,9 +176,7 @@ def build_models(idx, test):
     if across_model_mvr_on:
         maxmvr, maxpackages = 1, 2
         mvrpack_sim = [["flow1", "sfr-1"], ["flow2", "sfr-1"]]
-        mvrspd = [
-            ["flow1", "sfr-1", ncol - 1, "flow2", "sfr-1", 0, "FACTOR", 1.00]
-        ]
+        mvrspd = [["flow1", "sfr-1", ncol - 1, "flow2", "sfr-1", 0, "FACTOR", 1.00]]
         gwfgwf.mvr.initialize(
             modelnames=True,
             maxmvr=maxmvr,
@@ -459,9 +457,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )

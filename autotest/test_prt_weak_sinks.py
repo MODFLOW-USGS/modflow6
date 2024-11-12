@@ -86,9 +86,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # create prp package
     flopy.mf6.ModflowPrtprp(
@@ -202,9 +200,7 @@ def build_models(idx, test):
     )
 
     # build mp7 model
-    mp7_sim = build_mp7_sim(
-        test.name, test.workspace / "mp7", test.targets["mp7"], gwf
-    )
+    mp7_sim = build_mp7_sim(test.name, test.workspace / "mp7", test.targets["mp7"], gwf)
     return gwf_sim, prt_sim, mp7_sim
 
 

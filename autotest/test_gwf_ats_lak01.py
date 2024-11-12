@@ -298,9 +298,7 @@ def budcsv_to_cumulative(fpth):
     budcsv_cumulative["time"][1:] = budcsv["time"][:]
     for name in budcsv.dtype.names[1:]:
         for i in range(nrow):
-            dt = (
-                budcsv_cumulative["time"][i + 1] - budcsv_cumulative["time"][i]
-            )
+            dt = budcsv_cumulative["time"][i + 1] - budcsv_cumulative["time"][i]
             budcsv_cumulative[name][i + 1] = (
                 budcsv_cumulative[name][i] + budcsv[name][i] * dt
             )
@@ -314,9 +312,7 @@ def listfile_to_cumulative(listfile):
     return mflist.get_cumulative()
 
 
-def compare_listbudget_and_budgetcsv(
-    listfile, budcsvfile, verbose, check, atol
-):
+def compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol):
     """Read a budgetcsv file, convert it to a cumulative budget
     and then compare it with the cumulative budget in a list file"""
 
@@ -331,9 +327,7 @@ def compare_listbudget_and_budgetcsv(
 
     # if print budget is not active for every time step, then the list file
     # budget may not be complete and comparable to budcsvfile
-    assert (
-        budcsvcum.shape[0] - 1 == budlstcum.shape[0]
-    ), "File sizes are different."
+    assert budcsvcum.shape[0] - 1 == budlstcum.shape[0], "File sizes are different."
 
     allclose_list = []
     for name1 in budlstcum.dtype.names[3:]:
@@ -351,9 +345,7 @@ def compare_listbudget_and_budgetcsv(
                     msg = f"{name2} is same: {allclose}.  Min diff: {mindiff} Max diff {maxdiff}"
                     if verbose:
                         print(msg)
-                    allclose_list.append(
-                        (allclose, name1, mindiff, maxdiff, msg)
-                    )
+                    allclose_list.append((allclose, name1, mindiff, maxdiff, msg))
 
     if check:
         for rec in allclose_list:
@@ -399,9 +391,7 @@ def check_output(idx, test):
             node, node2, q = r
             n0 = node - 1
             if ilak[n0] == 1:
-                kk, ii, jj = get_kij_from_node(
-                    n0, botm.shape[1], botm.shape[2]
-                )
+                kk, ii, jj = get_kij_from_node(n0, botm.shape[1], botm.shape[2])
                 tp = botm[kk - 1, ii, jj]
                 if stage_current > tp and q != 0.0:
                     all_passed = False
@@ -484,9 +474,7 @@ def check_output(idx, test):
     verbose = True
     check = True
     atol = 0.001
-    compare_listbudget_and_budgetcsv(
-        listfile, budcsvfile, verbose, check, atol
-    )
+    compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol)
 
 
 @pytest.mark.slow

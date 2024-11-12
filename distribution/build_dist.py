@@ -30,9 +30,7 @@ DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 # OS-specific extensions
 SYSTEM = platform.system()
 EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
-LIB_EXT = (
-    ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
-)
+LIB_EXT = ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
 SCR_EXT = ".bat" if SYSTEM == "Windows" else ".sh"
 MF6_EXE = f"mf6{EXE_EXT}"
 
@@ -117,18 +115,12 @@ def setup_examples(
     examples_path = Path(examples_path).expanduser().absolute()
 
     # find and download example models distribution from latest examples release
-    latest = get_release(
-        "MODFLOW-USGS/modflow6-examples", tag="latest", verbose=True
-    )
+    latest = get_release("MODFLOW-USGS/modflow6-examples", tag="latest", verbose=True)
     assets = latest["assets"]
     print(f"Found {len(assets)} assets from the latest examples release:")
     pprint([a["name"] for a in assets])
-    asset = next(
-        iter([a for a in assets if a["name"].endswith("examples.zip")]), None
-    )
-    download_and_unzip(
-        asset["browser_download_url"], examples_path, verbose=True
-    )
+    asset = next(iter([a for a in assets if a["name"].endswith("examples.zip")]), None)
+    download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # filter examples for models selected for release
     # and omit any excluded models
@@ -159,9 +151,7 @@ def setup_examples(
                 f.write(runbatloc + "\n")
                 if SYSTEM == "Windows":
                     f.write("echo." + "\n")
-                    f.write(
-                        "echo Run complete.  Press any key to continue" + "\n"
-                    )
+                    f.write("echo Run complete.  Press any key to continue" + "\n")
                     f.write("pause>nul" + "\n")
 
             if SYSTEM != "Windows":
@@ -195,9 +185,7 @@ def setup_examples(
                 print(f"Execute permission set for {script_path}")
 
 
-def build_programs_meson(
-    build_path: PathLike, bin_path: PathLike, force: bool = False
-):
+def build_programs_meson(build_path: PathLike, bin_path: PathLike, force: bool = False):
     build_path = Path(build_path).expanduser().absolute()
     bin_path = Path(bin_path).expanduser().absolute()
 
@@ -283,9 +271,7 @@ def test_build_makefiles(tmp_path):
     assert (tmp_path / "make" / "makefile").is_file()
     assert (tmp_path / "make" / "makedefaults").is_file()
     assert (tmp_path / "utils" / "zonebudget" / "make" / "makefile").is_file()
-    assert (
-        tmp_path / "utils" / "zonebudget" / "make" / "makedefaults"
-    ).is_file()
+    assert (tmp_path / "utils" / "zonebudget" / "make" / "makedefaults").is_file()
     assert (tmp_path / "utils" / "mf5to6" / "make" / "makefile").is_file()
     assert (tmp_path / "utils" / "mf5to6" / "make" / "makedefaults").is_file()
 

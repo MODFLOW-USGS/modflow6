@@ -250,10 +250,7 @@ def check_output(idx, test):
     for v in stage_all[-1].flatten():
         print(f"{v:18.8f},")
 
-    msg = (
-        "Simulated stage does not match with the answer "
-        "stored from a previous run."
-    )
+    msg = "Simulated stage does not match with the answer stored from a previous run."
     assert np.allclose(stage_all[-1].flatten(), stage_answer, atol=1.0e-5), msg
 
 

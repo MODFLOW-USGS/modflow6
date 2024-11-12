@@ -85,9 +85,7 @@ def build_models(idx, test):
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.MFModel(
@@ -182,9 +180,7 @@ def build_models(idx, test):
         gwf,
         budget_filerecord=f"{name}.cbc",
         head_filerecord=f"{name}.hds",
-        headprintrecord=[
-            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         filename=f"{name}.oc",
@@ -219,9 +215,7 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpthobs}"'
     try:
-        tcmfr = np.genfromtxt(
-            fpthmfr, names=True, delimiter=",", deletechars=""
-        )
+        tcmfr = np.genfromtxt(fpthmfr, names=True, delimiter=",", deletechars="")
     except:
         assert False, f'could not load data from "{fpthmfr}"'
 

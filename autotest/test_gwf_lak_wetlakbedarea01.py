@@ -247,9 +247,7 @@ def build_models(idx, test):
     # Instantiate LAK package
     lak_conn = []
     if use_embedded_lak:
-        lak_conn.append(
-            [0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0]
-        )
+        lak_conn.append([0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0])
     else:
         lak_conn.append(
             [
@@ -264,9 +262,7 @@ def build_models(idx, test):
                 10.0,
             ]
         )
-        lak_conn.append(
-            [0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0]
-        )
+        lak_conn.append([0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0])
 
     lak_packagedata = [0, lak_strt, len(lak_conn)]
     budpth = f"{gwfname}.lak.cbc"
@@ -354,9 +350,7 @@ def check_output(idx, test):
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
+    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage

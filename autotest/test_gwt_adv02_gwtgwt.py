@@ -99,9 +99,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     return gwf
 
 
-def get_gwt_model(
-    sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
-):
+def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
     delc = 1.0
@@ -147,9 +145,7 @@ def get_gwt_model(
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -170,9 +166,7 @@ def build_models(idx, test):
 
     # build MODFLOW 6 files
     ws = test.workspace
-    sim = flopy.mf6.MFSimulation(
-        sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws)
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
@@ -183,9 +177,7 @@ def build_models(idx, test):
 
     for imodel in range(number_of_models):
         if imodel == 0:
-            welspd = {
-                0: [[(k, 0, 0), 1.0, concentration] for k in range(nlay)]
-            }
+            welspd = {0: [[(k, 0, 0), 1.0, concentration] for k in range(nlay)]}
         else:
             welspd = None
 
@@ -319,9 +311,7 @@ def check_output(idx, test):
     for imodel in range(number_of_models):
         gwtname = f"transport{imodel + 1}"
         fpth = pl.Path(test.workspace) / gwtname / f"{gwtname}.ucn"
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc = cobj.get_data()
         conclist.append(conc)
     conc_sim = np.hstack(conclist)

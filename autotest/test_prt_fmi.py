@@ -90,22 +90,16 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # convert mp7 to prt release points and check against expectation
     partdata = get_partdata(prt.modelgrid, FlopyReadmeCase.releasepts_mp7)
     coords = partdata.to_coords(prt.modelgrid)
     if "bprp" in name:
         # bad cell indices!
-        releasepts = [
-            (i, 0, 1, 1, c[0], c[1], c[2]) for i, c in enumerate(coords)
-        ]
+        releasepts = [(i, 0, 1, 1, c[0], c[1], c[2]) for i, c in enumerate(coords)]
     else:
-        releasepts = [
-            (i, 0, 0, 0, c[0], c[1], c[2]) for i, c in enumerate(coords)
-        ]
+        releasepts = [(i, 0, 0, 0, c[0], c[1], c[2]) for i, c in enumerate(coords)]
         assert np.allclose(FlopyReadmeCase.releasepts_prt, releasepts)
 
     # create prp package
@@ -291,8 +285,7 @@ def check_output(idx, test):
     ]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
 

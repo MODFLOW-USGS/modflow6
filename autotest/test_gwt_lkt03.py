@@ -50,9 +50,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -134,17 +132,11 @@ def build_models(idx, test):
     con_data = []
     # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     # lake 1
-    con_data.append(
-        (0, 0, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
-    )
+    con_data.append((0, 0, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth))
     # lake 2
-    con_data.append(
-        (1, 0, (0, 0, 3), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
-    )
+    con_data.append((1, 0, (0, 0, 3), "VERTICAL", DNODATA, 10, 10, connlen, connwidth))
     # lake 3
-    con_data.append(
-        (2, 0, (0, 0, 4), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
-    )
+    con_data.append((2, 0, (0, 0, 4), "VERTICAL", DNODATA, 10, 10, connlen, connwidth))
 
     p_data = [
         (0, "RAINFALL", 0.1),

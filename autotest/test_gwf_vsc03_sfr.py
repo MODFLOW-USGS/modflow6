@@ -513,9 +513,7 @@ def check_output(idx, test):
             )
 
             # lower reaches
-            assert abs(stored_ans_dn[-(i + 1)]) < abs(
-                with_vsc_bud_last[-(i + 1), 2]
-            ), (
+            assert abs(stored_ans_dn[-(i + 1)]) < abs(with_vsc_bud_last[-(i + 1), 2]), (
                 "GW/SW not as expected in lower reaches of viscosity test "
                 "problem that uses SFR.  This test activates the VSC package that "
                 "should elicit a known relative change in the GW/SW exchange"

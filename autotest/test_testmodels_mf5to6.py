@@ -97,9 +97,7 @@ def test_model(
     if compare == "mf6_regression":
         copytree(mf5to6_workspace, mf6_workspace / compare)
     else:
-        setup_mf6_comparison(
-            mf5to6_workspace, mf6_workspace, compare, overwrite=True
-        )
+        setup_mf6_comparison(mf5to6_workspace, mf6_workspace, compare, overwrite=True)
 
     # run the test
     test.run()

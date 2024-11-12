@@ -162,9 +162,7 @@ def get_model(idx, workspace):
         sim_ws=str(workspace),
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(
@@ -183,9 +181,7 @@ def get_model(idx, workspace):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -355,9 +351,7 @@ def check_output(idx, test):
     msg = f"maximum absolute total-compaction difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
-    )
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out")
     with open(fpth, "w") as f:
         for i in range(diff.shape[0]):
             line = f"{tc0['time'][i]:10.2g}"
@@ -419,9 +413,7 @@ def check_output(idx, test):
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
-    )
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out")
     with open(fpth, "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:

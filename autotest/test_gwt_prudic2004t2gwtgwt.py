@@ -236,9 +236,7 @@ def build_models(idx, test):
     return sim, regression
 
 
-def sfr_packagedata_to_list(
-    fname, gwf, boundnames=False, convert_to_zero_base=True
-):
+def sfr_packagedata_to_list(fname, gwf, boundnames=False, convert_to_zero_base=True):
     dt = flopy.mf6.ModflowGwfsfr.packagedata.dtype(
         gwf, cellid_expanded=True, boundnames=boundnames, timeseries=False
     )
@@ -265,9 +263,7 @@ def sfr_connectiondata_to_list(fname, convert_to_zero_base=True):
     with open(fname) as f:
         cd_list = [[int(i) for i in s.strip().split()] for s in f.readlines()]
     if convert_to_zero_base:
-        cd_list = [
-            [np.sign(irch) * (abs(irch) - 1) for irch in l] for l in cd_list
-        ]
+        cd_list = [[np.sign(irch) * (abs(irch) - 1) for irch in l] for l in cd_list]
     return cd_list
 
 
@@ -325,17 +321,13 @@ def build_gwfgwt_combo(
         gwf,
         budget_filerecord=f"{gwfname}.bud",
         head_filerecord=f"{gwfname}.hds",
-        headprintrecord=[
-            ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
     if rch_on:
-        rch = flopy.mf6.ModflowGwfrcha(
-            gwf, recharge={0: 4.79e-3}, pname="RCH-1"
-        )
+        rch = flopy.mf6.ModflowGwfrcha(gwf, recharge={0: 4.79e-3}, pname="RCH-1")
 
     if icombo == 1:
         fname = "chd_north.dat"
@@ -349,9 +341,7 @@ def build_gwfgwt_combo(
         if len(ll) == 4:
             k, i, j, hd = ll
             chdlist.append([int(k) - 1, int(i) - 1, int(j) - 1, float(hd)])
-    chd = flopy.mf6.ModflowGwfchd(
-        gwf, stress_period_data=chdlist, pname="CHD-1"
-    )
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist, pname="CHD-1")
 
     if sfr_on:
         if icombo == 1:
@@ -737,19 +727,13 @@ def make_concentration_vs_time(sim, ws, ans_lak1, ans_sfr3, ans_sfr4):
         times = np.array(times) / 365.0
         if lkaconc is not None:
             plt.plot(times, lkaconc[:, 0], "b-", label="Lake 1")
-            plt.plot(
-                times, ans_lak1, ls="none", marker="o", mfc="none", mec="b"
-            )
+            plt.plot(times, ans_lak1, ls="none", marker="o", mfc="none", mec="b")
         if sft3outflowconc is not None:
             plt.plot(times, sft3outflowconc, "r-", label="Stream segment 3")
-            plt.plot(
-                times, ans_sfr3, ls="none", marker="o", mfc="none", mec="r"
-            )
+            plt.plot(times, ans_sfr3, ls="none", marker="o", mfc="none", mec="r")
         if sft4outflowconc is not None:
             plt.plot(times, sft4outflowconc, "g-", label="Stream segment 4")
-            plt.plot(
-                times, ans_sfr4, ls="none", marker="o", mfc="none", mec="g"
-            )
+            plt.plot(times, ans_sfr4, ls="none", marker="o", mfc="none", mec="g")
         plt.legend()
         plt.ylim(0, 50)
         plt.xlim(0, 25)
@@ -798,9 +782,7 @@ def make_head_map(sim, ws):
         pmv.plot_array(lakibd, masked_values=[0], alpha=0.2)
         pmv.plot_ibound(idomain)
         pmv.plot_bc(name="CHD-1", color="blue")
-        cs = pmv.contour_array(
-            head_global, levels=levels, masked_values=[1.0e30]
-        )
+        cs = pmv.contour_array(head_global, levels=levels, masked_values=[1.0e30])
         ax.clabel(cs, cs.levels[::5], fmt="%1.0f", colors="b")
         ax.set_title(f"Model layer {ilay + 1}")
 

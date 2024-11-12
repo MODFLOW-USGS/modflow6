@@ -44,9 +44,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -249,9 +247,7 @@ def build_models(idx, test):
         ic = flopy.mf6.ModflowGwtic(gwt, strt=0.000, filename=f"{gwtname}.ic")
 
         # advection
-        adv = flopy.mf6.ModflowGwtadv(
-            gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
-        )
+        adv = flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv")
 
         # dispersion
         diffc = 0.0
@@ -266,9 +262,7 @@ def build_models(idx, test):
 
         # storage
         porosity = 0.30
-        sto = flopy.mf6.ModflowGwtmst(
-            gwt, porosity=porosity, filename=f"{gwtname}.sto"
-        )
+        sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity, filename=f"{gwtname}.sto")
 
         mwt_obs = {
             (gwtname + ".mwt.obs.csv",): [
@@ -402,9 +396,7 @@ def make_plot(sim):
 
     fname = gwtname + ".ucn"
     fname = os.path.join(ws, fname)
-    cobj = flopy.utils.HeadFile(
-        fname, text="CONCENTRATION"
-    )  # , precision='double')
+    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")  # , precision='double')
     conc = cobj.get_data()
 
     import matplotlib.pyplot as plt

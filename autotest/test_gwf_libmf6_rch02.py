@@ -76,9 +76,7 @@ def get_model(ws, name, exe, rech=rch_spd):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -241,9 +239,7 @@ def api_func(exe, idx, model_ws=None):
         est_iter = 0
         while est_iter < 100:
             # base simulation loop
-            has_converged = run_perturbation(
-                mf6, max_iter, new_recharge, rch_tag, rch
-            )
+            has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
             if not has_converged:
                 return False, open(output_file_path).readlines()
             h0 = head.reshape((nrow, ncol))[5, 5]
@@ -278,9 +274,7 @@ def api_func(exe, idx, model_ws=None):
                 rch += dr
 
         # solution with final estimated recharge for the timestep
-        has_converged = run_perturbation(
-            mf6, max_iter, new_recharge, rch_tag, rch
-        )
+        has_converged = run_perturbation(mf6, max_iter, new_recharge, rch_tag, rch)
         if not has_converged:
             return False, open(output_file_path).readlines()
 

@@ -57,9 +57,7 @@ def build_models(idx, test):
 
     # sfr data
     # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
-    package_data = [
-        (0, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 0, 0.0, 0)
-    ]
+    package_data = [(0, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 0, 0.0, 0)]
     connection_data = [(0)]
 
     sfr_obs = {

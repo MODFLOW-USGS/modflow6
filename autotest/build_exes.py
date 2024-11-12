@@ -23,9 +23,7 @@ def test_meson_build(bin_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        "Rebuild local development version of MODFLOW 6"
-    )
+    parser = argparse.ArgumentParser("Rebuild local development version of MODFLOW 6")
     parser.add_argument(
         "-p", "--path", help="path to bin directory", default=top_bin_path
     )

@@ -74,9 +74,7 @@ def get_gridprops(test, **kwargs):
 
     # add polygon for each refinement level
     polygon = [[(300, 300), (300, 700), (700, 700), (700, 300), (300, 300)]]
-    g.add_refinement_features(
-        [polygon], "polygon", refinement_levels, range(nlay)
-    )
+    g.add_refinement_features([polygon], "polygon", refinement_levels, range(nlay))
     g.build(verbose=False)
     return g.get_gridprops_disv()
 
@@ -100,9 +98,7 @@ def build_mf6_sim(idx, test, **kwargs):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=gwf_name, model_nam_file=gwf_name
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwf_name, model_nam_file=gwf_name)
     gwf.name_file.save_flows = True
     disv = flopy.mf6.ModflowGwfdisv(
         gwf,
@@ -136,9 +132,7 @@ def build_mf6_sim(idx, test, **kwargs):
     # create prt model
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
     flopy.mf6.ModflowGwfdisv(prt, length_units="FEET", **gridprops)
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
     rpts = [(50, 950), (45, 945), (55, 955)]
     rpts = [
         [i, 0, prt.modelgrid.intersect(x, y), x, y, 5.0]
@@ -280,9 +274,7 @@ def check_output(idx, test, snapshot):
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.parametrize("levels", [1, 2])
 @pytest.mark.parametrize("method", ["pollock", "ternary"])
-def test_mf6model(
-    idx, name, function_tmpdir, targets, levels, method, array_snapshot
-):
+def test_mf6model(idx, name, function_tmpdir, targets, levels, method, array_snapshot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,

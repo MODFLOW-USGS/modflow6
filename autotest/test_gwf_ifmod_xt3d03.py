@@ -99,9 +99,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -279,9 +277,7 @@ def create_gwf_model(sim, mname, dis_params):
         right_chd = []
     elif mname == "tr" or mname == "br":
         left_chd = []
-        right_chd = [
-            [(0, irow, ncol_split - 1), h_right] for irow in range(nrow_split)
-        ]
+        right_chd = [[(0, irow, ncol_split - 1), h_right] for irow in range(nrow_split)]
     chd_data = left_chd + right_chd
     chd_spd = {0: chd_data}
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)

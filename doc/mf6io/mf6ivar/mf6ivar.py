@@ -153,9 +153,7 @@ def parse_mf6var_file(fname):
                 else:
                     key = name
                 if key in vardict:
-                    raise ValueError(
-                        f"Variable already exists in dictionary: {k}"
-                    )
+                    raise ValueError(f"Variable already exists in dictionary: {k}")
                 vardict[key] = vd
             vd = {}
             continue
@@ -170,9 +168,7 @@ def parse_mf6var_file(fname):
             istart = line.index(" ")
             v = line[istart:].strip()
             if k in vd:
-                raise ValueError(
-                    f"Attribute already exists in dictionary: {k}"
-                )
+                raise ValueError(f"Attribute already exists in dictionary: {k}")
             vd[k] = v
 
     if len(vd) > 0:
@@ -276,9 +272,7 @@ def block_entry(varname, block, vardict, prefix="  "):
     return s
 
 
-def write_block(
-    vardict, block, blk_var_list, varexcludeprefix=None, indent=None
-):
+def write_block(vardict, block, blk_var_list, varexcludeprefix=None, indent=None):
     prepend = "" if indent is None else indent * " "
     s = prepend + f"BEGIN {block.upper()}"
     for variable in blk_var_list:
@@ -508,8 +502,7 @@ def get_examples(component):
     files = [
         filename
         for filename in sorted(os.listdir(EXAMPLES_DIR_PATH))
-        if component.lower() in filename.lower()
-        and "-obs" not in filename.lower()
+        if component.lower() in filename.lower() and "-obs" not in filename.lower()
     ]
     s = ""
     for idx, filename in enumerate(files):
@@ -560,12 +553,8 @@ def get_obs_table(component):
     s = ""
     if files:
         s += "#### Available Observation Types\n\n"
-        s += (
-            "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
-        )
-        s += (
-            "|----------------|------------------|-----|-----|-------------|\n"
-        )
+        s += "| Stress Package | Observation Type | ID1 | ID2 | Description |\n"
+        s += "|----------------|------------------|-----|-----|-------------|\n"
     for filename in files:
         fpth = os.path.join(COMMON_DIR_PATH, filename)
         with open(fpth, "r") as f:
@@ -665,9 +654,7 @@ def write_appendix(blocks):
             f.write(s)
             lastftype = ftype
 
-        f.write(
-            "\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n"
-        )
+        f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")
 
 
 def get_dfn_files(models):
@@ -725,23 +712,21 @@ def write_variables():
                 allblocks.append(b)
 
             # go through each block and write information
-            desc = "% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n"
+            desc = (
+                "% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n"
+            )
             for b in blocks:
                 blk_var_list = []
 
                 # Write the name of the block to the latex file
                 desc += f"\\item \\textbf{'{Block: ' + b.upper() + '}'}\n\n"
                 desc += "\\begin{description}\n"
-                desc += write_desc(
-                    vardict, b, blk_var_list, varexcludeprefix="dev_"
-                )
+                desc += write_desc(vardict, b, blk_var_list, varexcludeprefix="dev_")
                 desc += "\\end{description}\n"
 
                 with open(TEX_DIR_PATH / f"{fpath.stem}-{b}.dat", "w") as f:
                     s = (
-                        write_block(
-                            vardict, b, blk_var_list, varexcludeprefix="dev_"
-                        )
+                        write_block(vardict, b, blk_var_list, varexcludeprefix="dev_")
                         + "\n"
                     )
                     f.write(s)

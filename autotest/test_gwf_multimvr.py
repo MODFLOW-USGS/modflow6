@@ -484,9 +484,7 @@ def get_parent_mvr_info(frac):
     # return the appropriate mvr info for the current scenario
     mvrperioddata = [("WEL-1", 0, "SFR-parent", 10, "FACTOR", 1.0)]
     if frac is not None:
-        mvrperioddata.append(
-            ("SFR-parent", 15, "SFR-parent", 16, "FACTOR", frac)
-        )
+        mvrperioddata.append(("SFR-parent", 15, "SFR-parent", 16, "FACTOR", frac))
 
     mvrspd = {0: mvrperioddata}
 
@@ -578,9 +576,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
     for i in range(len(perlen)):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # Instantiate the gwf model (parent model)
     gwf = flopy.mf6.ModflowGwf(
@@ -997,9 +993,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    gwf_srch_str1 = (
-        " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
-    )
+    gwf_srch_str1 = " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
     gwf_srch_str2 = " WATER MOVER PACKAGE (MVR) FLOW RATES   "
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
 
@@ -1086,9 +1080,7 @@ def check_output(idx, test):
         gwf_transferred_50 = parent_sfr_mvr_amount / (
             parent_sfr_mvr_amount + sim_mvr_amount
         )
-        sim_transferred_50 = sim_mvr_amount / (
-            parent_sfr_mvr_amount + sim_mvr_amount
-        )
+        sim_transferred_50 = sim_mvr_amount / (parent_sfr_mvr_amount + sim_mvr_amount)
         assert np.allclose(
             np.array([gwf_transferred_50, sim_transferred_50]),
             np.array([0.5, 0.5]),
@@ -1103,9 +1095,7 @@ def check_output(idx, test):
         gwf_transferred_75 = parent_sfr_mvr_amount / (
             parent_sfr_mvr_amount + sim_mvr_amount
         )
-        sim_transferred_75 = sim_mvr_amount / (
-            parent_sfr_mvr_amount + sim_mvr_amount
-        )
+        sim_transferred_75 = sim_mvr_amount / (parent_sfr_mvr_amount + sim_mvr_amount)
         assert np.allclose(
             np.array([gwf_transferred_75, sim_transferred_75]),
             np.array([0.75, 0.25]),

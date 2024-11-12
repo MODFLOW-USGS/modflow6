@@ -86,9 +86,7 @@ tdis_rc = []
 for i in np.arange(nper):
     tdis_rc.append((perlen[i], nstp[i], ttsmult))
 
-Joules_added_for_1degC_rise = (
-    delr * delc * (top - botm[0]) * (1 - prsity) * cps * rhos
-)
+Joules_added_for_1degC_rise = delr * delc * (top - botm[0]) * (1 - prsity) * cps * rhos
 
 # ### Create MODFLOW 6 GWE
 #
@@ -111,9 +109,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
@@ -203,9 +199,7 @@ def build_models(idx, test):
     # ----------------------------------
     # Instantiating MODFLOW 6 GWE model
     # ----------------------------------
-    gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
-    )
+    gwe = flopy.mf6.ModflowGwe(sim, modelname=gwename, model_nam_file=f"{gwename}.nam")
     gwe.name_file.save_flows = True
 
     imsgwe = flopy.mf6.ModflowIms(
@@ -242,9 +236,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp1, pname="IC-2", filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp1, pname="IC-2", filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
@@ -283,9 +275,7 @@ def build_models(idx, test):
         pname="OC-1",
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -333,9 +323,7 @@ def check_output(idx, test):
 
     try:
         # load temperatures
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         temps = tobj.get_alldata()
     except:
         assert False, f'could not load temperature data from "{fpth}"'
@@ -349,9 +337,7 @@ def check_output(idx, test):
         "in stress period "
     )
     for index in np.arange(4):
-        assert np.isclose(temps[index, 0, 0, 0], known_ans[index]), msg0 + str(
-            index
-        )
+        assert np.isclose(temps[index, 0, 0, 0], known_ans[index]), msg0 + str(index)
 
 
 # - No need to change any code below

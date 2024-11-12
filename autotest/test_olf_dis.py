@@ -234,9 +234,7 @@ def check_grb_dis2d(fpth):
     assert np.allclose(
         grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
     ), "grb botm not correct"
-    assert (
-        grb.ia.shape[0] == grb.ncells + 1
-    ), "ia in grb file is not correct size"
+    assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
     assert np.allclose(
         grb.idomain.reshape((nrow, ncol)), idomain
@@ -263,21 +261,13 @@ def check_grb_disv2d(fpth):
         np.linspace(dx / 2, ncol * dx - dx / 2, ncol),
         np.linspace(dx * nrow - dx / 2.0, dx / 2, nrow),
     )
-    assert np.allclose(
-        grb._datadict["CELLX"], cellx.flatten()
-    ), "cellx is not right"
-    assert np.allclose(
-        grb._datadict["CELLY"], celly.flatten()
-    ), "celly is not right"
-    assert (
-        grb._datadict["IAVERT"].shape[0] == ncpl + 1
-    ), "iavert size not right"
+    assert np.allclose(grb._datadict["CELLX"], cellx.flatten()), "cellx is not right"
+    assert np.allclose(grb._datadict["CELLY"], celly.flatten()), "celly is not right"
+    assert grb._datadict["IAVERT"].shape[0] == ncpl + 1, "iavert size not right"
     assert (
         grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
     ), "javert size not right"
-    assert (
-        grb.ia.shape[0] == grb.ncells + 1
-    ), "ia in grb file is not correct size"
+    assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
     assert np.allclose(
         grb.idomain.reshape((ncpl,)), idomain.reshape((ncpl,))
