@@ -375,7 +375,8 @@ jobs:
         include:
           # intel mac, ifort
           - os: macos-13
-            compiler: gcc
+            compiler: intel-classic
+            version: "2021.7"
           # ubuntu, ifx
           - os: ubuntu-22.04
             compiler: intel
