@@ -39,7 +39,7 @@ Variables are organized into **blocks**. A block is a set of related input param
 # --------------------- component subcomponent block ---------------------
 ```
 
-A variable is specified by a set of attributes on adjacent one on each line, one attribute per line, following the general format:
+A variable is specified by a set of attributes, with one attribute per line, following the general format:
 
 ```
 name value
@@ -81,7 +81,7 @@ A MODFLOW 6 input variable is described by a set of attributes. Some attributes 
 The reader attribute indicates what reader is used by MODFLOW 6 for the information.  There are several reader types that result in specialized input instructions.  For example, the delr array of the DIS package is read using u1ddbl.  Because the MODFLOW 6 array readers often require a control record, when this reader type is specified, information about the control record is written.  For example, the following block identifies how delr is specified:
 
 ```
-block disdata
+block griddata
 name delr
 type double precision
 shape (ncol)
@@ -93,16 +93,16 @@ description is the is the column spacing in the row direction.
 This results in the following block description:
 
 ```
-BEGIN DISDATA
+BEGIN GRIDDATA
   DELR
     delr(ncol) -- U1DDBL
-END DISDATA
+END GRIDDATA
 ```
 
 The READARRAY reader is another reader that results in specialized input.  It allows for a LAYERED keyword to be specified.  The icelltype variable is read using readarray and is specified as:
 
 ```
-block npfdata
+block GRIDDATA
 name icelltype
 type integer
 shape (nodes)
@@ -117,10 +117,10 @@ description flag for each cell that specifies how saturated thickness is treated
 This results in the following block description:
 
 ```
-BEGIN NPFDATA
+BEGIN GRIDDATA
   ICELLTYPE [LAYERED]
     icelltype(nodes) -- READARRAY
-END NPFDATA
+END GRIDDATA
 ```
 
 ## Variable types
