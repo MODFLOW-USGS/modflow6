@@ -1,6 +1,6 @@
 # MODFLOW 6 input specification language
 
-MODFLOW 6 accepts input via **input files** which use a custom text-based format. The MODFLOW 6 input file format is specified by **definition (DFN) files**. Each definition file specifies the input expected for some MODFLOW 6 component (e.g. a simulation, model, or package).
+MODFLOW 6 accepts input via **input files** which use a custom text-based format. The MODFLOW 6 input file format is specified by **definition (DFN) files**. This document specifies the definition file format.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -27,7 +27,7 @@ MODFLOW 6 accepts input via **input files** which use a custom text-based format
 
 ## DFN file overview
 
-A DFN file is a text file enumerating **input variables** for a MODFLOW 6 component. An input variable is any value provided by the user to configure a MODFLOW 6 simulation. Each DFN file describes a single MODFLOW 6 input file and specifies zero or more variables.
+A DFN file is a text file enumerating **input variables** for a MODFLOW 6 component. An input variable is any value provided by the user to configure a MODFLOW 6 simulation. Each definition file specifies the input file expected for some MODFLOW 6 component (e.g. a simulation, model, or package) and specifies zero or more variables.
 
 Each variable is described by a set of attributes, some of which are required, some optional.
 
