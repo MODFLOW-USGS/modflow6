@@ -1,22 +1,22 @@
 # MODFLOW 6 input specification language
 
-MODFLOW 6 accepts input via **input files** which use a custom text-based format. The MODFLOW 6 input file format is specified by **definition (DFN) files**. Each definition file specifies the input expected for some MODFLOW 6 component (e.g. a simulation, model, or package). DFN files are primarily relevant to MODFLOW 6 developers and contributors, though users may find it helpful to peruse them.
+MODFLOW 6 accepts input via **input files** which use a custom text-based format. The MODFLOW 6 input file format is specified by **definition (DFN) files**. Each definition file specifies the input expected for some MODFLOW 6 component (e.g. a simulation, model, or package).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [DFN file overview](#dfn-file-overview)
-- [Input parameter attributes](#input-parameter-attributes)
-- [Input parameter types](#input-parameter-types)
+- [Variable attributes](#variable-attributes)
+  - [Reader Attribute](#reader-attribute)
+- [Variable types](#variable-types)
   - [Keyword](#keyword)
-  - [Strings](#strings)
-  - [Numerics](#numerics)
-  - [Recarrays](#recarrays)
-  - [Records](#records)
-  - [Repeating records](#repeating-records)
-  - [Keystrings](#keystrings)
-- [Reader Attribute](#reader-attribute)
-- [Common Text Strings](#common-text-strings)
+  - [String](#string)
+  - [Numeric](#numeric)
+  - [Recarray](#recarray)
+  - [Record](#record)
+    - [Repeating records](#repeating-records)
+  - [Keystring](#keystring)
+- [Text substitutions](#text-substitutions)
 - [Writing definition files](#writing-definition-files)
   - [Subpackages](#subpackages)
   - [Models](#models)
@@ -27,31 +27,35 @@ MODFLOW 6 accepts input via **input files** which use a custom text-based format
 
 ## DFN file overview
 
-A DFN file is a text file enumerating **input parameters** for a MODFLOW 6 component. An input parameter is any value provided by the user to configure a MODFLOW 6 simulation. Each DFN file describes a single MODFLOW 6 input file and specifies zero or more input parameters. Each input parameter is described by a set of attributes, some of which are required, some optional. Input parameters are delimited by empty lines.
+A DFN file is a text file enumerating **input variables** for a MODFLOW 6 component. An input variable is any value provided by the user to configure a MODFLOW 6 simulation. Each DFN file describes a single MODFLOW 6 input file and specifies zero or more variables.
+
+Each variable is described by a set of attributes, some of which are required, some optional.
 
 DFN files must contain only ASCII characters. DFN files may include comment lines, which must begin with "#".
 
-Input parameters are organized into **blocks**. A block is a set of related input parameters. Each block in a DFN file is conventionally preceded by a comment line according to the format:
+Variables are organized into **blocks**. A block is a set of related input parameters. Each block in a DFN file is conventionally preceded by a comment line according to the format:
 
 ```
 # --------------------- component subcomponent block ---------------------
 ```
 
-An input parameter is specified by a set of attributes on adjacent one on each line, one attribute per line, following the general format:
+A variable is specified by a set of attributes on adjacent one on each line, one attribute per line, following the general format:
 
 ```
 name value
 ```
 
-Some attribute values are optional.
+Some attribute values are optional. Variables are delimited by empty lines.
 
 DFN files should be named `component-subcomponent.dfn`, where the component and subcomponent are abbreviated acronyms or names. For instance, a groundwater flow (GWF) model's initial conditions (IC) package DFN file is named `gwf-ic.dfn`.
 
 DFN files are parsed to generate both source code and documentation.
 
-## Input parameter attributes
+**Note**: The DFN format is undergoing a migration to TOML. This involves transforming the flat variable representation into a tree with composite variables as nodes and scalars as leaves.
 
-A MODFLOW 6 input parameter is described by a set of attributes. Some attributes are optional and do not need to be specified (because they have a default value) and others are required. The following attributes are supported:
+## Variable attributes
+
+A MODFLOW 6 input variable is described by a set of attributes. Some attributes are optional and do not need to be specified (because they have a default value) and others are required. The following attributes are supported:
 
 | Attribute     | Description                                                            | Required | Default | Notes                                                                                                                                                         |
 |---------------|------------------------------------------------------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -72,7 +76,54 @@ A MODFLOW 6 input parameter is described by a set of attributes. Some attributes
 | numeric_index | Indicates that this is an index variable.                              | No       | False   | Indicates that FloPy should treat the parameter as zero-based.                                                                                                |
 | deprecated    | Indicates that the parameter has been deprecated.                      | No       | None    | Should a semantic version number, the version in which the parameter was deprecated. If this attribute is provided without a value, it is ignored.            |
 
-## Input parameter types
+### Reader Attribute
+
+The reader attribute indicates what reader is used by MODFLOW 6 for the information.  There are several reader types that result in specialized input instructions.  For example, the delr array of the DIS package is read using u1ddbl.  Because the MODFLOW 6 array readers often require a control record, when this reader type is specified, information about the control record is written.  For example, the following block identifies how delr is specified:
+
+```
+block disdata
+name delr
+type double precision
+shape (ncol)
+reader u1ddbl
+longname spacing along a row
+description is the is the column spacing in the row direction.
+```
+
+This results in the following block description:
+
+```
+BEGIN DISDATA
+  DELR
+    delr(ncol) -- U1DDBL
+END DISDATA
+```
+
+The READARRAY reader is another reader that results in specialized input.  It allows for a LAYERED keyword to be specified.  The icelltype variable is read using readarray and is specified as:
+
+```
+block npfdata
+name icelltype
+type integer
+shape (nodes)
+valid
+reader readarray
+layered true
+optional
+longname confined or convertible indicator
+description flag for each cell that specifies how saturated thickness is treated.  0 means saturated thickness is held constant;  $>$0 means saturated thickness varies with computed head when head is below the cell top; $<$0 means saturated thickness varies with computed head unless the THICKSTRT option is in effect.  When THICKSTRT is in effect, a negative value of icelltype indicates that saturated thickness will be computed as STRT-BOT and held constant.
+```
+
+This results in the following block description:
+
+```
+BEGIN NPFDATA
+  ICELLTYPE [LAYERED]
+    icelltype(nodes) -- READARRAY
+END NPFDATA
+```
+
+## Variable types
 
 The following input parameter types are supported.
 
@@ -104,7 +155,8 @@ END OPTIONS
 
 Note that the optional tag being set to true results in square brackets around NOGRB.
 
-### Strings
+### String
+
 As shown in the simple example above, a string type is simply a keyword followed by a text string.  This type allows the user to provide text information to MODFLOW 6.
 
 A simple example of a keyword is:
@@ -141,7 +193,7 @@ END OPTIONS
 
 In this case, the user would provide length_units directly without a preceding keyword.  Eliminating tags is used later to construct records consisting of multiple data entries.
 
-### Numerics
+### Numeric
 
 As you might expect, the integer and double precision types allow for specification of integer and double precision input by the user.  A simple example from the Solution Sparse Matrix Solver Nonlinear block is:
 
@@ -176,7 +228,7 @@ END NONLINEAR
 
 Note that in this case, both of the variables are required (optional false) and so they are not enclosed in brackets.
 
-### Recarrays
+### Recarray
 
 The recarray type is patterned after the recarray type that is available in the numpy package for Python.
 
@@ -254,7 +306,7 @@ BEGIN PERIOD
 END PERIOD
 ```
 
-### Records
+### Record
 
 A record type is similar to the recarray type, except that it doesn't have a shape.  A record can be just a list of values on one line.  A simple example of this is in the SMS Linear block, where we have the rcloserecord consisting of the inner_rclose and rclose_option variables.
 
@@ -295,14 +347,14 @@ BEGIN LINEAR
 END LINEAR
 ```
 
-### Repeating records
+#### Repeating records
 
 The recordrepeating type is the same as the record type.  We've given it another name to indicate that the user can specify more than on line.  The only place this is used at present is in the Output Control.
 
 
-### Keystrings
+### Keystring
 
-A keystring is a final record type.  A keystring identifies that a variable can specified using multiple different types of input.  It is most often used by the advanced packages to adjust individual comments of the package.  The following is an example of the mawsetting variable:
+A keystring is a union type.  A keystring identifies that a variable can specified using multiple different types of input.  It is most often used by the advanced packages to adjust individual comments of the package.  The following is an example of the mawsetting variable:
 
 ```
 block period
@@ -539,54 +591,9 @@ AUXILIARY auxname auxval
 \end{verbatim}
 ```
 
-## Reader Attribute
 
-The reader attribute indicates what reader is used by MODFLOW 6 for the information.  There are several reader types that result in specialized input instructions.  For example, the delr array of the DIS package is read using u1ddbl.  Because the MODFLOW 6 array readers often require a control record, when this reader type is specified, information about the control record is written.  For example, the following block identifies how delr is specified:
 
-```
-block disdata
-name delr
-type double precision
-shape (ncol)
-reader u1ddbl
-longname spacing along a row
-description is the is the column spacing in the row direction.
-```
-
-This results in the following block description:
-
-```
-BEGIN DISDATA
-  DELR
-    delr(ncol) -- U1DDBL
-END DISDATA
-```
-
-The READARRAY reader is another reader that results in specialized input.  It allows for a LAYERED keyword to be specified.  The icelltype variable is read using readarray and is specified as:
-
-```
-block npfdata
-name icelltype
-type integer
-shape (nodes)
-valid
-reader readarray
-layered true
-optional
-longname confined or convertible indicator
-description flag for each cell that specifies how saturated thickness is treated.  0 means saturated thickness is held constant;  $>$0 means saturated thickness varies with computed head when head is below the cell top; $<$0 means saturated thickness varies with computed head unless the THICKSTRT option is in effect.  When THICKSTRT is in effect, a negative value of icelltype indicates that saturated thickness will be computed as STRT-BOT and held constant.
-```
-
-This results in the following block description:
-
-```
-BEGIN NPFDATA
-  ICELLTYPE [LAYERED]
-    icelltype(nodes) -- READARRAY
-END NPFDATA
-```
-
-## Common Text Strings
+## Text substitutions
 
 Many of the MODFLOW 6 input variables share common description information.  This information can be defined in one place and then referenced as many times as needed throughout the definition files.  The definition file [./dfn/common.dfn](./dfn/common.dfn) is where common information is defined.  For example, there is a text string defined as:
 
@@ -609,8 +616,6 @@ description REPLACE auxnames {'{#1}': 'Groundwater Flow'}
 ```
 
 In the description attribute, the capital REPLACE instructs the processor to replace auxnames with the text string defined by auxnames in common.dfn.  Also included here is a Python dictionary, which instructs the processor to replace the text string '{#1}' with 'Groundwater Flow'.
-
-
 
 ## Writing definition files
 
