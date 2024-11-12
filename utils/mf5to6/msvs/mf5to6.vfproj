@@ -140,7 +140,6 @@
 		<File RelativePath="..\src\NWT\NWT1_xmd.f"/>
 		<File RelativePath="..\src\NWT\NWT1_xmdlib.f"/></Filter>
 		<Filter Name="Preproc">
-		<File RelativePath="..\src\Preproc\ArrayHandlers.f90"/>
 		<File RelativePath="..\src\Preproc\ConstantsPHMF.f90"/>
 		<File RelativePath="..\src\Preproc\Discretization3D.f90"/>
 		<File RelativePath="..\src\Preproc\DiscretizationBasePHMF.f90"/>
