@@ -25,7 +25,7 @@ module BoundInputContextModule
   !> @brief Pointer type for read state variable
   !<
   type ReadStateVarType
-    integer, pointer :: invar
+    integer(I4B), pointer :: invar
   end type ReadStateVarType
 
   !> @brief derived type for boundary package input context

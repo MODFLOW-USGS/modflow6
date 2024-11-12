@@ -1092,7 +1092,7 @@ contains
     integer(I4B) :: nunopn = 99
     character(len=:), allocatable :: line
     character(len=LINELENGTH) :: fname
-    logical :: exists
+    logical(LGP) :: exists
     real(DP) :: r
     character(len=*), parameter :: fmtocne = &
       &"('Specified OPEN/CLOSE file ',(A),' does not exist')"

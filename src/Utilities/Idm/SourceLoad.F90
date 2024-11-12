@@ -154,7 +154,7 @@ contains
     type(ModflowInputType) :: mf6_input, hpc_input
     character(len=LINELENGTH) :: hpc6_filename
     character(len=LINELENGTH) :: line
-    logical :: lexist
+    logical(LGP) :: lexist
 
     ! load mfsim.nam if it exists
     inquire (file=trim(adjustl(simfile)), exist=lexist)
@@ -188,7 +188,7 @@ contains
     type(ModflowInputType) :: mf6_input
     character(len=LENPACKAGENAME) :: source_type
     character(len=:), pointer :: tdis6
-    logical :: lexist
+    logical(LGP) :: lexist
 
     ! set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
