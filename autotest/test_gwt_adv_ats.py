@@ -50,9 +50,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # set dt0, dtmin, dtmax, dtadj, dtfailadj
     dt0 = 0.01
@@ -61,9 +59,7 @@ def build_models(idx, test):
     dtadj = 2.0
     dtfailadj = 5.0
     ats_filerecord = name + ".ats"
-    atsperiod = [
-        (0, dt0, dtmin, dtmax[i], dtadj, dtfailadj) for i in range(nper)
-    ]
+    atsperiod = [(0, dt0, dtmin, dtmax[i], dtadj, dtfailadj) for i in range(nper)]
     tdis.ats.initialize(
         maxats=len(atsperiod),
         perioddata=atsperiod,
@@ -219,9 +215,7 @@ def build_models(idx, test):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -265,9 +259,7 @@ def check_output(idx, test):
 
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc = cobj.get_data()
         times = cobj.times
     except:

@@ -48,9 +48,7 @@ def run_flow_model(dir, exe):
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=wsf, exe_name=exe)
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -254,9 +252,7 @@ def run_transport_model(dir, exe):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     gwt = flopy.mf6.ModflowGwt(
         sim,
@@ -296,15 +292,11 @@ def run_transport_model(dir, exe):
     ic = flopy.mf6.ModflowGwtic(gwt, strt=10.0, filename=f"{gwtname}.ic")
 
     # advection
-    adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
-    )
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv")
 
     # storage
     porosity = 1.0
-    sto = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=porosity, filename=f"{gwtname}.sto"
-    )
+    sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity, filename=f"{gwtname}.sto")
     # sources
     sourcerecarray = [
         ("WEL-1", "AUX", "CONCENTRATION"),
@@ -380,9 +372,7 @@ def run_transport_model(dir, exe):
         budget_filerecord=f"{gwtname}.bud",
         budgetcsv_filerecord=f"{gwtname}.bud.csv",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -431,9 +421,7 @@ def run_transport_model(dir, exe):
     # compare observation concs with binary file concs
     for i in range(7):
         oname = f"SFT{i+1}CONC"
-        assert np.allclose(
-            tc[oname][-1], csft[i]
-        ), f"{tc[oname][-1]} {csft[i]}"
+        assert np.allclose(tc[oname][-1], csft[i]), f"{tc[oname][-1]} {csft[i]}"
 
     simres = tc["SFT1CONC"]
     answer = [

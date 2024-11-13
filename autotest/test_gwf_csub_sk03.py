@@ -108,9 +108,7 @@ tsname = "FR"
 tsnames.append(tsname)
 sig0.append([(0, 9, 0), tsname])
 
-datestart = datetime.datetime.strptime(
-    "03/21/1938 00:00:00", "%m/%d/%Y %H:%M:%S"
-)
+datestart = datetime.datetime.strptime("03/21/1938 00:00:00", "%m/%d/%Y %H:%M:%S")
 train1 = 2.9635  # 3.9009
 train2 = 2.8274
 fcar1 = 0.8165
@@ -267,9 +265,7 @@ def get_model(idx, ws):
     sc = sske
     compression_indices = None
 
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -564,9 +560,7 @@ def check_output(idx, test):
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
-    )
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out")
     with open(fpth, "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:

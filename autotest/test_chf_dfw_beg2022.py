@@ -219,9 +219,7 @@ def make_plot(test, mfsim):
     x = df_mfswr["TOTTIME"] - 86400.0
     x = x / 60.0 / 60.0
     ax.plot(x, -df_mfswr["QCRFLOW"], "go:", mfc="none", label="MODFLOW-SWR")
-    ax.plot(
-        times / 60.0 / 60.0, qoutflow, "bo:", mfc="none", label="MODFLOW 6"
-    )
+    ax.plot(times / 60.0 / 60.0, qoutflow, "bo:", mfc="none", label="MODFLOW 6")
     ax.set_xlim(0, 24.0)
     ax.set_ylim(19, 26)
     plt.xlabel("time, in hours")

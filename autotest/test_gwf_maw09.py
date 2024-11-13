@@ -60,9 +60,7 @@ def build_models(idx, test):
         memory_print_option="summary",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[(20.0, 50, 1.1)]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[(20.0, 50, 1.1)])
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -143,9 +141,7 @@ def build_models(idx, test):
     )
 
     # storage
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, ss=0.0, sy=1.0, transient=True, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, ss=0.0, sy=1.0, transient=True, iconvert=1)
 
     # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = flopy.mf6.ModflowGwfmaw.packagedata.empty(gwf, maxbound=1)
@@ -156,9 +152,7 @@ def build_models(idx, test):
     mawpackagedata["ngwfnodes"] = 2
 
     # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(
-        gwf, maxbound=2
-    )
+    mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(gwf, maxbound=2)
     mawconnectiondata["icon"] = [0, 1]
     mawconnectiondata["cellid"] = cellids
     mawconnectiondata["scrn_top"] = 100.0
@@ -186,9 +180,7 @@ def build_models(idx, test):
             ("whead", "head", (0,)),
         ]
     }
-    maw.obs.initialize(
-        filename=opth, digits=20, print_input=True, continuous=obsdata
-    )
+    maw.obs.initialize(filename=opth, digits=20, print_input=True, continuous=obsdata)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(

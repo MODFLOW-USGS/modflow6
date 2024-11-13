@@ -276,9 +276,7 @@ def build_gwf_model(sim, gwfname, idx, head1=2.0, head2=2.0):
 def build_gwe_model(sim, gwename, idx):
     conn_type = conn_types[idx]
 
-    gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
-    )
+    gwe = flopy.mf6.ModflowGwe(sim, modelname=gwename, model_nam_file=f"{gwename}.nam")
     gwe.name_file.save_flows = True
 
     imsgwe = flopy.mf6.ModflowIms(
@@ -315,14 +313,10 @@ def build_gwe_model(sim, gwename, idx):
     )
 
     # Instantiating MODFLOW 6 energy transport initial temperature
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, pname="IC", filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, pname="IC", filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv"
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, pname="ADV", filename=f"{gwename}.adv")
 
     # Instantiating MODFLOW 6 energy transport dispersion package
     flopy.mf6.ModflowGwecnd(
@@ -362,9 +356,7 @@ def build_gwe_model(sim, gwename, idx):
         pname="OC",
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -460,9 +452,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     gwf1 = build_gwf_model(sim, gwfname + "-1", idx, 10.0, 7.0)
     gwf2 = build_gwf_model(sim, gwfname + "-2", idx, 4.0, 4.0)

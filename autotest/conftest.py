@@ -129,9 +129,7 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     if not config.getoption("--parallel"):
-        skip_parallel = pytest.mark.skip(
-            reason="need --parallel option to run"
-        )
+        skip_parallel = pytest.mark.skip(reason="need --parallel option to run")
         for item in items:
             if "parallel" in item.keywords:
                 item.add_marker(skip_parallel)

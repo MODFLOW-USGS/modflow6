@@ -61,10 +61,7 @@ def build_gwf_sim(name, ws, mf6):
     nlay = int(name[-1])
     botm = [FlopyReadmeCase.top - (k + 1) for k in range(nlay)]
     botm_data = np.array(
-        [
-            list(repeat(b, FlopyReadmeCase.nrow * FlopyReadmeCase.ncol))
-            for b in botm
-        ]
+        [list(repeat(b, FlopyReadmeCase.nrow * FlopyReadmeCase.ncol)) for b in botm]
     ).reshape((nlay, FlopyReadmeCase.nrow, FlopyReadmeCase.ncol))
     dis.nlay = nlay
     dis.botm.set_data(botm_data)
@@ -217,9 +214,7 @@ def build_models(idx, test):
     prt_sim = build_prt_sim(
         test.name, test.workspace, test.workspace / "prt", test.targets["mf6"]
     )
-    mp7_sim = build_mp7_sim(
-        test.name, test.workspace / "mp7", test.targets["mp7"], gwf
-    )
+    mp7_sim = build_mp7_sim(test.name, test.workspace / "mp7", test.targets["mp7"], gwf)
     return gwf_sim, prt_sim, mp7_sim
 
 
@@ -388,9 +383,7 @@ def check_output(idx, test):
         k, i, j = mg.intersect(x, y, z)
         nn = mg.get_node([k, i, j]) + 1
         neighbors = mg.neighbors(nn)
-        assert np.isclose(nn, icell, atol=1) or any(
-            (nn - 1) == n for n in neighbors
-        )
+        assert np.isclose(nn, icell, atol=1) or any((nn - 1) == n for n in neighbors)
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)

@@ -44,9 +44,7 @@ methods = [
 ]
 
 
-def build_prt_sim(
-    idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5
-):
+def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5):
     prt_ws = Path(prt_ws)
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
@@ -54,9 +52,7 @@ def build_prt_sim(
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
     tri = get_tri(prt_ws / "grid", targets)
     cell2d = tri.get_cell2d()
@@ -124,9 +120,7 @@ def build_prt_sim(
 
 
 def build_models(idx, test, exit_solve_tolerance=1e-7):
-    gwf_sim = build_gwf_sim(
-        test.name, test.workspace, test.targets, ["left", "botm"]
-    )
+    gwf_sim = build_gwf_sim(test.name, test.workspace, test.targets, ["left", "botm"])
     prt_sim = build_prt_sim(
         idx,
         test.name,
@@ -235,11 +229,7 @@ def check_output(idx, test, snapshot):
     prt_name = get_model_name(name, "prt")
     prt_track_csv_file = f"{prt_name}.prp.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-    endpts = (
-        pls.sort_values("t")
-        .groupby(["imdl", "iprp", "irpt", "trelease"])
-        .tail(1)
-    )
+    endpts = pls.sort_values("t").groupby(["imdl", "iprp", "irpt", "trelease"]).tail(1)
 
     # check pathline shape and endpoints
     assert pls.shape == (116, 16)
@@ -249,20 +239,14 @@ def check_output(idx, test, snapshot):
     # plot results if enabled
     plot = False
     if plot:
-        plot_output(
-            name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png"
-        )
+        plot_output(name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png")
 
     # check pathlines against snapshot
-    assert snapshot == pls.drop("name", axis=1).round(3).to_records(
-        index=False
-    )
+    assert snapshot == pls.drop("name", axis=1).round(3).to_records(index=False)
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(
-    idx, name, function_tmpdir, targets, benchmark, array_snapshot
-):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,

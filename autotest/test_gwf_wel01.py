@@ -173,15 +173,15 @@ def check_output(idx, test):
     # MODFLOW 6 AFR CSV output file
     fpth = os.path.join(test.workspace, "wel01.afr.csv")
     try:
-        afroutput = np.genfromtxt(
-            fpth, names=True, delimiter=",", deletechars=""
-        )
+        afroutput = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     a1 = afroutput["rate-requested"]
     a2 = afroutput["rate-actual"] + afroutput["wel-reduction"]
-    errmsg = "Auto flow reduce requested rate must equal actual rate plus reduced rate.\n"
+    errmsg = (
+        "Auto flow reduce requested rate must equal actual rate plus reduced rate.\n"
+    )
     errmsg += f"{a1} /= {a2}"
     assert np.allclose(a1, a2), errmsg
 

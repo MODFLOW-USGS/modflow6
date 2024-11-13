@@ -216,9 +216,7 @@ def build_models(idx, test, ener_input):
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, pname="IC-HD", filename=f"{gwfname}.ic"
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, pname="IC-HD", filename=f"{gwfname}.ic")
 
     # Node property flow
     flopy.mf6.ModflowGwfnpf(
@@ -308,9 +306,7 @@ def build_models(idx, test, ener_input):
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGweic(
-        gwe, strt=T_0, pname="IC-1", filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=T_0, pname="IC-1", filename=f"{gwename}.ic")
 
     # Advection
     flopy.mf6.ModflowGweadv(
@@ -389,9 +385,7 @@ def build_models(idx, test, ener_input):
         gwe,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )

@@ -95,9 +95,7 @@ def get_model(dir, name):
         memory_print_option="all",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -114,9 +112,7 @@ def get_model(dir, name):
 
     # boundary for submodels on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
+        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
@@ -359,9 +355,7 @@ def check_interface_models(mf6):
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_1, "GC")
     idxToGlobalIdx_1 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_1) == 12
-    assert np.array_equal(
-        idxToGlobalIdx_1, [3, 4, 5, 21, 22, 8, 9, 10, 26, 27, 14, 15]
-    )
+    assert np.array_equal(idxToGlobalIdx_1, [3, 4, 5, 21, 22, 8, 9, 10, 26, 27, 14, 15])
     addr = mf6.get_var_address("ia", gfc_topleft_1, "gc/con")
     ia_1 = mf6.get_value_ptr(addr)
     addr = mf6.get_var_address("ja", gfc_topleft_1, "gc/con")
@@ -398,9 +392,7 @@ def check_interface_models(mf6):
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_2, "GC")
     idxToGlobalIdx_2 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_2) == 10
-    assert np.array_equal(
-        idxToGlobalIdx_2, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    )
+    assert np.array_equal(idxToGlobalIdx_2, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
 
 
 @requires_pkg("modflowapi")

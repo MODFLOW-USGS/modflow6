@@ -231,9 +231,7 @@ def build_gwe_model(idx, sim, gwename, side="left"):
         xorigin = ncol * delr
 
     # Instantiate GWE model
-    gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file=f"{gwename}.nam"
-    )
+    gwe = flopy.mf6.ModflowGwe(sim, modelname=gwename, model_nam_file=f"{gwename}.nam")
     gwe.name_file.save_flows = True
 
     # Instantiating MODFLOW 6 transport discretization package
@@ -309,9 +307,7 @@ def build_gwe_model(idx, sim, gwename, side="left"):
         pname="OC" + pckg_suffix,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -343,9 +339,7 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # left model
     gwf1 = build_gwf_model(sim, "gwfleft", side="left")
@@ -472,12 +466,8 @@ def check_output(idx, test):
         fpth2 = os.path.join(test.workspace, gwename2)
 
         # load temperatures
-        tobj1 = flopy.utils.HeadFile(
-            fpth1, precision="double", text="TEMPERATURE"
-        )
-        tobj2 = flopy.utils.HeadFile(
-            fpth2, precision="double", text="TEMPERATURE"
-        )
+        tobj1 = flopy.utils.HeadFile(fpth1, precision="double", text="TEMPERATURE")
+        tobj2 = flopy.utils.HeadFile(fpth2, precision="double", text="TEMPERATURE")
         temps1 = tobj1.get_alldata()
         temps2 = tobj2.get_alldata()
         temps_all = np.concatenate((temps1, temps2), axis=3)

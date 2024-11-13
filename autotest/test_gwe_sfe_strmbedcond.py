@@ -530,9 +530,7 @@ def build_models(idx, test):
     # Instantiating MODFLOW 6 transport source-sink mixing package
     # [b/c at least one boundary back is active (SFR), ssm must be on]
     sourcerecarray = [("CHD-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename=f"{gwename}.ssm"
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=sourcerecarray, filename=f"{gwename}.ssm")
 
     # Instantiate Streamflow Energy Transport package
     sfepackagedata = []
@@ -567,9 +565,7 @@ def build_models(idx, test):
         gwe,
         temperature_filerecord=f"{gwename}.ucn",
         saverecord=[("TEMPERATURE", "ALL")],
-        temperatureprintrecord=[
-            ("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         filename=f"{gwename}.oc",
     )
@@ -629,30 +625,26 @@ def check_output(idx, test):
 
     # Sub-scenario checks
     # initialize search term
-    srchStr = "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    srchStr = (
+        "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    )
     fname = "gwe-" + name + ".lst"
     fname = os.path.join(test.workspace, fname)
 
     # gw exchng (item 'GWF') should be zero in heat transport budget
     T_in, T_out, in_bud_lst, out_bud_lst = get_bud(fname, srchStr)
-    assert np.isclose(
-        T_in, T_out, atol=0.1
-    ), "There is a heat budget discrepancy"
+    assert np.isclose(T_in, T_out, atol=0.1), "There is a heat budget discrepancy"
 
     # Get temperature of streamwater
     fname1 = "gwe-" + name + ".sfe.bin"
     fname1 = os.path.join(test.workspace, fname1)
-    sfeobj = flopy.utils.HeadFile(
-        fname1, precision="double", text="TEMPERATURE"
-    )
+    sfeobj = flopy.utils.HeadFile(fname1, precision="double", text="TEMPERATURE")
     sfe_temps = sfeobj.get_alldata()
 
     # Get temperature of gw
     fname2 = "gwe-" + name + ".ucn"
     fname2 = os.path.join(test.workspace, fname2)
-    gwobj = flopy.utils.HeadFile(
-        fname2, precision="double", text="TEMPERATURE"
-    )
+    gwobj = flopy.utils.HeadFile(fname2, precision="double", text="TEMPERATURE")
     gw_temps = gwobj.get_alldata()
 
     msg1 = "Budget item 'GWF' should be 0.0 for this scenario"
@@ -684,9 +676,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
         else:
@@ -710,9 +700,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
         else:
@@ -736,9 +724,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp < 0.0, msg4
 
         else:
@@ -768,9 +754,7 @@ def check_output(idx, test):
             )
             assert slp > 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
 

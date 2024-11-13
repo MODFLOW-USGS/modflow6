@@ -65,9 +65,7 @@ DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 # OS-specific extensions
 SYSTEM = platform.system()
 EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
-LIB_EXT = (
-    ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
-)
+LIB_EXT = ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
 
 # publications included in full dist docs
 PUB_URLS = [
@@ -88,9 +86,7 @@ def download_benchmarks(
 
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"  # todo make configurable
-    repo = (
-        f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
-    )
+    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
     artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(
         artifacts,
@@ -100,16 +96,13 @@ def download_benchmarks(
     artifacts = [
         a
         for a in artifacts
-        if a["workflow_run"]["head_branch"]
-        == "develop"  # todo make configurable
+        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
     ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(
-            repo, id=most_recent["id"], path=output_path, verbose=verbose
-        )
+        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
@@ -149,9 +142,7 @@ def build_benchmark_tex(
 
     # download benchmark artifacts if any exist on GitHub
     if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(
-            BENCHMARKS_PATH, repo_owner=repo_owner
-        )
+        benchmarks_path = download_benchmarks(BENCHMARKS_PATH, repo_owner=repo_owner)
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
     if force or not benchmarks_path.is_file():
@@ -212,9 +203,7 @@ def build_deprecations_tex(force: bool = False):
     else:
         tex_path.unlink(missing_ok=True)
         with set_dir(RELEASE_NOTES_PATH):
-            out, err, ret = run_py_script(
-                "mk_deprecations.py", md_path, verbose=True
-            )
+            out, err, ret = run_py_script("mk_deprecations.py", md_path, verbose=True)
             assert not ret, out + err
 
     # check deprecations files exist
@@ -375,9 +364,7 @@ def build_pdfs(
                     buff = out + err
                     assert not ret, buff
                     if first:
-                        out, err, ret = run_cmd(
-                            "bibtex", tex_path.stem + ".aux"
-                        )
+                        out, err, ret = run_cmd("bibtex", tex_path.stem + ".aux")
                         buff = out + err
                         assert not ret or "I found no" in buff, buff
                         first = False
@@ -391,9 +378,7 @@ def build_pdfs(
         else:
             print(f"{tgt_path} already exists, nothing to do")
 
-        assert (
-            tgt_path.is_file()
-        ), f"Failed to build {tgt_path} from {tex_path}"
+        assert tgt_path.is_file(), f"Failed to build {tgt_path} from {tex_path}"
         assert tgt_path not in built_paths, f"Duplicate target: {tgt_path}"
         built_paths.add(tgt_path)
 
@@ -455,21 +440,15 @@ def build_documentation(
 
     if full:
         # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(
-            output_path=output_path, force=force, repo_owner=repo_owner
-        )
+        build_benchmark_tex(output_path=output_path, force=force, repo_owner=repo_owner)
 
         # download example docs
         pdf_name = "mf6examples.pdf"
         if force or not (output_path / pdf_name).is_file():
             latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
             assets = latest["assets"]
-            asset = next(
-                iter([a for a in assets if a["name"] == pdf_name]), None
-            )
-            download_and_unzip(
-                asset["browser_download_url"], output_path, verbose=True
-            )
+            asset = next(iter([a for a in assets if a["name"] == pdf_name]), None)
+            download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
 
         # download publications
         for url in PUB_URLS:

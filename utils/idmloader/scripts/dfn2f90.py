@@ -35,9 +35,7 @@ class Dfn2F90:
         self._subpackage = []
         self._verbose = verbose
 
-        self.component, self.subcomponent = self._dfnfspec.stem.upper().split(
-            "-"
-        )
+        self.component, self.subcomponent = self._dfnfspec.stem.upper().split("-")
 
         print(f"\nprocessing dfn => {self._dfnfspec}")
         self._set_var_d()
@@ -55,9 +53,7 @@ class Dfn2F90:
     def write_f90(self, ofspec=None):
         with open(ofspec, "w") as f:
             # file header
-            f.write(
-                self._source_file_header(self.component, self.subcomponent)
-            )
+            f.write(self._source_file_header(self.component, self.subcomponent))
 
             # found type
             f.write(
@@ -97,73 +93,44 @@ class Dfn2F90:
             # params
             if len(self._param_varnames):
                 f.write(self._param_str)
+                f.write(self._source_params_header(self.component, self.subcomponent))
+                f.write("    " + ", &\n    ".join(self._param_varnames) + " &\n")
                 f.write(
-                    self._source_params_header(
-                        self.component, self.subcomponent
-                    )
-                )
-                f.write(
-                    "    " + ", &\n    ".join(self._param_varnames) + " &\n"
-                )
-                f.write(
-                    self._source_list_footer(self.component, self.subcomponent)
-                    + "\n"
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
                 )
             else:
-                f.write(
-                    self._source_params_header(
-                        self.component, self.subcomponent
-                    )
-                )
+                f.write(self._source_params_header(self.component, self.subcomponent))
                 f.write(self._param_str.rsplit(",", 1)[0] + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent)
-                    + "\n"
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
                 )
 
             # aggregate types
             if len(self._aggregate_varnames):
                 f.write(self._aggregate_str)
                 f.write(
-                    self._source_aggregates_header(
-                        self.component, self.subcomponent
-                    )
+                    self._source_aggregates_header(self.component, self.subcomponent)
                 )
+                f.write("    " + ", &\n    ".join(self._aggregate_varnames) + " &\n")
                 f.write(
-                    "    "
-                    + ", &\n    ".join(self._aggregate_varnames)
-                    + " &\n"
-                )
-                f.write(
-                    self._source_list_footer(self.component, self.subcomponent)
-                    + "\n"
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
                 )
             else:
                 f.write(
-                    self._source_aggregates_header(
-                        self.component, self.subcomponent
-                    )
+                    self._source_aggregates_header(self.component, self.subcomponent)
                 )
                 f.write(self._aggregate_str.rsplit(",", 1)[0] + " &\n")
                 f.write(
-                    self._source_list_footer(self.component, self.subcomponent)
-                    + "\n"
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
                 )
 
             # blocks
-            f.write(
-                self._source_blocks_header(self.component, self.subcomponent)
-            )
+            f.write(self._source_blocks_header(self.component, self.subcomponent))
             f.write(self._block_str.rsplit(",", 1)[0] + " &\n")
-            f.write(
-                self._source_list_footer(self.component, self.subcomponent)
-                + "\n"
-            )
+            f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
 
             # file footer
-            f.write(
-                self._source_file_footer(self.component, self.subcomponent)
-            )
+            f.write(self._source_file_footer(self.component, self.subcomponent))
 
     def get_blocknames(self):
         blocknames = []
@@ -221,9 +188,7 @@ class Dfn2F90:
                 istart = line.index(" ")
                 v = line[istart:].strip()
                 if k in vd:
-                    raise Exception(
-                        "Attribute already exists in dictionary: " + k
-                    )
+                    raise Exception("Attribute already exists in dictionary: " + k)
                 vd[k] = v
 
         if len(vd) > 0:
@@ -234,9 +199,7 @@ class Dfn2F90:
             else:
                 key = name
             if name in vardict:
-                raise Exception(
-                    "Variable already exists in dictionary: " + name
-                )
+                raise Exception("Variable already exists in dictionary: " + name)
             vardict[key] = vd
 
         self._var_d = vardict
@@ -415,11 +378,7 @@ class Dfn2F90:
 
             if t == "DOUBLE PRECISION":
                 t = "DOUBLE"
-            if (
-                shape != ""
-                and not aggregate_t
-                and (t == "DOUBLE" or t == "INTEGER")
-            ):
+            if shape != "" and not aggregate_t and (t == "DOUBLE" or t == "INTEGER"):
                 t = f"{t}{ndim}D"
 
             longname = ""
@@ -621,12 +580,7 @@ class IdmDfnSelector:
 
     def _write_selectors(self):
         for c in self._d:
-            ofspec = (
-                SRC_PATH
-                / "Idm"
-                / "selector"
-                / f"Idm{c.title()}DfnSelector.f90"
-            )
+            ofspec = SRC_PATH / "Idm" / "selector" / f"Idm{c.title()}DfnSelector.f90"
             with open(ofspec, "w") as fh:
                 self._write_selector_decl(fh, component=c, sc_list=self._d[c])
                 self._write_selector_helpers(fh)
@@ -653,9 +607,7 @@ class IdmDfnSelector:
                 )
                 self._write_selector_multi(fh, component=c, sc_list=self._d[c])
                 self._write_selector_sub(fh, component=c, sc_list=self._d[c])
-                self._write_selector_integration(
-                    fh, component=c, sc_list=self._d[c]
-                )
+                self._write_selector_integration(fh, component=c, sc_list=self._d[c])
                 fh.write(f"end module Idm{c.title()}DfnSelectorModule\n")
 
     def _write_selector_decl(self, fh=None, component=None, sc_list=None):
@@ -815,9 +767,7 @@ class IdmDfnSelector:
 
         fh.write(s)
 
-    def _write_selector_integration(
-        self, fh=None, component=None, sc_list=None
-    ):
+    def _write_selector_integration(self, fh=None, component=None, sc_list=None):
         c = component
 
         s = (
@@ -1000,7 +950,7 @@ class IdmDfnSelector:
         )
 
         for c in dfn_d:
-            s += f"    case ('{c}')\n" f"      integrated = .true.\n"
+            s += f"    case ('{c}')\n      integrated = .true.\n"
 
         s += (
             "    case default\n"
@@ -1059,11 +1009,7 @@ if __name__ == "__main__":
     if dfn.suffix.lower() in [".txt"]:
         dfns = open(dfn, "r").readlines()
         dfns = [l.strip() for l in dfns]
-        dfns = [
-            l
-            for l in dfns
-            if not l.startswith("#") and l.lower().endswith(".dfn")
-        ]
+        dfns = [l for l in dfns if not l.startswith("#") and l.lower().endswith(".dfn")]
         if dfn == DEFAULT_DFNS_PATH:
             dfns = [DFN_PATH / p for p in dfns]
     elif dfn.suffix.lower() in [".yml", ".yaml"]:

@@ -41,9 +41,7 @@ def get_model_name(idx, mdl):
 def build_mf6_sim(idx, test):
     # create simulation
     name = cases[idx]
-    sim = FlopyReadmeCase.get_gwf_sim(
-        name, test.workspace, test.targets["mf6"]
-    )
+    sim = FlopyReadmeCase.get_gwf_sim(name, test.workspace, test.targets["mf6"])
 
     # create prt model
     prt_name = get_model_name(idx, "prt")
@@ -59,9 +57,7 @@ def build_mf6_sim(idx, test):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # create prp package
     rpts = (
@@ -163,9 +159,7 @@ def build_models(idx, test):
     mf6sim = build_mf6_sim(idx, test)
     gwf_name = get_model_name(idx, "gwf")
     gwf = mf6sim.get_model(gwf_name)
-    mp7sim = build_mp7_sim(
-        idx, test.workspace / "mp7", test.targets["mp7"], gwf
-    )
+    mp7sim = build_mp7_sim(idx, test.workspace / "mp7", test.targets["mp7"], gwf)
     return mf6sim, mp7sim
 
 
@@ -224,9 +218,7 @@ def check_output(idx, test):
     # check boundname values
     if "bnms" in name:
         # boundnames should be release point numbers (so pandas parses them as ints)
-        assert np.array_equal(
-            mf6_pls["name"].to_numpy(), mf6_pls["irpt"].to_numpy()
-        )
+        assert np.array_equal(mf6_pls["name"].to_numpy(), mf6_pls["irpt"].to_numpy())
     else:
         # no boundnames given so check for defaults
         assert pd.isna(mf6_pls["name"]).all()

@@ -41,9 +41,7 @@ def test_model(
     model_name = model_path.name
     excluded = model_name in excluded_models
     compare = (
-        get_mf6_comparison(model_path)
-        if original_regression
-        else "mf6_regression"
+        get_mf6_comparison(model_path) if original_regression else "mf6_regression"
     )
     dev_only = "dev" in model_name and "not developmode" in markers
     if excluded or dev_only:
@@ -64,9 +62,7 @@ def test_model(
     if compare == "mf6_regression":
         copytree(function_tmpdir, function_tmpdir / compare)
     else:
-        setup_mf6_comparison(
-            model_path, function_tmpdir, compare, overwrite=True
-        )
+        setup_mf6_comparison(model_path, function_tmpdir, compare, overwrite=True)
 
     # run the test
     test.run()

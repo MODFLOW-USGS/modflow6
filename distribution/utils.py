@@ -14,11 +14,7 @@ def get_project_root_path():
 
 
 def get_modified_time(path: Path) -> float:
-    return (
-        path.stat().st_mtime
-        if path.is_file()
-        else datetime.today().timestamp()
-    )
+    return path.stat().st_mtime if path.is_file() else datetime.today().timestamp()
 
 
 def glob(

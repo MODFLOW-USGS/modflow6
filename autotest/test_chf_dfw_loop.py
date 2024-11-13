@@ -251,18 +251,10 @@ def build_models(idx, test):
     )
 
     xfraction = (
-        [0.0, 10.0, 20.0, 30.0]
-        + [0, 20.0, 40.0, 60.0]
-        + [0.0, 15.0, 30.0, 45.0]
+        [0.0, 10.0, 20.0, 30.0] + [0, 20.0, 40.0, 60.0] + [0.0, 15.0, 30.0, 45.0]
     )
-    height = (
-        [10.0, 0.0, 0.0, 10.0]
-        + [20.0, 0.0, 0.0, 20.0]
-        + [15.0, 0.0, 0.0, 15.0]
-    )
-    mannfraction = (
-        [1.0, 1.0, 1.0, 1.0] + [1.0, 1.0, 1.0, 1.0] + [1.0, 1.0, 1.0, 1.0]
-    )
+    height = [10.0, 0.0, 0.0, 10.0] + [20.0, 0.0, 0.0, 20.0] + [15.0, 0.0, 0.0, 15.0]
+    mannfraction = [1.0, 1.0, 1.0, 1.0] + [1.0, 1.0, 1.0, 1.0] + [1.0, 1.0, 1.0, 1.0]
 
     cxsdata = list(zip(xfraction, height, mannfraction))
     cxs = flopy.mf6.ModflowChfcxs(
@@ -398,12 +390,8 @@ def make_plot(test):
         lw=0.0,
         label="MF6 Gauge 5",
     )
-    ax.plot(
-        answer_flow["TOTIME"], answer_flow["FLOW45"], "b-", label="SWR Gauge 4"
-    )
-    ax.plot(
-        answer_flow["TOTIME"], answer_flow["FLOW56"], "g-", label="SWR Gauge 5"
-    )
+    ax.plot(answer_flow["TOTIME"], answer_flow["FLOW45"], "b-", label="SWR Gauge 4")
+    ax.plot(answer_flow["TOTIME"], answer_flow["FLOW56"], "g-", label="SWR Gauge 5")
     # ax.plot(obsvals["time"], answer["STAGE0000000014"], marker="o", mfc="none", mec="k", lw=0., label="swr")
     ax.set_xscale("log")
     plt.xlabel("time, in seconds")

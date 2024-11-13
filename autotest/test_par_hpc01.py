@@ -85,9 +85,7 @@ def get_simulation(idx, ws):
 
     hpc = flopy.mf6.ModflowUtlhpc(sim, partitions=partitions)
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -265,9 +263,7 @@ def check_output(idx, test):
                 if success_msg in line:
                     success = True
                     break
-            assert (
-                success
-            ), f"Model {model_id} not created on target process {rank}"
+            assert success, f"Model {model_id} not created on target process {rank}"
     elif ncpus == 1:
         list_file = pl.Path(test.workspace, "mfsim.lst")
         for name, rank in partitions:
@@ -278,9 +274,7 @@ def check_output(idx, test):
                 if success_msg in line:
                     success = True
                     break
-            assert (
-                success
-            ), f"Model {model_id} not created on target process {rank}"
+            assert success, f"Model {model_id} not created on target process {rank}"
 
 
 @pytest.mark.parallel

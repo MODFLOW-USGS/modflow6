@@ -72,9 +72,7 @@ def build_models(idx, test):
 
     # Instantiating time discretization
     tdis_ds = ((perlen, nstp, 1.0),)
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_ds, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_ds, time_units=time_units)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
 
     # Instantiating solver
@@ -139,8 +137,7 @@ def build_models(idx, test):
     # Instantiating GHB
     ghbcond = hydraulic_conductivity[idx] * delv * delc / (0.5 * delr)
     ghbspd = [
-        [(0, i, ncol - 1), top, ghbcond, initial_temperature]
-        for i in range(nrow)
+        [(0, i, ncol - 1), top, ghbcond, initial_temperature] for i in range(nrow)
     ]
     flopy.mf6.ModflowGwfghb(
         gwf,
@@ -279,8 +276,9 @@ def check_output(idx, test):
 
         # Ensure latest simulated value hasn't changed from stored answer
         assert np.allclose(sim_val_2, stored_ans, atol=1e-4), (
-            "Flow in the " + cases[1] + " test problem (simulates "
-            "viscosity) has changed,\n should be "
+            "Flow in the "
+            + cases[1]
+            + " test problem (simulates viscosity) has changed,\n should be "
             + str(stored_ans)
             + " but instead is "
             + str(sim_val_2)
@@ -303,9 +301,7 @@ def check_output(idx, test):
     vsc_filerecord = f"{gwfname}.vsc.bin"
     fname = os.path.join(test.workspace, vsc_filerecord)
     if os.path.isfile(fname):
-        vscobj = flopy.utils.HeadFile(
-            fname, precision="double", text="VISCOSITY"
-        )
+        vscobj = flopy.utils.HeadFile(fname, precision="double", text="VISCOSITY")
         try:
             data = vscobj.get_alldata()
             print(data.shape)

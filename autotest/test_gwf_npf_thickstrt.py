@@ -51,9 +51,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.MFModel(
@@ -184,9 +182,7 @@ def check_output(idx, test):
     }
 
     hres = answer_dict[idx]
-    assert np.allclose(
-        hres, head
-    ), "simulated head do not match with known solution."
+    assert np.allclose(hres, head), "simulated head do not match with known solution."
 
     fpth = os.path.join(test.workspace, f"{name}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")

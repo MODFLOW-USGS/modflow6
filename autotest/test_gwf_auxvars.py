@@ -36,9 +36,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
@@ -75,9 +73,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -210,9 +206,7 @@ def build_models(idx, test):
     # <ifno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
     perioddata = []
     for p in packagedata:
-        perioddata.append(
-            (p[0], 0.001, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, auxvar1, auxvar2)
-        )
+        perioddata.append((p[0], 0.001, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, auxvar1, auxvar2))
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
         boundnames=True,

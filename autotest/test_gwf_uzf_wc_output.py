@@ -234,9 +234,7 @@ def build_mf6_model(idx, ws):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -281,14 +279,10 @@ def build_mf6_model(idx, ws):
     )
 
     # aquifer storage
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, iconvert=1, ss=ss, sy=sy, transient=True
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=ss, sy=sy, transient=True)
 
     # ghb files
-    ghb = flopy.mf6.ModflowGwfghb(
-        gwf, print_flows=True, stress_period_data=ghbspd
-    )
+    ghb = flopy.mf6.ModflowGwfghb(gwf, print_flows=True, stress_period_data=ghbspd)
 
     # transient uzf info
     uzf_obs = {
@@ -384,9 +378,7 @@ def build_mfnwt_model(idx, ws):
 
     # Instantiate link mass-transport package (for writing cell-by-cell
     # water contents)
-    flopy.modflow.ModflowLmt(
-        mf, output_file_format="formatted", package_flows=["UZF"]
-    )
+    flopy.modflow.ModflowLmt(mf, output_file_format="formatted", package_flows=["UZF"])
 
     # Instantiate general head boundary package
     ghb = flopy.modflow.ModflowGhb(mf, stress_period_data=nwt_ghb_spdat)

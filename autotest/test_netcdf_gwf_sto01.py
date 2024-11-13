@@ -160,9 +160,7 @@ def check_output(idx, test, export, gridded_input):
     elif export == "structured":
         xds = xa.open_dataset(nc_fpth)
 
-    hds_fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.hds"
-    )
+    hds_fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.hds")
     hds = flopy.utils.HeadFile(hds_fpth, precision="double")
 
     gwf = test.sims[0].gwf[0]

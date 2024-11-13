@@ -95,9 +95,7 @@ def build_gwf_sim(idx, ws, mf6):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -165,9 +163,7 @@ def build_gwf_sim(idx, ws, mf6):
             obs_lst.append(["obs_" + str(i + 1), "head", (k, i)])
 
     obs_dict = {f"{gwf_name}.obs.csv": obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(
-        gwf, pname="head_obs", digits=20, continuous=obs_dict
-    )
+    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
 
     return sim
 
@@ -183,9 +179,7 @@ def build_prt_sim(idx, gwf_ws, prt_ws, mf6):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create prt model
     prt_name = f"{cases[idx]}_prt"
@@ -332,9 +326,7 @@ def plot_output(name, gwf, head, spdis, mf6_pls, mp7_pls, fpath):
     pmv.plot_vector(*spdis, normalize=True, color="white")
 
     # plot labeled nodes and vertices
-    plot_nodes_and_vertices(
-        gwf, gwf.modelgrid, None, gwf.modelgrid.ncpl, ax[0]
-    )
+    plot_nodes_and_vertices(gwf, gwf.modelgrid, None, gwf.modelgrid.ncpl, ax[0])
     mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
     for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
         pl.plot(

@@ -50,9 +50,7 @@ def build_models(idx, test):
         print_option="ALL",
         complexity="simple",
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     gwf = flopy.mf6.ModflowGwf(
         sim,
@@ -124,9 +122,7 @@ def check_output(idx, test):
     q_out_sim = inc["CHD2_OUT"]
 
     assert np.allclose([q_in_sim], [q_in]), f"CHD_IN <> {q_in} ({q_in_sim})"
-    assert np.allclose(
-        [q_out_sim], [q_out]
-    ), f"CHD2_OUT <> {q_out} ({q_out_sim})"
+    assert np.allclose([q_out_sim], [q_out]), f"CHD2_OUT <> {q_out} ({q_out_sim})"
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

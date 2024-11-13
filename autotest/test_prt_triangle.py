@@ -143,9 +143,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
     tri = get_tri(prt_ws / "grid", targets)
     cell2d = tri.get_cell2d()
@@ -278,9 +276,7 @@ def check_output(idx, test, snapshot):
     endpts = pls[pls.ireason == 3]  # termination
 
     # check termination points against snapshot
-    assert snapshot == endpts.drop("name", axis=1).round(3).to_records(
-        index=False
-    )
+    assert snapshot == endpts.drop("name", axis=1).round(3).to_records(index=False)
 
     plot_debug = False
     if plot_debug:

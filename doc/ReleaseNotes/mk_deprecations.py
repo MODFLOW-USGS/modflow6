@@ -66,8 +66,6 @@ if __name__ == "__main__":
                     skipline = False
         ftex.write(footer)
         ftex.close()
-        print(
-            f"Created LaTex file {fnametex} from markdown deprecations file {fpath}"
-        )
+        print(f"Created LaTex file {fnametex} from markdown deprecations file {fpath}")
     else:
         warn(f"Deprecations not found: {fpath}")

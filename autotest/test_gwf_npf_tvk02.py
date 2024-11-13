@@ -39,9 +39,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -170,9 +168,7 @@ def check_output(idx, test):
 
     # Check against manually calculated results
     expected_results = []
-    expected_results.append(
-        0.5
-    )  # TVK SP1: No changes. Check initial solution.
+    expected_results.append(0.5)  # TVK SP1: No changes. Check initial solution.
     expected_results.append(0.4)  # TVK SP2: Increase K1.
     expected_results.append(0.75)  # TVK SP3: Decrease K1.
     expected_results.append(0.6)  # TVK SP4: Revert K1 and increase K3.

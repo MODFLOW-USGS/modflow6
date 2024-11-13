@@ -1,4 +1,4 @@
-line-length = 79
+line-length = 88
 target-version = "py37"
 include = [
     ".doc/**/*.py",

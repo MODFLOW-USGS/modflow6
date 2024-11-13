@@ -45,10 +45,7 @@ releasepts = [
     # particle index, k, i, j, x, y, z
     [i, 0, 0, 1, float(f"1.{i + 1}"), float(f"0.{i + 1}"), 75]
     for i in range(5)
-] + [
-    [i, 0, 0, 3, float(f"3.{i + 1}"), float(f"0.{i + 1}"), 75]
-    for i in range(5, 9)
-]
+] + [[i, 0, 0, 3, float(f"3.{i + 1}"), float(f"0.{i + 1}"), 75] for i in range(5, 9)]
 
 
 def build_gwf_sim(name, ws, mf6):
@@ -60,9 +57,7 @@ def build_gwf_sim(name, ws, mf6):
         sim_name=gwf_name, version="mf6", exe_name=mf6, sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # set ims csv files
     csv0 = f"{gwf_name}.outer.ims.csv"
@@ -154,9 +149,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create prt model
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
@@ -276,8 +269,7 @@ def check_output(idx, test):
     ]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
 

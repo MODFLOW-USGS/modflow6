@@ -81,9 +81,7 @@ def build_models(idx, test):
 
     # Instantiating time discretization
     tdis_ds = ((perlen, nstp, 1.0),)
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_ds, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_ds, time_units=time_units)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
 
     # Instantiating solver
@@ -157,8 +155,7 @@ def build_models(idx, test):
     # Instantiating GHB (rightside, "outflow" boundary)
     ghbcond = hydraulic_conductivity[idx] * delv * delc / (0.5 * delr)
     ghbspd = [
-        [(0, i, ncol - 1), top, ghbcond, initial_temperature]
-        for i in range(nrow)
+        [(0, i, ncol - 1), top, ghbcond, initial_temperature] for i in range(nrow)
     ]
     flopy.mf6.ModflowGwfghb(
         gwf,
@@ -277,9 +274,7 @@ def check_output(idx, test):
     # read flow results from model
     name = cases[idx]
     gwfname = "gwf-" + name
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
+    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
     gwf = sim1.get_model(gwfname)
 
     # Get grid data
@@ -326,9 +321,7 @@ def check_output(idx, test):
 
         # Ensure with and without VSC simulations give nearly identical flow results
         # for each cell-to-cell exchange between columns 5 and 6
-        assert np.allclose(
-            no_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
-        ), (
+        assert np.allclose(no_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3), (
             "Flow in models "
             + cases[0]
             + " and the established answer should be approximately "
@@ -338,9 +331,7 @@ def check_output(idx, test):
     elif idx == 1:
         with_vsc_bud_last = np.array(vals_to_store)
 
-        assert np.allclose(
-            with_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
-        ), (
+        assert np.allclose(with_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3), (
             "Flow in models "
             + cases[1]
             + " and the established answer should be approximately "
@@ -354,9 +345,7 @@ def check_output(idx, test):
         # 3 is less than what's in the "with viscosity" model
         assert np.less(no_vsc_low_k_bud_last[:, 2], stored_ans[:, 2]).all(), (
             "Exit flow from model the established answer "
-            "should be greater than flow existing "
-            + cases[2]
-            + ", but it is not."
+            "should be greater than flow existing " + cases[2] + ", but it is not."
         )
 
 

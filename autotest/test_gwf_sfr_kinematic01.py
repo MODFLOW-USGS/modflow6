@@ -89,12 +89,8 @@ def build_models(idx, test):
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=1)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=top)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, iconvert=1, ss=1e-6, sy=0.2, transient={0: True}
-    )
-    ghb = flopy.mf6.ModflowGwfghb(
-        gwf, stress_period_data=[(0, 0, 0, top, 5.0)]
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=1e-6, sy=0.2, transient={0: True})
+    ghb = flopy.mf6.ModflowGwfghb(gwf, stress_period_data=[(0, 0, 0, top, 5.0)])
     oc = flopy.mf6.ModflowGwfoc(gwf, printrecord=[("budget", "all")])
 
     # sfr file
@@ -149,9 +145,7 @@ def build_models(idx, test):
 def check_output(idx, test):
     print("Checking sfr external outflow")
     name = cases[idx]
-    obs_values = flopy.utils.Mf6Obs(
-        test.workspace / f"{name}.sfr.obs.csv"
-    ).get_data()
+    obs_values = flopy.utils.Mf6Obs(test.workspace / f"{name}.sfr.obs.csv").get_data()
     # fmt: off
     test_values = {storage_weights[0]: np.array(
         [ 

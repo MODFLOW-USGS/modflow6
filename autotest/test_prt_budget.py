@@ -161,9 +161,7 @@ def build_mp7_sim(name, ws, mp7, gwf):
 
 
 def build_models(idx, test):
-    gwf_sim = HorizontalCase.get_gwf_sim(
-        test.name, test.workspace, test.targets["mf6"]
-    )
+    gwf_sim = HorizontalCase.get_gwf_sim(test.name, test.workspace, test.targets["mf6"])
     prt_sim = build_prt_sim(
         test.name, test.workspace, test.workspace / "prt", test.targets["mf6"]
     )
@@ -261,8 +259,7 @@ def check_output(idx, test):
     ]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
 

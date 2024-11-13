@@ -185,20 +185,14 @@ def set_connectiondata(n, lay, top, left, right, bottom):
     if top:
         jas.append(n - ncol)
         ihc.append(0)  # ihc = 0 for vertical connection
-        cl12.append(
-            cl12_val
-        )  # half the cell thickness or a vertical connection
-        hwva.append(
-            delr * delc
-        )  # for vertical connection, area is 1.0m x 1.0m
+        cl12.append(cl12_val)  # half the cell thickness or a vertical connection
+        hwva.append(delr * delc)  # for vertical connection, area is 1.0m x 1.0m
         angldeg.append(0.0)  # placeholder only for vertical connections
 
     if left:
         jas.append(n - 1)  # left
         ihc.append(1)  # ihc = 1 for horizontal connection
-        cl12.append(
-            delc / 2
-        )  # half the cell width along a horizontal connection
+        cl12.append(delc / 2)  # half the cell width along a horizontal connection
         hwva.append(
             delr
         )  # for horizontal connection, value of hwva is width along a row
@@ -209,9 +203,7 @@ def set_connectiondata(n, lay, top, left, right, bottom):
     if right:
         jas.append(n + 1)  # right
         ihc.append(1)  # ihc = 1 for horizontal connection
-        cl12.append(
-            delc / 2
-        )  # half the cell width along a horizontal connection
+        cl12.append(delc / 2)  # half the cell width along a horizontal connection
         hwva.append(
             delc
         )  # for horizontal connection, value of hwva is width along a row
@@ -222,12 +214,8 @@ def set_connectiondata(n, lay, top, left, right, bottom):
     if bottom:
         jas.append(n + ncol)  # below
         ihc.append(0)  # ihc = 0 for vertical connection
-        cl12.append(
-            cl12_val
-        )  # half the cell thickness or a vertical connection
-        hwva.append(
-            delr * delc
-        )  # for vertical connection, value of hwva is area
+        cl12.append(cl12_val)  # half the cell thickness or a vertical connection
+        hwva.append(delr * delc)  # for vertical connection, value of hwva is area
         angldeg.append(0.0)  # placeholder only for vertical connections
 
     return jas, ihc, cl12, hwva, angldeg
@@ -397,9 +385,7 @@ def build_models(idx, test):
     )
 
     # Instantiate time discretization package
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiate flow model
     gwf = flopy.mf6.ModflowGwf(
@@ -631,9 +617,7 @@ def build_models(idx, test):
         ("WEL-left", "AUX", "CONCENTRATION"),
         ("WEL-right", "AUX", "CONCENTRATION"),
     ]
-    flopy.mf6.ModflowGwtssm(
-        gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
-    )
+    flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm")
 
     # Instantiate streamflow transport package
     sftpackagedata = []
@@ -663,9 +647,7 @@ def build_models(idx, test):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )

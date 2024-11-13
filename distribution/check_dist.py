@@ -11,9 +11,7 @@ from modflow_devtools.misc import run_cmd
 # OS-specific extensions
 SYSTEM = platform.system()
 EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
-LIB_EXT = (
-    ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
-)
+LIB_EXT = ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
 SCR_EXT = ".bat" if SYSTEM == "Windows" else ".sh"
 
 # fortran compiler
@@ -115,24 +113,14 @@ def test_makefiles(dist_dir_path, full):
 
     assert (dist_dir_path / "make" / "makefile").is_file()
     assert (dist_dir_path / "make" / "makedefaults").is_file()
-    assert (
-        dist_dir_path / "utils" / "zonebudget" / "make" / "makefile"
-    ).is_file()
-    assert (
-        dist_dir_path / "utils" / "zonebudget" / "make" / "makedefaults"
-    ).is_file()
+    assert (dist_dir_path / "utils" / "zonebudget" / "make" / "makefile").is_file()
+    assert (dist_dir_path / "utils" / "zonebudget" / "make" / "makedefaults").is_file()
     assert (dist_dir_path / "utils" / "mf5to6" / "make" / "makefile").is_file()
-    assert (
-        dist_dir_path / "utils" / "mf5to6" / "make" / "makedefaults"
-    ).is_file()
+    assert (dist_dir_path / "utils" / "mf5to6" / "make" / "makedefaults").is_file()
 
     # makefiles can't be used on Windows with ifort compiler
     if SYSTEM != "Windows" or FC != "ifort":
-        print(
-            subprocess.check_output(
-                "make", cwd=dist_dir_path / "make", shell=True
-            )
-        )
+        print(subprocess.check_output("make", cwd=dist_dir_path / "make", shell=True))
         print(
             subprocess.check_output(
                 "make",
@@ -196,9 +184,7 @@ def test_examples(dist_dir_path, full):
 
     # print examples found
     example_paths = [
-        p
-        for p in examples_path.glob("*")
-        if p.is_dir() and p.stem.startswith("ex")
+        p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
     ]
     assert any(example_paths)
     print(f"{len(example_paths)} example models found:")

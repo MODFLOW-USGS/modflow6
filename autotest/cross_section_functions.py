@@ -127,10 +127,7 @@ def wetted_area(
 
             # write to screen
             if verbose:
-                print(
-                    f"{idx}->{idx + 1} ({x0},{x1}) - "
-                    f"perimeter={x1 - x0} - area={a}"
-                )
+                print(f"{idx}->{idx + 1} ({x0},{x1}) - perimeter={x1 - x0} - area={a}")
 
     return area
 
@@ -199,9 +196,7 @@ def is_neighb_vert(x, h, idx):
 
     # Assess left neighbor first
     if idx > 0:
-        if (
-            cnt > 2
-        ):  # only x-sections w/ 3 or more pts may host a vertical side
+        if cnt > 2:  # only x-sections w/ 3 or more pts may host a vertical side
             idxm1 = idx - 1
             if x[idxm1] == x[idx] and h[idxm1] != h[idx]:
                 leftvert = True

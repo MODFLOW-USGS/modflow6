@@ -44,9 +44,7 @@ vk = [10.0, 0.01, 20.0]
 concentration = 1.0
 
 canal_head = 330.0
-canal_coordinates = [
-    (0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)
-]
+canal_coordinates = [(0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)]
 
 river_head = 320.0
 river_coordinates = [

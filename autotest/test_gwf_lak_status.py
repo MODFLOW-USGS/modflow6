@@ -104,9 +104,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True, icelltype=1, k=1.0, k33=0.01)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -284,9 +282,7 @@ def check_lake_obs(idx, test):
     obs = np.genfromtxt(fpth, names=True, delimiter=",")
     stage = obs["LAKESTAGE"].tolist()
     print(stage)
-    assert (
-        stage[0] == stage[2]
-    ), "Period 1 and period 3 stages should be equal."
+    assert stage[0] == stage[2], "Period 1 and period 3 stages should be equal."
     assert stage[1] == dnodata, "Period 2 stage should equal dnodata"
 
 

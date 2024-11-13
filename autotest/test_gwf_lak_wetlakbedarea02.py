@@ -337,9 +337,7 @@ def check_output(idx, test):
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
+    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage

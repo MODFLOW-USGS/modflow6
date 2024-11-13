@@ -78,9 +78,7 @@ def get_model(ws, name, rech):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -200,11 +198,7 @@ def api_func(exe, idx, model_ws=None):
             kiter += 1
 
             if has_converged:
-                msg = (
-                    f"Component {1}"
-                    + f" converged in {kiter}"
-                    + " outer iterations"
-                )
+                msg = f"Component {1}" + f" converged in {kiter}" + " outer iterations"
                 print(msg)
                 break
 
