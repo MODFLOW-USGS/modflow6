@@ -37,9 +37,7 @@ nodes = list(range(100))
 
 def get_start_points():
     return np.add(
-        np.transpose(
-            np.array(np.meshgrid(range(10), range(10))).reshape(2, -1)
-        ),
+        np.transpose(np.array(np.meshgrid(range(10), range(10))).reshape(2, -1)),
         0.5,
     )
 
@@ -122,9 +120,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # create prp package
     prp = get_prp(prt)
@@ -168,9 +164,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
 def build_models(idx, test):
     gwf_ws = test.workspace / "gwf"
     prt_ws = test.workspace / "prt"
-    gwf_sim = FlopyReadmeCase.get_gwf_sim(
-        test.name, gwf_ws, test.targets["mf6"]
-    )
+    gwf_sim = FlopyReadmeCase.get_gwf_sim(test.name, gwf_ws, test.targets["mf6"])
     prt_sim = build_prt_sim(test.name, gwf_ws, prt_ws, test.targets["mf6"])
     return gwf_sim, prt_sim
 
