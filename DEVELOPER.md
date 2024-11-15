@@ -82,6 +82,12 @@ Some additional, optional tools are also discussed below.
 [Git](https://git-scm.com) and/or the **GitHub app** (for [Mac](https://mac.github.com) or [Windows](https://windows.github.com)).
 [GitHub's Guide to Installing Git](https://help.github.com/articles/set-up-git) is a good source of information.
 
+Optionally, the [`git blame`](https://git-scm.com/docs/git-blame) tool can be configured to work locally using:
+
+```shell
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ### Python
 
 Python 3.9+ is required to run MODFLOW 6 tests and in some cases to build MODFLOW 6. Information on installing the python environment is given in the [Installing Python environment](#install-the-python-environment) section. The MODFLOW 6 python environment should be installed after [locally cloning the repository](#get-the-modflow-6-repository).
