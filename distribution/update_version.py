@@ -13,20 +13,23 @@ This script is used to update several files in the modflow6 repository, includin
   ../code.json
   ../src/Utilities/version.f90
 
-Information in these files include version number (major.minor.patch[label]), build timestamp,
-whether or not the release is preliminary/provisional or official/approved, whether the source
-code should be compiled in develop mode (IDEVELOPMODE = 1) or for release, and other metadata.
+Information in these files include version number (major.minor.patch[label]), build
+timestamp, whether or not the release is preliminary/provisional or official/approved,
+whether the source code should be compiled in develop mode (IDEVELOPMODE = 1) or for
+release, and other metadata.
 
-The version number is read from ../version.txt, which contains major, minor, and patch version
-numbers, and an optional label. Version numbers are substituted into source code, latex files,
-markdown files, etc. The version number can be provided explicitly using --version, short -v.
+The version number is read from ../version.txt, which contains major, minor, and patch
+version numbers, and an optional label. Version numbers are substituted into source
+code, latex files, markdown files, etc. The version number can be provided explicitly
+using --version, short -v.
 
-If the --releasemode flag is provided, IDEVELOPMODE is set to 0 in src/Utilities/version.f90.
-Otherwise, IDEVELOPMODE is set to 1.
+If the --releasemode flag is provided, IDEVELOPMODE is set to 0 in
+src/Utilities/version.f90.  Otherwise, IDEVELOPMODE is set to 1.
 
-if the --approved flag (short -a) is provided, the disclaimer in src/Utilities/version.f90 and
-the README/DISCLAIMER markdown files is modified to reflect review and approval. Otherwise the
-language reflects preliminary/provisional status, and version strings contain "(preliminary)".
+if the --approved flag (short -a) is provided, the disclaimer in
+src/Utilities/version.f90 and the README/DISCLAIMER markdown files is modified to
+reflect review and approval. Otherwise the language reflects preliminary/provisional
+status, and version strings contain "(preliminary)".
 """
 
 import argparse
@@ -160,7 +163,8 @@ def get_software_citation(
 
     # add the rest of the citation
     line += (
-        f", {timestamp.year}, MODFLOW 6 Modular Hydrologic Model version {version}{sb}: "
+        f", {timestamp.year}, "
+        f"MODFLOW 6 Modular Hydrologic Model version {version}{sb}: "
         f"U.S. Geological Survey Software Release, {timestamp:%-d %B %Y}, "
         "https://doi.org/10.5066/P9FL1JCC"
     )
@@ -468,21 +472,24 @@ if __name__ == "__main__":
         "--approved",
         required=False,
         action="store_true",
-        help="Approve the release version (defaults to false for preliminary/development distributions)",
+        help="Approve the release version "
+        "(defaults to false for preliminary/development distributions)",
     )
     parser.add_argument(
         "-r",
         "--releasemode",
         required=False,
         action="store_true",
-        help="Set IDEVELOPMODE to 0 for release mode (defaults to false for development distributions)",
+        help="Set IDEVELOPMODE to 0 for release mode "
+        "(defaults to false for development distributions)",
     )
     parser.add_argument(
         "-g",
         "--get",
         required=False,
         action="store_true",
-        help="Get the current version number, don't update anything (defaults to false)",
+        help="Get the current version number, don't update anything "
+        "(defaults to false)",
     )
     parser.add_argument(
         "-c",

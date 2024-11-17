@@ -702,7 +702,8 @@ def check_obs(sim):
                 ):
                     print(t, x, y)
 
-    # process the sft values and make sure the individual connection rates add up to the boundname rate
+    # process the sft values and make sure the individual connection rates
+    # add up to the boundname rate
     csvfile = "gwt_prudic2004t2.sft.obs.flow-ja-face.csv"
     print(f"Checking csv file: {csvfile}")
     conc_ra = gwt.sft.obs.output.obs(f=csvfile).data
@@ -717,10 +718,13 @@ def check_obs(sim):
             success = False
             diff = connection_sum - conc_ra[f"BSFT{ireach + 1}"]
             print(
-                f"Problem with SFT {ireach + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+                f"Problem with SFT {ireach + 1}; "
+                f"mindiff {diff.min()} and maxdiff {diff.max()}"
             )
-            # for itime, (cs, bsft) in enumerate(zip(connection_sum, conc_ra[f"BSFT{ireach + 1}"])):
-            #    print(itime, cs, bsft)
+            # for itime, (cs, bsft) in enumerate(
+            #     zip(connection_sum, conc_ra[f"BSFT{ireach + 1}"])
+            # ):
+            #     print(itime, cs, bsft)
 
     assert success, "One or more SFT obs checks did not pass"
 
@@ -755,7 +759,8 @@ def check_obs(sim):
                 ):
                     print(t, x, y)
 
-    # process the lkt values and make sure the individual connection rates add up to the boundname rate
+    # process the lkt values and make sure the individual connection rates
+    # add up to the boundname rate
     csvfile = "gwt_prudic2004t2.lkt.obs.lkt.csv"
     print(f"Checking csv file: {csvfile}")
     conc_ra = gwt.lkt.obs.output.obs(f=csvfile).data

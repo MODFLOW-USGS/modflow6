@@ -125,7 +125,9 @@ def build_models(idx, test):
         filename=f"{gwfname}.chd",
     )
 
-    nlakeconn = 3  # note: this is the number of connectiosn for a lake, not total number of connections
+    # note: this is the number of connections for a lake,
+    # not total number of connections
+    nlakeconn = 3
     # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.4, nlakeconn, 0.0, 1025.0)]
 

@@ -140,7 +140,8 @@ def build_models(idx, test):
         filename=f"{gwfname}.wel",
     )
 
-    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
+    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #             <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
     rlen = delr
     rwid = delc
     rgrd = 1.0
@@ -399,7 +400,8 @@ def check_output(idx, test):
     res = bobj.get_data(text="flow-ja-face")[-1]
     # print(res)
 
-    # check the storage terms, which include the total mass in the reach as an aux variable
+    # check the storage terms, which include the total mass in the reach
+    # as an aux variable
     res = bobj.get_data(text="storage")[-1]
     # print(res)
 

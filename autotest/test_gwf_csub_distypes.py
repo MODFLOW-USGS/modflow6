@@ -97,7 +97,8 @@ def get_interbed(modelgrid):
         package_data.append(
             (
                 ifno,
-                cellid,  # will need to be detuplaized with *cellid - does not work for dis
+                # will need to be detuplaized with *cellid - does not work for dis
+                cellid,
                 "nodelay",
                 ini_stress,
                 modelgrid.cell_thickness[cellid],

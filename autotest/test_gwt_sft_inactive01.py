@@ -25,7 +25,7 @@ groundwater model.
      |       |       |       |       |       |       |/                      |       |       |       |       |       |       |/
      +-------+-------+-------+-------+-------+-------+                       +-------+-------+-------+-------+-------+-------+
 
-"""
+"""  # noqa
 
 # Imports
 
@@ -268,8 +268,8 @@ def get_conndat(n, lay, col):
     ) = set_connectiondata(n, lay, top, left, right, bottom)
 
     # If bottom most layer, need to .pop() the last values out of the respective lists
-    # This should be done because the bottom connections will always be represented by the final
-    # values in the list (at this point in the development anyway)
+    # This should be done because the bottom connections will always be represented by
+    # the final values in the list (at this point in the development anyway)
     # if lay == nlay - 1:
     #    iac -= 1
     #    jas_vals.pop(-1)
@@ -467,7 +467,8 @@ def build_models(idx, test):
     # SFR data
     nreaches = 15
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv>
     rhk = 0.05
     package_data = [
         (0, 0, delr, 0.25, 1e-3, top - 0.25, 0.25, rhk, 0.02, 1, 1.0, 0),

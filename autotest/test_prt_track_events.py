@@ -401,7 +401,9 @@ def check_output(idx, test):
     )
 
     # check that particle names are particle indices
-    # assert len(mf6_pldata) == len(mf6_pldata[mf6_pldata['irpt'].astype(str).eq(mf6_pldata['name'])])
+    # assert len(mf6_pldata) == len(
+    #     mf6_pldata[mf6_pldata["irpt"].astype(str).eq(mf6_pldata["name"])]
+    # )
 
     # get head, budget, and spdis results from GWF model
     hds = HeadFile(gwf_ws / gwf_head_file).get_data()

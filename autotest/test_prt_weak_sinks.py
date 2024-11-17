@@ -170,7 +170,9 @@ def build_mp7_sim(name, ws, mp7, gwf):
 
 
 def get_different_rows(source_df, new_df):
-    """Returns just the rows from the new dataframe that differ from the source dataframe"""
+    """Returns just the rows from the new dataframe that differ
+    from the source dataframe
+    """
     merged_df = source_df.merge(new_df, indicator=True, how="outer")
     changed_rows_df = merged_df[merged_df["_merge"] == "right_only"]
     return changed_rows_df.drop("_merge", axis=1)
@@ -245,7 +247,8 @@ def check_output(idx, test):
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file)
 
-    # if STOP_AT_WEAK_SINK disabled, check for an extra datum when particle exited weak sink
+    # if STOP_AT_WEAK_SINK disabled,
+    # check for an extra datum when particle exited weak sink
     wksk_irsn = get_ireason_code("WEAKSINK")
     assert len(mf6_pls[mf6_pls["ireason"] == wksk_irsn]) == (
         1 if "saws" not in name else 0

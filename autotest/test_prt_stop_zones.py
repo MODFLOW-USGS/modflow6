@@ -321,7 +321,9 @@ def check_output(idx, test):
             )
 
         def sort_square_verts(verts):
-            """Sort 4 or more points on a square in clockwise order, starting with the top-left point"""
+            """Sort 4 or more points on a square in clockwise order,
+            starting with the top-left point
+            """
 
             # sort by y coordinate
             verts.sort(key=lambda v: v[1], reverse=True)

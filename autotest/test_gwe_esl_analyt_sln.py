@@ -47,7 +47,7 @@ CTP ->  |                                                                  | <- 
 
   Specified temperature boundary, T_0
 
-"""
+"""  # noqa
 
 import math
 import os
@@ -339,7 +339,8 @@ def build_models(idx, test, ener_input):
     )
 
     # Constant temperature
-    # Note: Implementation of the CTP boundary depends on which analytical sln is in view
+    # Note: Implementation of the CTP boundary depends on which analytical sln
+    #       is in view
     #       See notes at top of script regarding scenarios
     if idx > 0:
         if idx == 1:
@@ -502,7 +503,7 @@ def check_output(idx, test, ener_input):
             assert np.allclose(
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=0.005
             ), "simulated solution is whacked"
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
+            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
             # plt.legend()
@@ -533,7 +534,7 @@ def check_output(idx, test, ener_input):
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
             ), "simulated solution is whacked"
 
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
+            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
             # plt.legend()

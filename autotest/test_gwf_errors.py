@@ -186,7 +186,7 @@ def test_disu_errors(function_tmpdir, targets):
         )
         sim.write_simulation()
         err_str = [
-            "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",
+            "1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (",  # noqa
             "-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be",
             "below cell 1.",
             "UNIT ERROR REPORT:1. ERROR OCCURRED WHILE READING FILE './test.disu'",

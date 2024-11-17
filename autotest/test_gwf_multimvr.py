@@ -1020,7 +1020,8 @@ def check_output(idx, test):
                 line = next(gwf_lst)
                 m_arr = line.strip().split()
                 if m_arr[0] == "18":
-                    # store the 3rd value on the line (it should be the same across all scenarios
+                    # store the 3rd value on the line
+                    # (it should be the same across all scenarios)
                     parent_sfr_last_reach_flow = float(m_arr[2])
                     break
 

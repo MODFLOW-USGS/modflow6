@@ -1,5 +1,6 @@
 """
-Two-Dimensional Heat Transport (GWE) in a Radial Flow Field with Comparison to a MODFLOW 6 GWT model
+Two-Dimensional Heat Transport (GWE) in a Radial Flow Field with Comparison
+to a MODFLOW 6 GWT model
 
 The purpose of this script is to test the new heat transport model developed
 for MODFLOW 6.  To that end, this problem uses the setup of the fifth MT3DMS
@@ -493,7 +494,8 @@ def add_energy(sim):
         filename="gwesolver.ims",
     )
 
-    # Set the advection scheme, it is needed by both gwe model instantiation and gwegwe exchange
+    # Set the advection scheme, it is needed by both gwe model instantiation
+    # and gwegwe exchange
     if mixelm >= 0:
         scheme = "UPSTREAM"
     elif mixelm == -1:
@@ -702,7 +704,8 @@ def add_transport(sim):
         filename="gwtsolver.ims",
     )
 
-    # Set the advection scheme, it is needed by both gwe model instantiation and gwegwe exchange
+    # Set the advection scheme, it is needed by both gwe model instantiation
+    # and gwegwe exchange
     if mixelm >= 0:
         scheme = "UPSTREAM"
     elif mixelm == -1:
@@ -933,7 +936,8 @@ def check_output(idx, test):
             elif idomain_ll[k, i, j] > 0:
                 stitched_temps[i, j] = temp_ll[tm, k, i, j]
 
-    # Stitch together the "concentrations" (which represent temperatures) from the upper-right and lower-left models
+    # Stitch together the "concentrations" (which represent temperatures)
+    # from the upper-right and lower-left models
     tm = k = 0
     stitched_conc = np.zeros((nrow, ncol))
     for i in np.arange(nrow):

@@ -18,7 +18,6 @@ select = [
     "I001", # isort - unsorted-imports
 ]
 ignore = [
-    "E501", # line too long TODO FIXME
     "E722", # do not use bare `except`
     "E741", # ambiguous variable name
     "F821", # undefined name TODO FIXME

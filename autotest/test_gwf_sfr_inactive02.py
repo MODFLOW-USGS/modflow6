@@ -71,7 +71,8 @@ def build_models(idx, test):
     # sfr data
     nreaches = 4
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv>
     package_data = [
         (0, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 0.0, 0),
         (1, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 1.0, 0),

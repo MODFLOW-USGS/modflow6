@@ -174,7 +174,8 @@ def check_output(idx, test):
     # comment when done testing
     print(f"Total outflow in stress period 1 is {str(sp_x[0][8])}")
     print(
-        "Total outflow in stress period 2 after increasing K33 should have no effect on final solution"
+        "Total outflow in stress period 2 after increasing K33 "
+        "should have no effect on final solution"
     )
     errmsg = "Period 2 budget should be exactly the same as period 1"
     assert sp_x[0][8] == sp_x[1][8], errmsg
