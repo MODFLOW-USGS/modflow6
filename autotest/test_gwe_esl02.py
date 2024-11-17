@@ -340,7 +340,7 @@ def check_output(idx, test):
         "in stress period "
     )
     ans = ncol[idx]
-    assert np.isclose(np.sum(temps[-1]), ans), msg0 + str(index)
+    assert np.isclose(np.sum(temps[-1]), ans), msg0 + str(idx)
 
 
 # - No need to change any code below

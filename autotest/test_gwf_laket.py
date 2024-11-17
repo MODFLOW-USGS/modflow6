@@ -281,6 +281,7 @@ def check_output(idx, test):
         stage_compare = True
 
     test.success = True
+    msg = ""
     if not evap_compare:
         test.success = False
         msg += " Lake evaporation comparison failed."

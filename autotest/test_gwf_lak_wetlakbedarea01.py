@@ -142,7 +142,7 @@ def calc_qSat(top, bot, thk):
             y = 1.0
 
     else:
-        if x < bot:
+        if x < bot:  # noqa: F821 -- FIXME
             y = 0.0
         else:
             y = 1.0

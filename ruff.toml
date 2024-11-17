@@ -21,7 +21,6 @@ ignore = [
     "E501", # line too long TODO FIXME
     "E722", # do not use bare `except`
     "E741", # ambiguous variable name
-    "F821", # undefined name TODO FIXME
     "F841", # local variable assigned but never used
 ]
 

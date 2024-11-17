@@ -488,7 +488,7 @@ def check_output(idx, test):
         # return out of function
         return None
     else:
-        assert error_count == 0, errmsg0
+        assert error_count == 0
 
     name = cases[idx]
     gwename1 = "gwe-" + name + "-1"
