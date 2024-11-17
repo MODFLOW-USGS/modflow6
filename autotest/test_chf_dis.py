@@ -177,7 +177,7 @@ def check_grb_disv1d(fpth):
         grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
     ), "javert size not right"
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
-    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
+    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
     assert np.allclose(
         grb.idomain.reshape((nodes,)), idomain.reshape((nodes,))
     ), "grb idomain not correct"

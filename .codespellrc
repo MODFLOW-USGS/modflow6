@@ -1,0 +1,3 @@
+[codespell]
+skip = *.pdf,*.grb,*.bib,*.bst,./src/Utilities/Libraries/*,./utils/mf5to6/*
+ignore-words = .codespell.ignore

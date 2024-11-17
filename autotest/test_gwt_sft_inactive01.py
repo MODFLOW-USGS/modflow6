@@ -1,6 +1,6 @@
 """
 A test of the keyword NONE for <cellid> in the package data block.
-In essense, this tests inactivation of cells which if active, would be connected
+In essence, this tests inactivation of cells which if active, would be connected
 to SFR reaches during a simulation. Additionally, this uses a DISU grid.  The
 test was developed based on a user having memory access violations for a real-
 world model that included DISU and SFR reaches where cells did not exist.
@@ -169,7 +169,7 @@ def buildout_vertex_locations():
 
 
 def set_connectiondata(n, lay, top, left, right, bottom):
-    # Instatiate empty lists
+    # Instantiate empty lists
     jas = [n]
     ihc = [lay]
     cl12 = [n]
@@ -445,7 +445,7 @@ def build_models(idx, test):
         transient={0: True},
     )
 
-    # Instantiate the intial conditions
+    # Instantiate the initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # Instantiate constant heads for keeping the heads from rising
@@ -672,7 +672,7 @@ def check_output(idx, test):
         "therefore inactive."
     )
     msg1 = (
-        "There seems to be mis-alignment in the flow/transport results "
+        "There seems to be misalignment in the flow/transport results "
         "when some of the GWF cells are inactive but overlain with SFR "
         "reaches"
     )
