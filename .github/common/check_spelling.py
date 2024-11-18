@@ -23,7 +23,7 @@ excludedirs = [
 excludefiles = []
 
 # commands
-codespell_cmds = ["codespell", "--ignore-words=.codespell.ignore"]
+codespell_cmds = ["codespell"]
 
 
 def excluded(path) -> bool:
