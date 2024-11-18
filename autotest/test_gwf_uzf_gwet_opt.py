@@ -156,7 +156,8 @@ def buildout_vertex_locations():
                 xvc.append(vert_left)
                 yvc.append(vert_front)
 
-            # Second, only keep vertices that don't already appear in the respective lists
+            # Second, only keep vertices that don't already appear in the
+            # respective lists
             iv, xv, yv = filter_nodes(xvc, yvc, iv, xv, yv)
 
             # Store dictionary entry linking cell ID with its vertices
@@ -194,12 +195,8 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
     if top:
         jas.append(n - (ncol * nrow))
         ihc.append(0)  # ihc = 0 for vertical connection
-        cl12.append(
-            cl12_val
-        )  # half the cell thickness or a vertical connection
-        hwva.append(
-            delr * delc
-        )  # for vertical connection, area is 1.0m x 1.0m
+        cl12.append(cl12_val)  # half the cell thickness or a vertical connection
+        hwva.append(delr * delc)  # for vertical connection, area is 1.0m x 1.0m
         angldeg.append(0.0)  # placeholder only for vertical connections
 
     if back:
@@ -214,9 +211,7 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
     if left:
         jas.append(n - 1)  # left
         ihc.append(1)  # ihc = 1 for horizontal connection
-        cl12.append(
-            delr / 2
-        )  # half the cell width along a horizontal connection (row)
+        cl12.append(delr / 2)  # half the cell width along a horizontal connection (row)
         hwva.append(
             delr
         )  # for horizontal connection, value of hwva is width along a row
@@ -227,9 +222,7 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
     if right:
         jas.append(n + 1)  # right
         ihc.append(1)  # ihc = 1 for horizontal connection
-        cl12.append(
-            delr / 2
-        )  # half the cell width along a horizontal connection row
+        cl12.append(delr / 2)  # half the cell width along a horizontal connection row
         hwva.append(
             delc
         )  # for horizontal connection, value of hwva is width along a row
@@ -249,12 +242,8 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
     if bottom:
         jas.append(n + (nrow * ncol))  # below
         ihc.append(0)  # ihc = 0 for vertical connection
-        cl12.append(
-            cl12_val
-        )  # half the cell thickness or a vertical connection
-        hwva.append(
-            delr * delc
-        )  # for vertical connection, value of hwva is area
+        cl12.append(cl12_val)  # half the cell thickness or a vertical connection
+        hwva.append(delr * delc)  # for vertical connection, value of hwva is area
         angldeg.append(0.0)  # placeholder only for vertical connections
 
     return jas, ihc, cl12, hwva, angldeg
@@ -347,9 +336,7 @@ angldeg_lst = []
 for lay in np.arange(nlay):
     for row in np.arange(nrow):
         for col in np.arange(ncol):
-            n = (
-                (lay * nrow * ncol) + (row * ncol) + col
-            )  # n will be zero based
+            n = (lay * nrow * ncol) + (row * ncol) + col  # n will be zero based
 
             # Values for CONNECTIONDATA block
             (
@@ -531,9 +518,7 @@ def build_models(idx, test):
     )
 
     # Instantiate time discretization package
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     build_gwf_model(sim, name + "-lin", linear_et_flg=True)
     build_gwf_model(sim, name + "-sqr", linear_et_flg=False)
