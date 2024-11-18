@@ -379,9 +379,10 @@ def check_output(idx, test):
     cres1 = np.array(cres1)
     diff = cres1 - conc
     print(f"{diff.min()=} {diff.max()=}")
-    assert np.allclose(
-        cres1, conc, atol=0.03
-    ), f"simulated concentrations do not match with known solution: {diff.min()=} {diff.max()=}"
+    assert np.allclose(cres1, conc, atol=0.03), (
+        "simulated concentrations do not match with known solution: "
+        f"{diff.min()=} {diff.max()=}"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

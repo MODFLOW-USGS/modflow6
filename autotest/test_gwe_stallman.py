@@ -281,7 +281,8 @@ def build_models(idx, test):
         filename=f"{gwename}.dsp",
     )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=porosity,

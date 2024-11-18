@@ -227,7 +227,7 @@ def build_models(idx, test):
         for j in np.arange(ncol):
             evtr = evtr_hi - (evtr_hi - evtr_lo) / ncol * j
             extdp = extdp_hi - (extdp_hi - extdp_lo) / ncol * j
-            #                 cellid,   surface, rate, depth, [pxdp], [petm], [petm0], [aux]
+            #       cellid,   surface, rate, depth, [pxdp], [petm], [petm0], [aux]
             evtspd.append([(0, i, j), top[i, j], evtr, extdp, 1.0, 0.0])
     surf_rate_specified = True
     flopy.mf6.ModflowGwfevt(

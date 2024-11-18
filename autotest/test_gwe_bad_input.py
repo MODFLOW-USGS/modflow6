@@ -277,7 +277,8 @@ def build_gwe_model(idx, sim, gwename, side="left"):
         filename=f"{gwename}.cnd",
     )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     rhow_mf6 = rhow[0]
     if idx > 0 and side == "right":
         # Set a parameter value that should trip a failure

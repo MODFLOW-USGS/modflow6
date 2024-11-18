@@ -429,7 +429,8 @@ def check_obs(sim):
                 if not is_same:
                     success = False
                     print(
-                        "Binary concentrations do not match with observation concentrations for uzt1"
+                        "Binary concentrations do not match with "
+                        "observation concentrations for uzt1"
                     )
                     print(conc_ra["BUZT1"], conc_uzt)
 
@@ -458,7 +459,8 @@ def check_obs(sim):
             success = False
             diff = connection_sum - conc_ra[f"BMWTUZT{icv + 1}"]
             print(
-                f"Problem with UZT {icv + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+                f"Problem with UZT {icv + 1}; "
+                f"mindiff {diff.min()} and maxdiff {diff.max()}"
             )
 
     assert success, "One or more UZT obs checks did not pass"

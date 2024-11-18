@@ -238,12 +238,13 @@ def check_track_data(
         data_csv = np.array([data_csv])
 
     # check shape
-    assert (
-        data_bin.shape == data_csv.shape
-    ), f"Binary and CSV track data shapes do not match: {data_bin.shape} != {data_csv.shape}"
+    assert data_bin.shape == data_csv.shape, (
+        "Binary and CSV track data shapes do not match: "
+        f"{data_bin.shape} != {data_csv.shape}"
+    )
 
     # check each column separately to avoid TypeError:
-    # The DType <class 'numpy._FloatAbstractDType'> could not be promoted by <class 'numpy.dtype[void]'>
+    # The DType <class 'numpy._FloatAbstractDType'> could not be promoted by <class 'numpy.dtype[void]'>  # noqa
     for k in data_bin.dtype.names:
         if k == "name":
             continue

@@ -81,8 +81,9 @@ class Dfn2F90:
 
             # subpackage
             f.write(
-                f"  character(len=16), parameter :: &\n"
-                f"    {self.component.lower()}_{self.subcomponent.lower()}_subpackages(*) = &\n"
+                f"  character(len=16), parameter :: &\n    "
+                f"{self.component.lower()}_{self.subcomponent.lower()}_subpackages(*) "
+                "= &\n"
             )
             if not len(self._subpackage):
                 self._subpackage.append("".ljust(16))
@@ -984,7 +985,8 @@ if __name__ == "__main__":
         "--dfn",
         required=False,
         default=DEFAULT_DFNS_PATH,
-        help="Path to a DFN file, or to a text or YAML file listing DFN files (one per line)",
+        help="Path to a DFN file, or to a text or YAML file listing DFN files "
+        "(one per line)",
     )
     parser.add_argument(
         "-o",

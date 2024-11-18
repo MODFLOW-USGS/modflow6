@@ -143,7 +143,8 @@ def build_models(idx, test):
         filename=f"{gwfname}.wel",
     )
 
-    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
+    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #             <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
     rlen = delr
     rwid = delc
     rgrd = 1.0

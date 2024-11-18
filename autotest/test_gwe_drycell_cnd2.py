@@ -40,7 +40,7 @@ neighbors.  Referring to this test as a flowing through problem.
      |       |
      |       |
      +-------+
-"""
+"""  # noqa
 
 # Imports
 
@@ -107,7 +107,8 @@ idomain = 1  # All cells included in the simulation
 iconvert = 1  # All cells are convertible
 
 bot_r1 = np.zeros(ncol).tolist()
-# This is the head solution for row 1, so round up to ensure neighboring cells remain dry
+# This is the head solution for row 1, so round up to
+# ensure neighboring cells remain dry
 r2 = [
     6.99850,
     6.78111,
@@ -172,7 +173,8 @@ ghb_conc = 4.0
 ghb_temp = 4.0
 ghb_conc_warmup = 30.0
 ghb_temp_warmup = 30.0
-# left boundary:  cellid, elv, cond, conc, temp; right bnd: cellid, elv, cond, conc, temp
+# left boundary:  cellid, elv, cond, conc, temp
+# right boundary: cellid, elv, cond, conc, temp
 ghbspd = {
     # Steady state stress period
     0: [
@@ -361,7 +363,8 @@ def build_models(idx, test):
             filename=f"{gwtname}.dsp",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGwtmst(
         gwt,
         porosity=prsity,
@@ -473,7 +476,8 @@ def build_models(idx, test):
             filename=f"{gwename}.cnd",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,

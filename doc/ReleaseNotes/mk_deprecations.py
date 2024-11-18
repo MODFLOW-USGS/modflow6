@@ -32,7 +32,7 @@ if __name__ == "__main__":
     \hline
     \endhead
 
-    """
+    """  # noqa
 
     footer = r"""
     \hline

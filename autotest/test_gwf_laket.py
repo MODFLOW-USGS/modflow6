@@ -160,7 +160,12 @@ def get_model(idx, ws):
                 (0, 0, 0, strt[idx], 1000.0),
             ],
         )
-        # chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=[(0, 0, 0, strt[idx]),])
+        # chd = flopy.mf6.modflow.ModflowGwfchd(
+        #     gwf,
+        #     stress_period_data=[
+        #         (0, 0, 0, strt[idx]),
+        #     ],
+        # )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(

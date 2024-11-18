@@ -40,12 +40,18 @@ def create_deprecations_file(dfndir, mddir, verbose):
         print(f"Found {len(deprecations)} deprecations, writing {deps_path}")
     with open(deps_path, "w") as f:
         s = "#### Deprecations\n\n"
-        s += "The following table lists deprecated options and the versions in which they were deprecated and (optionally) removed.\n\n"
+        s += (
+            "The following table lists deprecated options and the versions "
+            "in which they were deprecated and (optionally) removed.\n\n"
+        )
         if any(deprecations):
             s += "| Model-Package | Option | Deprecated | Removed |\n"
             s += "|:--------------|:-------|:-----------|:--------|\n"
             for file, option, deprecated, removed in deprecations:
-                s += f"| {file.stem} | {option} | {deprecated} | {removed if removed else ''} |\n"
+                s += (
+                    f"| {file.stem} | {option} | {deprecated} "
+                    f"| {removed if removed else ''} |\n"
+                )
             if len(s) > 0:
                 s += "\n"
         f.write(s)

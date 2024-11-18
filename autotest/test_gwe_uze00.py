@@ -483,7 +483,8 @@ def check_output(idx, test):
     assert np.allclose(analytical_sln[10, 38:], temps[10, 0, 0, 38:]), msg0
     # Compare day 50. For layer 84 and below, the defaults of allclose should work
     assert np.allclose(analytical_sln[50, 83:], temps[50, 0, 0, 83:]), msg0
-    # Compare day 100, fits are generally good, but do not pass allclose default settings
+    # Compare day 100, fits are generally good,
+    # but do not pass allclose default settings
 
     # Ensure that the differences in the 1st day fall within established bounds
     msg1 = (

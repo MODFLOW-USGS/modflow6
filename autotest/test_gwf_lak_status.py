@@ -131,7 +131,8 @@ def build_models(idx, test):
     packagedata = [
         [0, 100.0, 9, "lake1"],
     ]
-    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
+    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> ...
+    #        <connlen> <connwidth>
     bedleak = 1.0
     connectiondata = [
         [0, 0, (0, 3, 3), "vertical", bedleak, 0.0, 0.0, 0.0, 0.0],

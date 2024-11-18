@@ -340,13 +340,9 @@ def check_output(idx, test):
             fullrw = arr[rw]
             for cl in np.arange(len(fullrw) - 1):
                 assert abs(fullrw[cl]) <= abs(fullrw[cl + 1]) + 0.01, (
-                    "gwet not decreasing to the right as expected. Stress Period: "
-                    + str(tm + 1)
-                    + "; Row: "
-                    + str(rw + 1)
-                    + "; Col: "
-                    + str(cl + 1)
-                    + f"{fullrw[cl]} should be less than or equal to {abs(fullrw[cl + 1])}"
+                    "gwet not decreasing to the right as expected. "
+                    f"Stress Period: {tm + 1}; Row: {rw + 1}; Col: {cl + 1}"
+                    f"\n{fullrw[cl]} should be <= to {abs(fullrw[cl + 1])}"
                 )
 
     # Confirm that total simulated ET does not exceed potential ET.
@@ -358,12 +354,8 @@ def check_output(idx, test):
         for rw in np.arange(total_et.shape[1]):
             for cl in np.arange(total_et.shape[2]):
                 assert total_et[tm, rw, cl] <= pet, (
-                    "simulated ET exceeds user-specified potential ET.  Stress Period: "
-                    + str(tm + 1)
-                    + "; Row: "
-                    + str(rw + 1)
-                    + "; Col: "
-                    + str(cl + 1)
+                    "simulated ET exceeds user-specified potential ET.  "
+                    f"Stress Period: {tm + 1}; Row: {rw + 1}; Col: {cl + 1}"
                 )
 
     print("Finished running checks")

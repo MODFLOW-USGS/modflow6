@@ -159,7 +159,10 @@ def check_output(idx, test, export, gridded_input):
                     assert np.allclose(
                         np.array(rec[l]).flatten(),
                         xds[f"concentration_l{l+1}"][timestep, :].data,
-                    ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
+                    ), (
+                        "NetCDF-concentration comparison failure "
+                        f"in timestep {timestep+1}"
+                    )
                 timestep += 1
             elif export == "structured":
                 assert np.allclose(
