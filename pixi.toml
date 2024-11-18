@@ -76,7 +76,7 @@ install = { depends_on = [
 # check format
 check-format = "python .github/common/check_format.py"
 check-vfproj = "python .github/common/check_vfproj.py"
-check-spelling = "python .github/common/check_spelling.py"
+check-spelling = "codespell"
 check-python-lint = { cmd = "ruff check ." }
 check-python-format = { cmd = "pixi run fix-python-format --check" }
 
