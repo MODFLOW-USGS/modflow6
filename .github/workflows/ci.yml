@@ -198,16 +198,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-12
+          # intel mac, release mode
+          - os: macos-13
             debug: false
+          # arm mac, release mode
           - os: macos-14
             debug: false
+          # arm mac, debug mode
           - os: macos-14
             debug: true
+          # ubuntu, release mode
           - os: ubuntu-22.04
             debug: false
+          # ubuntu, debug mode
           - os: ubuntu-22.04
             debug: true
+          # windows, release mode
           - os: windows-2022
             debug: false
     defaults:
@@ -251,7 +257,7 @@ jobs:
         run: pixi run install
 
       - name: Set LDFLAGS (macOS)
-        if: matrix.os == 'macos-14'
+        if: runner.os == 'macOS'
         run: |
           os_ver=$(sw_vers -productVersion | cut -d'.' -f1)
           if (( "$os_ver" > 12 )); then
@@ -372,7 +378,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-12, windows-2022]
+        os: [ubuntu-22.04, macos-13, windows-2022]
     defaults:
       run:
         shell: bash
