@@ -305,7 +305,7 @@ def check_output(idx, test):
         calci["THICK"] += calc["THICK"]
         calci["THETA"] += calc["THICK"] * calc["THETA"]
 
-    # finialize weighted theta and
+    # finalize weighted theta and
     calci["THETA"] /= calci["THICK"]
     for key in calci.dtype.names:
         diff = calci[key] - ovalsi[key]

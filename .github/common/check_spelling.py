@@ -14,11 +14,7 @@ PROJ_ROOT = Path(__file__).parents[2]
 excludedirs = [
     PROJ_ROOT / ".pixi",
     PROJ_ROOT / "autotest" / ".pytest_cache",
-    PROJ_ROOT / "src" / "Utilities" / "Libraries" / "blas",
-    PROJ_ROOT / "src" / "Utilities" / "Libraries" / "daglib",
-    PROJ_ROOT / "src" / "Utilities" / "Libraries" / "rcm",
-    PROJ_ROOT / "src" / "Utilities" / "Libraries" / "sparsekit",
-    PROJ_ROOT / "src" / "Utilities" / "Libraries" / "sparskit2",
+    PROJ_ROOT / "src" / "Utilities" / "Libraries",
     PROJ_ROOT / "srcbmi" / "latex",
     PROJ_ROOT / "utils" / "mf5to6",
 ]
@@ -27,7 +23,7 @@ excludedirs = [
 excludefiles = []
 
 # commands
-codespell = "codespell --ignore-words=.codespell.ignore"
+codespell_cmds = ["codespell"]
 
 
 def excluded(path) -> bool:
@@ -46,10 +42,12 @@ def check_spelling(path, lock, checks, failures, write_changes=False, verbose=Fa
     if verbose:
         print(f"Checking spelling: {path}")
 
-    wc = "-w" if write_changes else ""
-    cmd = f"{codespell} {wc} {path}"
-    result = run(cmd, capture_output=True, shell=True)
-    if result.stdout or result.stderr:
+    cmds = codespell_cmds.copy()
+    if write_changes:
+        cmds.append("-w")
+    cmds.append(path)
+    result = run(cmds, capture_output=True)
+    if result.returncode != 0:
         failures.put(path)
 
     with lock:
@@ -71,7 +69,7 @@ def report(checks, failures, duration: float) -> bool:
         print(f"{hr}\n{stats}")
         while True:
             try:
-                print(f"{codespell} {pop(failures)}")
+                print(f"{' '.join(codespell_cmds)} {pop(failures)}")
             except Empty:
                 break
 
@@ -93,7 +91,7 @@ if __name__ == "__main__":
         "--extension",
         help="file extensions to check",
         action="append",
-        default=[".[fF]9[05]", ".dfn", ".tex", ".md"],
+        default=[".[fF]9[05]", ".dfn", ".tex", ".md", ".py"],
     )
     parser.add_argument(
         "-w",

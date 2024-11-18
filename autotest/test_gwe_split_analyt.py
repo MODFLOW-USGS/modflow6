@@ -154,7 +154,7 @@ def calc_ener_input(primer_val):
     return ener_add_rate
 
 
-# Instatiate model to compare against analytical solution
+# Instantiate model to compare against analytical solution
 def assemble_half_model(sim, gwfname, gwfpath, side="right"):
     # Create GWF model
     gwf = flopy.mf6.MFModel(

@@ -501,7 +501,7 @@ def check_output(idx, test):
     )
     temp_diff = np.diff(temp_nwt.squeeze(), axis=0)
 
-    # Because of the time discretization scheme, need to check each cell in two chuncks
+    # Because of the time discretization scheme, need to check each cell in two chunks
     # Cell ID: (0, 0, 0)
     assert isMonotonic(temp_diff[:, 0, 0][::-1][0:10]), msg2
     assert isMonotonic(temp_diff[:, 0, 0][::-1][10:-1]), msg2
