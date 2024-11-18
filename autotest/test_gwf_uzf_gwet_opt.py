@@ -179,7 +179,7 @@ def buildout_vertex_locations():
 
 
 def set_connectiondata(n, lay, top, back, left, right, front, bottom):
-    # Instatiate empty lists
+    # Instantiate empty lists
     jas = [n]
     ihc = [lay]
     cl12 = [n]
@@ -206,7 +206,7 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
         hwva.append(delr)  # the width perpendicular to the connection
         angldeg.append(
             90.0
-        )  # for horizontal connection, 90.0 deg points in teh positive y direction
+        )  # for horizontal connection, 90.0 deg points in the positive y direction
 
     if left:
         jas.append(n - 1)  # left
@@ -237,7 +237,7 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
         hwva.append(delr)  # the width perpendicular to the connection
         angldeg.append(
             2700.0
-        )  # for horizontal connection, 90.0 deg points in teh positive y direction
+        )  # for horizontal connection, 90.0 deg points in the positive y direction
 
     if bottom:
         jas.append(n + (nrow * ncol))  # below
