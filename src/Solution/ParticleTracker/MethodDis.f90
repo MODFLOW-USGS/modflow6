@@ -11,6 +11,7 @@ module MethodDisModule
   use PrtFmiModule, only: PrtFmiType
   use DisModule, only: DisType
   use GeomUtilModule, only: get_ijk, get_jk
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -81,11 +82,25 @@ contains
     select type (dis => this%fmi%dis)
     type is (DisType)
       icu = dis%get_nodeuser(ic)
+
       call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
                    irow, jcol, klay)
+
       dx = dis%delr(jcol)
       dy = dis%delc(irow)
       dz = cell%defn%top - cell%defn%bot
+
+      ! particle is stationary if cell is dry
+      if (is_close(dz, DZERO)) then
+        cell%vx1 = DZERO
+        cell%vx2 = DZERO
+        cell%vy1 = DZERO
+        cell%vy2 = DZERO
+        cell%vz1 = DZERO
+        cell%vz2 = DZERO
+        return
+      end if
+
       cell%dx = dx
       cell%dy = dy
       cell%dz = dz

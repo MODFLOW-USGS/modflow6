@@ -76,55 +76,41 @@ contains
      &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE')"
     character(len=*), parameter :: fmtrewet = &
      &"(/1X,'DRY CELL REACTIVATED AT ', a)"
-    !
-    ! -- Set flag to indicated that flows are being updated.  For the case where
-    !    flows may be reused (only when flows are read from a file) then set
-    !    the flag to zero to indicated that flows were not updated
+    
+    ! Set flag to indicated that flows are being updated
     this%iflowsupdated = 1
-    !
-    ! -- If reading flows from a budget file, read the next set of records
-    if (this%iubud /= 0) then
+    
+    ! If reading flows from a budget file, read the next set of records
+    if (this%iubud /= 0) &
       call this%advance_bfr()
-    end if
-    !
-    ! -- If reading heads from a head file, read the next set of records
-    if (this%iuhds /= 0) then
+    
+    ! If reading heads from a head file, read the next set of records
+    if (this%iuhds /= 0) &
       call this%advance_hfr()
-    end if
-    !
-    ! -- If mover flows are being read from file, read the next set of records
-    if (this%iumvr /= 0) then
+    
+    ! If mover flows are being read from file, read the next set of records
+    if (this%iumvr /= 0) &
       call this%mvrbudobj%bfr_advance(this%dis, this%iout)
-    end if
-    !
-    ! -- Accumulate flows
+    
+    ! Accumulate flows
     call this%accumulate_flows()
-    !
-    ! -- if flow cell is dry, then set this%ibound = 0
+    
+    ! Deactivate dry cells and reactivate rewet cells
     do n = 1, this%dis%nodes
-      !
-      ! -- Calculate the ibound-like array that has 0 if saturation
-      !    is zero and 1 otherwise
       if (this%gwfsat(n) > DZERO) then
         this%ibdgwfsat0(n) = 1
       else
         this%ibdgwfsat0(n) = 0
       end if
-      !
-      ! -- Check if active model cell is inactive for flow
+      
       if (this%ibound(n) > 0) then
         if (this%gwfhead(n) == DHDRY) then
-          ! -- cell should be made inactive
           this%ibound(n) = 0
           call this%dis%noder_to_string(n, nodestr)
           write (this%iout, fmtdry) trim(nodestr)
         end if
-      end if
-      !
-      ! -- Convert dry model cell to active if flow has rewet
-      if (this%ibound(n) == 0) then
+      else
         if (this%gwfhead(n) /= DHDRY) then
-          ! -- cell is now wet
           this%ibound(n) = 1
           call this%dis%noder_to_string(n, nodestr)
           write (this%iout, fmtrewet) trim(nodestr)
