@@ -172,7 +172,6 @@ contains
     type is (CellPolyType)
       ! Number of vertices
       this%nverts = cell%defn%npolyverts
-      ! (Re)allocate type-bound arrays
       if (allocated(this%xvert)) then
         deallocate (this%xvert)
         deallocate (this%yvert)
