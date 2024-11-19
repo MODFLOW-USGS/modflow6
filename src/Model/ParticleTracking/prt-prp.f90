@@ -463,15 +463,11 @@ contains
     particle%ilay = ilay
     particle%izone = this%rptzone(ic)
     particle%istatus = 0
-    if (this%ibound(ic) == 0) then
-      ! Handle inactive cells:
-      ! If drape option activated, release in highest active
-      ! cell vertically below release point. Otherwise don't
-      ! release the particle, just terminate it unreleased.
+    if (this%ibound(ic) == 0 .or. this%fmi%ibdgwfsat0(ic) == 0) then
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
-      else
-        particle%istatus = 8 ! permanently unreleased
+      else if (this%ibound(ic) == 0) then
+        particle%istatus = 8
       end if
     end if
     particle%x = x

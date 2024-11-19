@@ -35,66 +35,66 @@ contains
 
   !> @brief Create a new PrtFmi object
   subroutine fmi_cr(fmiobj, name_model, inunit, iout)
-    ! -- dummy
+    ! dummy
     type(PrtFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(inout) :: inunit
     integer(I4B), intent(in) :: iout
     !
-    ! -- Create the object
+    ! Create the object
     allocate (fmiobj)
     !
-    ! -- create name and memory path
+    ! create name and memory path
     call fmiobj%set_names(1, name_model, 'FMI', 'FMI')
     fmiobj%text = text
     !
-    ! -- Allocate scalars
+    ! Allocate scalars
     call fmiobj%allocate_scalars()
     !
-    ! -- Set variables
+    ! Set variables
     fmiobj%inunit = inunit
     fmiobj%iout = iout
     !
-    ! -- Initialize block parser
+    ! Initialize block parser
     call fmiobj%parser%Initialize(fmiobj%inunit, fmiobj%iout)
     !
-    ! -- Assign dependent variable label
+    ! Assign dependent variable label
     fmiobj%depvartype = 'TRACKS          '
 
   end subroutine fmi_cr
 
   !> @brief Time step advance
   subroutine fmi_ad(this)
-    ! -- modules
+    ! modules
     use ConstantsModule, only: DHDRY
-    ! -- dummy
+    ! dummy
     class(PrtFmiType) :: this
-    ! -- local
+    ! local
     integer(I4B) :: n
     character(len=15) :: nodestr
     character(len=*), parameter :: fmtdry = &
      &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE')"
     character(len=*), parameter :: fmtrewet = &
      &"(/1X,'DRY CELL REACTIVATED AT ', a)"
-    
+
     ! Set flag to indicated that flows are being updated
     this%iflowsupdated = 1
-    
+
     ! If reading flows from a budget file, read the next set of records
     if (this%iubud /= 0) &
       call this%advance_bfr()
-    
+
     ! If reading heads from a head file, read the next set of records
     if (this%iuhds /= 0) &
       call this%advance_hfr()
-    
+
     ! If mover flows are being read from file, read the next set of records
     if (this%iumvr /= 0) &
       call this%mvrbudobj%bfr_advance(this%dis, this%iout)
-    
+
     ! Accumulate flows
     call this%accumulate_flows()
-    
+
     ! Deactivate dry cells and reactivate rewet cells
     do n = 1, this%dis%nodes
       if (this%gwfsat(n) > DZERO) then
@@ -102,7 +102,7 @@ contains
       else
         this%ibdgwfsat0(n) = 0
       end if
-      
+
       if (this%ibound(n) > 0) then
         if (this%gwfhead(n) == DHDRY) then
           this%ibound(n) = 0
@@ -122,17 +122,17 @@ contains
 
   !> @brief Define the flow model interface
   subroutine prtfmi_df(this, dis, idryinactive)
-    ! -- modules
+    ! modules
     use SimModule, only: store_error
-    ! -- dummy
+    ! dummy
     class(PrtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), intent(in) :: idryinactive
     !
-    ! -- Call parent class define
+    ! Call parent class define
     call this%FlowModelInterfaceType%fmi_df(dis, idryinactive)
     !
-    ! -- Allocate arrays
+    ! Allocate arrays
     allocate (this%StorageFlows(this%dis%nodes))
     allocate (this%SourceFlows(this%dis%nodes))
     allocate (this%SinkFlows(this%dis%nodes))
@@ -143,9 +143,9 @@ contains
   !> @brief Accumulate flows
   subroutine accumulate_flows(this)
     implicit none
-    ! -- dummy
+    ! dummy
     class(PrtFmiType) :: this
-    ! -- local
+    ! local
     integer(I4B) :: j, i, ip, ib
     integer(I4B) :: ioffset, iflowface, iauxiflowface
     real(DP) :: qbnd

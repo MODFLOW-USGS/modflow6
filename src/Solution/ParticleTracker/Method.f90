@@ -2,6 +2,7 @@
 module MethodModule
 
   use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DZERO
   use ErrorUtilModule, only: pstop
   use SubcellModule, only: SubcellType
   use ParticleModule
@@ -11,6 +12,7 @@ module MethodModule
   use CellDefnModule, only: CellDefnType
   use TrackControlModule, only: TrackControlType
   use TimeSelectModule, only: TimeSelectType
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -198,28 +200,34 @@ contains
     type(CellDefnType), pointer, intent(inout) :: cell_defn
 
     particle%izone = cell_defn%izone
+    if (is_close(cell_defn%top - cell_defn%bot, DZERO)) then
+      particle%advancing = .false.
+      particle%istatus = 7
+      call this%save(particle, reason=3)
+      return
+    end if
     if (cell_defn%izone .ne. 0) then
       if (particle%istopzone .eq. cell_defn%izone) then
         particle%advancing = .false.
         particle%istatus = 6
-        call this%save(particle, reason=3) ! particle terminated
+        call this%save(particle, reason=3)
         return
       end if
     end if
     if (cell_defn%inoexitface .ne. 0) then
       particle%advancing = .false.
       particle%istatus = 5
-      call this%save(particle, reason=3) ! particle terminated
+      call this%save(particle, reason=3)
       return
     end if
     if (cell_defn%iweaksink .ne. 0) then
-      if (particle%istopweaksink .ne. 0) then
-        particle%advancing = .false.
-        particle%istatus = 3
-        call this%save(particle, reason=3) ! particle terminated
+      if (particle%istopweaksink == 0) then
+        call this%save(particle, reason=4)
         return
       else
-        call this%save(particle, reason=4) ! particle exited weak sink
+        particle%advancing = .false.
+        particle%istatus = 3
+        call this%save(particle, reason=3)
         return
       end if
     end if
