@@ -1000,9 +1000,10 @@ def check_output(idx, test):
     # cur_ws, gwfparent = ex[idx], gwf_names[idx]
     cur_ws = test.workspace
     gwfparent = "gwf_" + cases[idx] + "_p"
-    with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
-        os.path.join(cur_ws, "mfsim.lst"), "r"
-    ) as sim_lst:
+    with (
+        open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst,
+        open(os.path.join(cur_ws, "mfsim.lst"), "r") as sim_lst,
+    ):
         gwf_lst_lines = gwf_lst.readlines()
         sim_lst_lines = sim_lst.readlines()
 

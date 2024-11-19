@@ -141,9 +141,7 @@ if __name__ == "__main__":
         )
         is None
     ):
-        raise ValueError(
-            f"SLURM command '{slurm_args.command}' does not exist"
-        )
+        raise ValueError(f"SLURM command '{slurm_args.command}' does not exist")
 
     end_tag = f"sstat:,error:,no,steps,running,for,job,{slurm_args.jobid}"
     # open file
