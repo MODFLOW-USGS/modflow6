@@ -1,14 +1,5 @@
 line-length = 88
-target-version = "py37"
-include = [
-    ".doc/**/*.py",
-    "autotest/pyproject.toml",
-    "autotest/**/*.py",
-    "distribution/**/*.py",
-    "doc/**/*.py",
-    "pymake/**/*.py",
-    "utils/**/*.py",
-]
+target-version = "py39"
 
 [lint]
 select = [
@@ -23,6 +14,9 @@ ignore = [
     "F821", # undefined name TODO FIXME
     "F841", # local variable assigned but never used
 ]
+
+[lint.per-file-ignores]
+"doc/**.ipynb" = ["E501"]
 
 [format]
 quote-style = "double"

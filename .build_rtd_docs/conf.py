@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -14,7 +15,7 @@ import shutil
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import sys
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 sys.path.insert(0, os.path.abspath(os.path.join("..", "distribution")))
@@ -37,6 +38,7 @@ for dox_pth in dox_pths:
 # -- Update the modflow 6 version -------------------------------------------
 print("Update the modflow6 version")
 from update_version import update_version
+
 update_version()
 
 # -- import version from doc/version.py -------------------------------------
