@@ -1,10 +1,22 @@
-# Vertical tracking
+# Vertical tracking and cell drying/rewetting
 
-This document describes the approach PRT takes to particle motion along the z axis. When a particle is immersed in the flow field, vertical motion can be treated identically to the lateral dimensions. Special handling is necessary above the water table.
+When a particle is in the flow field, vertical motion can be treated the same as lateral motion. Special handling is necessary above the water table.
 
-**Note:** PRT model's particle release point (PRP) package implements particle release. This consists of registering each particle with an in-memory store from which the particle will be checked out later by the tracking algorithm. Release-time and tracking-time considerations are therefore described (as well as implemented) separately.
+## Overview
 
-At release time, PRT must decide whether to release the particle into the simulation, or to terminate it permanently unreleased. It does this on the basis of the `DRAPE` option, which determines whether particles whose release position is in a dry cell should be dropped to the top-most active cell beneath it, if any, at the same lateral coordinates. If `DRAPE` is not enabled, particles whose release point is dry will terminate immediately with status 8 (permanently unreleased).
+This document describes the approach taken for vertical particle motion in "dry" conditions.
+
+There are two kinds of dry cells: truly inactive cells, and dry-but-active cells, as can occur with Newton enabled for the flow model.
+
+## Approach
+
+PRT model's particle release point (PRP) package implements particle release. This consists of registering each particle with an in-memory store from which the particle will be checked out later by the tracking algorithm. Release-time and tracking-time considerations are therefore described (as well as implemented) separately.
+
+### Release time
+
+At release time, PRT decides whether to release a particle whose release position is dry, or to terminate it permanently unreleased. It does this on the basis of the `DRAPE` option. If `DRAPE` is enabled, the particle is dropped to the top-most active cell beneath it, if any, at the same lateral coordinates. Otherwise, the particle will terminate immediately with status code 8 (permanently unreleased).
+
+If `DRAPE` is enabled but there is no active cell beneath a given particle release position, the particle is released normally (at the configured elevation) and then will terminate at tracking time with status 7 (stranded), consistent with the behavior of MODPATH 7.
 
 ```mermaid
 flowchart LR
@@ -22,9 +34,9 @@ flowchart LR
     TERMINATE
 ```
 
-If `DRAPE` is enabled but there is no active cell beneath a given particle release location, the particle is released normally (at the configured elevation) and then will terminate at tracking time with status 7 (stranded).
+### Tracking time
 
-At tracking time, PRT decides whether to terminate a particle in a dry cell or pass it to the cell below. If the cell is dry but active, as can occur if Newton is enabled in the flow model, the particle is passed instantaneously to the its bottom, i.e. to the cell below. Otherwise the particle terminates.
+At tracking time, PRT decides whether to terminate a particle in a dry cell or pass it to the cell below. If the cell is dry but active, as can occur if Newton is enabled in the flow model, the particle is passed instantaneously to the bottom, otherwise the particle terminates.
 
 ```mermaid
 flowchart LR
@@ -36,43 +48,5 @@ flowchart LR
     subgraph Track
     PASS_TO_BOTTOM
     TRACK
-    end
-```
-
-## Proposal
-
-Introduce 2 new tracking-time options:
-
-|Name|Package|Description
-|:--|:--|:--|
-| `DRYDIE` | PRP | If any cell is (or goes) dry, terminate any particles inside it.
-| `EFFSAT` | DIS | Effective cell saturation &mdash; substitute for saturation allowing particles to travel vertically through dry cells when the flow model uses the Newton-Raphson formulation.
-
-If the cell has vertical flow and an effective cell saturation is provided, tracking can proceed as usual. Without vertical flow and no `EFFSAT`, pass the particle instantaneously to the cell bottom.
-
-If the cell has no vertical flow, `DRYDIE` decides whether to terminate it, unless it's the simulation's last step, in which case terminate stationary particles whether or not `EXTEND_TRACKING` is enabled.
-
-```mermaid
-flowchart LR
-    START[At tracking time...] --> DRY{Cell dry?}
-    DRY --> |No| TRACK[Track normally]
-    DRY --> |Yes| VERT{Vertical flow?}
-    VERT --> |NO| PASS_TO_BOTTOM[Pass to bottom]
-    VERT --> |Yes| EFFSAT{EFFSAT provided?}
-    EFFSAT --> |Yes| TRACK_EFFSAT[Use EFFSAT]
-    EFFSAT --> |No| DRYDIE{DRYDIE enabled?}
-    DRYDIE --> |No| LAST{Last time step?}
-    LAST --> |No| STAY[Stationary]
-    LAST --> |Yes| TERMINATE[Terminate complete]
-    DRYDIE --> |Yes| TERMINATE_STRANDED[Terminate stranded]
-    subgraph Track
-    TRACK
-    TRACK_EFFSAT
-    PASS_TO_BOTTOM
-    STAY
-    end
-    subgraph Terminate
-    TERMINATE
-    TERMINATE_STRANDED
     end
 ```
