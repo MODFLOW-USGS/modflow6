@@ -343,7 +343,7 @@ def check_output(idx, test):
     answer = ncol[idx]
     assert np.isclose(np.sum(temps[-1]), answer), msg0 + str(idx)
 
-    
+
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
