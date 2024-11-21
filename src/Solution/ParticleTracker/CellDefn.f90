@@ -1,5 +1,7 @@
 module CellDefnModule
   use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DZERO
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -32,6 +34,7 @@ module CellDefnModule
     procedure, public :: get_topflow !< returns top flow
     procedure, public :: get_distflow !< returns distributed flow
     procedure, public :: get_faceflow !< returns a face flow
+    procedure, public :: is_dry !< returns whether the cell is dry
   end type CellDefnType
 
 contains
@@ -96,5 +99,11 @@ contains
     real(DP) :: faceflow
     faceflow = this%faceflow(m)
   end function get_faceflow
+
+  logical function is_dry(this)
+    class(CellDefnType), intent(inout) :: this
+    is_dry = is_close(this%top, this%bot) .and. &
+             is_close(this%sat, DZERO, symmetric=.false.)
+  end function is_dry
 
 end module CellDefnModule

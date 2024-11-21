@@ -96,7 +96,7 @@ contains
       ! If cell dry but active, pass to bottom.
       ! Otherwise if the cell is active, track
       ! with a method appropriate for the cell.
-      if (this%fmi%ibdgwfsat0(ic) == 0) then
+      if (cell%defn%is_dry()) then
         call method_cell_ptb%init( &
           fmi=this%fmi, &
           cell=this%cell, &

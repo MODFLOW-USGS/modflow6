@@ -24,7 +24,7 @@ flowchart LR
     DRY --> |No| RELEASE[Release normally]
     DRY --> |Yes| DRAPE{DRAPE enabled?}
     DRAPE --> |Yes| WETBELOW{Active cell below?}
-    DRAPE --> |No| TERMINATE[Terminate unreleased]
+    DRAPE --> |No| TERMINATE[Terminate]
     WETBELOW --> |No| RELEASE[Release normally]
     WETBELOW --> |Yes| RELEASE_AT_TABLE[Release at water table]
     subgraph Release
@@ -36,15 +36,17 @@ flowchart LR
 
 ### Tracking time
 
-At tracking time, PRT decides whether to terminate a particle in a dry cell or pass it to the cell below. If the cell is dry but active, as can occur if Newton is enabled in the flow model, the particle is passed instantaneously to the bottom, otherwise the particle terminates.
+At tracking time, PRT decides whether to terminate a particle in a dry cell or pass it to the cell below. If the cell is dry but active, as can occur if Newton is enabled in the flow model, the `DRYDIE` option decides whether to pass the particle vertically and instantaneously to the cell bottom or to terminate it.
 
 ```mermaid
 flowchart LR
     START[At tracking time...] --> DRY{Cell dry?}
     DRY --> |No| TRACK[Track normally]
-    DRY --> |Yes| VERT{Vertical flow?}
+    DRY --> |Yes| DRYDIE{DRYDIE enabled?}
+    DRYDIE --> |No| VERT{Vertical flow?}
+    DRYDIE --> |Yes| TERMINATE
     VERT --> |Yes| PASS_TO_BOTTOM[Pass to bottom]
-    VERT --> |No| TERMINATE[Terminate stranded]
+    VERT --> |No| TERMINATE[Terminate]
     subgraph Track
     PASS_TO_BOTTOM
     TRACK

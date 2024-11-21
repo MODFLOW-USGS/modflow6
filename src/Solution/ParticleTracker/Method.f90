@@ -199,12 +199,15 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellDefnType), pointer, intent(inout) :: cell_defn
 
-    particle%izone = cell_defn%izone
-    if (is_close(cell_defn%top - cell_defn%bot, DZERO)) then
-      particle%advancing = .false.
-      particle%istatus = 7
-      call this%save(particle, reason=3)
-      return
+    if (cell_defn%is_dry()) then
+      if (particle%idrydie > 0) then
+        particle%advancing = .false.
+        particle%istatus = 7
+        call this%save(particle, reason=3)
+        return
+      else
+        call this%save(particle, reason=6)
+      end if
     end if
     if (cell_defn%izone .ne. 0) then
       if (particle%istopzone .eq. cell_defn%izone) then
@@ -223,7 +226,6 @@ contains
     if (cell_defn%iweaksink .ne. 0) then
       if (particle%istopweaksink == 0) then
         call this%save(particle, reason=4)
-        return
       else
         particle%advancing = .false.
         particle%istatus = 3

@@ -49,6 +49,7 @@ module PrtPrpModule
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
     integer(I4B), pointer :: istopzone => null() !< optional stop zone number: 0 = no stop zone
     integer(I4B), pointer :: idrape => null() !< drape option: 0 = do not drape, 1 = drape to topmost active cell
+    integer(I4B), pointer :: idrydie => null() !< drydie option, what to do in active-but-dry cells: 0 = stationary, 1 = terminate
     integer(I4B), pointer :: itrkout => null() !< binary track file
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
@@ -158,6 +159,7 @@ contains
     call mem_deallocate(this%istopweaksink)
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
+    call mem_deallocate(this%idrydie)
     call mem_deallocate(this%nreleasepoints)
     call mem_deallocate(this%nreleasetimes)
     call mem_deallocate(this%nparticles)
@@ -247,6 +249,7 @@ contains
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
+    call mem_allocate(this%idrydie, 'IDRYDIE', this%memoryPath)
     call mem_allocate(this%nreleasepoints, 'NRELEASEPOINTS', this%memoryPath)
     call mem_allocate(this%nreleasetimes, 'NRELEASETIMES', this%memoryPath)
     call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
@@ -270,6 +273,7 @@ contains
     this%istopweaksink = 0
     this%istopzone = 0
     this%idrape = 0
+    this%idrydie = 0
     this%nreleasepoints = 0
     this%nreleasetimes = 0
     this%nparticles = 0
@@ -453,6 +457,7 @@ contains
     particle%irpt = ip
     particle%istopweaksink = this%istopweaksink
     particle%istopzone = this%istopzone
+    particle%idrydie = this%idrydie
     particle%icu = icu
     select type (dis => this%dis)
     type is (DisType)
@@ -463,6 +468,8 @@ contains
     particle%ilay = ilay
     particle%izone = this%rptzone(ic)
     particle%istatus = 0
+    ! If cell is dry, drape if enabled, terminate the particle
+    ! if the cell is inactive, release normally if dry/active.
     if (this%ibound(ic) == 0 .or. this%fmi%ibdgwfsat0(ic) == 0) then
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
@@ -687,6 +694,9 @@ contains
       found = .true.
     case ('DRAPE')
       this%idrape = 1
+      found = .true.
+    case ('DRYDIE')
+      this%idrydie = 1
       found = .true.
     case ('TRACK')
       call this%parser%GetStringCaps(keyword)

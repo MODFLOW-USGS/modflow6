@@ -100,7 +100,7 @@ contains
       cell%zOrigin = cell%defn%bot
       cell%ipvOrigin = 1
 
-      if (is_close(dz, DZERO)) then
+      if (cell%defn%is_dry()) then
         cell%vx1 = DZERO
         cell%vx2 = DZERO
         cell%vy1 = DZERO
@@ -143,7 +143,7 @@ contains
       call this%load_celldefn(ic, cell%defn)
       call this%load_cell(ic, cell)
 
-      if (this%fmi%ibdgwfsat0(ic) == 0) then
+      if (cell%defn%is_dry()) then
         call method_cell_ptb%init( &
           fmi=this%fmi, &
           cell=this%cell, &
