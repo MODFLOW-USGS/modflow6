@@ -28,14 +28,10 @@ contains
   function nc_fopen(nc_fname, iout) result(ncid)
     character(len=*), intent(in) :: nc_fname
     integer(I4B), intent(in) :: iout
-    ! -- return
     integer(I4B) :: ncid
-    ! -- local
-    !
-    ! -- initialize
+    ! initialize
     ncid = -1
-    !
-    ! -- open netcdf file
+    ! open netcdf file
     call nf_verify(nf90_open(nc_fname, NF90_NOWRITE, ncid), nc_fname)
   end function nc_fopen
 
@@ -44,9 +40,7 @@ contains
   subroutine nc_fclose(ncid, nc_fname)
     integer(I4B), intent(in) :: ncid
     character(len=*), intent(in) :: nc_fname
-    ! -- local
-    !
-    ! -- close netcdf file
+    ! close netcdf file
     call nf_verify(nf90_close(ncid), nc_fname)
   end subroutine nc_fclose
 
@@ -55,11 +49,10 @@ contains
   subroutine nf_verify(res, nc_fname)
     integer(I4B), intent(in) :: res
     character(len=*), intent(in) :: nc_fname
-    ! -- local variables
     character(len=LINELENGTH) :: errstr
-    !
-    ! -- strings are set for a subset of errors
-    !    but the exit status will always be reported
+
+    ! strings are set for a subset of errors
+    ! but the exit status will always be reported
     if (res /= NF90_NOERR) then
       !
       select case (res)
@@ -100,7 +93,7 @@ contains
       case default
         errstr = ''
       end select
-      !
+
       if (errstr /= '') then
         write (errmsg, '(a,a,a,i0,a)') 'NetCDF library error [error="', &
           trim(errstr), '", exit code=', res, '].'
@@ -108,7 +101,7 @@ contains
         write (errmsg, '(a,i0,a)') 'NetCDF library error [exit code=', &
           res, '].'
       end if
-      !
+
       call store_error(errmsg)
       call store_error_filename(nc_fname)
     end if

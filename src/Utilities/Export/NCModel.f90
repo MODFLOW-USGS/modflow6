@@ -142,7 +142,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
     use MemoryHelperModule, only: create_mem_path
-    ! -- dummy
     class(ExportPackageType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: mshape !< model shape
@@ -153,29 +152,29 @@ contains
     character(len=LENVARNAME) :: rs_varname
     character(len=LENMEMPATH) :: input_mempath
     integer(I4B), pointer :: rsvar
-    !
+
     this%mf6_input = mf6_input
     this%mshape => mshape
     this%nparam = nparam
     this%iper_export = 0
-    !
+
     input_mempath = create_mem_path(component=mf6_input%component_name, &
                                     subcomponent=mf6_input%subcomponent_name, &
                                     context=idm_context)
-    !
-    ! -- allocate param arrays
+
+    ! allocate param arrays
     allocate (this%param_names(nparam))
     allocate (this%param_reads(nparam))
-    !
-    ! -- set param arrays
+
+    ! set param arrays
     do n = 1, nparam
       this%param_names(n) = param_names(n)
       rs_varname = rsv_name(param_names(n))
       call mem_setptr(rsvar, rs_varname, mf6_input%mempath)
       this%param_reads(n)%invar => rsvar
     end do
-    !
-    ! -- set pointer to loaded input period
+
+    ! set pointer to loaded input period
     call mem_setptr(this%iper, 'IPER', mf6_input%mempath)
   end subroutine epkg_init
 
@@ -183,7 +182,6 @@ contains
   !<
   subroutine epkg_destroy(this)
     use InputDefinitionModule, only: InputParamDefinitionType
-    ! -- dummy
     class(ExportPackageType), intent(inout) :: this
     if (allocated(this%param_names)) deallocate (this%param_names)
   end subroutine epkg_destroy
@@ -199,7 +197,7 @@ contains
     integer(I4B), intent(in) :: nctype
     character(len=LINELENGTH) :: fullname
     integer :: values(8)
-    !
+
     this%title = ''
     this%model = ''
     this%grid = ''
@@ -208,13 +206,13 @@ contains
     this%conventions = ''
     this%stdname = ''
     this%longname = ''
-    !
-    ! -- set file conventions
+
+    ! set file conventions
     this%conventions = 'CF-1.11'
     if (nctype == NETCDF_UGRID) this%conventions = &
       trim(this%conventions)//' UGRID-1.0'
-    !
-    ! -- set model specific attributes
+
+    ! set model specific attributes
     select case (modeltype)
     case ('GWF')
       fullname = 'Groundwater Flow'
@@ -233,22 +231,22 @@ contains
       call store_error(errmsg)
       call store_error_filename(modelfname)
     end select
-    !
-    ! -- set export type
+
+    ! set export type
     if (nctype == NETCDF_UGRID) then
       this%grid = 'LAYERED MESH'
     else if (nctype == NETCDF_STRUCTURED) then
       this%grid = 'STRUCTURED'
     end if
-    !
-    ! -- model description string
+
+    ! model description string
     this%model = trim(modelname)//': MODFLOW 6 '//trim(fullname)// &
                  ' ('//trim(modeltype)//') model'
-    !
-    ! -- modflow6 version string
+
+    ! modflow6 version string
     this%source = 'MODFLOW 6 '//trim(adjustl(VERSION))
-    !
-    ! -- create timestamp
+
+    ! create timestamp
     call date_and_time(values=values)
     write (this%history, '(a,i0,a,i0,a,i0,a,i0,a,i0,a,i0,a,i0)') &
       'first created ', values(1), '/', values(2), '/', values(3), ' ', &
@@ -277,14 +275,14 @@ contains
     character(len=LENMEMPATH) :: model_mempath
     type(UtlNcfParamFoundType) :: found
     logical(LGP) :: found_mempath
-    !
-    ! -- allocate
+
+    ! allocate
     allocate (this%deflate)
     allocate (this%shuffle)
     allocate (this%input_attr)
     allocate (this%chunk_time)
-    !
-    ! -- initialize
+
+    ! initialize
     this%modelname = modelname
     this%modeltype = modeltype
     this%modelfname = modelfname
@@ -304,13 +302,13 @@ contains
     this%chunk_time = -1
     this%iout = iout
     this%chunking_active = .false.
-    !
+
     call lowcase(this%nc_fname)
-    !
-    ! -- set file scoped attributes
+
+    ! set file scoped attributes
     call this%annotation%set(modelname, modeltype, modelfname, nctype)
-    !
-    ! -- set dependent variable basename
+
+    ! set dependent variable basename
     select case (modeltype)
     case ('GWF')
       this%xname = 'head'
@@ -323,8 +321,8 @@ contains
       call store_error(errmsg)
       call store_error_filename(modelfname)
     end select
-    !
-    ! -- set discretization input mempath
+
+    ! set discretization input mempath
     if (disenum == DIS) then
       this%dis_mempath = create_mem_path(modelname, 'DIS', idm_context)
     else if (disenum == DISU) then
@@ -332,15 +330,15 @@ contains
     else if (disenum == DISV) then
       this%dis_mempath = create_mem_path(modelname, 'DISV', idm_context)
     end if
-    !
-    ! -- set dependent variable pointer
+
+    ! set dependent variable pointer
     model_mempath = create_mem_path(component=modelname)
     call mem_setptr(this%x, 'X', model_mempath)
-    !
-    ! --set ncf_mempath if provided
+
+    ! set ncf_mempath if provided
     call mem_set_value(this%ncf_mempath, 'NCF6_MEMPATH', this%dis_mempath, &
                        found_mempath)
-    !
+
     if (found_mempath) then
       call mem_set_value(this%ogc_wkt, 'OGC_WKT', this%ncf_mempath, &
                          found%ogc_wkt)
@@ -353,17 +351,17 @@ contains
       call mem_set_value(this%chunk_time, 'CHUNK_TIME', this%ncf_mempath, &
                          found%chunk_time)
     end if
-    !
+
     if (found%ogc_wkt) then
       this%gridmap_name = 'projection'
     end if
-    !
-    ! -- ATTR_OFF turns off modflow 6 input attributes
+
+    ! ATTR_OFF turns off modflow 6 input attributes
     if (found%attr_off) then
       this%input_attr = 0
     end if
-    !
-    ! -- set datetime string
+
+    ! set datetime string
     if (isim_mode /= MVALIDATE .and. datetime0 == '') then
       errmsg = 'TDIS parameter START_DATE_TIME required for NetCDF export.'
       call store_error(errmsg)
@@ -371,8 +369,8 @@ contains
     else
       this%datetime = 'days since '//trim(datetime0)
     end if
-    !
-    ! -- set total nstp
+
+    ! set total nstp
     this%totnstp = sum(nstp)
   end subroutine export_init
 
@@ -384,7 +382,6 @@ contains
     integer(I4B), intent(in) :: idx
     class(ExportPackageType), pointer :: res
     class(*), pointer :: obj
-    !
     nullify (res)
     obj => this%pkglist%GetItem(idx)
     if (associated(obj)) then
@@ -405,9 +402,7 @@ contains
     character(len=*), intent(in) :: pkgname
     type(InputParamDefinitionType), pointer, intent(in) :: idt
     character(len=LINELENGTH) :: attr
-    !
     attr = ''
-    !
     if (this%input_attr > 0) then
       attr = trim(this%modelname)//memPathSeparator//trim(pkgname)// &
              memPathSeparator//trim(idt%mf6varname)
@@ -425,7 +420,6 @@ contains
     integer(I4B), optional, intent(in) :: iper
     character(len=LINELENGTH) :: lname
     character(len=LINELENGTH) :: pname, vname
-    !
     pname = pkgname
     vname = tagname
     call lowcase(pname)
@@ -454,33 +448,31 @@ contains
     integer(I4B) :: idx, ilayer
     class(ExportPackageType), pointer :: export_pkg
     character(len=LENVARNAME) :: ilayer_varname
-    !
+
     do idx = 1, this%pkglist%Count()
-      !
       export_pkg => this%get(idx)
-      ! -- last loaded data is not current period
+      ! last loaded data is not current period
       if (export_pkg%iper /= kper) cycle
-      ! -- period input already exported
+      ! period input already exported
       if (export_pkg%iper_export >= export_pkg%iper) cycle
-      ! -- set exported iper
+      ! set exported iper
       export_pkg%iper_export = export_pkg%iper
-      !
-      ! -- initialize ilayer
+
+      ! initialize ilayer
       ilayer = 0
-      !
-      ! -- set expected ilayer index variable name
+
+      ! set expected ilayer index variable name
       ilayer_varname = 'I'//trim(export_pkg%mf6_input%subcomponent_type(1:3))
-      !
-      ! -- is ilayer variable in param name list
+
+      ! is ilayer variable in param name list
       ilayer = ifind(export_pkg%param_names, ilayer_varname)
-      !
-      ! -- layer index variable is required to be first defined in period block
+
+      ! layer index variable is required to be first defined in period block
       if (ilayer == 1) then
         call this%package_step_ilayer(export_pkg, ilayer_varname, ilayer)
       else
         call this%package_step(export_pkg)
       end if
-      !
     end do
   end subroutine export_input
 
@@ -490,14 +482,12 @@ contains
     use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     class(NCModelExportType), intent(inout) :: this
-    !
-    ! -- override in derived class
+    ! override in derived class
     deallocate (this%deflate)
     deallocate (this%shuffle)
     deallocate (this%input_attr)
     deallocate (this%chunk_time)
-    !
-    ! -- Deallocate idm memory
+    ! Deallocate idm memory
     if (this%ncf_mempath /= '') then
       call memorystore_remove(this%modelname, 'NCF', idm_context)
     end if
