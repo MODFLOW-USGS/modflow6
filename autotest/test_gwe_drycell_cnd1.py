@@ -62,7 +62,8 @@ scheme = "UPSTREAM"
 cases = [
     "drycell2-a",  # 2-cell model, horizontally connected with tops and bots aligned
     "drycell2-b",  # 2-cell model, vertically connected
-    "drycell2-c",  # 2-cell model, horizontally connected with staggered alignment (reduced shared cell face area)
+    "drycell2-c",  # 2-cell model, horizontally connected with staggered alignment
+    #                              (reduced shared cell face area)
 ]
 
 conn_types = (
@@ -324,7 +325,8 @@ def build_models(idx, test):
         filename=f"{gwename1}.cnd",
     )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe1,
         save_flows=True,
@@ -449,7 +451,8 @@ def check_output(idx, test):
     assert isMonotonic(np.diff(conc1[12:, 0, 0, 0])), msg3
     assert isMonotonic(np.diff(conc1[12:, idxl, idxr, idxc])), msg2
 
-    # Ensure that the equilibrated temperature is half the starting difference between the cells
+    # Ensure that the equilibrated temperature is half the starting difference
+    # between the cells
     msg4 = (
         "The final equilibrated cell temperature does not split the "
         "difference of the starting temperature"

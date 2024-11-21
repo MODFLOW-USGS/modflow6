@@ -724,7 +724,8 @@ class TestFramework:
                         shutil.rmtree(cmp_path)
                     if self.verbose:
                         print(
-                            f"Copying simulation files from {self.workspace} to {cmp_path}"
+                            "Copying simulation files "
+                            f"from {self.workspace} to {cmp_path}"
                         )
                     shutil.copytree(self.workspace, cmp_path)
 
@@ -732,11 +733,13 @@ class TestFramework:
                 if self.compare in ["mf6_regression", "libmf6"]:
                     if self.compare not in self.targets:
                         warn(
-                            f"Couldn't find comparison program '{self.compare}', skipping comparison"
+                            f"Couldn't find comparison program '{self.compare}', "
+                            "skipping comparison"
                         )
                     else:
-                        # todo: don't hardcode workspace or assume agreement with test case
-                        # simulation workspace, set & access simulation workspaces directly
+                        # todo: don't hardcode workspace or assume agreement with
+                        # test case simulation workspace, set & access simulation
+                        # workspaces directly
                         workspace = self.workspace / self.compare
                         success, _ = self._run_sim_or_model(
                             workspace,

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     \hline
     \endhead
 
-    """
+    """  # noqa
 
     footer = r"""
     \hline
@@ -72,7 +72,8 @@ if __name__ == "__main__":
         ftex.write(footer)
         ftex.close()
         print(
-            f"Created LaTex file {fnametex} from markdown benchmark results file {fpath}"
+            f"Created LaTex file {fnametex} "
+            f"from markdown benchmark results file {fpath}"
         )
     else:
         warn(f"Benchmark results not found: {fpath}")

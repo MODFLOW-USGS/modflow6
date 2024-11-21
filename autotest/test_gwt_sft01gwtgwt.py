@@ -15,7 +15,7 @@ should match exactly with the gwf flows and the gwf concentrations.
  sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
       -------------                -------------
  gwt  1 2 3 4 5 6 7  gwtgwt     => 1 2 3 4 5 6 7
-"""
+"""  # noqa
 
 import flopy
 import numpy as np
@@ -276,7 +276,8 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
             filename=f"{gwfname}.wel",
         )
 
-    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
+    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #             <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
     rlen = delr
     rwid = delc
     rgrd = 1.0

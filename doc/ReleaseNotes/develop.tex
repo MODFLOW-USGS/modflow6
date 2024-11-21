@@ -46,7 +46,9 @@
 		\item The Stress Package Concentration (SPC) utility available with the SSM Package is now the referred to as the Stress Package Component utility in the MF6IO guide.  Additionally, some relatively minor refactoring of the code facilitates use of the SPC utility with the GWE model type so that TEMPERATURE arrays may be read by the utility.  The SPC acronym was maintained to preserve backward compatibility.
 		\item The GWF-GWF Exchange has been fixed to support the configuration of the Mover package (MVR) also in cases where the number of exchanges equals zero (NEXG = 0). In earlier versions this has caused MODFLOW to terminate with an error.
 		\item A PRT bug was fixed in which array-based input read from the RCH (recharge) or EVT (evapotranspiration) packages could fail to be processed correctly by the PRT FMI (flow model interface) package, causing a crash.
-		
+		\item When the SQUARE\_GWET option was invoked in the UZF options block, evapotranspiration from the water table (GWET) was calculated incorrectly.  Instead of acting as a sink, the calculated evapotranspiration flux was added as a source of water.  The applied fix ensures that groundwater evapotranspiration is removed from the water table and as a result the GWET values are accumulated as outflows in the budget table.
+	%	\item xxx
+
 	\end{itemize}
 
 	%\underline{INTERNAL FLOW PACKAGES}

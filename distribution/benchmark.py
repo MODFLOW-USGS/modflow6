@@ -335,7 +335,9 @@ def run_benchmarks(
     output_path: PathLike,
     excluded: List[str] = [],
 ):
-    """Benchmark current development version against previous release with example models."""
+    """Benchmark current development version against previous release
+    with example models.
+    """
 
     build_path = Path(build_path).expanduser().absolute()
     current_bin_path = Path(current_bin_path).expanduser().absolute()
@@ -421,8 +423,8 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Benchmarks the current version of MODFLOW 6 against the latest official release,
-            with the example models stored in the MODFLOW-USGS/modflow6-examples repository.
+    Benchmarks the current version of MODFLOW 6 against the latest official release,
+    with the example models stored in the MODFLOW-USGS/modflow6-examples repository.
             """
         ),
     )

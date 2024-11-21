@@ -335,7 +335,8 @@ def add_gwe_model(sim, gwename):
         filename=f"{gwename}.cnd",
     )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
@@ -500,7 +501,7 @@ def check_output(idx, test):
     )
     temp_diff = np.diff(temp_nwt.squeeze(), axis=0)
 
-    # Because of the time discretization scheme, need to check each cell in two chuncks
+    # Because of the time discretization scheme, need to check each cell in two chunks
     # Cell ID: (0, 0, 0)
     assert isMonotonic(temp_diff[:, 0, 0][::-1][0:10]), msg2
     assert isMonotonic(temp_diff[:, 0, 0][::-1][10:-1]), msg2

@@ -106,25 +106,25 @@ contains
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
     logical(LGP) :: found
-    !
-    ! -- initialize base class
+
+    ! initialize base class
     call this%NCModelExportType%init(modelname, modeltype, modelfname, disenum, &
                                      nctype, iout)
-    !
-    ! -- allocate and initialize
+
+    ! allocate and initialize
     allocate (this%chunk_face)
     this%chunk_face = -1
-    !
-    ! -- update values from input context
+
+    ! update values from input context
     if (this%ncf_mempath /= '') then
       call mem_set_value(this%chunk_face, 'CHUNK_FACE', this%ncf_mempath, found)
     end if
-    !
+
     if (this%chunk_time > 0 .and. this%chunk_face > 0) then
       this%chunking_active = .true.
     end if
-    !
-    ! -- create the netcdf file
+
+    ! create the netcdf file
     call nf_verify(nf90_create(this%nc_fname, &
                                IAND(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
                    this%nc_fname)
@@ -135,9 +135,7 @@ contains
   subroutine mesh_destroy(this)
     use MemoryManagerExtModule, only: mem_set_value
     class(MeshModelType), intent(inout) :: this
-    !
     call nf_verify(nf90_close(this%ncid), this%nc_fname)
-    !
     deallocate (this%chunk_face)
     nullify (this%chunk_face)
   end subroutine mesh_destroy
@@ -146,22 +144,22 @@ contains
   !<
   subroutine add_global_att(this)
     class(MeshModelType), intent(inout) :: this
-    ! -- file scoped title
+    ! file scoped title
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'title', &
                                 this%annotation%title), this%nc_fname)
-    ! -- source (MODFLOW 6)
+    ! source (MODFLOW 6)
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'source', &
                                 this%annotation%source), this%nc_fname)
-    ! -- export type (MODFLOW 6)
+    ! export type (MODFLOW 6)
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'modflow6_grid', &
                                 this%annotation%grid), this%nc_fname)
-    ! -- MODFLOW 6 model type
+    ! MODFLOW 6 model type
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'modflow6_model', &
                                 this%annotation%model), this%nc_fname)
-    ! -- generation datetime
+    ! generation datetime
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'history', &
                                 this%annotation%history), this%nc_fname)
-    ! -- supported conventions
+    ! supported conventions
     call nf_verify(nf90_put_att(this%ncid, NF90_GLOBAL, 'Conventions', &
                                 this%annotation%conventions), &
                    this%nc_fname)
@@ -179,16 +177,14 @@ contains
       intent(in) :: param_dfns
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam, isize
-    !
-    ! -- export griddata block parameters
+    ! export griddata block parameters
     do iparam = 1, size(param_dfns)
-      ! -- assign param definition pointer
+      ! assign param definition pointer
       idt => param_dfns(iparam)
-      ! -- for now
+      ! for now only griddata is exported
       if (idt%blockname == 'GRIDDATA') then
-        ! -- veriy variable is allocated
+        ! veriy variable is allocated
         call get_isize(idt%mf6varname, mempath, isize)
-        !
         if (isize > 0) then
           call this%export_input_array(pkgtype, pkgname, mempath, idt)
         end if
@@ -219,31 +215,29 @@ contains
     integer(I4B) :: n
     integer(I4B), pointer :: export_arrays
     logical(LGP) :: found
-    !
+
     input_mempath = create_mem_path(component=this%modelname, context=idm_context)
-    !
-    ! -- set pointers to model path package info
+
+    ! set pointers to model path package info
     call mem_setptr(pkgtypes, 'PKGTYPES', input_mempath)
     call mem_setptr(pkgnames, 'PKGNAMES', input_mempath)
     call mem_setptr(mempaths, 'MEMPATHS', input_mempath)
-    !
+
     allocate (export_arrays)
-    !
+
     do n = 1, size(mempaths)
-      !
-      ! -- initialize export_arrays
+      ! initialize export_arrays
       export_arrays = 0
-      !
-      ! -- set package attributes
+
+      ! set package attributes
       mempath = mempaths(n)
       pname = pkgnames(n)
       ptype = pkgtypes(n)
-      !
-      ! -- export input arrays
+
+      ! export input arrays
       if (mempath /= '') then
-        ! -- update export
+        ! update export
         call mem_set_value(export_arrays, 'EXPORT_NC', mempath, found)
-        !
         if (export_arrays > 0) then
           pkgtype = idm_subcomponent_type(this%modeltype, ptype)
           param_dfns => param_definitions(this%modeltype, pkgtype)
@@ -251,8 +245,8 @@ contains
         end if
       end if
     end do
-    !
-    ! -- cleanup
+
+    ! cleanup
     deallocate (export_arrays)
   end subroutine add_pkg_data
 
@@ -262,27 +256,26 @@ contains
     class(MeshModelType), intent(inout) :: this
     character(len=LINELENGTH) :: varname, longname
     integer(I4B) :: k
-    !
-    ! -- create a dependent variable for each layer
+
+    ! create a dependent variable for each layer
     do k = 1, this%nlay
-      !
-      ! -- initialize names
+      ! initialize names
       varname = ''
       longname = ''
-      !
-      ! -- set layer variable and longnames
+
+      ! set layer variable and longnames
       write (varname, '(a,i0)') trim(this%xname)//'_l', k
       write (longname, '(a,i0,a)') trim(this%annotation%longname)// &
         ' (layer ', k, ')'
-      !
-      ! -- create the netcdf dependent layer variable
+
+      ! create the netcdf dependent layer variable
       call nf_verify(nf90_def_var(this%ncid, varname, NF90_DOUBLE, &
                                   (/this%dim_ids%nmesh_face, &
                                     this%dim_ids%time/), &
                                   this%var_ids%dependent(k)), &
                      this%nc_fname)
-      !
-      ! -- apply chunking parameters
+
+      ! apply chunking parameters
       if (this%chunking_active) then
         call nf_verify(nf90_def_var_chunking(this%ncid, &
                                              this%var_ids%dependent(k), &
@@ -291,11 +284,12 @@ contains
                                                this%chunk_time/)), &
                        this%nc_fname)
       end if
-      ! -- deflate and shuffle
+
+      ! deflate and shuffle
       call ncvar_deflate(this%ncid, this%var_ids%dependent(k), this%deflate, &
                          this%shuffle, this%nc_fname)
-      !
-      ! -- assign variable attributes
+
+      ! assign variable attributes
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
                                   'units', 'm'), this%nc_fname)
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
@@ -310,8 +304,8 @@ contains
                                   'mesh', this%mesh_name), this%nc_fname)
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%dependent(k), &
                                   'location', 'face'), this%nc_fname)
-      !
-      ! -- add grid mapping
+
+      ! add grid mapping
       call ncvar_gridmap(this%ncid, this%var_ids%dependent(k), &
                          this%gridmap_name, this%nc_fname)
     end do
@@ -322,18 +316,17 @@ contains
   subroutine define_gridmap(this)
     class(MeshModelType), intent(inout) :: this
     integer(I4B) :: var_id
-    !
-    ! -- was projection info provided
+
+    ! was projection info provided
     if (this%ogc_wkt /= '') then
-      !
-      ! -- create projection variable
+      ! create projection variable
       call nf_verify(nf90_redef(this%ncid), this%nc_fname)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%nc_fname)
-      ! -- cf-conventions prefers 'crs_wkt'
+      ! cf-conventions prefers 'crs_wkt'
       !call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
       !               this%nc_fname)
-      ! -- QGIS recognizes 'wkt'
+      ! QGIS recognizes 'wkt'
       call nf_verify(nf90_put_att(this%ncid, var_id, 'wkt', this%ogc_wkt), &
                      this%nc_fname)
       call nf_verify(nf90_enddef(this%ncid), this%nc_fname)
@@ -346,12 +339,12 @@ contains
   !<
   subroutine create_mesh(this)
     class(Mesh2dModelType), intent(inout) :: this
-    !
-    ! -- create mesh container variable
+
+    ! create mesh container variable
     call nf_verify(nf90_def_var(this%ncid, this%mesh_name, NF90_INT, &
                                 this%var_ids%mesh), this%nc_fname)
-    !
-    ! -- assign container variable attributes
+
+    ! assign container variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh, 'cf_role', &
                                 'mesh_topology'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh, 'long_name', &
@@ -370,12 +363,12 @@ contains
                                 'face_node_connectivity', 'mesh_face_nodes'), &
                    this%nc_fname)
 
-    ! -- create mesh x node (mesh vertex) variable
+    ! create mesh x node (mesh vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_node_x', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_node/), &
                                 this%var_ids%mesh_node_x), this%nc_fname)
-    !
-    ! -- assign mesh x node variable attributes
+
+    ! assign mesh x node variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                 'units', 'm'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
@@ -383,20 +376,20 @@ contains
                    this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                 'long_name', 'Easting'), this%nc_fname)
-    !
+
     if (this%ogc_wkt /= '') then
-      ! -- associate with projection
+      ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                   'grid_mapping', this%gridmap_name), &
                      this%nc_fname)
     end if
 
-    ! -- create mesh y node (mesh vertex) variable
+    ! create mesh y node (mesh vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_node_y', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_node/), &
                                 this%var_ids%mesh_node_y), this%nc_fname)
-    !
-    ! -- assign mesh y variable attributes
+
+    ! assign mesh y variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                 'units', 'm'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
@@ -404,20 +397,20 @@ contains
                    this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                 'long_name', 'Northing'), this%nc_fname)
-    !
+
     if (this%ogc_wkt /= '') then
-      ! -- associate with projection
+      ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                   'grid_mapping', this%gridmap_name), &
                      this%nc_fname)
     end if
 
-    ! -- create mesh x face (cell vertex) variable
+    ! create mesh x face (cell vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_x', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_x), this%nc_fname)
-    !
-    ! -- assign mesh x face variable attributes
+
+    ! assign mesh x face variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
                                 'units', 'm'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
@@ -428,25 +421,25 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, 'bounds', &
                                 'mesh_face_xbnds'), this%nc_fname)
     if (this%ogc_wkt /= '') then
-      ! -- associate with projection
+      ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
                                   'grid_mapping', this%gridmap_name), &
                      this%nc_fname)
     end if
 
-    ! -- create mesh x cell bounds variable
+    ! create mesh x cell bounds variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_xbnds', NF90_DOUBLE, &
                                 (/this%dim_ids%max_nmesh_face_nodes, &
                                   this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_xbnds), &
                    this%nc_fname)
-    !
-    ! -- create mesh y face (cell vertex) variable
+
+    ! create mesh y face (cell vertex) variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_y', NF90_DOUBLE, &
                                 (/this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_y), this%nc_fname)
-    !
-    ! -- assign mesh y face variable attributes
+
+    ! assign mesh y face variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
                                 'units', 'm'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
@@ -456,29 +449,29 @@ contains
                                 'long_name', 'Northing'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, 'bounds', &
                                 'mesh_face_ybnds'), this%nc_fname)
-    !
+
     if (this%ogc_wkt /= '') then
-      ! -- associate with projection
+      ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
                                   'grid_mapping', this%gridmap_name), &
                      this%nc_fname)
     end if
 
-    ! -- create mesh y cell bounds variable
+    ! create mesh y cell bounds variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_ybnds', NF90_DOUBLE, &
                                 (/this%dim_ids%max_nmesh_face_nodes, &
                                   this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_ybnds), &
                    this%nc_fname)
-    !
-    ! -- create mesh face nodes variable
+
+    ! create mesh face nodes variable
     call nf_verify(nf90_def_var(this%ncid, 'mesh_face_nodes', NF90_INT, &
                                 (/this%dim_ids%max_nmesh_face_nodes, &
                                   this%dim_ids%nmesh_face/), &
                                 this%var_ids%mesh_face_nodes), &
                    this%nc_fname)
-    !
-    ! -- assign variable attributes
+
+    ! assign variable attributes
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_nodes, &
                                 'cf_role', 'face_node_connectivity'), &
                    this%nc_fname)
@@ -500,8 +493,6 @@ contains
     integer(I4B), intent(in) :: varid
     integer(I4B), intent(in) :: chunk_face
     character(len=*), intent(in) :: nc_fname
-    !
-    ! -- apply chunking parameters
     if (chunk_face > 0) then
       call nf_verify(nf90_def_var_chunking(ncid, varid, NF90_CHUNKED, &
                                            (/chunk_face/)), nc_fname)
@@ -516,7 +507,6 @@ contains
     integer(I4B), intent(in) :: deflate
     integer(I4B), intent(in) :: shuffle
     character(len=*), intent(in) :: nc_fname
-    ! -- deflate and shuffle
     if (deflate >= 0) then
       call nf_verify(nf90_def_var_deflate(ncid, varid, shuffle=shuffle, &
                                           deflate=1, deflate_level=deflate), &
@@ -531,7 +521,6 @@ contains
     integer(I4B), intent(in) :: varid
     character(len=*), intent(in) :: gridmap_name
     character(len=*), intent(in) :: nc_fname
-    !
     if (gridmap_name /= '') then
       call nf_verify(nf90_put_att(ncid, varid, 'coordinates', &
                                   'mesh_face_x mesh_face_y'), nc_fname)
@@ -550,7 +539,6 @@ contains
     integer(I4B), intent(in) :: iaux
     character(len=*), intent(in) :: nc_tag
     character(len=*), intent(in) :: nc_fname
-    !
     if (nc_tag /= '') then
       call nf_verify(nf90_put_att(ncid, varid, 'modflow6_input', &
                                   nc_tag), nc_fname)
@@ -558,12 +546,10 @@ contains
         call nf_verify(nf90_put_att(ncid, varid, 'modflow6_layer', &
                                     layer), nc_fname)
       end if
-      !
       if (iper > 0) then
         call nf_verify(nf90_put_att(ncid, varid, 'modflow6_iper', &
                                     iper), nc_fname)
       end if
-      !
       if (iaux > 0) then
         call nf_verify(nf90_put_att(ncid, varid, 'modflow6_iaux', &
                                     iaux), nc_fname)
@@ -580,9 +566,7 @@ contains
     integer(I4B), optional, intent(in) :: iper
     integer(I4B), optional, intent(in) :: iaux
     character(len=LINELENGTH) :: vname
-    !
     vname = ''
-    !
     if (varname /= '') then
       vname = varname
       call lowcase(vname)

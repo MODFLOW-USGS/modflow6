@@ -339,7 +339,6 @@ def build_models(idx, test):
                 kstp=1,
                 kper=1,
             )
-            header.tofile(f)
             flopy.utils.Util2d.write_bin(
                 (nrow, ncol),
                 f,
@@ -372,7 +371,6 @@ def build_models(idx, test):
             kstp=1,
             kper=1,
         )
-        header.tofile(f)
         flopy.utils.Util2d.write_bin(
             (nrow, ncol),
             f,

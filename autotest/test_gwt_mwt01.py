@@ -325,7 +325,8 @@ def check_obs(sim):
             if not is_same:
                 success = False
                 print(
-                    "Binary concentrations do not match with observation concentrations for mwt1"
+                    "Binary concentrations do not match with "
+                    "observation concentrations for mwt1"
                 )
                 print(conc_ra["BMWT1"], conc_mwt1)
         # check boundname observations with numeric ID observations
@@ -356,7 +357,8 @@ def check_obs(sim):
             success = False
             diff = connection_sum - conc_ra[f"BMWT{icv + 1}"]
             print(
-                f"Problem with MWT {icv + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+                f"Problem with MWT {icv + 1}; "
+                f"mindiff {diff.min()} and maxdiff {diff.max()}"
             )
 
     assert success, "One or more MWT obs checks did not pass"

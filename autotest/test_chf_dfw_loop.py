@@ -392,7 +392,7 @@ def make_plot(test):
     )
     ax.plot(answer_flow["TOTIME"], answer_flow["FLOW45"], "b-", label="SWR Gauge 4")
     ax.plot(answer_flow["TOTIME"], answer_flow["FLOW56"], "g-", label="SWR Gauge 5")
-    # ax.plot(obsvals["time"], answer["STAGE0000000014"], marker="o", mfc="none", mec="k", lw=0., label="swr")
+    # ax.plot(obsvals["time"], answer["STAGE0000000014"], marker="o", mfc="none", mec="k", lw=0., label="swr")  # noqa
     ax.set_xscale("log")
     plt.xlabel("time, in seconds")
     plt.ylabel("flow, in cubic meters per second")

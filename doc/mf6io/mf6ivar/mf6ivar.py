@@ -92,7 +92,8 @@
 #   change FILE ctabname to TABLE_FILENAME table_filename
 #   STATUS not implemented yet, but it is described in input instructions
 #   invert indicates an integer variable.  change to dinvert?
-#   time series variables are listed as "real or character ..." should just be double precision
+#   time series variables are listed as "real or character ..."
+#       should just be double precision
 #   capitalize example input file words that are recognized by mf6
 #
 # uzf
@@ -108,7 +109,8 @@
 #
 # mvr
 #   change maxpackages to npackages
-#   Included WEL, DRN, RIV, GHB as providers, though that is not supported in the code yet
+#   Included WEL, DRN, RIV, GHB as providers,
+#       though that is not supported in the code yet
 #
 # oc
 #   output control rewritten entirely, and implemented in the code
@@ -119,13 +121,15 @@
 # name :: variable name
 # in_record :: optional True or False, False if not specified
 # type :: recarray, record, keyword, integer, double precision, keystring
-# tagged :: optional True or False, True if not specified. If tagged, then keyword comes before value
+# tagged :: optional True or False, True if not specified.
+#           If tagged, then keyword comes before value
 # shape :: (size), optional, only required for arrays
 # valid :: description of valid values
 # reader :: urword, readarray, u1dint, ...
 # optional :: optional True or False, False if not specified
 # longname :: long name for variable
-# description :: description for variable, REPLACE tag indicates that description will come from common.dfn
+# description :: description for variable, REPLACE tag indicates that
+#                description will come from common.dfn
 
 
 import os
@@ -613,7 +617,8 @@ def write_appendix(blocks):
         )
         f.write("\\hline\n\\hline\n")
         f.write(
-            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n"
+            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & "
+            "\\textbf{OPEN/CLOSE} \\\\\n"
         )
         f.write("\\hline\n\\endfirsthead\n\n\n")
 
@@ -627,7 +632,8 @@ def write_appendix(blocks):
 
         f.write("\n\\hline\n\\hline\n")
         f.write(
-            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n"
+            "\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & "
+            "\\textbf{OPEN/CLOSE} \\\\\n"
         )
         f.write("\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n")
 
@@ -796,7 +802,11 @@ def write_variables():
                 if "sln-ims" in mdname:
                     with open("../ims_table.tex", "r") as fims:
                         lines = fims.readlines()
-                    s = "\n\n#### IMS variable values for the available complexity options\n"
+                    s = (
+                        "\n\n"
+                        "#### IMS variable values for the "
+                        "available complexity options\n"
+                    )
                     for line in lines:
                         line = md_replace(line.rstrip())
                         save_line = True

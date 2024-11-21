@@ -505,12 +505,12 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Create documentation for a distribution. By default, this only includes the mf6io PDF
-            document. If the --full flag is provided this includes benchmarks, release notes, the
-            MODFLOW 6 input/output specification, example model documentation, supplemental info,
-            documentation for the MODFLOW 5 to 6 converter and Zonebudget 6, and several articles
-            downloaded from the USGS website. These are all written to a specified --output-path.
-            Additional LaTeX files may be included in the distribution by specifying --tex-paths.
+Create documentation for a distribution. By default, this only includes the mf6io PDF
+document. If the --full flag is provided this includes benchmarks, release notes, the
+MODFLOW 6 input/output specification, example model documentation, supplemental info,
+documentation for the MODFLOW 5 to 6 converter and Zonebudget 6, and several articles
+downloaded from the USGS website. These are all written to a specified --output-path.
+Additional LaTeX files may be included in the distribution by specifying --tex-paths.
             """
         ),
     )

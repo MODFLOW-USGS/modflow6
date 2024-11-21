@@ -1,14 +1,5 @@
 line-length = 88
-target-version = "py37"
-include = [
-    ".doc/**/*.py",
-    "autotest/pyproject.toml",
-    "autotest/**/*.py",
-    "distribution/**/*.py",
-    "doc/**/*.py",
-    "pymake/**/*.py",
-    "utils/**/*.py",
-]
+target-version = "py39"
 
 [lint]
 select = [
@@ -18,11 +9,13 @@ select = [
     "I001", # isort - unsorted-imports
 ]
 ignore = [
-    "E501", # line too long TODO FIXME
     "E722", # do not use bare `except`
     "E741", # ambiguous variable name
     "F841", # local variable assigned but never used
 ]
+
+[lint.per-file-ignores]
+"doc/**.ipynb" = ["E501"]
 
 [format]
 quote-style = "double"

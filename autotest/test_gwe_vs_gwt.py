@@ -121,7 +121,7 @@ npsink = nph
 tdis_rc = []
 tdis_rc.append((perlen, nstp, 1.0))
 
-# ### Functions to build, write, and run models and plot MT3DMS Example 10 Problem results
+## Functions to build, write, and run models and plot MT3DMS Example 10 Problem results
 #
 # MODFLOW 6 flopy simulation object (sim) is returned if building the model
 
@@ -201,7 +201,8 @@ def build_models(idx, test):
         filename=f"{gwfname}.npf",
     )
 
-    # Instantiating MODFLOW 6 storage package (steady flow conditions, so no actual storage, using to print values in .lst file)
+    # Instantiating MODFLOW 6 storage package (steady flow conditions,
+    # so no actual storage, using to print values in .lst file)
     flopy.mf6.ModflowGwfsto(gwf, ss=0, sy=0, pname="STO-1", filename=f"{gwfname}.sto")
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
@@ -307,7 +308,8 @@ def build_models(idx, test):
             filename=f"{gwename}.cnd",
         )
 
-    # Instantiating MODFLOW 6 heat transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 heat transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=prsity,
@@ -412,7 +414,8 @@ def build_models(idx, test):
             filename=f"{gwtname}.dsp",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGwtmst(
         gwt,
         porosity=prsity,

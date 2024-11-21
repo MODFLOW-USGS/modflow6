@@ -169,9 +169,10 @@ def check_output(idx, test):
                 for icol in range(grb.modelgrid.ncol):
                     xc = xyc[0][icol] + xoff
                     ref_value = exact(xc)
-                    assert (
-                        heads[ilay, irow, icol] == pytest.approx(ref_value)
-                    ), f"Comparing for model {model_name}, cell ({ilay},{irow},{icol}) failed"
+                    assert heads[ilay, irow, icol] == pytest.approx(ref_value), (
+                        f"Comparing for model {model_name}, "
+                        f"cell ({ilay},{irow},{icol}) failed"
+                    )
 
 
 @pytest.mark.parallel

@@ -39,88 +39,86 @@ contains
     class(Mesh2dDisvExportType), pointer :: ugrid_disv
     class(DisNCStructuredType), pointer :: structured_dis
     class(DisBaseType), pointer :: disbase
-    !
+
     select case (export_model%disenum)
     case (DIS)
-      ! -- allocate nc structured grid export object
+      ! allocate nc structured grid export object
       if (export_model%nctype == NETCDF_UGRID) then
-        !
-        ! -- allocate nc structured grid export object
+        ! allocate nc structured grid export object
         allocate (ugrid_dis)
-        !
-        ! -- set dis base type
+
+        ! set dis base type
         disbase => num_model%dis
         select type (disbase)
         type is (DisType)
           ugrid_dis%dis => disbase
         end select
-        !
-        ! -- set dynamic loaders
+
+        ! set dynamic loaders
         call create_export_pkglist(ugrid_dis%pkglist, export_model%loaders, &
                                    export_model%iout)
-        !
-        ! -- initialize export object
+
+        ! initialize export object
         call ugrid_dis%init(export_model%modelname, export_model%modeltype, &
                             export_model%modelfname, export_model%disenum, &
                             NETCDF_UGRID, export_model%iout)
-        !
-        ! -- define export object
+
+        ! define export object
         call ugrid_dis%df()
-        !
-        ! -- set base pointer
+
+        ! set base pointer
         export_model%nc_export => ugrid_dis
       else if (export_model%nctype == NETCDF_STRUCTURED) then
-        !
-        ! -- allocate nc structured grid export object
+        ! allocate nc structured grid export object
         allocate (structured_dis)
-        !
-        ! -- set dis base type
+
+        ! set dis base type
         disbase => num_model%dis
         select type (disbase)
         type is (DisType)
           structured_dis%dis => disbase
         end select
-        !
-        ! -- set dynamic loaders
+
+        ! set dynamic loaders
         call create_export_pkglist(structured_dis%pkglist, export_model%loaders, &
                                    export_model%iout)
-        !
-        ! -- initialize export object
+
+        ! initialize export object
         call structured_dis%init(export_model%modelname, export_model%modeltype, &
                                  export_model%modelfname, export_model%disenum, &
                                  NETCDF_STRUCTURED, export_model%iout)
-        !
-        ! -- define export object
+
+        ! define export object
         call structured_dis%df()
-        !
-        ! -- set base pointer
+
+        ! set base pointer
         export_model%nc_export => structured_dis
       end if
     case (DISV)
       if (export_model%nctype == NETCDF_UGRID) then
-        ! -- allocate nc structured grid export object
+        ! allocate nc structured grid export object
         allocate (ugrid_disv)
-        !
-        ! -- set dis base type
+
+        ! set dis base type
         disbase => num_model%dis
         select type (disbase)
         type is (DisvType)
           ugrid_disv%disv => disbase
         end select
-        !
-        ! -- set dynamic loaders
+
+        ! set dynamic loaders
         call create_export_pkglist(ugrid_disv%pkglist, export_model%loaders, &
                                    export_model%iout)
-        !
-        ! -- initialize export object
+
+        ! initialize export object
         call ugrid_disv%init(export_model%modelname, export_model%modeltype, &
                              export_model%modelfname, export_model%disenum, &
                              NETCDF_UGRID, export_model%iout)
-        !
-        ! -- define export object
+
+        ! define export object
         call ugrid_disv%df()
-        !
-        ! -- set base pointer
+
+        ! set base pointer
         export_model%nc_export => ugrid_disv
       else
         errmsg = 'DISV model discretization only &
@@ -155,43 +153,39 @@ contains
     class(*), pointer :: obj
     logical(LGP) :: found
     integer(I4B) :: n
-    !
-    ! -- create list of in scope loaders
+
+    ! create list of in scope loaders
     allocate (export_arrays)
-    !
+
     do n = 1, loaders%pkglist%Count()
-      !
-      ! -- initialize export arrays option
+      ! initialize export arrays option
       export_arrays = 0
-      !
+
       dynamic_pkg => loaders%get(n)
-      !
-      ! -- update export arrays option
+
+      ! update export arrays option
       call mem_set_value(export_arrays, 'EXPORT_NC', &
                          dynamic_pkg%mf6_input%mempath, found)
-      !
+
       if (export_arrays > 0 .and. dynamic_pkg%readasarrays) then
         select type (dynamic_pkg)
         type is (Mf6FileDynamicPkgLoadType)
-          !
           rp_loader => dynamic_pkg%rp_loader
-          !
           select type (rp_loader)
           type is (BoundGridInputType)
-            ! -- create the export object
+            ! create the export object
             allocate (export_pkg)
             call export_pkg%init(rp_loader%mf6_input, &
                                  rp_loader%bound_context%mshape, &
                                  rp_loader%param_names, rp_loader%nparam)
             obj => export_pkg
             call pkglist%add(obj)
-            !
           end select
         end select
       end if
     end do
-    !
-    ! -- cleanup
+
+    ! cleanup
     deallocate (export_arrays)
   end subroutine create_export_pkglist
 
@@ -205,24 +199,19 @@ contains
     type(ExportModelType), pointer :: export_model
     class(NumericalModelType), pointer :: num_model
     integer(I4B) :: im
-    !
     do n = 1, export_models%Count()
-      ! -- set pointer to export model
+      ! set pointer to export model
       export_model => get_export_model(n)
       if (export_model%nctype /= NETCDF_UNDEF) then
-        !
-        ! -- netcdf export is active identify model
+        ! netcdf export is active identify model
         do im = 1, basemodellist%Count()
-          !
-          ! -- set model pointer
+          ! set model pointer
           num_model => GetNumericalModelFromList(basemodellist, im)
           if (num_model%name == export_model%modelname .and. &
               num_model%macronym == export_model%modeltype) then
-            !
-            ! -- allocate and initialize nc export model
+            ! allocate and initialize nc export model
             call create_nc_export(export_model, num_model)
             exit
-            !
           end if
         end do
       end if

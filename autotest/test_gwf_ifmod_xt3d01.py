@@ -452,7 +452,8 @@ def check_output(idx, test):
     )[0]
     child_exchange_flows = child_exchange_flows["q"]
 
-    # Ensure observations are the same as parent exchange flows and negative child exchange flows
+    # Ensure observations are the same as parent exchange flows
+    # and negative child exchange flows
     assert np.allclose(
         obsvalues, parent_exchange_flows
     ), "exchange observations do not match parent exchange flows"

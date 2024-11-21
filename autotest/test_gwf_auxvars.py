@@ -118,7 +118,8 @@ def build_models(idx, test):
     )
     # maw.remove()
 
-    # <rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
+    # <rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #       <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
     packagedata = [
         [
             0,
@@ -175,7 +176,8 @@ def build_models(idx, test):
         [0, 100.0, 1, auxvar1, auxvar2, "lake1"],
         [1, 100.0, 1, auxvar1, auxvar2, "lake2"],
     ]
-    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
+    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> ...
+    #        <connlen> <connwidth>
     connectiondata = [
         [0, 0, (0, 1, 1), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
         [1, 0, (0, 2, 2), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
@@ -196,7 +198,8 @@ def build_models(idx, test):
     )
     # lak.remove()
 
-    # <ifno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
+    # <ifno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> ...
+    #        <thtr> <thts> <thti> <eps> [<boundname>]
     packagedata = [
         [0, (0, nrow - 1, 5), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [1, (0, nrow - 1, 6), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],

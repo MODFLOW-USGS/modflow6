@@ -1000,9 +1000,10 @@ def check_output(idx, test):
     # cur_ws, gwfparent = ex[idx], gwf_names[idx]
     cur_ws = test.workspace
     gwfparent = "gwf_" + cases[idx] + "_p"
-    with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
-        os.path.join(cur_ws, "mfsim.lst"), "r"
-    ) as sim_lst:
+    with (
+        open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst,
+        open(os.path.join(cur_ws, "mfsim.lst"), "r") as sim_lst,
+    ):
         gwf_lst_lines = gwf_lst.readlines()
         sim_lst_lines = sim_lst.readlines()
 
@@ -1020,7 +1021,8 @@ def check_output(idx, test):
                 line = next(gwf_lst)
                 m_arr = line.strip().split()
                 if m_arr[0] == "18":
-                    # store the 3rd value on the line (it should be the same across all scenarios
+                    # store the 3rd value on the line
+                    # (it should be the same across all scenarios)
                     parent_sfr_last_reach_flow = float(m_arr[2])
                     break
 

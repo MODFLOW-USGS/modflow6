@@ -361,26 +361,19 @@ pixi run build builddir
 
 Fortran source files, python files, definition files, markdown, and LaTeX files can be checked with [codespell](https://github.com/codespell-project/codespell). codespell was designed primarily for checking misspelled words in source code, but it can be used with other text files as well. The `codespell` package is included in the Conda `environment.yml` and the Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
 
-For instance, to format a single file:
-
-```shell
-python .github/common/check_spelling.py -p ./utils/zonebudget/src/zbud6.f90 --write-changes
-```
-When run in this way, the tool will modify the file in place. If unresolvable errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
-
 To check whether the repository's Fortran source files, python files, definition files, markdown, and LaTeX files have any spelling errors without making any changes:
-
-```shell
-python .github/common/check_spelling.py
-```
-
-or using pixi:
 
 ```shell
 pixi run check-spelling
 ```
 
-To fix spelling errors in all files, add the `--write-changes` flag to the end of the python or pixi commands.
+Or, from an environment with `codespell` installed, simply
+
+```shell
+codespell
+```
+
+To fix spelling errors in all files, use `-w` (`--write-changes`). When run in this way, the tool will modify the file in place. If unresolvable errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
 
 **Note**: Spell checking by codespell may make unwanted changes (for example, a variable name in source code). As a result, you should check the `codespell` changes. codespell can be forced to leave a particular word unchanged by adding it to the `.codespell.ignore` file.
 

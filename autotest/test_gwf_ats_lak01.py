@@ -342,7 +342,10 @@ def compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol)
                     allclose = np.allclose(
                         budcsvcum[name2][1:], budlstcum[name1], atol=atol
                     )
-                    msg = f"{name2} is same: {allclose}.  Min diff: {mindiff} Max diff {maxdiff}"
+                    msg = (
+                        f"{name2} is same: {allclose}.  "
+                        f"Min diff: {mindiff} Max diff {maxdiff}"
+                    )
                     if verbose:
                         print(msg)
                     allclose_list.append((allclose, name1, mindiff, maxdiff, msg))

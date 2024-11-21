@@ -98,7 +98,8 @@ def build_models(idx, test):
     slope = 1.0 / dx
     roughness = 0.03574737676661647
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
     pak_data = [
         (
             ifno,

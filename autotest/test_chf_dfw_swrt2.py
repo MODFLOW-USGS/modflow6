@@ -187,7 +187,7 @@ def make_plot(test, mfsim):
             lw=0.0,
             label=f"MF6 reach {irch}",
         )
-        # ax.plot(obsvals["time"], answer[f"STAGE00000000{irch:02d}"], "k-", label=f"SWR Reach {irch}")
+        # ax.plot(obsvals["time"], answer[f"STAGE00000000{irch:02d}"], "k-", label=f"SWR Reach {irch}")  # noqa
     ax.set_xlim(0, 30.0)
     ax.set_ylim(1.2, 2.4)
     plt.xlabel("time, in hours")

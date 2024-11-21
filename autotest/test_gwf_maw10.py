@@ -53,9 +53,15 @@ mawsetting_d = {
 
 # simple single stress period without going inactive in 2nd stress period
 # mawsetting_a = [(0, "rate", -2000.0), (0, "head_limit", -0.4)]
-# mawsetting_b = [[(0, "rate", -2000.0), (0, "rate_scaling", -1.4, 1.0)], ["status", "inactive"]]
+# mawsetting_b = [
+#     [(0, "rate", -2000.0), (0, "rate_scaling", -1.4, 1.0)],
+#     ["status", "inactive"],
+# ]
 # mawsetting_c = [[(0, "rate", 2000.0), (0, "head_limit", 0.4)], ["status", "inactive"]]
-# mawsetting_d = [[(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)], ["status", "inactive"]]
+# mawsetting_d = [
+#     [(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)],
+#     ["status", "inactive"],
+# ]
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
@@ -203,8 +209,8 @@ def build_models(idx, test):
 
 # 2 tests to perform here:
 # 1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
-# 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
-#  (and all are reduction times present in the obs file)?
+# 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at
+#    each time (and all are reduction times present in the obs file)?
 def check_output(idx, test):
     # MODFLOW 6 maw results
     name = cases[idx]
@@ -219,16 +225,20 @@ def check_output(idx, test):
     except:
         assert False, f'could not load data from "{fpthmfr}"'
 
-    # test 1: does rate-requested = rate-actual + maw-reduction at each time in the .maw.reduced.csv?
+    # test 1: does rate-requested = rate-actual + maw-reduction at each time
+    # in the .maw.reduced.csv?
     for rowmfr in tcmfr:
         v1 = rowmfr["rate-requested"]
         v2 = rowmfr["rate-actual"] + rowmfr["maw-reduction"]
-        errmsg = "MAW flow reduction output: requested rate must equal actual rate plus reduced rate.\n"
-        errmsg += f"{v1} /= {v2}"
+        errmsg = (
+            "MAW flow reduction output: "
+            "requested rate must equal actual rate plus reduced rate.\n"
+            f"{v1} /= {v2}"
+        )
         assert np.allclose(v1, v2), errmsg
 
-    # test 2: do values of rate-actual in .maw.reduced.csv equal those flow values reported in .maw.obs.csv?
-    #        (and are there matching times?)
+    # test 2: do values of rate-actual in .maw.reduced.csv equal those
+    # flow values reported in .maw.obs.csv? (and are there matching times?)
     for rowmfr in tcmfr:
         timevalmfr = rowmfr["time"]
         actvalmfr = rowmfr["rate-actual"]

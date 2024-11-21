@@ -140,7 +140,9 @@ def build_models(idx, test):
         filename=f"{gwfname}.wel",
     )
 
-    nlakeconn = 1  # note: this is the number of connectiosn for a lake, not total number of connections
+    # note: this is the number of connections for a lake,
+    # not total number of connections
+    nlakeconn = 1
     # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [
         (0, 1.0, nlakeconn, 0.0, 1025.0),
@@ -191,7 +193,8 @@ def build_models(idx, test):
         auxiliary=["CONCENTRATION", "DENSITY"],
     )
 
-    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
+    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #             <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
     rlen = delr
     rwid = delc
     rgrd = 1.0
@@ -510,7 +513,8 @@ def check_output(idx, test):
     res = bobj.get_data(text="flow-ja-face")[-1]
     # print(res)
 
-    # check the storage terms, which include the total mass in the reach as an aux variable
+    # check the storage terms, which include the total mass in the reach
+    # as an aux variable
     res = bobj.get_data(text="storage")[-1]
     # print(res)
 

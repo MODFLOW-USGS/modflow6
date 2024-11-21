@@ -74,7 +74,8 @@ def build_models(idx, test):
     # sfr data
     nreaches = 2
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv>
     if idx < 2:
         rhk1 = 0.0
         rhk2 = 0.0

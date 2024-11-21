@@ -60,7 +60,7 @@ contains
     type(ModflowInputType) :: mf6_input
     character(len=LENPACKAGETYPE) :: dfn_subcomponent_type
 
-    ! -- set subcomponent type
+    ! set subcomponent type
     if (present(filename)) then
       dfn_subcomponent_type = update_sc_type(pkgtype, filename, component_type, &
                                              subcomponent_type)
@@ -68,20 +68,20 @@ contains
       dfn_subcomponent_type = trim(subcomponent_type)
     end if
 
-    ! -- set input attributes
+    ! set input attributes
     mf6_input%pkgtype = trim(pkgtype)
     mf6_input%component_type = trim(component_type)
     mf6_input%subcomponent_type = trim(dfn_subcomponent_type)
     mf6_input%component_name = trim(component_name)
     mf6_input%subcomponent_name = trim(subcomponent_name)
 
-    ! -- set mempaths
+    ! set mempaths
     mf6_input%mempath = create_mem_path(component_name, subcomponent_name, &
                                         idm_context)
     mf6_input%component_mempath = create_mem_path(component=component_name, &
                                                   context=idm_context)
 
-    ! -- set input definitions
+    ! set input definitions
     mf6_input%block_dfns => block_definitions(mf6_input%component_type, &
                                               mf6_input%subcomponent_type)
     mf6_input%aggregate_dfns => aggregate_definitions(mf6_input%component_type, &
@@ -96,11 +96,8 @@ contains
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: filetype
     character(len=*), intent(in) :: filename
-    ! -- result
     character(len=LENPACKAGETYPE) :: sc_type
-    !
     sc_type = subcomponent_type
-    !
     select case (subcomponent_type)
     case ('RCH', 'EVT', 'SCP')
       sc_type = read_as_arrays(filetype, filename, component_type, &
@@ -118,43 +115,36 @@ contains
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: filetype
     character(len=*), intent(in) :: filename
-    ! -- result
     character(len=LENPACKAGETYPE) :: sc_type
     type(BlockParserType) :: parser
     integer(I4B) :: ierr, inunit
     logical(LGP) :: isfound
     logical(LGP) :: endOfBlock
     character(len=LINELENGTH) :: keyword
-    !
+
     sc_type = subcomponent_type
-    !
     inunit = getunit()
-    !
     call openfile(inunit, 0, trim(adjustl(filename)), filetype, &
                   'FORMATTED', 'SEQUENTIAL', 'OLD')
-    !
     call parser%Initialize(inunit, 0)
-    !
-    ! -- get options block
+
+    ! get options block
     call parser%GetBlock('OPTIONS', isfound, ierr, &
                          supportOpenClose=.true., blockRequired=.false.)
-    !
-    ! -- parse options block if detected
+
+    ! parse options block if detected
     if (isfound) then
       do
         call parser%GetNextLine(endOfBlock)
-        !
         if (endOfBlock) exit
-        !
         call parser%GetStringCaps(keyword)
-        !
         if (keyword == 'READASARRAYS') then
           write (sc_type, '(a)') trim(subcomponent_type)//'A'
           exit
         end if
       end do
     end if
-    !
+
     call parser%clear()
   end function read_as_arrays
 

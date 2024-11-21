@@ -1,6 +1,6 @@
 """
 A test of the keyword NONE for <cellid> in the package data block.
-In essense, this tests inactivation of cells which if active, would be connected
+In essence, this tests inactivation of cells which if active, would be connected
 to SFR reaches during a simulation. Additionally, this uses a DISU grid.  The
 test was developed based on a user having memory access violations for a real-
 world model that included DISU and SFR reaches where cells did not exist.
@@ -25,7 +25,7 @@ groundwater model.
      |       |       |       |       |       |       |/                      |       |       |       |       |       |       |/
      +-------+-------+-------+-------+-------+-------+                       +-------+-------+-------+-------+-------+-------+
 
-"""
+"""  # noqa
 
 # Imports
 
@@ -169,7 +169,7 @@ def buildout_vertex_locations():
 
 
 def set_connectiondata(n, lay, top, left, right, bottom):
-    # Instatiate empty lists
+    # Instantiate empty lists
     jas = [n]
     ihc = [lay]
     cl12 = [n]
@@ -268,8 +268,8 @@ def get_conndat(n, lay, col):
     ) = set_connectiondata(n, lay, top, left, right, bottom)
 
     # If bottom most layer, need to .pop() the last values out of the respective lists
-    # This should be done because the bottom connections will always be represented by the final
-    # values in the list (at this point in the development anyway)
+    # This should be done because the bottom connections will always be represented by
+    # the final values in the list (at this point in the development anyway)
     # if lay == nlay - 1:
     #    iac -= 1
     #    jas_vals.pop(-1)
@@ -445,7 +445,7 @@ def build_models(idx, test):
         transient={0: True},
     )
 
-    # Instantiate the intial conditions
+    # Instantiate the initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # Instantiate constant heads for keeping the heads from rising
@@ -467,7 +467,8 @@ def build_models(idx, test):
     # SFR data
     nreaches = 15
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv>
     rhk = 0.05
     package_data = [
         (0, 0, delr, 0.25, 1e-3, top - 0.25, 0.25, rhk, 0.02, 1, 1.0, 0),
@@ -672,7 +673,7 @@ def check_output(idx, test):
         "therefore inactive."
     )
     msg1 = (
-        "There seems to be mis-alignment in the flow/transport results "
+        "There seems to be misalignment in the flow/transport results "
         "when some of the GWF cells are inactive but overlain with SFR "
         "reaches"
     )

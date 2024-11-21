@@ -1,6 +1,7 @@
 """
-Two-dimensional injection of solute into the middle of a square grid.  The test will pass
-if the results are symmetric.  Based on test_gwt_adv04, this tests the disu package, which
+Two-dimensional injection of solute into the middle of a square grid.
+The test will pass if the results are symmetric.
+Based on test_gwt_adv04, this tests the disu package, which
 represents a regular MODFLOW grid.
 """
 

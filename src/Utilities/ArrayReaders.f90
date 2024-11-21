@@ -16,6 +16,19 @@ module ArrayReadersModule
   private
   public :: ReadArray
   public :: read_binary_header
+  public :: check_binary_filesize
+  public :: BINARY_INT_BYTES
+  public :: BINARY_DOUBLE_BYTES
+  public :: BINARY_HEADER_BYTES
+
+  integer(I4B), parameter :: BINARY_CHAR_BYTES = 1
+  integer(I4B), parameter :: BINARY_INT_BYTES = 4
+  integer(I4B), parameter :: BINARY_DOUBLE_BYTES = 8
+  integer(I4B), parameter :: BINARY_STRLEN = 16
+  integer(I4B), parameter :: BINARY_HEADER_BYTES = &
+                             (5 * BINARY_INT_BYTES) + & !< kstp, kper, msize1, msize2, msize3
+                             (2 * BINARY_DOUBLE_BYTES) + & !< pertim, totim
+                             (BINARY_STRLEN * BINARY_CHAR_BYTES) !< array text
 
   interface ReadArray
     module procedure &
@@ -1023,7 +1036,7 @@ contains
     integer(I4B) :: istat
     integer(I4B) :: kstp, kper, m1, m2, m3
     real(DP) :: pertim, totim
-    character(len=16) :: text
+    character(len=BINARY_STRLEN) :: text
     character(len=MAXCHARLEN) :: ermsgr
     character(len=*), parameter :: fmthdr = &
       "(/,1X,'HEADER FROM BINARY FILE HAS FOLLOWING ENTRIES',&
@@ -1052,6 +1065,26 @@ contains
     ! -- Assign the number of values that follow the header
     nval = m1 * m2
   end subroutine read_binary_header
+
+  subroutine check_binary_filesize(locat, expected_size, arrname)
+    ! -- dummy
+    integer(I4B), intent(in) :: locat
+    integer(I4B), intent(in) :: expected_size
+    character(len=*), intent(in) :: arrname
+    ! -- local
+    integer(I4B) :: file_size
+    !
+    inquire (unit=locat, size=file_size)
+    !
+    if (expected_size /= file_size) then
+      write (errmsg, '(a,i0,a,i0,a)') &
+        'Unexpected file size for binary input array '// &
+        trim(arrname)//'. Expected=', expected_size, &
+        '/Found=', file_size, ' bytes.'
+      call store_error(errmsg)
+      call store_error_unit(locat)
+    end if
+  end subroutine check_binary_filesize
 
   !> @ brief Check the binary data size
   !!

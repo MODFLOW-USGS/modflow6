@@ -235,7 +235,7 @@ def check_grb_dis2d(fpth):
         grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
     ), "grb botm not correct"
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
-    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
+    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
     assert np.allclose(
         grb.idomain.reshape((nrow, ncol)), idomain
     ), "grb idomain not correct"
@@ -268,7 +268,7 @@ def check_grb_disv2d(fpth):
         grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
     ), "javert size not right"
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
-    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not corect size"
+    assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
     assert np.allclose(
         grb.idomain.reshape((ncpl,)), idomain.reshape((ncpl,))
     ), "grb idomain not correct"

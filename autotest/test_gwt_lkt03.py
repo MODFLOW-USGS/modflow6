@@ -361,7 +361,8 @@ def check_output(idx, test):
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), f"{res} {answer}"
 
-    # check the storage terms, which include the total mass in the lake as an aux variable
+    # check the storage terms, which include the total mass in the lake
+    # as an aux variable
     res = bobj.get_data(text="storage")[-1]
     answer = [(1, 1, 0.0, 0.0), (2, 2, -0.1, 0.1), (3, 3, -1.0, 1.0)]
     dt = [("node", "<i4"), ("node2", "<i4"), ("q", "<f8"), ("MASS", "<f8")]
