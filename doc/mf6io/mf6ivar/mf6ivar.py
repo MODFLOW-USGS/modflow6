@@ -157,7 +157,7 @@ def parse_mf6var_file(fname):
                 else:
                     key = name
                 if key in vardict:
-                    raise ValueError(f"Variable already exists in dictionary: {k}")
+                    raise ValueError(f"Variable already exists in dictionary: {key}")
                 vardict[key] = vd
             vd = {}
             continue
@@ -233,9 +233,7 @@ def block_entry(varname, block, vardict, prefix="  "):
     elif " " in vtype:
         vtype = vtype.split(" ", 1)[0]
     if vtype not in VALID_TYPES:
-        raise ValueError(
-            f"{fname}: {key}: {vtype!r} is not a valid type from {VALID_TYPES}"
-        )
+        raise ValueError(f"{key}: {vtype!r} is not a valid type from {VALID_TYPES}")
 
     # record or recarray
     if v["type"].startswith("rec"):

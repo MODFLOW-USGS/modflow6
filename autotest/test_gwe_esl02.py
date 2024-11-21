@@ -340,7 +340,8 @@ def check_output(idx, test):
         "Grid cell temperatures do not reflect the expected difference"
         "in stress period "
     )
-    assert np.isclose(np.sum(temps[-1]), ncol[idx]), msg0 + str(index)
+    answer = ncol[idx]
+    assert np.isclose(np.sum(temps[-1]), answer), msg0 + str(idx)
 
 
 # - No need to change any code below
