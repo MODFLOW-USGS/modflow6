@@ -2656,7 +2656,7 @@ contains
                                   pertim, totim, this%iout)
     end if
     !
-    ! -- Print lake flows table
+    ! -- Print maw flows table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
