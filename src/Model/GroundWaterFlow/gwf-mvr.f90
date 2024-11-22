@@ -688,7 +688,7 @@ contains
     use ConstantsModule, only: LINELENGTH, DZERO, DONE
     use OpenSpecModule, only: access, form
     use SimModule, only: store_error, store_error_unit
-    use InputOutputModule, only: urword, getunit, openfile
+    use InputOutputModule, only: urword, check_assign_unit, openfile
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -718,7 +718,7 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%ibudgetout = getunit()
+            call check_assign_unit(this%ibudgetout, this%inunit, "BUDGET fileout")
             call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                           form, access, 'REPLACE')
             write (this%iout, fmtmvrbin) 'BUDGET', trim(adjustl(fname)), &
@@ -732,7 +732,7 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%ibudcsv = getunit()
+            call check_assign_unit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
             call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                           filstat_opt='REPLACE')
             write (this%iout, fmtmvrbin) 'BUDGET CSV', trim(adjustl(fname)), &

@@ -1645,7 +1645,7 @@ contains
   subroutine maw_read_options(this, option, found)
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: urword, getunit, openfile
+    use InputOutputModule, only: urword, check_assign_unit, openfile
     ! -- dummy
     class(MawType), intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -1674,7 +1674,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%iheadout = getunit()
+        call check_assign_unit(this%iheadout, this%inunit, "HEAD fileout")
         call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'HEAD', trim(adjustl(fname)), &
@@ -1687,7 +1687,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudgetout = getunit()
+        call check_assign_unit(this%ibudgetout, this%inunit, "BUDGET fileout")
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'BUDGET', trim(adjustl(fname)), &
@@ -1700,7 +1700,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudcsv = getunit()
+        call check_assign_unit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtmawbin) 'BUDGET CSV', trim(adjustl(fname)), &

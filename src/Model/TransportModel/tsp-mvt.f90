@@ -570,7 +570,7 @@ contains
   subroutine read_options(this)
     ! -- modules
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: getunit, openfile
+    use InputOutputModule, only: check_assign_unit, openfile
     ! -- dummy
     class(TspMvtType) :: this
     ! -- local
@@ -611,7 +611,7 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%ibudgetout = getunit()
+            call check_assign_unit(this%ibudgetout, this%inunit, "BUDGET fileout")
             call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                           form, access, 'REPLACE')
             write (this%iout, fmtflow) 'MVT', 'BUDGET', trim(adjustl(fname)), &
@@ -624,7 +624,7 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%ibudcsv = getunit()
+            call check_assign_unit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
             call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                           filstat_opt='REPLACE')
             write (this%iout, fmtflow) 'MVT', 'BUDGET CSV', &

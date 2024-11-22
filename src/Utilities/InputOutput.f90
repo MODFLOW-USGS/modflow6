@@ -17,7 +17,7 @@ module InputOutputModule
             linear_interpolate, lowcase, read_line, GetFileFromPath, &
             extract_idnum_or_bndname, urdaux, print_format, BuildFixedFormat, &
             BuildFloatFormat, BuildIntFormat, fseek_stream, get_nwords, &
-            u9rdcom, append_processor_id
+            u9rdcom, append_processor_id, check_assign_unit
 
 contains
 
@@ -178,6 +178,27 @@ contains
     call freeunitnumber(iunit)
     getunit = iunit
   end function getunit
+
+  !> @ brief check assign unit
+  !!
+  !!  Generic method to verify that an integer variable for storing
+  !!  a file io unit number is unassigned.  Assumes unit number is
+  !!  unassigned and initialized if less than or equal to 0.  Assigns
+  !!  a valid number if unassigned, otherwise throws an error and exits.
+  !!
+  !<
+  subroutine check_assign_unit(iounit, errunit, description)
+    integer(I4B), intent(inout) :: iounit !< iounit to assign
+    integer(I4B), intent(in) :: errunit !< input file inunit for error assignment
+    character(len=*), intent(in) :: description !< usage description for iounit
+    if (iounit > 0) then
+      write (errmsg, '(a,1x,i0)') &
+        trim(description)//' already assigned at unit: ', iounit
+      call store_error(errmsg)
+      call store_error_unit(errunit)
+    end if
+    iounit = getunit()
+  end subroutine check_assign_unit
 
   !> @brief Convert to upper case
   !!
