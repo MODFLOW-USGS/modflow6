@@ -1,54 +1,73 @@
-# Vertical tracking and cell drying/rewetting
+# Vertical tracking
 
-When a particle is in the flow field, vertical motion can be treated the same as lateral motion. Special handling is necessary above the water table.
+This document describes the approach PRT takes to vertical particle motion.
 
-## Overview
+When a particle is in the flow field, vertical motion can be solved in the same way as lateral motion. Special handling is necessary above the water table.
 
-This document describes the approach taken for vertical particle motion in "dry" conditions.
+## The problem
 
-There are two kinds of dry cells: truly inactive cells, and dry-but-active cells, as can occur with Newton enabled for the flow model.
+The main question is what to do with particles under "dry" conditions.
 
-## Approach
+There are two kinds of dry cells: inactive cells, and active-but-dry cells, as can occur with a flow model using the Newton formulation.
 
-PRT model's particle release point (PRP) package implements particle release. This consists of registering each particle with an in-memory store from which the particle will be checked out later by the tracking algorithm. Release-time and tracking-time considerations are therefore described (as well as implemented) separately.
+## The approach
+
+Release-time and tracking-time considerations are described (as well as implemented) separately.
 
 ### Release time
 
-At release time, PRT decides whether to release a particle whose release position is dry, or to terminate it permanently unreleased. It does this on the basis of the `DRAPE` option. If `DRAPE` is enabled, the particle is dropped to the top-most active cell beneath it, if any, at the same lateral coordinates. Otherwise, the particle will terminate immediately with status code 8 (permanently unreleased).
+At release time, if the release cell is active, the particle is released. Otherwise behavior depends on the `DRAPE` keyword option. If `DRAPE` is not enabled, the particle is released at the specified coordinates and any special handling is deferred to tracking time. If `DRAPE` is enabled, the particle is "draped" to the top-most active cell beneath it, if any, and released at the water table at the same lateral coordinates. If there is no active cell below the particle, it is released at the specified coordinates, as if `DRAPE` were disabled.
 
-If `DRAPE` is enabled but there is no active cell beneath a given particle release position, the particle is released normally (at the configured elevation) and then will terminate at tracking time with status 7 (stranded), consistent with the behavior of MODPATH 7.
+**Note**: This is a departure from version 6.5.0, in which a particle released in a dry position without `DRAPE`, or with `DRAPE` but no active cell below, would terminate unreleased with status code 8.
 
 ```mermaid
 flowchart LR
-    START[At release time...] --> DRY{Release point dry?}
-    DRY --> |No| RELEASE[Release normally]
-    DRY --> |Yes| DRAPE{DRAPE enabled?}
+    START[At release time...] --> INACTIVE{Cell inactive?}
+    INACTIVE --> |No| RELEASE[Release normally]
+    INACTIVE --> |Yes| DRAPE{DRAPE enabled?}
     DRAPE --> |Yes| WETBELOW{Active cell below?}
-    DRAPE --> |No| TERMINATE[Terminate]
+    DRAPE --> |No| RELEASE
     WETBELOW --> |No| RELEASE[Release normally]
     WETBELOW --> |Yes| RELEASE_AT_TABLE[Release at water table]
     subgraph Release
     RELEASE
     RELEASE_AT_TABLE
     end
-    TERMINATE
 ```
 
 ### Tracking time
 
-At tracking time, PRT decides whether to terminate a particle in a dry cell or pass it to the cell below. If the cell is dry but active, as can occur if Newton is enabled in the flow model, the `DRYDIE` option decides whether to pass the particle vertically and instantaneously to the cell bottom or to terminate it.
+At tracking time, a particle might find itself above the water table for one of two reasons:
+
+- it was released above the water table
+- the water table has receded beneath it
+
+Typically, such a particle will terminate immediately with status code 7. This is consistent with MODPATH 7's behavior.
+
+If the Newton formulation is used for the flow model, a dry cell can remain active. MODFLOW version 6.6.0 introduces a PRP package option `DRY` determining how particles should behave in this case. This option can take one of the following values:
+
+- `die`
+- `drop` (default)
+- `stay`
+
+If `die` is selected, particles terminate immediately in dry positions.
+
+If `drop` is selected, or if the `DRY` option is unspecified, particles in a dry position are passed vertically and instantaneously to the bottom of the cell if it the cell is dry, or to the water table if it's within the cell. This was the behavior in version 6.5.0, and remains the default behavior.
+
+If `stay` is selected, the particle will remain stationary until a) the cell rewets and tracking can continue, or b) particle tracking ceases (either at the end of the simulation's final time step, or when all other particles have terminated if `EXTEND_TRACKING` is enabled), at which point it is terminated.
 
 ```mermaid
 flowchart LR
-    START[At tracking time...] --> DRY{Cell dry?}
-    DRY --> |No| TRACK[Track normally]
-    DRY --> |Yes| DRYDIE{DRYDIE enabled?}
-    DRYDIE --> |No| VERT{Vertical flow?}
-    DRYDIE --> |Yes| TERMINATE
-    VERT --> |Yes| PASS_TO_BOTTOM[Pass to bottom]
-    VERT --> |No| TERMINATE[Terminate]
+    START[At tracking time...] --> LOCDRY{Position dry?}
+    LOCDRY --> |Yes| DRY{DRY option}
+    LOCDRY --> |No| TRACK[Track normally]
+    DRY --> |Die| TERMINATE[Terminate]
+    DRY --> |Drop| DROP
+    DRY --> |Stay| STAY[Stationary]
+    DROP[Drop]
     subgraph Track
-    PASS_TO_BOTTOM
+    DROP
+    STAY
     TRACK
     end
 ```
