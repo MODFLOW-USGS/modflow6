@@ -156,16 +156,9 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! Update particle state, return early if done advancing
-    call this%update(particle, this%cell%defn)
+    ! Prepare to apply method, return early if done advancing
+    call this%prepare(particle, this%cell%defn)
     if (.not. particle%advancing) return
-
-    ! If the particle is above the top of the cell (presumed water table)
-    ! pass it vertically and instantaneously to the top
-    if (particle%z > this%cell%defn%top) then
-      particle%z = this%cell%defn%top
-      call this%save(particle, reason=1)
-    end if
 
     ! (Re)allocate type-bound arrays
     select type (cell => this%cell)

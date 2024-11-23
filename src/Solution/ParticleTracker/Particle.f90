@@ -40,7 +40,7 @@ module ParticleModule
     ! stop criteria
     integer(I4B), public :: istopweaksink !< weak sink option (0: do not stop, 1: stop)
     integer(I4B), public :: istopzone !< stop zone number
-    integer(I4B), public :: idrydie !< stop in dry cells
+    integer(I4B), public :: idry !< stop in dry cells
     ! state
     integer(I4B), allocatable, public :: idomain(:) !< tracking domain hierarchy
     integer(I4B), allocatable, public :: iboundary(:) !< tracking domain boundaries
@@ -82,7 +82,7 @@ module ParticleModule
     ! stopping criteria
     integer(I4B), dimension(:), pointer, public, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
     integer(I4B), dimension(:), pointer, public, contiguous :: istopzone !< stop zone number
-    integer(I4B), dimension(:), pointer, public, contiguous :: idrydie !< stop in dry cells
+    integer(I4B), dimension(:), pointer, public, contiguous :: idry !< stop in dry cells
     ! state
     integer(I4B), dimension(:, :), pointer, public, contiguous :: idomain !< array of indices for domains in the tracking domain hierarchy
     integer(I4B), dimension(:, :), pointer, public, contiguous :: iboundary !< array of indices for tracking domain boundaries
@@ -140,7 +140,7 @@ contains
     call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
-    call mem_allocate(this%idrydie, np, 'PLIDRYDIE', mempath)
+    call mem_allocate(this%idry, np, 'PLIDRYDIE', mempath)
     call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_allocate(this%iexmeth, np, 'PLIEXMETH', mempath)
     call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
@@ -170,7 +170,7 @@ contains
     call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
-    call mem_deallocate(this%idrydie, 'PLIDRYDIE', mempath)
+    call mem_deallocate(this%idry, 'PLIDRYDIE', mempath)
     call mem_deallocate(this%ifrctrn, 'PLIFRCTRN', mempath)
     call mem_deallocate(this%iexmeth, 'PLIEXMETH', mempath)
     call mem_deallocate(this%extol, 'PLEXTOL', mempath)
@@ -203,7 +203,7 @@ contains
     call mem_reallocate(this%ttrack, np, 'PLTTRACK', mempath)
     call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
-    call mem_reallocate(this%idrydie, np, 'PLIDRYDIE', mempath)
+    call mem_reallocate(this%idry, np, 'PLIDRYDIE', mempath)
     call mem_reallocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
     call mem_reallocate(this%iexmeth, np, 'PLIEXMETH', mempath)
     call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
@@ -232,7 +232,7 @@ contains
     this%name = store%name(ip)
     this%istopweaksink = store%istopweaksink(ip)
     this%istopzone = store%istopzone(ip)
-    this%idrydie = store%idrydie(ip)
+    this%idry = store%idry(ip)
     this%icu = store%icu(ip)
     this%ilay = store%ilay(ip)
     this%izone = store%izone(ip)
@@ -267,7 +267,7 @@ contains
     this%name(ip) = particle%name
     this%istopweaksink(ip) = particle%istopweaksink
     this%istopzone(ip) = particle%istopzone
-    this%idrydie = particle%idrydie
+    this%idry(ip) = particle%idry
     this%icu(ip) = particle%icu
     this%ilay(ip) = particle%ilay
     this%izone(ip) = particle%izone

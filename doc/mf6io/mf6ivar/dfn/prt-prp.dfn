@@ -168,12 +168,13 @@ longname drape
 description is a text keyword to indicate that if a particle's release point is in a cell that happens to be inactive at release time, the particle is to be moved to the topmost active cell below it, if any. By default, a particle is not released into the simulation if its release point's cell is inactive at release time.
 
 block options
-name drydie
-type keyword
+name dry_tracking_method
+type string
+valid drop stop stay
 reader urword
 optional true
-longname stop in dry cells
-description is a text keyword to indicate that particles should terminate in dry-but-active cells (as can occur with the Newton formulation). By default, particles are passed to the bottom of dry-but-active cells.
+longname what to do in active but dry cells
+description is a string indicating how particles should behave in dry-but-active cells (as can occur with the Newton formulation).  The value can be ``DROP'', ``STOP'', or ``STAY''.  The default is ``DROP'', which passes particles vertically and instantaneously to the water table. ``STOP'' causes particles to terminate. ``STAY'' causes particles to remain stationary but active.
 
 block options
 name dev_forceternary

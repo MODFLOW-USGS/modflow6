@@ -129,16 +129,9 @@ contains
 
     select type (cell => this%cell)
     type is (CellRectType)
-      ! Update particle state, return early if done advancing
-      call this%update(particle, cell%defn)
+      ! Prepare to apply method, return early if done advancing
+      call this%prepare(particle, cell%defn)
       if (.not. particle%advancing) return
-
-      ! If the particle is above the top of the cell (presumed water table)
-      ! pass it vertically and instantaneously to the top
-      if (particle%z > cell%defn%top) then
-        particle%z = cell%defn%top
-        call this%save(particle, reason=1)
-      end if
 
       ! Transform particle location into local cell coordinates
       ! (translated and rotated but not scaled relative to model).

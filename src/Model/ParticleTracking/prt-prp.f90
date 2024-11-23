@@ -49,7 +49,7 @@ module PrtPrpModule
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
     integer(I4B), pointer :: istopzone => null() !< optional stop zone number: 0 = no stop zone
     integer(I4B), pointer :: idrape => null() !< drape option: 0 = do not drape, 1 = drape to topmost active cell
-    integer(I4B), pointer :: idrydie => null() !< drydie option, what to do in active-but-dry cells: 0 = stationary, 1 = terminate
+    integer(I4B), pointer :: idry => null() !< dry option, what to do in active-but-dry cells: 0=die, 1=drop, 2=stay
     integer(I4B), pointer :: itrkout => null() !< binary track file
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
@@ -160,7 +160,7 @@ contains
     call mem_deallocate(this%istopweaksink)
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
-    call mem_deallocate(this%idrydie)
+    call mem_deallocate(this%idry)
     call mem_deallocate(this%nreleasepoints)
     call mem_deallocate(this%nreleasetimes)
     call mem_deallocate(this%nparticles)
@@ -250,7 +250,7 @@ contains
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
-    call mem_allocate(this%idrydie, 'IDRYDIE', this%memoryPath)
+    call mem_allocate(this%idry, 'IDRY', this%memoryPath)
     call mem_allocate(this%nreleasepoints, 'NRELEASEPOINTS', this%memoryPath)
     call mem_allocate(this%nreleasetimes, 'NRELEASETIMES', this%memoryPath)
     call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
@@ -274,7 +274,7 @@ contains
     this%istopweaksink = 0
     this%istopzone = 0
     this%idrape = 0
-    this%idrydie = 0
+    this%idry = 0
     this%nreleasepoints = 0
     this%nreleasetimes = 0
     this%nparticles = 0
@@ -461,7 +461,7 @@ contains
     particle%irpt = ip
     particle%istopweaksink = this%istopweaksink
     particle%istopzone = this%istopzone
-    particle%idrydie = this%idrydie
+    particle%idry = this%idry
     particle%icu = icu
 
     select type (dis => this%dis)
@@ -478,11 +478,9 @@ contains
     ! to the top-most active cell beneath it if drape is
     ! enabled, or else terminate permanently unreleased.
     if (this%ibound(ic) == 0) then
-      if (this%idrape > 0) then
+      if (this%idrape > 0) &
         call this%dis%highest_active(ic, this%ibound)
-      else
-        particle%istatus = 8
-      end if
+      if (this%ibound(ic) == 0) particle%istatus = 8
     end if
 
     ! Load coordinates and transform if needed
@@ -711,8 +709,24 @@ contains
     case ('DRAPE')
       this%idrape = 1
       found = .true.
-    case ('DRYDIE')
-      this%idrydie = 1
+    case ('DRY_TRACKING_METHOD')
+      call this%parser%GetStringCaps(keyword)
+      select case (keyword)
+      case ('DROP')
+        this%idry = 0
+      case ('STOP')
+        this%idry = 1
+      case ('STAY')
+        this%idry = 2
+      case default
+        write (errmsg, '(a, a)') &
+          'Unknown dry tracking strategy: ', trim(keyword)
+        call store_error(errmsg)
+        write (errmsg, '(a, a)') &
+          'DRY must be "DROP", "STOP" or "STAY"'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end select
       found = .true.
     case ('TRACK')
       call this%parser%GetStringCaps(keyword)

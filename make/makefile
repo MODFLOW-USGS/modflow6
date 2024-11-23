@@ -331,7 +331,6 @@ $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/MethodCellTernary.o \
 $(OBJDIR)/MethodCellPollockQuad.o \
 $(OBJDIR)/MethodCellPollock.o \
-$(OBJDIR)/MethodCellPassToBot.o \
 $(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/Disv1dGeom.o \
 $(OBJDIR)/CellWithNbrs.o \

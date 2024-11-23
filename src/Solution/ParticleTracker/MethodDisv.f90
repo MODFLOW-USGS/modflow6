@@ -96,47 +96,38 @@ contains
       ! If cell dry but active, pass to bottom.
       ! Otherwise if the cell is active, track
       ! with a method appropriate for the cell.
-      if (cell%defn%is_dry()) then
-        call method_cell_ptb%init( &
+      if (particle%ifrctrn > 0) then
+        call method_cell_tern%init( &
           fmi=this%fmi, &
           cell=this%cell, &
           trackctl=this%trackctl, &
           tracktimes=this%tracktimes)
-        submethod => method_cell_ptb
+        submethod => method_cell_tern
+      else if (cell%defn%can_be_rect) then
+        call cell_poly_to_rect(cell, rect)
+        base => rect
+        call method_cell_plck%init( &
+          fmi=this%fmi, &
+          cell=base, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_plck
+      else if (cell%defn%can_be_quad) then
+        call cell_poly_to_quad(cell, quad)
+        base => quad
+        call method_cell_quad%init( &
+          fmi=this%fmi, &
+          cell=base, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_quad
       else
-        if (particle%ifrctrn > 0) then
-          call method_cell_tern%init( &
-            fmi=this%fmi, &
-            cell=this%cell, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_tern
-        else if (cell%defn%can_be_rect) then
-          call cell_poly_to_rect(cell, rect)
-          base => rect
-          call method_cell_plck%init( &
-            fmi=this%fmi, &
-            cell=base, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_plck
-        else if (cell%defn%can_be_quad) then
-          call cell_poly_to_quad(cell, quad)
-          base => quad
-          call method_cell_quad%init( &
-            fmi=this%fmi, &
-            cell=base, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_quad
-        else
-          call method_cell_tern%init( &
-            fmi=this%fmi, &
-            cell=this%cell, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_tern
-        end if
+        call method_cell_tern%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_tern
       end if
     end select
   end subroutine load_disv
