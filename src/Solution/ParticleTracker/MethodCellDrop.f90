@@ -51,11 +51,9 @@ contains
     if (.not. particle%advancing) return
 
     if (this%cell%defn%is_dry()) then
-      print *, 'dry drop'
       particle%z = this%cell%defn%bot
       particle%iboundary(2) = this%cell%defn%npolyverts + 2
     else if (particle%z > this%cell%defn%top) then
-      print *, 'wet drop from ', particle%z, ' to ', this%cell%defn%top
       particle%z = this%cell%defn%top
     end if
 
