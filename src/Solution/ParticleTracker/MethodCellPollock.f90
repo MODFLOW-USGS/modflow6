@@ -129,12 +129,13 @@ contains
 
     select type (cell => this%cell)
     type is (CellRectType)
-      ! Prepare to apply method, return early if done advancing
+      ! Prepare to apply the tracking method and
+      ! check termination / reporting conditions
       call this%prepare(particle, cell%defn)
       if (.not. particle%advancing) return
 
       ! Transform particle location into local cell coordinates
-      ! (translated and rotated but not scaled relative to model).
+      ! (translated and rotated but not scaled relative to model)
       xOrigin = cell%xOrigin
       yOrigin = cell%yOrigin
       zOrigin = cell%zOrigin
@@ -143,13 +144,14 @@ contains
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot)
 
-      ! Track the particle across the cell.
+      ! Track the particle across the cell
       call this%track(particle, 2, tmax)
 
-      ! Transform particle location back to model coordinates, then
-      ! reset transformation and eliminate accumulated roundoff error.
+      ! Transform particle location back to model coordinates
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot, invert=.true.)
+
+      ! Reset transformation and eliminate accumulated roundoff error
       call particle%transform(reset=.true.)
     end select
   end subroutine apply_mcp

@@ -188,9 +188,8 @@ contains
   !> @brief Prepare to apply the tracking method to the particle.
   !!
   !! Check a number of conditions determining whether to continue
-  !! tracking the particle or stop tracking and move on. Check if
-  !! any reporting conditions apply also, and save the particle's
-  !! state if so.
+  !! tracking the particle or terminate it. This includes a check
+  !! for any reporting conditions as well.
   !<
   subroutine prepare(this, particle, cell_defn)
     ! dummy
@@ -201,45 +200,6 @@ contains
     logical(LGP) :: cell_dry
     logical(LGP) :: locn_dry
     integer(I4B) :: ic
-
-    cell_dry = cell_defn%is_dry()
-    locn_dry = particle%z > cell_defn%top
-
-    ! dry
-    if (cell_dry .or. locn_dry) then
-      ! drop
-      if (particle%idry == 0) then
-        if (cell_dry) then
-          ! if no active cell below particle's position, terminate
-          ic = particle%idomain(2)
-          call this%fmi%dis%highest_active(ic, this%fmi%ibound)
-          if (this%fmi%ibound(ic) == 0) then
-            particle%advancing = .false.
-            particle%istatus = 7
-            call this%save(particle, reason=3)
-            return
-          end if
-          ! drop to cell below
-          particle%z = cell_defn%bot
-          particle%iboundary(2) = this%cell%defn%npolyverts + 2
-          call this%save(particle, reason=1)
-        else if (locn_dry) then
-          ! drop to water table
-          particle%z = cell_defn%top
-          call this%save(particle, reason=1)
-        end if
-      else if (particle%idry == 1) then
-        ! stop
-        particle%advancing = .false.
-        particle%istatus = 7
-        call this%save(particle, reason=3)
-        return
-      else if (particle%idry == 2) then
-        ! stay
-        particle%advancing = .false.
-        call this%save(particle, reason=6)
-      end if
-    end if
 
     ! stop zone
     if (cell_defn%izone .ne. 0) then
@@ -268,6 +228,36 @@ contains
         particle%istatus = 3
         call this%save(particle, reason=3)
         return
+      end if
+    end if
+
+    ! dry
+    cell_dry = cell_defn%is_dry()
+    locn_dry = particle%z > cell_defn%top
+    if (cell_dry .or. locn_dry) then
+      if (particle%idry == 0) then
+        ! drop
+        if (cell_dry) then
+          ! if no active cell underneath position, terminate
+          ic = particle%idomain(2)
+          call this%fmi%dis%highest_active(ic, this%fmi%ibound)
+          if (this%fmi%ibound(ic) == 0) then
+            particle%advancing = .false.
+            particle%istatus = 7
+            call this%save(particle, reason=3)
+            return
+          end if
+        end if
+      else if (particle%idry == 1) then
+        ! stop
+        particle%advancing = .false.
+        particle%istatus = 7
+        call this%save(particle, reason=3)
+        return
+      else if (particle%idry == 2) then
+        ! stay
+        particle%advancing = .false.
+        call this%save(particle, reason=6)
       end if
     end if
   end subroutine prepare

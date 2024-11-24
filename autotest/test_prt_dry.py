@@ -449,7 +449,7 @@ def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=F
             mm.plot_shapes(polys, alpha=0.2)
             plt.show()
 
-        fig, ax = plt.subplots(1, 1, figsize=(12, 12))
+        fig, ax = plt.subplots(1, 1, figsize=(8, 8))
         cmapbd = clt.ListedColormap(["b", "r"])
         chdcells = []
         for pckge in gwf.get_package("chd"):
@@ -474,6 +474,32 @@ def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=F
         plot_pathlines_and_timeseries(
             ax, gwf.modelgrid, ibd, mf6pathlines, None, "MODFLOW 6 PRT"
         )
+    
+    # temporary, TODO: remove after debugging
+    plot_3d = True
+    if plot_3d:
+        import pyvista as pv
+        from flopy.export.vtk import Vtk
+
+        vert_exag = 1
+        vtk = Vtk(
+            model=gwf, binary=False, vertical_exageration=vert_exag, smooth=False
+        )
+        vtk.add_model(gwf)
+        vtk.add_pathline_points(mf6pathlines.to_records(index=False))
+        gwf_mesh, prt_mesh = vtk.to_pyvista()
+        axes = pv.Axes(show_actor=False, actor_scale=2.0, line_width=5)
+        p = pv.Plotter(window_size=[700, 700])
+        p.enable_anti_aliasing()
+        p.add_mesh(gwf_mesh, opacity=0.025, style="wireframe")
+        p.add_mesh(
+            prt_mesh,
+            point_size=8,
+            line_width=2.5,
+            smooth_shading=True,
+            color="blue",
+        )
+        p.show()
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

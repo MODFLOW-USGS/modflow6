@@ -142,12 +142,21 @@ contains
       ic = particle%idomain(next_level)
       call this%load_celldefn(ic, cell%defn)
       call this%load_cell(ic, cell)
-      call method_cell_plck%init( &
-        fmi=this%fmi, &
-        cell=this%cell, &
-        trackctl=this%trackctl, &
-        tracktimes=this%tracktimes)
-      submethod => method_cell_plck
+      if (cell%defn%is_dry() .or. particle%z > cell%defn%top) then
+        call method_cell_drop%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_drop
+      else
+        call method_cell_plck%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_plck
+      end if
     end select
   end subroutine load_dis
 
@@ -220,7 +229,6 @@ contains
       end if
       particle%z = z
     end select
-
   end subroutine load_particle
 
   !> @brief Update cell-cell flows of particle mass.
@@ -247,7 +255,6 @@ contains
     ! entering new cell
     this%flowja(this%fmi%dis%con%isym(ipos)) &
       = this%flowja(this%fmi%dis%con%isym(ipos)) + DONE
-
   end subroutine update_flowja
 
   !> @brief Pass a particle to the next cell, if there is one
@@ -314,14 +321,11 @@ contains
       defn%icell, &
       defn%polyvert, &
       closed=.true.)
-
-    ! Load cell face neighbors
     call this%load_neighbors(defn)
 
     ! Load 180 degree face indicators
     defn%ispv180(1:defn%npolyverts + 1) = .false.
 
-    ! Load face flows (assumes face neighbors already loaded)
     call this%load_flows(defn)
 
   end subroutine load_celldefn
@@ -346,7 +350,6 @@ contains
     defn%izone = this%izone(ic)
     defn%can_be_rect = .true.
     defn%can_be_quad = .false.
-
   end subroutine load_properties
 
   !> @brief Loads face neighbors to cell definition from the grid.
@@ -444,7 +447,6 @@ contains
     else
       defn%iweaksink = 0
     end if
-
   end subroutine load_flows
 
   subroutine load_face_flows_to_defn(this, defn)

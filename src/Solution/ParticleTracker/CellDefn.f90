@@ -102,6 +102,7 @@ contains
 
   logical function is_dry(this)
     class(CellDefnType), intent(inout) :: this
+    print *, '===== ', this%top, this%bot, this%sat
     is_dry = is_close(this%top, this%bot) .and. &
              is_close(this%sat, DZERO, symmetric=.false.)
   end function is_dry

@@ -79,24 +79,22 @@ contains
     class(MethodType), pointer, intent(inout) :: submethod
     ! local
     integer(I4B) :: ic
-    real(DP) :: dz
     class(CellType), pointer :: base
     type(CellRectType), pointer :: rect
     type(CellRectQuadType), pointer :: quad
 
     select type (cell => this%cell)
     type is (CellPolyType)
-      ! load cell definition
       ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
-
-      ! terminate particle if cell is dry
-      dz = cell%defn%top - cell%defn%bot
-
-      ! If cell dry but active, pass to bottom.
-      ! Otherwise if the cell is active, track
-      ! with a method appropriate for the cell.
-      if (particle%ifrctrn > 0) then
+      if (cell%defn%is_dry() .or. particle%z > cell%defn%top) then
+        call method_cell_drop%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_drop
+      else if (particle%ifrctrn > 0) then
         call method_cell_tern%init( &
           fmi=this%fmi, &
           cell=this%cell, &
@@ -152,21 +150,22 @@ contains
 
     select type (dis => this%fmi%dis)
     type is (DisvType)
-      ! compute and set reduced/user node numbers and layer
       inface = particle%iboundary(2)
       idiag = dis%con%ia(cell%defn%icell)
       inbr = cell%defn%facenbr(inface)
       ipos = idiag + inbr
       ic = dis%con%ja(ipos)
       icu = dis%get_nodeuser(ic)
+
       call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+
       particle%idomain(2) = ic
       particle%icu = icu
       particle%ilay = ilay
 
-      ! map/set particle entry face and z coordinate
       z = particle%z
       call this%map_neighbor(cell%defn, inface, z)
+
       particle%iboundary(2) = inface
       particle%idomain(3:) = 0
       particle%iboundary(3:) = 0
@@ -306,19 +305,10 @@ contains
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
 
-    ! Load basic cell properties
     call this%load_properties(ic, defn)
-
-    ! Load polygon vertices
     call this%load_polygon(defn)
-
-    ! Load face neighbors
     call this%load_neighbors(defn)
-
-    ! Load 180-degree indicator
     call this%load_indicators(defn)
-
-    ! Load flows (assumes face neighbors already loaded)
     call this%load_flows(defn)
   end subroutine load_cell_defn
 
@@ -346,7 +336,6 @@ contains
     defn%porosity = this%porosity(ic)
     defn%retfactor = this%retfactor(ic)
     defn%izone = this%izone(ic)
-
   end subroutine load_properties
 
   subroutine load_polygon(this, defn)
@@ -359,7 +348,6 @@ contains
       defn%polyvert, &
       closed=.true.)
     defn%npolyverts = size(defn%polyvert, dim=2) - 1
-
   end subroutine load_polygon
 
   !> @brief Loads face neighbors to cell definition from the grid
@@ -433,7 +421,6 @@ contains
     end select
     ! List of edge (polygon) faces wraps around
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
-
   end subroutine load_neighbors
 
   !> @brief Load flows into the cell definition.
@@ -472,7 +459,6 @@ contains
     else
       defn%iweaksink = 0
     end if
-
   end subroutine load_flows
 
   subroutine load_face_flows_to_defn_poly(this, defn)
@@ -519,7 +505,6 @@ contains
                        this%fmi%BoundaryFlows(ioffset + 9)
     defn%faceflow(7) = defn%faceflow(7) + &
                        this%fmi%BoundaryFlows(ioffset + 10)
-
   end subroutine load_boundary_flows_to_defn_rect
 
   !> @brief Load boundary flows from the grid into rectangular quadcell.
@@ -620,8 +605,9 @@ contains
   end subroutine load_boundary_flows_to_defn_poly
 
   !> @brief Load 180-degree vertex indicator array and set flags
-  !! indicating how cell can be represented.
-  !! Assumes cell index and number of vertices are already loaded.
+  !! indicating how cell can be represented. Assumes cell index
+  !! and number of vertices are already loaded.
+  !<
   subroutine load_indicators(this, defn)
     ! dummy
     class(MethodDisvType), intent(inout) :: this
@@ -651,12 +637,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! expand ispv180 array if needed
     if (size(defn%ispv180) < npolyverts + 3) &
       call ExpandArray(defn%ispv180, npolyverts + 1)
 
-    ! Load 180-degree indicator.
-    ! Also, set flags that indicate how cell can be represented.
     defn%ispv180(1:npolyverts + 1) = .false.
     defn%can_be_rect = .false.
     defn%can_be_quad = .false.
@@ -664,6 +647,7 @@ contains
     num90 = 0
     num180 = 0
     last180 = .false.
+
     ! assumes non-self-intersecting polygon
     do m = 1, npolyverts
       m1 = m
@@ -707,6 +691,7 @@ contains
     ! List of 180-degree indicators wraps around for convenience
     defn%ispv180(npolyverts + 1) = defn%ispv180(1)
 
+    ! Set rect/quad flags
     if (num90 .eq. 4) then
       if (num180 .eq. 0) then
         defn%can_be_rect = .true.
@@ -714,7 +699,6 @@ contains
         defn%can_be_quad = .true.
       end if
     end if
-
   end subroutine load_indicators
 
 end module MethodDisvModule
