@@ -66,9 +66,7 @@ def get_minimal_gwf_simulation(
         gwfkwargs = {}
         gwfkwargs["modelname"] = name
     if imskwargs is None:
-        imskwargs = {
-            "print_option": "SUMMARY",
-        }
+        imskwargs = {"print_option": "SUMMARY"}
     if diskwargs is None and disukwargs is None:
         diskwargs = {}
         diskwargs["nlay"] = 5

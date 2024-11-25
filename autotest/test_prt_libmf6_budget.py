@@ -8,12 +8,7 @@ from pathlib import Path
 import pytest
 from framework import TestFramework
 from modflow_devtools.markers import requires_pkg
-from test_prt_budget import (
-    HorizontalCase,
-    build_mp7_sim,
-    build_prt_sim,
-    check_output,
-)
+from test_prt_budget import HorizontalCase, build_mp7_sim, build_prt_sim, check_output
 
 simname = "prt_libmf6"
 cases = [simname]

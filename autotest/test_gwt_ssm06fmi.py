@@ -325,10 +325,7 @@ def run_transport_model(dir, exe):
         pname="SFT-1",
     )
 
-    mvt = flopy.mf6.modflow.ModflowGwtmvt(
-        gwt,
-        pname="MVT-1",
-    )
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, pname="MVT-1")
 
     oc = flopy.mf6.ModflowGwtoc(
         gwt,

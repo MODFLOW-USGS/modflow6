@@ -71,10 +71,7 @@ def build_models(idx, test):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=name,
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,

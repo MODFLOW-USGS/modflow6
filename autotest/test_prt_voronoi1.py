@@ -230,17 +230,9 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
     gwf_budget_file = gwf_ws / f"{gwf_name}.bud"
     gwf_head_file = gwf_ws / f"{gwf_name}.hds"
     flopy.mf6.ModflowPrtfmi(
-        prt,
-        packagedata=[
-            ("GWFHEAD", gwf_head_file),
-            ("GWFBUDGET", gwf_budget_file),
-        ],
+        prt, packagedata=[("GWFHEAD", gwf_head_file), ("GWFBUDGET", gwf_budget_file)]
     )
-    ems = flopy.mf6.ModflowEms(
-        sim,
-        pname="ems",
-        filename=f"{prt_name}.ems",
-    )
+    ems = flopy.mf6.ModflowEms(sim, pname="ems", filename=f"{prt_name}.ems")
     sim.register_solution_package(ems, [prt.name])
     return sim
 
@@ -248,12 +240,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
 def build_models(idx, test):
     gwf_sim, cell_ids = build_gwf_sim(test.name, test.workspace, test.targets)
     prt_sim = build_prt_sim(
-        idx,
-        test.name,
-        test.workspace,
-        test.workspace / "prt",
-        test.targets,
-        cell_ids,
+        idx, test.name, test.workspace, test.workspace / "prt", test.targets, cell_ids
     )
     return gwf_sim, prt_sim
 
@@ -283,18 +270,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
     if "wel" in name:
         handles.append(
             mpl.lines.Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                label="Well",
-                markerfacecolor="red",
-            ),
+                [0], [0], marker="o", linestyle="", label="Well", markerfacecolor="red"
+            )
         )
-    ax.legend(
-        handles=handles,
-        loc="lower right",
-    )
+    ax.legend(handles=handles, loc="lower right")
     pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
     if "wel" in name:
         pmv.plot_bc(ftype="WEL")

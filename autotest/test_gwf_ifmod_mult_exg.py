@@ -197,16 +197,7 @@ def get_model(idx, dir):
     idomainp = gwf.dis.idomain.array
 
     lgr = Lgr(
-        nlay,
-        nrowp,
-        ncolp,
-        delrp,
-        delcp,
-        topp,
-        botmp,
-        idomainp,
-        ncpp=rft,
-        ncppl=1,
+        nlay, nrowp, ncolp, delrp, delcp, topp, botmp, idomainp, ncpp=rft, ncppl=1
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)

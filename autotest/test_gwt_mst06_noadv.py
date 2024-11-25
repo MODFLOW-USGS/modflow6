@@ -135,18 +135,7 @@ def check_output(idx, test):
         assert False, f'could not load data from "{fpth}"'
     decay_list = bobj.get_data(text="DECAY-AQUEOUS")
     decay_rate = [dr[0] for dr in decay_list]
-    decay_rate_answer = [
-        -8.4,
-        -8.4,
-        -8.4,
-        -8.4,
-        -8.4,
-        -8.4,
-        -8.4,
-        -8.4,
-        0.0,
-        0.0,
-    ]
+    decay_rate_answer = [-8.4, -8.4, -8.4, -8.4, -8.4, -8.4, -8.4, -8.4, 0.0, 0.0]
     msg = "simulated decay rates do not match with known solution. {} {}".format(
         decay_rate, decay_rate_answer
     )

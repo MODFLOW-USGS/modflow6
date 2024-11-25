@@ -177,24 +177,12 @@ def build_models(idx, test):
         head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
-            (
-                "HEAD",
-                "ALL",
-            ),
-            (
-                "BUDGET",
-                "ALL",
-            ),
+            ("HEAD", "ALL"),
+            ("BUDGET", "ALL"),
         ],
         printrecord=[
-            (
-                "HEAD",
-                "LAST",
-            ),
-            (
-                "BUDGET",
-                "LAST",
-            ),
+            ("HEAD", "LAST"),
+            ("BUDGET", "LAST"),
         ],
     )
 
@@ -362,13 +350,12 @@ def build_models(idx, test):
             concentrationprintrecord=[
                 ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
-            saverecord=[("CONCENTRATION", "ALL")],
+            saverecord=[
+                ("CONCENTRATION", "ALL"),
+            ],
             printrecord=[
                 ("CONCENTRATION", "ALL"),
-                (
-                    "BUDGET",
-                    "ALL",
-                ),
+                ("BUDGET", "ALL"),
             ],
         )
 

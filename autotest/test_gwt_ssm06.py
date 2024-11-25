@@ -292,10 +292,7 @@ def run_flw_and_trnprt_models(dir, exe):
         pname="SFT-1",
     )
 
-    mvt = flopy.mf6.modflow.ModflowGwtmvt(
-        gwt,
-        pname="MVT-1",
-    )
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, pname="MVT-1")
 
     oc = flopy.mf6.ModflowGwtoc(
         gwt,

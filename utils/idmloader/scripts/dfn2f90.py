@@ -586,25 +586,13 @@ class IdmDfnSelector:
                 self._write_selector_decl(fh, component=c, sc_list=self._d[c])
                 self._write_selector_helpers(fh)
                 self._write_selector_defn(
-                    fh,
-                    component=c,
-                    sc_list=self._d[c],
-                    defn="param",
-                    dtype="param",
+                    fh, component=c, sc_list=self._d[c], defn="param", dtype="param"
                 )
                 self._write_selector_defn(
-                    fh,
-                    component=c,
-                    sc_list=self._d[c],
-                    defn="aggregate",
-                    dtype="param",
+                    fh, component=c, sc_list=self._d[c], defn="aggregate", dtype="param"
                 )
                 self._write_selector_defn(
-                    fh,
-                    component=c,
-                    sc_list=self._d[c],
-                    defn="block",
-                    dtype="block",
+                    fh, component=c, sc_list=self._d[c], defn="block", dtype="block"
                 )
                 self._write_selector_multi(fh, component=c, sc_list=self._d[c])
                 self._write_selector_sub(fh, component=c, sc_list=self._d[c])

@@ -243,11 +243,7 @@ def check_output(idx, test):
         concctr = pmv.contour_array(conc, levels=(0.0001, 0.001, 0.01, 0.1), colors="y")
         plt.clabel(concctr)
         plt.colorbar(
-            concmesh,
-            shrink=0.25,
-            ax=ax,
-            label="Concentration",
-            location="right",
+            concmesh, shrink=0.25, ax=ax, label="Concentration", location="right"
         )
 
         handles = [
@@ -261,10 +257,7 @@ def check_output(idx, test):
                 markerfacecolor="gray",
             ),
         ]
-        ax.legend(
-            handles=handles,
-            loc="lower right",
-        )
+        ax.legend(handles=handles, loc="lower right")
         pmv.plot_vector(qx, qy, normalize=True, alpha=0.25)
         mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
         for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):

@@ -409,27 +409,9 @@ def get_model(ws, name, timeseries=False):
         (7, (0, 7, 2), 1, -1, 1.0, kv, 0.2, 0.4, 0.3, 3.5),
         (8, (0, 7, 3), 1, -1, 1.0, kv, 0.2, 0.4, 0.3, 3.5),
     ]
-    (
-        finf,
-        pet,
-        extdp,
-        extwc,
-    ) = (
-        1e-8,
-        5e-9,
-        1.0,
-        0.01,
-    )
+    (finf, pet, extdp, extwc) = (1e-8, 5e-9, 1.0, 0.01)
     ha, hroot, rootact = 0.0, 0.0, 0.0
-    ts_names = [
-        "finf",
-        "pet",
-        "extdp",
-        "extwc",
-        "ha",
-        "hroot",
-        "rootact",
-    ] + auxnames
+    ts_names = ["finf", "pet", "extdp", "extwc", "ha", "hroot", "rootact"] + auxnames
     if timeseries:
         ts_methods = ["linearend"] * len(ts_names)
         ts_data = []

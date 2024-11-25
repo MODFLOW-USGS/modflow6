@@ -49,9 +49,7 @@ def test_rebuild_release(rebuilt_bin_path: Path):
         # download the release
         download_path = Path(td)
         download_and_unzip(
-            asset["browser_download_url"],
-            path=download_path,
-            verbose=True,
+            asset["browser_download_url"], path=download_path, verbose=True
         )
 
         # update IDEVELOPMODE

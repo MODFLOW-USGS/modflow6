@@ -21,9 +21,7 @@ nlay, nrow, ncol = 1, 1, 1
 
 
 def build_models(idx, test):
-    perlen = [
-        2.0,
-    ]
+    perlen = [2.0]
     nper = len(perlen)
     nstp = [14]
     tsmult = [1.0]

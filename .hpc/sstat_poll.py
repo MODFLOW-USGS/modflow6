@@ -68,10 +68,7 @@ if __name__ == "__main__":
         + "by specifying the format argument "
         + "(--format=JobID,AveCPU,AveRSS,MaxRSS,...)."
     )
-    parser = argparse.ArgumentParser(
-        "sstat_poll",
-        description=description,
-    )
+    parser = argparse.ArgumentParser("sstat_poll", description=description)
     parser.add_argument("jobid", help="SLURM JobID", type=int)
     parser.add_argument(
         "--format",

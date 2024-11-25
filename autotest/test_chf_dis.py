@@ -157,10 +157,7 @@ def check_grb_disv1d(fpth):
     assert grb.grid_type == "DISV1D", "grb grid type not DISV1D"
     assert grb.ncells == nodes, "grb ncells is incorrect"
     assert grb._datadict["NCELLS"] == nodes, "grb nodes is incorrect"
-    assert grb.verts.shape == (
-        nodes + 1,
-        2,
-    ), "vertices shape is incorrect"
+    assert grb.verts.shape == (nodes + 1, 2), "vertices shape is incorrect"
     assert grb.nja == 14, "nja in grb file is not 14"
     assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, "yorigin in grb file is not correct"

@@ -286,9 +286,7 @@ def build_models(idx, test):
     # +1.0, +2.0, -1.0, and 0.0 degrees Celsius from stress period to stress
     # period
     esl_spd = {
-        0: [
-            [(0, 0, 0), Joules_added_for_1degC_rise],
-        ],
+        0: [[(0, 0, 0), Joules_added_for_1degC_rise]],
         1: [[(0, 0, 0), 2 * Joules_added_for_1degC_rise]],
         2: [[(0, 0, 0), -1 * Joules_added_for_1degC_rise]],
         3: [],

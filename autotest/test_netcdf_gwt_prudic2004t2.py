@@ -126,9 +126,7 @@ def check_output(idx, test, export, gridded_input):
         xds = xa.open_dataset(nc_fpth)
 
     cobj = flopy.utils.HeadFile(
-        os.path.join(ws, f"{gwtname}.ucn"),
-        precision="double",
-        text="CONCENTRATION",
+        os.path.join(ws, f"{gwtname}.ucn"), precision="double", text="CONCENTRATION"
     )
 
     # Compare NetCDF head arrays with binary headfile concentrations

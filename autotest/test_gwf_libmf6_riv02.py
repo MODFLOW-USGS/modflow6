@@ -226,12 +226,7 @@ def api_func(exe, idx, model_ws=None):
 
         while kiter < max_iter:
             # update api package
-            hcof[:], rhs[:] = api_riv_pak(
-                stage,
-                head,
-                hcof,
-                rhs,
-            )
+            hcof[:], rhs[:] = api_riv_pak(stage, head, hcof, rhs)
 
             # solve with updated api data
             has_converged = mf6.solve()

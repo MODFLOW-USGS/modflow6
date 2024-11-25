@@ -798,21 +798,7 @@ def make_concentration_map(sim, ws):
 
     import matplotlib.pyplot as plt
 
-    levels = [
-        1,
-        10,
-        25,
-        50,
-        100,
-        150,
-        200,
-        250,
-        300,
-        350,
-        400,
-        450,
-        500,
-    ]
+    levels = [1, 10, 25, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
     fig, axs = plt.subplots(2, 2, figsize=(5, 7), dpi=300, tight_layout=True)
 
     # push combo concentrations into global concentration

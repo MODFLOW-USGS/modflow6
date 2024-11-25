@@ -27,15 +27,7 @@ def build_models(idx, test):
     delc = 10.0 * np.ones(nrow)
     top = 0
     botm = [-10, -20, -30]
-    disukwargs = get_disu_kwargs(
-        nlay,
-        nrow,
-        ncol,
-        delr,
-        delc,
-        top,
-        botm,
-    )
+    disukwargs = get_disu_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
     if idx == 1:
         # for the second test, set one cell to idomain = 0
         idomain = np.ones((nlay, nrow * ncol), dtype=int)

@@ -248,10 +248,7 @@ def check_output(idx, test):
 
     # read data from csv file
     zbd = np.genfromtxt(
-        test.workspace / "zonebudget.csv",
-        names=True,
-        delimiter=",",
-        deletechars="",
+        test.workspace / "zonebudget.csv", names=True, delimiter=",", deletechars=""
     )
 
     # sum the data for all zones
@@ -288,8 +285,7 @@ def check_output(idx, test):
     for key in bud_lst:
         d[key] = 0.0
     cobj = flopy.utils.CellBudgetFile(
-        test.workspace / f"{os.path.basename(test.name)}.cbc",
-        precision="double",
+        test.workspace / f"{os.path.basename(test.name)}.cbc", precision="double"
     )
     kk = cobj.get_kstpkper()
     times = cobj.get_times()

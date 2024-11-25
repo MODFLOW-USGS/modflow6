@@ -319,10 +319,7 @@ class TestFramework:
                     if len(exfiles) > 0:
                         exfile = exfiles[i]
                         if exfile is not None:
-                            print(
-                                f"Exclusion file {i + 1}",
-                                os.path.basename(exfile),
-                            )
+                            print(f"Exclusion file {i + 1}", os.path.basename(exfile))
 
                 # make comparison
                 success = compare_heads(

@@ -39,10 +39,7 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 delr, delc = 1.0, 1.0
 area = delr * delc
-zelev = (
-    0.0,
-    -100.0,
-)
+zelev = (0.0, -100.0)
 strt = zelev[-1] + 1e-7
 cmp_offset = 15999.1
 obsname = "H1"

@@ -34,15 +34,9 @@ cases = ["gwf-lak-status"]
 def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
-    perlen = nper * [
-        1.0,
-    ]
-    nstp = nper * [
-        1,
-    ]
-    tsmult = nper * [
-        1.0,
-    ]
+    perlen = nper * [1.0]
+    nstp = nper * [1]
+    tsmult = nper * [1.0]
 
     lenx = 300.0
     delr = delc = lenx / float(nrow)

@@ -33,10 +33,7 @@ def build_models(idx, test):
         inner_hclose=1e-6,
     )
 
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=name,
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
     flopy.mf6.ModflowGwfdis(
         gwf,
         length_units=length_units,
@@ -89,12 +86,7 @@ def build_models(idx, test):
 
 def check_output(idx, test):
     answer = np.array(
-        [
-            1.0,
-            -0.92094535738673577,
-            -0.92094535738673577,
-            0.79053721667952215e-1,
-        ]
+        [1.0, -0.92094535738673577, -0.92094535738673577, 0.79053721667952215e-1]
     )
     obs_pth = pl.Path(f"{test.workspace}/{cases[idx]}.sfr.obs.csv")
     sim_data = flopy.utils.Mf6Obs(obs_pth).get_data()

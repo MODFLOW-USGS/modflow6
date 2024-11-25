@@ -143,16 +143,7 @@ def build_models(idx, test):
 
     # add a gwf-gwf exchange
     gwfgwf_data = [
-        (
-            (0, 0, ncol - 1),
-            (0, 0, 0),
-            1,
-            delr / 2.0,
-            delr / 2.0,
-            delc,
-            0.0,
-            delr,
-        )
+        ((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2.0, delr / 2.0, delc, 0.0, delr)
     ]
 
     # GWF-GWF
@@ -294,20 +285,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
         if irno in [0, ncol - 1]:
             ncon = 1
         cellid = (0, 0, irno)
-        t = (
-            irno,
-            cellid,
-            rlen,
-            rwid,
-            rgrd,
-            rtp,
-            rbth,
-            rhk,
-            rman,
-            ncon,
-            ustrf,
-            ndv,
-        )
+        t = (irno, cellid, rlen, rwid, rgrd, rtp, rbth, rhk, rman, ncon, ustrf, ndv)
         pak_data.append(t)
 
     con_data = []

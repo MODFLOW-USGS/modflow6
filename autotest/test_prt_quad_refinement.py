@@ -258,10 +258,7 @@ def check_output(idx, test, snapshot):
             )
 
         # plot nodes
-        xc, yc = (
-            mg.get_xcellcenters_for_layer(0),
-            mg.get_ycellcenters_for_layer(0),
-        )
+        xc, yc = (mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0))
         for i in range(mg.ncpl):
             x, y = xc[i], yc[i]
             ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)

@@ -250,9 +250,7 @@ def add_gwf_model(sim, gwfname, newton=False):
     # sfr file
     connectiondata = [[0, -1], [1, 0]]
 
-    sfr_perioddata = [
-        [0, "inflow", 1.0],
-    ]
+    sfr_perioddata = [[0, "inflow", 1.0]]
 
     pname = "SFR-" + gwfname[-1]
     sfr = flopy.mf6.ModflowGwfsfr(

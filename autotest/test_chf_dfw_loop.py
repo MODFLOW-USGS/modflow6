@@ -166,26 +166,7 @@ def build_models(idx, test):
         0.0,
     ]
 
-    idcxs = [
-        0,
-        0,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        2,
-        2,
-        2,
-        2,
-        2,
-    ]
+    idcxs = [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2]
 
     # time, reach1, reach5 (cms)
     reach_inflow = [
@@ -245,10 +226,7 @@ def build_models(idx, test):
         idcxs=idcxs,
     )
 
-    sto = flopy.mf6.ModflowChfsto(
-        chf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowChfsto(chf, save_flows=True)
 
     xfraction = (
         [0.0, 10.0, 20.0, 30.0] + [0, 20.0, 40.0, 60.0] + [0.0, 15.0, 30.0, 45.0]

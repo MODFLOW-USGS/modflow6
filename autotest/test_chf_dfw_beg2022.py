@@ -210,12 +210,7 @@ def make_plot(test, mfsim):
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(times / 60.0 / 60.0, qinflow, "r-", label="Inflow")
-    ax.plot(
-        times / 60.0 / 60.0,
-        df_hecras["Flow Flow (CMS)"],
-        "b-",
-        label="HEC-RAS",
-    )
+    ax.plot(times / 60.0 / 60.0, df_hecras["Flow Flow (CMS)"], "b-", label="HEC-RAS")
     x = df_mfswr["TOTTIME"] - 86400.0
     x = x / 60.0 / 60.0
     ax.plot(x, -df_mfswr["QCRFLOW"], "go:", mfc="none", label="MODFLOW-SWR")
@@ -237,11 +232,7 @@ def make_plot(test, mfsim):
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(times / 60.0 / 60.0, stage[:, 0, 0, 0], "r-", label="Upstream")
     ax.plot(
-        times / 60.0 / 60.0,
-        stage[:, 0, 0, -1],
-        "bo",
-        mfc="none",
-        label="Downstream",
+        times / 60.0 / 60.0, stage[:, 0, 0, -1], "bo", mfc="none", label="Downstream"
     )
     # ax.set_xlim(0, 24.)
     # ax.set_ylim(19, 26)

@@ -279,14 +279,7 @@ def get_depths(
     depths = np.zeros(flows.shape, dtype=float)
     for idx, q in enumerate(flows):
         depths[idx] = qtodepth(
-            x,
-            h,
-            q,
-            roughness=roughness,
-            slope=slope,
-            conv=conv,
-            dd=dd,
-            verbose=False,
+            x, h, q, roughness=roughness, slope=slope, conv=conv, dd=dd, verbose=False
         )
 
     return depths
@@ -303,42 +296,21 @@ def qtodepth(
     verbose=False,
 ):
     h0 = 0.0
-    q0 = manningsq(
-        x,
-        h,
-        h0,
-        roughness=roughness,
-        slope=slope,
-        conv=conv,
-    )
+    q0 = manningsq(x, h, h0, roughness=roughness, slope=slope, conv=conv)
     r = q0 - q
 
     iter = 0
     if verbose:
         print(f"iteration {iter:>2d} - residual={r}")
     while abs(r) > 1e-12:
-        q1 = manningsq(
-            x,
-            h,
-            h0 + dd,
-            roughness=roughness,
-            slope=slope,
-            conv=conv,
-        )
+        q1 = manningsq(x, h, h0 + dd, roughness=roughness, slope=slope, conv=conv)
         dq = q1 - q0
         if dq != 0.0:
             derv = dd / (q1 - q0)
         else:
             derv = 0.0
         h0 -= derv * r
-        q0 = manningsq(
-            x,
-            h,
-            h0,
-            roughness=roughness,
-            slope=slope,
-            conv=conv,
-        )
+        q0 = manningsq(x, h, h0, roughness=roughness, slope=slope, conv=conv)
         r = q0 - q
 
         iter += 1

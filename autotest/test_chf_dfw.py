@@ -80,10 +80,7 @@ def build_models(idx, test):
         idcxs=0,
     )
 
-    sto = flopy.mf6.ModflowChfsto(
-        chf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowChfsto(chf, save_flows=True)
 
     ic = flopy.mf6.ModflowChfic(chf, strt=1.0)
 
@@ -116,19 +113,13 @@ def build_models(idx, test):
 
     # Save to external binary file or into flw package depending on binary keyword
     binary = True
-    flw_list = [
-        (1, 100),
-    ]  # one-based cell numbers here
+    flw_list = [(1, 100)]  # one-based cell numbers here
     maxbound = len(flw_list)
     if binary:
         ra = np.array(flw_list, dtype=[("irch", "<i4"), ("q", "<f8")])
         ra.tofile(os.path.join(sim_ws, "flw0.bin"))
         flw_spd = {
-            0: {
-                "filename": "flw0.bin",
-                "binary": True,
-                "data": None,
-            },
+            0: {"filename": "flw0.bin", "binary": True, "data": None},
         }
     else:
         flw_spd = {0: flw_list}

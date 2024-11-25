@@ -968,11 +968,7 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
 
 
 def build_models(idx, test):
-    scen_nm, conns, frac = (
-        cases[idx],
-        scen_conns[idx],
-        parent_mvr_frac[idx],
-    )
+    scen_nm, conns, frac = (cases[idx], scen_conns[idx], parent_mvr_frac[idx])
     scen_nm_parent = "gwf_" + scen_nm + "_p"
     scen_nm_child = "gwf_" + scen_nm + "_c"
     sim, gwf, gwfc = instantiate_base_simulation(

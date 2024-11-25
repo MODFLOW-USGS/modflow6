@@ -57,19 +57,7 @@ ini_stress = 20.0
 thick = [1.0]
 
 sub6 = [
-    [
-        0,
-        (1, 0, 1),
-        "nodelay",
-        ini_stress,
-        thick[0],
-        1.0,
-        cc,
-        cr,
-        theta,
-        kv,
-        ini_stress,
-    ]
+    [0, (1, 0, 1), "nodelay", ini_stress, thick[0], 1.0, cc, cr, theta, kv, ini_stress]
 ]
 
 

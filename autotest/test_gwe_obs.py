@@ -395,18 +395,8 @@ def build_gwe_model(sim, gwename, idx):
         obs_lay2 = 2
 
     obs_data0 = [
-        (
-            "temp1",
-            obs_txt,
-            (obs_lay2, 0, obs_col2),
-            (obs_lay1, 0, obs_col1),
-        ),
-        (
-            "flow1",
-            "flow-ja-face",
-            (obs_lay2, 0, obs_col2),
-            (obs_lay1, 0, obs_col1),
-        ),
+        ("temp1", obs_txt, (obs_lay2, 0, obs_col2), (obs_lay1, 0, obs_col1)),
+        ("flow1", "flow-ja-face", (obs_lay2, 0, obs_col2), (obs_lay1, 0, obs_col1)),
     ]
     obs_recarray = {f"{gwename}.obs.csv": obs_data0}
 

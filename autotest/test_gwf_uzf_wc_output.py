@@ -288,12 +288,7 @@ def build_mf6_model(idx, ws):
     uzf_obs = {
         f"{name}.uzfobs": [
             ("uzf01_dpth=0.5", "water-content", "uzf01", 0.5),
-            (
-                "uzf01_dpth=1.5",
-                "water-content",
-                "uzf01",
-                1.5,
-            ),  # Relies on boundnames
+            ("uzf01_dpth=1.5", "water-content", "uzf01", 1.5),  # Relies on boundnames
             ("uzf01_dpth=2.5", "water-content", "uzf01", 2.5),
             ("uzf01_dpth=3.5", "water-content", "uzf01", 3.5),
             ("uzf01_dpth=4.49", "water-content", "uzf01", 4.49),

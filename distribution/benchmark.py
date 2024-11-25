@@ -42,11 +42,7 @@ def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
         f"https://github.com/{GITHUB_REPO}"
         + f"/releases/download/{version}/{distname}.zip"
     )
-    download_and_unzip(
-        url,
-        path=output_path,
-        verbose=True,
-    )
+    download_and_unzip(url, path=output_path, verbose=True)
 
     return version, output_path / distname
 
@@ -54,10 +50,7 @@ def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
 def get_mf6_cmdargs(app, argv, text="mf6:", verbose=False):
     return_text = None
     proc = subprocess.Popen(
-        argv,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=os.path.dirname(app),
+        argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.path.dirname(app)
     )
     result, error = proc.communicate()
     if result is not None:
@@ -94,11 +87,7 @@ def get_mf6_compiler(app, verbose=False):
 
 
 def revert_files(app, example):
-    replace_dict = {
-        ".ims": {
-            (6, 1, 1): ("dvclose", "hclose"),
-        }
-    }
+    replace_dict = {".ims": {(6, 1, 1): ("dvclose", "hclose")}}
     extensions = list(replace_dict.keys())
 
     # get current version
@@ -165,16 +154,7 @@ def elapsed_real_to_string(elt):
 
 
 def run_function(id, app, example):
-    return (
-        id,
-        flopy.run_model(
-            app,
-            None,
-            model_ws=example,
-            silent=True,
-            report=True,
-        ),
-    )
+    return (id, flopy.run_model(app, None, model_ws=example, silent=True, report=True))
 
 
 def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLike):
@@ -383,11 +363,7 @@ def run_benchmarks(
     previous_total = 0.0
     lines = []
     for idx, example in enumerate(example_dirs):
-        success, t, t0, line = run_model(
-            current_exe,
-            previous_exe,
-            example,
-        )
+        success, t, t0, line = run_model(current_exe, previous_exe, example)
         if not success:
             print(f"{example} run failed")
         current_total += t

@@ -14,38 +14,10 @@ cases = (
     "csub_db01f",
 )
 
-newtons = (
-    True,
-    True,
-    True,
-    True,
-    True,
-    True,
-)
-stress_lag = (
-    None,
-    True,
-    None,
-    True,
-    None,
-    True,
-)
-elastic = (
-    True,
-    True,
-    False,
-    False,
-    False,
-    False,
-)
-convertible = (
-    True,
-    True,
-    True,
-    True,
-    False,
-    False,
-)
+newtons = (True, True, True, True, True, True)
+stress_lag = (None, True, None, True, None, True)
+elastic = (True, True, False, False, False, False)
+convertible = (True, True, True, True, False, False)
 htol = None
 dtol = 1e-3
 budtol = 0.01
@@ -126,14 +98,7 @@ def build_models(idx, test):
     else:
         newtonoptions = None
         imsla = "CG"
-        rewet_record = [
-            "wetfct",
-            0.1,
-            "iwetit",
-            1,
-            "ihdwet",
-            0,
-        ]
+        rewet_record = ["wetfct", 0.1, "iwetit", 1, "ihdwet", 0]
         wetdry = [1, 0]
 
     ims = flopy.mf6.ModflowIms(
@@ -225,9 +190,7 @@ def build_models(idx, test):
     chd.ts.initialize(
         filename=chnam,
         timeseries=chd_ts,
-        time_series_namerecord=[
-            ts_name,
-        ],
+        time_series_namerecord=[ts_name],
         interpolation_methodrecord=["linear"],
     )
 
