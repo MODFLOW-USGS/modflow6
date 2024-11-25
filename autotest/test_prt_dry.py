@@ -371,9 +371,7 @@ def check_output(idx, test, snapshot):
     trackcsv_path = prt_ws / trackcsv_file
     mf6pathlines = pd.read_csv(trackcsv_path)
     startpts = mf6pathlines[mf6pathlines.ireason == 0]
-    endpts = mf6pathlines[mf6pathlines.ireason == 3]
 
-    # check termination points against snapshot
     assert snapshot == mf6pathlines.drop("name", axis=1).round(3).to_records(
         index=False
     )

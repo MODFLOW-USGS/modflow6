@@ -6,13 +6,13 @@ When a particle is in the flow field, vertical motion can be solved in the same 
 
 ## Legend
 
-A diagrams in this document represents a decision tree applied to each particle in a given context. Diagrams use the following conventions.
+A diagram in this document represents a decision tree applied to a particle in a given context. Diagrams use the following conventions.
 
 * Stadium-shaped boxes represent steps or processes.
 * Square boxes represent outcomes.
 * Diamond boxes represent conditions (i.e. runtime state).
-* Rounded boxes represent user options.
-* Thin lines represent decisions made by the program on the basis of conditions, e.g. particle, cell, flows.
+* Round-corner boxes represent user options.
+* Thin lines represent decisions made by the program on the basis of runtime state, e.g. particle, cell, flows.
 * Thick lines represent decisions made by the user by way of options.
 * Green outcome boxes indicate the particle remains active.
 * Red outcome boxes indicate the particle terminates.
@@ -24,8 +24,8 @@ flowchart TD
     OPTION ==> |No| CONDITION{Condition}
     CONDITION --> |Yes| TERMINATE
     CONDITION --> |No| ACTIVE
-    ACTIVE[Active outcome]:::active
-    TERMINATE[Terminating outcome]:::terminate
+    ACTIVE[Active]:::active
+    TERMINATE[Termination]:::terminate
 
     classDef active stroke:#98fb98
     classDef terminate stroke:#f08080
@@ -33,7 +33,7 @@ flowchart TD
 
 ## The problem
 
-The main question is what to do with particles under "dry" conditions.
+The question is what to do with particles in "dry" conditions.
 
 There are two kinds of dry cells: inactive cells, and active-but-dry cells, as can occur with the Newton formulation.
 
@@ -41,17 +41,15 @@ There are two kinds of dry cells: inactive cells, and active-but-dry cells, as c
 
 Release-time and tracking-time considerations are described (as well as implemented) separately.
 
-
-
 ### Release time
 
 At release time, PRT decides whether to release each particle or to terminate it unreleased.
 
 If the release cell is active, the particle will be released at the specified coordinates.
 
-If the release cell is inactive, behavior is determined by the `DRAPE` option. If the `DRAPE` option is enabled, the particle will be "draped" down to and released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if `DRAPE` is not enabled, the particle will terminate with status code 8.
+If the release cell is inactive, behavior is determined by the `DRAPE` option. If the `DRAPE` option is enabled, the particle will be "draped" down to and released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if `DRAPE` is not enabled, the particle will terminate unreleased (with status code 8).
 
-**Note**: Since under the Newton formulation dry cells can remain active, the `DRAPE` option will not be applied when Newton is enabled. Vertical tracking behavior with Newton can be configured with tracking-time settings.
+**Note**: Since under the Newton formulation dry cells can remain active, the `DRAPE` option has no effect when Newton is enabled. Vertical tracking behavior with Newton can be configured with tracking-time settings.
 
 ```mermaid
 flowchart LR
@@ -72,15 +70,15 @@ A particle might find itself above the water table for one of two reasons:
 
 1. It was released above the water table.
 
-    With the Newton formulation, dry cells can remain active, meaning particles can be released into them.
+    With the Newton formulation, particles can be released into dry-but-active cells.
 
-2. The water table has receded beneath it.
+2. The water table has receded.
 
-    Particle trajectories are solved over the same time discretization used by the flow model. A particle may be immersed in the flow field in one time step, and find that the water table has dropped below it on the next.
+    Particle trajectories are solved over the same time discretization used by the flow model. A particle may be immersed in the flow field in one time step, and find that the water table has dropped below it in the next.
 
 A particle which finds itself in an inactive cell will terminate with status code 7. This is consistent with MODPATH 7's behavior.
 
-A particle in a dry-but-active cell, or above the water table in an active cell, need not terminate. MODFLOW version 6.6.0 introduces a new option `DRY_TRACKING_METHOD` for the PRP package, determining how dry particles should behave. Supported values are:
+A particle in a dry-but-active cell, or above the water table in a partially saturated cell, need not terminate. MODFLOW version 6.6.0 introduces a new option `DRY_TRACKING_METHOD` for the PRP package, determining how dry particles should behave. Supported values are:
 
 - `DROP` (default)
 - `STOP`
@@ -94,7 +92,7 @@ If `STAY` is selected, a dry particle will remain stationary until a) the cell r
 
 **Note**: In version 6.5.0, behavior was as described by `DROP`. This remains the default behavior in version 6.6.0.
 
-**Note**: In each time step, PRT tracks each particle until the end of the time step, or until the particle encounters a termination condition, whichever occurs first. A particle may traverse an arbitrary number of cells in a single time step. Below, square boxes represent time-step outcomes, i.e. the state of the tracking algorithm at the end of the time step. Stadium-shaped boxes represent intermediate steps in the tracking algorithm.
+**Note**: In each time step, PRT tracks each particle until the end of the time step, or until the particle encounters a termination condition, whichever occurs first. A particle may traverse an arbitrary number of cells in a single time step.
 
 ```mermaid
 flowchart LR
