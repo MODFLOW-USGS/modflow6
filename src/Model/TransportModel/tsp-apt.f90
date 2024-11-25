@@ -1307,7 +1307,7 @@ contains
   subroutine apt_options(this, option, found)
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: urword, getunit, check_assign_unit, openfile
+    use InputOutputModule, only: urword, getunit, assign_iounit, openfile
     ! -- dummy
     class(TspAptType), intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -1365,7 +1365,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        call check_assign_unit(this%ibudgetout, this%inunit, "BUDGET fileout")
+        call assign_iounit(this%ibudgetout, this%inunit, "BUDGET fileout")
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET', &
@@ -1377,7 +1377,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        call check_assign_unit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
+        call assign_iounit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET CSV', &
