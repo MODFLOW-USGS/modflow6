@@ -560,9 +560,8 @@ def check_output(idx, test):
         plt.text(16.0, 4.00, "100 days", fontsize=10)
 
         plt.gca().invert_yaxis()
-        plt.xlabel(
-            "$Temperature, C$"
-        )  # For latex replace with: '$Temperature, ^{\circ}C$'
+        # For latex replace with: '$Temperature, ^{\circ}C$'
+        plt.xlabel("$Temperature, C$")
         plt.ylabel("$Depth, m$")
         plt.minorticks_on()
         plt.axhline(y=0.0)

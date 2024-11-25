@@ -89,11 +89,8 @@ cpw = 4183.0
 lhv = 2500.0
 cps = 760.0
 rhos = 1500.0
-K_therm_strmbed = [
-    1.5,
-    1.75,
-    2.0,
-]  # Thermal conductivity of the streambed material ($W/m/C$)
+# Thermal conductivity of the streambed material ($W/m/C$)
+K_therm_strmbed = [1.5, 1.75, 2.0]
 rbthcnd = 0.0001
 prsity = sy
 drn_depth = 2.0
@@ -292,20 +289,7 @@ for irno in range(nrow):
     if irno in [0, nrow - 1]:
         ncon = 1
     cellid = (0, irno, ncol - 1)
-    t = (
-        irno,
-        cellid,
-        rlen,
-        rwid,
-        rgrd,
-        rtp,
-        rbth,
-        rhk,
-        rman,
-        ncon,
-        ustrf,
-        ndv,
-    )
+    t = (irno, cellid, rlen, rwid, rgrd, rtp, rbth, rhk, rman, ncon, ustrf, ndv)
     pak_data.append(t)
 
 con_data = []
@@ -408,12 +392,7 @@ def build_mf6_model(idx, ws):
     uzf_obs = {
         f"{gwfname}.uzfobs": [
             ("uzf01_dpth=0.5", "water-content", "uzf01", 0.5),
-            (
-                "uzf01_dpth=1.5",
-                "water-content",
-                "uzf01",
-                1.5,
-            ),  # Relies on boundnames
+            ("uzf01_dpth=1.5", "water-content", "uzf01", 1.5),  # Relies on boundnames
             ("uzf01_dpth=2.5", "water-content", "uzf01", 2.5),
             ("uzf01_dpth=3.5", "water-content", "uzf01", 3.5),
             ("uzf01_dpth=4.49", "water-content", "uzf01", 4.49),
@@ -742,8 +721,7 @@ def check_output(idx, test):
                                 itm[ct][-1], -1 * (finf0 - vks) + accum_runoff
                             ), msg0
                             assert np.isclose(
-                                itm_e[ct][-1],
-                                (finf0 - vks) * rhow * cpw + accum_energy,
+                                itm_e[ct][-1], (finf0 - vks) * rhow * cpw + accum_energy
                             ), msg7
                             accum_runoff += -1 * (finf0 - vks)
                             accum_energy += (finf0 - vks) * rhow * cpw
@@ -791,8 +769,7 @@ def check_output(idx, test):
                                 itm[ct][-1], -1 * (finf0 - vks) + accum_runoff
                             ), msg0
                             assert np.isclose(
-                                itm_e[ct][-1],
-                                (finf0 - vks) * rhow * cpw + accum_energy,
+                                itm_e[ct][-1], (finf0 - vks) * rhow * cpw + accum_energy
                             ), msg7
                             accum_runoff += -1 * (finf0 - vks)
                             accum_energy += (finf0 - vks) * rhow * cpw

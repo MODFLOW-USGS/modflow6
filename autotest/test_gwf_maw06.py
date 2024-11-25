@@ -29,14 +29,8 @@ botm = [top - dz * (k + 1) for k in range(nlay)]
 ztop = [top - dz * k for k in range(nlay)]
 
 strt_min = aqthick / 8.0
-mawstrt = [
-    strt_min,
-    top,
-]
-gwfstrt = [
-    top,
-    strt_min,
-]
+mawstrt = [strt_min, top]
+gwfstrt = [top, strt_min]
 
 Kh = 1.0
 Kv = 1.0
@@ -167,24 +161,12 @@ def build_models(idx, test):
         head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
-            (
-                "HEAD",
-                "ALL",
-            ),
-            (
-                "BUDGET",
-                "ALL",
-            ),
+            ("HEAD", "ALL"),
+            ("BUDGET", "ALL"),
         ],
         printrecord=[
-            (
-                "HEAD",
-                "ALL",
-            ),
-            (
-                "BUDGET",
-                "ALL",
-            ),
+            ("HEAD", "ALL"),
+            ("BUDGET", "ALL"),
         ],
     )
 

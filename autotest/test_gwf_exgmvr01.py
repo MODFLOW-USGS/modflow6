@@ -36,16 +36,9 @@ Kv = 20.0
 
 def build_simulation(idx, sim_ws, sim_type="single"):
     name = cases[idx]
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name,
-        sim_ws=sim_ws,
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=sim_ws)
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim,
-        time_units="DAYS",
-        nper=nper,
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper)
 
     # Flow solver
     ims = flopy.mf6.ModflowIms(
@@ -144,20 +137,7 @@ def build_gwf(sim, gwf_type="single"):
         if irno in [0, nc - 1]:
             ncon = 1
         cellid = (0, 0, irno)
-        t = (
-            irno,
-            cellid,
-            rlen,
-            rwid,
-            rgrd,
-            rtp,
-            rbth,
-            rhk,
-            rman,
-            ncon,
-            ustrf,
-            ndv,
-        )
+        t = (irno, cellid, rlen, rwid, rgrd, rtp, rbth, rhk, rman, ncon, ustrf, ndv)
         pak_data.append(t)
 
     con_data = []
@@ -243,16 +223,7 @@ def build_exchanges(sim):
     maxmvr, maxpackages = 1, 2
     mvrpack_sim = [["left", "sfr_left"], ["right", "sfr_right"]]
     mvrspd = [
-        [
-            "left",
-            "sfr_left",
-            int(ncol / 2) - 1,
-            "right",
-            "sfr_right",
-            0,
-            "FACTOR",
-            1.00,
-        ]
+        ["left", "sfr_left", int(ncol / 2) - 1, "right", "sfr_right", 0, "FACTOR", 1.00]
     ]
 
     gwfgwf.mvr.initialize(

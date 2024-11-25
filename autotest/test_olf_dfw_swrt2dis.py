@@ -94,15 +94,9 @@ def build_models(idx, test):
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowOlfsto(
-        olf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowOlfsto(olf, save_flows=True)
 
-    ic = flopy.mf6.ModflowOlfic(
-        olf,
-        strt=2.05,
-    )
+    ic = flopy.mf6.ModflowOlfic(olf, strt=2.05)
 
     # output control
     oc = flopy.mf6.ModflowOlfoc(

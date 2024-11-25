@@ -152,36 +152,10 @@ slope = 0.001
 ustrf = 1.0
 ndv = 0
 # reach 1
-rp = [
-    0,
-    (0, 0, 0),
-    rlen,
-    rwid,
-    slope,
-    top[0, 0, 0],
-    rbth,
-    rhk,
-    roughness,
-    1,
-    ustrf,
-    0,
-]
+rp = [0, (0, 0, 0), rlen, rwid, slope, top[0, 0, 0], rbth, rhk, roughness, 1, ustrf, 0]
 sfr_pkdat.append(rp)
 # reach 2
-rp = [
-    1,
-    (0, 0, 1),
-    rlen,
-    rwid,
-    slope,
-    top[0, 0, 1],
-    rbth,
-    rhk,
-    roughness,
-    1,
-    ustrf,
-    0,
-]
+rp = [1, (0, 0, 1), rlen, rwid, slope, top[0, 0, 1], rbth, rhk, roughness, 1, ustrf, 0]
 sfr_pkdat.append(rp)
 
 sfr_perdat = {0: [0, "INFLOW", 1.0]}

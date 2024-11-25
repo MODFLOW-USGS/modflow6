@@ -109,10 +109,7 @@ def add_chf_model(sim):
         idcxs=0,
     )
 
-    sto = flopy.mf6.ModflowChfsto(
-        chf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowChfsto(chf, save_flows=True)
 
     ic = flopy.mf6.ModflowChfic(chf, strt=1.0)
 
@@ -143,9 +140,7 @@ def add_chf_model(sim):
         ],
     )
 
-    flw_spd = [
-        (0, 100),
-    ]
+    flw_spd = [(0, 100)]
     maxbound = len(flw_spd)
     flw = flopy.mf6.ModflowChfflw(
         chf,

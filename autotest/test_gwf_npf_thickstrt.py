@@ -159,14 +159,7 @@ def check_output(idx, test):
     )
     answer_confined_thickstart_hfb = np.array(answer_confined_thickstart_hfb)
 
-    answer_unconfined_hfb = (
-        6.0,
-        5.99983342,
-        5.99966683,
-        4.00049971,
-        4.00024986,
-        4.0,
-    )
+    answer_unconfined_hfb = (6.0, 5.99983342, 5.99966683, 4.00049971, 4.00024986, 4.0)
     answer_unconfined_hfb = np.array(answer_unconfined_hfb)
 
     answer_dict = {

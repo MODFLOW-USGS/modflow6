@@ -11,15 +11,9 @@ cases = ["bedleak", "bedleak_fail", "bedleak_none"]
 def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 1
-    perlen = [
-        1.0,
-    ]
-    nstp = [
-        1,
-    ]
-    tsmult = [
-        1.0,
-    ]
+    perlen = [1.0]
+    nstp = [1]
+    tsmult = [1.0]
 
     lenx = 300.0
     delr = delc = lenx / float(nrow)

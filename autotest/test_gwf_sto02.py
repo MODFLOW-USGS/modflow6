@@ -11,13 +11,7 @@ from framework import TestFramework
 
 cases = ["gwf_sto02a", "gwf_sto02b"]
 ncols = [1, 2]
-(
-    nlay,
-    nrow,
-) = (
-    1,
-    1,
-)
+(nlay, nrow) = (1, 1)
 
 
 def build_models(idx, test):

@@ -198,11 +198,8 @@ rhos = 2650  # Density of the aquifer material ($kg/m^3$)
 Cpw = 4180  # Heat capacity of water ($J/kg/C$)
 Cps = 880  # Heat capacity of the solids ($J/kg/C$)
 lhv = 2454000.0  # Latent heat of vaporization ($J/kg$)
-K_therm_strmbed = [
-    1.5,
-    1.75,
-    2.0,
-]  # Thermal conductivity of the streambed material ($W/m/C$)
+# Thermal conductivity of the streambed material ($W/m/C$)
+K_therm_strmbed = [1.5, 1.75, 2.0]
 rbthcnd = [0.0001, 0.0001, 0.0001, 0.0001]
 
 # time params
@@ -358,9 +355,8 @@ def build_models(idx, test):
     strmbd_hk = rhk[idx]
     strm_up = 100.25
     strm_dn = 99
-    slope = (
-        (strm_up - strm_dn) / ((ncol - 1) * delr) / 10
-    )  # divide by 10 to further reduce slop
+    # divide by 10 to further reduce slop
+    slope = (strm_up - strm_dn) / ((ncol - 1) * delr) / 10
     ustrf = 1.0
     ndv = 0
     strm_incision = 1.0
@@ -659,9 +655,8 @@ def check_output(idx, test):
         "conductive losses from the stream to the aquifer "
         "(i.e., greater shared wetted areas)"
     )
-    if (
-        name[-1] == "n"
-    ):  # no gw/sw convective exchange, simulates conductive exchange only
+    if name[-1] == "n":
+        # no gw/sw convective exchange, simulates conductive exchange only
         assert in_bud_lst["GWF"] == 0.0, msg1
         assert out_bud_lst["GWF"] == 0.0, msg1
 

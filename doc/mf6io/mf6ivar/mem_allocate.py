@@ -105,14 +105,7 @@ def line_list_to_var_list(line_list, fname):
 def write_md(memvar_list, fmd):
     "write markdown table records for list of memory managed variables"
     for l in memvar_list:
-        (
-            source_name,
-            current_module,
-            typename,
-            fortran_varname,
-            varname,
-            dims,
-        ) = l
+        (source_name, current_module, typename, fortran_varname, varname, dims) = l
         write_md_record(fmd, source_name, current_module, typename, varname, dims)
     return
 
@@ -120,14 +113,7 @@ def write_md(memvar_list, fmd):
 def write_tex(memvar_list, ftex):
     "write latex table records for list of memory managed variables"
     for l in memvar_list:
-        (
-            source_name,
-            current_module,
-            typename,
-            fortran_varname,
-            varname,
-            dims,
-        ) = l
+        (source_name, current_module, typename, fortran_varname, varname, dims) = l
         write_tex_record(ftex, typename, varname, dims)
     return
 

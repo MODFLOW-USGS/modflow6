@@ -1038,10 +1038,7 @@ def check_output(idx, test):
 
         # save figure
         if plotSave:
-            fpth = os.path.join(
-                out_pth,
-                f"{sim_name + '-planView.png'}",
-            )
+            fpth = os.path.join(out_pth, f"{sim_name + '-planView.png'}")
             fig.savefig(fpth)
 
 

@@ -173,12 +173,10 @@ def check_output(idx, test):
     expected_results.append(0.75)  # TVK SP3: Decrease K1.
     expected_results.append(0.6)  # TVK SP4: Revert K1 and increase K3.
     expected_results.append(0.25)  # TVK SP5: Decrease K3.
-    expected_results.append(
-        0.25
-    )  # TVK SP6: No changes. Check that solution remains as per SP5.
-    expected_results.append(
-        0.5
-    )  # TVK SP7: Revert K3. Check that solution returns to original.
+    # TVK SP6: No changes. Check that solution remains as per SP5.
+    expected_results.append(0.25)
+    # TVK SP7: Revert K3. Check that solution returns to original.
+    expected_results.append(0.5)
     nper = len(expected_results)
     ex_lay = 1
     ex_row = 1

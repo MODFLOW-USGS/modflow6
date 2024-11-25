@@ -117,16 +117,7 @@ def run_flow_model(dir, exe):
         ll = line.strip().split()
         if len(ll) == 4:
             k, i, j, hd = ll
-            chdlist.append(
-                [
-                    (
-                        int(k) - 1,
-                        int(i) - 1,
-                        int(j) - 1,
-                    ),
-                    float(hd),
-                ]
-            )
+            chdlist.append([(int(k) - 1, int(i) - 1, int(j) - 1), float(hd)])
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist, pname="CHD-1")
 
     rivlist = []
@@ -137,11 +128,7 @@ def run_flow_model(dir, exe):
             k, i, j, s, c, rb, bn = ll
             rivlist.append(
                 [
-                    (
-                        int(k) - 1,
-                        int(i) - 1,
-                        int(j) - 1,
-                    ),
+                    (int(k) - 1, int(i) - 1, int(j) - 1),
                     float(s),
                     float(c),
                     float(rb),

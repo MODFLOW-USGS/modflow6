@@ -191,13 +191,7 @@ def check_output(idx, test, export, gridded_input):
             timestep += 1
 
     # NetCDF variables, layered variables end with "_l"
-    vlist = [
-        "disv_top",
-        "disv_botm_l",
-        "npf_icelltype_l",
-        "npf_k_l",
-        "ic_strt_l",
-    ]
+    vlist = ["disv_top", "disv_botm_l", "npf_icelltype_l", "npf_k_l", "ic_strt_l"]
 
     # Compare NetCDF package input arrays with FloPy arrays
     for i, var in enumerate(vlist):

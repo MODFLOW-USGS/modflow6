@@ -274,10 +274,7 @@ def build_mp7_sim(name, ws, mp7, gwf):
         headfilename=f"{gwf.name}.hds",
         budgetfilename=f"{gwf.name}.bud",
     )
-    mpbas = flopy.modpath.Modpath7Bas(
-        mp,
-        porosity=FlopyReadmeCase.porosity,
-    )
+    mpbas = flopy.modpath.Modpath7Bas(mp, porosity=FlopyReadmeCase.porosity)
     mpsim = flopy.modpath.Modpath7Sim(
         mp,
         simulationtype="pathline",
@@ -464,14 +461,7 @@ def check_output(idx, test):
         if row.ireason == 3:  # termination
             continue
 
-        x, y, z, t, ilay, icell = (
-            row.x,
-            row.y,
-            row.z,
-            row.t,
-            row.ilay,
-            row.icell,
-        )
+        x, y, z, t, ilay, icell = (row.x, row.y, row.z, row.t, row.ilay, row.icell)
         k, i, j = mg.intersect(x, y, z)
         nn = mg.get_node([k, i, j]) + 1
         neighbors = mg.neighbors(nn)

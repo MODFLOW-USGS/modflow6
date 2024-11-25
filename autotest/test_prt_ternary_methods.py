@@ -157,18 +157,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
     if "wel" in name:
         handles.append(
             mpl.lines.Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                label="Well",
-                markerfacecolor="red",
-            ),
+                [0], [0], marker="o", linestyle="", label="Well", markerfacecolor="red"
+            )
         )
-    ax.legend(
-        handles=handles,
-        loc="lower right",
-    )
+    ax.legend(handles=handles, loc="lower right")
     pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
     if "wel" in name:
         pmv.plot_bc(ftype="WEL")

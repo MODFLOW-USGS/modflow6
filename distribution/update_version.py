@@ -298,11 +298,7 @@ def update_citation_cff(version: Version, timestamp: datetime):
 
     with open(path, "w") as f:
         yaml.safe_dump(
-            citation,
-            f,
-            allow_unicode=True,
-            default_flow_style=False,
-            sort_keys=False,
+            citation, f, allow_unicode=True, default_flow_style=False, sort_keys=False
         )
     log_update(path, version)
 

@@ -140,10 +140,7 @@ def build_mp7_sim(idx, ws, mp7, gwf):
         headfilename=f"{gwf.name}.hds",
         budgetfilename=f"{gwf.name}.bud",
     )
-    mpbas = flopy.modpath.Modpath7Bas(
-        mp,
-        porosity=FlopyReadmeCase.porosity,
-    )
+    mpbas = flopy.modpath.Modpath7Bas(mp, porosity=FlopyReadmeCase.porosity)
     mpsim = flopy.modpath.Modpath7Sim(
         mp,
         simulationtype="pathline",

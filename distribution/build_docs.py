@@ -26,13 +26,7 @@ from modflow_devtools.download import (
 from modflow_devtools.markers import no_parallel, requires_exe, requires_github
 from modflow_devtools.misc import run_cmd, run_py_script, set_dir
 
-from utils import (
-    assert_match,
-    convert_line_endings,
-    get_project_root_path,
-    glob,
-    match,
-)
+from utils import assert_match, convert_line_endings, get_project_root_path, glob, match
 
 # paths
 PROJ_ROOT_PATH = get_project_root_path()
@@ -463,18 +457,10 @@ def build_documentation(
                     raise
 
         # convert LaTex to PDF
-        build_pdfs(
-            tex_paths=TEX_PATHS["full"],
-            output_path=output_path,
-            force=force,
-        )
+        build_pdfs(tex_paths=TEX_PATHS["full"], output_path=output_path, force=force)
     else:
         # just convert LaTeX to PDF
-        build_pdfs(
-            tex_paths=TEX_PATHS["minimal"],
-            output_path=output_path,
-            force=force,
-        )
+        build_pdfs(tex_paths=TEX_PATHS["minimal"], output_path=output_path, force=force)
 
     # enforce os line endings on all text files
     windows_line_endings = True

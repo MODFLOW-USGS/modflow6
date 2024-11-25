@@ -34,15 +34,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 # use flopy util to get disv arguments
-disvkwargs = get_disv_kwargs(
-    nlay,
-    nrow,
-    ncol,
-    delr,
-    delc,
-    top,
-    botm,
-)
+disvkwargs = get_disv_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
 
 # Work up UZF data
 iuzno = 0

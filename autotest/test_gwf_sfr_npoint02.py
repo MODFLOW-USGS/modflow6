@@ -70,10 +70,7 @@ def build_models(idx, test):
     )
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(
-        sim,
-        print_option="ALL",
-    )
+    ims = flopy.mf6.ModflowIms(sim, print_option="ALL")
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(

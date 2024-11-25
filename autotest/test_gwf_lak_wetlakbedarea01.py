@@ -244,17 +244,7 @@ def build_models(idx, test):
         lak_conn.append([0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0])
     else:
         lak_conn.append(
-            [
-                0,
-                0,
-                (0, 0, 0),
-                "horizontal",
-                lak_bedleak,
-                10.0,
-                20.0,
-                10.0,
-                10.0,
-            ]
+            [0, 0, (0, 0, 0), "horizontal", lak_bedleak, 10.0, 20.0, 10.0, 10.0]
         )
         lak_conn.append([0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0])
 

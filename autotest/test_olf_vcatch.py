@@ -47,9 +47,8 @@ def build_models(idx, test):
     dtfailadj = 5.0
 
     nper = 2
-    perlen = nper * [
-        time_rainfall * 60.0
-    ]  # convert time_rainfall from minutes to seconds
+    # convert time_rainfall from minutes to seconds
+    perlen = nper * [time_rainfall * 60.0]
     nstp = nper * [1]
     tsmult = nper * [1]
 

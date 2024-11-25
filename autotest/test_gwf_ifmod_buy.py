@@ -368,9 +368,7 @@ def add_gwtrefmodel(sim):
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
     # sources
-    sourcerecarray = [
-        (),
-    ]
+    sourcerecarray = [()]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     # output control
@@ -412,9 +410,7 @@ def add_gwtleftmodel(sim):
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
     # sources
-    sourcerecarray = [
-        (),
-    ]
+    sourcerecarray = [()]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     # output control
@@ -458,9 +454,7 @@ def add_gwtrightmodel(sim):
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
     # sources
-    sourcerecarray = [
-        (),
-    ]
+    sourcerecarray = [()]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     # output control

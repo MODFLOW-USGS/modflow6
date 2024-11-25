@@ -101,10 +101,7 @@ def add_olf_model(sim):
         idcxs=None,
     )
 
-    sto = flopy.mf6.ModflowOlfsto(
-        olf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowOlfsto(olf, save_flows=True)
 
     ic = flopy.mf6.ModflowOlfic(olf, strt=1.0)
 

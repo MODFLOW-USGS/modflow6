@@ -331,9 +331,8 @@ def check_output(idx, test):
         for i in range(test.model.dis.nrow.get_data()):
             for j in range(test.model.dis.ncol.get_data()):
                 if (0, i, j) in cell_iuz_dict:
-                    iuz = cell_iuz_dict[
-                        (0, i, j)
-                    ]  # For this test, pET only specified in the top layer
+                    # For this test, pET only specified in the top layer
+                    iuz = cell_iuz_dict[(0, i, j)]
                     for m_row in uzf_strsPerDat[mstp]:
                         if m_row[0] == iuz:
                             pet = float(m_row[2])

@@ -101,22 +101,7 @@ def build_models(idx, test):
     # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
     #        <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
     pak_data = [
-        (
-            ifno,
-            -1,
-            -1,
-            -1,
-            dx,
-            10.0,
-            slope,
-            top,
-            1.0,
-            0.0,
-            roughness,
-            0,
-            0.0,
-            0,
-        )
+        (ifno, -1, -1, -1, dx, 10.0, slope, top, 1.0, 0.0, roughness, 0, 0.0, 0)
         for ifno in range(nreaches)
     ]
     sfr_spd = {idx: [(0, "inflow", q)] for idx, q in enumerate(flows[1:])}

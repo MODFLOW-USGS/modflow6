@@ -1,11 +1,7 @@
 from shutil import copytree
 
 import pytest
-from common_regression import (
-    get_mf6_comparison,
-    setup_mf6,
-    setup_mf6_comparison,
-)
+from common_regression import get_mf6_comparison, setup_mf6, setup_mf6_comparison
 from framework import TestFramework
 
 excluded_models = [

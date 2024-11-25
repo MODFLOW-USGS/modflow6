@@ -397,13 +397,7 @@ def check_output(idx, test):
 
     # Establish known answer:
     stored_strm_evap = np.array(
-        [
-            -62.17272623,
-            -62.15731943,
-            -62.14191043,
-            -62.12649925,
-            -62.11108587,
-        ]
+        [-62.17272623, -62.15731943, -62.14191043, -62.12649925, -62.11108587]
     )
 
     msg = "The SFR evaporation test with n-point x-section (trapezoid) is failing."

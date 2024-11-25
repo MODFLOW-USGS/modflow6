@@ -72,19 +72,7 @@ ldnd = [0]
 dp = [[kv, cr, cc]]
 
 sub6 = [
-    [
-        0,
-        (0, 0, 1),
-        "delay",
-        ini_stress,
-        thick[0],
-        1.0,
-        cc,
-        cr,
-        theta,
-        kv,
-        ini_stress,
-    ]
+    [0, (0, 0, 1), "delay", ini_stress, thick[0], 1.0, cc, cr, theta, kv, ini_stress]
 ]
 
 

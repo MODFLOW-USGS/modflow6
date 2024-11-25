@@ -332,10 +332,7 @@ def build_mf6(idx, ws, gridgen):
         strt = top
     else:
         strt = [top, top, top]
-    ic = flopy.mf6.ModflowGwfic(
-        gwf,
-        strt=strt,
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     if dis_type in ("dis", "disv"):
         k11 = hk
@@ -373,10 +370,7 @@ def build_mf6(idx, ws, gridgen):
             filename=f"{name}.canal.chd",
             pname="canal",
             stress_period_data=build_chd_data(
-                gwf.modelgrid,
-                canal_coordinates,
-                canal_head,
-                boundname="canal",
+                gwf.modelgrid, canal_coordinates, canal_head, boundname="canal"
             ),
         )
 
@@ -388,10 +382,7 @@ def build_mf6(idx, ws, gridgen):
             filename=f"{name}.river.chd",
             pname="river",
             stress_period_data=build_chd_data(
-                gwf.modelgrid,
-                river_coordinates,
-                river_head,
-                boundname="river",
+                gwf.modelgrid, river_coordinates, river_head, boundname="river"
             ),
         )
     else:
@@ -400,9 +391,7 @@ def build_mf6(idx, ws, gridgen):
             auxiliary=["concentration"],
             boundnames=True,
             pname="river",
-            stress_period_data=build_riv_data(
-                gwf.modelgrid,
-            ),
+            stress_period_data=build_riv_data(gwf.modelgrid),
         )
 
     if name.startswith("ps2"):
@@ -414,10 +403,7 @@ def build_mf6(idx, ws, gridgen):
                 gwf,
                 auxiliary=["concentration"],
                 boundnames=True,
-                stress_period_data=build_drn_data(
-                    gwf.modelgrid,
-                    boundname="ghb-1",
-                ),
+                stress_period_data=build_drn_data(gwf.modelgrid, boundname="ghb-1"),
             )
         else:
             drn = flopy.mf6.ModflowGwfdrn(

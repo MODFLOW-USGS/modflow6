@@ -13,10 +13,7 @@ import pytest
 from framework import TestFramework
 
 cases = ["issue655a", "issue655b"]
-newton = [
-    False,
-    True,
-]
+newton = [False, True]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]

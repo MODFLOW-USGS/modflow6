@@ -70,15 +70,7 @@ tracktimes = list(np.linspace(0, 19, 20))
 
 
 # vertex grid properties
-disvkwargs = get_disv_kwargs(
-    nlay,
-    nrow,
-    ncol,
-    delr,
-    delc,
-    top,
-    botm,
-)
+disvkwargs = get_disv_kwargs(nlay, nrow, ncol, delr, delc, top, botm)
 
 # release points in mp7 format
 releasepts_mp7 = [
@@ -283,10 +275,7 @@ def build_mp7_sim(idx, ws, mp7, gwf):
         headfilename=f"{gwf.name}.hds",
         budgetfilename=f"{gwf.name}.cbc",
     )
-    mpbas = flopy.modpath.Modpath7Bas(
-        mp,
-        porosity=porosity,
-    )
+    mpbas = flopy.modpath.Modpath7Bas(mp, porosity=porosity)
     mpsim = flopy.modpath.Modpath7Sim(
         mp,
         simulationtype=(
@@ -501,13 +490,7 @@ def check_output(idx, test):
     plot = False
     if "bprp" not in name and plot:
         plot_output(
-            name,
-            gwf,
-            head,
-            (qx, qy),
-            mf6_pls,
-            mp7_pls,
-            gwf_ws / f"test_{simname}.png",
+            name, gwf, head, (qx, qy), mf6_pls, mp7_pls, gwf_ws / f"test_{simname}.png"
         )
 
     # compare prt and mp7 results

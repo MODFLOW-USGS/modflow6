@@ -274,11 +274,7 @@ def check_output(idx, test):
         ),
     }
 
-    if idx in (
-        0,
-        1,
-        2,
-    ):
+    if idx in (0, 1, 2):
         evap_compare = np.allclose(obs[idx]["evap"], tc["EVAP"])
         stage_compare = np.allclose(obs[idx]["stage"], tc["LAKESTAGE"])
     else:

@@ -178,16 +178,7 @@ def get_model(dir, name):
     angldegx = 0.0
     cdist = delr
     gwfgwf_data = [
-        [
-            (0, 0, ncol - 1),
-            (0, 0, 0),
-            1,
-            delr / 2.0,
-            delr / 2.0,
-            delc,
-            angldegx,
-            cdist,
-        ]
+        [(0, 0, ncol - 1), (0, 0, 0), 1, delr / 2.0, delr / 2.0, delc, angldegx, cdist]
     ]
     exg1 = flopy.mf6.ModflowGwfgwf(
         sim,

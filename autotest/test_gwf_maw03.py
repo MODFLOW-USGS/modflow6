@@ -12,9 +12,7 @@ bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
 def well3(name):
     perioddata = {
-        "maw03a": [
-            (0, "rate", 2000.0),
-        ],
+        "maw03a": [(0, "rate", 2000.0)],
         "maw03b": [(0, "rate", 2000.0), (0, "head_limit", 0.4)],
         "maw03c": [(0, "rate", 2000.0), (0, "rate_scaling", 0.0, 1.0)],
     }

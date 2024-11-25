@@ -176,9 +176,8 @@ def check_output(idx, test):
     expected_results.append(3000.823)  # TVS SP2: Decrease SY1.
     expected_results.append(300.5323)  # TVS SP3: Increase SS1.
     expected_results.append(0.399976)  # TVS SP4: Increase SY1.
-    expected_results.append(
-        0.8
-    )  # TVS SP5: Revert SS1 and SY1. Check that solution returns to original.
+    # TVS SP5: Revert SS1 and SY1. Check that solution returns to original.
+    expected_results.append(0.8)
     nper = len(expected_results)
     ex_lay = 1
     ex_row = 1

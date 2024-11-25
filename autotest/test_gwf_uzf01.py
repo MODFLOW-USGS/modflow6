@@ -131,43 +131,13 @@ def build_models(idx, test):
     thti = thtr
     thts = sy
     eps = 4
-    uzf_pkdat = [
-        [
-            0,
-            (0, 0, 0),
-            1,
-            1,
-            sd,
-            vks,
-            thtr,
-            thts,
-            thti,
-            eps,
-            "uzf 001",
-        ]
-    ] + [
-        [
-            k,
-            (k, 0, 0),
-            0,
-            k + 1,
-            sd,
-            vks,
-            thtr,
-            thts,
-            thti,
-            eps,
-            f"uzf {k + 1:03d}",
-        ]
+    uzf_pkdat = [[0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf 001"]] + [
+        [k, (k, 0, 0), 0, k + 1, sd, vks, thtr, thts, thti, eps, f"uzf {k + 1:03d}"]
         for k in range(1, nlay - 1)
     ]
     uzf_pkdat[-1][3] = -1
     infiltration = 2.01
-    uzf_spd = {
-        0: [
-            [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    }
+    uzf_spd = {0: [[0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]}
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
         print_input=True,

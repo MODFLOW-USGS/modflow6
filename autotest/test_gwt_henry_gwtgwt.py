@@ -80,10 +80,7 @@ def get_gwf_model(sim, model_shape, model_desc):
     )
 
     pd = [(0, 0.7, 0.0, gwtname, "none")]
-    _ = flopy.mf6.ModflowGwfbuy(
-        gwf,
-        packagedata=pd,
-    )
+    _ = flopy.mf6.ModflowGwfbuy(gwf, packagedata=pd)
 
     def chd_value(k):
         # depth = k * delz + 0.5 * delz

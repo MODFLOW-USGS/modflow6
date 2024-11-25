@@ -134,16 +134,7 @@ def build_models(idx, test):
         ll = line.strip().split()
         if len(ll) == 4:
             k, i, j, hd = ll
-            chdlist.append(
-                [
-                    (
-                        int(k) - 1,
-                        int(i) - 1,
-                        int(j) - 1,
-                    ),
-                    float(hd),
-                ]
-            )
+            chdlist.append([(int(k) - 1, int(i) - 1, int(j) - 1), float(hd)])
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chdlist, pname="CHD-1")
 
     rivlist = []
@@ -154,11 +145,7 @@ def build_models(idx, test):
             k, i, j, s, c, rb, bn = ll
             rivlist.append(
                 [
-                    (
-                        int(k) - 1,
-                        int(i) - 1,
-                        int(j) - 1,
-                    ),
+                    (int(k) - 1, int(i) - 1, int(j) - 1),
                     float(s),
                     float(c),
                     float(rb),
@@ -611,21 +598,7 @@ def make_concentration_map(sim):
 
     import matplotlib.pyplot as plt
 
-    levels = [
-        1,
-        10,
-        25,
-        50,
-        100,
-        150,
-        200,
-        250,
-        300,
-        350,
-        400,
-        450,
-        500,
-    ]
+    levels = [1, 10, 25, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
 
     name = sim.name
     ws = sim.workspace

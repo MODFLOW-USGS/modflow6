@@ -204,40 +204,34 @@ def set_connectiondata(n, lay, top, back, left, right, front, bottom):
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delc / 2)  # half the cell width along a column
         hwva.append(delr)  # the width perpendicular to the connection
-        angldeg.append(
-            90.0
-        )  # for horizontal connection, 90.0 deg points in the positive y direction
+        # for horizontal connection, 90.0 deg points in the positive y direction
+        angldeg.append(90.0)
 
     if left:
         jas.append(n - 1)  # left
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delr / 2)  # half the cell width along a horizontal connection (row)
-        hwva.append(
-            delr
-        )  # for horizontal connection, value of hwva is width along a row
-        angldeg.append(
-            180.0
-        )  # for horizontal connection, value is 180.0 along negative x-axis
+        # for horizontal connection, value of hwva is width along a row
+        hwva.append(delr)
+        # for horizontal connection, value is 180.0 along negative x-axis
+        angldeg.append(180.0)
 
     if right:
         jas.append(n + 1)  # right
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delr / 2)  # half the cell width along a horizontal connection row
-        hwva.append(
-            delc
-        )  # for horizontal connection, value of hwva is width along a row
-        angldeg.append(
-            0.0
-        )  # for horizontal connection, value is 0.0 along positive x-axis
+        # for horizontal connection, value of hwva is width along a row
+        hwva.append(delc)
+        # for horizontal connection, value is 0.0 along positive x-axis
+        angldeg.append(0.0)
 
     if front:
         jas.append(n + ncol)
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delc / 2)  # half the cell width along a column
         hwva.append(delr)  # the width perpendicular to the connection
-        angldeg.append(
-            2700.0
-        )  # for horizontal connection, 90.0 deg points in the positive y direction
+        # for horizontal connection, 90.0 deg points in the positive y direction
+        angldeg.append(2700.0)
 
     if bottom:
         jas.append(n + (nrow * ncol))  # below
@@ -276,13 +270,9 @@ def get_conndat(n, lay, row, col):
     elif col == 1:
         left = True
 
-    (
-        jas_vals,
-        ihc_vals,
-        cl12_vals,
-        hwva_vals,
-        angldeg_vals,
-    ) = set_connectiondata(n, lay, top, back, left, right, front, bottom)
+    (jas_vals, ihc_vals, cl12_vals, hwva_vals, angldeg_vals) = set_connectiondata(
+        n, lay, top, back, left, right, front, bottom
+    )
 
     return iac, jas_vals, ihc_vals, cl12_vals, hwva_vals, angldeg_vals
 
@@ -339,14 +329,9 @@ for lay in np.arange(nlay):
             n = (lay * nrow * ncol) + (row * ncol) + col  # n will be zero based
 
             # Values for CONNECTIONDATA block
-            (
-                iac,
-                ja_cell,
-                ihc_cell,
-                cl12_cell,
-                hwva_cell,
-                angldeg_cell,
-            ) = get_conndat(n, lay, row, col)
+            (iac, ja_cell, ihc_cell, cl12_cell, hwva_cell, angldeg_cell) = get_conndat(
+                n, lay, row, col
+            )
 
             # accumulate connection information in lists
             iac_lst.append(iac)

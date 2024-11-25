@@ -141,15 +141,9 @@ def build_models(idx, test):
         stress_period_data=spd,
     )
 
-    sto = flopy.mf6.ModflowChfsto(
-        chf,
-        save_flows=True,
-    )
+    sto = flopy.mf6.ModflowChfsto(chf, save_flows=True)
 
-    ic = flopy.mf6.ModflowChfic(
-        chf,
-        strt=strt,
-    )
+    ic = flopy.mf6.ModflowChfic(chf, strt=strt)
 
     xfraction = [0.0, 0.0, 1.0, 1.0]
     height = [100.0, 0.0, 0.0, 100.0]

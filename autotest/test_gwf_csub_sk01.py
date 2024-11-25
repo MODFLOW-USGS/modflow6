@@ -134,25 +134,7 @@ def get_model(idx, workspace):
 
     # sub output data
     ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
-    ds16 = [
-        0,
-        nper - 1,
-        0,
-        nstp[-1] - 1,
-        0,
-        0,
-        1,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-    ]
+    ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(

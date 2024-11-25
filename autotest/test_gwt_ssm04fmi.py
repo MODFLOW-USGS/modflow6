@@ -463,10 +463,7 @@ def eval_transport(wst):
 
     # load transport budget file
     fpth = os.path.join(wst, f"{gwtname}.cbc")
-    bobj = flopy.utils.CellBudgetFile(
-        fpth,
-        precision="double",
-    )
+    bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     ssmbudall = bobj.get_data(text="SOURCE-SINK MIX")
     times = cobj.get_times()

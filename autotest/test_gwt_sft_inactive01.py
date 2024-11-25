@@ -193,23 +193,19 @@ def set_connectiondata(n, lay, top, left, right, bottom):
         jas.append(n - 1)  # left
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delc / 2)  # half the cell width along a horizontal connection
-        hwva.append(
-            delr
-        )  # for horizontal connection, value of hwva is width along a row
-        angldeg.append(
-            180.0
-        )  # for horizontal connection, value is 180.0 along negative x-axis
+        # for horizontal connection, value of hwva is width along a row
+        hwva.append(delr)
+        # for horizontal connection, value is 180.0 along negative x-axis
+        angldeg.append(180.0)
 
     if right:
         jas.append(n + 1)  # right
         ihc.append(1)  # ihc = 1 for horizontal connection
         cl12.append(delc / 2)  # half the cell width along a horizontal connection
-        hwva.append(
-            delc
-        )  # for horizontal connection, value of hwva is width along a row
-        angldeg.append(
-            0.0
-        )  # for horizontal connection, value is 0.0 along positive x-axis
+        # for horizontal connection, value of hwva is width along a row
+        hwva.append(delc)
+        # for horizontal connection, value is 0.0 along positive x-axis
+        angldeg.append(0.0)
 
     if bottom:
         jas.append(n + ncol)  # below
@@ -259,13 +255,9 @@ def get_conndat(n, lay, col):
     iac += 1
     num_neigh += 1
 
-    (
-        jas_vals,
-        ihc_vals,
-        cl12_vals,
-        hwva_vals,
-        angldeg_vals,
-    ) = set_connectiondata(n, lay, top, left, right, bottom)
+    (jas_vals, ihc_vals, cl12_vals, hwva_vals, angldeg_vals) = set_connectiondata(
+        n, lay, top, left, right, bottom
+    )
 
     # If bottom most layer, need to .pop() the last values out of the respective lists
     # This should be done because the bottom connections will always be represented by
@@ -328,14 +320,9 @@ for lay in np.arange(nlay):
         n = lay * ncol + col  # n will be zero based
 
         # Values for CONNECTIONDATA block
-        (
-            iac,
-            ja_cell,
-            ihc_cell,
-            cl12_cell,
-            hwva_cell,
-            angldeg_cell,
-        ) = get_conndat(n, lay, col)
+        (iac, ja_cell, ihc_cell, cl12_cell, hwva_cell, angldeg_cell) = get_conndat(
+            n, lay, col
+        )
 
         # accumulate connection information in lists
         iac_lst.append(iac)

@@ -243,10 +243,7 @@ def plot_output(name, grid, head, spdis, pls):
             legend=False,
             color="red" if iprp == 1 else "blue",
         )
-    xc, yc = (
-        grid.get_xcellcenters_for_layer(0),
-        grid.get_ycellcenters_for_layer(0),
-    )
+    xc, yc = (grid.get_xcellcenters_for_layer(0), grid.get_ycellcenters_for_layer(0))
     for i in range(grid.ncpl):
         x, y = xc[i], yc[i]
         ax.plot(x, y, "o", color="grey", alpha=0.25, ms=2)

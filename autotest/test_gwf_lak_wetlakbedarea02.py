@@ -280,14 +280,8 @@ def build_models(idx, test):
     flopy.mf6.ModflowGwfevta(gwf, surface=surf, rate=etvrate, depth=etvdepth)
 
     # Instantiate LAK package
-    (
-        idomain_wlakes,
-        pakdata_dict,
-        lak_conn,
-    ) = flopy.mf6.utils.get_lak_connections(
-        gwf.modelgrid,
-        lake_map,
-        bedleak=lak_bedleak,
+    (idomain_wlakes, pakdata_dict, lak_conn) = flopy.mf6.utils.get_lak_connections(
+        gwf.modelgrid, lake_map, bedleak=lak_bedleak
     )
     global lak_con
     lak_con = lak_conn
