@@ -37,7 +37,6 @@ module TrackFileModule
   !!     3: particle terminated
   !!     4: particle in weak sink
   !!     5: user-specified tracking time
-  !!     6: particle stationary in dry cell
   !!
   !! Each record has an "istatus" property, which is the tracking status;
   !! e.g., awaiting release, active, terminated. A particle may terminate

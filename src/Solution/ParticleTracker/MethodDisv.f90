@@ -87,13 +87,13 @@ contains
     type is (CellPolyType)
       ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
-      if (cell%defn%is_dry() .or. particle%z > cell%defn%top) then
-        call method_cell_drop%init( &
+      if (this%fmi%ibdgwfsat0(ic) == 0) then
+        call method_cell_ptb%init( &
           fmi=this%fmi, &
           cell=this%cell, &
           trackctl=this%trackctl, &
           tracktimes=this%tracktimes)
-        submethod => method_cell_drop
+        submethod => method_cell_ptb
       else if (particle%ifrctrn > 0) then
         call method_cell_tern%init( &
           fmi=this%fmi, &

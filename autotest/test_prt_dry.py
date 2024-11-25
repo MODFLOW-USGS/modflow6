@@ -14,6 +14,7 @@ https://github.com/MODFLOW-USGS/modflow6/issues/2014.
 """
 
 import os
+from warnings import warn
 
 import flopy
 import matplotlib.colors as clt
@@ -24,24 +25,22 @@ import pytest
 from framework import TestFramework
 from prt_test_utils import get_model_name
 
-simname = "gwf_sim"
+simname = "prtdry"
 cases = [
     # expect termination with status 7 immediately in 1st time step
     simname,
     # expect all particles to be draped to water table and tracked
-    simname + "drp",
-    # expect 2 particles in partially saturated cells to be tracked,
-    # others should terminate with status 7 immediately after release
-    simname + "nwt",
+    simname + "_drape",
     # the rest of the test cases activate newton and test the behavior
-    # of the DRY option. with drop, expect all particles to be dropped
-    # to the highest active cell below and then to be tracked as usual
-    simname + "drop",
+    # of the DRY option. with drop, expect two particles to be dropped
+    # to the highest active cell below and then to be tracked as usual.
+    # others should terminate with status 7 immediately after release.
+    simname + "_drop",
     # expect termination with status 7 immediately in 1st time step
-    simname + "stop",
+    simname + "_stop",
     # expect particles to remain in release positions until the water
     # table rises to meet them
-    simname + "stay",
+    simname + "_stay",
 ]
 
 nper = 3
@@ -358,7 +357,7 @@ def build_models(idx, test, newton, drape=False, dry_tracking_method=False):
     return gwf_sim, prt_sim
 
 
-def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=False):
+def check_output(idx, test, snapshot):
     name = test.name
     gwf_ws = test.workspace / "gwf"
     prt_ws = test.workspace / "prt"
@@ -375,9 +374,9 @@ def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=F
     endpts = mf6pathlines[mf6pathlines.ireason == 3]
 
     # check termination points against snapshot
-    # assert snapshot == mf6pathlines.drop("name", axis=1).round(3).to_records(
-    #     index=False
-    # )
+    assert snapshot == mf6pathlines.drop("name", axis=1).round(3).to_records(
+        index=False
+    )
 
     plot_head = False
     if plot_head:
@@ -423,7 +422,7 @@ def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=F
 
             ax.set_title(f"cross-section at row = {xs_row}")
 
-    plot_pathlines = True
+    plot_pathlines = False
     if plot_pathlines:
 
         def plot_pathlines_and_timeseries(
@@ -471,20 +470,19 @@ def check_output(idx, test, snapshot, newton, drape=False, dry_tracking_method=F
         ibd[ilay, irow, icol] = 2
         ibd = np.ma.masked_equal(ibd, 0)
 
-        plot_pathlines_and_timeseries(
-            ax, gwf.modelgrid, ibd, mf6pathlines, None, "MODFLOW 6 PRT"
-        )
-    
-    # temporary, TODO: remove after debugging
-    plot_3d = True
+        plot_pathlines_and_timeseries(ax, gwf.modelgrid, ibd, mf6pathlines, None, name)
+
+    plot_3d = False
     if plot_3d:
-        import pyvista as pv
-        from flopy.export.vtk import Vtk
+        try:
+            import pyvista as pv
+            from flopy.export.vtk import Vtk
+        except:
+            warn("Couldn't make 3D plots, need pyvista/vtk")
+            return
 
         vert_exag = 1
-        vtk = Vtk(
-            model=gwf, binary=False, vertical_exageration=vert_exag, smooth=False
-        )
+        vtk = Vtk(model=gwf, binary=False, vertical_exageration=vert_exag, smooth=False)
         vtk.add_model(gwf)
         vtk.add_pathline_points(mf6pathlines.to_records(index=False))
         gwf_mesh, prt_mesh = vtk.to_pyvista()
@@ -509,15 +507,13 @@ def test_mf6model(idx, name, function_tmpdir, targets, array_snapshot):
         dry_tracking_method = name[-4:]
     else:
         dry_tracking_method = None
-    newton = "nwt" in name or any(t in name for t in dry_tracking_methods)
-    drape = "drp" in name
+    newton = any(t in name for t in dry_tracking_methods)
+    drape = "drape" in name
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t, newton, drape, dry_tracking_method),
-        check=lambda t: check_output(
-            idx, t, array_snapshot, newton, drape, dry_tracking_method
-        ),
+        check=lambda t: check_output(idx, t, array_snapshot),
         targets=targets,
         compare=None,
     )

@@ -211,14 +211,6 @@ contains
       end if
     end if
 
-    ! cell with no exit face
-    if (cell_defn%inoexitface .ne. 0) then
-      particle%advancing = .false.
-      particle%istatus = 5
-      call this%save(particle, reason=3)
-      return
-    end if
-
     ! weak sink
     if (cell_defn%iweaksink .ne. 0) then
       if (particle%istopweaksink == 0) then
@@ -232,7 +224,7 @@ contains
     end if
 
     ! dry
-    cell_dry = cell_defn%is_dry()
+    cell_dry = this%fmi%ibdgwfsat0(cell_defn%icell) == 0
     locn_dry = particle%z > cell_defn%top
     if (cell_dry .or. locn_dry) then
       if (particle%idry == 0) then
@@ -247,6 +239,8 @@ contains
             call this%save(particle, reason=3)
             return
           end if
+        else if (locn_dry) then
+          particle%z = this%cell%defn%top
         end if
       else if (particle%idry == 1) then
         ! stop
@@ -259,6 +253,17 @@ contains
         particle%advancing = .false.
         call this%save(particle, reason=6)
       end if
+
+      ! cell with no exit face.
+      ! mutually exclusive with dry because a dry
+      ! cell will have no exit face, but we want
+      ! to respect the STAY dry tracking method
+      ! where a particle is active / stationary.
+    else if (cell_defn%inoexitface .ne. 0) then
+      particle%advancing = .false.
+      particle%istatus = 5
+      call this%save(particle, reason=3)
+      return
     end if
   end subroutine prepare
 
