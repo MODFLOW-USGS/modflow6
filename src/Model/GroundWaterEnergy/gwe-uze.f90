@@ -1327,7 +1327,7 @@ contains
       dup_chk(n) = IZERO
     end do
     !
-    ! -- cycle through uze objects, stop at first occurence of more than one
+    ! -- cycle through uze objects, stop at first occurrence of more than one
     !    uze object in a cell
     do n = 1, nuz
       iloc = this%flowbudptr%budterm(1)%id2(n)
