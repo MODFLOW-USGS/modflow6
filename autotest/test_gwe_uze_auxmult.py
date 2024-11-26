@@ -475,6 +475,3 @@ def test_auxmultname(function_tmpdir, targets):
     # Next, separate GWF and GWE models into 2 different simulations
     # and ensure MF quits with error message
     run_separate_sims(str(function_tmpdir), targets["mf6"])
-
-
-run_separate_sims(r"c:\temp\test_auxmult", "mf6.exe")
