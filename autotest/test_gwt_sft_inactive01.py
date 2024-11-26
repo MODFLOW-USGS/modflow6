@@ -501,16 +501,16 @@ def build_models(idx, test):
 
     sfr_obs = {
         f"{name}.sfr.obs.csv": [
-            ("gwf", "sfr", (0,)),
-            ("outflow", "ext-inflow", (0,)),
-            ("depth", "depth", (0,)),
-            ("gwf", "sfr", (6,)),
-            ("depth", "depth", (6,)),
-            ("gwf", "sfr", (7,)),
-            ("depth", "depth", (7,)),
-            ("gwf", "sfr", (14,)),
-            ("outflow", "ext-outflow", (14,)),
-            ("depth", "depth", (14,)),
+            ("gwf0", "sfr", (0,)),
+            ("outflow0", "ext-inflow", (0,)),
+            ("depth0", "depth", (0,)),
+            ("gwf6", "sfr", (6,)),
+            ("depth6", "depth", (6,)),
+            ("gwf7", "sfr", (7,)),
+            ("depth7", "depth", (7,)),
+            ("gwf14", "sfr", (14,)),
+            ("outflow14", "ext-outflow", (14,)),
+            ("depth14", "depth", (14,)),
         ],
         "filename": name + ".sfr.obs",
     }

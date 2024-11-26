@@ -1039,9 +1039,9 @@ contains
 
           ! check and make sure obsname is unique
           if (this%is_duplicate(obsrv)) then
-            errmsg = 'Observation name has already been specified: ' // &
-              trim(obsrv%Name) // '.  Check for duplicate observation names &
-              &within a block and make sure name are unique.'
+            errmsg = 'Observation name has already been specified: '// &
+              trim(obsrv%Name)//'.  Check for duplicate observation names &
+              &within a block and make sure names are unique.'
             call store_error(errmsg)
           end if
 
