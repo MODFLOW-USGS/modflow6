@@ -47,10 +47,15 @@ cps = 800.0
 rhos = 2500.0
 prsity = 0.2
 
+idomain = np.ones((nlay, nrow, ncol))
+idomain[0, 0, 0] = 0
+idomain[0, 0, ncol - 1] = 0
+
 
 def build_gwf(gwf, gwfname):
     flopy.mf6.ModflowGwfdis(
         gwf,
+        nogrb=True,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -58,6 +63,7 @@ def build_gwf(gwf, gwfname):
         delc=delc,
         top=0.0,
         botm=[-10.0, -20.0, -30.0],
+        idomain=idomain,
     )
 
     # initial conditions
@@ -91,8 +97,8 @@ def build_gwf(gwf, gwfname):
     temperature = 10.0
     chdspd = {
         0: [
-            [(0, 0, 0), chdval, iface, temperature, "object0"],
-            [(0, 0, ncol - 1), chdval, iface, temperature, "object0"],
+            [(2, 0, 0), chdval, iface, temperature, "object0"],
+            [(2, 0, ncol - 1), chdval, iface, temperature, "object0"],
         ]
     }
     flopy.mf6.ModflowGwfchd(
@@ -169,6 +175,7 @@ def build_gwe(gwe, gwename, fmi=False):
         top=0.0,
         botm=[-10.0, -20.0, -30.0],
         pname="DIS",
+        idomain=idomain,
         filename=f"{gwename}.dis",
     )
 
@@ -468,3 +475,6 @@ def test_auxmultname(function_tmpdir, targets):
     # Next, separate GWF and GWE models into 2 different simulations
     # and ensure MF quits with error message
     run_separate_sims(str(function_tmpdir), targets["mf6"])
+
+
+run_separate_sims(r"c:\temp\test_auxmult", "mf6.exe")

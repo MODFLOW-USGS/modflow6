@@ -82,8 +82,8 @@ module GweUzeModule
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
-    procedure, private :: stop_if_multi_uzobj_in_cell
-    procedure, private :: too_many_uzobjs
+    procedure, private :: duplicate_chk
+    procedure, private :: print_uz_err
 
   end type GweUzeType
 
@@ -177,8 +177,6 @@ contains
       call this%fmi%set_aptbudobj_pointer(this%flowpackagename, this%flowbudptr)
       if (associated(this%flowbudptr)) then
         found = .true.
-        nuz = this%flowbudptr%budterm(nuz)%maxlist
-        call this%stop_if_multi_uzobj_in_cell(nuz)
       end if
       !
     else
@@ -198,11 +196,6 @@ contains
               this%flowbudptr => packobj%budobj
             end select
           end if
-          !
-          ! -- Error if option for multiple UZF objects per cell is in use
-          if (packobj%iauxmultcol > 0) then
-            call this%too_many_uzobjs()
-          end if
           if (found) exit
         end do
       end if
@@ -215,6 +208,10 @@ contains
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
+    !
+    ! -- Check for multiple UZF objects per cell, if found report to user
+    nuz = this%flowbudptr%budterm(nuz)%maxlist
+    call this%duplicate_chk(nuz)
     !
     ! -- Allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
@@ -1314,45 +1311,51 @@ contains
   !! support multiple UZE objects within a given cell, requiring the code
   !! to exit with an appropriate message.
   !<
-  subroutine stop_if_multi_uzobj_in_cell(this, nuz)
+  subroutine duplicate_chk(this, nuz)
     ! -- modules
     use ConstantsModule, only: IZERO
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B) :: nuz
     ! -- local
-    integer(I4B) :: n, iloc
+    integer(I4B) :: n, iloc, ncell
     integer(I4B), dimension(:), allocatable :: dup_chk
     !
-    allocate (dup_chk(nuz))
-    do n = 1, nuz
+    ncell = this%dis%nodes
+    allocate (dup_chk(ncell))
+    do n = 1, ncell
       dup_chk(n) = IZERO
     end do
     !
-    ! -- add explanation
+    ! -- cycle through uze objects, stop at first occurence of more than one
+    !    uze object in a cell
     do n = 1, nuz
-      if (this%flowbudptr%budterm(1)%id2(n) /= IZERO) then
-        call this%too_many_uzobjs()
-      end if
       iloc = this%flowbudptr%budterm(1)%id2(n)
+      if (dup_chk(iloc) /= IZERO) then
+        call this%print_uz_err(iloc)
+      end if
       dup_chk(iloc) = 1
     end do
-  end subroutine stop_if_multi_uzobj_in_cell
+  end subroutine duplicate_chk
 
   !> @brief Print and store error msg for too many UZF/UZE objs in cell
   !<
-  subroutine too_many_uzobjs(this)
+  subroutine print_uz_err(this, iloc)
     ! -- dummy
     class(GweUzeType) :: this
+    integer(I4B) :: iloc
     ! -- local
     character(len=LINELENGTH) :: errmsg
+    character(len=30) :: nodestr
     !
-    write (errmsg, '(a)') 'UZE does not support the use of multiple UZF &
-                          &objects in a cell. Check use of AUXMULTNAME &
-                          &option in UZF package.'
+    call this%dis%noder_to_string(iloc, nodestr)
+    write (errmsg, '(3a)') &
+      'More than one UZF object was found in cell ', trim(adjustl(nodestr)), &
+      '. UZE will only work with one UZE object per grid cell. Check use of &
+      &AUXMULTNAME option in UZF package.'
     call store_error(errmsg)
     call this%parser%StoreErrorUnit()
-  end subroutine too_many_uzobjs
+  end subroutine print_uz_err
 
   !> @brief Sets the stress period attributes for keyword use.
   !<
