@@ -229,6 +229,7 @@ contains
           end if
         else if (locn_dry) then
           particle%z = this%cell%defn%top
+          call this%save(particle, reason=1)
         end if
       else if (particle%idry == 1) then
         ! stop
