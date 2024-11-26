@@ -23,7 +23,6 @@ Pathlines are compared with a MODPATH 7 model.
 """
 
 from pathlib import Path
-from typing import List
 
 import flopy
 import matplotlib.cm as cm
@@ -147,7 +146,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         for grp in ["a", "b"]
     ]
 
-    def get_oc() -> List[str]:
+    def get_oc() -> list[str]:
         prt_track_file = f"{prt_name}.trk"
         prt_track_csv_file = f"{prt_name}.trk.csv"
         if "all" in name:

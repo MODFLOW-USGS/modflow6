@@ -1,6 +1,5 @@
 import argparse
 import pathlib as pl
-import sys
 import time
 from subprocess import PIPE, STDOUT, Popen
 
@@ -106,9 +105,6 @@ if __name__ == "__main__":
         default=30.0,
     )
     slurm_args = parser.parse_args()
-
-    if sys.version_info < (3, 8):
-        sys.exit("Python version must be 3.8 or higher.")
 
     print(f"SLURM command: {slurm_args.command}")
     print(f"JobID: {slurm_args.jobid}")

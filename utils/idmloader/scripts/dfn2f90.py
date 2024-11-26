@@ -3,6 +3,7 @@ import sys
 import textwrap
 from pathlib import Path
 from pprint import pprint
+from typing import Optional
 
 import yaml
 
@@ -18,7 +19,7 @@ IDM_PATH = SRC_PATH / "Idm"
 class Dfn2F90:
     """generate idm f90 file from dfn file"""
 
-    def __init__(self, dfnfspec: str = None, verbose: bool = False):
+    def __init__(self, dfnfspec: Optional[str] = None, verbose: bool = False):
         """Dfn290 init"""
 
         self._dfnfspec = dfnfspec
@@ -555,8 +556,8 @@ class IdmDfnSelector:
 
     def __init__(
         self,
-        dfn_d: dict = None,
-        varnames: list = None,
+        dfn_d: Optional[dict] = None,
+        varnames: Optional[list] = None,
     ):
         """IdmDfnSelector init"""
 

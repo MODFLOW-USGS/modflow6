@@ -339,7 +339,7 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
     for name, b in vardict.keys():
         v = vardict[(name, b)]
         if v["block"] == block:
-            if "block_variable" in v and v["block_variable"]:
+            if v.get("block_variable"):
                 optional = "optional" in v and v["optional"] == "true"
                 blk_var_list.append((v["name"], optional))
             addv = True
@@ -401,7 +401,7 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
     for name, b in vardict.keys():
         v = vardict[(name, b)]
         if v["block"] == block:
-            if "block_variable" in v and v["block_variable"]:
+            if v.get("block_variable"):
                 optional = "optional" in v and v["optional"] == "true"
                 blk_var_list.append((v["name"], optional))
             addv = True
@@ -652,10 +652,10 @@ def write_appendix(blocks):
                 and "time" in blockname.lower()
             ):
                 oc = "no"
-            s = "{} & {} & {} & {} \\\\ \n".format(
-                component.upper(), ftype.upper(), blockname.upper(), oc
+            f.write(
+                f"{component.upper()} & {ftype.upper()} & {blockname.upper()} & {oc} "
+                "\\\\ \n"
             )
-            f.write(s)
             lastftype = ftype
 
         f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")

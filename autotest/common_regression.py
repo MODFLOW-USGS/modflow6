@@ -1,7 +1,8 @@
 import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Optional, Union
 from warnings import warn
 
 COMPARE_PROGRAMS = (
@@ -221,8 +222,7 @@ def get_matching_files(
         extensions = [extensions]
 
     for ext in extensions:
-        for file in workspace.glob(f"*.{ext}"):
-            yield file
+        yield from workspace.glob(f"*.{ext}")
 
 
 def get_mf6_comparison(src):
@@ -475,7 +475,7 @@ def get_mf6_ftypes(namefile, ftypekeys):
 
 def get_regression_files(
     workspace: os.PathLike, extensions
-) -> Tuple[List[str], List[str]]:
+) -> tuple[list[str], list[str]]:
     if isinstance(extensions, str):
         extensions = [extensions]
     files = os.listdir(workspace)

@@ -266,7 +266,7 @@ def build_mf6(idx, ws, gridgen):
     elif "disu" in str(ws):
         dis_type = "disu"
     else:
-        raise ValueError(f"Invalid discretization type in {str(ws)}")
+        raise ValueError(f"Invalid discretization type in {ws!s}")
 
     if "disu" in str(ws):
         list_recharge = True

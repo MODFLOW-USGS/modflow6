@@ -36,3 +36,6 @@ d56a12e0db8ff9d052b7ef9d7157506528e1a70e
 
 # reformat Python code with line length = 88 (#2056)
 f6c3a55ea72065ba1ce8540d1fd3c051696df1f1
+
+# reformat multi-line statements (#2070)
+cc7f930b961345536529942fc57db0c515a1f7fc

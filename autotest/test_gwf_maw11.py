@@ -188,7 +188,7 @@ def build_models(idx, test):
         connectiondata=connectiondata,
         perioddata=sfr_perioddata,
         pname="SFR-1",
-        filename="{}.sfr".format(name),
+        filename=f"{name}.sfr",
     )
 
     packages = [("MAW-1",), ("SFR-1",)]
@@ -202,7 +202,7 @@ def build_models(idx, test):
         packages=packages,
         perioddata=mvr_perioddata,
         pname="MVR-1",
-        filename="{}.mvr".format(name),
+        filename=f"{name}.mvr",
     )
 
     # output control
@@ -235,9 +235,9 @@ def check_output(idx, test):
     for itm in bud_names:
         nm_lst.append(str(itm.strip(), "utf-8"))
 
-    assert "CONSTANT-TO-MVR" in nm_lst, (
-        "Expected budget term not in MAW " "binary output file."
-    )
+    assert (
+        "CONSTANT-TO-MVR" in nm_lst
+    ), "Expected budget term not in MAW binary output file."
 
     rtm = mawobj.get_data(text="RATE-TO-MVR")
     ctm = mawobj.get_data(text="CONSTANT-TO-MVR")

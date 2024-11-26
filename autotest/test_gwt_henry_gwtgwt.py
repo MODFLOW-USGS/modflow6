@@ -357,8 +357,8 @@ def check_output(idx, test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_gwfgwf))
-    assert maxdiff < 10 * hclose, "Max. head diff. {} should \
-        be within solver tolerance (x10): {}".format(maxdiff, 10 * hclose)
+    assert maxdiff < 10 * hclose, f"Max. head diff. {maxdiff} should \
+        be within solver tolerance (x10): {10 * hclose}"
 
     fpth = os.path.join(test.workspace, "gwt_ref.ucn")
     try:
@@ -385,8 +385,8 @@ def check_output(idx, test):
     conc_gwtgwt = np.append(conc_left, conc_right, axis=2)
 
     maxdiff = np.amax(abs(conc_gwtgwt - conc_ref))
-    assert maxdiff < conc_tol, "Max. concentration diff. {} should \
-        be within solver tolerance (x10): {}".format(maxdiff, conc_tol)
+    assert maxdiff < conc_tol, f"Max. concentration diff. {maxdiff} should \
+        be within solver tolerance (x10): {conc_tol}"
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

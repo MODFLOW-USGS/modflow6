@@ -388,7 +388,7 @@ def build_models(idx, test):
         outer_dvclose=1e-5,
         inner_dvclose=1e-6,
         linear_acceleration="BICGSTAB",
-        filename="{}.ims".format(name),
+        filename=f"{name}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -441,14 +441,14 @@ def build_models(idx, test):
         auxiliary="CONCENTRATION",
         stress_period_data=chd_spd_left,
         pname="WEL-left",
-        filename="{}.wel-left".format(name),
+        filename=f"{name}.wel-left",
     )
     flopy.mf6.ModflowGwfchd(
         gwf,
         auxiliary="CONCENTRATION",
         stress_period_data=chd_spd_right,
         pname="WEL-right",
-        filename="{}.wel-right".format(name),
+        filename=f"{name}.wel-right",
     )
 
     # SFR data
@@ -560,7 +560,7 @@ def build_models(idx, test):
         outer_dvclose=1e-5,
         inner_dvclose=1e-6,
         linear_acceleration="BICGSTAB",
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 

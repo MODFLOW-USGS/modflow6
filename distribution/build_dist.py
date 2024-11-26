@@ -6,7 +6,7 @@ from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from shutil import copy, copyfile, copytree, ignore_patterns, rmtree
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 from build_docs import build_documentation
@@ -110,7 +110,7 @@ def setup_examples(
     bin_path: PathLike,
     examples_path: PathLike,
     force: bool = False,
-    models: Optional[List[str]] = None,
+    models: Optional[list[str]] = None,
 ):
     examples_path = Path(examples_path).expanduser().absolute()
 
@@ -285,7 +285,7 @@ def build_distribution(
     output_path: PathLike,
     full: bool = False,
     force: bool = False,
-    models: Optional[List[str]] = None,
+    models: Optional[list[str]] = None,
 ):
     print(f"Building {'full' if full else 'minimal'} distribution")
 
