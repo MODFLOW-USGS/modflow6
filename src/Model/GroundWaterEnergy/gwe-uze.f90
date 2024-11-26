@@ -1323,7 +1323,6 @@ contains
     ! -- local
     integer(I4B) :: n, iloc
     integer(I4B), dimension(:), allocatable :: dup_chk
-    character(len=LINELENGTH) :: errmsg
     !
     allocate (dup_chk(nuz))
     do n = 1, nuz
