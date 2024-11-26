@@ -206,6 +206,7 @@ module ObsModule
     procedure, private :: read_obs_blocks
     procedure, private :: read_obs_options
     procedure, private :: write_obs_simvals
+    procedure, private :: is_duplicate
   end type ObsType
 
 contains
@@ -1035,7 +1036,15 @@ contains
           call ConstructObservation(obsrv, line, numspec, fmtd, &
                                     indexobsout, this%obsData, &
                                     this%parser%iuactive)
-          !
+
+          ! check and make sure obsname is unique
+          if (this%is_duplicate(obsrv)) then
+            errmsg = 'Observation name has already been specified: ' // &
+              trim(obsrv%Name) // '.  Check for duplicate observation names &
+              &within a block and make sure name are unique.'
+            call store_error(errmsg)
+          end if
+
           ! -- increment number of observations
           !    to be written to this output file.
           obsOutput => this%obsOutputList%Get(indexobsout)
@@ -1064,6 +1073,29 @@ contains
       call this%parser%StoreErrorUnit()
     end if
   end subroutine read_obs_blocks
+
+  !> @ brief Check to see if observation name already specified
+  !!
+  !! An observation is considered a duplicate if it is specified more than
+  !! once in a CONTINUOUS block.  Observation names can be reused if they are
+  !< specified in different blocks.
+  logical function is_duplicate(this, obsrv)
+    ! dummy
+    class(ObsType), intent(inout) :: this
+    type(ObserveType), intent(in) :: obsrv
+    ! local
+    type(ObserveType), pointer :: otemp => null()
+    integer(I4B) :: i
+    is_duplicate = .false.
+    do i = 1, this%obsList%Count()
+      otemp => this%get_obs(i)
+      if (obsrv%Name == otemp%Name .and. &
+          obsrv%UnitNumber == otemp%UnitNumber) then
+        is_duplicate = .true.
+        exit
+      end if
+    end do
+  end function is_duplicate
 
   !> @ brief Write observation data
   !!
