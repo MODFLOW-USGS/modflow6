@@ -82,6 +82,8 @@ module GweUzeModule
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
+    procedure, private :: stop_if_multi_uzobj_in_cell
+    procedure, private :: too_many_uzobjs
 
   end type GweUzeType
 
@@ -156,22 +158,28 @@ contains
     ! -- dummy
     class(GweUzeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip, icount
+    integer(I4B) :: ip, icount, nuz
     integer(I4B) :: nbudterm
+    character(len=LINELENGTH) :: errmsg
     logical :: found
     !
     ! -- Initialize found to false, and error later if flow package cannot
     !    be found
     found = .false.
     !
+    nuz = 1
+    !
     ! -- If user is specifying flows in a binary budget file, then set up
     !    the budget file reader, otherwise set a pointer to the flow package
     !    budobj
     if (this%fmi%flows_from_file) then
       call this%fmi%set_aptbudobj_pointer(this%flowpackagename, this%flowbudptr)
-      if (associated(this%flowbudptr)) found = .true.
+      if (associated(this%flowbudptr)) then
+        found = .true.
+        nuz = this%flowbudptr%budterm(nuz)%maxlist
+        call this%stop_if_multi_uzobj_in_cell(nuz)
+      end if
       !
     else
       if (associated(this%fmi%gwfbndlist)) then
@@ -189,6 +197,11 @@ contains
             type is (UzfType)
               this%flowbudptr => packobj%budobj
             end select
+          end if
+          !
+          ! -- Error if option for multiple UZF objects per cell is in use
+          if (packobj%iauxmultcol > 0) then
+            call this%too_many_uzobjs()
           end if
           if (found) exit
         end do
@@ -1292,6 +1305,55 @@ contains
       found = .false.
     end select
   end subroutine uze_bd_obs
+
+  !> @brief Stop simulation when multiple UZF objects discovered in cell
+  !!
+  !! GWE equilibrates the temperature of a  UZE object with the host cell.
+  !! This is accomplished through the use of a residual term in the energy
+  !! balance of each cell.  As a result, GWE, specifically UZE, does not
+  !! support multiple UZE objects within a given cell, requiring the code
+  !! to exit with an appropriate message.
+  !<
+  subroutine stop_if_multi_uzobj_in_cell(this, nuz)
+    ! -- modules
+    use ConstantsModule, only: IZERO
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B) :: nuz
+    ! -- local
+    integer(I4B) :: n, iloc
+    integer(I4B), dimension(:), allocatable :: dup_chk
+    character(len=LINELENGTH) :: errmsg
+    !
+    allocate (dup_chk(nuz))
+    do n = 1, nuz
+      dup_chk(n) = IZERO
+    end do
+    !
+    ! -- add explanation
+    do n = 1, nuz
+      if (this%flowbudptr%budterm(1)%id2(n) /= IZERO) then
+        call this%too_many_uzobjs()
+      end if
+      iloc = this%flowbudptr%budterm(1)%id2(n)
+      dup_chk(iloc) = 1
+    end do
+  end subroutine stop_if_multi_uzobj_in_cell
+
+  !> @brief Print and store error msg for too many UZF/UZE objs in cell
+  !<
+  subroutine too_many_uzobjs(this)
+    ! -- dummy
+    class(GweUzeType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    !
+    write (errmsg, '(a)') 'UZE does not support the use of multiple UZF &
+                          &objects in a cell. Check use of AUXMULTNAME &
+                          &option in UZF package.'
+    call store_error(errmsg)
+    call this%parser%StoreErrorUnit()
+  end subroutine too_many_uzobjs
 
   !> @brief Sets the stress period attributes for keyword use.
   !<

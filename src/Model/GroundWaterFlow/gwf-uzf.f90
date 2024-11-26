@@ -2032,7 +2032,7 @@ contains
     end do
     !
     ! -- do an initial evaluation of the sum of uzfarea relative to the
-    !    GWF cell area in the case that there is more than one UZF cell
+    !    GWF cell area in the case that there is more than one UZF object
     !    in a GWF cell and a auxmult value is not being applied to the
     !    calculate the UZF cell area from the GWF cell area.
     if (this%imaxcellcnt > 1 .and. this%iauxmultcol < 1) then
