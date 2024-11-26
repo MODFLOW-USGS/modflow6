@@ -202,13 +202,12 @@ contains
     integer(I4B) :: ic
 
     ! stop zone
-    if (cell_defn%izone .ne. 0) then
-      if (particle%istopzone .eq. cell_defn%izone) then
-        particle%advancing = .false.
-        particle%istatus = 6
-        call this%save(particle, reason=3)
-        return
-      end if
+    particle%izone = cell_defn%izone
+    if (cell_defn%izone > 0 .and. particle%istopzone == cell_defn%izone) then
+      particle%advancing = .false.
+      particle%istatus = 6
+      call this%save(particle, reason=3)
+      return
     end if
 
     ! dry
@@ -228,7 +227,7 @@ contains
             return
           end if
         else if (locn_dry) then
-          particle%z = this%cell%defn%top
+          particle%z = cell_defn%top
           call this%save(particle, reason=1)
         end if
       else if (particle%idry == 1) then
@@ -244,7 +243,7 @@ contains
 
       ! cell with no exit face (mutually exclusive with
       ! dry because a dry cell will have no exit face)
-    else if (cell_defn%inoexitface .ne. 0) then
+    else if (cell_defn%inoexitface > 0) then
       particle%advancing = .false.
       particle%istatus = 5
       call this%save(particle, reason=3)
@@ -252,7 +251,7 @@ contains
     end if
 
     ! weak sink
-    if (cell_defn%iweaksink .ne. 0) then
+    if (cell_defn%iweaksink > 0) then
       if (particle%istopweaksink == 0) then
         call this%save(particle, reason=4)
       else

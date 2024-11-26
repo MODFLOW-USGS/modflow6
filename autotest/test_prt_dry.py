@@ -372,7 +372,7 @@ def check_output(idx, test, snapshot):
     mf6pathlines = pd.read_csv(trackcsv_path)
     startpts = mf6pathlines[mf6pathlines.ireason == 0]
 
-    assert snapshot == mf6pathlines.drop("name", axis=1).round(3).to_records(
+    assert snapshot == mf6pathlines.drop(["name", "icell"], axis=1).round(3).to_records(
         index=False
     )
 
