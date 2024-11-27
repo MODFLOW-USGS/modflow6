@@ -82,7 +82,7 @@ module GweUzeModule
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
-    procedure, private :: duplicate_chk
+    procedure, private :: uzarea_chk
     procedure, private :: print_uz_err
 
   end type GweUzeType
@@ -169,8 +169,6 @@ contains
     !    be found
     found = .false.
     !
-    nuz = 1
-    !
     ! -- If user is specifying flows in a binary budget file, then set up
     !    the budget file reader, otherwise set a pointer to the flow package
     !    budobj
@@ -218,7 +216,7 @@ contains
       if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
     end do
     nuz = this%flowbudptr%budterm(idxbudgwf)%maxlist
-    call this%duplicate_chk(nuz, idxbudgwf)
+    call this%uzarea_chk(nuz, idxbudgwf)
     !
     ! -- Allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
@@ -1316,7 +1314,7 @@ contains
   !! the area of the host cell. When this condition is not true, the code
   !! exits with an appropriate message.
   !<
-  subroutine duplicate_chk(this, nuz, idxbudgwf)
+  subroutine uzarea_chk(this, nuz, idxbudgwf)
     ! -- modules
     use ConstantsModule, only: IZERO
     use MathUtilModule, only: is_close
@@ -1341,7 +1339,7 @@ contains
         call this%print_uz_err(igwfnode)
       end if
     end do
-  end subroutine duplicate_chk
+  end subroutine uzarea_chk
 
   !> @brief Print and store error msg indicating area of UZF object is not
   !! equal to that of the host cell
