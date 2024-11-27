@@ -2798,7 +2798,7 @@ contains
     q = DZERO
     do n = 1, this%nodes
       n2 = this%igwfnode(n)
-      this%qauxcbc(1) = this%uzfobj%uzfarea(n)      
+      this%qauxcbc(1) = this%uzfobj%uzfarea(n)
       call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
     end do
     !
