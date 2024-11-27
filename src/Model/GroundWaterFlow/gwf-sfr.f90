@@ -707,7 +707,7 @@ contains
   subroutine sfr_options(this, option, found)
     ! -- modules
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: getunit, openfile
+    use InputOutputModule, only: getunit, assign_iounit, openfile
     ! -- dummy variables
     class(SfrType), intent(inout) :: this !< SfrType object
     character(len=*), intent(inout) :: option !< option keyword string
@@ -761,7 +761,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudgetout = getunit()
+        call assign_iounit(this%ibudgetout, this%inunit, "BUDGET fileout")
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', MNORMAL)
         write (this%iout, fmtsfrbin) &
@@ -774,7 +774,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudcsv = getunit()
+        call assign_iounit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtsfrbin) &
