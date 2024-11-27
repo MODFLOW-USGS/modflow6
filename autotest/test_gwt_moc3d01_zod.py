@@ -400,8 +400,8 @@ def check_output(idx, test):
         if conc[i] / delt > decay_rate:
             qknown = -decay_rate * vcell * porosity
             errmsg = (
-                "Decay rate in budget file for cell {} should be "
-                "{} but found {} instead.".format(i, qdecay_budfile[i], qknown)
+                f"Decay rate in budget file for cell {i} should be "
+                f"{qdecay_budfile[i]} but found {qknown} instead."
             )
             assert np.allclose(qdecay_budfile[i], qknown), errmsg
         # print(i, qdecay_budfile[i], conc[i])
@@ -427,7 +427,7 @@ def check_output(idx, test):
             "Mass transfer rates from the gwt budget file do not "
             "compare with mass transfer rates calculated from "
             "simulated mobile and immobile domain concentrations\n"
-            "{} /= {}".format(qim_budfile, qim_calculated)
+            f"{qim_budfile} /= {qim_calculated}"
         )
         np.allclose(qim_budfile, qim_calculated), errmsg
 
@@ -556,7 +556,7 @@ def check_output(idx, test):
     tsres = tsreslist[idx]
     errmsg = (
         "Simulated concentrations do not match with known solution.\n"
-        "{} /= {}".format(tssim, tsres)
+        f"{tssim} /= {tsres}"
     )
     if tsres is not None:
         assert np.allclose(tsres, tssim), errmsg

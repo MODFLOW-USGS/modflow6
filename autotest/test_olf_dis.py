@@ -229,8 +229,8 @@ def check_grb_dis2d(fpth):
     assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
     assert grb.angrot == angrot, "angrot in grb file is not correct"
-    assert np.allclose(grb.delr, dx * np.ones((ncol))), "grb delr not correct"
-    assert np.allclose(grb.delc, dx * np.ones((nrow))), "grb delc not correct"
+    assert np.allclose(grb.delr, dx * np.ones(ncol)), "grb delr not correct"
+    assert np.allclose(grb.delc, dx * np.ones(nrow)), "grb delc not correct"
     assert np.allclose(
         grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
     ), "grb botm not correct"

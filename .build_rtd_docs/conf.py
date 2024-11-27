@@ -24,12 +24,12 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "distribution")))
 on_rtd = os.environ.get("READTHEDOCS") == "True"
 
 # -- print current directory
-print("Current Directory...'{}'".format(os.path.abspath(os.getcwd())))
+print(f"Current Directory...'{os.path.abspath(os.getcwd())}'")
 
 # -- clean up doxygen files -------------------------------------------------
 dox_pths = ("_mf6io",)
 for dox_pth in dox_pths:
-    print("cleaning....{}".format(dox_pth))
+    print(f"cleaning....{dox_pth}")
     for root, dirs, files in os.walk(dox_pth):
         for name in files:
             fpth = os.path.join(root, name)
@@ -99,7 +99,8 @@ stdout, stderr = proc.communicate()
 if stdout:
     print(stdout.decode("utf-8"))
 if stderr:
-    print("Errors:\n{}".format(stderr.decode("utf-8")))
+    print("Errors:")
+    print(stderr.decode("utf-8"))
 
 # -- copy deprecations markdown ---------------------------------------------
 print("Copy the deprecations table")
@@ -120,7 +121,8 @@ stdout, stderr = proc.communicate()
 if stdout:
     print(stdout.decode("utf-8"))
 if stderr:
-    print("Errors:\n{}".format(stderr.decode("utf-8")))
+    print("Errors:")
+    print(stderr.decode("utf-8"))
 
 # -- update the doxygen version number ---------------------------------------
 print("Update the Doxyfile with the latest version number")
@@ -131,7 +133,7 @@ tag = "PROJECT_NUMBER"
 with open("Doxyfile", "w") as fp:
     for line in lines:
         if tag in line:
-            line = '{}         = "version {}"\n'.format(tag, __version__)
+            line = f'{tag}         = "version {__version__}"\n'
         fp.write(line)
 
 # -- Project information -----------------------------------------------------

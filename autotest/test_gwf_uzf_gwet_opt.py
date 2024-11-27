@@ -374,7 +374,7 @@ def build_gwf_model(sim, name, linear_et_flg=True):
         outer_dvclose=1e-5,
         inner_dvclose=1e-6,
         linear_acceleration="BICGSTAB",
-        filename="{}.ims".format(name),
+        filename=f"{name}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 

@@ -9,7 +9,7 @@ from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from tempfile import TemporaryDirectory
-from typing import List, Optional
+from typing import Optional
 from urllib.error import HTTPError
 from warnings import warn
 
@@ -210,7 +210,7 @@ def test_build_deprecations_tex():
     build_deprecations_tex(force=True)
 
 
-def build_mf6io_tex(models: Optional[List[str]] = None, force: bool = False):
+def build_mf6io_tex(models: Optional[list[str]] = None, force: bool = False):
     """Build LaTeX files for the MF6IO guide from DFN files."""
 
     if models is None:
@@ -326,7 +326,7 @@ def build_usage_example_tex(
 
 
 def build_pdfs(
-    tex_paths: List[PathLike],
+    tex_paths: list[PathLike],
     output_path: PathLike,
     passes: int = 3,
     force: bool = False,
@@ -401,7 +401,7 @@ def build_documentation(
     output_path: PathLike,
     force: bool = False,
     full: bool = False,
-    models: Optional[List[str]] = None,
+    models: Optional[list[str]] = None,
     repo_owner: str = "MODFLOW-USGS",
 ):
     """Build documentation for a MODFLOW 6 distribution."""

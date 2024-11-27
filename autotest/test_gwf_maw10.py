@@ -245,7 +245,7 @@ def check_output(idx, test):
         msgtime = (
             "There should be a matching time in the maw.obs.csv file for each "
             "time in the maw.reduce.csv file, but no match was found for "
-            "time = {} in the maw.obs.csv file".format(timevalmfr)
+            f"time = {timevalmfr} in the maw.obs.csv file"
         )
         blnFoundTimeMatch = False
         for rowobs in tcobs:
@@ -254,9 +254,9 @@ def check_output(idx, test):
                 blnFoundTimeMatch = True
                 actvalobs = rowobs["M1RATE"]
                 msgval = (
-                    "The maw.obs.csv file rate-actual value of {} should have "
-                    "matched the maw.reduce.csv file rate-actual value of {} "
-                    "at time {}".format(actvalobs, actvalmfr, timevalobs)
+                    f"The maw.obs.csv file rate-actual value of {actvalobs} "
+                    "should have matched the maw.reduce.csv file rate-actual "
+                    f"value of {actvalmfr} at time {timevalobs}"
                 )
                 break
         assert blnFoundTimeMatch, msgtime

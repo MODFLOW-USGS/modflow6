@@ -7,7 +7,6 @@ import textwrap
 from multiprocessing import Pool
 from os import PathLike
 from pathlib import Path
-from typing import List, Tuple
 
 import flopy
 import pytest
@@ -34,7 +33,7 @@ OSTAG = (
 )
 
 
-def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
+def download_previous_version(output_path: PathLike) -> tuple[str, Path]:
     output_path = Path(output_path).expanduser().absolute()
     version = get_latest_version(GITHUB_REPO)
     distname = f"mf{version}_{OSTAG}"
@@ -258,7 +257,7 @@ def write_results(
     output_path: PathLike,
     current_total,
     previous_total,
-    lines: List[str],
+    lines: list[str],
 ):
     current_exe = Path(current_exe)
     previous_exe = Path(previous_exe)
@@ -313,7 +312,7 @@ def run_benchmarks(
     previous_bin_path: PathLike,
     examples_path: PathLike,
     output_path: PathLike,
-    excluded: List[str] = [],
+    excluded: list[str] = [],
 ):
     """Benchmark current development version against previous release
     with example models.

@@ -158,7 +158,7 @@ def converge_fail_continue(dir, exe):
     msg = (
         "The run should have been successful even though it failed, because"
         " the continue flag was set.  But a non-zero error code was "
-        "found: {}".format(returncode)
+        f"found: {returncode}"
     )
     assert returncode == 0, msg
 

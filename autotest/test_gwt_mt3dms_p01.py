@@ -20,7 +20,6 @@ dispersion, and reaction (sorption and decay):
 
 import os
 from pathlib import Path
-from typing import Tuple
 
 import flopy
 import numpy as np
@@ -461,7 +460,7 @@ def p01mf6(
     return sim, conc
 
 
-def get_binaries(targets) -> Tuple[Path, Path, Path]:
+def get_binaries(targets) -> tuple[Path, Path, Path]:
     return (
         targets["mf6"],
         try_get_target(targets, "mf2005s"),

@@ -29,9 +29,9 @@ if not on_rtd:
         src = os.path.join(src_pth, on_dir)
         dst = os.path.join(".", on_dir)
         if os.path.exists(dst):
-            print("deleting...{}".format(dst))
+            print(f"deleting...{dst}")
             shutil.rmtree(dst)
-        print("copying {} -> {}".format(src, dst))
+        print(f"copying {src} -> {dst}")
         shutil.copytree(src, dst)
 
     # copy files
@@ -40,9 +40,9 @@ if not on_rtd:
         src = os.path.join(src_pth, file_name)
         dst = os.path.join(".", file_name)
         if os.path.exists(dst):
-            print("deleting...{}".format(dst))
+            print(f"deleting...{dst}")
             os.remove(dst)
-        print("copying {} -> {}".format(src, dst))
+        print(f"copying {src} -> {dst}")
         shutil.copy(src, dst)
 
 

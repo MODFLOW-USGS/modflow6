@@ -172,7 +172,7 @@ def check_output(idx, test):
         sp_x.append(bud)
 
     # comment when done testing
-    print(f"Total outflow in stress period 1 is {str(sp_x[0][8])}")
+    print(f"Total outflow in stress period 1 is {sp_x[0][8]!s}")
     print(
         "Total outflow in stress period 2 after increasing K33 "
         "should have no effect on final solution"

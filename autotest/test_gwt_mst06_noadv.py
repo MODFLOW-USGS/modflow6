@@ -122,10 +122,10 @@ def check_output(idx, test):
     # The answer
     # print(conc[:, 1])
     cres = np.array([7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0])
-    msg = "simulated concentrations do not match with known solution. {} {}".format(
-        conc[:, 1], cres
+    assert np.allclose(cres, conc[:, 1]), (
+        "simulated concentrations do not match with known solution. "
+        f"{conc[:, 1]} {cres}"
     )
-    assert np.allclose(cres, conc[:, 1]), msg
 
     # Check budget file
     fpth = os.path.join(test.workspace, f"{gwtname}.bud")
@@ -136,10 +136,10 @@ def check_output(idx, test):
     decay_list = bobj.get_data(text="DECAY-AQUEOUS")
     decay_rate = [dr[0] for dr in decay_list]
     decay_rate_answer = [-8.4, -8.4, -8.4, -8.4, -8.4, -8.4, -8.4, -8.4, 0.0, 0.0]
-    msg = "simulated decay rates do not match with known solution. {} {}".format(
-        decay_rate, decay_rate_answer
+    assert np.allclose(decay_rate, decay_rate_answer), (
+        "simulated decay rates do not match with known solution. "
+        f"{decay_rate} {decay_rate_answer}"
     )
-    assert np.allclose(decay_rate, decay_rate_answer), msg
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

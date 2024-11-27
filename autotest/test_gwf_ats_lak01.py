@@ -400,9 +400,7 @@ def check_output(idx, test):
                     all_passed = False
                     msg = (
                         "recharge must be zero if overlying lake is "
-                        "active. node {} qlak {} qrch {} time {}".format(
-                            n0, qlakleak[n0], q, t
-                        )
+                        f"active. node {n0} qlak {qlakleak[n0]} qrch {q} time {t}"
                     )
                     print(msg)
     assert all_passed, "found recharge applied to cell beneath active lake"

@@ -1,10 +1,11 @@
 import os
 import shutil
+from collections.abc import Iterable
 from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from traceback import format_exc
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 from warnings import warn
 
 import flopy
@@ -44,7 +45,7 @@ CBC_EXT = (
 )
 
 
-def api_return(success, model_ws) -> Tuple[bool, List[str]]:
+def api_return(success, model_ws) -> tuple[bool, list[str]]:
     """
     parse libmf6 stdout shared object file
     """
@@ -74,7 +75,7 @@ def get_workspace(sim_or_model) -> Path:
         raise ValueError(f"Unsupported model type: {type(sim_or_model)}")
 
 
-def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
+def run_parallel(workspace, target, ncpus) -> tuple[bool, list[str]]:
     if not is_in_ci() and get_ostag() in ["mac"]:
         oversubscribed = ["--hostfile", "localhost"]
         with open(f"{workspace}/localhost", "w") as f:
@@ -219,7 +220,7 @@ class TestFramework:
         self,
         name: str,
         workspace: Union[str, os.PathLike],
-        targets: Dict[str, Path],
+        targets: dict[str, Path],
         api_func: Optional[Callable] = None,
         build: Optional[Callable] = None,
         check: Optional[Callable] = None,
@@ -358,10 +359,8 @@ class TestFramework:
                 verbose=self.verbose,
             )
             print(
-                (
-                    f"{EXTTEXT[extension]} comparison {i + 1}"
-                    + f"{self.name} ({os.path.basename(fpth0)})"
-                )
+                f"{EXTTEXT[extension]} comparison {i + 1}"
+                + f"{self.name} ({os.path.basename(fpth0)})"
             )
             if not success:
                 return False
@@ -540,7 +539,7 @@ class TestFramework:
         target: Union[str, os.PathLike],
         xfail: bool = False,
         ncpus: int = 1,
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Run a simulation or model with FloPy.
 

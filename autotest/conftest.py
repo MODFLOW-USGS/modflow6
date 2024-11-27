@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from typing import Dict
 from warnings import warn
 
 import pytest
@@ -54,7 +53,7 @@ def bin_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def targets() -> Dict[str, Path]:
+def targets() -> dict[str, Path]:
     """
     Target executables for tests. These include local development builds as
     well as binaries 1) downloaded from GitHub and 2) rebuilt from the last
@@ -81,7 +80,7 @@ def targets() -> Dict[str, Path]:
     return d
 
 
-def try_get_target(targets: Dict[str, Path], name: str) -> Path:
+def try_get_target(targets: dict[str, Path], name: str) -> Path:
     """Try to retrieve the path to a binary. If the binary is a development
     target and can't be found, an error is raised. Otherwise (if the binary
     is downloaded or rebuilt) the test is skipped. This is to allow testing
