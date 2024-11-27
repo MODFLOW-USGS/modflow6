@@ -434,7 +434,6 @@ contains
     integer(I4B), intent(in) :: in !< input file unit number
     ! -- local
     character(len=20) string
-    character(len=30) rw
     character(len=1) tab
     character(len=1) charend
     character(len=200) :: msg
@@ -520,12 +519,17 @@ contains
     !
     ! -- Convert word to a number if requested.
 100 if (ncode == 2 .or. ncode == 3) then
-      rw = ' '
-      l = 30 - istop + istart
+      l = istop - istart + 1
       if (l < 1) go to 200
-      rw(l:30) = line(istart:istop)
-      if (ncode == 2) read (rw, '(i30)', err=200) n
-      if (ncode == 3) read (rw, '(f30.0)', err=200) r
+      if (istart > linlen) then
+        ! support legacy urword behavior to return a zero value when
+        ! no more data is on the line
+        if (ncode == 2) n = 0
+        if (ncode == 3) r = DZERO
+      else
+        if (ncode == 2) read (line(istart:istop), *, err=200) n
+        if (ncode == 3) read (line(istart:istop), *, err=200) r
+      end if
     end if
     return
     !
