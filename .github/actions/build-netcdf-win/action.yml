@@ -21,20 +21,46 @@ runs:
     - name: Setup 7-zip
       uses: milliewalky/setup-7-zip@v1
 
-    - name: Download NetCDF-C
+    - name: Prepare for NetCDF-C download
       shell: bash
       run: |
         mkdir -p netcdf/netCDF4.9.2-NC4-64
-        cd netcdf/netCDF4.9.2-NC4-64
-        curl -L -o netCDF4.9.2-NC4-64.exe "https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe"
+
+    - name: Download NetCDF-C
+      uses: nick-fields/retry@v3
+      with:
+        shell: bash
+        timeout_minutes: 1
+        max_attempts: 5
+        retry_on: error
+        command: |
+          curl -L -o netcdf/netCDF4.9.2-NC4-64/netCDF4.9.2-NC4-64.exe "https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe"
+
+    - name:  Unpack NetCDF-C download
+      working-directory: netcdf/netCDF4.9.2-NC4-64
+      shell: bash
+      run: |
         7z x netCDF4.9.2-NC4-64.exe -aou
 
-    - name: Download NetCDF-Fortran
+    - name: Prepare for NetCDF-Fortran download
       shell: bash
       run: |
         mkdir -p netcdf/netcdf-fortran-4.6.1/build
-        cd netcdf/netcdf-fortran-4.6.1
-        curl -L -o netcdf-fortran-4.6.1.zip "https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip"
+
+    - name: Download NetCDF-Fortran
+      uses: nick-fields/retry@v3
+      with:
+        shell: bash
+        timeout_minutes: 1
+        max_attempts: 5
+        retry_on: error
+        command: |
+          curl -L -o netcdf/netcdf-fortran-4.6.1/netcdf-fortran-4.6.1.zip "https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip"
+
+    - name: Unzip NetCDF-Fortran download
+      working-directory: netcdf/netcdf-fortran-4.6.1
+      shell: bash
+      run: |
         unzip netcdf-fortran-4.6.1.zip
 
     - name: Build NetCDF
