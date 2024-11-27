@@ -161,6 +161,7 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip, icount, nuz
     integer(I4B) :: nbudterm
+    integer(I4B) :: idxbudgwf
     character(len=LINELENGTH) :: errmsg
     logical :: found
     !
@@ -209,13 +210,18 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- Check for multiple UZF objects per cell, if found report to user
-    nuz = this%flowbudptr%budterm(nuz)%maxlist
-    call this%duplicate_chk(nuz)
+    ! Check for multiple UZF objects per cell, if found report to user
+    ! Determine index of 'gwf' entry in flowbudptr since the variable
+    ! this%idxbudgwf has not been set yet
+    nbudterm = this%tspapttype%flowbudptr%nbudterm
+    do idxbudgwf = 1, nbudterm
+      if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
+    end do
+    nuz = this%flowbudptr%budterm(idxbudgwf)%maxlist
+    call this%duplicate_chk(nuz, idxbudgwf)
     !
     ! -- Allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
-    nbudterm = this%flowbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
@@ -1303,42 +1309,42 @@ contains
     end select
   end subroutine uze_bd_obs
 
-  !> @brief Stop simulation when multiple UZF objects discovered in cell
+  !> @brief Stop simulation when UZF object area is not equal to the cell area
   !!
-  !! GWE equilibrates the temperature of a  UZE object with the host cell.
-  !! This is accomplished through the use of a residual term in the energy
-  !! balance of each cell.  As a result, GWE, specifically UZE, does not
-  !! support multiple UZE objects within a given cell, requiring the code
-  !! to exit with an appropriate message.
+  !! GWE equilibrates the temperature of a UZE object with the host cell. UZE
+  !! assumes that the area associated with a specific UZE object is equal to
+  !! the area of the host cell. When this condition is not true, the code
+  !! exits with an appropriate message.
   !<
-  subroutine duplicate_chk(this, nuz)
+  subroutine duplicate_chk(this, nuz, idxbudgwf)
     ! -- modules
     use ConstantsModule, only: IZERO
+    use MathUtilModule, only: is_close
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B) :: nuz
+    integer(I4B) :: idxbudgwf
     ! -- local
-    integer(I4B) :: n, iloc, ncell
-    integer(I4B), dimension(:), allocatable :: dup_chk
-    !
-    ncell = this%dis%nodes
-    allocate (dup_chk(ncell))
-    do n = 1, ncell
-      dup_chk(n) = IZERO
-    end do
-    !
-    ! -- cycle through uze objects, stop at first occurrence of more than one
-    !    uze object in a cell
+    integer(I4B) :: n
+    integer(I4B) :: igwfnode
+    real(DP) :: carea
+    real(DP) :: uzarea
+
+    ! cycle through uze objects, stop at first occurrence of more than one
+    ! uze object in a cell
     do n = 1, nuz
-      iloc = this%flowbudptr%budterm(1)%id2(n)
-      if (dup_chk(iloc) /= IZERO) then
-        call this%print_uz_err(iloc)
+      igwfnode = this%flowbudptr%budterm(idxbudgwf)%id2(n)
+      carea = this%dis%area(igwfnode)
+      uzarea = this%flowbudptr%budterm(idxbudgwf)%auxvar(1, n)
+      ! compare areas
+      if (.not. is_close(carea, uzarea)) then
+        call this%print_uz_err(igwfnode)
       end if
-      dup_chk(iloc) = 1
     end do
   end subroutine duplicate_chk
 
-  !> @brief Print and store error msg for too many UZF/UZE objs in cell
+  !> @brief Print and store error msg indicating area of UZF object is not
+  !! equal to that of the host cell
   !<
   subroutine print_uz_err(this, iloc)
     ! -- dummy
@@ -1350,9 +1356,10 @@ contains
     !
     call this%dis%noder_to_string(iloc, nodestr)
     write (errmsg, '(3a)') &
-      'More than one UZF object was found in cell ', trim(adjustl(nodestr)), &
-      '. UZE will only work with one UZE object per grid cell. Check use of &
-      &AUXMULTNAME option in UZF package.'
+      'In a GWE model, the area of every UZF object must be equal to that of &
+      &the host cell. This condition is violated in cell ', &
+       trim(adjustl(nodestr)), '. Check use of AUXMULTNAME option in UZF &
+      &package.'
     call store_error(errmsg)
     call this%parser%StoreErrorUnit()
   end subroutine print_uz_err
