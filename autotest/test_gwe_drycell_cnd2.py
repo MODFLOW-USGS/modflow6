@@ -584,12 +584,12 @@ def check_output(idx, test):
     ), "Concentrations should be set to 'inactive' (-1.e+30) in row 2"
 
     # Starting in the transient stress period, the water entering in the
-    # 'trough' row is warmed to 30.0 C.  First check that this is the case
+    # 'through' row is warmed to 30.0 C.  First check that this is the case
     assert np.all(
         temp1[-1] > temp1[0]
     ), "Transient period temperature increase does not appear to have kicked in"
     # Dry cell temperatures are only warmed through conduction with neighboring
-    # 'trough' cells and shouldn't be as warm as wet cells at the end of the
+    # 'through' cells and shouldn't be as warm as wet cells at the end of the
     # warming period
     assert np.all(
         temp1[-1, :, 0] > temp1[-1, 0, 1]

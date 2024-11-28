@@ -24,7 +24,7 @@ module TimeStepSelectModule
   !!   FREQUENCY 4
   !!
   !! The read() procedure may be invoked multiple times to select multiple
-  !! time steps. Note that a character string re-using a keyword which has
+  !! time steps. Note that a character string reusing a keyword which has
   !! been used for a previous read() invocation will override the previous
   !! setting using that keyword. To combine multiple settings, be sure the
   !! keywords are different on each invocation, e.g.:
