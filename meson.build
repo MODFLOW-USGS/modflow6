@@ -8,7 +8,7 @@ project(
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
     'debug=false',
-    'fortran_std=f2008',
+    'fortran_std=f2018',
 ])
 
 if get_option('optimization') == '3'
