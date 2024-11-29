@@ -20,12 +20,12 @@ if get_option('optimization') == '2'
 else
   profile = 'develop'
 endif
-message('The used profile is:', profile)
+message('Profile:', profile)
 
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
-message('The fc_id is:', fc_id)
+message('Compiler ID:', fc_id)
 compile_args = []
 link_args = []
 
