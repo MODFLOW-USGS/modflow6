@@ -1223,6 +1223,7 @@ contains
       ! -- copy existing values
       do n = 1, nrow_old
         astrtemp(n) = acharstr1d(n)
+        call acharstr1d(n)%destroy()
       end do
       !
       ! -- fill new values with missing values
@@ -1242,6 +1243,7 @@ contains
       ! -- fill the reallocated character array
       do n = 1, nrow
         acharstr1d(n) = astrtemp(n)
+        call astrtemp(n)%destroy()
       end do
       !
       ! -- deallocate temporary storage
@@ -2009,6 +2011,7 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
+    integer(I4B) :: n
     ! -- code
     !
     ! -- process optional variables
@@ -2033,6 +2036,9 @@ contains
                        terminate=.TRUE.)
     else
       if (mt%master) then
+        do n = 1, size(astr1d)
+          call astr1d(n)%destroy()
+        end do
         deallocate (astr1d)
       else
         nullify (astr1d)
