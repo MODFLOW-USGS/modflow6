@@ -460,7 +460,7 @@ contains
     call this%oc%oc_ot(ipflag)
   end subroutine tsp_ot_dv
 
-  !> @brief Generalized tranpsort model output budget summary
+  !> @brief Generalized transport model output budget summary
   !!
   !! Loop through attached packages and write budget summaries
   !<
@@ -576,7 +576,7 @@ contains
     call mem_deallocate(this%eqnsclfac)
   end subroutine tsp_da
 
-  !> @brief Generalized tranpsort model routine
+  !> @brief Generalized transport model routine
   !!
   !! Check to make sure required input files have been specified
   !<

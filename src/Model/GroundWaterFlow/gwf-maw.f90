@@ -637,8 +637,14 @@ contains
         call this%parser%GetStringCaps(keyword)
         if (keyword == 'SPECIFIED') then
           ieqn = 0
-        else if (keyword == 'THEIM' .or. keyword == 'THIEM') then
+        else if (keyword == 'THIEM') then
           ieqn = 1
+        else if (keyword == 'THEIM') then ! # codespell:ignore
+          ieqn = 1
+          write (warnmsg, '(a,a,a,a,a,a)') &
+            "CONDEQN in '", trim(this%packName), "' should be ", &
+            "corrected from '", trim(keyword), "' to 'THIEM'."
+          call store_warning(warnmsg)
         else if (keyword == 'SKIN') then
           ieqn = 2
         else if (keyword == 'CUMULATIVE') then
@@ -3490,7 +3496,7 @@ contains
       c = hks * pavg * tthkw / slen
     end if
     !
-    ! -- calculate final conductance for Theim (1), Skin (2), and
+    ! -- calculate final conductance for Thiem (1), Skin (2), and
     ! and cumulative Thiem and skin equations (3)
     if (this%ieqn(i) < 4) then
       if (lc1 + lc2 /= DZERO) then
@@ -3881,7 +3887,7 @@ contains
       else
         scale = DONE
         !
-        ! -- Apply rate scaling for an injection well by reducting the
+        ! -- Apply rate scaling for an injection well by reducing the
         !    injection rate as hmaw rises above the pump elevation.  The rate
         !    will approach zero as hmaw approaches pumpelev + reduction_length.
         if (this%reduction_length(n) /= DEP20) then

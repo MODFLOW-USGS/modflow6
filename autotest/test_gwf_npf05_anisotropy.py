@@ -124,7 +124,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, "npf.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
-    # answer was obtained from running problem without anistropy
+    # answer was obtained from running problem without anisotropy
     answer = [
         100.0,
         100.00031999,

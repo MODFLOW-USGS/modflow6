@@ -762,7 +762,7 @@ contains
     end if
   end subroutine rejfinf
 
-  !> @brief Calculate groudwater discharge to land surface
+  !> @brief Calculate groundwater discharge to land surface
   !<
   subroutine gwseep(this, icell, deriv, scale, hgwf, trhs, thcof, seep)
     ! -- dummy
