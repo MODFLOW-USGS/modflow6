@@ -4,8 +4,8 @@ UZE will stop with an error msg.  UZF objects must have the same area as the
 host cell.  If this condition is violated, the code exits with an
 appropriate message. Two variations of the same test problem are scripted; the
 first test combines GWF and GWE into a single simulation and should error out.
-The second test splits GWF and GWE into two different simulations where the
-simulation containing the GWE model should also error out.
+The second test splits GWF and GWE into two different simulations connected
+via FMI and the simulation containing the GWE model also should error out.
 """
 
 import flopy
