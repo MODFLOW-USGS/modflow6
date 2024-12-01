@@ -443,7 +443,7 @@ contains
     real(DP), intent(in) :: trelease !< release time
     ! local
     integer(I4B) :: irow, icol, ilay, icpl
-    integer(I4B) :: ic, icu
+    integer(I4B) :: ic, icu, ic_old
     real(DP) :: x, y, z
     real(DP) :: top, bot, hds
 
@@ -461,7 +461,7 @@ contains
     particle%irpt = ip
     particle%istopweaksink = this%istopweaksink
     particle%istopzone = this%istopzone
-    particle%idry = this%idry
+    particle%idrymeth = this%idry
     particle%icu = icu
 
     select type (dis => this%dis)
@@ -478,9 +478,14 @@ contains
     ! to the top-most active cell beneath it if drape is
     ! enabled, or else terminate permanently unreleased.
     if (this%ibound(ic) == 0) then
-      if (this%idrape > 0) &
+      ic_old = ic
+      if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
-      if (this%ibound(ic) == 0) particle%istatus = 8
+        if (ic == ic_old .or. this%ibound(ic) == 0) &
+          particle%istatus = 8
+      else
+        particle%istatus = 8
+      end if
     end if
 
     ! Load coordinates and transform if needed
@@ -928,7 +933,7 @@ contains
 
         if (n < 1 .or. n > this%nreleasepoints) then
           write (errmsg, '(a,1x,i0,a)') &
-            'Release point number must be greater than 0 and less than ', &
+            'Release point number must be greater than 0 and less than', &
             'or equal to', this%nreleasepoints, '.'
           call store_error(errmsg)
           cycle

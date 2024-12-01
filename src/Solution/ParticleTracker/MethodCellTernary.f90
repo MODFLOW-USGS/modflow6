@@ -62,7 +62,7 @@ contains
     allocate (method)
     call create_cell_poly(cell)
     method%cell => cell
-    method%type => method%cell%type
+    method%name => method%cell%type
     method%delegates = .true.
     call create_subcell_tri(subcell)
     method%subcell => subcell
@@ -71,7 +71,7 @@ contains
   !> @brief Destroy the tracking method
   subroutine destroy_mct(this)
     class(MethodCellTernaryType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine destroy_mct
 
   !> @brief Load subcell into tracking method
@@ -156,15 +156,16 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! Prepare to apply method, return early if done advancing
-    call this%prepare(particle, this%cell%defn)
-    if (.not. particle%advancing) return
-
     ! (Re)allocate type-bound arrays
     select type (cell => this%cell)
     type is (CellPolyType)
+      ! Check termination/reporting conditions
+      call this%check(particle, this%cell%defn)
+      if (.not. particle%advancing) return
+
       ! Number of vertices
       this%nverts = cell%defn%npolyverts
+
       ! (Re)allocate type-bound arrays
       if (allocated(this%xvert)) then
         deallocate (this%xvert)
@@ -178,6 +179,7 @@ contains
         deallocate (this%xvertnext)
         deallocate (this%yvertnext)
       end if
+
       allocate (this%xvert(this%nverts))
       allocate (this%yvert(this%nverts))
       allocate (this%vne(this%nverts))
@@ -188,15 +190,18 @@ contains
       allocate (this%iprev(this%nverts))
       allocate (this%xvertnext(this%nverts))
       allocate (this%yvertnext(this%nverts))
+
       ! Cell vertices
       do i = 1, this%nverts
         this%xvert(i) = cell%defn%polyvert(1, i)
         this%yvert(i) = cell%defn%polyvert(2, i)
       end do
+
       ! Top, bottom, and thickness
       this%ztop = cell%defn%top
       this%zbot = cell%defn%bot
       this%dz = this%ztop - this%zbot
+
       ! Shifted arrays
       do i = 1, this%nverts
         this%iprev(i) = i

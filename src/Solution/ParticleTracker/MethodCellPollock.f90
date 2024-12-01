@@ -36,7 +36,7 @@ contains
     allocate (method)
     call create_cell_rect(cell)
     method%cell => cell
-    method%type => method%cell%type
+    method%name => method%cell%type
     method%delegates = .true.
     call create_subcell_rect(subcell)
     method%subcell => subcell
@@ -45,7 +45,7 @@ contains
   !> @brief Destroy the tracking method
   subroutine destroy_mcp(this)
     class(MethodCellPollockType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine destroy_mcp
 
   !> @brief Load subcell tracking method
@@ -129,13 +129,12 @@ contains
 
     select type (cell => this%cell)
     type is (CellRectType)
-      ! Prepare to apply the tracking method and
-      ! check termination / reporting conditions
-      call this%prepare(particle, cell%defn)
+      ! Check termination/reporting conditions
+      call this%check(particle, cell%defn)
       if (.not. particle%advancing) return
 
-      ! Transform particle location into local cell coordinates
-      ! (translated and rotated but not scaled relative to model)
+      ! Transform model coordinates to local cell coordinates
+      ! (translated/rotated but not scaled relative to model)
       xOrigin = cell%xOrigin
       yOrigin = cell%yOrigin
       zOrigin = cell%zOrigin
@@ -144,15 +143,13 @@ contains
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot)
 
-      ! Track the particle across the cell
+      ! Track the particle over the cell
       call this%track(particle, 2, tmax)
 
-      ! Transform particle location back to model coordinates
+      ! Transform cell coordinates back to model coordinates
       call particle%transform(xOrigin, yOrigin, zOrigin, &
                               sinrot, cosrot, invert=.true.)
-
-      ! Reset transformation and eliminate accumulated roundoff error
-      call particle%transform(reset=.true.)
+      call particle%reset_transform()
     end select
   end subroutine apply_mcp
 

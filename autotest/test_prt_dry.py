@@ -369,10 +369,10 @@ def check_output(idx, test, snapshot):
     hds_path = gwf_ws / hds_file
     trackcsv_file = prt_name + ".csv"
     trackcsv_path = prt_ws / trackcsv_file
-    mf6pathlines = pd.read_csv(trackcsv_path)
-    startpts = mf6pathlines[mf6pathlines.ireason == 0]
+    pls = pd.read_csv(trackcsv_path)
+    strtpts = pls[pls.ireason == 0]
 
-    assert snapshot == mf6pathlines.drop(["name", "icell"], axis=1).round(3).to_records(
+    assert snapshot == pls.drop(["name", "icell"], axis=1).round(3).to_records(
         index=False
     )
 
@@ -438,7 +438,7 @@ def check_output(idx, test, snapshot):
             plt.scatter(pathlines["x"], pathlines["y"])
             mm.plot_pathline(pathlines, layer="all", colors=["blue"], lw=0.75)
             ax.set_title(plottitle, fontsize=12)
-            ax.scatter(startpts.x, startpts.y)
+            ax.scatter(strtpts.x, strtpts.y)
             from shapely.geometry import Polygon
 
             cellids = [105, 85, 125, 104, 106]
@@ -468,7 +468,7 @@ def check_output(idx, test, snapshot):
         ibd[ilay, irow, icol] = 2
         ibd = np.ma.masked_equal(ibd, 0)
 
-        plot_pathlines_and_timeseries(ax, gwf.modelgrid, ibd, mf6pathlines, None, name)
+        plot_pathlines_and_timeseries(ax, gwf.modelgrid, ibd, pls, None, name)
 
     plot_3d = False
     if plot_3d:
@@ -482,7 +482,7 @@ def check_output(idx, test, snapshot):
         vert_exag = 1
         vtk = Vtk(model=gwf, binary=False, vertical_exageration=vert_exag, smooth=False)
         vtk.add_model(gwf)
-        vtk.add_pathline_points(mf6pathlines.to_records(index=False))
+        vtk.add_pathline_points(pls.to_records(index=False))
         gwf_mesh, prt_mesh = vtk.to_pyvista()
         axes = pv.Axes(show_actor=False, actor_scale=2.0, line_width=5)
         p = pv.Plotter(window_size=[700, 700])

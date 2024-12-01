@@ -17,6 +17,7 @@ module CellDefnModule
     integer(I4B), public :: npolyverts !< number of vertices for cell polygon
     real(DP), public :: porosity !< cell porosity
     real(DP), public :: retfactor !< cell retardation factor
+    integer(I4B), public :: ilay !< layer number
     integer(I4B), public :: izone !< cell zone number
     integer(I4B), public :: iweaksink !< weak sink indicator
     integer(I4B), public :: inoexitface !< no exit face indicator

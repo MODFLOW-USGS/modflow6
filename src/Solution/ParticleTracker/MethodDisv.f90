@@ -52,10 +52,10 @@ contains
     type(CellPolyType), pointer :: cell
 
     allocate (method)
-    allocate (method%type)
+    allocate (method%name)
     call create_cell_poly(cell)
     method%cell => cell
-    method%type = "disv"
+    method%name = "disv"
     method%delegates = .true.
     call create_defn(method%neighbor)
   end subroutine create_method_disv
@@ -63,7 +63,7 @@ contains
   !> @brief Destroy the tracking method
   subroutine deallocate (this)
     class(MethodDisvType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine deallocate
 
   !> @brief Load the cell and the tracking method
@@ -155,6 +155,17 @@ contains
       inbr = cell%defn%facenbr(inface)
       ipos = idiag + inbr
       ic = dis%con%ja(ipos)
+
+      if (ic == particle%icp) then
+        print *, "bouncing!"
+        particle%istatus = 2
+        particle%advancing = .false.
+        call this%save(particle, reason=3)
+        return
+      else
+        particle%icp = particle%idomain(2)
+      end if
+
       icu = dis%get_nodeuser(ic)
 
       call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
@@ -216,9 +227,11 @@ contains
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else
-        ! Otherwise, load cell properties into the
-        ! particle and update intercell mass flows
+        ! Update old to new cell properties
         call this%load_particle(cell, particle)
+        if (.not. particle%advancing) return
+
+        ! Update intercell mass flows
         call this%update_flowja(cell, particle)
       end if
     end select
@@ -290,11 +303,12 @@ contains
     end if
   end subroutine map_neighbor
 
-  !> @brief Apply the DISV-grid method
+  !> @brief Apply the DISV tracking method to a particle.
   subroutine apply_disv(this, particle, tmax)
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
+
     call this%track(particle, 1, tmax)
   end subroutine apply_disv
 
@@ -322,6 +336,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: sat
+    integer(I4B) :: icu, icpl, ilay
 
     defn%icell = ic
     defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
@@ -336,6 +351,12 @@ contains
     defn%porosity = this%porosity(ic)
     defn%retfactor = this%retfactor(ic)
     defn%izone = this%izone(ic)
+    select type (dis => this%fmi%dis)
+    type is (DisvType)
+      icu = dis%get_nodeuser(ic)
+      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+      defn%ilay = ilay
+    end select
   end subroutine load_properties
 
   subroutine load_polygon(this, defn)

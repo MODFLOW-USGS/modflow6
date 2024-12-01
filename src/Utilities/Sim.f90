@@ -310,7 +310,7 @@ contains
   !<
   subroutine ustop(stopmess, ioutlocal)
     ! -- dummy variables
-    character, optional, intent(in) :: stopmess * (*) !< optional message to print before
+    character(len=*), optional, intent(in) :: stopmess !< optional message to print before
                                                       !! stopping the simulation
     integer(I4B), optional, intent(in) :: ioutlocal !< optional output file to
                                                     !! final message to
@@ -331,7 +331,7 @@ contains
   !<
   subroutine print_final_message(stopmess, ioutlocal)
     ! -- dummy variables
-    character, optional, intent(in) :: stopmess * (*) !< optional message to print before
+    character(len=*), optional, intent(in) :: stopmess !< optional message to print before
                                                       !! stopping the simulation
     integer(I4B), optional, intent(in) :: ioutlocal !< optional output file to
                                                     !! final message to
