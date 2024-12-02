@@ -188,7 +188,7 @@ def api_func(exe, idx, model_ws=None):
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
-        print("Failed to load " + exe)
+        print("Failed to load " + str(exe))
         print("with message: " + str(e))
         return False, open(output_file_path).readlines()
 
