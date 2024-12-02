@@ -92,8 +92,8 @@ def get_model(dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord=f"model.hds",
-        budget_filerecord=f"model.cbc",
+        head_filerecord="model.hds",
+        budget_filerecord="model.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
