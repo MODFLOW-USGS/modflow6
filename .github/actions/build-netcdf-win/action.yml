@@ -3,7 +3,6 @@ description: Build NetCDF on Windows
 runs:
   using: "composite"
   steps:
-
     - name: Convert line endings
       shell: cmd
       run: |
@@ -26,6 +25,8 @@ runs:
       run: |
         mkdir -p netcdf/netCDF4.9.2-NC4-64
         cd netcdf/netCDF4.9.2-NC4-64
+        bash --version
+        curl --version
         curl -L -o netCDF4.9.2-NC4-64.exe "https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe"
         7z x netCDF4.9.2-NC4-64.exe -aou
 
