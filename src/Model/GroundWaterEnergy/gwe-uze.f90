@@ -302,7 +302,7 @@ contains
     call this%TspAptType%bnd_rp()
   end subroutine uze_rp
 
-  !> @brief Check to ensure auxilary areas equal respective cell areas
+  !> @brief Check to ensure auxiliary areas equal respective cell areas
   !<
   subroutine uze_chk_aux_area(this)
     ! -- dummy
