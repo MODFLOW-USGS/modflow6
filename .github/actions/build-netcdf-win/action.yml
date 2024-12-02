@@ -14,9 +14,6 @@ runs:
         cmakeVersion: latest
         ninjaVersion: latest
 
-    - name: Setup oneAPI
-      uses: ./modflow6/.github/actions/setup-par-oneapi
-
     - name: Setup 7-zip
       uses: milliewalky/setup-7-zip@v1
 
@@ -25,8 +22,6 @@ runs:
       run: |
         mkdir -p netcdf/netCDF4.9.2-NC4-64
         cd netcdf/netCDF4.9.2-NC4-64
-        bash --version
-        curl --version
         curl -L -o netCDF4.9.2-NC4-64.exe "https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe"
         7z x netCDF4.9.2-NC4-64.exe -aou
 
@@ -37,6 +32,9 @@ runs:
         cd netcdf/netcdf-fortran-4.6.1
         curl -L -o netcdf-fortran-4.6.1.zip "https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip"
         unzip netcdf-fortran-4.6.1.zip
+
+    - name: Setup oneAPI
+      uses: ./modflow6/.github/actions/setup-par-oneapi
 
     - name: Build NetCDF
       shell: cmd
