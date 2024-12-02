@@ -13,7 +13,6 @@ module StructVectorModule
   use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
   use STLVecIntModule, only: STLVecInt
-  use ArrayHandlersModule, only: expandarray
 
   implicit none
   private
