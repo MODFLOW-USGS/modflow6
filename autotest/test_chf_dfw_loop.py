@@ -359,7 +359,7 @@ def make_plot(test):
     plt.ylabel("inflow, in cubic meters per second")
     plt.legend()
     ax.set_xlim(0.0, 25.0)
-    fname = ws / f"loop_network_inflow.png"
+    fname = ws / "loop_network_inflow.png"
     plt.savefig(fname)
 
     # observations for model
@@ -392,7 +392,7 @@ def make_plot(test):
     plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = ws / f"loop_network_stage.png"
+    fname = ws / "loop_network_stage.png"
     plt.savefig(fname)
 
     fig = plt.figure(figsize=(6, 4))
@@ -433,7 +433,7 @@ def make_plot(test):
     plt.xlabel("time, in hours")
     plt.ylabel("reach outflow, in cubic meters per second")
     plt.legend()
-    fname = ws / f"loop_network_flow.png"
+    fname = ws / "loop_network_flow.png"
     plt.savefig(fname)
 
     fig = plt.figure(figsize=(6, 6))
