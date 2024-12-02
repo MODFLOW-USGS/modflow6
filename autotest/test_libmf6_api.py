@@ -16,7 +16,6 @@ cases = ["libmf6_api"]
 
 
 def get_model(dir):
-
     # parameters and spd
     # tdis
     nper = 1
