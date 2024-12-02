@@ -1,7 +1,7 @@
 module SwfObsModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
+  use ConstantsModule, only: LINELENGTH
   use BaseDisModule, only: DisBaseType
   use SwfIcModule, only: SwfIcType
   use ObserveModule, only: ObserveType

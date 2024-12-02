@@ -7,20 +7,16 @@
 module SwfZdgModule
   ! -- modules
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DNODATA, &
-                             LINELENGTH, DHALF, DTWOTHIRDS
+  use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, DHALF
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use SmoothingModule, only: sQSaturation, sQSaturationDerivative
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use BlockParserModule, only: BlockParserType
-  use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use BaseDisModule, only: DisBaseType
   use Disv1dModule, only: Disv1dType

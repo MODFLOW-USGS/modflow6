@@ -2,7 +2,6 @@ module SwfOcModule
 
   use BaseDisModule, only: DisBaseType
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENMODELNAME
   use OutputControlModule, only: OutputControlType
   use OutputControlDataModule, only: OutputControlDataType, ocd_cr
 

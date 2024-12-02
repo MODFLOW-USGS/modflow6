@@ -20,7 +20,6 @@ module StructArrayModule
   use IdmLoggerModule, only: idm_log_var
   use BlockParserModule, only: BlockParserType
   use ModflowInputModule, only: ModflowInputType
-  use ArrayHandlersModule, only: expandarray
 
   implicit none
   private

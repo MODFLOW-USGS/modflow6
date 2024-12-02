@@ -22,31 +22,31 @@ module GwfBuyModule
   public :: buy_cr
 
   type :: ConcentrationPointer
-    real(DP), dimension(:), pointer :: conc => null() ! pointer to concentration array
-    integer(I4B), dimension(:), pointer :: icbund => null() ! store pointer to gwt ibound array
+    real(DP), dimension(:), pointer :: conc => null() !< pointer to concentration array
+    integer(I4B), dimension(:), pointer :: icbund => null() !< store pointer to gwt ibound array
   end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfBuyType
-    type(GwfNpfType), pointer :: npf => null() ! npf object
-    integer(I4B), pointer :: ioutdense => null() ! unit number for saving density
-    integer(I4B), pointer :: iform => null() ! formulation: 0 freshwater head, 1 hh rhs, 2 hydraulic head
-    integer(I4B), pointer :: ireadelev => null() ! if 1 then elev has been allocated and filled
-    integer(I4B), pointer :: ireadconcbuy => null() ! if 1 then dense has been read from this buy input file
-    integer(I4B), pointer :: iconcset => null() ! if 1 then conc is pointed to a gwt model%x
-    real(DP), pointer :: denseref => null() ! reference fluid density
-    real(DP), dimension(:), pointer, contiguous :: dense => null() ! density
-    real(DP), dimension(:), pointer, contiguous :: concbuy => null() ! concentration array if specified in buy package
-    real(DP), dimension(:), pointer, contiguous :: elev => null() ! cell center elevation (optional; if not specified, then use (top+bot)/2)
-    integer(I4B), dimension(:), pointer :: ibound => null() ! store pointer to ibound
+    type(GwfNpfType), pointer :: npf => null() !< npf object
+    integer(I4B), pointer :: ioutdense => null() !< unit number for saving density
+    integer(I4B), pointer :: iform => null() !< formulation: 0 freshwater head, 1 hh rhs, 2 hydraulic head
+    integer(I4B), pointer :: ireadelev => null() !< if 1 then elev has been allocated and filled
+    integer(I4B), pointer :: ireadconcbuy => null() !< if 1 then dense has been read from this buy input file
+    integer(I4B), pointer :: iconcset => null() !< if 1 then conc is pointed to a gwt model%x
+    real(DP), pointer :: denseref => null() !< reference fluid density
+    real(DP), dimension(:), pointer, contiguous :: dense => null() !< density
+    real(DP), dimension(:), pointer, contiguous :: concbuy => null() !< concentration array if specified in buy package
+    real(DP), dimension(:), pointer, contiguous :: elev => null() !< cell center elevation (optional; if not specified, then use (top+bot)/2)
+    integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
-    integer(I4B), pointer :: nrhospecies => null() ! number of species used in equation of state to calculate density
-    real(DP), dimension(:), pointer, contiguous :: drhodc => null() ! change in density with change in concentration
-    real(DP), dimension(:), pointer, contiguous :: crhoref => null() ! reference concentration used in equation of state
-    real(DP), dimension(:), pointer, contiguous :: ctemp => null() ! temporary array of size (nrhospec) to pass to calcdens
-    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname ! names of gwt models used in equation of state
-    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname ! names of gwt models used in equation of state
+    integer(I4B), pointer :: nrhospecies => null() !< number of species used in equation of state to calculate density
+    real(DP), dimension(:), pointer, contiguous :: drhodc => null() !< change in density with change in concentration
+    real(DP), dimension(:), pointer, contiguous :: crhoref => null() !< reference concentration used in equation of state
+    real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nrhospec) to pass to calcdens
+    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt models used in equation of state
+    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of gwt models used in equation of state
 
-    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc ! concentration pointer for each transport model
+    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration pointer for each transport model
 
   contains
     procedure :: buy_df
