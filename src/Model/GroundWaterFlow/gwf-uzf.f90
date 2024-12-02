@@ -649,6 +649,9 @@ contains
     integer(I4B) :: j
     integer(I4B) :: jj
     integer(I4B) :: ierr
+    integer(I4B) :: idxbudgwf
+    integer(I4B) :: nbudterm
+    real(DP) :: rval1
     real(DP), pointer :: bndElem => null()
     ! -- table output
     character(len=20) :: cellid
@@ -915,6 +918,22 @@ contains
     !
     ! -- Save old ss flag
     this%issflagold = this%issflag
+    !
+    ! -- Update uzf area
+    if (this%iauxmultcol > 0) then
+      nbudterm = this%budobj%nbudterm
+      do idxbudgwf = 1, nbudterm
+        if (this%budobj%budterm(idxbudgwf)%flowtype == '             GWF') exit
+      end do
+
+      do i = 1, this%nodes
+        if (this%noupdateauxvar(this%iauxmultcol) /= 0) cycle
+        this%auxvar(this%iauxmultcol, i) = this%uauxvar(this%iauxmultcol, i)
+        rval1 = this%uauxvar(this%iauxmultcol, i)
+        call this%uzfobj%setdatauzfarea(i, rval1)
+        this%budobj%budterm(idxbudgwf)%auxvar(1, i) = this%uzfobj%uzfarea(i)
+      end do
+    end if
   end subroutine uzf_rp
 
   !> @brief Advance UZF Package

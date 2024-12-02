@@ -79,6 +79,7 @@ module GweUzeModule
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
     procedure :: pak_set_stressperiod => uze_set_stressperiod
+    procedure :: apt_chk_aux_area => uze_chk_aux_area
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
@@ -278,6 +279,49 @@ contains
     ! -- Thermal equilibration term
     this%idxbudtheq = this%flowbudptr%nbudterm + 1
   end subroutine find_uze_package
+
+  subroutine uze_rp(this)
+    ! -- dummy
+    class(GweUzeType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: nuz
+    integer(I4B) :: idxbudgwf
+    integer(I4B) :: nbudterm
+    !
+    ! Check for multiple UZF objects per cell, if found report to user
+    ! Determine index of 'gwf' entry in flowbudptr since the variable
+    ! this%idxbudgwf has not been set yet
+    nbudterm = this%tspapttype%flowbudptr%nbudterm
+    do idxbudgwf = 1, nbudterm
+      if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
+    end do
+    nuz = this%flowbudptr%budterm(idxbudgwf)%maxlist
+    call this%uzarea_chk(nuz, idxbudgwf)
+    !
+    ! -- call parent _rp routines
+    call this%TspAptType%bnd_rp()
+  end subroutine uze_rp
+
+  !> @brief Check to ensure auxillary areas equal respective cell areas
+  !<
+  subroutine uze_chk_aux_area(this)
+    ! -- dummy
+    class(GweUzeType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: nuz
+    integer(I4B) :: idxbudgwf
+    integer(I4B) :: nbudterm
+    !
+    ! if discrepancy in areas found, report to user
+    ! Determine index of 'gwf' entry in flowbudptr since the variable
+    ! this%idxbudgwf has not been set yet
+    nbudterm = this%tspapttype%flowbudptr%nbudterm
+    do idxbudgwf = 1, nbudterm
+      if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
+    end do
+    nuz = this%flowbudptr%budterm(idxbudgwf)%maxlist
+    call this%uzarea_chk(nuz, idxbudgwf)
+  end subroutine uze_chk_aux_area
 
   !> @brief Add package connection to matrix.
   !!
