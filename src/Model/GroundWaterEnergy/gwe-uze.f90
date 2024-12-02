@@ -209,9 +209,9 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! Check for multiple UZF objects per cell, if found report to user
-    ! Determine index of 'gwf' entry in flowbudptr since the variable
-    ! this%idxbudgwf has not been set yet
+    ! When GWE and GWF models are run in separate simulations, determine
+    ! the index of 'gwf' entry in flowbudptr since the variable this%idxbudgwf
+    ! has not been set yet
     nbudterm = this%tspapttype%flowbudptr%nbudterm
     do idxbudgwf = 1, nbudterm
       if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
@@ -279,28 +279,6 @@ contains
     ! -- Thermal equilibration term
     this%idxbudtheq = this%flowbudptr%nbudterm + 1
   end subroutine find_uze_package
-
-  subroutine uze_rp(this)
-    ! -- dummy
-    class(GweUzeType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: nuz
-    integer(I4B) :: idxbudgwf
-    integer(I4B) :: nbudterm
-    !
-    ! Check for multiple UZF objects per cell, if found report to user
-    ! Determine index of 'gwf' entry in flowbudptr since the variable
-    ! this%idxbudgwf has not been set yet
-    nbudterm = this%tspapttype%flowbudptr%nbudterm
-    do idxbudgwf = 1, nbudterm
-      if (this%flowbudptr%budterm(idxbudgwf)%flowtype == '             GWF') exit
-    end do
-    nuz = this%flowbudptr%budterm(idxbudgwf)%maxlist
-    call this%uzarea_chk(nuz, idxbudgwf)
-    !
-    ! -- call parent _rp routines
-    call this%TspAptType%bnd_rp()
-  end subroutine uze_rp
 
   !> @brief Check to ensure auxiliary areas equal respective cell areas
   !<
