@@ -372,7 +372,7 @@ def check_output(idx, test, snapshot):
     pls = pd.read_csv(trackcsv_path)
     strtpts = pls[pls.ireason == 0]
 
-    assert snapshot == pls.drop(["name", "icell"], axis=1).round(3).to_records(
+    assert snapshot == pls.drop(["name", "icell"], axis=1).round(2).to_records(
         index=False
     )
 

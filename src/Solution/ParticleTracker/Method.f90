@@ -7,8 +7,6 @@ module MethodModule
   use SubcellModule, only: SubcellType
   use ParticleModule
   use BaseDisModule, only: DisBaseType
-  use DisModule, only: DisType
-  use DisvModule, only: DisvType
   use PrtFmiModule, only: PrtFmiType
   use CellModule, only: CellType
   use CellDefnModule, only: CellDefnType
