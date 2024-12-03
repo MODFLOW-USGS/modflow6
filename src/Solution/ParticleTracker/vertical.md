@@ -2,8 +2,6 @@
 
 This document describes the approach PRT takes to vertical particle motion.
 
-When a particle is in the flow field, vertical motion can be solved in the same way as lateral motion. Special handling is necessary above the water table.
-
 ## Legend
 
 Diagrams use the following conventions.
@@ -33,21 +31,20 @@ flowchart TD
 
 ## The problem
 
-The question is what to do with particles in "dry" conditions.
+When a particle is in the flow field, vertical motion can be solved in the same way as lateral motion. Special handling is necessary above the water table.
 
 A "dry" cell is either 1) an inactive cell or 2) an active-but-dry cell, as can occur with the Newton formulation.
 
-Normally, a cell can be inactive because a) it has been disabled with idomain or b) it's dry. With Newton, a cell is inactive only if it is disabled.
+Normally, an inactive cell might be dry or explicitly disabled (idomain).  With Newton, dry cells remain active.
 
-Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on.
+Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on, where boundary packages are, or even which boundary packages are present.
 
 Tracking and termination decisions must be made, therefore, strictly on the basis of information like
 
-1) a cell's status
-2) if the cell is active, whether it is dry
-3) if the cell is not dry, whether the particle is dry (above the water table)
-
-Because PRT is ignorant of boundary packages, seeing only heads and flows, each particle must also maintain some state with which it can "intelligently" determine when to terminate.
+1) a cell's active status
+2) whether the cell is dry
+3) whether the particle is dry (above the water table)
+4) the particle's prior path
 
 ## The approach
 
@@ -98,13 +95,13 @@ A particle in a dry-but-active cell, or above the water table in a partially sat
 
 If `DROP` is selected, or if a `DRY_TRACKING_METHOD` is unspecified, a particle in a dry position is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e. the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual.
 
+**Note**: A divide-by-zero crash has been fixed for `gfortran`, which could occur upon a particle's entry into a dry cell in a structured grid.
+
 If `STOP` is selected, dry particles will be terminated.
 
 If `STAY` is selected, a dry particle will remain stationary until a) the cell rewets and tracking can continue or b) the simulation ends.
 
 **Note**: In version 6.5.0, behavior was as described by `DROP`. This remains the default behavior in version 6.6.0.
-
-**Note**: There is one significant exception to the `DROP` behavior: well cells. If `DROP` is enabled, a particle entering a pumping well cell may be passed to the cell bottom into the cell beneath if the cell is dry, rather than terminating as we might expect. It is then pulled back into the well, and the cycle repeats. To avoid an infinite loop in this situation, we stipulate that, within each time step, a particle may not backtrack (i.e. return to the cell it was previously in). Thus a particle will be passed out of the well onto the face of the cell below, then will terminate.
 
 ```mermaid
 flowchart LR
