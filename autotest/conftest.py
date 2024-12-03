@@ -100,6 +100,11 @@ def original_regression(request) -> bool:
     return request.config.getoption("--original-regression")
 
 
+@pytest.fixture
+def plot(request) -> bool:
+    return request.config.getoption("--plot")
+
+
 @pytest.fixture(scope="session")
 def markers(pytestconfig) -> str:
     return pytestconfig.getoption("-m")
@@ -123,6 +128,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="include netcdf test cases",
+    )
+    parser.addoption(
+        "--plot",
+        action="store_true",
+        default=False,
+        help="make plots of model output",
     )
 
 

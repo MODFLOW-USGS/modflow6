@@ -322,8 +322,8 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(test):
-    print("making plots...")
+def plot_output(idx, test):
+
     import matplotlib.pyplot as plt
 
     name = test.name
@@ -436,48 +436,51 @@ def make_plot(test):
     fname = ws / "loop_network_flow.png"
     plt.savefig(fname)
 
+    # read grb and get locations of the cell center
+    fpth = test.workspace / f"{name}.disv1d.grb"
+    grb = flopy.mf6.utils.MfGrdFile(fpth)
+    cellx = grb._datadict["CELLX"]
+    celly = grb._datadict["CELLY"]
+
     fig = plt.figure(figsize=(6, 6))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlim(-100, 6100)
     ax.set_ylim(-100, 6100)
     pmv = flopy.plot.PlotMapView(model=chf, ax=ax)
     pmv.plot_grid()
+
+    # plot and label vertices
     vertices = chf.disv1d.vertices.get_data()
     ax.plot(vertices["xv"], vertices["yv"], "bo")
     for iv, x, y in vertices:
-        ax.text(x, y, f"{iv + 1}")
-    cell1d = chf.disv1d.cell1d.get_data()
-    print(cell1d.dtype)
-    for row in cell1d:
-        ic = row["icell1d"]
-        ncvert = row["ncvert"]
-        if ncvert == 2:
-            n0 = row["icvert_0"]
-            n1 = row["icvert_1"]
-            x0 = vertices["xv"][n0]
-            x1 = vertices["xv"][n1]
-            y0 = vertices["yv"][n0]
-            y1 = vertices["yv"][n1]
-            xm = 0.5 * (x0 + x1)
-            ym = 0.5 * (y0 + y1)
-        elif ncvert == 3:
-            n0 = row["icvert_1"]
-            xm = vertices["xv"][n0] + 150
-            ym = vertices["yv"][n0] + 150
-        ax.text(xm, ym, f"{ic + 1}", color="red")
-    # raise Exception()
-    fname = ws / "grid.png"
+        ax.text(
+            x,
+            y,
+            f"{iv + 1}",
+            color="blue",
+            horizontalalignment="left",
+            verticalalignment="bottom",
+        )
+
+    # plot and label cell centers
+    ax.plot(cellx, celly, marker="o", mfc="none", mec="red", linewidth=0.0)
+    for icell, (x, y) in enumerate(zip(cellx, celly)):
+        ax.text(
+            x,
+            y,
+            f"{icell + 1}",
+            color="red",
+            horizontalalignment="right",
+            verticalalignment="top",
+        )
+
+    fname = ws / "loop_network_grid.png"
     plt.savefig(fname)
 
     return
 
 
 def check_output(idx, test):
-    print("evaluating model...")
-
-    makeplot = False
-    if makeplot:
-        make_plot(test)
 
     # read the observation output
     name = cases[idx]
@@ -532,12 +535,13 @@ def check_output(idx, test):
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

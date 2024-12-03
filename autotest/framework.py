@@ -224,6 +224,7 @@ class TestFramework:
         api_func: Optional[Callable] = None,
         build: Optional[Callable] = None,
         check: Optional[Callable] = None,
+        plot: Optional[Callable] = None,
         compare: Optional[str] = "auto",
         parallel=False,
         ncpus=1,
@@ -244,6 +245,7 @@ class TestFramework:
         self.targets = targets
         self.build = build
         self.check = check
+        self.plot = plot
         self.parallel = parallel
         self.ncpus = [ncpus] if isinstance(ncpus, int) else ncpus
         self.api_func = api_func
@@ -753,3 +755,9 @@ class TestFramework:
             if self.verbose:
                 print("Checking outputs")
             self.check(self)
+
+        # plot results, if enabled
+        if self.plot:
+            if self.verbose:
+                print("Plotting outputs")
+            self.plot(self)
