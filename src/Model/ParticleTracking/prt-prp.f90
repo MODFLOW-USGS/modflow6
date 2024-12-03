@@ -49,7 +49,7 @@ module PrtPrpModule
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
     integer(I4B), pointer :: istopzone => null() !< optional stop zone number: 0 = no stop zone
     integer(I4B), pointer :: idrape => null() !< drape option: 0 = do not drape, 1 = drape to topmost active cell
-    integer(I4B), pointer :: idry => null() !< dry option, what to do in active-but-dry cells: 0=die, 1=drop, 2=stay
+    integer(I4B), pointer :: idrymeth => null() !< dry tracking method: 0 = drop, 1 = stop, 2 = stay
     integer(I4B), pointer :: itrkout => null() !< binary track file
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
@@ -160,7 +160,7 @@ contains
     call mem_deallocate(this%istopweaksink)
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
-    call mem_deallocate(this%idry)
+    call mem_deallocate(this%idrymeth)
     call mem_deallocate(this%nreleasepoints)
     call mem_deallocate(this%nreleasetimes)
     call mem_deallocate(this%nparticles)
@@ -250,7 +250,7 @@ contains
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
-    call mem_allocate(this%idry, 'IDRY', this%memoryPath)
+    call mem_allocate(this%idrymeth, 'IDRYMETH', this%memoryPath)
     call mem_allocate(this%nreleasepoints, 'NRELEASEPOINTS', this%memoryPath)
     call mem_allocate(this%nreleasetimes, 'NRELEASETIMES', this%memoryPath)
     call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
@@ -274,7 +274,7 @@ contains
     this%istopweaksink = 0
     this%istopzone = 0
     this%idrape = 0
-    this%idry = 0
+    this%idrymeth = 0
     this%nreleasepoints = 0
     this%nreleasetimes = 0
     this%nparticles = 0
@@ -461,7 +461,7 @@ contains
     particle%irpt = ip
     particle%istopweaksink = this%istopweaksink
     particle%istopzone = this%istopzone
-    particle%idrymeth = this%idry
+    particle%idrymeth = this%idrymeth
     particle%icu = icu
 
     select type (dis => this%dis)
@@ -718,11 +718,11 @@ contains
       call this%parser%GetStringCaps(keyword)
       select case (keyword)
       case ('DROP')
-        this%idry = 0
+        this%idrymeth = 0
       case ('STOP')
-        this%idry = 1
+        this%idrymeth = 1
       case ('STAY')
-        this%idry = 2
+        this%idrymeth = 2
       case default
         write (errmsg, '(a, a)') &
           'Unknown dry tracking strategy: ', trim(keyword)

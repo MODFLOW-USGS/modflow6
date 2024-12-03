@@ -6,7 +6,7 @@ When a particle is in the flow field, vertical motion can be solved in the same 
 
 ## Legend
 
-A diagram in this document represents a decision tree applied to a particle in a given context. Diagrams use the following conventions.
+Diagrams use the following conventions.
 
 * Stadium-shaped boxes represent steps or processes.
 * Square boxes represent outcomes.
@@ -35,13 +35,23 @@ flowchart TD
 
 The question is what to do with particles in "dry" conditions.
 
-There are two kinds of dry cells: inactive cells, and active-but-dry cells, as can occur with the Newton formulation.
+A "dry" cell is either 1) an inactive cell or 2) an active-but-dry cell, as can occur with the Newton formulation.
+
+Normally, a cell can be inactive because a) it has been disabled with idomain or b) it's dry. With Newton, a cell is inactive only if it is disabled.
+
+Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on.
+
+Tracking decisions must be made, therefore, on the basis of
+
+1) a cell's status
+2) if the cell is active, whether it is dry
+3) if the cell is not dry, whether the particle is dry (above the water table)
 
 ## The approach
 
-Release-time and tracking-time considerations are described (as well as implemented) separately.
+Release-time and tracking-time considerations are described (and implemented) separately.
 
-### Release time
+### Release
 
 At release time, PRT decides whether to release each particle or to terminate it unreleased.
 
@@ -49,7 +59,7 @@ If the release cell is active, the particle will be released at the specified co
 
 If the release cell is inactive, behavior is determined by the `DRAPE` option. If the `DRAPE` option is enabled, the particle will be "draped" down to and released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if `DRAPE` is not enabled, the particle will terminate unreleased (with status code 8).
 
-**Note**: Since under the Newton formulation dry cells can remain active, the `DRAPE` option has no effect when Newton is enabled. Vertical tracking behavior with Newton can be configured with tracking-time settings.
+Since under the Newton formulation dry cells can remain active, the `DRAPE` option has no effect when Newton is on (assuming particles are not released into disabled grid regions). Vertical tracking behavior with Newton can be configured with tracking-time settings.
 
 ```mermaid
 flowchart LR
@@ -64,7 +74,7 @@ flowchart LR
     classDef terminate stroke:#f08080
 ```
 
-### Tracking time
+### Tracking
 
 A particle might find itself above the water table for one of two reasons:
 
@@ -92,8 +102,6 @@ If `STAY` is selected, a dry particle will remain stationary until a) the cell r
 
 **Note**: In version 6.5.0, behavior was as described by `DROP`. This remains the default behavior in version 6.6.0.
 
-**Note**: In each time step, PRT tracks each particle until the end of the time step, or until the particle encounters a termination condition, whichever occurs first. A particle may traverse an arbitrary number of cells in a single time step.
-
 ```mermaid
 flowchart LR
     ACTIVE{Cell active?} --> |No| TERMINATE{Terminate}
@@ -101,15 +109,11 @@ flowchart LR
     PARTICLE_DRY{Particle dry?} --> |Yes| DRY_TRACKING_METHOD(DRY_TRACKING_METHOD)
     DRY_TRACKING_METHOD ==> |STOP| TERMINATE[Terminate]:::terminate
     DRY_TRACKING_METHOD ==> |DROP| CELL_DRY{Cell dry?}
-    CELL_DRY --> |Yes| ACTIVE_UNDER
+    CELL_DRY --> |Yes| DROP_BOTTOM[Pass to cell bottom]:::track
     CELL_DRY --> |No| DROP_TABLE([Pass to water table])
-    ACTIVE_UNDER{Active under?}
-    ACTIVE_UNDER --> |No| TERMINATE
-    ACTIVE_UNDER --> |Yes| DROP_BOTTOM([Pass to cell below])
     DRY_TRACKING_METHOD ==> |STAY| STAY[Stationary]:::track
     DROP_TABLE --> TRACK:::track
     PARTICLE_DRY --> |No| TRACK[Track normally]
-    DROP_BOTTOM --> CELL_DRY
 
     classDef track stroke:#98fb98
     classDef terminate stroke:#f08080

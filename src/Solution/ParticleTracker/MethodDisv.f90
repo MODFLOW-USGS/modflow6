@@ -157,7 +157,6 @@ contains
       ic = dis%con%ja(ipos)
 
       if (ic == particle%icp) then
-        print *, "bouncing!"
         particle%istatus = 2
         particle%advancing = .false.
         call this%save(particle, reason=3)

@@ -42,7 +42,7 @@ module ParticleModule
     integer(I4B), public :: istopzone !< stop zone number
     integer(I4B), public :: idrymeth !< dry tracking method
     ! state
-    integer(I4B), allocatable, public :: idomain(:) !< tracking domain hierarchy ! TODO: rename to itdomain?
+    integer(I4B), allocatable, public :: idomain(:) !< tracking domain hierarchy ! TODO: rename to itdomain? idomain
     integer(I4B), allocatable, public :: iboundary(:) !< tracking domain boundaries
     integer(I4B), public :: icp !< previous cell number (reduced)
     integer(I4B), public :: icu !< user cell number
