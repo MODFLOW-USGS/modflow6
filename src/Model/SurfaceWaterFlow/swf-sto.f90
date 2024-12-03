@@ -7,14 +7,12 @@
 module SwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, &
-                             LENBUDTXT, LINELENGTH, LENMEMPATH
+  use ConstantsModule, only: DZERO, LENBUDTXT, LINELENGTH, LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, store_error_filename, count_errors
+  use SimModule, only: store_error, store_error_filename
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
-  use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use Disv1dModule, only: Disv1dType
   use SwfCxsModule, only: SwfCxsType
@@ -576,7 +574,6 @@ contains
   !<
   subroutine source_options(this)
     ! -- modules
-    use ConstantsModule, only: LENMEMPATH
     use MemoryManagerExtModule, only: mem_set_value
     use SourceCommonModule, only: filein_fname
     use SwfStoInputModule, only: SwfStoParamFoundType

@@ -8,8 +8,8 @@ module SwfCxsModule
   use ConstantsModule, only: LENMEMPATH, DZERO, DTWOTHIRDS
   use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate
-  use SimVariablesModule, only: errmsg, warnmsg
-  use SimModule, only: count_errors, store_error, store_error_unit
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
 

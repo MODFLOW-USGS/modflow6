@@ -5,21 +5,20 @@
 module SwfDfwModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME, LINELENGTH, &
-                             DZERO, DHALF, DONE, DTWO, DTHREE, &
-                             DNODATA, DEM5, DTWOTHIRDS, DP9, DONETHIRD, &
+  use ConstantsModule, only: LENMEMPATH, LINELENGTH, &
+                             DZERO, DHALF, DONE, DTWO, &
+                             DTWOTHIRDS, DP9, DONETHIRD, &
                              DPREC, DEM10
   use MemoryHelperModule, only: create_mem_path
-  use MemoryManagerModule, only: mem_reallocate
-  use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
-  use SimVariablesModule, only: errmsg, warnmsg
+  use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize, &
+                                 mem_reallocate
+  use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use SwfCxsModule, only: SwfCxsType
   use ObsModule, only: ObsType, obs_cr
-  use ObsModule, only: DefaultObsIdProcessor
   use ObserveModule, only: ObserveType
   use MatrixBaseModule
 

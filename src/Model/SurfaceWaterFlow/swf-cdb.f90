@@ -15,12 +15,9 @@ module SwfCdbModule
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use SmoothingModule, only: sQSaturation, sQSaturationDerivative
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use BlockParserModule, only: BlockParserType
-  use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use BaseDisModule, only: DisBaseType
   use SwfCxsModule, only: SwfCxsType

@@ -3,12 +3,12 @@
 module SwfModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, LINELENGTH, &
+  use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, &
                              LENMEMPATH, LENPACKAGETYPE
   use SimModule, only: count_errors, store_error, store_error_filename
   use SimVariablesModule, only: errmsg
   use MemoryManagerModule, only: mem_allocate
-  use BaseModelModule, only: BaseModelType
+  use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use SwfIcModule, only: SwfIcType
@@ -83,7 +83,6 @@ contains
   !<
   subroutine initialize(this, modelftype, filename, id, modelname)
     ! modules
-    use MemoryHelperModule, only: create_mem_path
     ! dummy
     class(SwfModelType) :: this
     character(len=*), intent(in) :: modelftype !< abbreviation for model type (CHF or OLF)
@@ -833,8 +832,6 @@ contains
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
                             inunit, iout)
     ! modules
-    use ConstantsModule, only: LINELENGTH
-    use MemoryHelperModule, only: create_mem_path
     use SwfFlwModule, only: flw_create
     use ChdModule, only: chd_create
     use SwfCdbModule, only: cdb_create
@@ -939,7 +936,7 @@ contains
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
                             mempaths, inunits)
     ! modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     ! dummy
     class(SwfModelType) :: this
@@ -997,7 +994,6 @@ contains
     use CharacterStringModule, only: CharacterStringType
     use ArrayHandlersModule, only: expandarray
     use MemoryManagerModule, only: mem_setptr
-    use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
     use Disv1dModule, only: disv1d_cr
     use Dis2dModule, only: dis2d_cr

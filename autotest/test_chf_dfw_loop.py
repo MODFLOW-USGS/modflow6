@@ -258,6 +258,16 @@ def build_models(idx, test):
         ],
     )
 
+    # note: for specifying zero-based reach number, put reach number in tuple
+    fname = f"{name}.flw.obs.csv"
+    flw_obs = {
+        fname: [
+            ("INFLOW1", "FLW", (0,)),
+            ("INFLOW5", "FLW", (4,)),
+        ],
+        # "digits": 10,
+    }
+
     flwlist = [
         [(0,), "reach1"],
         [(4,), "reach5"],
@@ -267,6 +277,7 @@ def build_models(idx, test):
         maxbound=len(flwlist),
         print_input=True,
         print_flows=True,
+        observations=flw_obs,
         stress_period_data=flwlist,
     )
 
@@ -317,65 +328,112 @@ def make_plot(test):
 
     name = test.name
     ws = test.workspace
-    mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    mfsim = test.sims[0]
+
     chf = mfsim.get_model(name)
 
-    fpth = test.workspace / f"{name}.obs.csv"
-    obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
+    # observations for flow package
+    output = chf.obs[0].output
+    obs_names = output.obs_names
+    print("Obs output names: ", obs_names)
+    print("Observations", output.methods())
+    flw_obsvals = output.obs().get_data()
+    print(flw_obsvals)
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(4, 4))
     ax = fig.add_subplot(1, 1, 1)
-    for irch in [1, 4, 15, 18]:
+    colors = ["blue", "red"]
+    sec2hour = 1.0 / 60.0 / 60.0
+    for i, irch in enumerate([1, 5]):
         ax.plot(
-            obsvals["time"],
+            flw_obsvals["totim"] * sec2hour,
+            flw_obsvals[f"INFLOW{irch}"],
+            color=colors[i],
+            marker="o",
+            mfc="none",
+            mec="none",
+            lw=0.5,
+            label=f"Inflow reach {irch}",
+        )
+    plt.xlabel("time, in hours")
+    plt.ylabel("inflow, in cubic meters per second")
+    plt.legend()
+    ax.set_xlim(0.0, 25.0)
+    fname = ws / "loop_network_inflow.png"
+    plt.savefig(fname)
+
+    # observations for model
+    output = chf.obs[1].output
+    obs_names = output.obs_names
+    print("Obs output names: ", obs_names)
+    print("observations", output.methods())
+    obsvals = output.obs().get_data()
+
+    fig = plt.figure(figsize=(6, 4))
+    ax = fig.add_subplot(1, 1, 1)
+    colors = ["b", "g", "r", "c"]
+    for i, irch in enumerate([1, 4, 15, 18]):
+        ax.plot(
+            obsvals["totim"] * sec2hour,
             obsvals[f"REACH{irch}"],
             marker="o",
             mfc="none",
-            mec="k",
+            mec=colors[i],
             lw=0.0,
             label=f"MF6 reach {irch}",
         )
         ax.plot(
-            obsvals["time"],
+            obsvals["totim"] * sec2hour,
             answer[f"STAGE00000000{irch:02d}"],
-            "k-",
+            f"{colors[i]}-",
             label=f"SWR Reach {irch}",
         )
     ax.set_xscale("log")
-    plt.xlabel("time, in seconds")
+    plt.xlabel("time, in hours")
     plt.ylabel("stage, in meters")
     plt.legend()
-    fname = ws / f"{name}.obs.1.png"
+    fname = ws / "loop_network_stage.png"
     plt.savefig(fname)
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(1, 1, 1)
+    sign = -1.0
     ax.plot(
-        obsvals["time"],
-        obsvals["FLOW45"],
+        obsvals["totim"] * sec2hour,
+        obsvals["FLOW45"] * sign,
         marker="o",
         mfc="none",
         mec="b",
         lw=0.0,
-        label="MF6 Gauge 4",
+        label="MF6 Location 4",
     )
     ax.plot(
-        obsvals["time"],
-        obsvals["FLOW56"],
+        obsvals["totim"] * sec2hour,
+        obsvals["FLOW56"] * sign,
         marker="o",
         mfc="none",
         mec="g",
         lw=0.0,
-        label="MF6 Gauge 5",
+        label="MF6 Location 5",
     )
-    ax.plot(answer_flow["TOTIME"], answer_flow["FLOW45"], "b-", label="SWR Gauge 4")
-    ax.plot(answer_flow["TOTIME"], answer_flow["FLOW56"], "g-", label="SWR Gauge 5")
+    ax.plot(
+        answer_flow["TOTIME"] * sec2hour,
+        answer_flow["FLOW45"] * sign,
+        "b-",
+        label="SWR Location 4",
+    )
+    ax.plot(
+        answer_flow["TOTIME"] * sec2hour,
+        answer_flow["FLOW56"] * sign,
+        "g-",
+        label="SWR Location 5",
+    )
     # ax.plot(obsvals["time"], answer["STAGE0000000014"], marker="o", mfc="none", mec="k", lw=0., label="swr")  # noqa
     ax.set_xscale("log")
-    plt.xlabel("time, in seconds")
-    plt.ylabel("flow, in cubic meters per second")
+    plt.xlabel("time, in hours")
+    plt.ylabel("reach outflow, in cubic meters per second")
     plt.legend()
-    fname = ws / f"{name}.obs.2.png"
+    fname = ws / "loop_network_flow.png"
     plt.savefig(fname)
 
     fig = plt.figure(figsize=(6, 6))
@@ -388,6 +446,26 @@ def make_plot(test):
     ax.plot(vertices["xv"], vertices["yv"], "bo")
     for iv, x, y in vertices:
         ax.text(x, y, f"{iv + 1}")
+    cell1d = chf.disv1d.cell1d.get_data()
+    print(cell1d.dtype)
+    for row in cell1d:
+        ic = row["icell1d"]
+        ncvert = row["ncvert"]
+        if ncvert == 2:
+            n0 = row["icvert_0"]
+            n1 = row["icvert_1"]
+            x0 = vertices["xv"][n0]
+            x1 = vertices["xv"][n1]
+            y0 = vertices["yv"][n0]
+            y1 = vertices["yv"][n1]
+            xm = 0.5 * (x0 + x1)
+            ym = 0.5 * (y0 + y1)
+        elif ncvert == 3:
+            n0 = row["icvert_1"]
+            xm = vertices["xv"][n0] + 150
+            ym = vertices["yv"][n0] + 150
+        ax.text(xm, ym, f"{ic + 1}", color="red")
+    # raise Exception()
     fname = ws / "grid.png"
     plt.savefig(fname)
 
