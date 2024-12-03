@@ -323,7 +323,6 @@ def build_models(idx, test):
 
 
 def plot_output(idx, test):
-
     import matplotlib.pyplot as plt
 
     name = test.name
@@ -481,7 +480,6 @@ def plot_output(idx, test):
 
 
 def check_output(idx, test):
-
     # read the observation output
     name = cases[idx]
     fpth = test.workspace / f"{name}.obs.csv"
