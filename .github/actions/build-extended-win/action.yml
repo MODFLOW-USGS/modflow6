@@ -3,12 +3,12 @@ description: Build Extended MODFLOW 6 on Windows
 runs:
   using: "composite"
   steps:
+    # first NetCDF, PETSc cygwin installation forces a different bash shell upon us...
+    - name: Setup NetCDF
+      uses: ./modflow6/.github/actions/build-netcdf-win
 
     - name: Setup PETSc
       uses: ./modflow6/.github/actions/build-petsc-win
-
-    - name: Setup NetCDF
-      uses: ./modflow6/.github/actions/build-netcdf-win
 
     - name: Build modflow6
       shell: cmd

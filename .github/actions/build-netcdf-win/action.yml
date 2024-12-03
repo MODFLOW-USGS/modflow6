@@ -18,17 +18,17 @@ runs:
       uses: milliewalky/setup-7-zip@v1
 
     - name: Download NetCDF-C
-      shell: cmd
+      shell: bash
       run: |
-        mkdir netcdf/netCDF4.9.2-NC4-64
+        mkdir -p netcdf/netCDF4.9.2-NC4-64
         cd netcdf/netCDF4.9.2-NC4-64
         curl https://downloads.unidata.ucar.edu/netcdf-c/4.9.2/netCDF4.9.2-NC4-64.exe -O -J
         7z x netCDF4.9.2-NC4-64.exe -aou
 
     - name: Download NetCDF-Fortran
-      shell: cmd
+      shell: bash
       run: |
-        mkdir netcdf/netcdf-fortran-4.6.1/build
+        mkdir -p netcdf/netcdf-fortran-4.6.1/build
         cd netcdf/netcdf-fortran-4.6.1
         curl https://downloads.unidata.ucar.edu/netcdf-fortran/4.6.1/netcdf-fortran-4.6.1.zip -O -J
         unzip netcdf-fortran-4.6.1.zip
