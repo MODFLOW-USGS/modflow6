@@ -41,11 +41,13 @@ Normally, a cell can be inactive because a) it has been disabled with idomain or
 
 Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on.
 
-Tracking decisions must be made, therefore, on the basis of
+Tracking and termination decisions must be made, therefore, strictly on the basis of information like
 
 1) a cell's status
 2) if the cell is active, whether it is dry
 3) if the cell is not dry, whether the particle is dry (above the water table)
+
+Because PRT is ignorant of boundary packages, seeing only heads and flows, each particle must also maintain some state with which it can "intelligently" determine when to terminate.
 
 ## The approach
 
@@ -101,6 +103,8 @@ If `STOP` is selected, dry particles will be terminated.
 If `STAY` is selected, a dry particle will remain stationary until a) the cell rewets and tracking can continue or b) the simulation ends.
 
 **Note**: In version 6.5.0, behavior was as described by `DROP`. This remains the default behavior in version 6.6.0.
+
+**Note**: There is one significant exception to the `DROP` behavior: well cells. If `DROP` is enabled, a particle entering a pumping well cell may be passed to the cell bottom into the cell beneath if the cell is dry, rather than terminating as we might expect. It is then pulled back into the well, and the cycle repeats. To avoid an infinite loop in this situation, we stipulate that, within each time step, a particle may not backtrack (i.e. return to the cell it was previously in). Thus a particle will be passed out of the well onto the face of the cell below, then will terminate.
 
 ```mermaid
 flowchart LR
