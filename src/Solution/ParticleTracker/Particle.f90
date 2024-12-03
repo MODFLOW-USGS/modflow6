@@ -47,7 +47,8 @@ module ParticleModule
     integer(I4B), public :: icp !< previous cell number (reduced)
     integer(I4B), public :: icu !< user cell number
     integer(I4B), public :: ilay !< grid layer
-    integer(I4B), public :: izone !< zone number
+    integer(I4B), public :: izone !< current zone number
+    integer(I4B), public :: izp !< previous zone number
     integer(I4B), public :: istatus !< tracking status
     real(DP), public :: x !< x coordinate
     real(DP), public :: y !< y coordinate
@@ -92,6 +93,7 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, public, contiguous :: icu !< cell number (user)
     integer(I4B), dimension(:), pointer, public, contiguous :: ilay !< layer
     integer(I4B), dimension(:), pointer, public, contiguous :: izone !< current zone number
+    integer(I4B), dimension(:), pointer, public, contiguous :: izp !< previous zone number
     integer(I4B), dimension(:), pointer, public, contiguous :: istatus !< particle status
     real(DP), dimension(:), pointer, public, contiguous :: x !< model x coord of particle
     real(DP), dimension(:), pointer, public, contiguous :: y !< model y coord of particle
@@ -135,6 +137,7 @@ contains
     call mem_allocate(this%icu, np, 'PLICU', mempath)
     call mem_allocate(this%ilay, np, 'PLILAY', mempath)
     call mem_allocate(this%izone, np, 'PLIZONE', mempath)
+    call mem_allocate(this%izp, np, 'PLIZP', mempath)
     call mem_allocate(this%istatus, np, 'PLISTATUS', mempath)
     call mem_allocate(this%x, np, 'PLX', mempath)
     call mem_allocate(this%y, np, 'PLY', mempath)
@@ -166,6 +169,7 @@ contains
     call mem_deallocate(this%icu, 'PLICU', mempath)
     call mem_deallocate(this%ilay, 'PLILAY', mempath)
     call mem_deallocate(this%izone, 'PLIZONE', mempath)
+    call mem_deallocate(this%izp, 'PLIZP', mempath)
     call mem_deallocate(this%istatus, 'PLISTATUS', mempath)
     call mem_deallocate(this%x, 'PLX', mempath)
     call mem_deallocate(this%y, 'PLY', mempath)
@@ -200,6 +204,7 @@ contains
     call mem_reallocate(this%icu, np, 'PLICU', mempath)
     call mem_reallocate(this%ilay, np, 'PLILAY', mempath)
     call mem_reallocate(this%izone, np, 'PLIZONE', mempath)
+    call mem_reallocate(this%izp, np, 'PLIZP', mempath)
     call mem_reallocate(this%istatus, np, 'PLISTATUS', mempath)
     call mem_reallocate(this%x, np, 'PLX', mempath)
     call mem_reallocate(this%y, np, 'PLY', mempath)
@@ -243,6 +248,7 @@ contains
     this%icu = store%icu(ip)
     this%ilay = store%ilay(ip)
     this%izone = store%izone(ip)
+    this%izp = store%izp(ip)
     this%istatus = store%istatus(ip)
     this%x = store%x(ip)
     this%y = store%y(ip)
@@ -279,6 +285,7 @@ contains
     this%icu(ip) = particle%icu
     this%ilay(ip) = particle%ilay
     this%izone(ip) = particle%izone
+    this%izp(ip) = particle%izp
     this%istatus(ip) = particle%istatus
     this%x(ip) = particle%x
     this%y(ip) = particle%y

@@ -9,8 +9,6 @@ module MethodCellPassToBotModule
   use CellModule, only: CellType
   use SubcellModule, only: SubcellType
   use TrackControlModule, only: TrackControlType
-  use DisModule, only: DisType
-  use DisvModule, only: DisvType
   implicit none
 
   private
@@ -47,8 +45,6 @@ contains
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
-    ! local
-    integer(I4B) :: nlay, reason
 
     ! Check termination/reporting conditions
     call this%check(particle, this%cell%defn)
@@ -57,20 +53,6 @@ contains
     ! Pass to bottom face
     particle%z = this%cell%defn%bot
     particle%iboundary(2) = this%cell%defn%npolyverts + 2
-
-    ! Terminate if bottom layer
-    select type (dis => this%fmi%dis)
-    type is (DisType)
-      nlay = dis%nlay
-    type is (DisvType)
-      nlay = dis%nlay
-    end select
-    if (this%cell%defn%ilay == nlay) then
-      particle%istatus = 5
-      reason = 3
-    else
-      reason = 1
-    end if
 
     ! Save datum
     call this%save(particle, reason=1)

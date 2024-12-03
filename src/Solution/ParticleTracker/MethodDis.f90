@@ -195,12 +195,19 @@ contains
       ic = dis%con%ja(ipos)
 
       if (ic == particle%icp) then
-        particle%istatus = 2
+        ! terminate in the previous cell.
+        ! got here by falling through the
+        ! bottom of a well.. TODO: check
+        ! if entry/exit face is top/bot?
         particle%advancing = .false.
+        particle%idomain(2) = particle%icp
+        particle%istatus = 2
+        particle%izone = particle%izp
         call this%save(particle, reason=3)
         return
       else
         particle%icp = particle%idomain(2)
+        particle%izp = particle%izone
       end if
 
       icu = dis%get_nodeuser(ic)
