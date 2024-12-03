@@ -136,7 +136,7 @@ module TspAptModule
     procedure :: bnd_reset => apt_reset
     procedure :: bnd_fc => apt_fc
     procedure, public :: apt_fc_expanded ! Made public for uze
-    procedure, public :: apt_chk_aux_area ! Made public for uze
+    procedure, public :: apt_chk ! Made public for uze
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
     procedure, public :: apt_cfupdate ! Made public for uze
@@ -384,9 +384,6 @@ contains
     character(len=*), parameter :: fmtlsp = &
       &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     !
-    ! -- run aux area check (for uze)
-    call this%apt_chk_aux_area()
-    !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
     !
@@ -481,13 +478,16 @@ contains
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       this%nodelist(n) = igwfnode
     end do
+    !
+    ! -- run package-specific checks
+    call this%apt_chk()
   end subroutine apt_rp
 
-  subroutine apt_chk_aux_area(this)
+  subroutine apt_chk(this)
     ! -- dummy
     class(TspAptType), intent(inout) :: this
     ! function available for override by packages
-  end subroutine apt_chk_aux_area
+  end subroutine apt_chk
 
   !> @brief Advanced package transport set stress period routine.
   !!

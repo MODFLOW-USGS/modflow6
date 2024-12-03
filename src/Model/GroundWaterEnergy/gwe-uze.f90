@@ -79,7 +79,7 @@ module GweUzeModule
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
     procedure :: pak_set_stressperiod => uze_set_stressperiod
-    procedure :: apt_chk_aux_area => uze_chk_aux_area
+    procedure :: apt_chk => uze_chk_aux_area
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
