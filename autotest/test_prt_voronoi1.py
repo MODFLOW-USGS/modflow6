@@ -27,8 +27,6 @@ from modflow_devtools.markers import requires_pkg
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
 
-# snapshot_path = Path(__file__).parent / "__snapshots__" / __name__ / "test_mf6model"
-
 simname = "prtvor1"
 cases = [f"{simname}l2r", f"{simname}welp", f"{simname}weli"]
 times = [True, False, False]
