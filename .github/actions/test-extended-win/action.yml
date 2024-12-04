@@ -3,7 +3,6 @@ description: Build and test extended MODFLOW 6 on Windows
 runs:
   using: "composite"
   steps:
-
     - name: Build MF6 parallel
       uses: ./modflow6/.github/actions/build-extended-win
 
@@ -22,57 +21,21 @@ runs:
     - name: Convert unix2dos
       shell: cmd
       run: |
-        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_parallel.bat" "%TEMP%\test_modflow6_parallel.bat"
-        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_serial.bat" "%TEMP%\test_modflow6_serial.bat"
-        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_netcdf.bat" "%TEMP%\test_modflow6_netcdf.bat"
+        unix2dos -n "%GITHUB_WORKSPACE%\modflow6\.github\common\test_modflow6_extended.bat" "%TEMP%\test_modflow6_extended.bat"
 
-    - name: Test programs (parallel)
+    - name: Test programs (extended)
       if: github.ref_name != 'master'
       shell: cmd
       env:
         REPOS_PATH: ${{ github.workspace }}
       run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_extended.bat"
 
-    - name: Test programs (parallel)
+    - name: Test programs (extended)
       if: github.ref_name == 'master'
       shell: cmd
       env:
         REPOS_PATH: ${{ github.workspace }}
         MARKERS: not developmode
       run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_parallel.bat"
-
-    - name: Test programs (netcdf)
-      if: github.ref_name != 'master'
-      shell: cmd
-      env:
-        REPOS_PATH: ${{ github.workspace }}
-      run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_netcdf.bat"
-
-    - name: Test programs (netcdf)
-      if: github.ref_name == 'master'
-      shell: cmd
-      env:
-        REPOS_PATH: ${{ github.workspace }}
-        MARKERS: not developmode
-      run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_netcdf.bat"
-
-    - name: Test programs (serial)
-      if: github.ref_name != 'master'
-      shell: cmd
-      env:
-        REPOS_PATH: ${{ github.workspace }}
-      run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
-
-    - name: Test programs (serial)
-      if: github.ref_name == 'master'
-      shell: cmd
-      env:
-        REPOS_PATH: ${{ github.workspace }}
-        MARKERS: not developmode
-      run: |
-        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_serial.bat"
+        "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\test_modflow6_extended.bat"

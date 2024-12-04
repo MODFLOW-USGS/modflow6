@@ -90,4 +90,4 @@ runs:
       working-directory: modflow6
       env:
         REPOS_PATH: ${{ github.workspace }}
-      run: pixi run autotest --parallel --netcdf -k "test_par or test_netcdf"
+      run: pixi run autotest --parallel --netcdf
