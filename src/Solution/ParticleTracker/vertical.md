@@ -39,12 +39,13 @@ Normally, an inactive cell might be dry or explicitly disabled (idomain).  With 
 
 Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on, where boundary packages are, or even which boundary packages are present.
 
-Tracking and termination decisions must be made, therefore, strictly on the basis of information like
+Tracking and termination decisions must therefore be made without regard to options or packages, strictly on the basis of information like
 
 1) a cell's active status
 2) whether the cell is dry
-3) whether the particle is dry (above the water table)
-4) the particle's prior path
+3) whether the cell has outgoing flow across any face
+4) whether the particle is dry (above the water table)
+5) the particle's prior path
 
 ## The approach
 
@@ -101,8 +102,6 @@ If `STOP` is selected, dry particles will be terminated.
 
 If `STAY` is selected, a dry particle will remain stationary until a) the cell rewets and tracking can continue or b) the simulation ends.
 
-**Note**: In version 6.5.0, behavior was as described by `DROP`. This remains the default behavior in version 6.6.0.
-
 ```mermaid
 flowchart LR
     ACTIVE{Cell active?} --> |No| TERMINATE{Terminate}
@@ -119,3 +118,9 @@ flowchart LR
     classDef track stroke:#98fb98
     classDef terminate stroke:#f08080
 ```
+
+#### Caveat
+
+In MF6.5, behavior was as described by `DROP`, with one major exception: lack of an exit face (i.e. any face with outgoing flow) took precedence over cell saturation; a particle finding itself in a dry cell with no outgoing flow would previously terminate, where in MF6.6, if `DROP` is selected (or a dry tracking method unspecified) the pass-to-bottom method will be applied instead.
+
+Since in MF6.6 saturation takes precedence over outgoing flow in the particle tracking decision tree, it becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below. 
