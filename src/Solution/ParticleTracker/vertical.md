@@ -17,8 +17,9 @@ Diagrams use the following conventions.
 
 ```mermaid
 flowchart TD
-    STEP([Step]) --> OPTION[Outcome]
-    OPTION(OPTION) ==> |Yes| ACTIVE
+     OPTION[Outcome]
+    OPTION(OPTION) ==> |Yes| STEP([Step])
+    STEP --> ACTIVE
     OPTION ==> |No| CONDITION{Condition}
     CONDITION --> |Yes| TERMINATE
     CONDITION --> |No| ACTIVE
