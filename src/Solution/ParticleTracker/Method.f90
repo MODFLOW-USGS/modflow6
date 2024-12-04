@@ -200,22 +200,41 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellDefnType), pointer, intent(inout) :: cell_defn
     ! local
-    logical(LGP) :: no_exit_face
+    logical(LGP) :: dry_cell, dry_particle, no_exit_face, stop_zone, weak_sink
 
-    ! stop zone
+    dry_cell = this%fmi%ibdgwfsat0(cell_defn%icell) == 0
+    dry_particle = particle%z > cell_defn%top
+    no_exit_face = cell_defn%inoexitface > 0
+    stop_zone = cell_defn%izone > 0 .and. particle%istopzone == cell_defn%izone
+    weak_sink = cell_defn%iweaksink > 0
+
     particle%izone = cell_defn%izone
-    if (cell_defn%izone > 0 .and. particle%istopzone == cell_defn%izone) then
+    if (stop_zone) then
       particle%advancing = .false.
       particle%istatus = 6
       call this%save(particle, reason=3)
       return
     end if
 
-    ! no exit face
-    no_exit_face = cell_defn%inoexitface > 0
+    if (no_exit_face .and. .not. dry_cell) then
+      particle%advancing = .false.
+      particle%istatus = 5
+      call this%save(particle, reason=3)
+      return
+    end if
 
-    ! dry cell
-    if (this%fmi%ibdgwfsat0(cell_defn%icell) == 0) then
+    if (weak_sink) then
+      if (particle%istopweaksink > 0) then
+        particle%advancing = .false.
+        particle%istatus = 3
+        call this%save(particle, reason=3)
+        return
+      else
+        call this%save(particle, reason=4)
+      end if
+    end if
+
+    if (dry_cell) then
       if (particle%idrymeth == 0) then
         no_exit_face = .false.
       else if (particle%idrymeth == 1) then
@@ -237,7 +256,7 @@ contains
         end if
         call this%save(particle, reason=2)
       end if
-    else if (this%name /= "passtobottom" .and. particle%z > cell_defn%top) then
+    else if (dry_particle .and. this%name /= "passtobottom") then
       ! dry particle
       if (particle%idrymeth == 0) then
         ! drop to water table
@@ -257,9 +276,6 @@ contains
       end if
     end if
 
-    ! cell with no exit face. handle after
-    ! dry conditions because dry cells will
-    ! also have no exit face.
     if (no_exit_face) then
       particle%advancing = .false.
       particle%istatus = 5
@@ -267,17 +283,6 @@ contains
       return
     end if
 
-    ! weak sink
-    if (cell_defn%iweaksink > 0) then
-      if (particle%istopweaksink == 0) then
-        call this%save(particle, reason=4)
-      else
-        particle%advancing = .false.
-        particle%istatus = 3
-        call this%save(particle, reason=3)
-        return
-      end if
-    end if
   end subroutine check
 
 end module MethodModule

@@ -366,64 +366,14 @@ def check_output(idx, test, snapshot):
     gwf_sim = test.sims[0]
     gwf = gwf_sim.get_model(gwf_name)
     hds_file = gwf.name + ".hds"
-    hds_path = gwf_ws / hds_file
     trackcsv_file = prt_name + ".csv"
     trackcsv_path = prt_ws / trackcsv_file
     pls = pd.read_csv(trackcsv_path)
     strtpts = pls[pls.ireason == 0]
 
+    # compare to expected results
     actual = pls.drop(["name", "icell"], axis=1).round(2).reset_index(drop=True)
-    try:
-        assert snapshot == actual.to_records(index=False)
-    except:
-        snapshot_path = next(iter(k for k in snapshot.session._extensions if name in k))
-        expected = pd.DataFrame(np.load(snapshot_path)).reset_index(drop=True)
-        diff = expected.compare(actual)
-        pytest.fail(diff.to_json())
-
-    plot_head = False
-    if plot_head:
-        with flopy.utils.binaryfile.HeadFile(hds_path, model=gwf) as hds:
-            times = hds.get_times()
-            kstpkper = hds.get_kstpkper()
-
-        kstpkper_to_plot = [(0, 0), (4, 1), (0, 2)]
-
-        for kstpkper in kstpkper_to_plot:
-            with flopy.utils.binaryfile.HeadFile(hds_path, model=gwf) as hds:
-                heads = hds.get_data(kstpkper)
-
-            print(heads.min(), heads.max())
-
-            fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-            mview = flopy.plot.PlotMapView(ax=ax, model=gwf, layer=1)
-
-            mview.plot_grid(color=(0.4, 0.4, 0.4, 0.5), lw=0.2)
-            mview.plot_bc("WEL", plotAll=True, kper=kstpkper[1])
-            mview.plot_bc("CHD", plotAll=True)
-
-            h_dwstr = 1582
-            levels = np.arange(h_dwstr, heads.max(), 1)
-            contour_set = mview.contour_array(
-                heads, levels=levels, linewidths=0.5, colors=[(0.3, 0.3, 1.0, 1.0)]
-            )
-
-            plt.clabel(
-                contour_set, fmt="%.1f", colors="blue", fontsize=6
-            )  # --- number format in the contour
-
-            ax.set_title(f"kstpkper: {kstpkper}")
-
-            xs_figsize = (6, 1)
-            xs_row = int(nrow / 4)
-
-            fig, ax = plt.subplots(1, 1, figsize=xs_figsize)
-            xsect = flopy.plot.PlotCrossSection(ax=ax, model=gwf, line={"row": xs_row})
-            xsect.plot_grid(color=(0.4, 0.4, 0.4, 0.5), lw=1)
-            xsect.plot_array(heads, head=heads, alpha=0.5, cmap="jet")
-            xsect.contour_array(heads, head=heads, levels=levels, colors="blue")
-
-            ax.set_title(f"cross-section at row = {xs_row}")
+    assert snapshot == actual.to_records(index=False)
 
     plot_pathlines = False
     if plot_pathlines:

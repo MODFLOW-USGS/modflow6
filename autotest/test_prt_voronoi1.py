@@ -348,7 +348,7 @@ def check_output(idx, test, snapshot):
     prt_track_csv_file = f"{prt_name}.prp.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
     endpts = pls[pls.ireason == 3]  # termination
-    endpts.drop("icell", axis=1, inplace=True)
+    # endpts.drop("icell", axis=1, inplace=True)
 
     # compare pathlines with snapshot. particles shouldn't
     # have moved vertically. round for cross-platform error.
