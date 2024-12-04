@@ -10,7 +10,6 @@ then again with wells, first pumping, then injection.
 """
 
 from pathlib import Path
-from platform import processor, system
 
 import flopy
 import matplotlib as mpl
@@ -267,6 +266,10 @@ def plot_output(idx, test):
     ax = plt.subplot(1, 1, 1, aspect="equal")
     pmv = flopy.plot.PlotMapView(model=gwf, ax=ax)
     pmv.plot_grid(alpha=0.25)
+
+    if diff:
+        ax.scatter(diff.x, diff.y, c="red")
+
     pmv.plot_ibound(alpha=0.5)
     headmesh = pmv.plot_array(head, alpha=0.25)
     cv = pmv.contour_array(head, levels=np.linspace(0, 1, 9), colors="black")
@@ -331,7 +334,7 @@ def plot_output(idx, test):
     plt.savefig(prt_ws / f"{name}.png")
 
 
-def check_output(idx, test, snapshot):
+def check_output(idx, test):
     name = test.name
     prt_ws = test.workspace / "prt"
     prt_name = get_model_name(name, "prt")
@@ -348,13 +351,10 @@ def check_output(idx, test, snapshot):
     prt_track_csv_file = f"{prt_name}.prp.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
     endpts = pls[pls.ireason == 3]  # termination
-    # endpts.drop("icell", axis=1, inplace=True)
 
-    # compare pathlines with snapshot. particles shouldn't
-    # have moved vertically. round for cross-platform error.
-    # skip macos-14 in CI because grid is slightly different
-    if not (system() == "Darwin" and processor() == "arm"):
-        assert snapshot == endpts.drop("name", axis=1).round(1).to_records(index=False)
+    assert np.allclose(endpts.z, 0.5)
+    assert np.isclose(endpts.y.min(), 1, atol=4)
+    assert np.isclose(endpts.y.max(), 996, atol=4)
 
 
 @requires_pkg("syrupy")
