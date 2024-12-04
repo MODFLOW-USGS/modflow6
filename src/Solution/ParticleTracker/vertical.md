@@ -51,6 +51,14 @@ Tracking and termination decisions must therefore be made without regard to opti
 
 Release-time and tracking-time considerations are described (and implemented) separately.
 
+Each particle is either released into the simulation, or terminates unreleased. In the former case the particle's first record will be reason 0 (release), status 1 (active). In the latter reason 3 (termination), status 8 (permanently unreleased).
+
+At each time step, the PRT model applies the tracking method to each particle. The particle's trajectory is solved over the model grid until the end of the time step, or until the particle terminates, whichever occurs first.
+
+Particles may traverse an arbitrary number of cells in a time step, in the lateral as well as vertical dimensions.
+
+Sometimes it is convenient to avoid "stranding" particles &mdash; rather than terminating dry particles, it is often convenient instead to move them down to the saturated zone and continue tracking. PRT allows particles (and indeed configures them by default) to move instantaneously down to the water table in dry conditions.
+
 ### Release
 
 At release time, PRT decides whether to release each particle or to terminate it unreleased.
@@ -121,6 +129,6 @@ flowchart LR
 
 #### Caveat
 
-In MF6.5, behavior was as described by `DROP`, with one major exception: lack of an exit face (i.e. any face with outgoing flow) took precedence over cell saturation; a particle finding itself in a dry cell with no outgoing flow would previously terminate, where in MF6.6, if `DROP` is selected (or a dry tracking method unspecified) the pass-to-bottom method will be applied instead.
+In MF6.5, behavior was as described by `DROP`, with one major exception: lack of an exit face (i.e. any face with outgoing flow) took precedence over cell saturation; a particle finding itself in a dry cell with no outgoing flow would previously terminate, where if `DROP` is selected (or a dry tracking method unspecified) the pass-to-bottom method will now be applied instead.
 
-Since in MF6.6 saturation takes precedence over outgoing flow in the particle tracking decision tree, it becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below. 
+With this change, it also becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below. 
