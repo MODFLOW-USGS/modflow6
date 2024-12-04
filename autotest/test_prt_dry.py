@@ -372,9 +372,14 @@ def check_output(idx, test, snapshot):
     pls = pd.read_csv(trackcsv_path)
     strtpts = pls[pls.ireason == 0]
 
-    assert snapshot == pls.drop(["name", "icell"], axis=1).round(2).to_records(
-        index=False
-    )
+    actual = pls.drop(["name", "icell"], axis=1).round(2).reset_index(drop=True)
+    try:
+        assert snapshot == actual.to_records(index=False)
+    except:
+        snapshot_path = next(iter(k for k in snapshot.session._extensions if name in k))
+        expected = pd.DataFrame(np.load(snapshot_path)).reset_index(drop=True)
+        diff = expected.compare(actual)
+        pytest.fail(diff.to_json())
 
     plot_head = False
     if plot_head:
