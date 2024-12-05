@@ -7,7 +7,6 @@ through the system.
 """
 
 import os
-import sys
 
 import flopy
 import numpy as np
@@ -841,7 +840,7 @@ def make_concentration_map(sim, ws):
     plt.savefig(fname)
 
 
-def check_output(idx, test):
+def get_answers():
     # these answer files are results from autotest/prudic2004test2
     fname = os.path.join(model_path, "result_conc_lak1.txt")
     ans_lak1 = np.loadtxt(fname)
@@ -849,39 +848,37 @@ def check_output(idx, test):
     ans_sfr3 = np.loadtxt(fname)
     fname = os.path.join(model_path, "result_conc_sfr4.txt")
     ans_sfr4 = np.loadtxt(fname)
+    return ans_lak1, ans_sfr3, ans_sfr4
 
-    makeplot = False
-    for arg in sys.argv:
-        if arg.lower() == "--makeplot":
-            makeplot = True
 
+def plot_output(idx, test):
     ws = test.workspace
-    simfp = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
+    simfp = test.sims[0]
+    ans_lak1, ans_sfr3, ans_sfr4 = get_answers()
+    make_head_map(simfp, ws)
+    if transport_on:
+        make_concentration_vs_time(simfp, ws, ans_lak1, ans_sfr3, ans_sfr4)
+        make_concentration_map(simfp, ws)
 
-    if makeplot:
-        make_head_map(simfp, ws)
-        if transport_on:
-            make_concentration_vs_time(simfp, ws, ans_lak1, ans_sfr3, ans_sfr4)
-            make_concentration_map(simfp, ws)
 
-    # ensure concentrations were saved
+def check_output(idx, test):
+    ans_lak1, ans_sfr3, ans_sfr4 = get_answers()
     ws = test.workspace
-    gwfname = gwfnames[0]
-    gwtname = gwtnames[0]
+    sim = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
 
     lkaconc = None
     if lkt_on and transport_on:
-        gwt = simfp.get_model(gwtnames[0])
-        bobj = gwt.lkt.output.concentration()
-        lkaconc = bobj.get_alldata()[:, 0, 0, :]
-        times = bobj.times
-        bobj.file.close()
+        gwt = sim.get_model(gwtnames[0])
+        cobj = gwt.lkt.output.concentration()
+        lkaconc = cobj.get_alldata()[:, 0, 0, :]
+        times = cobj.times
+        cobj.file.close()
 
     sft3outflowconc = None
     sft4outflowconc = None
     if sft_on and transport_on:
         # get southern model
-        gwt = simfp.get_model(gwtnames[1])
+        gwt = sim.get_model(gwtnames[1])
         sftpack = gwt.get_package("sft-3")
         times = sftpack.output.concentration().times
         conc = sftpack.output.concentration().get_alldata()[:, 0, 0, :]
@@ -918,12 +915,13 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
     )
     test.run()

@@ -203,8 +203,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(test, mfsim):
-    print("making plots...")
+def plot_output(idx, test):
     import matplotlib.pyplot as plt
 
     fpth = test.workspace / "olf_model.zdg.obs.csv"
@@ -239,10 +238,6 @@ def check_output(idx, test):
     olfname = "olf_model"
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
-
-    makeplot = False
-    if makeplot:
-        make_plot(test, mfsim)
 
     # read the binary grid file
     fpth = test.workspace / f"{olfname}.dis2d.grb"
@@ -292,12 +287,13 @@ def check_output(idx, test):
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

@@ -133,26 +133,25 @@ def build_models(idx, test):
         stress_period_data=spd,
     )
 
-    # obs_data = {
-    #     f"{olfname}.obs.csv": [
-    #         ("OBS1", "STAGE", (1,)),
-    #         ("OBS2", "STAGE", (5,)),
-    #         ("OBS3", "STAGE", (8,)),
-    #     ],
-    # }
-    # obs_package = flopy.mf6.ModflowUtlobs(
-    #     olf,
-    #     filename=f"{olfname}.obs",
-    #     digits=10,
-    #     print_input=True,
-    #     continuous=obs_data,
-    # )
+    obs_data = {
+        f"{olfname}.obs.csv": [
+            ("OBS1", "STAGE", (5, 1)),
+            ("OBS2", "STAGE", (5, 5)),
+            ("OBS3", "STAGE", (5, 8)),
+        ],
+    }
+    obs_package = flopy.mf6.ModflowUtlobs(
+        olf,
+        filename=f"{olfname}.obs",
+        digits=10,
+        print_input=True,
+        continuous=obs_data,
+    )
 
     return sim, None
 
 
-def make_plot(test, mfsim):
-    print("making plots...")
+def plot_output(idx, test):
     import matplotlib.pyplot as plt
 
     fpth = test.workspace / "olf_model.obs.csv"
@@ -168,7 +167,7 @@ def make_plot(test, mfsim):
             mfc="none",
             mec="k",
             lw=0.0,
-            label=f"MF6 reach {irch}",
+            label=f"MF6 obs {irch}",
         )
         # ax.plot(obsvals["time"], answer[f"STAGE00000000{irch:02d}"], "k-", label=f"SWR Reach {irch}")  # noqa
     ax.set_xlim(0, 30.0)
@@ -189,10 +188,6 @@ def check_output(idx, test):
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
-    makeplot = False
-    if makeplot:
-        make_plot(test, mfsim)
-
     # read binary stage file
     fpth = test.workspace / f"{olfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
@@ -208,12 +203,13 @@ def check_output(idx, test):
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

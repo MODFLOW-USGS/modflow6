@@ -174,8 +174,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(test, mfsim):
-    print("making plots...")
+def plot_output(idx, test):
     import matplotlib.pyplot as plt
 
     hecras = data_path / "hecras0125.csv.cmp"
@@ -251,10 +250,6 @@ def check_output(idx, test):
     # get MFSimulation from test
     sim = test.sims[0]
 
-    makeplot = False
-    if makeplot:
-        make_plot(test, sim)
-
     # assign name
     name = "chfmodel"
 
@@ -304,12 +299,13 @@ def check_output(idx, test):
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

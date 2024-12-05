@@ -139,13 +139,16 @@ def add_chf_model_disv1d(sim):
     return
 
 
-def make_plot(test, mfsim, stage, idx):
-    print("making plots...")
+def plot_output(idx, test):
     import matplotlib.pyplot as plt
 
+    mfsim = test.sims[0]
     chf = mfsim.chf[0]
+
+    stage = chf.output.stage().get_data().reshape((nodes,))
+
     pmv = flopy.plot.PlotMapView(model=chf)
-    pmv.plot_array(stage, masked_values=[3e30])
+    pmv.plot_array(stage, masked_values=[3e30])  # not working yet
     pmv.plot_grid()
 
     fname = test.workspace / "results.png"
@@ -201,20 +204,16 @@ def check_output(idx, test):
     assert stage[idomain == 1].max() == 1.0, "maximum stage should be 1.0"
     assert stage[idomain == 1].min() == 0.5, "minimum stage should be 0.5"
 
-    makeplot = False
-    if makeplot:
-        # PlotMapView not working yet for disv1d
-        make_plot(test, mfsim, stage.flatten(), idx)
-
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()
