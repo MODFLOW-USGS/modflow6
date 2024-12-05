@@ -763,23 +763,29 @@ def check_output(idx, test):
   e = expected[idx]
   ...
 
+def plot_output(idx, test):
+  import matplotlib.pyplot as plt
+  ...
+
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         compare=None,
     )
     test.run()
 ```
 
-The framework has two hooks:
+The framework has three hooks:
 
 - `build`: construct one or more MF6 simulations and/or non-MF6 models with FloPy
 - `check`: evaluate simulation/model output
+- `plot`: evaluate simulation/model output
 
 A test script conventionally contains one or more test cases, fed to the test function as `idx, name` pairs. `idx` can be used to index parameter values or expected results for a specific test case. The test case `name` is useful for model/subdirectory naming, etc.
 
