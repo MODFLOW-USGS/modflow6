@@ -368,13 +368,6 @@ def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
 
 
 def plot_output(idx, test):
-# def make_plot(sim, headall, concall):
-#     print("making plots...")
-
-    # name = sim.name
-    # ws = sim.workspace
-    # sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
-
     ws = test.workspace
     name = test.name
     sim = test.sims[0]

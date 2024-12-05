@@ -7,7 +7,6 @@ through the system.
 """
 
 import os
-import sys
 
 import flopy
 import numpy as np
@@ -777,8 +776,6 @@ def plot_output(idx, test):
 
 
 def check_output(idx, test):
-
-    # ensure concentrations were saved
     ws = test.workspace
     name = test.name
     gwtname = "gwt_" + name

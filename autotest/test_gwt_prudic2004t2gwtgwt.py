@@ -7,7 +7,6 @@ through the system.
 """
 
 import os
-import sys
 
 import flopy
 import numpy as np
@@ -863,7 +862,6 @@ def plot_output(idx, test):
 
 
 def check_output(idx, test):
-
     ans_lak1, ans_sfr3, ans_sfr4 = get_answers()
     ws = test.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
