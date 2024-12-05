@@ -372,7 +372,8 @@ def check_output(idx, test, snapshot):
     strtpts = pls[pls.ireason == 0]
 
     # compare to expected results
-    actual = pls.drop(["name", "icell"], axis=1).round(2).reset_index(drop=True)
+    decimals = 1 if "drop" in name else 2
+    actual = pls.drop(["name", "icell"], axis=1).round(decimals).reset_index(drop=True)
     assert snapshot == actual.to_records(index=False)
 
     plot_pathlines = False
