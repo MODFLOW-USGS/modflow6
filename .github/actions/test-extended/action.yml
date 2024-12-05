@@ -96,7 +96,7 @@ runs:
         echo $DYLD_LIBRARY_PATH 
         pixi run autotest --parallel --netcdf -k "test_par or test_netcdf"
 
-    - name: Test programs (macOS)
+    - name: Test programs (Linux)
       if: runner.os != 'macOS'
       shell: bash
       working-directory: modflow6
