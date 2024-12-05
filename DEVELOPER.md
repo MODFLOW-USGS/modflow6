@@ -785,7 +785,7 @@ The framework has three hooks:
 
 - `build`: construct one or more MF6 simulations and/or non-MF6 models with FloPy
 - `check`: evaluate simulation/model output
-- `plot`: evaluate simulation/model output
+- `plot`: make one or more plots of simulation/model output
 
 A test script conventionally contains one or more test cases, fed to the test function as `idx, name` pairs. `idx` can be used to index parameter values or expected results for a specific test case. The test case `name` is useful for model/subdirectory naming, etc.
 
