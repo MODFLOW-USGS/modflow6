@@ -957,6 +957,10 @@ contains
           ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
 
+          ! Reset previous cell and zone numbers
+          particle%icp = 0
+          particle%izp = 0
+
           ! Update particle storage
           call packobj%particles%save_particle(particle, np)
         end do
