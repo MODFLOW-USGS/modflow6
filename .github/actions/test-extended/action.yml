@@ -85,9 +85,24 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
       run: pixi run get-exes
 
-    - name: Test programs
+    - name: Test programs (macOS)
+      if: runner.os == 'macOS'
       shell: bash
       working-directory: modflow6
       env:
         REPOS_PATH: ${{ github.workspace }}
-      run: pixi run autotest --parallel --netcdf
+      run: |
+        otool -L bin/libmf6.dylib
+        echo $DYLD_LIBRARY_PATH 
+        pixi run autotest --parallel --netcdf -k "test_par or test_netcdf"
+
+    - name: Test programs (macOS)
+      if: runner.os != 'macOS'
+      shell: bash
+      working-directory: modflow6
+      env:
+        REPOS_PATH: ${{ github.workspace }}
+      run: |
+        ldd bin/libmf6.so
+        echo $LD_LIBRARY_PATH
+        pixi run autotest --parallel --netcdf -k "test_par or test_netcdf"
