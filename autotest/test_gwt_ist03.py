@@ -261,10 +261,10 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(sim, plot_title):
-    print("making plots...")
-    name = sim.name
-    ws = sim.workspace
+def plot_output(idx, test):
+    plot_title = sorption_idx[idx]
+    name = test.name
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -310,11 +310,6 @@ def check_output(idx, test):
     sorption = sorption_idx[idx]
     distcoef = distcoef_idx[idx]
     sp2 = sp2_idx[idx]
-
-    makeplot = False
-    if makeplot:
-        plot_title = sorption
-        make_plot(test, plot_title)
 
     name = test.name
     gwtname = "gwt_" + name
@@ -367,12 +362,13 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
     )
     test.run()

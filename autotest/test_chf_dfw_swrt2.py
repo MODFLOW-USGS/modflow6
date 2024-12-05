@@ -165,7 +165,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(test, mfsim):
+def plot_output(idx, test):
     print("making plots...")
     import matplotlib.pyplot as plt
 
@@ -203,10 +203,6 @@ def check_output(idx, test):
     ws = test.workspace
     mfsim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
-    makeplot = False
-    if makeplot:
-        make_plot(test, mfsim)
-
     # read binary stage file
     fpth = test.workspace / f"{chfname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
@@ -243,12 +239,13 @@ def check_output(idx, test):
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

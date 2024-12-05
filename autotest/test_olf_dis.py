@@ -206,11 +206,14 @@ def add_olf_model_disv2d(sim):
     return
 
 
-def make_plot(test, mfsim, stage, idx):
-    print("making plots...")
+def plot_output(idx, test):
     import matplotlib.pyplot as plt
 
+    mfsim = test.sims[0]
     olf = mfsim.olf[0]
+
+    stage = olf.output.stage().get_data()
+
     pmv = flopy.plot.PlotMapView(model=olf)
     pmv.plot_array(stage, masked_values=[3e30])
     pmv.plot_grid()
@@ -299,19 +302,16 @@ def check_output(idx, test):
     assert stage[idomain == 1].max() == 1.0, "maximum stage should be 1.0"
     assert stage[idomain == 1].min() == 0.5, "minimum stage should be 0.5"
 
-    makeplot = False
-    if makeplot:
-        make_plot(test, mfsim, stage.flatten(), idx)
-
 
 @pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
     )
     test.run()

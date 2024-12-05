@@ -311,10 +311,9 @@ def build_models(idx, test):
     return sim, None
 
 
-def make_plot(sim):
-    print("making plots...")
-    name = sim.name
-    ws = sim.workspace
+def plot_output(idx, test):
+    name = test.name
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -339,10 +338,6 @@ def make_plot(sim):
 
 
 def check_output(idx, test):
-    makeplot = False
-    if makeplot:
-        make_plot(test)
-
     name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
@@ -368,12 +363,13 @@ def check_output(idx, test):
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
     )
     test.run()

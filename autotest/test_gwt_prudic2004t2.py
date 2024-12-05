@@ -771,15 +771,12 @@ def check_obs(sim):
     assert success, "One or more SFT-LKT obs checks did not pass"
 
 
-def check_output(idx, test):
-    makeplot = False
-    for arg in sys.argv:
-        if arg.lower() == "--makeplot":
-            makeplot = True
+def plot_output(idx, test):
+    make_concentration_vs_time(test)
+    make_concentration_map(test)
 
-    if makeplot:
-        make_concentration_vs_time(test)
-        make_concentration_map(test)
+
+def check_output(idx, test):
 
     # ensure concentrations were saved
     ws = test.workspace
@@ -919,12 +916,13 @@ def check_output(idx, test):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
     )
     test.run()

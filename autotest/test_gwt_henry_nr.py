@@ -367,16 +367,23 @@ def get_patch_collection(modelgrid, head, conc, cmap="jet", zorder=None):
     return pc
 
 
-def make_plot(sim, headall, concall):
-    print("making plots...")
+def plot_output(idx, test):
+# def make_plot(sim, headall, concall):
+#     print("making plots...")
 
-    name = sim.name
-    ws = sim.workspace
-    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    # name = sim.name
+    # ws = sim.workspace
+    # sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+
+    ws = test.workspace
+    name = test.name
+    sim = test.sims[0]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
     gwf = sim.get_model(gwfname)
     gwt = sim.get_model(gwtname)
+    headall = gwf.output.head().get_alldata()
+    concall = gwt.output.concentration().get_alldata()
 
     import matplotlib.patches
     import matplotlib.pyplot as plt
@@ -456,20 +463,13 @@ def make_plot(sim, headall, concall):
 def check_output(idx, test):
     name = test.name
     ws = test.workspace
+    sim = test.sims[0]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
-
-    # load heads
-    fname = os.path.join(ws, gwfname + ".hds")
-    assert os.path.isfile(fname)
-    headobj = flopy.utils.HeadFile(fname, precision="double")
-    head = headobj.get_alldata()
-
-    # load concs
-    fname = os.path.join(ws, gwtname + ".ucn")
-    assert os.path.isfile(fname)
-    concobj = flopy.utils.HeadFile(fname, text="concentration", precision="double")
-    conc = concobj.get_alldata()
+    gwf = sim.get_model(gwfname)
+    gwt = sim.get_model(gwtname)
+    headobj = gwf.output.head()
+    concobj = gwt.output.concentration()
 
     # extract 10 simulated heads and concs for cell (0, 0, 20)
     hsim = headobj.get_ts((0, 0, 20))[::125, 1]
@@ -509,20 +509,16 @@ def check_output(idx, test):
     errmsg = f"concs not right for cell (0, 0, 20):\n{csim}\n{cans}"
     assert np.allclose(hsim, hans, atol=1.0e-3), errmsg
 
-    makeplot = False
-    if makeplot:
-        make_plot(test, head, conc)
-        assert False
-
 
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
     )
     test.run()
