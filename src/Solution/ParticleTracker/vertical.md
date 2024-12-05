@@ -16,7 +16,7 @@ Diagrams use the following conventions.
 * Red outcome boxes indicate the particle terminates.
 
 ```mermaid
-flowchart TD
+flowchart LR
      OPTION[Outcome]
     OPTION(OPTION) ==> |Yes| STEP([Step])
     STEP --> ACTIVE
