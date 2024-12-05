@@ -100,6 +100,15 @@ contains
       cell%zOrigin = cell%defn%bot
       cell%ipvOrigin = 1
 
+      factor = DONE / cell%defn%retfactor
+      factor = factor / cell%defn%porosity
+
+      areaz = dx * dy
+      term = factor / areaz
+
+      cell%vz1 = cell%defn%faceflow(6) * term
+      cell%vz2 = -cell%defn%faceflow(7) * term
+
       if (this%fmi%ibdgwfsat0(ic) == 0) then
         cell%vx1 = DZERO
         cell%vx2 = DZERO
@@ -111,19 +120,15 @@ contains
       end if
 
       areax = dy * dz
-      areay = dx * dz
-      areaz = dx * dy
-      factor = DONE / cell%defn%retfactor
-      factor = factor / cell%defn%porosity
       term = factor / areax
       cell%vx1 = cell%defn%faceflow(1) * term
       cell%vx2 = -cell%defn%faceflow(3) * term
+
+      areay = dx * dz
       term = factor / areay
       cell%vy1 = cell%defn%faceflow(4) * term
       cell%vy2 = -cell%defn%faceflow(2) * term
-      term = factor / areaz
-      cell%vz1 = cell%defn%faceflow(6) * term
-      cell%vz2 = -cell%defn%faceflow(7) * term
+
     end select
   end subroutine load_cell
 
