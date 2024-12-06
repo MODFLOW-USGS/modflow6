@@ -38,16 +38,6 @@ A "dry" cell is either 1) an inactive cell or 2) an active-but-dry cell, as can 
 
 Normally, an inactive cell might be dry or explicitly disabled (idomain).  With Newton, dry cells remain active.
 
-Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on, where boundary packages are, or even which boundary packages are present.
-
-Tracking and termination decisions must therefore be made without regard to options or packages, strictly on the basis of information like
-
-1) a cell's active status
-2) whether the cell is dry
-3) whether the cell has outgoing flow across any face
-4) whether the particle is dry (above the water table)
-5) the particle's prior path
-
 ## The approach
 
 Release-time and tracking-time considerations are described (and implemented) separately.
@@ -95,6 +85,14 @@ A particle might find itself above the water table for one of two reasons:
 
     Particle trajectories are solved over the same time discretization used by the flow model. A particle may be immersed in the flow field in one time step, and find that the water table has dropped below it in the next.
 
+Tracking and termination decisions are made on the basis of information like
+
+1) a cell's active status
+2) whether the cell is dry
+3) whether the cell has outgoing flow across any face
+4) whether the particle is dry (above the water table)
+5) the particle's prior path
+
 A particle which finds itself in an inactive cell will terminate with status code 7. This is consistent with MODPATH 7's behavior.
 
 A particle in a dry-but-active cell, or above the water table in a partially saturated cell, need not terminate. MODFLOW version 6.6.0 introduces a new option `DRY_TRACKING_METHOD` for the PRP package, determining how dry particles should behave. Supported values are:
@@ -132,4 +130,4 @@ flowchart LR
 
 In MF6.5, behavior was as described by `DROP`, with one major exception: lack of an exit face (i.e. any face with outgoing flow) took precedence over cell saturation; a particle finding itself in a dry cell with no outgoing flow would previously terminate, where if `DROP` is selected (or a dry tracking method unspecified) the pass-to-bottom method will now be applied instead.
 
-With this change, it also becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below. 
+With this change, it also becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below.
