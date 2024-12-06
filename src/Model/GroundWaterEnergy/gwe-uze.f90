@@ -160,9 +160,8 @@ contains
     class(GweUzeType) :: this
     ! -- local
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip, icount, nuz
+    integer(I4B) :: ip, icount
     integer(I4B) :: nbudterm
-    integer(I4B) :: idxbudgwf
     character(len=LINELENGTH) :: errmsg
     logical :: found
     !
