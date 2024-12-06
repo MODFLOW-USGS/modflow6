@@ -79,11 +79,10 @@ module GweUzeModule
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
     procedure :: pak_set_stressperiod => uze_set_stressperiod
-    procedure :: apt_ad_chk => uze_chk_aux_area
+    procedure :: apt_ad_chk => uze_ad_chk
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
-    procedure, private :: uzarea_chk
     procedure, private :: area_error
 
   end type GweUzeType
@@ -269,19 +268,6 @@ contains
     ! -- Thermal equilibration term
     this%idxbudtheq = this%flowbudptr%nbudterm + 1
   end subroutine find_uze_package
-
-  !> @brief Check to ensure auxiliary areas equal respective cell areas
-  !<
-  subroutine uze_chk_aux_area(this)
-    ! -- dummy
-    class(GweUzeType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: nuz
-    !
-    ! if discrepancy in areas found, report to user
-    nuz = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
-    call this%uzarea_chk(nuz, this%idxbudgwf)
-  end subroutine uze_chk_aux_area
 
   !> @brief Add package connection to matrix.
   !!
@@ -1311,34 +1297,35 @@ contains
     end select
   end subroutine uze_bd_obs
 
-  !> @brief Stop simulation when UZF object area is not equal to the cell area
+  !> @brief Check if UZF object area is not equal to the cell area
   !!
   !! GWE equilibrates the temperature of a UZE object with the host cell. UZE
   !! assumes that the area associated with a specific UZE object is equal to
   !! the area of the host cell. When this condition is not true, the code
   !! exits with an appropriate message.
   !<
-  subroutine uzarea_chk(this, nuz, idxbudgwf)
+  subroutine uze_ad_chk(this)
     ! -- modules
     use ConstantsModule, only: IZERO
     use MathUtilModule, only: is_close
     use SimModule, only: count_errors
     ! -- dummy
-    class(GweUzeType) :: this
-    integer(I4B) :: nuz
-    integer(I4B) :: idxbudgwf
+    class(GweUzeType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: nuz
     integer(I4B) :: n
     integer(I4B) :: igwfnode
     real(DP) :: carea
     real(DP) :: uzarea
 
+    nuz = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+
     ! cycle through uze objects, stop at first occurrence of more than one
     ! uze object in a cell
     do n = 1, nuz
-      igwfnode = this%flowbudptr%budterm(idxbudgwf)%id2(n)
+      igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       carea = this%dis%area(igwfnode)
-      uzarea = this%flowbudptr%budterm(idxbudgwf)%auxvar(1, n)
+      uzarea = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(1, n)
       ! compare areas
       if (.not. is_close(carea, uzarea)) then
         call this%area_error(igwfnode)
@@ -1347,7 +1334,7 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-  end subroutine uzarea_chk
+  end subroutine uze_ad_chk
 
   !> @brief Print and store error msg indicating area of UZF object is not
   !! equal to that of the host cell
