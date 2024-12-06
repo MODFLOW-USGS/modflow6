@@ -44,7 +44,7 @@ Release-time and tracking-time considerations are described (and implemented) se
 
 Each particle is either released into the simulation, or terminates unreleased. In the former case the particle's first record will be reason 0 (release), status 1 (active). In the latter reason 3 (termination), status 8 (permanently unreleased).
 
-At each time step, the PRT model applies the tracking method to each particle. The particle's trajectory is solved over the model grid until the end of the time step, or until the particle terminates, whichever occurs first.
+At each time step, the PRT model applies the tracking method to each particle. The particle's trajectory is solved over the model grid until the end of the time step, or until the particle terminates (due e.g. to stop time or encountering a termination condition), whichever occurs first.
 
 Particles may traverse an arbitrary number of cells in a time step, in the lateral as well as vertical dimensions.
 
@@ -107,7 +107,7 @@ If `DROP` is selected, or if a `DRY_TRACKING_METHOD` is unspecified, a particle 
 
 If `STOP` is selected, dry particles will be terminated.
 
-If `STAY` is selected, a dry particle will remain stationary until a) the cell rewets and tracking can continue or b) the simulation ends.
+If `STAY` is selected, a dry particle will remain stationary until a) the water table rises and tracking can continue or b) the simulation ends.
 
 ```mermaid
 flowchart LR
@@ -130,4 +130,4 @@ flowchart LR
 
 In MF6.5, behavior was as described by `DROP`, with one major exception: lack of an exit face (i.e. any face with outgoing flow) took precedence over cell saturation; a particle finding itself in a dry cell with no outgoing flow would previously terminate, where if `DROP` is selected (or a dry tracking method unspecified) the pass-to-bottom method will now be applied instead.
 
-With this change, it also becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below.
+With this change, it also becomes necessary to prohibit particle backtracking (i.e. re-entering the previous cell) within the same time step, in order to avoid the possibility of infinite loops. For instance, a particle might otherwise be passed endlessly between e.g. the bottom face of a cell containing a pumping well and the top face of the cell below. 
