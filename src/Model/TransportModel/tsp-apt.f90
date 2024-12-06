@@ -136,7 +136,7 @@ module TspAptModule
     procedure :: bnd_reset => apt_reset
     procedure :: bnd_fc => apt_fc
     procedure, public :: apt_fc_expanded ! Made public for uze
-    procedure, public :: apt_chk ! Made public for uze
+    procedure, public :: apt_ad_chk
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
     procedure, public :: apt_cfupdate ! Made public for uze
@@ -478,16 +478,13 @@ contains
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       this%nodelist(n) = igwfnode
     end do
-    !
-    ! -- run package-specific checks
-    call this%apt_chk()
   end subroutine apt_rp
 
-  subroutine apt_chk(this)
+  subroutine apt_ad_chk(this)
     ! -- dummy
     class(TspAptType), intent(inout) :: this
     ! function available for override by packages
-  end subroutine apt_chk
+  end subroutine apt_ad_chk
 
   !> @brief Advanced package transport set stress period routine.
   !!
@@ -695,6 +692,9 @@ contains
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
     call this%obs%obs_ad()
+    !
+    ! -- run package-specific checks
+    call this%apt_ad_chk()
   end subroutine apt_ad
 
   !> @brief Override bnd reset for custom mover logic
