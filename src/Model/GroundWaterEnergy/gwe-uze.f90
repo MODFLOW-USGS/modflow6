@@ -156,13 +156,13 @@ contains
   subroutine find_uze_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GweUzeType) :: this
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip, icount
     integer(I4B) :: nbudterm
-    character(len=LINELENGTH) :: errmsg
     logical :: found
     !
     ! -- Initialize found to false, and error later if flow package cannot
@@ -1349,11 +1349,12 @@ contains
   !! equal to that of the host cell
   !<
   subroutine print_uz_err(this, iloc)
+    ! -- modules
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B) :: iloc
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
     !
     call this%dis%noder_to_string(iloc, nodestr)
