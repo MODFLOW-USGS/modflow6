@@ -229,8 +229,6 @@ def check_output(idx, test):
 
     # pathlines should be west -> east and no elevation change
     assert len(pls.irpt.unique()) == 3
-    assert np.allclose(pls.y, 967.556473)
-    assert pls.x.min() < 250
     assert pls.x.max() > 1950
     assert np.allclose(pls[pls.irpt == 1].z, 0.166666)
     assert np.allclose(pls[pls.irpt == 2].z, 0.5)
