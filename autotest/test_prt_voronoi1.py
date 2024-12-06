@@ -267,9 +267,6 @@ def plot_output(idx, test):
     pmv = flopy.plot.PlotMapView(model=gwf, ax=ax)
     pmv.plot_grid(alpha=0.25)
 
-    if diff:
-        ax.scatter(diff.x, diff.y, c="red")
-
     pmv.plot_ibound(alpha=0.5)
     headmesh = pmv.plot_array(head, alpha=0.25)
     cv = pmv.contour_array(head, levels=np.linspace(0, 1, 9), colors="black")
