@@ -7,8 +7,6 @@ module IdmChfDfnSelectorModule
                                    InputBlockDefinitionType
   use ChfNamInputModule
   use ChfDisv1DInputModule
-  use ChfDis2DInputModule
-  use ChfDisv2DInputModule
   use ChfCxsInputModule
   use ChfDfwInputModule
   use ChfIcInputModule
@@ -56,10 +54,6 @@ contains
       call set_param_pointer(input_definition, chf_nam_param_definitions)
     case ('DISV1D')
       call set_param_pointer(input_definition, chf_disv1d_param_definitions)
-    case ('DIS2D')
-      call set_param_pointer(input_definition, chf_dis2d_param_definitions)
-    case ('DISV2D')
-      call set_param_pointer(input_definition, chf_disv2d_param_definitions)
     case ('CXS')
       call set_param_pointer(input_definition, chf_cxs_param_definitions)
     case ('DFW')
@@ -90,10 +84,6 @@ contains
       call set_param_pointer(input_definition, chf_nam_aggregate_definitions)
     case ('DISV1D')
       call set_param_pointer(input_definition, chf_disv1d_aggregate_definitions)
-    case ('DIS2D')
-      call set_param_pointer(input_definition, chf_dis2d_aggregate_definitions)
-    case ('DISV2D')
-      call set_param_pointer(input_definition, chf_disv2d_aggregate_definitions)
     case ('CXS')
       call set_param_pointer(input_definition, chf_cxs_aggregate_definitions)
     case ('DFW')
@@ -124,10 +114,6 @@ contains
       call set_block_pointer(input_definition, chf_nam_block_definitions)
     case ('DISV1D')
       call set_block_pointer(input_definition, chf_disv1d_block_definitions)
-    case ('DIS2D')
-      call set_block_pointer(input_definition, chf_dis2d_block_definitions)
-    case ('DISV2D')
-      call set_block_pointer(input_definition, chf_disv2d_block_definitions)
     case ('CXS')
       call set_block_pointer(input_definition, chf_cxs_block_definitions)
     case ('DFW')
@@ -157,10 +143,6 @@ contains
       multi_package = chf_nam_multi_package
     case ('DISV1D')
       multi_package = chf_disv1d_multi_package
-    case ('DIS2D')
-      multi_package = chf_dis2d_multi_package
-    case ('DISV2D')
-      multi_package = chf_disv2d_multi_package
     case ('CXS')
       multi_package = chf_cxs_multi_package
     case ('DFW')
@@ -193,10 +175,6 @@ contains
       call set_subpkg_pointer(subpackages, chf_nam_subpackages)
     case ('DISV1D')
       call set_subpkg_pointer(subpackages, chf_disv1d_subpackages)
-    case ('DIS2D')
-      call set_subpkg_pointer(subpackages, chf_dis2d_subpackages)
-    case ('DISV2D')
-      call set_subpkg_pointer(subpackages, chf_disv2d_subpackages)
     case ('CXS')
       call set_subpkg_pointer(subpackages, chf_cxs_subpackages)
     case ('DFW')
@@ -226,10 +204,6 @@ contains
     case ('NAM')
       integrated = .true.
     case ('DISV1D')
-      integrated = .true.
-    case ('DIS2D')
-      integrated = .true.
-    case ('DISV2D')
       integrated = .true.
     case ('CXS')
       integrated = .true.

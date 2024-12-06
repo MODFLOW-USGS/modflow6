@@ -6,10 +6,8 @@ module IdmOlfDfnSelectorModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   use OlfNamInputModule
-  use OlfDisv1DInputModule
   use OlfDis2DInputModule
   use OlfDisv2DInputModule
-  use OlfCxsInputModule
   use OlfDfwInputModule
   use OlfIcInputModule
   use OlfCdbInputModule
@@ -54,14 +52,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, olf_nam_param_definitions)
-    case ('DISV1D')
-      call set_param_pointer(input_definition, olf_disv1d_param_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, olf_dis2d_param_definitions)
     case ('DISV2D')
       call set_param_pointer(input_definition, olf_disv2d_param_definitions)
-    case ('CXS')
-      call set_param_pointer(input_definition, olf_cxs_param_definitions)
     case ('DFW')
       call set_param_pointer(input_definition, olf_dfw_param_definitions)
     case ('IC')
@@ -88,14 +82,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_param_pointer(input_definition, olf_nam_aggregate_definitions)
-    case ('DISV1D')
-      call set_param_pointer(input_definition, olf_disv1d_aggregate_definitions)
     case ('DIS2D')
       call set_param_pointer(input_definition, olf_dis2d_aggregate_definitions)
     case ('DISV2D')
       call set_param_pointer(input_definition, olf_disv2d_aggregate_definitions)
-    case ('CXS')
-      call set_param_pointer(input_definition, olf_cxs_aggregate_definitions)
     case ('DFW')
       call set_param_pointer(input_definition, olf_dfw_aggregate_definitions)
     case ('IC')
@@ -122,14 +112,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_block_pointer(input_definition, olf_nam_block_definitions)
-    case ('DISV1D')
-      call set_block_pointer(input_definition, olf_disv1d_block_definitions)
     case ('DIS2D')
       call set_block_pointer(input_definition, olf_dis2d_block_definitions)
     case ('DISV2D')
       call set_block_pointer(input_definition, olf_disv2d_block_definitions)
-    case ('CXS')
-      call set_block_pointer(input_definition, olf_cxs_block_definitions)
     case ('DFW')
       call set_block_pointer(input_definition, olf_dfw_block_definitions)
     case ('IC')
@@ -155,14 +141,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       multi_package = olf_nam_multi_package
-    case ('DISV1D')
-      multi_package = olf_disv1d_multi_package
     case ('DIS2D')
       multi_package = olf_dis2d_multi_package
     case ('DISV2D')
       multi_package = olf_disv2d_multi_package
-    case ('CXS')
-      multi_package = olf_cxs_multi_package
     case ('DFW')
       multi_package = olf_dfw_multi_package
     case ('IC')
@@ -191,14 +173,10 @@ contains
     select case (subcomponent)
     case ('NAM')
       call set_subpkg_pointer(subpackages, olf_nam_subpackages)
-    case ('DISV1D')
-      call set_subpkg_pointer(subpackages, olf_disv1d_subpackages)
     case ('DIS2D')
       call set_subpkg_pointer(subpackages, olf_dis2d_subpackages)
     case ('DISV2D')
       call set_subpkg_pointer(subpackages, olf_disv2d_subpackages)
-    case ('CXS')
-      call set_subpkg_pointer(subpackages, olf_cxs_subpackages)
     case ('DFW')
       call set_subpkg_pointer(subpackages, olf_dfw_subpackages)
     case ('IC')
@@ -225,13 +203,9 @@ contains
     select case (subcomponent)
     case ('NAM')
       integrated = .true.
-    case ('DISV1D')
-      integrated = .true.
     case ('DIS2D')
       integrated = .true.
     case ('DISV2D')
-      integrated = .true.
-    case ('CXS')
       integrated = .true.
     case ('DFW')
       integrated = .true.
