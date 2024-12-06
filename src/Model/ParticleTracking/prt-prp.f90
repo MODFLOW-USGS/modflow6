@@ -725,7 +725,7 @@ contains
         this%idrymeth = 2
       case default
         write (errmsg, '(a, a)') &
-          'Unknown dry tracking strategy: ', trim(keyword)
+          'Unknown dry tracking method: ', trim(keyword)
         call store_error(errmsg)
         write (errmsg, '(a, a)') &
           'DRY must be "DROP", "STOP" or "STAY"'
