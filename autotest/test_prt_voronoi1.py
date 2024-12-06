@@ -357,12 +357,12 @@ def check_output(idx, test):
 @requires_pkg("syrupy")
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot, plot):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t, array_snapshot),
+        check=lambda t: check_output(idx, t),
         plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
