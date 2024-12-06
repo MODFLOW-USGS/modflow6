@@ -210,6 +210,7 @@ contains
     !
     ! -- Allocate space for idxbudssm, which indicates whether this is a
     !    special budget term or one that is a general source and sink
+    nbudterm = this%flowbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%memoryPath)
     !
     ! -- Process budget terms and identify special budget terms
