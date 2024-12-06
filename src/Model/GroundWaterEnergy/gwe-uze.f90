@@ -84,7 +84,7 @@ module GweUzeModule
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
     procedure, private :: uzarea_chk
-    procedure, private :: print_uz_err
+    procedure, private :: area_error
 
   end type GweUzeType
 
@@ -1322,6 +1322,7 @@ contains
     ! -- modules
     use ConstantsModule, only: IZERO
     use MathUtilModule, only: is_close
+    use SimModule, only: count_errors
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B) :: nuz
@@ -1340,15 +1341,18 @@ contains
       uzarea = this%flowbudptr%budterm(idxbudgwf)%auxvar(1, n)
       ! compare areas
       if (.not. is_close(carea, uzarea)) then
-        call this%print_uz_err(igwfnode)
+        call this%area_error(igwfnode)
       end if
     end do
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
   end subroutine uzarea_chk
 
   !> @brief Print and store error msg indicating area of UZF object is not
   !! equal to that of the host cell
   !<
-  subroutine print_uz_err(this, iloc)
+  subroutine area_error(this, iloc)
     ! -- modules
     use SimVariablesModule, only: errmsg
     ! -- dummy
@@ -1364,8 +1368,7 @@ contains
        trim(adjustl(nodestr)), '. Check use of AUXMULTNAME option in UZF &
       &package.'
     call store_error(errmsg)
-    call this%parser%StoreErrorUnit()
-  end subroutine print_uz_err
+  end subroutine area_error
 
   !> @brief Sets the stress period attributes for keyword use.
   !<
