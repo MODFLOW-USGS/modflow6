@@ -95,7 +95,7 @@ Tracking and termination decisions are made on the basis of information like
 
 A particle which finds itself in an inactive cell will terminate with status code 7. This is consistent with MODPATH 7's behavior.
 
-A particle in a dry-but-active cell, or above the water table in a partially saturated cell, need not terminate. MODFLOW version 6.6.0 introduces a new option `DRY_TRACKING_METHOD` for the PRP package, determining how dry particles should behave. Supported values are:
+A particle in a dry-but-active cell, or above the water table in a partially saturated cell, need not terminate. We call such a particle dry. MODFLOW version 6.6.0 introduces a new option `DRY_TRACKING_METHOD` for the PRP package, determining how dry particles should behave. Supported values are:
 
 - `DROP` (default)
 - `STOP`
