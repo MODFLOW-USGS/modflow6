@@ -244,6 +244,16 @@ def check_output(idx, test):
     prt_track_csv_file = f"{prt_name}.trk.csv"
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
+
+    # extract head, budget, and specific discharge results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+
     assert (gwf_ws / gwf_budget_file).is_file()
     assert (gwf_ws / gwf_head_file).is_file()
     assert (prt_ws / prt_track_file).is_file()
@@ -251,15 +261,9 @@ def check_output(idx, test):
     assert (prt_ws / prp_track_file).is_file()
     assert (prt_ws / prp_track_csv_file).is_file()
 
-    # load mf6 pathline results
-    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-
     # make sure all mf6 pathline data have correct model and PRP index (1)
     assert all_equal(mf6_pls["imdl"], 1)
     assert all_equal(mf6_pls["iprp"], 1)
-
-    # check budget data were written to mf6 prt list file
-    # check_budget_data(ws / f"{name}_prt.lst", perlen, nper)
 
     # check mf6 prt particle track data were written to binary/CSV files
     # and that different formats are equal
@@ -273,39 +277,6 @@ def check_output(idx, test):
             track_csv=track_csv,
         )
 
-    # extract head, budget, and specific discharge results from GWF model
-    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
-    bud = gwf.output.budget()
-    spdis = bud.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
-
-    # setup plot
-    plot_results = False
-    if plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-        ax.set_aspect("equal")
-
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax)
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title=f"MF6 pathlines{' (drape)' if drape else ''}",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax,
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
-
-        # view/save plot
-        plt.show()
-        plt.savefig(gwf_ws / f"test_{simname}.png")
-
     if drape:
         assert mf6_pls.shape[0] == 36
     else:
@@ -315,13 +286,64 @@ def check_output(idx, test):
         assert mf6_pls.istatus.eq(8).all()
 
 
+def plot_output(idx, test):
+    name = test.name
+    gwf_ws = test.workspace
+    prt_ws = test.workspace / "prt"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+    mg = gwf.modelgrid
+    drape = "drp" in name
+
+    # check mf6 output files exist
+    gwf_head_file = f"{gwf_name}.hds"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
+
+    # extract head, budget, and specific discharge results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+
+    # set up plot
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
+    ax.set_aspect("equal")
+
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax)
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title=f"MF6 pathlines{' (drape)' if drape else ''}",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax,
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # view/save plot
+    plt.show()
+    plt.savefig(prt_ws / f"{name}.png")
+
+
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )

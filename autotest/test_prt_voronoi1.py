@@ -24,7 +24,6 @@ from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
 from framework import TestFramework
 from modflow_devtools.markers import requires_pkg
-from modflow_devtools.misc import is_in_ci
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
 
@@ -245,7 +244,24 @@ def build_models(idx, test):
     return gwf_sim, prt_sim
 
 
-def plot_output(name, gwf, head, spdis, pls, fpath):
+def plot_output(idx, test):
+    name = test.name
+    prt_ws = test.workspace / "prt"
+    prt_name = get_model_name(name, "prt")
+    gwfsim = test.sims[0]
+
+    # get gwf output
+    gwf = gwfsim.get_model()
+    head = gwf.output.head().get_data()
+    bdobj = gwf.output.budget()
+    spdis = bdobj.get_data(text="DATA-SPDIS")[0]
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # get prt output
+    prt_track_csv_file = f"{prt_name}.prp.trk.csv"
+    pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+    endpts = pls[pls.ireason == 3]  # termination
+
     # plot in 2d with mpl
     fig = plt.figure(figsize=(16, 10))
     ax = plt.subplot(1, 1, 1, aspect="equal")
@@ -274,7 +290,7 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
             )
         )
     ax.legend(handles=handles, loc="lower right")
-    pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
+    pmv.plot_vector(qx, qy, normalize=True, alpha=0.25)
     if "wel" in name:
         pmv.plot_bc(ftype="WEL")
     mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
@@ -312,40 +328,7 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
         ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
 
     plt.show()
-    plt.savefig(fpath)
-
-    # plot in 3d with pyvista (via vtk)
-    import pyvista as pv
-    from flopy.export.vtk import Vtk
-    from flopy.plot.plotutil import to_mp7_pathlines
-
-    def get_meshes(model, pathlines):
-        vtk = Vtk(model=model, binary=False, smooth=False)
-        vtk.add_model(model)
-        vtk.add_pathline_points(to_mp7_pathlines(pathlines.to_records(index=False)))
-        grid_mesh, path_mesh = vtk.to_pyvista()
-        grid_mesh.rotate_x(-100, point=axes.origin, inplace=True)
-        grid_mesh.rotate_z(90, point=axes.origin, inplace=True)
-        grid_mesh.rotate_y(120, point=axes.origin, inplace=True)
-        path_mesh.rotate_x(-100, point=axes.origin, inplace=True)
-        path_mesh.rotate_z(90, point=axes.origin, inplace=True)
-        path_mesh.rotate_y(120, point=axes.origin, inplace=True)
-        return grid_mesh, path_mesh
-
-    def callback(mesh, value):
-        sub = pls[pls.t <= value]
-        gm, pm = get_meshes(gwf, sub)
-        mesh.shallow_copy(pm)
-
-    pv.set_plot_theme("document")
-    axes = pv.Axes(show_actor=True, actor_scale=2.0, line_width=5)
-    p = pv.Plotter(notebook=False)
-    grid_mesh, path_mesh = get_meshes(gwf, pls)
-    p.add_mesh(grid_mesh, scalars=head[0], cmap="Blues", opacity=0.5)
-    p.add_mesh(path_mesh, label="Time", style="points", color="black")
-    p.camera.zoom(1)
-    p.add_slider_widget(lambda v: callback(path_mesh, v), [0, 30202])
-    p.show()
+    plt.savefig(prt_ws / f"{name}.png")
 
 
 def check_output(idx, test, snapshot):
@@ -369,24 +352,20 @@ def check_output(idx, test, snapshot):
     # compare pathlines with snapshot. particles shouldn't
     # have moved vertically. round for cross-platform error.
     # skip macos-14 in CI because grid is slightly different
-    if not (is_in_ci() and system() == "Darwin" and processor() == "arm"):
+    if not (system() == "Darwin" and processor() == "arm"):
         assert snapshot == endpts.drop("name", axis=1).round(1).to_records(index=False)
-
-    # plot results if enabled
-    plot = False
-    if plot:
-        plot_output(name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png")
 
 
 @requires_pkg("syrupy")
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t, array_snapshot),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )

@@ -262,56 +262,11 @@ def build_models(test):
     return gwf_sim, prt_sim, mp7_sim
 
 
-def plot_output(grid, head, spdis, mf6_pls, mp7_pls, fpath):
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-    for a in ax:
-        a.set_aspect("equal")
-
-    # plot mf6 pathlines in map view
-    pmv = flopy.plot.PlotMapView(modelgrid=grid, ax=ax[0])
-    pmv.plot_grid()
-    pmv.plot_array(head[0], alpha=0.1)
-    pmv.plot_vector(*spdis[:2], normalize=True, color="white")
-    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-        pl.plot(
-            title="MF6 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[0],
-            legend=False,
-            color=cm.plasma(ipl / len(mf6_plines)),
-        )
-
-    # plot mp7 pathlines in map view
-    pmv = flopy.plot.PlotMapView(modelgrid=grid, ax=ax[1])
-    pmv.plot_grid()
-    pmv.plot_array(head[0], alpha=0.1)
-    pmv.plot_vector(*spdis[:2], normalize=True, color="white")
-    mp7_plines = mp7_pls.groupby(["particleid"])
-    for ipl, (pid, pl) in enumerate(mp7_plines):
-        pl.plot(
-            title="MP7 pathlines",
-            kind="line",
-            x="x",
-            y="y",
-            ax=ax[1],
-            legend=False,
-            color=cm.plasma(ipl / len(mp7_plines)),
-        )
-
-    # view/save plot
-    plt.show()
-    plt.savefig(fpath)
-
-
 def check_output(test, snapshot):
     from flopy.plot.plotutil import to_mp7_pathlines
 
     name = test.name
     ws = test.workspace
-
     prt_ws = test.workspace / "prt"
     mp7_ws = test.workspace / "mp7"
     gwf_name = get_model_name(name, "gwf")
@@ -321,35 +276,19 @@ def check_output(test, snapshot):
     gwf = gwf_sim.get_model(gwf_name)
     mg = gwf.modelgrid
 
-    # check mf6 output files exist
     gwf_budget_file = f"{gwf_name}.bud"
     gwf_head_file = f"{gwf_name}.hds"
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
-    assert (ws / gwf_budget_file).is_file()
-    assert (ws / gwf_head_file).is_file()
-    assert (prt_ws / prt_track_file).is_file()
-    assert (prt_ws / prt_track_csv_file).is_file()
-    assert (prt_ws / prp_track_file).is_file()
-    assert (prt_ws / prp_track_csv_file).is_file()
-
-    # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
-    assert (mp7_ws / mp7_pathline_file).is_file()
 
-    # check list file for logged release configuration
-    list_file = prt_ws / f"{prt_name}.lst"
-    assert list_file.is_file()
-    lines = open(list_file).readlines()
-    lines = [l.strip() for l in lines]
-    if "frac" in name:
-        # FRACTION no longer supported
-        return
-    else:
-        li = lines.index("PARTICLE RELEASE FOR PRP 1")
-        assert "RELEASE SCHEDULE:" in lines[li + 1]
+    # load head, budget and intercell flows from gwf model
+    head = gwf.output.head().get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -366,6 +305,27 @@ def check_output(test, snapshot):
 
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+
+    # check output files exist
+    assert (ws / gwf_budget_file).is_file()
+    assert (ws / gwf_head_file).is_file()
+    assert (prt_ws / prt_track_file).is_file()
+    assert (prt_ws / prt_track_csv_file).is_file()
+    assert (prt_ws / prp_track_file).is_file()
+    assert (prt_ws / prp_track_csv_file).is_file()
+    assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # check list file for logged release configuration
+    list_file = prt_ws / f"{prt_name}.lst"
+    assert list_file.is_file()
+    lines = open(list_file).readlines()
+    lines = [l.strip() for l in lines]
+    if "frac" in name:
+        # FRACTION no longer supported
+        return
+    else:
+        li = lines.index("PARTICLE RELEASE FOR PRP 1")
+        assert "RELEASE SCHEDULE:" in lines[li + 1]
 
     # make sure pathline df has "name" (boundname) column and empty values
     assert "name" in mf6_pls
@@ -392,24 +352,6 @@ def check_output(test, snapshot):
             track_bin=prt_ws / prt_track_file,
             track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
-        )
-
-    # load head, budget and intercell flows from gwf model
-    head = gwf.output.head().get_data()
-    bud = gwf.output.budget()
-    spdis = bud.get_data(text="DATA-SPDIS")[0]
-    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
-
-    # plot results if enabled
-    plot = False
-    if plot:
-        plot_output(
-            grid=gwf.modelgrid,
-            head=head,
-            spdis=(qx, qy),
-            mf6_pls=mf6_pls,
-            mp7_pls=mp7_pls,
-            fpath=ws / f"test_{simname}.png",
         )
 
     # compare pathlines with snapshot
@@ -457,14 +399,95 @@ def check_output(test, snapshot):
         assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
+def plot_output(test):
+    name = test.name
+    prt_ws = test.workspace / "prt"
+    mp7_ws = test.workspace / "mp7"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    mp7_name = get_model_name(name, "mp7")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+    mg = gwf.modelgrid
+
+    prt_track_csv_file = f"{prt_name}.trk.csv"
+    mp7_pathline_file = f"{mp7_name}.mppth"
+
+    # load head, budget and intercell flows from gwf model
+    head = gwf.output.head().get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # load mp7 pathline results
+    plf = PathlineFile(mp7_ws / mp7_pathline_file)
+    mp7_pls = pd.DataFrame(
+        plf.get_destination_pathline_data(range(mg.nnodes), to_recarray=True)
+    )
+    # convert zero-based to one-based indexing in mp7 results
+    mp7_pls["particlegroup"] = mp7_pls["particlegroup"] + 1
+    mp7_pls["node"] = mp7_pls["node"] + 1
+    mp7_pls["k"] = mp7_pls["k"] + 1
+
+    # apply reference time to mp7 results (mp7 reports relative times)
+    mp7_pls["time"] = mp7_pls["time"]
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+
+    # set up plot
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
+
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(head[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
+
+    # view/save plot
+    plt.show()
+    plt.savefig(prt_ws / f"{name}.png")
+
+
 @requires_pkg("syrupy")
 @pytest.mark.parametrize("name", cases)
-def test_mf6model(name, function_tmpdir, targets, array_snapshot):
+def test_mf6model(name, function_tmpdir, targets, array_snapshot, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(t),
         check=lambda t: check_output(t, array_snapshot),
+        plot=lambda t: plot_output(t) if plot else None,
         targets=targets,
         compare=None,
         # expect case using FRACTION to fail

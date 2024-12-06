@@ -229,19 +229,20 @@ def check_output(idx, test):
     gwf = gwf_sim.get_model(gwf_name)
     mg = gwf.modelgrid
 
-    # check mf6 output files exist
     gwf_budget_file = f"{gwf_name}.bud"
     gwf_head_file = f"{gwf_name}.hds"
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
-    assert (gwf_ws / gwf_budget_file).is_file()
-    assert (gwf_ws / gwf_head_file).is_file()
-    assert (prt_ws / prt_track_file).is_file()
-    assert (prt_ws / prt_track_csv_file).is_file()
-
-    # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
-    assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # get head, budget, and spdis results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file)
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -253,8 +254,12 @@ def check_output(idx, test):
     mp7_pls["node"] = mp7_pls["node"] + 1
     mp7_pls["k"] = mp7_pls["k"] + 1
 
-    # load mf6 pathline results
-    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file)
+    # check output files exist
+    assert (gwf_ws / gwf_budget_file).is_file()
+    assert (gwf_ws / gwf_head_file).is_file()
+    assert (prt_ws / prt_track_file).is_file()
+    assert (prt_ws / prt_track_csv_file).is_file()
+    assert (mp7_ws / mp7_pathline_file).is_file()
 
     # check budget data were written to mf6 prt list file
     check_budget_data(
@@ -269,101 +274,6 @@ def check_output(idx, test):
         track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
         track_csv=prt_ws / prt_track_csv_file,
     )
-
-    # get head, budget, and spdis results from GWF model
-    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
-    bud = gwf.output.budget()
-    spdis = bud.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
-
-    # setup map view plot
-    plot_results = False
-    if plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-        for a in ax:
-            a.set_aspect("equal")
-
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title="MF6 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[0],
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
-
-        # plot mp7 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mp7_plines = mp7_pls.groupby(["particleid"])
-        for ipl, (pid, pl) in enumerate(mp7_plines):
-            pl.plot(
-                title="MP7 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[1],
-                legend=False,
-                color=cm.plasma(ipl / len(mp7_plines)),
-            )
-
-        def sort_square_verts(verts):
-            """Sort 4 or more points on a square in clockwise order,
-            starting with the top-left point
-            """
-
-            # sort by y coordinate
-            verts.sort(key=lambda v: v[1], reverse=True)
-
-            # separate top and bottom rows
-            y0 = verts[0][1]
-            t = [v for v in verts if v[1] == y0]
-            b = verts[len(t) :]
-
-            # sort top and bottom rows by x coordinate
-            t.sort(key=lambda v: v[0])
-            b.sort(key=lambda v: v[0])
-
-            # return vertices in clockwise order
-            return t + list(reversed(b))
-
-        def plot_stop_zone(nn, ax):
-            ifaces = []
-            iverts = mg.iverts[nn]
-
-            # sort vertices of well cell in clockwise order
-            verts = [tuple(mg.verts[v]) for v in iverts]
-            sorted_verts = sort_square_verts(list(set(verts.copy())))
-            for i in range(len(sorted_verts) - 1):
-                if i == 0:
-                    p0 = sorted_verts[-1]
-                    p1 = sorted_verts[i]
-                    ifaces.append([p0, p1])
-                p0 = sorted_verts[i]
-                p1 = sorted_verts[(i + 1)]
-                ifaces.append([p0, p1])
-
-            lc = LineCollection(ifaces, color="red", lw=4)
-            ax.add_collection(lc)
-
-        # plot stop zones
-        for iz in stopzone_cells:
-            for a in ax:
-                plot_stop_zone(mg.get_node([iz])[0], a)
-
-        # view/save plot
-        plt.show()
-        plt.savefig(gwf_ws / f"test_{name}_map.png")
 
     # check that cell numbers are correct
     for i, row in list(mf6_pls.iterrows()):
@@ -405,13 +315,137 @@ def check_output(idx, test):
     assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
+def plot_output(idx, test):
+    name = test.name
+    gwf_ws = test.workspace
+    prt_ws = test.workspace / "prt"
+    mp7_ws = test.workspace / "mp7"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    mp7_name = get_model_name(name, "mp7")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+    mg = gwf.modelgrid
+
+    gwf_head_file = f"{gwf_name}.hds"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
+    mp7_pathline_file = f"{mp7_name}.mppth"
+
+    # get head, budget, and spdis results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file)
+
+    # load mp7 pathline results
+    plf = PathlineFile(mp7_ws / mp7_pathline_file)
+    mp7_pls = pd.DataFrame(
+        plf.get_destination_pathline_data(range(mg.nnodes), to_recarray=True)
+    )
+    # convert zero-based to one-based
+    mp7_pls["particlegroup"] = mp7_pls["particlegroup"] + 1
+    mp7_pls["node"] = mp7_pls["node"] + 1
+    mp7_pls["k"] = mp7_pls["k"] + 1
+
+    # set up plot
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
+
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
+
+    def sort_square_verts(verts):
+        """Sort 4 or more points on a square in clockwise order,
+        starting with the top-left point
+        """
+
+        # sort by y coordinate
+        verts.sort(key=lambda v: v[1], reverse=True)
+
+        # separate top and bottom rows
+        y0 = verts[0][1]
+        t = [v for v in verts if v[1] == y0]
+        b = verts[len(t) :]
+
+        # sort top and bottom rows by x coordinate
+        t.sort(key=lambda v: v[0])
+        b.sort(key=lambda v: v[0])
+
+        # return vertices in clockwise order
+        return t + list(reversed(b))
+
+    def plot_stop_zone(nn, ax):
+        ifaces = []
+        iverts = mg.iverts[nn]
+
+        # sort vertices of well cell in clockwise order
+        verts = [tuple(mg.verts[v]) for v in iverts]
+        sorted_verts = sort_square_verts(list(set(verts.copy())))
+        for i in range(len(sorted_verts) - 1):
+            if i == 0:
+                p0 = sorted_verts[-1]
+                p1 = sorted_verts[i]
+                ifaces.append([p0, p1])
+            p0 = sorted_verts[i]
+            p1 = sorted_verts[(i + 1)]
+            ifaces.append([p0, p1])
+
+        lc = LineCollection(ifaces, color="red", lw=4)
+        ax.add_collection(lc)
+
+    # plot stop zones
+    for iz in stopzone_cells:
+        for a in ax:
+            plot_stop_zone(mg.get_node([iz])[0], a)
+
+    # view/save plot
+    plt.show()
+    plt.savefig(prt_ws / f"{name}.png")
+
+
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )
