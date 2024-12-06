@@ -1,0 +1,6 @@
+BEGIN options
+END options
+
+BEGIN griddata
+  strt NETCDF
+END griddata

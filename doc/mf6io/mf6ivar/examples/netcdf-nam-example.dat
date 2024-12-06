@@ -1,0 +1,11 @@
+BEGIN options
+  EXPORT_NETCDF MESH
+  NETCDF FILEIN gwf.in.nc
+END options
+
+BEGIN packages
+  DISV6  gwf.disv  disv
+  IC6  gwf.ic  ic
+  NPF6  gwf.npf  npf
+  CHD6  gwf.chd  chd_0
+END packages

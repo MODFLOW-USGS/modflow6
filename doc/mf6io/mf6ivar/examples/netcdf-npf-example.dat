@@ -1,0 +1,7 @@
+BEGIN options
+END options
+
+BEGIN griddata
+  icelltype  NETCDF
+  k  NETCDF
+END griddata
