@@ -1,4 +1,4 @@
-# --------------------- swf flw options ---------------------
+# --------------------- chf flw options ---------------------
 # flopy multi-package
 
 block options
@@ -127,7 +127,7 @@ optional false
 longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'inflow'}
 
-# --------------------- swf flw dimensions ---------------------
+# --------------------- chf flw dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -138,7 +138,7 @@ longname maximum number of inflow
 description REPLACE maxbound {'{#1}': 'inflow'}
 
 
-# --------------------- swf flw period ---------------------
+# --------------------- chf flw period ---------------------
 
 block period
 name iper

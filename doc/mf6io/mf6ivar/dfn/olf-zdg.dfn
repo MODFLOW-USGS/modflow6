@@ -1,4 +1,4 @@
-# --------------------- swf zdg options ---------------------
+# --------------------- olf zdg options ---------------------
 # flopy multi-package
 
 block options
@@ -122,7 +122,7 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'Zero-Depth-Gradient Boundary'}
 
 
-# --------------------- swf zdg dimensions ---------------------
+# --------------------- olf zdg dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -133,7 +133,7 @@ longname maximum number of zero-depth-gradient boundaries
 description REPLACE maxbound {'{#1}': 'zero-depth-gradient boundary'}
 
 
-# --------------------- swf zdg period ---------------------
+# --------------------- olf zdg period ---------------------
 
 block period
 name iper

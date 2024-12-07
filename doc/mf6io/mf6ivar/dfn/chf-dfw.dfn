@@ -1,4 +1,4 @@
-# --------------------- swf dfw options ---------------------
+# --------------------- chf dfw options ---------------------
 
 block options
 name central_in_space
@@ -117,7 +117,7 @@ longname use SWR conductance formulation
 description use the conductance formulation in the Surface Water Routing (SWR) Process for MODFLOW-2005.
 mf6internal iswrcond
 
-# --------------------- swf dfw griddata ---------------------
+# --------------------- chf dfw griddata ---------------------
 
 block griddata
 name manningsn

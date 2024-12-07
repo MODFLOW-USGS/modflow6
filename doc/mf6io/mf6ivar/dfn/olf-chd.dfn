@@ -1,4 +1,4 @@
-# --------------------- swf chd options ---------------------
+# --------------------- olf chd options ---------------------
 # flopy multi-package
 
 block options
@@ -128,7 +128,7 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'constant-head'}
 
 
-# --------------------- swf chd dimensions ---------------------
+# --------------------- olf chd dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -139,7 +139,7 @@ longname maximum number of constant heads
 description REPLACE maxbound {'{#1}': 'constant-head'}
 
 
-# --------------------- swf chd period ---------------------
+# --------------------- olf chd period ---------------------
 
 block period
 name iper

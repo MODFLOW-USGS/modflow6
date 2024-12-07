@@ -1,4 +1,4 @@
-# --------------------- swf cdb options ---------------------
+# --------------------- olf cdb options ---------------------
 # flopy multi-package
 
 block options
@@ -90,7 +90,7 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'Zero-Depth-Gradient Boundary'}
 
 
-# --------------------- swf cdb dimensions ---------------------
+# --------------------- olf cdb dimensions ---------------------
 
 block dimensions
 name maxbound
@@ -101,7 +101,7 @@ longname maximum number of critical depth boundaries
 description REPLACE maxbound {'{#1}': 'critical depth boundary'}
 
 
-# --------------------- swf cdb period ---------------------
+# --------------------- olf cdb period ---------------------
 
 block period
 name iper

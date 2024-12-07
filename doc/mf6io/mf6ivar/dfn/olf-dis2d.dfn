@@ -1,4 +1,4 @@
-# --------------------- swf dis2d options ---------------------
+# --------------------- olf dis2d options ---------------------
 
 block options
 name length_units
@@ -49,7 +49,7 @@ mf6internal export_ascii
 longname export array variables to layered ascii files.
 description keyword that specifies input griddata arrays should be written to layered ascii output files.
 
-# --------------------- swf dis2d dimensions ---------------------
+# --------------------- olf dis2d dimensions ---------------------
 
 block dimensions
 name nrow
@@ -69,7 +69,7 @@ longname number of columns
 description is the number of columns in the model grid.
 default_value 2
 
-# --------------------- swf dis2d griddata ---------------------
+# --------------------- olf dis2d griddata ---------------------
 
 block griddata
 name delr
