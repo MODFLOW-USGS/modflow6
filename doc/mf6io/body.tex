@@ -56,14 +56,18 @@
 \input{prt/prt.tex}
 
 %CHF Model Input Instructions
+\IfFileExists{develop.version}{
 \newpage
 \SECTION{Channel Flow (CHF) Model Input}
 \input{chf/chf.tex}
+}{}
 
 %OLF Model Input Instructions
+\IfFileExists{develop.version}{
 \newpage
 \SECTION{Overland Flow (OLF) Model Input}
 \input{olf/olf.tex}
+}{}
 
 %Sparse Matrix Solution (IMS)
 \newpage
