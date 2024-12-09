@@ -279,7 +279,6 @@ def block_entry(varname, block, vardict, prefix="  "):
         elif v["type"] != "keyword":
             s = f"{s} <{vtmp}>"
 
-
     # if optional, wrap string in square brackets
     if "optional" in v:
         if v["optional"] == "true":
