@@ -229,6 +229,9 @@ def block_entry(varname, block, vardict, prefix="  "):
     if "extended" in v:
         if v["extended"] == "true":
             extmarker = "$"
+    if "netcdf" in v:
+        if v["netcdf"] == "true":
+            extmarker = "$"
 
     # check valid type
     vtype = v["type"]
@@ -250,7 +253,7 @@ def block_entry(varname, block, vardict, prefix="  "):
             s = s.strip()
             s = f"{s}\n{prefix}{s}\n{prefix}..."
 
-    # layered
+    # layered and netcdf
     elif v["reader"] in ["readarray", "u1ddbl", "u2ddbl", "u1dint"]:
         shape = v["shape"]
         reader = v["reader"].upper()
@@ -258,6 +261,9 @@ def block_entry(varname, block, vardict, prefix="  "):
         if "layered" in v:
             if v["layered"] == "true":
                 layered = " [LAYERED]"
+        if "netcdf" in v:
+            if v["netcdf"] == "true":
+                layered = layered + f" {extmarker}[NETCDF]{extmarker}"
         s = f"{s}{layered}\n{prefix}{prefix}<{varname}{shape}> -- {reader}"
 
     # timeseries, extended color annotation

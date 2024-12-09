@@ -116,6 +116,7 @@ shape (nodes)
 valid
 reader readarray
 layered true
+netcdf true
 optional false
 longname convertible indicator
 description is a flag for each cell that specifies whether or not a cell is convertible for the storage calculation. 0 indicates confined storage is used. $>$0 indicates confined storage is used when head is above cell top and a mixed formulation of unconfined and confined storage is used when head is below cell top.
@@ -128,6 +129,7 @@ shape (nodes)
 valid
 reader readarray
 layered true
+netcdf true
 optional false
 longname specific storage
 description is specific storage (or the storage coefficient if STORAGECOEFFICIENT is specified as an option). Specific storage values must be greater than or equal to 0. If the CSUB Package is included in the GWF model, specific storage must be zero for every cell.
@@ -140,6 +142,7 @@ shape (nodes)
 valid
 reader readarray
 layered true
+netcdf true
 optional false
 longname specific yield
 description is specific yield. Specific yield values must be greater than or equal to 0. Specific yield does not have to be specified if there are no convertible cells (ICONVERT=0 in every cell).
