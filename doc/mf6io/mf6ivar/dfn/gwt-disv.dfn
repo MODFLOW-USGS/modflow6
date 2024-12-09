@@ -58,6 +58,7 @@ optional true
 mf6internal export_nc
 longname export array variables to netcdf output files.
 description keyword that specifies input griddata arrays should be written to the model output netcdf file.
+extended true
 
 block options
 name ncf_filerecord
@@ -77,6 +78,7 @@ tagged true
 optional false
 longname ncf keyword
 description keyword to specify that record corresponds to a netcdf configuration (NCF) file.
+extended true
 
 block options
 name filein
@@ -98,6 +100,7 @@ optional false
 tagged false
 longname file name of NCF information
 description defines a netcdf configuration (NCF) input file.
+extended true
 
 # --------------------- gwt disv dimensions ---------------------
 
