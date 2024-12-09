@@ -1,4 +1,4 @@
-# --------------------- swf nam options ---------------------
+# --------------------- chf nam options ---------------------
 
 block options
 name list
@@ -7,7 +7,7 @@ reader urword
 optional true
 preserve_case true
 longname name of listing file
-description is name of the listing file to create for this SWF model.  If not specified, then the name of the list file will be the basename of the SWF model name file and the '.lst' extension.  For example, if the SWF name file is called ``my.model.nam'' then the list file will be called ``my.model.lst''.
+description is name of the listing file to create for this CHF model.  If not specified, then the name of the list file will be the basename of the CHF model name file and the '.lst' extension.  For example, if the CHF name file is called ``my.model.nam'' then the list file will be called ``my.model.lst''.
 
 block options
 name print_input
@@ -58,7 +58,7 @@ optional true
 longname keyword to activate Newton-Raphson UNDER_RELAXATION option
 description keyword that indicates whether the surface water stage in a reach will be under-relaxed when water levels fall below the bottom of the model below any given cell. By default, Newton-Raphson UNDER\_RELAXATION is not applied.
 
-# --------------------- swf nam packages ---------------------
+# --------------------- chf nam packages ---------------------
 
 block packages
 name packages
@@ -75,7 +75,7 @@ type string
 tagged false
 reader urword
 longname package type
-description is the file type, which must be one of the following character values shown in table~\ref{table:ftype-swf}. Ftype may be entered in any combination of uppercase and lowercase.
+description is the file type, which must be one of the following character values shown in table~\ref{table:ftype-chf}. Ftype may be entered in any combination of uppercase and lowercase.
 
 block packages
 name fname
@@ -95,5 +95,5 @@ tagged false
 reader urword
 optional true
 longname user name for package
-description is the user-defined name for the package. PNAME is restricted to 16 characters.  No spaces are allowed in PNAME.  PNAME character values are read and stored by the program for stress packages only.  These names may be useful for labeling purposes when multiple stress packages of the same type are located within a single SWF Model.  If PNAME is specified for a stress package, then PNAME will be used in the flow budget table in the listing file; it will also be used for the text entry in the cell-by-cell budget file.  PNAME is case insensitive and is stored in all upper case letters.
+description is the user-defined name for the package. PNAME is restricted to 16 characters.  No spaces are allowed in PNAME.  PNAME character values are read and stored by the program for stress packages only.  These names may be useful for labeling purposes when multiple stress packages of the same type are located within a single CHF Model.  If PNAME is specified for a stress package, then PNAME will be used in the flow budget table in the listing file; it will also be used for the text entry in the cell-by-cell budget file.  PNAME is case insensitive and is stored in all upper case letters.
 

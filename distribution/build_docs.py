@@ -54,7 +54,7 @@ TEX_PATHS = {
 
 # models to include in the docs by default,
 # filterable with the --models (-m) option
-DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "chf", "olf"]
 
 # OS-specific extensions
 SYSTEM = platform.system()

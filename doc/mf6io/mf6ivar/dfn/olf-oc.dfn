@@ -1,4 +1,4 @@
-# --------------------- swf oc options ---------------------
+# --------------------- olf oc options ---------------------
 
 block options
 name budget_filerecord
@@ -218,7 +218,7 @@ optional false
 longname write format
 description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
 
-# --------------------- swf oc period ---------------------
+# --------------------- olf oc period ---------------------
 
 block period
 name iper

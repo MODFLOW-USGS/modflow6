@@ -1,4 +1,4 @@
-# --------------------- swf disv2d options ---------------------
+# --------------------- olf disv2d options ---------------------
 
 block options
 name length_units
@@ -49,7 +49,7 @@ mf6internal export_ascii
 longname export array variables to layered ascii files.
 description keyword that specifies input griddata arrays should be written to layered ascii output files.
 
-# --------------------- swf disv2d dimensions ---------------------
+# --------------------- olf disv2d dimensions ---------------------
 
 block dimensions
 name nodes
@@ -67,7 +67,7 @@ optional false
 longname number of columns
 description is the total number of (x, y) vertex pairs used to characterize the horizontal configuration of the model grid.
 
-# --------------------- swf disv2d griddata ---------------------
+# --------------------- olf disv2d griddata ---------------------
 
 block griddata
 name bottom
@@ -88,7 +88,7 @@ optional true
 longname idomain existence array
 description is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1 or greater, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell.
 
-# --------------------- swf disv2d vertices ---------------------
+# --------------------- olf disv2d vertices ---------------------
 
 block vertices
 name vertices
@@ -131,7 +131,7 @@ longname y-coordinate for vertex
 description is the y-coordinate for the vertex.
 
 
-# --------------------- swf disv cell2d ---------------------
+# --------------------- olf disv cell2d ---------------------
 
 block cell2d
 name cell2d
