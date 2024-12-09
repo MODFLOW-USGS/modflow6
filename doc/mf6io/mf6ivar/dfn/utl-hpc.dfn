@@ -3,6 +3,14 @@
 # flopy parent_name_type parent_package MFSimulation
 
 block options
+name print_input
+type keyword
+reader urword
+optional true
+longname model print input to listing file
+description keyword to indicate that the input will be printed.
+
+block options
 name dev_log_mpi
 type keyword
 reader urword
