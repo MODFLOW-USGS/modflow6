@@ -49,6 +49,7 @@
 		\item When the SQUARE\_GWET option was invoked in the UZF options block, evapotranspiration from the water table (GWET) was calculated incorrectly.  Instead of acting as a sink, the calculated evapotranspiration flux was added as a source of water.  The applied fix ensures that groundwater evapotranspiration is removed from the water table and as a result the GWET values are accumulated as outflows in the budget table.
 		\item The number of characters used to represent integers and floating point numbers in MODFLOW input files was restricted to 30.  The program was modified to accept any number of characters provided the number is valid.  This may be useful for parameter estimation programs that use character substitution to create new input files.
 		\item A string to character array conversion function in the BMI interface could fail on Apple silicon macOS with recent versions of GNU Fortran, producing array extent errors at runtime. This has been fixed by properly specifying the intent of a dummy argument in the relevant function.
+		\item The UZF Package will facilitate UZF objects with areas less than the area of the host cell.  However, within the GWE model type, the UZE package will not work properly when the area of UZF objects is not equal to the area of the host cell.  New code was added to ensure that the area of each UZF object is equal to that of the host grid cell.  When this condition is not satisfied, the new code will stop the simulation with an error message indicating which cell is in violation.
 	%	\item xxx
 
 	\end{itemize}

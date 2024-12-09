@@ -79,9 +79,11 @@ module GweUzeModule
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
     procedure :: pak_set_stressperiod => uze_set_stressperiod
+    procedure :: apt_ad_chk => uze_ad_chk
     procedure :: bnd_ac => uze_ac
     procedure :: bnd_mc => uze_mc
     procedure :: get_mvr_depvar
+    procedure, private :: area_error
 
   end type GweUzeType
 
@@ -153,10 +155,10 @@ contains
   subroutine find_uze_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GweUzeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
     integer(I4B) :: ip, icount
     integer(I4B) :: nbudterm
@@ -171,7 +173,9 @@ contains
     !    budobj
     if (this%fmi%flows_from_file) then
       call this%fmi%set_aptbudobj_pointer(this%flowpackagename, this%flowbudptr)
-      if (associated(this%flowbudptr)) found = .true.
+      if (associated(this%flowbudptr)) then
+        found = .true.
+      end if
       !
     else
       if (associated(this%fmi%gwfbndlist)) then
@@ -1292,6 +1296,66 @@ contains
       found = .false.
     end select
   end subroutine uze_bd_obs
+
+  !> @brief Check if UZF object area is not equal to the cell area
+  !!
+  !! GWE equilibrates the temperature of a UZE object with the host cell. UZE
+  !! assumes that the area associated with a specific UZE object is equal to
+  !! the area of the host cell. When this condition is not true, the code
+  !! exits with an appropriate message.
+  !<
+  subroutine uze_ad_chk(this)
+    ! -- modules
+    use ConstantsModule, only: IZERO
+    use MathUtilModule, only: is_close
+    use SimModule, only: count_errors
+    ! -- dummy
+    class(GweUzeType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: nuz
+    integer(I4B) :: n
+    integer(I4B) :: igwfnode
+    real(DP) :: carea
+    real(DP) :: uzarea
+
+    nuz = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+
+    ! cycle through uze objects, stop at first occurrence of more than one
+    ! uze object in a cell
+    do n = 1, nuz
+      igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
+      carea = this%dis%area(igwfnode)
+      uzarea = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(1, n)
+      ! compare areas
+      if (.not. is_close(carea, uzarea)) then
+        call this%area_error(igwfnode)
+      end if
+    end do
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+  end subroutine uze_ad_chk
+
+  !> @brief Print and store error msg indicating area of UZF object is not
+  !! equal to that of the host cell
+  !<
+  subroutine area_error(this, iloc)
+    ! -- modules
+    use SimVariablesModule, only: errmsg
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B) :: iloc
+    ! -- local
+    character(len=30) :: nodestr
+    !
+    call this%dis%noder_to_string(iloc, nodestr)
+    write (errmsg, '(3a)') &
+      'In a GWE model, the area of every UZF object must be equal to that of &
+      &the host cell. This condition is violated in cell ', &
+       trim(adjustl(nodestr)), '. Check use of AUXMULTNAME option in UZF &
+      &package.'
+    call store_error(errmsg)
+  end subroutine area_error
 
   !> @brief Sets the stress period attributes for keyword use.
   !<

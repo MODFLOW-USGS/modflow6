@@ -2032,7 +2032,7 @@ contains
     end do
     !
     ! -- do an initial evaluation of the sum of uzfarea relative to the
-    !    GWF cell area in the case that there is more than one UZF cell
+    !    GWF cell area in the case that there is more than one UZF object
     !    in a GWF cell and a auxmult value is not being applied to the
     !    calculate the UZF cell area from the GWF cell area.
     if (this%imaxcellcnt > 1 .and. this%iauxmultcol < 1) then
@@ -2798,7 +2798,8 @@ contains
     q = DZERO
     do n = 1, this%nodes
       n2 = this%igwfnode(n)
-      call this%budobj%budterm(idx)%update_term(n, n2, q)
+      this%qauxcbc(1) = this%uzfobj%uzfarea(n)
+      call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
     end do
     !
     ! --
