@@ -1,6 +1,7 @@
 module DistributedSimModule
   use KindModule, only: I4B, LGP
-  use SimVariablesModule, only: idm_context, nr_procs, proc_id, errmsg, warnmsg
+  use SimVariablesModule, only: idm_context, simulation_mode, nr_procs, proc_id, &
+                                errmsg, warnmsg
   use ConstantsModule, only: LENMEMPATH, LENMODELNAME, LINELENGTH, LENPACKAGETYPE
   use ArrayHandlersModule, only: ifind
   use CharacterStringModule, only: CharacterStringType
@@ -124,12 +125,14 @@ contains
   !> @brief Get the model load balance for the simulation
   !<
   function get_load_balance(this) result(mranks)
+    use SimVariablesModule, only: iout
     use UtlHpcInputModule, only: UtlHpcParamFoundType
     class(DistributedSimType) :: this !< this distributed sim instance
     integer(I4B), dimension(:), pointer :: mranks !< the load balance: array of ranks per model id
     ! local
     integer(I4B) :: isize
-    character(len=LENMEMPATH) :: hpc_mempath
+    logical(LGP) :: hpc6_present, partitions_present
+    character(len=LENMEMPATH) :: simnam_mempath, hpc_mempath
     type(UtlHpcParamFoundType) :: found
 
     ! if load balance available, return here:
@@ -141,45 +144,56 @@ contains
     call mem_allocate(this%model_ranks, this%nr_models, 'MODELRANKS', &
                       this%memory_path)
 
-    ! check if exists (partitions block is optional in HPC file)
-    hpc_mempath = create_mem_path('UTL', 'HPC', idm_context)
-    call get_isize('MNAME', hpc_mempath, isize)
+    ! check for optional HPC file
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call get_isize('HPC6_FILENAME', simnam_mempath, isize)
+    hpc6_present = isize > 0
 
-    ! optional print input flag
-    call mem_set_value(this%print_ptable, 'PRINT_TABLE', hpc_mempath, &
-                       found%print_table)
-
-    if (isize > 0) then
-      ! HPC file present
-      if (nr_procs == 1) then
+    ! handle serial case
+    if (simulation_mode == 'SEQUENTIAL') then
+      if (hpc6_present) then
         write (warnmsg, *) "Ignoring PARTITIONS block in HPC file when "// &
           "running a serial process"
         call store_warning(warnmsg)
+      end if
 
-        ! single process, everything on cpu 0:
-        this%model_ranks = 0
-      else
-        ! set balance from HPC file
-        call this%set_load_balance_from_input()
-        ! check if valid configuration
-        call this%validate_load_balance()
-        ! print to listing file
-        if (this%print_ptable) then
-          call this%print_load_balance()
-        end if
-      end if
+      ! single process, everything on cpu 0:
+      this%model_ranks = 0
+      mranks => this%model_ranks
+      return
+    end if
+
+    ! continue for PARALLEL mode only:
+    write (iout, '(/1x,a)') 'PROCESSING HPC DATA'
+
+    hpc_mempath = create_mem_path('UTL', 'HPC', idm_context)
+    ! source optional print input flag
+    call mem_set_value(this%print_ptable, 'PRINT_TABLE', hpc_mempath, &
+                       found%print_table)
+    ! check if optional partition block exists
+    call get_isize('MNAME', hpc_mempath, isize)
+    partitions_present = isize > 0
+
+    ! fill model ranks (i.e. the load balance)
+    if (partitions_present) then
+      ! set balance from HPC file
+      call this%set_load_balance_from_input()
+      call this%validate_load_balance()
+      write (iout, '(1x,a)') 'Read partition data from HPC file'
     else
-      ! no HPC file present
-      if (nr_procs == 1) then
-        ! single process, everything on cpu 0:
-        this%model_ranks = 0
-      else
-        ! set balance from default algorithm
-        call this%set_load_balance_default()
-      end if
+      ! no HPC file present, set balance with default algorithm
+      call this%set_load_balance_default()
+      write (iout, '(1x,a)') 'Generate default partition data'
     end if
 
     mranks => this%model_ranks
+
+    ! print to listing file
+    if (this%print_ptable) then
+      call this%print_load_balance()
+    end if
+
+    write (iout, '(1x,a)') 'END OF HPC DATA'
 
   end function get_load_balance
 

@@ -118,7 +118,7 @@ module UtlHpcInputModule
     'RECARRAY MNAME MRANK', & ! type
     '', & ! shape
     'list of partition numbers', & ! longname
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -142,7 +142,7 @@ module UtlHpcInputModule
     ), &
     InputBlockDefinitionType( &
     'PARTITIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .true., & ! aggregate
     .false. & ! block_variable
     ) &
