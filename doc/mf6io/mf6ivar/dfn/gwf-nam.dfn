@@ -75,7 +75,7 @@ reader urword
 tagged true
 optional true
 longname
-description netcdf config filerecord
+description netcdf filerecord
 
 block options
 name netcdf

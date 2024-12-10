@@ -1,6 +1,7 @@
+# GWF Model input name file
 BEGIN options
-  EXPORT_NETCDF MESH
-  NETCDF FILEIN gwf.in.nc
+  EXPORT_NETCDF MESH # configure mesh type model NetCDF timeseries export
+  NETCDF FILEIN gwf.in.nc # configure model NetCDF griddata input file
 END options
 
 BEGIN packages
