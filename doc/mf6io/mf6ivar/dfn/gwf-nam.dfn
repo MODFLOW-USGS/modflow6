@@ -65,7 +65,7 @@ reader urword
 optional true
 mf6internal export_netcdf
 longname export model output netcdf file.
-description keyword that specifies timeseries data for the dependent variable should be written to a model output netcdf file.  No value or ``UGRID'' (ugrid based export) values are supported.
+description keyword that specifies timeseries data for the dependent variable should be written to a model output netcdf file.  ``STRUCTURED'' or ``MESH'' (ugrid based export) values are supported.
 extended true
 
 block options

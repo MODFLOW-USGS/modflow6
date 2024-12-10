@@ -279,7 +279,7 @@ def block_entry(varname, block, vardict, prefix="  "):
                 if "shape" in v:
                     shape = v["shape"]
                     vtmp += shape
-                s = f"{s} <{extmarker}{vtmp}{extmarker}>"
+                s = f"{extmarker}{s}{extmarker} <{extmarker}{vtmp}{extmarker}>"
             else:
                 s = f"{extmarker}{s}{extmarker}"
         elif v["type"] != "keyword":
