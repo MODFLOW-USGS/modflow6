@@ -12,7 +12,7 @@ module UtlHpcInputModule
   public utl_hpc_subpackages
 
   type UtlHpcParamFoundType
-    logical :: print_input = .false.
+    logical :: print_table = .false.
     logical :: dev_log_mpi = .false.
     logical :: mname = .false.
     logical :: mrank = .false.
@@ -27,16 +27,16 @@ module UtlHpcInputModule
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    utlhpc_print_input = InputParamDefinitionType &
+    utlhpc_print_table = InputParamDefinitionType &
     ( &
     'UTL', & ! component
     'HPC', & ! subcomponent
     'OPTIONS', & ! block
-    'PRINT_INPUT', & ! tag name
-    'PRINT_INPUT', & ! fortran variable
+    'PRINT_TABLE', & ! tag name
+    'PRINT_TABLE', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
-    'model print input to listing file', & ! longname
+    'model print table to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -101,7 +101,7 @@ module UtlHpcInputModule
   type(InputParamDefinitionType), parameter :: &
     utl_hpc_param_definitions(*) = &
     [ &
-    utlhpc_print_input, &
+    utlhpc_print_table, &
     utlhpc_dev_log_mpi, &
     utlhpc_mname, &
     utlhpc_mrank &

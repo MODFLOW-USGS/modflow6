@@ -83,7 +83,7 @@ def get_simulation(idx, ws):
     highest_rank = rnk
     partitions = [(n, highest_rank - r) for n, r in partitions]
 
-    hpc = flopy.mf6.ModflowUtlhpc(sim, partitions=partitions)
+    hpc = flopy.mf6.ModflowUtlhpc(sim, print_table=True, partitions=partitions)
 
     tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 

@@ -8,6 +8,7 @@ module DistributedSimModule
                        store_warning
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_setptr, &
                                  mem_print_detailed, get_isize
+  use MemoryManagerExtModule, only: mem_set_value
   use MemoryHelperModule, only: create_mem_path
 
   implicit none
@@ -21,6 +22,7 @@ module DistributedSimModule
     integer(I4B), pointer :: nr_models !< the total (global) number of models, equals the length of the model block in mfsim.nam
     integer(I4B), dimension(:), pointer, contiguous :: load_mask => null() !< mask for loading models and exchanges, 1 when active on this processor, else 0
     integer(I4B), dimension(:), pointer, contiguous :: model_ranks => null() !< load balance: model rank (0,...,nr_procs-1) per global model id (array index)
+    logical(LGP), pointer :: print_ptable !< when true, the partition table is printed to file
   contains
     procedure :: create
     procedure :: get_load_mask
@@ -31,6 +33,7 @@ module DistributedSimModule
     procedure, private :: set_load_balance_from_input
     procedure, private :: set_load_balance_default
     procedure, private :: validate_load_balance
+    procedure, private :: print_load_balance
   end type
 
   ! singleton, private member
@@ -66,6 +69,9 @@ contains
 
     call mem_allocate(this%nr_models, 'NUMMODELS', this%memory_path)
     this%nr_models = nmod
+
+    call mem_allocate(this%print_ptable, 'PRINT_PTABLE', this%memory_path)
+    this%print_ptable = .false.
 
   end subroutine create
 
@@ -118,11 +124,13 @@ contains
   !> @brief Get the model load balance for the simulation
   !<
   function get_load_balance(this) result(mranks)
+    use UtlHpcInputModule, only: UtlHpcParamFoundType
     class(DistributedSimType) :: this !< this distributed sim instance
     integer(I4B), dimension(:), pointer :: mranks !< the load balance: array of ranks per model id
     ! local
     integer(I4B) :: isize
     character(len=LENMEMPATH) :: hpc_mempath
+    type(UtlHpcParamFoundType) :: found
 
     ! if load balance available, return here:
     if (associated(this%model_ranks)) then
@@ -136,6 +144,10 @@ contains
     ! check if exists (partitions block is optional in HPC file)
     hpc_mempath = create_mem_path('UTL', 'HPC', idm_context)
     call get_isize('MNAME', hpc_mempath, isize)
+
+    ! optional print input flag
+    call mem_set_value(this%print_ptable, 'PRINT_TABLE', hpc_mempath, &
+                       found%print_table)
 
     if (isize > 0) then
       ! HPC file present
@@ -151,6 +163,10 @@ contains
         call this%set_load_balance_from_input()
         ! check if valid configuration
         call this%validate_load_balance()
+        ! print to listing file
+        if (this%print_ptable) then
+          call this%print_load_balance()
+        end if
       end if
     else
       ! no HPC file present
@@ -390,6 +406,7 @@ contains
   !<
   subroutine validate_load_balance(this)
     class(DistributedSimType) :: this
+    ! local
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mtypes !< model types
@@ -450,15 +467,75 @@ contains
 
   end subroutine validate_load_balance
 
+  !> @brief Print the load balance table to the listing file
+  !<
+  subroutine print_load_balance(this)
+    use TableModule, only: TableType, table_cr
+    use ConstantsModule, only: TABLEFT, TABCENTER
+    use SimVariablesModule, only: iout, proc_id
+    class(DistributedSimType) :: this
+    ! local
+    type(TableType), pointer :: inputtab => null()
+    character(len=LINELENGTH) :: tag, term
+    character(len=LENMEMPATH) :: input_mempath
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    integer(I4B) :: im, nr_models
+
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mnames, 'MNAME', input_mempath)
+
+    ! setup table
+    nr_models = size(mnames)
+    call table_cr(inputtab, 'HPC', 'HPC PARTITION DATA')
+    call inputtab%table_df(nr_models, 5, iout)
+
+    ! add columns
+    tag = 'ID'
+    call inputtab%initialize_column(tag, 8, alignment=TABLEFT)
+    tag = 'NAME'
+    call inputtab%initialize_column(tag, LENMODELNAME + 4, alignment=TABLEFT)
+    tag = 'TYPE'
+    call inputtab%initialize_column(tag, 8, alignment=TABLEFT)
+    tag = 'RANK'
+    call inputtab%initialize_column(tag, 8, alignment=TABLEFT)
+    tag = 'LOCAL'
+    call inputtab%initialize_column(tag, 8, alignment=TABLEFT)
+
+    do im = 1, nr_models
+      call inputtab%add_term(im)
+      term = mnames(im)
+      call inputtab%add_term(term)
+      term = mtypes(im)
+      call inputtab%add_term(term)
+      call inputtab%add_term(this%model_ranks(im))
+      term = ''
+      if (this%model_ranks(im) == proc_id) term = 'X'
+      call inputtab%add_term(term)
+    end do
+
+    ! deallocate
+    call inputtab%table_da()
+    deallocate (inputtab)
+
+  end subroutine print_load_balance
+
   !> @brief clean up
   !<
   subroutine destroy(this)
     class(DistributedSimType) :: this
 
-    call mem_deallocate(this%load_mask)
-    call mem_deallocate(this%model_ranks)
+    if (associated(this%load_mask)) then
+      call mem_deallocate(this%load_mask)
+      call mem_deallocate(this%model_ranks)
+    end if
 
     call mem_deallocate(this%nr_models)
+    call mem_deallocate(this%print_ptable)
 
     ! delete singleton instance
     if (associated(dist_sim)) deallocate (dist_sim)
