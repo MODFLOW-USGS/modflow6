@@ -18,7 +18,7 @@ type integer
 reader urword
 optional true
 longname variable compression deflate level
-description is the deflate level (0=min, 9=max) for per variable compression in the netcdf file. Defining the parameter activates per variable compression in the export file at the level specified.
+description is the variable deflate level (0=min, 9=max) in the netcdf file. Defining this parameter activates per-variable compression at the level specified.
 
 block options
 name shuffle
@@ -42,8 +42,8 @@ type keyword
 in_record true
 reader urword
 optional false
-longname keyword when defining ugrid chunking parameters
-description is a keyword for providing netcdf export chunk sizes. Chunking can dramatically impact data access times and is optimal chunking is highly dependent on access patterns (timeseries vs spatial, for example). It can also significanlty impact compressibility of the data. A valid input record specifies chunk_time and either chunk_face (UGRID) or chunk_z, chunk_y, and chunk_x (STRUCTURED).
+longname keyword when defining chunking parameters
+description is a keyword for providing netcdf export chunk sizes. Chunking can dramatically impact data access times and optimal chunking is highly dependent on access patterns (timeseries vs spatial, for example). It can also significantly impact compressibility of the data. A valid input record specifies chunk\_time and either chunk\_face (MESH) or chunk\_z, chunk\_y, and chunk\_x (STRUCTURED).
 
 block options
 name chunk_time
@@ -60,8 +60,8 @@ type integer
 in_record true
 reader urword
 optional true
-longname chunking parameter for the ugrid face dimension
-description is the keyword used to provide a ugrid face dimension chunk size.
+longname chunking parameter for the mesh face dimension
+description is the keyword used to provide a mesh face dimension chunk size.
 
 block options
 name chunk_z
@@ -96,7 +96,7 @@ type keyword
 reader urword
 optional true
 longname
-description is the keyword used to turn off internal input tagging in the model netcdf file. Tagging adds internal modflow 6 attribute(s) to input variables which identify the variable. Currently this applies to gridded arrays.
+description is the keyword used to turn off internal input tagging in the model netcdf file. Tagging adds internal modflow 6 attribute(s) to variables which facilitate identification. Currently this applies to gridded arrays.
 mf6internal attr_off
 
 # --------------------- utl ncf dimensions ---------------------

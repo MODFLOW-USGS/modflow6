@@ -17,6 +17,7 @@ optional true
 mf6internal export_nc
 longname export array variables to netcdf output files.
 description keyword that specifies input griddata arrays should be written to the model output netcdf file.
+extended true
 
 # --------------------- gwe ic griddata ---------------------
 
@@ -26,6 +27,7 @@ type double precision
 shape (nodes)
 reader readarray
 layered true
+netcdf true
 longname starting temperature
 description is the initial (starting) temperature---that is, the temperature at the beginning of the GWE Model simulation.  STRT must be specified for all GWE Model simulations. One value is read for every model cell.
 default_value 0.0

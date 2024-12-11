@@ -225,6 +225,13 @@ def block_entry(varname, block, vardict, prefix="  "):
     if "time_series" in v:
         if v["time_series"] == "true":
             tsmarker = "@"
+    extmarker = ""
+    if "extended" in v:
+        if v["extended"] == "true":
+            extmarker = "$"
+    if "netcdf" in v:
+        if v["netcdf"] == "true":
+            extmarker = "$"
 
     # check valid type
     vtype = v["type"]
@@ -246,7 +253,7 @@ def block_entry(varname, block, vardict, prefix="  "):
             s = s.strip()
             s = f"{s}\n{prefix}{s}\n{prefix}..."
 
-    # layered
+    # layered and netcdf
     elif v["reader"] in ["readarray", "u1ddbl", "u2ddbl", "u1dint"]:
         shape = v["shape"]
         reader = v["reader"].upper()
@@ -254,15 +261,29 @@ def block_entry(varname, block, vardict, prefix="  "):
         if "layered" in v:
             if v["layered"] == "true":
                 layered = " [LAYERED]"
+        if "netcdf" in v:
+            if v["netcdf"] == "true":
+                layered = layered + f" {extmarker}[NETCDF]{extmarker}"
         s = f"{s}{layered}\n{prefix}{prefix}<{varname}{shape}> -- {reader}"
 
-    # keyword
-    elif v["type"] != "keyword":
+    # timeseries, extended color annotation
+    else:
         vtmp = varname
-        if "shape" in v:
-            shape = v["shape"]
-            vtmp += shape
-        s = f"{s} <{tsmarker}{vtmp}{tsmarker}>"
+        if tsmarker != "" and v["type"] != "keyword":
+            if "shape" in v:
+                shape = v["shape"]
+                vtmp += shape
+            s = f"{s} <{tsmarker}{vtmp}{tsmarker}>"
+        elif extmarker != "":
+            if v["type"] != "keyword":
+                if "shape" in v:
+                    shape = v["shape"]
+                    vtmp += shape
+                s = f"{extmarker}{s}{extmarker} <{extmarker}{vtmp}{extmarker}>"
+            else:
+                s = f"{extmarker}{s}{extmarker}"
+        elif v["type"] != "keyword":
+            s = f"{s} <{vtmp}>"
 
     # if optional, wrap string in square brackets
     if "optional" in v:
@@ -381,6 +402,10 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                         fmt = "\\textcolor{blue}\{\}"
                         ss = "\\textcolor{blue}{" + ss + "}"
                         # \textcolor{declared-color}{text}
+                if "extended" in v:
+                    if v["extended"] == "true":
+                        fmt = "\\textcolor{red}\{\}"
+                        ss = "\\textcolor{red}{" + ss + "}"
                 s += "\\item " + ss + "\n\n"
 
                 t = v["type"]
@@ -441,6 +466,9 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                 if "time_series" in v:
                     if v["time_series"] == "true":
                         ss = '<span style="color:blue">' + ss + "</span>"
+                if "extended" in v:
+                    if v["extended"] == "true":
+                        ss = '<span style="color:red">' + ss + "</span>"
                 s += "  * " + ss + "\n\n"
 
                 t = v["type"]
