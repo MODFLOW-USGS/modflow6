@@ -159,7 +159,7 @@ contains
       call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
 
       ! if returning to a cell through the bottom
-      ! face after previously leaving it through  
+      ! face after previously leaving it through
       ! that same face, we've entered a cycle
       ! as can occur e.g. in wells. terminate
       ! in the previous cell.
