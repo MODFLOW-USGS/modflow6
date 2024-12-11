@@ -9,8 +9,9 @@ module NCModelExportModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMODELNAME, &
-                             LENMEMPATH, LENBIGLINE, LENVARNAME, DIS, DISU, DISV
-  use SimVariablesModule, only: errmsg
+                             LENMEMPATH, LENBIGLINE, LENVARNAME, MVALIDATE, &
+                             DIS, DISU, DISV
+  use SimVariablesModule, only: isim_mode, idm_context, errmsg
   use SimModule, only: store_error, store_error_filename
   use InputLoadTypeModule, only: ModelDynamicPkgsType
   use ModflowInputModule, only: ModflowInputType
@@ -232,6 +233,10 @@ contains
       call store_error_filename(modelfname)
     end select
 
+    if (isim_mode == MVALIDATE) then
+      this%title = trim(this%title)//' array input'
+    end if
+
     ! set export type
     if (nctype == NETCDF_UGRID) then
       this%grid = 'LAYERED MESH'
@@ -257,9 +262,7 @@ contains
   !<
   subroutine export_init(this, modelname, modeltype, modelfname, disenum, &
                          nctype, iout)
-    use SimVariablesModule, only: isim_mode, idm_context
     use TdisModule, only: datetime0, nstp
-    use ConstantsModule, only: MVALIDATE
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
@@ -286,7 +289,6 @@ contains
     this%modelname = modelname
     this%modeltype = modeltype
     this%modelfname = modelfname
-    this%nc_fname = trim(modelname)//'.nc'
     this%gridmap_name = ''
     this%ncf_mempath = ''
     this%ogc_wkt = ''
@@ -303,6 +305,12 @@ contains
     this%iout = iout
     this%chunking_active = .false.
 
+    ! set export file name
+    if (isim_mode /= MVALIDATE) then
+      this%nc_fname = trim(modelname)//'.nc'
+    else
+      this%nc_fname = trim(modelname)//'.in.nc'
+    end if
     call lowcase(this%nc_fname)
 
     ! set file scoped attributes
