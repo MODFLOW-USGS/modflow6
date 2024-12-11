@@ -156,11 +156,11 @@ contains
       ipos = idiag + inbr
       ic = dis%con%ja(ipos)
 
-      if (ic == particle%icp) then
-        ! terminate in the previous cell.
-        ! got here by falling through the
-        ! bottom of a well.. TODO: check
-        ! if entry/exit face is top/bot?
+      ! if returning to immediately previous cell
+      ! through its bottom, we've entered a cycle
+      ! as can occur e.g. in the bottom of wells.
+      ! terminate in the previous cell.
+      if (ic == particle%icp .and. inface == 7) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
         particle%istatus = 2

@@ -1,15 +1,13 @@
 """
 Tests particle tracking in "dry" conditions.
 
-Particles should terminate in inactive cells.
-
 The PRP package provides the `DRY` option
 to specify how particles should behave in
 dry conditions when the flow model enables
 the Newton formulation.
 
 This test case is adapted from the example
-simulation provided by Javier Gonzalez in
+simulation provided by @javgs-bd in
 https://github.com/MODFLOW-USGS/modflow6/issues/2014.
 """
 

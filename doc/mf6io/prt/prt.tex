@@ -29,25 +29,19 @@ A dry cell is either an inactive cell or an active but dry cell, as can occur wi
 
 Normally, an inactive cell might be dry or explicitly disabled (idomain).  With Newton, dry cells remain active.
 
-Of the flow model, PRT knows only what the FMI or exchange tells it. This includes heads, flows and the active grid region, but not whether Newton is on, where boundary packages are, or even which boundary packages are present.
-
-Tracking and termination decisions must be made, therefore, on the basis of available information like whether a cell is active, whether the cell is dry, and whether the particle is dry (above the water table).
-
 Release-time and tracking-time considerations are described (and implemented) separately.
 
 \subsubsection{Release}
 
 At release time, PRT decides whether to release each particle or to terminate it unreleased.
 
-If the release cell is active, the particle will be released at the specified coordinates.
+If the release cell is active, the particle will be released at the user-specified location.
 
 If the release cell is inactive, behavior is determined by the DRAPE option. If the DRAPE option is enabled, the particle will be released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if DRAPE is not enabled, the particle will terminate unreleased (with status code 8).
 
-Since under the Newton formulation dry cells can remain active, the DRAPE option has no effect when Newton is on (assuming particles are not released into disabled grid regions). Vertical tracking behavior with Newton can be configured with tracking-time settings.
+Since under the Newton formulation dry cells can remain active, the DRAPE option has no effect when Newton is on (assuming particles are not released into disabled grid regions). Vertical tracking behavior with Newton can be configured using the DRY\_TRACKING\_METHOD option discussed below.
 
 \subsubsection{Tracking}
-
-A particle might find itself above the water table for one of two reasons: it was released above the water table, or the water table has receded.
 
 With the Newton formulation, particles can be released into dry-but-active cells.
 
@@ -57,11 +51,11 @@ A particle which finds itself in an inactive cell will terminate with status cod
 
 A particle in a dry but active cell, or above the water table in a partially saturated cell, need not terminate. We call such a particle dry. The PRP package provides an option DRY\_TRACKING\_METHOD determining how dry particles should behave. Supported values are DROP (default), STOP, and STAY.
 
-If DROP is selected, or if a DRY\_TRACKING\_METHOD is unspecified, a particle in a dry position is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e. the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom of the model grid.
+If DROP is selected, or if a DRY\_TRACKING\_METHOD is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e. the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom of the model grid.
 
 If STOP is selected, dry particles will be terminated.
 
-If STAY is selected, a dry particle will remain stationary until a) the water table rises and tracking can continue or b) the simulation ends.
+If STAY is selected, a dry particle will remain stationary until a) the water table rises and tracking can continue, b) the particle terminates due to reaching its STOPTIME or STOPTRAVELTIME, or c) the simulation ends.
 
 \subsection{Particle Track Output}
 

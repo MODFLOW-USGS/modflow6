@@ -173,7 +173,7 @@ type string
 valid drop stop stay
 reader urword
 optional true
-longname what to do in active but dry cells
+longname what to do in dry-but-active cells
 description is a string indicating how particles should behave in dry-but-active cells (as can occur with the Newton formulation).  The value can be ``DROP'', ``STOP'', or ``STAY''.  The default is ``DROP'', which passes particles vertically and instantaneously to the water table. ``STOP'' causes particles to terminate. ``STAY'' causes particles to remain stationary but active.
 
 block options

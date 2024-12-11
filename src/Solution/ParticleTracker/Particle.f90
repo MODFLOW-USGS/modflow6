@@ -311,10 +311,7 @@ contains
   !!
   !! Apply a translation and/or rotation to particle coordinates.
   !! No rescaling. It's also possible to invert a transformation.
-  !!
-  !! Upon inverting, be sure to untransform to eliminate roundoff
-  !! error accumulated in the particle origin/rotation variables,
-  !! and unsetting the transformed flag.
+  !! Be sure to reset the transformation after using it.
   !<
   subroutine transform_coords(this, xorigin, yorigin, zorigin, &
                               sinrot, cosrot, invert)

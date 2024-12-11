@@ -957,7 +957,7 @@ contains
           ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
 
-          ! Reset previous cell and zone numbers
+          ! Reset previous cell, exit face, and zone numbers
           particle%icp = 0
           particle%izp = 0
 
