@@ -192,18 +192,22 @@ contains
 
     select type (dis => this%fmi%dis)
     type is (DisType)
-      ! compute and set reduced/user node numbers and layer
+      ! compute reduced/user node numbers and layer
       inface = particle%iboundary(2)
       inbr = cell%defn%facenbr(inface)
       idiag = this%fmi%dis%con%ia(cell%defn%icell)
       ipos = idiag + inbr
       ic = dis%con%ja(ipos)
+      icu = dis%get_nodeuser(ic)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
+                   irow, icol, ilay)
 
-      ! if returning to immediately previous cell
-      ! through its bottom, we've entered a cycle
-      ! as can occur e.g. in the bottom of wells.
-      ! terminate in the previous cell.
-      if (ic == particle%icp .and. inface == 7) then
+      ! if returning to a cell through the bottom
+      ! face after previously leaving it through  
+      ! that same face, we've entered a cycle
+      ! as can occur e.g. in wells. terminate
+      ! in the previous cell.
+      if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
         particle%istatus = 2
@@ -215,9 +219,7 @@ contains
         particle%izp = particle%izone
       end if
 
-      icu = dis%get_nodeuser(ic)
-      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
-                   irow, icol, ilay)
+      ! update node numbers and layer
       particle%idomain(2) = ic
       particle%icu = icu
       particle%ilay = ilay

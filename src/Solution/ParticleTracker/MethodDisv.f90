@@ -155,12 +155,15 @@ contains
       inbr = cell%defn%facenbr(inface)
       ipos = idiag + inbr
       ic = dis%con%ja(ipos)
+      icu = dis%get_nodeuser(ic)
+      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
 
-      ! if returning to immediately previous cell
-      ! through its bottom, we've entered a cycle
-      ! as can occur e.g. in the bottom of wells.
-      ! terminate in the previous cell.
-      if (ic == particle%icp .and. inface == 7) then
+      ! if returning to a cell through the bottom
+      ! face after previously leaving it through  
+      ! that same face, we've entered a cycle
+      ! as can occur e.g. in wells. terminate
+      ! in the previous cell.
+      if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
         particle%istatus = 2
@@ -171,10 +174,6 @@ contains
         particle%icp = particle%idomain(2)
         particle%izp = particle%izone
       end if
-
-      icu = dis%get_nodeuser(ic)
-
-      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
 
       particle%idomain(2) = ic
       particle%icu = icu
