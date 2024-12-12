@@ -1,35 +1,14 @@
-Next to the standard \mf executable, a second, extended version of the program is made available. This version comes with more advanced functionality for which it partially relies on third-party libraries. Currently this concerns the parallel computing capability and the use of NetCDF4 for I/O data. Because the external dependencies increase the complexity of the installation procedure, \mf will remain available in its core set of functionality.
+Next to the standard \mf executable, a second, extended program executable is made available. This extended executable comes with additional functionality for which it partially relies on third-party libraries. Extended functionality includes the parallel computing capability and the use of NetCDF4 for input and output data. Because the external dependencies increase the complexity of the installation procedure, \mf will remain available in its standard set of functionality.
 
-Extended \mf contains all features available in the standard edition, runs on the same input configuration, and produces the same results. Reversely, when running with the standard executable, some features described in this document (HPC Utility, NetCDF4 I/O) will not be available and their configuration will be ignored or an error is reported. These features will be labeled accordingly below.
+Extended \mf contains all features available in the standard executable, runs on the same input configuration, and produces the same results. Conversely, when running with the standard executable, some features described in this document (HPC Utility and NetCDF4 input and output, for example) will not be available and their configuration will be ignored or the program will terminate with an error. These features will be labeled accordingly below.
 
-\subsection{NetCDF Export Files}
+This sections describes input files that are only available with Extended \mf.  For more information on using Extended \mf, refer to the \href{https://github.com/MODFLOW-USGS/modflow6/wiki}{MODFLOW 6 Wiki} on the version-controlled \href{https://github.com/MODFLOW-USGS/modflow6}{MODFLOW 6 repository}.
 
-The extended build of \mf can optionally create model NetCDF export files.  \mf supports two types of NetCDF exports, referred to here as ``structured'' and ``mesh''.
+\newpage
+\subsection{NetCDF (NCF) Configuration Utility}
+\input{utl_ncf.tex}
 
-\mf NetCDF exports by default contain model dependent variable timeseries data, e.g. head.  In addition, \mf package griddata input arrays can be configured to be written to the export file.  Creating export files containing only one or the other of these these types of data form two distinct uses for the exports.  Generating exports of these two types will described below.
-
-These capabilities are dependent on the earlier described Input Data Processor (IDP).  In particular, the package array export capability described below is limited to packages currently supported by IDP.
-
-\subsubsection{Mesh Exports}
-\mf mesh exports comply with UGRID 1.0 conventions and are based on the UGRID 3D layered mesh topology.  A UGRID based NetCDF file explicitly describes the grid with a set of variables that gridded data can be associated with.  \mf mesh exports can be generated with a DIS or DISV based GWF, GWT, or GWE model.
-
-\subsubsection{Structured Exports}
-\mf structured NetCDF exports define x and y geometric coordinate variables and are not based on the UGRID specification.  \mf structured exports can be generated with a DIS based GWF, GWT, or GWE model.
-
-\subsubsection{Dependent variable exports}
-A typical use case creates an export that capture timeseries output for the model dependent variable.  This export can be optioned simply by adding the ``EXPORT\_NETCDF'' keyword to a GWF, GWT, or GWE model name file.  This keyword takes an argument for the NetCDF export type, either ``STRUCTURED'' or ``MESH'' (or alternatively, ``UGRID'').  Configured in this way, the export will contain only the mesh or x and y coordinate variables and the dependent variable(s).  Additional configuration options are possible when a NetCDF configuration package (UTL-NCF) is created, such as per-variable compression, chunking options, and options meant to support visualization in post-processing tools like QGIS.  This package is described below.
-
-\subsubsection{Exporting array input}
-Packages that support exporting griddata input arrays to model NetCDF files support the ``EXPORT\_ARRAY\_NETCDF'' keyword.  Using this keyword, when model NetCDF export also is active, has the effect of writing all package griddata arrays to the NetCDF export.  Writing candidate arrays to a NetCDF file offers an alternative to storing them in an ascii or binary input file.
-
-One approach to converting existing ascii or binary inputs to NetCDF inputs is described next.  \mf supports a validate mode option intended to support error checking.  In this mode no matrix equations are assembled or solved and no solution based outputs are created.  Input, however, is still read in validate mode and thus can be written to NetCDF exports when configured. Specific IDP supported packages can be configured to export griddata array input by using the ``EXPORT\_ARRAY\_NETCDF'' package option when running the simulation in validate mode.  When configured in this way, \mf will generate a NetCDF export file, absent a dependent or time coordinate variable, that can serve as a separate input file for model gridded package data.
-
-\subsection{NetCDF as simulation input}
-\mf can read NetCDF files as model inputs containing package griddata array input. Files generated using the validate method described in the previous section are suitable as inputs- note that \mf expects specific annotations for NetCDF input variables and that these are written by default into \mf NetCDF exports. An example follows showing a model name file that configures a NetCDF input and IC and NPF input files that specify specific griddata parameters should be read from the model NetCDF input:
-\input{netcdf_input.tex}
-
+\newpage
 \subsection{High Performance Computing (HPC) Utility}
 \input{utl_hpc.tex}
 
-\subsection{NetCDF configuration (NCF) Utility}
-\input{utl_ncf.tex}
