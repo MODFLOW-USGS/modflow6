@@ -30,9 +30,8 @@ cases = [
     # expect all particles to be draped to water table and tracked
     simname + "_drape",
     # the rest of the test cases activate newton and test the behavior
-    # of the DRY option. with drop, expect two particles to be dropped
+    # of the DRY option. with drop, expect all particles to be dropped
     # to the highest active cell below and then to be tracked as usual.
-    # others should terminate with status 7 immediately after release.
     simname + "_drop",
     # expect termination with status 7 immediately in 1st time step
     simname + "_stop",
