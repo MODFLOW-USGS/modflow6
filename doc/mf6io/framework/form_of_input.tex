@@ -24,8 +24,6 @@ END OPTIONS
 \end{lstlisting}
 This example shows the items that may be specified with this OPTIONS block.  Optional items are enclosed between ``['' and ``]'' symbols.  The ``\texttt{<}'' and ``\texttt{>}'' symbols indicate a variable that must be provided by the user.  In this case, \texttt{auxiliary} is an array of size \texttt{naux}.  Because there are bracket symbols around the entire item, the user it not required to specify anything for this item.  Likewise, the user may or may not invoke the ``\texttt{PRINT\_INPUT}'' option.  Lastly, the user can specify ``\texttt{MAXIMUM\_ITERATION}'' followed by a numeric value for ``\texttt{maxsfrit}''.  If the user does not specify an optional item, then a default condition will apply.  Behavior of the default condition is described in the input instructions for that item.
 
-Note that text color in the input instructions is indicative of special features or behaviors associated with the variables printed in that color.  Specifically, the text color of blue is reserved to indicate a variable that may be represented with a time series.  The text color of red is reserved for keywords or variables that are supported only in the extended build of \mf.  The extended build is covered in its own section in this document.
-
 \vspace{6pt}\noindent A valid user input block for OPTIONS might be:
 
 \begin{lstlisting}[style=inputfile]
@@ -64,6 +62,11 @@ END OPTIONS
 \noindent When MODFLOW encounters the OPEN/CLOSE keyword, the program opens the specified file on unit 99 and continues processing the information in the file as if it were within the block itself.  When the program reaches the end of the file, the file is closed, and the program returns to reading the original package file.  The next line after the OPEN/CLOSE line must end the block.
 
 Some blocks do not support the OPEN/CLOSE capability.  A list of all of the blocks, organized by component and input file type, are listed in a table in appendix A.  This table also indicates the blocks that do not support the OPEN/CLOSE capability.
+
+\subsection{Text Color}
+
+Note that text color in the input instructions is indicative of special features or behaviors associated with the variables printed in that color.  Specifically, the {\color{blue} text color of blue} is reserved to indicate a variable that may be represented with a time series.  The {\color{red} text color of red} is reserved for keywords or variables that are supported only in the extended build of \mf.  The extended build is covered in its own section in this document.
+
 
 \subsection{File Name Input}
 Some blocks may require that a file name be entered.  Although spaces within a file name are not generally recommended, they can be specified if the entire file name is enclosed within single quotes, which means that the file name itself cannot have a single quote within it.  On Windows computers, file names are not case sensitive, and thus, ``model.dis'' can be referenced within the input files as ``MODEL.DIS''.  On some other operating systems, however, file names are case sensitive and the case used in the input instructions must exactly reflect the case used to name the file.
