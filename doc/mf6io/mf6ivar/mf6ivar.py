@@ -196,7 +196,7 @@ TEX_DIR_PATH = MF6IVAR_DIR_PATH / "tex"
 RTD_DOC_DIR_PATH = Path(__file__).parents[3] / ".build_rtd_docs" / "_mf6io"
 COMMON_DFN_PATH = parse_mf6var_file(DFNS_DIR_PATH / "common.dfn")
 COMMON_DIR_PATH = MF6IVAR_DIR_PATH.parent.parent / "Common"
-DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt"] # , "chf", "olf"]
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt"]  # , "chf", "olf"]
 VALID_TYPES = [
     "integer",
     "double precision",

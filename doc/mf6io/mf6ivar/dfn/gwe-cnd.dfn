@@ -114,5 +114,5 @@ layered true
 netcdf true
 optional true
 longname thermal conductivity of the aquifer material
-description thermal conductivity of the aquifer material
+description thermal conductivity of the solid aquifer material
 

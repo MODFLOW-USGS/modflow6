@@ -14,7 +14,7 @@ type keyword
 reader urword
 optional true
 longname activate zero-order decay
-description is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorption is active) are specified in the GRIDDATA block.
+description is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY is specified in the GRIDDATA block.
 
 block options
 name density_water
