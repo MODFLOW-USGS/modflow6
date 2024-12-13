@@ -37,7 +37,7 @@ on:
         description: 'Linux runner image to build binaries on.'
         required: false
         type: string
-        default: 'ubuntu-20.04'
+        default: 'ubuntu-22.04'
       run_tests:
         description: Run tests after building binaries.'
         required: false
