@@ -23,15 +23,15 @@ module NCModelExportModule
   public :: NCBaseModelExportType, NCModelExportType
   public :: NCExportAnnotation
   public :: ExportPackageType
-  public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_UGRID
+  public :: NETCDF_UNDEF, NETCDF_STRUCTURED, NETCDF_MESH2D
   public :: export_longname
 
   !> @brief netcdf export types enumerator
   !<
   ENUM, BIND(C)
     ENUMERATOR :: NETCDF_UNDEF = 0 !< undefined netcdf export type
-    ENUMERATOR :: NETCDF_UGRID = 1 !< netcdf mesh export
-    ENUMERATOR :: NETCDF_STRUCTURED = 2 !< netcdf structrured export
+    ENUMERATOR :: NETCDF_STRUCTURED = 1 !< netcdf structrured export
+    ENUMERATOR :: NETCDF_MESH2D = 2 !< netcdf ugrid layered mesh export
   END ENUM
 
   type :: ExportPackageType
@@ -210,7 +210,7 @@ contains
 
     ! set file conventions
     this%conventions = 'CF-1.11'
-    if (nctype == NETCDF_UGRID) this%conventions = &
+    if (nctype == NETCDF_MESH2D) this%conventions = &
       trim(this%conventions)//' UGRID-1.0'
 
     ! set model specific attributes
@@ -238,7 +238,7 @@ contains
     end if
 
     ! set export type
-    if (nctype == NETCDF_UGRID) then
+    if (nctype == NETCDF_MESH2D) then
       this%grid = 'LAYERED MESH'
     else if (nctype == NETCDF_STRUCTURED) then
       this%grid = 'STRUCTURED'
@@ -260,8 +260,8 @@ contains
 
   !> @brief initialization of model netcdf export
   !<
-  subroutine export_init(this, modelname, modeltype, modelfname, disenum, &
-                         nctype, iout)
+  subroutine export_init(this, modelname, modeltype, modelfname, nc_fname, &
+                         disenum, nctype, iout)
     use TdisModule, only: datetime0, nstp
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
@@ -272,11 +272,12 @@ contains
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
     character(len=LENMEMPATH) :: model_mempath
-    type(UtlNcfParamFoundType) :: found
+    type(UtlNcfParamFoundType) :: ncf_found
     logical(LGP) :: found_mempath
 
     ! allocate
@@ -289,6 +290,7 @@ contains
     this%modelname = modelname
     this%modeltype = modeltype
     this%modelfname = modelfname
+    this%nc_fname = nc_fname
     this%gridmap_name = ''
     this%ncf_mempath = ''
     this%ogc_wkt = ''
@@ -304,14 +306,6 @@ contains
     this%chunk_time = -1
     this%iout = iout
     this%chunking_active = .false.
-
-    ! set export file name
-    if (isim_mode /= MVALIDATE) then
-      this%nc_fname = trim(modelname)//'.nc'
-    else
-      this%nc_fname = trim(modelname)//'.in.nc'
-    end if
-    call lowcase(this%nc_fname)
 
     ! set file scoped attributes
     call this%annotation%set(modelname, modeltype, modelfname, nctype)
@@ -349,23 +343,23 @@ contains
 
     if (found_mempath) then
       call mem_set_value(this%ogc_wkt, 'OGC_WKT', this%ncf_mempath, &
-                         found%ogc_wkt)
+                         ncf_found%ogc_wkt)
       call mem_set_value(this%deflate, 'DEFLATE', this%ncf_mempath, &
-                         found%deflate)
+                         ncf_found%deflate)
       call mem_set_value(this%shuffle, 'SHUFFLE', this%ncf_mempath, &
-                         found%shuffle)
+                         ncf_found%shuffle)
       call mem_set_value(this%input_attr, 'ATTR_OFF', this%ncf_mempath, &
-                         found%attr_off)
+                         ncf_found%attr_off)
       call mem_set_value(this%chunk_time, 'CHUNK_TIME', this%ncf_mempath, &
-                         found%chunk_time)
+                         ncf_found%chunk_time)
     end if
 
-    if (found%ogc_wkt) then
+    if (ncf_found%ogc_wkt) then
       this%gridmap_name = 'projection'
     end if
 
     ! ATTR_OFF turns off modflow 6 input attributes
-    if (found%attr_off) then
+    if (ncf_found%attr_off) then
       this%input_attr = 0
     end if
 

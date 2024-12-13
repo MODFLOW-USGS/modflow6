@@ -49,13 +49,14 @@ contains
 
   !> @brief netcdf export dis init
   !<
-  subroutine dis_export_init(this, modelname, modeltype, modelfname, disenum, &
-                             nctype, iout)
+  subroutine dis_export_init(this, modelname, modeltype, modelfname, nc_fname, &
+                             disenum, nctype, iout)
     use ArrayHandlersModule, only: expandarray
     class(Mesh2dDisExportType), intent(inout) :: this
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
@@ -67,7 +68,8 @@ contains
     allocate (this%var_ids%dependent(this%nlay))
 
     ! initialize base class
-    call this%mesh_init(modelname, modeltype, modelfname, disenum, nctype, iout)
+    call this%mesh_init(modelname, modeltype, modelfname, nc_fname, disenum, &
+                        nctype, iout)
   end subroutine dis_export_init
 
   !> @brief netcdf export dis destroy

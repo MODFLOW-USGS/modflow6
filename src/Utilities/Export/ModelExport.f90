@@ -38,6 +38,7 @@ module ModelExportModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LENCOMPONENTNAME) :: modeltype !< type of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
+    character(len=LINELENGTH) :: nc_fname !< name of netcdf export file
     class(NCBaseModelExportType), pointer :: nc_export => null() !< netcdf export object pointer
     integer(I4B) :: nctype !< type of netcdf export
     integer(I4B) :: disenum !< type of discretization
@@ -77,13 +78,12 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use InputLoadTypeModule, only: GetDynamicModelFromList
     use SimVariablesModule, only: idm_context
-    use NCModelExportModule, only: NETCDF_UGRID, NETCDF_STRUCTURED
+    use NCModelExportModule, only: NETCDF_MESH2D, NETCDF_STRUCTURED
     integer(I4B), intent(in) :: iout
     type(ModelDynamicPkgsType), pointer :: model_dynamic_input
     type(ExportModelType), pointer :: export_model
     character(len=LENMEMPATH) :: modelnam_mempath, model_mempath
     integer(I4B), pointer :: disenum
-    character(len=LINELENGTH) :: exportstr
     integer(I4B) :: n
     logical(LGP) :: found
 
@@ -106,14 +106,16 @@ contains
       ! initialize model
       call export_model%init(model_dynamic_input, disenum, iout)
 
-      ! update EXPORT_NETCDF string if provided
-      call mem_set_value(exportstr, 'EXPORT_NETCDF', modelnam_mempath, found)
+      ! update NetCDF fileout name if provided
+      call mem_set_value(export_model%nc_fname, 'NCMESH2DFILE', &
+                         modelnam_mempath, found)
       if (found) then
-        if (exportstr == 'STRUCTURED') then
+        export_model%nctype = NETCDF_MESH2D
+      else
+        call mem_set_value(export_model%nc_fname, 'NCSTRUCTFILE', &
+                           modelnam_mempath, found)
+        if (found) then
           export_model%nctype = NETCDF_STRUCTURED
-        else
-          ! mesh export is default
-          export_model%nctype = NETCDF_UGRID
         end if
       end if
 
@@ -193,6 +195,7 @@ contains
     this%modelname = loaders%modelname
     this%modeltype = loaders%modeltype
     this%modelfname = loaders%modelfname
+    this%nc_fname = ''
     this%nctype = NETCDF_UNDEF
     this%disenum = disenum
     this%iout = iout

@@ -309,8 +309,8 @@ contains
       call nc_export_create()
 #else
       write (errmsg, '(a)') &
-        'Model namefile EXPORT_NETCDF option configured but NetCDF libraries are &
-        &not available.'
+        'Model namefile NETCDF_STUCTURED or NETCDF_MESH2D option configured &
+        &but NetCDF libraries are not available.'
       call store_error(errmsg, .true.)
 #endif
     end if

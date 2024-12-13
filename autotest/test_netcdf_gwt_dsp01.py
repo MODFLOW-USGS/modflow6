@@ -20,13 +20,17 @@ def build_models(idx, test, export, gridded_input):
     sim, dummy = build(idx, test)
     sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
     gwt = sim.gwt[0]
-    gwt.name_file.export_netcdf = export
     gwt.dis.export_array_netcdf = True
     gwt.ic.export_array_netcdf = True
     gwt.dsp.export_array_netcdf = True
 
     # output control
     gwtname = "gwt_" + cases[idx]
+
+    if export == "ugrid":
+        gwt.name_file.nc_mesh2d_filerecord = f"{gwtname}.nc"
+    elif export == "structured":
+        gwt.name_file.nc_structured_filerecord = f"{gwtname}.nc"
 
     # netcdf config
     ncf = flopy.mf6.ModflowUtlncf(
@@ -58,10 +62,15 @@ def check_output(idx, test, export, gridded_input):
         nc_fname = f"{gwtname}.{export}.nc"
         os.rename(test.workspace / input_fname, test.workspace / nc_fname)
 
+        if export == "ugrid":
+            fileout_tag = "NETCDF_MESH2D"
+        elif export == "structured":
+            fileout_tag = "NETCDF_STRUCTURED"
+
         with open(test.workspace / f"{gwtname}.nam", "w") as f:
             f.write("BEGIN options\n")
             f.write("  SAVE_FLOWS\n")
-            f.write(f"  EXPORT_NETCDF {export}\n")
+            f.write(f"  {fileout_tag}  FILEOUT  {gwtname}.nc\n")
             f.write(f"  NETCDF  FILEIN {gwtname}.{export}.nc\n")
             f.write("END options\n\n")
             f.write("BEGIN packages\n")

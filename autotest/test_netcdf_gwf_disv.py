@@ -43,12 +43,14 @@ def build_models(idx, test, export, gridded_input):
     sim, dummy = build(idx, test)
     sim.tdis.start_date_time = "2041-01-01T00:00:00-05:00"
     gwf = sim.gwf[0]
-    gwf.name_file.export_netcdf = export
     gwf.disv.export_array_netcdf = True
     gwf.ic.export_array_netcdf = True
     gwf.npf.export_array_netcdf = True
 
     name = cases[idx]
+
+    if export == "ugrid":
+        gwf.name_file.nc_mesh2d_filerecord = f"{name}.nc"
 
     # netcdf config
     ncf = flopy.mf6.ModflowUtlncf(gwf.disv, ogc_wkt=wkt, filename=f"{name}.disv.ncf")
@@ -76,9 +78,12 @@ def check_output(idx, test, export, gridded_input):
         nc_fname = f"{name}.{export}.nc"
         os.rename(test.workspace / input_fname, test.workspace / nc_fname)
 
+        if export == "ugrid":
+            fileout_tag = "NETCDF_MESH2D"
+
         with open(test.workspace / f"{name}.nam", "w") as f:
             f.write("BEGIN options\n")
-            f.write(f"  EXPORT_NETCDF {export}\n")
+            f.write(f"  {fileout_tag}  FILEOUT  {name}.nc\n")
             f.write(f"  NETCDF  FILEIN {name}.{export}.nc\n")
             f.write("END options\n\n")
             f.write("BEGIN packages\n")

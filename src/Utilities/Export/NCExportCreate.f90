@@ -28,7 +28,7 @@ contains
   !> @brief create model netcdf export type
   !!
   subroutine create_nc_export(export_model, num_model)
-    use NCModelExportModule, only: NETCDF_UGRID, NETCDF_STRUCTURED
+    use NCModelExportModule, only: NETCDF_MESH2D, NETCDF_STRUCTURED
     use MeshDisModelModule, only: Mesh2dDisExportType
     use MeshDisvModelModule, only: Mesh2dDisvExportType
     use DisNCStructuredModule, only: DisNCStructuredType
@@ -43,7 +43,7 @@ contains
     select case (export_model%disenum)
     case (DIS)
       ! allocate nc structured grid export object
-      if (export_model%nctype == NETCDF_UGRID) then
+      if (export_model%nctype == NETCDF_MESH2D) then
         ! allocate nc structured grid export object
         allocate (ugrid_dis)
 
@@ -60,8 +60,9 @@ contains
 
         ! initialize export object
         call ugrid_dis%init(export_model%modelname, export_model%modeltype, &
-                            export_model%modelfname, export_model%disenum, &
-                            NETCDF_UGRID, export_model%iout)
+                            export_model%modelfname, export_model%nc_fname, &
+                            export_model%disenum, NETCDF_MESH2D, &
+                            export_model%iout)
 
         ! define export object
         call ugrid_dis%df()
@@ -85,8 +86,9 @@ contains
 
         ! initialize export object
         call structured_dis%init(export_model%modelname, export_model%modeltype, &
-                                 export_model%modelfname, export_model%disenum, &
-                                 NETCDF_STRUCTURED, export_model%iout)
+                                 export_model%modelfname, export_model%nc_fname, &
+                                 export_model%disenum, NETCDF_STRUCTURED, &
+                                 export_model%iout)
 
         ! define export object
         call structured_dis%df()
@@ -95,7 +97,7 @@ contains
         export_model%nc_export => structured_dis
       end if
     case (DISV)
-      if (export_model%nctype == NETCDF_UGRID) then
+      if (export_model%nctype == NETCDF_MESH2D) then
         ! allocate nc structured grid export object
         allocate (ugrid_disv)
 
@@ -112,8 +114,9 @@ contains
 
         ! initialize export object
         call ugrid_disv%init(export_model%modelname, export_model%modeltype, &
-                             export_model%modelfname, export_model%disenum, &
-                             NETCDF_UGRID, export_model%iout)
+                             export_model%modelfname, export_model%nc_fname, &
+                             export_model%disenum, NETCDF_MESH2D, &
+                             export_model%iout)
 
         ! define export object
         call ugrid_disv%df()

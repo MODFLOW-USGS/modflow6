@@ -118,7 +118,7 @@ module UtlNcfInputModule
     'CHUNKING', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
-    'keyword when defining ugrid chunking parameters', & ! longname
+    'keyword when defining chunking parameters', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -154,7 +154,7 @@ module UtlNcfInputModule
     'CHUNK_FACE', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
-    'chunking parameter for the ugrid face dimension', & ! longname
+    'chunking parameter for the mesh face dimension', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
