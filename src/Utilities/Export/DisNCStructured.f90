@@ -90,14 +90,15 @@ contains
 
   !> @brief netcdf export dis init
   !<
-  subroutine dis_export_init(this, modelname, modeltype, modelfname, disenum, &
-                             nctype, iout)
+  subroutine dis_export_init(this, modelname, modeltype, modelfname, nc_fname, &
+                             disenum, nctype, iout)
     use MemoryManagerModule, only: get_isize
     use MemoryManagerExtModule, only: mem_set_value
     class(DisNCStructuredType), intent(inout) :: this
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
@@ -124,8 +125,8 @@ contains
     this%latlon = .false.
 
     ! initialize base class
-    call this%NCModelExportType%init(modelname, modeltype, modelfname, disenum, &
-                                     nctype, iout)
+    call this%NCModelExportType%init(modelname, modeltype, modelfname, nc_fname, &
+                                     disenum, nctype, iout)
     ! update values from input context
     if (this%ncf_mempath /= '') then
       call mem_set_value(this%chunk_z, 'CHUNK_Z', this%ncf_mempath, found)

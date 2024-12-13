@@ -95,21 +95,22 @@ contains
 
   !> @brief initialize
   !<
-  subroutine mesh_init(this, modelname, modeltype, modelfname, disenum, &
-                       nctype, iout)
+  subroutine mesh_init(this, modelname, modeltype, modelfname, nc_fname, &
+                       disenum, nctype, iout)
     use MemoryManagerExtModule, only: mem_set_value
     class(MeshModelType), intent(inout) :: this
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: nc_fname
     integer(I4B), intent(in) :: disenum
     integer(I4B), intent(in) :: nctype
     integer(I4B), intent(in) :: iout
     logical(LGP) :: found
 
     ! initialize base class
-    call this%NCModelExportType%init(modelname, modeltype, modelfname, disenum, &
-                                     nctype, iout)
+    call this%NCModelExportType%init(modelname, modeltype, modelfname, nc_fname, &
+                                     disenum, nctype, iout)
 
     ! allocate and initialize
     allocate (this%chunk_face)
