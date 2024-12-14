@@ -49,9 +49,9 @@ A particle that finds itself in an inactive cell will terminate with status code
 
 Dry-but-active cells can occur when the Newton-Raphson formulation is used to solve for groundwater flow. As discussed above, particles can be released into dry-but-active cells.
 
-A particle in a dry-but-active cell, or above the water table in a partially saturated cell, which we call a "dry" particle, need not terminate. The PRP package provides a DRY_TRACKING_METHOD option that determines how dry particles should behave. Supported values are DROP (the default), STOP, and STAY.
+A particle in a dry-but-active cell, or above the water table in a partially saturated cell, which we call a "dry" particle, need not terminate. The PRP package provides a DRY\_TRACKING\_METHOD option that determines how dry particles should behave. Supported values are DROP (the default), STOP, and STAY.
 
-If DROP is selected, or if a DRY_TRACKING_METHOD is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e., the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom
+If DROP is selected, or if a DRY\_TRACKING\_METHOD is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e., the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom
 of the model grid.
 
 If STOP is selected, dry particles will be terminated.
@@ -131,8 +131,6 @@ The IREASON field indicates the reason the particle track record was saved:
 By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
 
 The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
-
-
 
 
 
