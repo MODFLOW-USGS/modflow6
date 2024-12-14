@@ -323,7 +323,7 @@ jobs:
         working-directory: modflow6
         shell: pixi run bash -e {0}
         run: |
-          cp bin/* ~/.local/bin/modflow/
+          cp -R bin/* ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
           pytest -v -n auto test_scripts.py
 
@@ -474,8 +474,7 @@ jobs:
         working-directory: modflow6
         shell: pixi run bash -e {0}
         run: |
-          cp bin/mf6 ~/.local/bin/modflow/
-          cp bin/libmf6.so ~/.local/bin/modflow/
+          cp -R bin/* ~/.local/bin/modflow/
           cd ../modflow6-examples/autotest
           pytest -v -n auto test_scripts.py
 
