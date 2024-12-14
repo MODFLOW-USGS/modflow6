@@ -6,13 +6,7 @@ be solved via Pollock's method applied to quad-
 refined cells, instead of the new ternary method
 which applies more generally to polygonal cells.
 
-The simulation includes a single stress period
-with multiple time steps. This serves to test
-whether PRT properly solves trajectories over
-"internal" time steps, i.e. within the step's
-slice of simulation time, as well as extending
-tracking to termination or particle stop times
-during the simulation's final time step.
+The simulation uses the Newton formulation.
 
 Several cases are provided:
     - default: No user-specified tracking times, MP7 in pathline mode.

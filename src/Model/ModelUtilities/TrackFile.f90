@@ -35,7 +35,7 @@ module TrackFileModule
   !!     1: particle transitioned between cells
   !!     2: current time step ended****
   !!     3: particle terminated
-  !!     4: particle exited weak sink
+  !!     4: particle in weak sink
   !!     5: user-specified tracking time
   !!
   !! Each record has an "istatus" property, which is the tracking status;

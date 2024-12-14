@@ -46,16 +46,16 @@ contains
 
   !> @brief Create a new vertex grid (DISV) tracking method
   subroutine create_method_disv(method)
-    ! -- dummy
+    ! dummy
     type(MethodDisvType), pointer :: method
-    ! -- local
+    ! local
     type(CellPolyType), pointer :: cell
 
     allocate (method)
-    allocate (method%type)
+    allocate (method%name)
     call create_cell_poly(cell)
     method%cell => cell
-    method%type = "disv"
+    method%name = "disv"
     method%delegates = .true.
     call create_defn(method%neighbor)
   end subroutine create_method_disv
@@ -63,7 +63,7 @@ contains
   !> @brief Destroy the tracking method
   subroutine deallocate (this)
     class(MethodDisvType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine deallocate
 
   !> @brief Load the cell and the tracking method
@@ -72,12 +72,12 @@ contains
     use CellRectModule
     use CellRectQuadModule
     use CellUtilModule
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     integer(I4B), intent(in) :: next_level
     class(MethodType), pointer, intent(inout) :: submethod
-    ! -- local
+    ! local
     integer(I4B) :: ic
     class(CellType), pointer :: base
     type(CellRectType), pointer :: rect
@@ -85,53 +85,47 @@ contains
 
     select type (cell => this%cell)
     type is (CellPolyType)
-      ! load cell definition
       ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
       if (this%fmi%ibdgwfsat0(ic) == 0) then
-        ! -- Cell is active but dry, so select and initialize pass-to-bottom
-        ! -- cell method and set cell method pointer
         call method_cell_ptb%init( &
           fmi=this%fmi, &
           cell=this%cell, &
           trackctl=this%trackctl, &
           tracktimes=this%tracktimes)
         submethod => method_cell_ptb
+      else if (particle%ifrctrn > 0) then
+        call method_cell_tern%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_tern
+      else if (cell%defn%can_be_rect) then
+        call cell_poly_to_rect(cell, rect)
+        base => rect
+        call method_cell_plck%init( &
+          fmi=this%fmi, &
+          cell=base, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_plck
+      else if (cell%defn%can_be_quad) then
+        call cell_poly_to_quad(cell, quad)
+        base => quad
+        call method_cell_quad%init( &
+          fmi=this%fmi, &
+          cell=base, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_quad
       else
-        ! -- Select and initialize cell method and set cell method pointer
-        if (particle%ifrctrn > 0) then
-          call method_cell_tern%init( &
-            fmi=this%fmi, &
-            cell=this%cell, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_tern
-        else if (cell%defn%can_be_rect) then
-          call cell_poly_to_rect(cell, rect)
-          base => rect
-          call method_cell_plck%init( &
-            fmi=this%fmi, &
-            cell=base, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_plck
-        else if (cell%defn%can_be_quad) then
-          call cell_poly_to_quad(cell, quad)
-          base => quad
-          call method_cell_quad%init( &
-            fmi=this%fmi, &
-            cell=base, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_quad
-        else
-          call method_cell_tern%init( &
-            fmi=this%fmi, &
-            cell=this%cell, &
-            trackctl=this%trackctl, &
-            tracktimes=this%tracktimes)
-          submethod => method_cell_tern
-        end if
+        call method_cell_tern%init( &
+          fmi=this%fmi, &
+          cell=this%cell, &
+          trackctl=this%trackctl, &
+          tracktimes=this%tracktimes)
+        submethod => method_cell_tern
       end if
     end select
   end subroutine load_disv
@@ -156,7 +150,6 @@ contains
 
     select type (dis => this%fmi%dis)
     type is (DisvType)
-      ! compute and set reduced/user node numbers and layer
       inface = particle%iboundary(2)
       idiag = dis%con%ia(cell%defn%icell)
       inbr = cell%defn%facenbr(inface)
@@ -164,13 +157,31 @@ contains
       ic = dis%con%ja(ipos)
       icu = dis%get_nodeuser(ic)
       call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+
+      ! if returning to a cell through the bottom
+      ! face after previously leaving it through
+      ! that same face, we've entered a cycle
+      ! as can occur e.g. in wells. terminate
+      ! in the previous cell.
+      if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
+        particle%advancing = .false.
+        particle%idomain(2) = particle%icp
+        particle%istatus = 2
+        particle%izone = particle%izp
+        call this%save(particle, reason=3)
+        return
+      else
+        particle%icp = particle%idomain(2)
+        particle%izp = particle%izone
+      end if
+
       particle%idomain(2) = ic
       particle%icu = icu
       particle%ilay = ilay
 
-      ! map/set particle entry face and z coordinate
       z = particle%z
       call this%map_neighbor(cell%defn, inface, z)
+
       particle%iboundary(2) = inface
       particle%idomain(3:) = 0
       particle%iboundary(3:) = 0
@@ -221,9 +232,11 @@ contains
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else
-        ! Otherwise, load cell properties into the
-        ! particle and update intercell mass flows
+        ! Update old to new cell properties
         call this%load_particle(cell, particle)
+        if (.not. particle%advancing) return
+
+        ! Update intercell mass flows
         call this%update_flowja(cell, particle)
       end if
     end select
@@ -252,14 +265,14 @@ contains
     real(DP) :: bot
     real(DP) :: sat
 
-    ! -- Map to shared cell face of neighbor
+    ! Map to shared cell face of neighbor
     inbr = defn%facenbr(inface)
     if (inbr .eq. 0) then
-      ! -- Exterior face; no neighbor to map to
+      ! Exterior face; no neighbor to map to
       ! todo AMP: reconsider when multiple models allowed
       inface = -1
     else
-      ! -- Load definition for neighbor cell (neighbor with shared face)
+      ! Load definition for neighbor cell (neighbor with shared face)
       icin = defn%icell
       j = this%fmi%dis%con%ia(icin)
       ic = this%fmi%dis%con%ja(j + inbr)
@@ -268,13 +281,13 @@ contains
       npolyvertsin = defn%npolyverts
       npolyverts = this%neighbor%npolyverts
       if (inface .eq. npolyvertsin + 2) then
-        ! -- Exits through bot, enters through top
+        ! Exits through bot, enters through top
         inface = npolyverts + 3
       else if (inface .eq. npolyvertsin + 3) then
-        ! -- Exits through top, enters through bot
+        ! Exits through top, enters through bot
         inface = npolyverts + 2
       else
-        ! -- Exits and enters through shared polygon face
+        ! Exits and enters through shared polygon face
         j = this%fmi%dis%con%ia(ic)
         do m = 1, npolyverts + 3
           inbrnbr = this%neighbor%facenbr(m)
@@ -283,7 +296,7 @@ contains
             exit
           end if
         end do
-        ! -- Map z between cells
+        ! Map z between cells
         topfrom = defn%top
         botfrom = defn%bot
         zrel = (z - botfrom) / (topfrom - botfrom)
@@ -295,34 +308,26 @@ contains
     end if
   end subroutine map_neighbor
 
-  !> @brief Apply the DISV-grid method
+  !> @brief Apply the DISV tracking method to a particle.
   subroutine apply_disv(this, particle, tmax)
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
+
     call this%track(particle, 1, tmax)
   end subroutine apply_disv
 
   !> @brief Load cell definition from the grid
   subroutine load_cell_defn(this, ic, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
 
-    ! -- Load basic cell properties
     call this%load_properties(ic, defn)
-
-    ! -- Load polygon vertices
     call this%load_polygon(defn)
-
-    ! -- Load face neighbors
     call this%load_neighbors(defn)
-
-    ! -- Load 180-degree indicator
     call this%load_indicators(defn)
-
-    ! -- Load flows (assumes face neighbors already loaded)
     call this%load_flows(defn)
   end subroutine load_cell_defn
 
@@ -336,6 +341,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: sat
+    integer(I4B) :: icu, icpl, ilay
 
     defn%icell = ic
     defn%iatop = get_iatop(this%fmi%dis%get_ncpl(), &
@@ -350,7 +356,12 @@ contains
     defn%porosity = this%porosity(ic)
     defn%retfactor = this%retfactor(ic)
     defn%izone = this%izone(ic)
-
+    select type (dis => this%fmi%dis)
+    type is (DisvType)
+      icu = dis%get_nodeuser(ic)
+      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+      defn%ilay = ilay
+    end select
   end subroutine load_properties
 
   subroutine load_polygon(this, defn)
@@ -363,16 +374,15 @@ contains
       defn%polyvert, &
       closed=.true.)
     defn%npolyverts = size(defn%polyvert, dim=2) - 1
-
   end subroutine load_polygon
 
   !> @brief Loads face neighbors to cell definition from the grid
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_neighbors(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), pointer, intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: ic1
     integer(I4B) :: ic2
     integer(I4B) :: icu1
@@ -392,14 +402,14 @@ contains
     integer(I4B) :: nfaces
     integer(I4B) :: nslots
 
-    ! -- expand facenbr array if needed
+    ! expand facenbr array if needed
     nfaces = defn%npolyverts + 3
     nslots = size(defn%facenbr)
     if (nslots < nfaces) call ExpandArray(defn%facenbr, nfaces - nslots)
 
     select type (dis => this%fmi%dis)
     type is (DisvType)
-      ! -- Load face neighbors.
+      ! Load face neighbors.
       defn%facenbr = 0
       ic1 = defn%icell
       icu1 = dis%get_nodeuser(ic1)
@@ -420,14 +430,14 @@ contains
                          dis%javert(istart2:istop2), &
                          isharedface)
         if (isharedface /= 0) then
-          ! -- Edge (polygon) face neighbor
+          ! Edge (polygon) face neighbor
           defn%facenbr(isharedface) = int(iloc, 1)
         else
           if (k2 > k1) then
-            ! -- Bottom face neighbor
+            ! Bottom face neighbor
             defn%facenbr(defn%npolyverts + 2) = int(iloc, 1)
           else if (k2 < k1) then
-            ! -- Top face neighbor
+            ! Top face neighbor
             defn%facenbr(defn%npolyverts + 3) = int(iloc, 1)
           else
             call pstop(1, "k2 should be <> k1, since no shared edge face")
@@ -435,9 +445,8 @@ contains
         end if
       end do
     end select
-    ! -- List of edge (polygon) faces wraps around
+    ! List of edge (polygon) faces wraps around
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
-
   end subroutine load_neighbors
 
   !> @brief Load flows into the cell definition.
@@ -476,7 +485,6 @@ contains
     else
       defn%iweaksink = 0
     end if
-
   end subroutine load_flows
 
   subroutine load_face_flows_to_defn_poly(this, defn)
@@ -501,10 +509,10 @@ contains
   !> @brief Load boundary flows from the grid into a rectangular cell.
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_boundary_flows_to_defn_rect(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: ioffset
 
     ! assignment of BoundaryFlows to faceflow below assumes clockwise
@@ -523,16 +531,15 @@ contains
                        this%fmi%BoundaryFlows(ioffset + 9)
     defn%faceflow(7) = defn%faceflow(7) + &
                        this%fmi%BoundaryFlows(ioffset + 10)
-
   end subroutine load_boundary_flows_to_defn_rect
 
   !> @brief Load boundary flows from the grid into rectangular quadcell.
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_boundary_flows_to_defn_rect_quad(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: m
     integer(I4B) :: n
     integer(I4B) :: nn
@@ -546,7 +553,7 @@ contains
 
     ioffset = (defn%icell - 1) * 10
 
-    ! -- Polygon faces in positions 1 through npolyverts
+    ! Polygon faces in positions 1 through npolyverts
     do n = 1, 4
       if (n .eq. 2) then
         nbf = 4
@@ -569,23 +576,23 @@ contains
       if (m2 .lt. m1) m2 = m2 + defn%npolyverts
       mdiff = m2 - m1
       if (mdiff .eq. 1) then
-        ! -- Assign BoundaryFlow to corresponding polygon face
+        ! Assign BoundaryFlow to corresponding polygon face
         defn%faceflow(m1) = defn%faceflow(m1) + qbf
       else
-        ! -- Split BoundaryFlow between two faces on quad-refined edge
+        ! Split BoundaryFlow between two faces on quad-refined edge
         qbf = 5d-1 * qbf
         defn%faceflow(m1) = defn%faceflow(m1) + qbf
         defn%faceflow(m1 + 1) = defn%faceflow(m1 + 1) + qbf
       end if
     end do
-    ! -- Wrap around to 1 in position npolyverts+1
+    ! Wrap around to 1 in position npolyverts+1
     m = defn%npolyverts + 1
     defn%faceflow(m) = defn%faceflow(1)
-    ! -- Bottom in position npolyverts+2
+    ! Bottom in position npolyverts+2
     m = m + 1
     defn%faceflow(m) = defn%faceflow(m) + &
                        this%fmi%BoundaryFlows(ioffset + 9)
-    ! -- Top in position npolyverts+3
+    ! Top in position npolyverts+3
     m = m + 1
     defn%faceflow(m) = defn%faceflow(m) + &
                        this%fmi%BoundaryFlows(ioffset + 10)
@@ -595,10 +602,10 @@ contains
   !> @brief Load boundary flows from the grid into a polygonal cell.
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_boundary_flows_to_defn_poly(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: ic
     integer(I4B) :: npolyverts
     integer(I4B) :: ioffset
@@ -624,13 +631,14 @@ contains
   end subroutine load_boundary_flows_to_defn_poly
 
   !> @brief Load 180-degree vertex indicator array and set flags
-  !! indicating how cell can be represented.
-  !! Assumes cell index and number of vertices are already loaded.
+  !! indicating how cell can be represented. Assumes cell index
+  !! and number of vertices are already loaded.
+  !<
   subroutine load_indicators(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), pointer, intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: npolyverts
     integer(I4B) :: m
     integer(I4B) :: m0
@@ -655,12 +663,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! -- expand ispv180 array if needed
     if (size(defn%ispv180) < npolyverts + 3) &
       call ExpandArray(defn%ispv180, npolyverts + 1)
 
-    ! -- Load 180-degree indicator.
-    ! -- Also, set flags that indicate how cell can be represented.
     defn%ispv180(1:npolyverts + 1) = .false.
     defn%can_be_rect = .false.
     defn%can_be_quad = .false.
@@ -668,6 +673,7 @@ contains
     num90 = 0
     num180 = 0
     last180 = .false.
+
     ! assumes non-self-intersecting polygon
     do m = 1, npolyverts
       m1 = m
@@ -708,9 +714,10 @@ contains
       end if
     end do
 
-    ! -- List of 180-degree indicators wraps around for convenience
+    ! List of 180-degree indicators wraps around for convenience
     defn%ispv180(npolyverts + 1) = defn%ispv180(1)
 
+    ! Set rect/quad flags
     if (num90 .eq. 4) then
       if (num180 .eq. 0) then
         defn%can_be_rect = .true.
@@ -718,7 +725,6 @@ contains
         defn%can_be_quad = .true.
       end if
     end if
-
   end subroutine load_indicators
 
 end module MethodDisvModule

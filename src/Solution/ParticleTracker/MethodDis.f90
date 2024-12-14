@@ -1,6 +1,6 @@
 module MethodDisModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DONE, DZERO
   use MethodModule, only: MethodType
   use MethodCellPoolModule
@@ -11,6 +11,7 @@ module MethodDisModule
   use PrtFmiModule, only: PrtFmiType
   use DisModule, only: DisType
   use GeomUtilModule, only: get_ijk, get_jk
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -40,23 +41,23 @@ contains
 
   !> @brief Create a new structured grid (DIS) tracking method
   subroutine create_method_dis(method)
-    ! -- dummy
+    ! dummy
     type(MethodDisType), pointer :: method
-    ! -- local
+    ! local
     type(CellRectType), pointer :: cell
 
     allocate (method)
-    allocate (method%type)
+    allocate (method%name)
     call create_cell_rect(cell)
     method%cell => cell
-    method%type = "dis"
+    method%name = "dis"
     method%delegates = .true.
   end subroutine create_method_dis
 
   !> @brief Destructor the tracking method
   subroutine deallocate (this)
     class(MethodDisType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine deallocate
 
   subroutine load_cell(this, ic, cell)
@@ -81,11 +82,14 @@ contains
     select type (dis => this%fmi%dis)
     type is (DisType)
       icu = dis%get_nodeuser(ic)
+
       call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
                    irow, jcol, klay)
+
       dx = dis%delr(jcol)
       dy = dis%delc(irow)
       dz = cell%defn%top - cell%defn%bot
+
       cell%dx = dx
       cell%dy = dy
       cell%dz = dz
@@ -95,41 +99,54 @@ contains
       cell%yOrigin = cell%defn%polyvert(2, 1)
       cell%zOrigin = cell%defn%bot
       cell%ipvOrigin = 1
-      areax = dy * dz
-      areay = dx * dz
-      areaz = dx * dy
+
       factor = DONE / cell%defn%retfactor
       factor = factor / cell%defn%porosity
+
+      areaz = dx * dy
+      term = factor / areaz
+
+      cell%vz1 = cell%defn%faceflow(6) * term
+      cell%vz2 = -cell%defn%faceflow(7) * term
+
+      if (this%fmi%ibdgwfsat0(ic) == 0) then
+        cell%vx1 = DZERO
+        cell%vx2 = DZERO
+        cell%vy1 = DZERO
+        cell%vy2 = DZERO
+        cell%vz1 = DZERO
+        cell%vz2 = DZERO
+        return
+      end if
+
+      areax = dy * dz
       term = factor / areax
       cell%vx1 = cell%defn%faceflow(1) * term
       cell%vx2 = -cell%defn%faceflow(3) * term
+
+      areay = dx * dz
       term = factor / areay
       cell%vy1 = cell%defn%faceflow(4) * term
       cell%vy2 = -cell%defn%faceflow(2) * term
-      term = factor / areaz
-      cell%vz1 = cell%defn%faceflow(6) * term
-      cell%vz2 = -cell%defn%faceflow(7) * term
+
     end select
   end subroutine load_cell
 
   !> @brief Load the cell geometry and tracking method
   subroutine load_dis(this, particle, next_level, submethod)
-    ! -- dummy
+    ! dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     integer(I4B), intent(in) :: next_level
     class(MethodType), pointer, intent(inout) :: submethod
-    ! -- local
+    ! local
     integer(I4B) :: ic
 
     select type (cell => this%cell)
     type is (CellRectType)
-      ! -- Load cell definition and geometry
       ic = particle%idomain(next_level)
       call this%load_celldefn(ic, cell%defn)
       call this%load_cell(ic, cell)
-
-      ! -- If cell is active but dry, Initialize instant pass-to-bottom method
       if (this%fmi%ibdgwfsat0(ic) == 0) then
         call method_cell_ptb%init( &
           fmi=this%fmi, &
@@ -138,7 +155,6 @@ contains
           tracktimes=this%tracktimes)
         submethod => method_cell_ptb
       else
-        ! -- Otherwise initialize Pollock's method
         call method_cell_plck%init( &
           fmi=this%fmi, &
           cell=this%cell, &
@@ -176,7 +192,7 @@ contains
 
     select type (dis => this%fmi%dis)
     type is (DisType)
-      ! compute and set reduced/user node numbers and layer
+      ! compute reduced/user node numbers and layer
       inface = particle%iboundary(2)
       inbr = cell%defn%facenbr(inface)
       idiag = this%fmi%dis%con%ia(cell%defn%icell)
@@ -185,6 +201,25 @@ contains
       icu = dis%get_nodeuser(ic)
       call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, &
                    irow, icol, ilay)
+
+      ! if returning to a cell through the bottom
+      ! face after previously leaving it through
+      ! that same face, we've entered a cycle
+      ! as can occur e.g. in wells. terminate
+      ! in the previous cell.
+      if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
+        particle%advancing = .false.
+        particle%idomain(2) = particle%icp
+        particle%istatus = 2
+        particle%izone = particle%izp
+        call this%save(particle, reason=3)
+        return
+      else
+        particle%icp = particle%idomain(2)
+        particle%izp = particle%izone
+      end if
+
+      ! update node numbers and layer
       particle%idomain(2) = ic
       particle%icu = icu
       particle%ilay = ilay
@@ -218,7 +253,6 @@ contains
       end if
       particle%z = z
     end select
-
   end subroutine load_particle
 
   !> @brief Update cell-cell flows of particle mass.
@@ -239,13 +273,12 @@ contains
     idiag = this%fmi%dis%con%ia(cell%defn%icell)
     ipos = idiag + inbr
 
-    ! -- leaving old cell
+    ! leaving old cell
     this%flowja(ipos) = this%flowja(ipos) - DONE
 
-    ! -- entering new cell
+    ! entering new cell
     this%flowja(this%fmi%dis%con%isym(ipos)) &
       = this%flowja(this%fmi%dis%con%isym(ipos)) + DONE
-
   end subroutine update_flowja
 
   !> @brief Pass a particle to the next cell, if there is one
@@ -267,15 +300,17 @@ contains
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else
-        ! Otherwise, load cell properties into the
-        ! particle and update intercell mass flows
+        ! Update old to new cell properties
         call this%load_particle(cell, particle)
+        if (.not. particle%advancing) return
+
+        ! Update intercell mass flows
         call this%update_flowja(cell, particle)
       end if
     end select
   end subroutine pass_dis
 
-  !> @brief Apply the method to a particle
+  !> @brief Apply the structured tracking method to a particle.
   subroutine apply_dis(this, particle, tmax)
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -299,36 +334,35 @@ contains
 
   !> @brief Loads cell definition from the grid
   subroutine load_celldefn(this, ic, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
 
-    ! -- Load basic cell properties
+    ! Load basic cell properties
     call this%load_properties(ic, defn)
 
-    ! -- Load cell polygon vertices
+    ! Load cell polygon vertices
     call this%fmi%dis%get_polyverts( &
       defn%icell, &
       defn%polyvert, &
       closed=.true.)
-
-    ! -- Load cell face neighbors
     call this%load_neighbors(defn)
 
-    ! -- Load 180 degree face indicators
+    ! Load 180 degree face indicators
     defn%ispv180(1:defn%npolyverts + 1) = .false.
 
-    ! -- Load face flows (assumes face neighbors already loaded)
     call this%load_flows(defn)
 
   end subroutine load_celldefn
 
   subroutine load_properties(this, ic, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisType), intent(inout) :: this
     integer(I4B), intent(in) :: ic
     type(CellDefnType), pointer, intent(inout) :: defn
+    ! local
+    integer(I4B) :: irow, icol, ilay, icu
 
     defn%icell = ic
     defn%npolyverts = 4 ! rectangular cell always has 4 vertices
@@ -341,19 +375,24 @@ contains
     defn%sat = this%fmi%gwfsat(ic)
     defn%porosity = this%porosity(ic)
     defn%retfactor = this%retfactor(ic)
+    select type (dis => this%fmi%dis)
+    type is (DisType)
+      icu = dis%get_nodeuser(ic)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
+      defn%ilay = ilay
+    end select
     defn%izone = this%izone(ic)
     defn%can_be_rect = .true.
     defn%can_be_quad = .false.
-
   end subroutine load_properties
 
   !> @brief Loads face neighbors to cell definition from the grid.
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_neighbors(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), pointer, intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: ic1
     integer(I4B) :: ic2
     integer(I4B) :: icu1
@@ -371,7 +410,7 @@ contains
 
     select type (dis => this%fmi%dis)
     type is (DisType)
-      ! -- Load face neighbors
+      ! Load face neighbors
       defn%facenbr = 0
       ic1 = defn%icell
       icu1 = dis%get_nodeuser(ic1)
@@ -387,7 +426,7 @@ contains
         call get_ijk(icu2, dis%nrow, dis%ncol, dis%nlay, &
                      irow2, jcol2, klay2)
         if (klay2 == klay1) then
-          ! -- Edge (polygon) face neighbor
+          ! Edge (polygon) face neighbor
           if (irow2 > irow1) then
             ! Neighbor to the S
             iedgeface = 4
@@ -403,15 +442,15 @@ contains
           end if
           defn%facenbr(iedgeface) = int(iloc, 1)
         else if (klay2 > klay1) then
-          ! -- Bottom face neighbor
+          ! Bottom face neighbor
           defn%facenbr(defn%npolyverts + 2) = int(iloc, 1)
         else
-          ! -- Top face neighbor
+          ! Top face neighbor
           defn%facenbr(defn%npolyverts + 3) = int(iloc, 1)
         end if
       end do
     end select
-    ! -- List of edge (polygon) faces wraps around
+    ! List of edge (polygon) faces wraps around
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
   end subroutine load_neighbors
 
@@ -442,7 +481,6 @@ contains
     else
       defn%iweaksink = 0
     end if
-
   end subroutine load_flows
 
   subroutine load_face_flows_to_defn(this, defn)
@@ -467,10 +505,10 @@ contains
   !> @brief Add boundary flows to the cell definition faceflow array.
   !! Assumes cell index and number of vertices are already loaded.
   subroutine load_boundary_flows_to_defn(this, defn)
-    ! -- dummy
+    ! dummy
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: defn
-    ! -- local
+    ! local
     integer(I4B) :: ioffset
 
     ioffset = (defn%icell - 1) * MAX_POLY_CELLS

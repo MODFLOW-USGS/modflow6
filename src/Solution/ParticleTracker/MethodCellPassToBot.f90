@@ -28,15 +28,15 @@ contains
   subroutine create_method_cell_ptb(method)
     type(MethodCellPassToBotType), pointer :: method
     allocate (method)
-    allocate (method%type)
-    method%type = "passtobottom"
+    allocate (method%name)
+    method%name = "passtobottom"
     method%delegates = .false.
   end subroutine create_method_cell_ptb
 
   !> @brief Deallocate the pass-to-bottom tracking method
   subroutine deallocate (this)
     class(MethodCellPassToBotType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine deallocate
 
   !> @brief Pass particle vertically and instantaneously to the cell bottom
@@ -46,10 +46,15 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
 
-    call this%update(particle, this%cell%defn)
+    ! Check termination/reporting conditions
+    call this%check(particle, this%cell%defn)
     if (.not. particle%advancing) return
+
+    ! Pass to bottom face
     particle%z = this%cell%defn%bot
     particle%iboundary(2) = this%cell%defn%npolyverts + 2
+
+    ! Save datum
     call this%save(particle, reason=1)
   end subroutine apply_ptb
 

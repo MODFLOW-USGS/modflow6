@@ -49,6 +49,7 @@ module PrtPrpModule
     integer(I4B), pointer :: istopweaksink => null() !< weak sink option: 0 = no stop, 1 = stop
     integer(I4B), pointer :: istopzone => null() !< optional stop zone number: 0 = no stop zone
     integer(I4B), pointer :: idrape => null() !< drape option: 0 = do not drape, 1 = drape to topmost active cell
+    integer(I4B), pointer :: idrymeth => null() !< dry tracking method: 0 = drop, 1 = stop, 2 = stay
     integer(I4B), pointer :: itrkout => null() !< binary track file
     integer(I4B), pointer :: itrkhdr => null() !< track header file
     integer(I4B), pointer :: itrkcsv => null() !< CSV track file
@@ -89,6 +90,7 @@ module PrtPrpModule
     procedure :: release
     procedure :: log_release
     procedure :: validate_release_point
+    procedure :: initialize_particle
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
   end type PrtPrpType
@@ -158,6 +160,7 @@ contains
     call mem_deallocate(this%istopweaksink)
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
+    call mem_deallocate(this%idrymeth)
     call mem_deallocate(this%nreleasepoints)
     call mem_deallocate(this%nreleasetimes)
     call mem_deallocate(this%nparticles)
@@ -247,6 +250,7 @@ contains
     call mem_allocate(this%istopweaksink, 'ISTOPWEAKSINK', this%memoryPath)
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
+    call mem_allocate(this%idrymeth, 'IDRYMETH', this%memoryPath)
     call mem_allocate(this%nreleasepoints, 'NRELEASEPOINTS', this%memoryPath)
     call mem_allocate(this%nreleasetimes, 'NRELEASETIMES', this%memoryPath)
     call mem_allocate(this%nparticles, 'NPARTICLES', this%memoryPath)
@@ -270,6 +274,7 @@ contains
     this%istopweaksink = 0
     this%istopzone = 0
     this%idrape = 0
+    this%idrymeth = 0
     this%nreleasepoints = 0
     this%nreleasetimes = 0
     this%nparticles = 0
@@ -413,20 +418,75 @@ contains
     integer(I4B), intent(in) :: ip !< particle index
     real(DP), intent(in) :: trelease !< release time
     ! local
-    integer(I4B) :: irow, icol, ilay, icpl
-    integer(I4B) :: ic, icu
     integer(I4B) :: np
-    real(DP) :: x, y, z
-    real(DP) :: top, bot, hds
     type(ParticleType), pointer :: particle
+
+    call this%initialize_particle(particle, ip, trelease)
 
     ! Increment cumulative particle count
     np = this%nparticles + 1
     this%nparticles = np
 
-    ! Get reduced and user node numbers
+    ! Save the particle to the store
+    call this%particles%save_particle(particle, np)
+    deallocate (particle)
+
+    ! Accumulate mass for release point
+    this%rptm(ip) = this%rptm(ip) + DONE
+
+  end subroutine release
+
+  subroutine initialize_particle(this, particle, ip, trelease)
+    class(PrtPrpType), intent(inout) :: this !< this instance
+    type(ParticleType), pointer, intent(inout) :: particle !< the particle
+    integer(I4B), intent(in) :: ip !< particle index
+    real(DP), intent(in) :: trelease !< release time
+    ! local
+    integer(I4B) :: irow, icol, ilay, icpl
+    integer(I4B) :: ic, icu, ic_old
+    real(DP) :: x, y, z
+    real(DP) :: top, bot, hds
+
     ic = this%rptnode(ip)
     icu = this%dis%get_nodeuser(ic)
+
+    call create_particle(particle)
+
+    if (size(this%boundname) /= 0) then
+      particle%name = this%boundname(ip)
+    else
+      particle%name = ''
+    end if
+
+    particle%irpt = ip
+    particle%istopweaksink = this%istopweaksink
+    particle%istopzone = this%istopzone
+    particle%idrymeth = this%idrymeth
+    particle%icu = icu
+
+    select type (dis => this%dis)
+    type is (DisType)
+      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
+    type is (DisvType)
+      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
+    end select
+    particle%ilay = ilay
+    particle%izone = this%rptzone(ic)
+
+    particle%istatus = 0
+    ! If the cell is inactive, either drape the particle
+    ! to the top-most active cell beneath it if drape is
+    ! enabled, or else terminate permanently unreleased.
+    if (this%ibound(ic) == 0) then
+      ic_old = ic
+      if (this%idrape > 0) then
+        call this%dis%highest_active(ic, this%ibound)
+        if (ic == ic_old .or. this%ibound(ic) == 0) &
+          particle%istatus = 8
+      else
+        particle%istatus = 8
+      end if
+    end if
 
     ! Load coordinates and transform if needed
     x = this%rptx(ip)
@@ -440,50 +500,21 @@ contains
       z = this%rptz(ip)
     end if
 
-    ! Make sure release point is in the grid/cell
     call this%validate_release_point(ic, x, y, z)
 
-    ! Initialize the particle
-    call create_particle(particle)
-    if (size(this%boundname) /= 0) then
-      particle%name = this%boundname(ip)
-    else
-      particle%name = ''
-    end if
-    particle%irpt = ip
-    particle%istopweaksink = this%istopweaksink
-    particle%istopzone = this%istopzone
-    particle%icu = icu
-    select type (dis => this%dis)
-    type is (DisType)
-      call get_ijk(icu, dis%nrow, dis%ncol, dis%nlay, irow, icol, ilay)
-    type is (DisvType)
-      call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
-    end select
-    particle%ilay = ilay
-    particle%izone = this%rptzone(ic)
-    particle%istatus = 0
-    ! Handle inactive cells
-    if (this%ibound(ic) == 0) then
-      ! If drape option activated, release in highest active
-      ! cell vertically below release point.
-      if (this%idrape /= 0) &
-        call this%dis%highest_active(ic, this%ibound)
-      ! If returned cell is inactive, do not release particle
-      if (this%ibound(ic) == 0) &
-        particle%istatus = 8 ! permanently unreleased
-    end if
     particle%x = x
     particle%y = y
     particle%z = z
     particle%trelease = trelease
-    ! Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
+
+    ! Set stop time to earlier of STOPTIME and STOPTRAVELTIME
     if (this%stoptraveltime == huge(1d0)) then
       particle%tstop = this%stoptime
     else
       particle%tstop = particle%trelease + this%stoptraveltime
       if (this%stoptime < particle%tstop) particle%tstop = this%stoptime
     end if
+
     particle%ttrack = particle%trelease
     particle%idomain(1) = 0
     particle%iboundary(1) = 0
@@ -495,15 +526,7 @@ contains
     particle%iexmeth = this%iexmeth
     particle%iextend = this%iextend
     particle%extol = this%extol
-
-    ! Store the particle's state and deallocate it
-    call this%particles%save_particle(particle, np)
-    deallocate (particle)
-
-    ! Accumulate particle mass for release point
-    this%rptm(ip) = this%rptm(ip) + DONE
-
-  end subroutine release
+  end subroutine initialize_particle
 
   !> @ brief Read and prepare period data for particle input
   subroutine prp_rp(this)
@@ -690,6 +713,25 @@ contains
       found = .true.
     case ('DRAPE')
       this%idrape = 1
+      found = .true.
+    case ('DRY_TRACKING_METHOD')
+      call this%parser%GetStringCaps(keyword)
+      select case (keyword)
+      case ('DROP')
+        this%idrymeth = 0
+      case ('STOP')
+        this%idrymeth = 1
+      case ('STAY')
+        this%idrymeth = 2
+      case default
+        write (errmsg, '(a, a)') &
+          'Unknown dry tracking method: ', trim(keyword)
+        call store_error(errmsg)
+        write (errmsg, '(a, a)') &
+          'DRY must be "DROP", "STOP" or "STAY"'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end select
       found = .true.
     case ('TRACK')
       call this%parser%GetStringCaps(keyword)
@@ -891,7 +933,7 @@ contains
 
         if (n < 1 .or. n > this%nreleasepoints) then
           write (errmsg, '(a,1x,i0,a)') &
-            'Release point number must be greater than 0 and less than ', &
+            'Release point number must be greater than 0 and less than', &
             'or equal to', this%nreleasepoints, '.'
           call store_error(errmsg)
           cycle

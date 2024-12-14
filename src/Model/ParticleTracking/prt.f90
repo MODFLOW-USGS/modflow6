@@ -932,7 +932,7 @@ contains
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
-            call this%method%save(particle, reason=3) ! reason=3: termination
+            call this%method%save(particle, reason=3)
 
           ! If particle is inactive or not yet to be released, cycle
           if (particle%istatus > 1) cycle
@@ -940,7 +940,7 @@ contains
           ! If particle released this time step, record its initial state
           particle%istatus = 1
           if (particle%trelease >= totimc) &
-            call this%method%save(particle, reason=0) ! reason=0: release
+            call this%method%save(particle, reason=0)
 
           ! Maximum time is the end of the time step or the particle
           ! stop time, whichever comes first, unless it's the final
@@ -956,6 +956,10 @@ contains
 
           ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
+
+          ! Reset previous cell, exit face, and zone numbers
+          particle%icp = 0
+          particle%izp = 0
 
           ! Update particle storage
           call packobj%particles%save_particle(particle, np)
