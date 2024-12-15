@@ -21,37 +21,38 @@ By default, flows associated with stress packages are assumed to be distributed 
 \subsection{Particle Mass Budget}
 A summary of all inflow (sources) and outflow (sinks) of particle mass is called a mass budget.  The particle mass budget is printed to the PRT Model Listing File for selected time steps.  In the current implementation, each particle is assigned unit mass, and the numerical value of the flow can be interpreted as particles per time.
 
-\subsection{Vertical Tracking}
+\subsection{Particle Release and Tracking in Inactive, Dry-But-Active, and Partially Saturated Cells}
 
-When a particle is in the flow field, vertical motion can be solved in the same way as lateral motion. Special handling is necessary above the water table.
+The motion of a particle is determined by the groundwater velocity field in which the particle is immersed. In a fully saturated cell, or the saturated portion of a partially saturated cell, the velocity field is calculated from the flows entering and exiting the cell. In a completely dry cell, or the dry portion of a partially saturated cell, the fate of a particle depends on whether the cell is an active part of the flow simulation, whether the particle is in a dry or wet part of the cell, and user-selected options.
 
-A dry cell is either an inactive cell or an active but dry cell, as can occur with the Newton formulation.
-
-Normally, an inactive cell might be dry or explicitly disabled (idomain).  With Newton, dry cells remain active.
+A cell can be inactive either because it has been removed from the active simulation using the IDOMAIN array or because it is completely dry, i.e., the head in the cell is below the bottom elevation of the cell. Deactivation of completely dry cells is the default behavior in MODFLOW 6. However, when the Newton-Raphson formulation is used to solve for groundwater flow, completely dry cells remain active. Particle tracking through inactive and dry-but-active cells is discussed in detail below.
 
 Release-time and tracking-time considerations are described (and implemented) separately.
 
 \subsubsection{Release}
 
-At release time, PRT decides whether to release each particle or to terminate it unreleased.
+At release time, PRT decides whether to release each particle or terminate it unreleased.
 
-If the release cell is active, the particle will be released at the user-specified location.
+If the cell into which the particle is being released is inactive, behavior is determined by the DRAPE option. If the DRAPE option is enabled, the particle will be released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if DRAPE is not enabled, the particle will terminate unreleased (with status code 8).
 
-If the release cell is inactive, behavior is determined by the DRAPE option. If the DRAPE option is enabled, the particle will be released from the top-most active cell beneath it, if any. If there is no active cell underneath the particle in any layer, or if DRAPE is not enabled, the particle will terminate unreleased (with status code 8).
+If the cell into which the particle is being released is active, the particle will be released at the user-specified location, even if that location is in the dry portion of the cell or the cell is dry-but-active.
 
-Since under the Newton formulation dry cells can remain active, the DRAPE option has no effect when Newton is on (assuming particles are not released into disabled grid regions). Vertical tracking behavior with Newton can be configured using the DRY\_TRACKING\_METHOD option discussed below.
+Note that for a dry-but-active cell the DRAPE option has no effect. In that case, the particle is released into the cell, and its subsequent behavior can be configured using the DRY\_TRACKING\_METHOD option discussed below.
 
 \subsubsection{Tracking}
 
-With the Newton formulation, particles can be released into dry-but-active cells.
+During tracking, the fate of a particle depends on the status of the cell that contains the particle, whether the particle is in a wet or dry part of the cell, and the DRY\_TRACKING\_METHOD option.
 
-Particle trajectories are solved over the same time discretization used by the flow model. A particle may be immersed in the flow field in one time step, and find that the water table has dropped below it in the next.
+A particle immersed in the groundwater flow field during a given time step can end up in an inactive cell, a dry-but-active cell, or the dry part of a partially saturated cell if the water table drops on the next time step.
 
-A particle which finds itself in an inactive cell will terminate with status code 7. This is consistent with MODPATH 7's behavior.
+A particle that finds itself in an inactive cell will terminate with status code 7. This is consistent with the behavior of MODPATH 7.
 
-A particle in a dry but active cell, or above the water table in a partially saturated cell, need not terminate. We call such a particle dry. The PRP package provides an option DRY\_TRACKING\_METHOD determining how dry particles should behave. Supported values are DROP (default), STOP, and STAY.
+Dry-but-active cells can occur when the Newton-Raphson formulation is used to solve for groundwater flow. As discussed above, particles can be released into dry-but-active cells.
 
-If DROP is selected, or if a DRY\_TRACKING\_METHOD is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e. the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom of the model grid.
+A particle in a dry-but-active cell, or above the water table in a partially saturated cell, which we call a dry particle, need not terminate. The PRP package provides a DRY\_TRACKING\_METHOD option that determines how dry particles should behave. Supported values are DROP (the default), STOP, and STAY.
+
+If DROP is selected, or if a DRY\_TRACKING\_METHOD is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e., the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom
+of the model grid.
 
 If STOP is selected, dry particles will be terminated.
 
@@ -123,15 +124,13 @@ The IREASON field indicates the reason the particle track record was saved:
 \item \texttt{1}: particle exited a cell
 \item \texttt{2}: time step ended
 \item \texttt{3}: particle terminated
-\item \texttt{4}: particle exited a weak sink cell
+\item \texttt{4}: particle entered a weak sink cell
 \item \texttt{5}: user-specified tracking time
 \end{description}
 
 By default, the PRT Model reports all particle events. The user can optionally select which events are reported, as explained in the Output Control (OC) subsection. Because multiple tracking events may coincide (e.g. exiting a cell and exiting a weak sink cell), particle track records may be duplicates except for the ISTATUS and/or IREASON codes.
 
 The binary particle track file contains the same particle track data in a record-based binary format explained in the Particle Track File subsection of the Description of Binary Output Files section.
-
-
 
 
 
