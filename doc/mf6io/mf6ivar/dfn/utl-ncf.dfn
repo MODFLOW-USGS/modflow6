@@ -35,7 +35,7 @@ in_record true
 reader urword
 optional false
 longname chunking parameter for the time dimension
-description is the keyword used to provide a user defined data chunk size for the time dimension in a NETCDF\_MESH2D or NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_face parameter (NETCDF\_MESH2D) or the chunk_z, chunk_y, and chunk_x parameter set (NETCDF\_STRUCTURED) to have an effect.
+description is the keyword used to provide a user defined data chunk size for the time dimension in a NETCDF\_MESH2D or NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk\_face parameter (NETCDF\_MESH2D) or the chunk\_z, chunk\_y, and chunk\_x parameter set (NETCDF\_STRUCTURED) to have an effect.
 
 block options
 name chunk_face
@@ -44,7 +44,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for the mesh face dimension
-description is the keyword used to provide a user defined data chunk size for the face dimension in a NETCDF\_MESH2D type netcdf output file. Must be used in combination with the the chunk_time parameter to have an effect.
+description is the keyword used to provide a user defined data chunk size for the face dimension in a NETCDF\_MESH2D type netcdf output file. Must be used in combination with the the chunk\_time parameter to have an effect.
 
 block options
 name chunk_z
@@ -53,7 +53,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured z
-description is the keyword used to provide a user defined data chunk size for the z dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_x and chunk_y parameter set to have an effect.
+description is the keyword used to provide a user defined data chunk size for the z dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk\_time, chunk\_x and chunk\_y parameter set to have an effect.
 
 block options
 name chunk_y
@@ -62,7 +62,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured y
-description is the keyword used to provide a user defined data chunk size for the y dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_x and chunk_z parameter set to have an effect.
+description is the keyword used to provide a user defined data chunk size for the y dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk\_time, chunk\_x and chunk\_z parameter set to have an effect.
 
 block options
 name chunk_x
@@ -71,7 +71,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured x
-description is the keyword used to provide a user defined data chunk size for the x dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_y and chunk_z parameter set to have an effect.
+description is the keyword used to provide a user defined data chunk size for the x dimension in a NETCDF\_STRUCTURED type netcdf output file. Must be used in combination with the the chunk\_time, chunk\_y and chunk\_z parameter set to have an effect.
 
 block options
 name modflow6_attr_off

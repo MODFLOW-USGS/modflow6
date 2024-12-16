@@ -12,6 +12,7 @@ from test_gwf_sto01 import cases
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
+netcdf4 = pytest.importorskip("netCDF4")
 
 htol = [None for _ in range(len(cases))]
 
@@ -67,6 +68,10 @@ def build_models(idx, test, export, gridded_input):
 
 def check_output(idx, test, export, gridded_input):
     from test_gwf_sto01 import check_output as check
+
+    # verify format of generated netcdf file
+    with netcdf4.Dataset(test.workspace / "gwf_sto01.nc") as ds:
+        assert ds.data_model == "NETCDF4"
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input
