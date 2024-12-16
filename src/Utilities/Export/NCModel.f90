@@ -74,7 +74,7 @@ module NCModelExportModule
     character(len=LINELENGTH) :: mesh_name = 'mesh' !< name of mesh container variable
     character(len=LENMEMPATH) :: dis_mempath !< discretization input mempath
     character(len=LENMEMPATH) :: ncf_mempath !< netcdf utility package input mempath
-    character(len=LENBIGLINE) :: ogc_wkt !< wkt user string
+    character(len=LENBIGLINE) :: wkt !< wkt user string
     character(len=LINELENGTH) :: datetime !< export file creation time
     character(len=LINELENGTH) :: xname !< dependent variable name
     type(NCExportAnnotation) :: annotation !< export file annotation
@@ -293,7 +293,7 @@ contains
     this%nc_fname = nc_fname
     this%gridmap_name = ''
     this%ncf_mempath = ''
-    this%ogc_wkt = ''
+    this%wkt = ''
     this%datetime = ''
     this%xname = ''
     this%disenum = disenum
@@ -342,8 +342,8 @@ contains
                        found_mempath)
 
     if (found_mempath) then
-      call mem_set_value(this%ogc_wkt, 'OGC_WKT', this%ncf_mempath, &
-                         ncf_found%ogc_wkt)
+      call mem_set_value(this%wkt, 'WKT', this%ncf_mempath, &
+                         ncf_found%wkt)
       call mem_set_value(this%deflate, 'DEFLATE', this%ncf_mempath, &
                          ncf_found%deflate)
       call mem_set_value(this%shuffle, 'SHUFFLE', this%ncf_mempath, &
@@ -354,7 +354,7 @@ contains
                          ncf_found%chunk_time)
     end if
 
-    if (ncf_found%ogc_wkt) then
+    if (ncf_found%wkt) then
       this%gridmap_name = 'projection'
     end if
 
@@ -364,12 +364,11 @@ contains
     end if
 
     ! set datetime string
-    if (isim_mode /= MVALIDATE .and. datetime0 == '') then
-      errmsg = 'TDIS parameter START_DATE_TIME required for NetCDF export.'
-      call store_error(errmsg)
-      call store_error_filename(modelfname)
-    else
+    if (datetime0 /= '') then
       this%datetime = 'days since '//trim(datetime0)
+    else
+      ! January 1, 1970 at 00:00:00 UTC
+      this%datetime = 'days since 1970-01-01T00:00:00'
     end if
 
     ! set total nstp

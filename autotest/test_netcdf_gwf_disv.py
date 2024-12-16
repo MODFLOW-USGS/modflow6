@@ -53,7 +53,7 @@ def build_models(idx, test, export, gridded_input):
         gwf.name_file.nc_mesh2d_filerecord = f"{name}.nc"
 
     # netcdf config
-    ncf = flopy.mf6.ModflowUtlncf(gwf.disv, ogc_wkt=wkt, filename=f"{name}.disv.ncf")
+    ncf = flopy.mf6.ModflowUtlncf(gwf.disv, wkt=wkt, filename=f"{name}.disv.ncf")
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(

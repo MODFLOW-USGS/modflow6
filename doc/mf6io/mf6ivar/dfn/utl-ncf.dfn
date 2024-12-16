@@ -4,7 +4,7 @@
 # --------------------- utl ncf options ---------------------
 
 block options
-name ogc_wkt
+name wkt
 type string
 shape lenbigline
 reader urword
@@ -29,30 +29,13 @@ longname
 description is the keyword used to turn on the netcdf variable shuffle filter when the deflate option is also set. The shuffle filter has the effect of storing the first byte of all of a variable's values in a chunk contiguously, followed by all the second bytes, etc. This can be an optimization for compression with certain types of data.
 
 block options
-name chunk_record
-type record chunking chunk_time chunk_face chunk_z chunk_y chunk_x
-reader urword
-optional true
-longname netcdf export chunking record
-description netcdf export chunking record
-
-block options
-name chunking
-type keyword
-in_record true
-reader urword
-optional false
-longname keyword when defining chunking parameters
-description is a keyword for providing netcdf export chunk sizes. Chunking can dramatically impact data access times and optimal chunking is highly dependent on access patterns (timeseries vs spatial, for example). It can also significantly impact compressibility of the data. A valid input record specifies chunk\_time and either chunk\_face (MESH) or chunk\_z, chunk\_y, and chunk\_x (STRUCTURED).
-
-block options
 name chunk_time
 type integer
 in_record true
 reader urword
 optional false
 longname chunking parameter for the time dimension
-description is the keyword used to provide a netcdf export time dimension chunk size.
+description is the keyword used to provide a user defined data chunk size for the time dimension in a NETCDF_MESH2D or NETCDF_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_face parameter (NETCDF_MESH2D) or the chunk_z, chunk_y, and chunk_x parameter set (NETCDF_STRUCTURED) to have an effect.
 
 block options
 name chunk_face
@@ -61,7 +44,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for the mesh face dimension
-description is the keyword used to provide a mesh face dimension chunk size.
+description is the keyword used to provide a user defined data chunk size for the face dimension in a NETCDF_MESH2D type netcdf output file. Must be used in combination with the the chunk_time parameter to have an effect.
 
 block options
 name chunk_z
@@ -70,7 +53,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured z
-description is the keyword used to provide a structured grid z dimensions chunk size.
+description is the keyword used to provide a user defined data chunk size for the z dimension in a NETCDF_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_x and chunk_y parameter set to have an effect.
 
 block options
 name chunk_y
@@ -79,7 +62,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured y
-description is the keyword used to provide a structured grid y dimensions chunk size.
+description is the keyword used to provide a user defined data chunk size for the y dimension in a NETCDF_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_x and chunk_z parameter set to have an effect.
 
 block options
 name chunk_x
@@ -88,7 +71,7 @@ in_record true
 reader urword
 optional true
 longname chunking parameter for structured x
-description is the keyword used to provide a structured grid x dimensions chunk size.
+description is the keyword used to provide a user defined data chunk size for the x dimension in a NETCDF_STRUCTURED type netcdf output file. Must be used in combination with the the chunk_time, chunk_y and chunk_z parameter set to have an effect.
 
 block options
 name modflow6_attr_off
@@ -107,12 +90,12 @@ type integer
 optional true
 reader urword
 longname number of cells in layer
-description is the number of cells in a in a projected plane layer.
+description is the number of cells in a projected plane layer.
 
 # --------------------- utl ncf griddata ---------------------
 
 block griddata
-name lat
+name latitude
 type double precision
 shape (ncpl)
 optional true
@@ -121,7 +104,7 @@ longname cell center latitude
 description cell center latitude.
 
 block griddata
-name lon
+name longitude
 type double precision
 shape (ncpl)
 optional true

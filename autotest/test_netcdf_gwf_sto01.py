@@ -58,7 +58,7 @@ def build_models(idx, test, export, gridded_input):
     # netcdf config
     ncf = flopy.mf6.ModflowUtlncf(
         gwf.dis,
-        ogc_wkt=wkt,
+        wkt=wkt,
         filename=f"{name}.dis.ncf",
     )
 
