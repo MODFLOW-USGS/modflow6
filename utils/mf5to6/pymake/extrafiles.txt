@@ -5,6 +5,7 @@
 ../../../src/Utilities/Memory/MemoryStore.f90
 ../../../src/Utilities/TimeSeries/TimeSeries.f90
 ../../../src/Utilities/TimeSeries/TimeSeriesRecord.f90
+../../../src/Utilities/ArrayHandlers.f90
 ../../../src/Utilities/BlockParser.f90
 ../../../src/Utilities/CharString.f90
 ../../../src/Utilities/Constants.f90

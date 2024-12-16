@@ -28,14 +28,14 @@ ${SOURCEDIR8}
 OBJECTS = \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
-$(OBJDIR)/Global.o \
+$(OBJDIR)/ErrorUtil.o \
+$(OBJDIR)/CharString.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Message.o \
 $(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
-$(OBJDIR)/ErrorUtil.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/KeyValueNode.o \
@@ -46,10 +46,10 @@ $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/KeyValueList.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/CharString.o \
 $(OBJDIR)/PtrHashTableIterator.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/GlobalVariables.o \
+$(OBJDIR)/Global.o \
 $(OBJDIR)/PtrHashTable.o \
 $(OBJDIR)/MemoryContainerIterator.o \
 $(OBJDIR)/SimPHMF.o \
