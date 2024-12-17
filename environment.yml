@@ -14,6 +14,7 @@ dependencies:
   - fprettify
   - fortran-language-server
   - gitpython
+  - Jinja2>=3
   - jupytext
   - matplotlib
   - meson=1.3.0
@@ -40,4 +41,5 @@ dependencies:
   - scipy
   - shapely
   - syrupy
+  - tomli
   
