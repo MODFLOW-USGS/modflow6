@@ -31,7 +31,6 @@ description is the keyword used to turn on the netcdf variable shuffle filter wh
 block options
 name chunk_time
 type integer
-in_record true
 reader urword
 optional false
 longname chunking parameter for the time dimension
@@ -40,7 +39,6 @@ description is the keyword used to provide a user defined data chunk size for th
 block options
 name chunk_face
 type integer
-in_record true
 reader urword
 optional true
 longname chunking parameter for the mesh face dimension
@@ -49,7 +47,6 @@ description is the keyword used to provide a user defined data chunk size for th
 block options
 name chunk_z
 type integer
-in_record true
 reader urword
 optional true
 longname chunking parameter for structured z
@@ -58,7 +55,6 @@ description is the keyword used to provide a user defined data chunk size for th
 block options
 name chunk_y
 type integer
-in_record true
 reader urword
 optional true
 longname chunking parameter for structured y
@@ -67,7 +63,6 @@ description is the keyword used to provide a user defined data chunk size for th
 block options
 name chunk_x
 type integer
-in_record true
 reader urword
 optional true
 longname chunking parameter for structured x
