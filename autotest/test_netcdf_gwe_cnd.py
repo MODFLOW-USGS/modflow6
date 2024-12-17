@@ -24,7 +24,7 @@ from test_gwe_cnd import cases
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
-netcdf4 = pytest.importorskip("netCDF4")
+nc = pytest.importorskip("netCDF4")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -59,7 +59,7 @@ def check_output(idx, test, export, gridded_input):
     name = "gwe-" + test.name
 
     # verify format of generated netcdf file
-    with netcdf4.Dataset(test.workspace / f"{name}.nc") as ds:
+    with nc.Dataset(test.workspace / f"{name}.nc") as ds:
         assert ds.data_model == "NETCDF4"
 
     if gridded_input == "netcdf":

@@ -12,7 +12,7 @@ from test_gwf_sto01 import cases
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
-netcdf4 = pytest.importorskip("netCDF4")
+nc = pytest.importorskip("netCDF4")
 
 htol = [None for _ in range(len(cases))]
 
@@ -53,15 +53,28 @@ def build_models(idx, test, export, gridded_input):
 
     if export == "ugrid":
         gwf.name_file.nc_mesh2d_filerecord = f"{name}.nc"
+        ncf = flopy.mf6.ModflowUtlncf(
+            gwf.dis,
+            deflate=5,
+            shuffle=True,
+            chunk_time=1,
+            chunk_face=10,
+            wkt=wkt,
+            filename=f"{name}.dis.ncf",
+        )
     elif export == "structured":
         gwf.name_file.nc_structured_filerecord = f"{name}.nc"
-
-    # netcdf config
-    ncf = flopy.mf6.ModflowUtlncf(
-        gwf.dis,
-        wkt=wkt,
-        filename=f"{name}.dis.ncf",
-    )
+        ncf = flopy.mf6.ModflowUtlncf(
+            gwf.dis,
+            deflate=5,
+            shuffle=True,
+            chunk_time=1,
+            chunk_z=1,
+            chunk_y=5,
+            chunk_x=5,
+            wkt=wkt,
+            filename=f"{name}.dis.ncf",
+        )
 
     return sim, dummy
 
@@ -70,8 +83,22 @@ def check_output(idx, test, export, gridded_input):
     from test_gwf_sto01 import check_output as check
 
     # verify format of generated netcdf file
-    with netcdf4.Dataset(test.workspace / "gwf_sto01.nc") as ds:
+    with nc.Dataset(test.workspace / "gwf_sto01.nc") as ds:
         assert ds.data_model == "NETCDF4"
+        if export == "structured":
+            cmpr = ds.variables["head"].filters()
+            chnk = ds.variables["head"].chunking()
+            assert chnk == [1, 1, 5, 5]
+            assert (
+                ds.variables["projection"].getncattr("crs_wkt").lower() == wkt.lower()
+            )
+        elif export == "ugrid":
+            cmpr = ds.variables["head_l1"].filters()
+            chnk = ds.variables["head_l1"].chunking()
+            assert chnk == [1, 10]
+            assert ds.variables["projection"].getncattr("wkt").lower() == wkt.lower()
+        assert cmpr["shuffle"]
+        assert cmpr["complevel"] == 5
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input

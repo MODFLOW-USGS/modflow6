@@ -14,7 +14,7 @@ from test_gwf_disv import cases
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
-netcdf4 = pytest.importorskip("netCDF4")
+nc = pytest.importorskip("netCDF4")
 
 wkt = (
     'PROJCS["NAD83 / UTM zone 18N", '
@@ -54,7 +54,15 @@ def build_models(idx, test, export, gridded_input):
         gwf.name_file.nc_mesh2d_filerecord = f"{name}.nc"
 
     # netcdf config
-    ncf = flopy.mf6.ModflowUtlncf(gwf.disv, wkt=wkt, filename=f"{name}.disv.ncf")
+    ncf = flopy.mf6.ModflowUtlncf(
+        gwf.disv,
+        deflate=9,
+        shuffle=True,
+        chunk_time=1,
+        chunk_face=3,
+        wkt=wkt,
+        filename=f"{name}.disv.ncf",
+    )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -74,8 +82,14 @@ def check_output(idx, test, export, gridded_input):
     name = test.name
 
     # verify format of generated netcdf file
-    with netcdf4.Dataset(test.workspace / f"{name}.nc") as ds:
+    with nc.Dataset(test.workspace / f"{name}.nc") as ds:
         assert ds.data_model == "NETCDF4"
+        cmpr = ds.variables["head_l1"].filters()
+        chnk = ds.variables["head_l1"].chunking()
+        assert cmpr["shuffle"]
+        assert cmpr["complevel"] == 9
+        assert chnk == [1, 3]
+        assert ds.variables["projection"].getncattr("wkt").lower() == wkt.lower()
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input
