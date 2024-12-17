@@ -12,6 +12,7 @@ from test_gwt_dsp01 import cases, xt3d
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
+nc = pytest.importorskip("netCDF4")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -29,14 +30,26 @@ def build_models(idx, test, export, gridded_input):
 
     if export == "ugrid":
         gwt.name_file.nc_mesh2d_filerecord = f"{gwtname}.nc"
+        ncf = flopy.mf6.ModflowUtlncf(
+            gwt.dis,
+            deflate=3,
+            shuffle=False,
+            chunk_time=1,
+            chunk_face=5,
+            filename=f"{gwtname}.dis.ncf",
+        )
     elif export == "structured":
         gwt.name_file.nc_structured_filerecord = f"{gwtname}.nc"
-
-    # netcdf config
-    ncf = flopy.mf6.ModflowUtlncf(
-        gwt.dis,
-        filename=f"{gwtname}.dis.ncf",
-    )
+        ncf = flopy.mf6.ModflowUtlncf(
+            gwt.dis,
+            deflate=3,
+            shuffle=False,
+            chunk_time=1,
+            chunk_z=1,
+            chunk_y=1,
+            chunk_x=20,
+            filename=f"{gwtname}.dis.ncf",
+        )
 
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
@@ -55,6 +68,20 @@ def check_output(idx, test, export, gridded_input):
 
     name = cases[idx]
     gwtname = "gwt_" + name
+
+    # verify format of generated netcdf file
+    with nc.Dataset(test.workspace / f"{gwtname}.nc") as ds:
+        assert ds.data_model == "NETCDF4"
+        if export == "structured":
+            cmpr = ds.variables["concentration"].filters()
+            chnk = ds.variables["concentration"].chunking()
+            assert chnk == [1, 1, 1, 20]
+        elif export == "ugrid":
+            cmpr = ds.variables["concentration_l1"].filters()
+            chnk = ds.variables["concentration_l1"].chunking()
+            assert chnk == [1, 5]
+        assert not cmpr["shuffle"]
+        assert cmpr["complevel"] == 3
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input

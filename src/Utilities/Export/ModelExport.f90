@@ -8,6 +8,8 @@
 module ModelExportModule
 
   use KindModule, only: DP, I4B, LGP
+  use SimModule, only: store_error, store_error_filename
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENCOMPONENTNAME, &
                              LENMEMPATH
   use ListModule, only: ListType
@@ -79,10 +81,11 @@ contains
     use InputLoadTypeModule, only: GetDynamicModelFromList
     use SimVariablesModule, only: idm_context
     use NCModelExportModule, only: NETCDF_MESH2D, NETCDF_STRUCTURED
+    use SourceCommonModule, only: file_ext
     integer(I4B), intent(in) :: iout
     type(ModelDynamicPkgsType), pointer :: model_dynamic_input
     type(ExportModelType), pointer :: export_model
-    character(len=LENMEMPATH) :: modelnam_mempath, model_mempath
+    character(len=LENMEMPATH) :: modelnam_mempath, model_mempath, ext
     integer(I4B), pointer :: disenum
     integer(I4B) :: n
     logical(LGP) :: found
@@ -116,6 +119,16 @@ contains
                            modelnam_mempath, found)
         if (found) then
           export_model%nctype = NETCDF_STRUCTURED
+        end if
+      end if
+
+      if (found) then
+        ext = file_ext(export_model%nc_fname)
+        if (ext /= 'nc') then
+          errmsg = 'NetCDF output file name must use ".nc" extension. '// &
+                   'Filename="'//trim(export_model%nc_fname)//'".'
+          call store_error(errmsg)
+          call store_error_filename(export_model%modelfname)
         end if
       end if
 

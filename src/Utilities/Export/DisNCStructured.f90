@@ -10,8 +10,8 @@ module DisNCStructuredModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENCOMPONENTNAME, &
                              LENMEMPATH, LENVARNAME
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, store_error_filename
+  use SimVariablesModule, only: errmsg, warnmsg
+  use SimModule, only: store_error, store_warning, store_error_filename
   use MemoryManagerModule, only: mem_setptr
   use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
@@ -43,8 +43,8 @@ module DisNCStructuredModule
     integer(I4B) :: x_bnds !< x boundaries 2D array
     integer(I4B) :: y_bnds !< y boundaries 2D array
     integer(I4B) :: z_bnds !< z boundaries 2D array
-    integer(I4B) :: lat !< latitude 2D array
-    integer(I4B) :: lon !< longitude 2D array
+    integer(I4B) :: latitude !< latitude 2D array
+    integer(I4B) :: longitude !< longitude 2D array
   contains
   end type StructuredNCVarIdType
 
@@ -53,8 +53,8 @@ module DisNCStructuredModule
     type(StructuredNCVarIdType) :: var_ids !< structured variable ids type
     type(DisType), pointer :: dis => null() !< pointer to model dis package
     integer(I4B) :: nlay !< number of layers
-    real(DP), dimension(:), pointer, contiguous :: lat => null() !< lat input array pointer
-    real(DP), dimension(:), pointer, contiguous :: lon => null() !< lon input array pointer
+    real(DP), dimension(:), pointer, contiguous :: latitude => null() !< lat input array pointer
+    real(DP), dimension(:), pointer, contiguous :: longitude => null() !< lon input array pointer
     integer(I4B), pointer :: chunk_z !< chunking parameter for z dimension
     integer(I4B), pointer :: chunk_y !< chunking parameter for y dimension
     integer(I4B), pointer :: chunk_x !< chunking parameter for x dimension
@@ -136,21 +136,31 @@ contains
       if (this%chunk_time > 0 .and. this%chunk_z > 0 .and. &
           this%chunk_y > 0 .and. this%chunk_x > 0) then
         this%chunking_active = .true.
+      else if (this%chunk_time > 0 .or. this%chunk_z > 0 .or. &
+               this%chunk_y > 0 .or. this%chunk_x > 0) then
+        this%chunk_time = -1
+        this%chunk_z = -1
+        this%chunk_y = -1
+        this%chunk_x = -1
+        write (warnmsg, '(a)') 'Ignoring user provided NetCDF chunking &
+          &parameters. Define chunk_time, chunk_x, chunk_y and chunk_z input &
+          &parameters to see an effect.'
+        call store_warning(warnmsg)
       end if
 
-      call get_isize('LAT', this%ncf_mempath, latsz)
-      call get_isize('LON', this%ncf_mempath, lonsz)
+      call get_isize('LATITUDE', this%ncf_mempath, latsz)
+      call get_isize('LONGITUDE', this%ncf_mempath, lonsz)
 
       if (latsz > 0 .and. lonsz > 0) then
         this%latlon = .true.
-        call mem_setptr(this%lat, 'LAT', this%ncf_mempath)
-        call mem_setptr(this%lon, 'LON', this%ncf_mempath)
+        call mem_setptr(this%latitude, 'LATITUDE', this%ncf_mempath)
+        call mem_setptr(this%longitude, 'LONGITUDE', this%ncf_mempath)
       end if
     end if
 
     ! create the netcdf file
     call nf_verify(nf90_create(this%nc_fname, &
-                               IAND(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
+                               IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
                    this%nc_fname)
   end subroutine dis_export_init
 
@@ -705,7 +715,7 @@ contains
                                 'projection_y_coordinate'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%y, 'long_name', &
                                 'Northing'), this%nc_fname)
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%y, 'grid_mapping', &
                                   this%gridmap_name), this%nc_fname)
     end if
@@ -728,7 +738,7 @@ contains
                                 'projection_x_coordinate'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%x, 'long_name', &
                                 'Easting'), this%nc_fname)
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%x, 'grid_mapping', &
                                   this%gridmap_name), this%nc_fname)
     end if
@@ -791,12 +801,12 @@ contains
   subroutine define_gridmap(this)
     class(DisNCStructuredType), intent(inout) :: this
     integer(I4B) :: var_id
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       call nf_verify(nf90_redef(this%ncid), this%nc_fname)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%nc_fname)
       ! TODO: consider variants epsg_code, spatial_ref, esri_pe_string, wkt, etc
-      call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
+      call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%wkt), &
                      this%nc_fname)
       call nf_verify(nf90_enddef(this%ncid), this%nc_fname)
       call nf_verify(nf90_put_var(this%ncid, var_id, 1), &
@@ -808,28 +818,28 @@ contains
   !<
   subroutine define_projection(this)
     class(DisNCStructuredType), intent(inout) :: this
-    if (this%latlon .and. this%ogc_wkt /= '') then
+    if (this%latlon .and. this%wkt /= '') then
       ! lat
       call nf_verify(nf90_def_var(this%ncid, 'lat', NF90_DOUBLE, &
                                   (/this%dim_ids%x, this%dim_ids%y/), &
-                                  this%var_ids%lat), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lat, 'units', &
-                                  'degrees_north'), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lat, 'standard_name', &
-                                  'latitude'), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lat, 'long_name', &
-                                  'latitude'), this%nc_fname)
+                                  this%var_ids%latitude), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%latitude, &
+                                  'units', 'degrees_north'), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%latitude, &
+                                  'standard_name', 'latitude'), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%latitude, &
+                                  'long_name', 'latitude'), this%nc_fname)
 
       ! lon
       call nf_verify(nf90_def_var(this%ncid, 'lon', NF90_DOUBLE, &
                                   (/this%dim_ids%x, this%dim_ids%y/), &
-                                  this%var_ids%lon), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lon, 'units', &
-                                  'degrees_east'), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lon, 'standard_name', &
-                                  'longitude'), this%nc_fname)
-      call nf_verify(nf90_put_att(this%ncid, this%var_ids%lon, 'long_name', &
-                                  'longitude'), this%nc_fname)
+                                  this%var_ids%longitude), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%longitude, &
+                                  'units', 'degrees_east'), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%longitude, &
+                                  'standard_name', 'longitude'), this%nc_fname)
+      call nf_verify(nf90_put_att(this%ncid, this%var_ids%longitude, &
+                                  'long_name', 'longitude'), this%nc_fname)
     end if
   end subroutine define_projection
 
@@ -837,16 +847,16 @@ contains
   !<
   subroutine add_proj_data(this)
     class(DisNCStructuredType), intent(inout) :: this
-    if (this%latlon .and. this%ogc_wkt /= '') then
+    if (this%latlon .and. this%wkt /= '') then
       ! lat
-      call nf_verify(nf90_put_var(this%ncid, this%var_ids%lat, &
-                                  this%lat, start=(/1, 1/), &
+      call nf_verify(nf90_put_var(this%ncid, this%var_ids%latitude, &
+                                  this%latitude, start=(/1, 1/), &
                                   count=(/this%dis%ncol, this%dis%nrow/)), &
                      this%nc_fname)
 
       ! lon
-      call nf_verify(nf90_put_var(this%ncid, this%var_ids%lon, &
-                                  this%lon, start=(/1, 1/), &
+      call nf_verify(nf90_put_var(this%ncid, this%var_ids%longitude, &
+                                  this%longitude, start=(/1, 1/), &
                                   count=(/this%dis%ncol, this%dis%nrow/)), &
                      this%nc_fname)
     end if

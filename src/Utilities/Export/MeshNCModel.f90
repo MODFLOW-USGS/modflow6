@@ -9,8 +9,8 @@ module MeshModelModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, LENMEMPATH, &
                              DNODATA, DHNOFLO
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, store_error_filename
+  use SimVariablesModule, only: errmsg, warnmsg
+  use SimModule, only: store_error, store_warning, store_error_filename
   use MemoryManagerModule, only: mem_setptr
   use InputDefinitionModule, only: InputParamDefinitionType
   use CharacterStringModule, only: CharacterStringType
@@ -123,11 +123,17 @@ contains
 
     if (this%chunk_time > 0 .and. this%chunk_face > 0) then
       this%chunking_active = .true.
+    else if (this%chunk_time > 0 .or. this%chunk_face > 0) then
+      this%chunk_face = -1
+      this%chunk_time = -1
+      write (warnmsg, '(a)') 'Ignoring user provided NetCDF chunking parameter. &
+        &Define chunk_time and chunk_face input parameters to see an effect.'
+      call store_warning(warnmsg)
     end if
 
     ! create the netcdf file
     call nf_verify(nf90_create(this%nc_fname, &
-                               IAND(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
+                               IOR(NF90_CLOBBER, NF90_NETCDF4), this%ncid), &
                    this%nc_fname)
   end subroutine mesh_init
 
@@ -319,16 +325,16 @@ contains
     integer(I4B) :: var_id
 
     ! was projection info provided
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       ! create projection variable
       call nf_verify(nf90_redef(this%ncid), this%nc_fname)
       call nf_verify(nf90_def_var(this%ncid, this%gridmap_name, NF90_INT, &
                                   var_id), this%nc_fname)
       ! cf-conventions prefers 'crs_wkt'
-      !call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%ogc_wkt), &
+      !call nf_verify(nf90_put_att(this%ncid, var_id, 'crs_wkt', this%wkt), &
       !               this%nc_fname)
       ! QGIS recognizes 'wkt'
-      call nf_verify(nf90_put_att(this%ncid, var_id, 'wkt', this%ogc_wkt), &
+      call nf_verify(nf90_put_att(this%ncid, var_id, 'wkt', this%wkt), &
                      this%nc_fname)
       call nf_verify(nf90_enddef(this%ncid), this%nc_fname)
       call nf_verify(nf90_put_var(this%ncid, var_id, 1), &
@@ -378,7 +384,7 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                 'long_name', 'Easting'), this%nc_fname)
 
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_x, &
                                   'grid_mapping', this%gridmap_name), &
@@ -399,7 +405,7 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                 'long_name', 'Northing'), this%nc_fname)
 
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_node_y, &
                                   'grid_mapping', this%gridmap_name), &
@@ -421,7 +427,7 @@ contains
                                 'long_name', 'Easting'), this%nc_fname)
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, 'bounds', &
                                 'mesh_face_xbnds'), this%nc_fname)
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_x, &
                                   'grid_mapping', this%gridmap_name), &
@@ -451,7 +457,7 @@ contains
     call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, 'bounds', &
                                 'mesh_face_ybnds'), this%nc_fname)
 
-    if (this%ogc_wkt /= '') then
+    if (this%wkt /= '') then
       ! associate with projection
       call nf_verify(nf90_put_att(this%ncid, this%var_ids%mesh_face_y, &
                                   'grid_mapping', this%gridmap_name), &

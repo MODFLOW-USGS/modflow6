@@ -12,6 +12,7 @@ from test_gwt_prudic2004t2 import cases
 
 xa = pytest.importorskip("xarray")
 xu = pytest.importorskip("xugrid")
+nc = pytest.importorskip("netCDF4")
 
 
 def build_models(idx, test, export, gridded_input):
@@ -46,6 +47,10 @@ def check_output(idx, test, export, gridded_input):
 
     name = test.name
     gwtname = "gwt_" + name
+
+    # verify format of generated netcdf file
+    with nc.Dataset(test.workspace / f"{gwtname}.nc") as ds:
+        assert ds.data_model == "NETCDF4"
 
     if gridded_input == "netcdf":
         # re-run the simulation with model netcdf input
