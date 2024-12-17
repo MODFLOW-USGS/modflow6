@@ -24,7 +24,6 @@ from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
-    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
@@ -73,7 +72,6 @@ def build_mf6_sim(idx, test):
         packagedata=rpts,
         perioddata={0: ["FIRST"]},
         boundnames="bnms" in name,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
     )
 

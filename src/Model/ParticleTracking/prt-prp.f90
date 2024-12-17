@@ -1,6 +1,6 @@
 module PrtPrpModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LINELENGTH, &
+  use ConstantsModule, only: DZERO, DEM1, DEM5, DONE, LENFTYPE, LINELENGTH, &
                              LENBOUNDNAME, LENPAKLOC, TABLEFT, TABCENTER, &
                              MNORMAL, DSAME, DEP3, DEP9
   use BndModule, only: BndType
@@ -64,7 +64,6 @@ module PrtPrpModule
     real(DP), pointer :: offset => null() !< release time offset
     real(DP), pointer :: stoptime => null() !< stop time for all release points
     real(DP), pointer :: stoptraveltime => null() !< stop travel time for all points
-    logical(LGP), pointer :: foundtol => null() !< whether tolerance option was found
     integer(I4B), pointer, contiguous :: rptnode(:) => null() !< release point reduced nns
     integer(I4B), pointer, contiguous :: rptzone(:) => null() !< release point zone numbers
     real(DP), pointer, contiguous :: rptx(:) => null() !< release point x coordinates
@@ -173,7 +172,6 @@ contains
     call mem_deallocate(this%extol)
     call mem_deallocate(this%rttol)
     call mem_deallocate(this%rtfreq)
-    call mem_deallocate(this%foundtol)
 
     ! Deallocate arrays
     call mem_deallocate(this%rptx)
@@ -263,7 +261,6 @@ contains
     call mem_allocate(this%extol, 'EXTOL', this%memoryPath)
     call mem_allocate(this%rttol, 'RTTOL', this%memoryPath)
     call mem_allocate(this%rtfreq, 'RTFREQ', this%memoryPath)
-    call mem_allocate(this%foundtol, 'FOUNDTOL', this%memoryPath)
 
     ! Set values
     this%ilocalz = 0
@@ -284,10 +281,9 @@ contains
     this%irlstls = 0
     this%ifrctrn = 0
     this%iexmeth = 0
-    this%extol = DZERO
+    this%extol = DEM5
     this%rttol = DSAME * DEP9
     this%rtfreq = DZERO
-    this%foundtol = .false.
 
   end subroutine prp_allocate_scalars
 
@@ -782,7 +778,6 @@ contains
       if (this%extol <= DZERO) &
         call store_error('EXIT_SOLVE_TOLERANCE MUST BE POSITIVE')
       found = .true.
-      this%foundtol = .true.
     case ('RELEASE_TIME_TOLERANCE')
       this%rttol = this%parser%GetDouble()
       if (this%rttol <= DZERO) &
@@ -831,9 +826,6 @@ contains
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-
-    if (.not. this%foundtol) &
-      call store_error('EXIT_SOLVE_TOLERANCE MISSING, VALUE REQUIRED')
 
     ! get dimension block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &

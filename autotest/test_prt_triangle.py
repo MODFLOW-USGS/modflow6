@@ -177,7 +177,6 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
             perioddata={0: ["FIRST"]},
             boundnames=True,
             stop_at_weak_sink=True,  # currently required for this problem
-            exit_solve_tolerance=1e-5,
             extend_tracking=True,
         )
     prt_track_file = f"{prtname}.trk"

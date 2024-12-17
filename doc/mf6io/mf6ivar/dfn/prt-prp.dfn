@@ -30,9 +30,10 @@ block options
 name exit_solve_tolerance
 type double precision
 reader urword
-optional false
+optional true
 longname exit solve tolerance
 description the convergence tolerance for iterative solution of particle exit location and time in the generalized Pollock's method.  A value of 0.00001 works well for many problems, but the value that strikes the best balance between accuracy and runtime is problem-dependent.
+default_value 1e-5
 
 block options
 name local_z

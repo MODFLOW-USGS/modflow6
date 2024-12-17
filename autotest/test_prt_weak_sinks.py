@@ -34,7 +34,6 @@ from flopy.utils import PathlineFile
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
-    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
@@ -97,7 +96,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         packagedata=FlopyReadmeCase.releasepts_prt,
         perioddata={0: ["FIRST"]},
         stop_at_weak_sink="saws" in name,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
     )
 

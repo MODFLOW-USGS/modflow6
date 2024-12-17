@@ -301,7 +301,6 @@ def build_prt_sim(name, gwf, prt_ws, mf6, drape=False, dry_tracking_method=False
         packagedata=prp_data,
         nreleasetimes=1,
         releasetimes=[(0.0,)],
-        exit_solve_tolerance=1e-7,
         drape=drape,
         dry_tracking_method=dry_tracking_method,
         pname="prp",
