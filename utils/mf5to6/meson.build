@@ -62,7 +62,6 @@ mf5to6_sources = files(
     'src' / 'NWT' / 'NWT1_solver.f',
     'src' / 'NWT' / 'NWT1_xmd.f',
     'src' / 'NWT' / 'NWT1_xmdlib.f',
-    'src' / 'Preproc' / 'ArrayHandlers.f90',
     'src' / 'Preproc' / 'ConstantsPHMF.f90',
     'src' / 'Preproc' / 'Discretization3D.f90',
     'src' / 'Preproc' / 'DiscretizationBasePHMF.f90',
