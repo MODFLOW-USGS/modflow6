@@ -181,8 +181,7 @@ Dry-but-active cells can occur when the Newton-Raphson formulation is used to so
 
 A particle in a dry-but-active cell, or above the water table in a partially saturated cell, which we call a dry particle, need not terminate. The PRP package provides a `DRY_TRACKING_METHOD` option that determines how dry particles should behave. Supported values are `DROP` (the default), `STOP`, and `STAY`.
 
-If `DROP` is selected, or if a `DRY_TRACKING_METHOD` is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e., the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom
-of the model grid.
+If `DROP` is selected, or if a `DRY_TRACKING_METHOD` is unspecified, a dry particle is passed vertically and instantaneously to the water table (if the cell is partially saturated) or to the bottom of the cell (if the cell is dry). This repeats (i.e., the particle may drop through multiple cells) until it reaches the water table. Tracking then proceeds as usual. If the vertical column containing the particle is entirely dry, the particle will terminate upon reaching the bottom of the model grid.
 
 If `STOP` is selected, dry particles will be terminated.
 
