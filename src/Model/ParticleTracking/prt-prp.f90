@@ -1,6 +1,6 @@
 module PrtPrpModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LINELENGTH, &
+  use ConstantsModule, only: DZERO, DEM1, DEM5, DONE, LENFTYPE, LINELENGTH, &
                              LENBOUNDNAME, LENPAKLOC, TABLEFT, TABCENTER, &
                              MNORMAL, DSAME, DEP3, DEP9
   use BndModule, only: BndType
@@ -281,7 +281,7 @@ contains
     this%irlstls = 0
     this%ifrctrn = 0
     this%iexmeth = 0
-    this%extol = 1.0e5_DP
+    this%extol = DEM5
     this%rttol = DSAME * DEP9
     this%rtfreq = DZERO
 
