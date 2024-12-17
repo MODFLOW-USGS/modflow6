@@ -1,0 +1,10 @@
+\item \currentmodflowversion
+
+{% for section, notes in sections|groupby("type") %}
+\underline{{{ section }}}
+\begin{itemize}
+{% for note in section %}
+\item {{ note.text }}
+{% endfor %}
+\end{itemize}
+{% endfor %}
