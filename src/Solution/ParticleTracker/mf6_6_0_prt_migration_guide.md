@@ -104,7 +104,7 @@ BEGIN tracktimes
 
 ## Extended tracking
 
-To achieve the same behavior as with a MODFLOW 6.5.0 PRT model, the `EXTEND_TRACKING` keyword must be supplied to the PRP package. In MF6.5.0, PRT followed MODPATH 7 in "extending" particle tracking beyond the end of the simulation time, until all particles terminate, if the last stress period is steady state. While consistent with MP7, this means a particle tracking simulation may fail to halt if particles get caught in flow cycles. To gaurantee termination under the default settings, MF6.6.0 introduces the `EXTEND_TRACKING` keyword to opt into tracking extension &mdash; otherwise particles will terminate at the simulation end time.
+To achieve the same behavior as with a MODFLOW 6.5.0 PRT model, the `EXTEND_TRACKING` keyword must be supplied to the PRP package. In MF6.5.0, PRT followed MODPATH 7 in "extending" particle tracking beyond the end of the simulation time, until all particles terminate, if the last stress period is steady state. While consistent with MP7, this means a particle tracking simulation may fail to halt if particles get caught in flow cycles. To guarantee termination under the default settings, MF6.6.0 introduces the `EXTEND_TRACKING` keyword to opt into tracking extension &mdash; otherwise particles will terminate at the simulation end time.
 
 ## Vertical tracking
 
