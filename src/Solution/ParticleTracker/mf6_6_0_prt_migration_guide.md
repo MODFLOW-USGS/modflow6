@@ -22,7 +22,7 @@ Rather than describing bug fixes and new features separately, this document is s
 
 ## Exit solve tolerance
 
-The PRT model's Particle Release Point (PRP) package now provides a new option EXIT\_SOLVE\_TOLERANCE which configures the tolerance to use when solving for a particle's exit location from an unstructured grid cell. This value is only used for the generalized (ternary) tracking method on vertex grids.
+The PRT model's Particle Release Point (PRP) package now provides an option `EXIT_SOLVE_TOLERANCE` which configures the tolerance to use when solving for a particle's exit location from an unstructured grid cell. This value is only used for the generalized (ternary) tracking method on vertex grids.
 
 A value of 0.00001 is set by default. This value works well for many problems, but the value that strikes the best balance between accuracy and runtime is problem-dependent.
 
