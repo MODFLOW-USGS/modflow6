@@ -24,7 +24,6 @@ from flopy.utils import PathlineFile
 from framework import TestFramework
 from modflow_devtools.markers import requires_pkg
 from prt_test_utils import (
-    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     all_equal,
     check_budget_data,
@@ -176,7 +175,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         else None,
         release_time_frequency=0.2 if "freq" in name else None,
         print_input=True,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
         release_time_tolerance=0.2 if "tol" in name else None,
     )

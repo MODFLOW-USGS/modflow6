@@ -20,7 +20,6 @@ import pytest
 from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from prt_test_utils import (
-    DEFAULT_EXIT_SOLVE_TOL,
     all_equal,
     check_track_data,
     get_model_name,
@@ -182,7 +181,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         track_filerecord=[prp_track_file],
         trackcsv_filerecord=[prp_track_csv_file],
         drape="drp" in name,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
     )
 

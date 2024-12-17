@@ -35,7 +35,6 @@ from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from matplotlib.collections import LineCollection
 from prt_test_utils import (
-    DEFAULT_EXIT_SOLVE_TOL,
     FlopyReadmeCase,
     check_budget_data,
     check_track_data,
@@ -127,7 +126,6 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         packagedata=FlopyReadmeCase.releasepts_prt,
         perioddata={0: ["FIRST"]},
         istopzone=1,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
         extend_tracking=True,
     )
 
