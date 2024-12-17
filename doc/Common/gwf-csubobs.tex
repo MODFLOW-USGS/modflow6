@@ -25,20 +25,20 @@ CSUB & thickness & icsubno or boundname & -- & thickness of a interbed or group 
 CSUB & coarse-thickness & cellid  & -- & thickness of coarse-grained materials in a GWF cell. \\
 CSUB & thickness-cell & cellid  & -- & total thickness of coarse-grained materials and all interbeds in a GWF cell. \\
 
-CSUB & theta & icsubno & -- & porosity of a interbed . \\
+CSUB & theta & icsubno or boundname & -- & porosity of a interbed or group of interbeds. \\
 CSUB & coarse-theta & cellid  & -- & porosity of coarse-grained materials in a GWF cell. \\
 CSUB & theta-cell & cellid  & -- & thickness-weighted porosity of coarse-grained materials and all interbeds in a GWF cell. \\
 
-CSUB & delay-flowtop & icsubno  & -- & Flow between the groundwater system and a delay interbed across the top of the interbed. \\
-CSUB & delay-flowbot & icsubno  & -- & Flow between the groundwater system and a delay interbed across the bottom of the interbed. \\
+CSUB & delay-flowtop & icsubno or boundname  & -- & Flow between the groundwater system and a delay interbed or group of interbeds across the top of the interbed(s). \\
+CSUB & delay-flowbot & icsubno or boundname  & -- & Flow between the groundwater system and a delay interbed or group of interbeds across the bottom of the interbed(s). \\
 
-CSUB & delay-head & icsubno  & idcellno & head in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
-CSUB & delay-gstress & icsubno  & idcellno & geostatic stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
-CSUB & delay-estress & icsubno  & idcellno & effective stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
-CSUB & delay-preconstress & icsubno  & idcellno & preconsolidation stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
-CSUB & delay-compaction & icsubno  & idcellno & compaction in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
-CSUB & delay-thickness & icsubno  & idcellno & thickness of interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
-CSUB & delay-theta & icsubno  & idcellno & porosity of interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-head & icsubno or boundname & idcellno & head in interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
+CSUB & delay-gstress & icsubno or boundname  & idcellno & geostatic stress in interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
+CSUB & delay-estress & icsubno or boundname  & idcellno & effective stress in interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
+CSUB & delay-preconstress & icsubno or boundname  & idcellno & preconsolidation stress in interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). The NODATA value is reported for steady-state stress periods. \\
+CSUB & delay-compaction & icsubno or boundname  & idcellno & compaction in interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-thickness & icsubno or boundname  & idcellno & thickness of interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-theta & icsubno or boundname  & idcellno & porosity of interbed or group of interbeds in delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
 
 CSUB & preconstress-cell & cellid  & -- & preconsolidation stress in a GWF cell containing at least one interbed. The NODATA value is reported for steady-state stress periods.
 

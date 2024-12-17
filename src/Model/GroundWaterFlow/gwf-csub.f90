@@ -6790,22 +6790,22 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for interbed ske observation type.
-    call this%obs%StoreObsType('ske', .true., indx)
+    call this%obs%StoreObsType('ske', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for interbed sk observation type.
-    call this%obs%StoreObsType('sk', .true., indx)
+    call this%obs%StoreObsType('sk', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for ske-cell observation type.
-    call this%obs%StoreObsType('ske-cell', .true., indx)
+    call this%obs%StoreObsType('ske-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for sk-cell observation type.
-    call this%obs%StoreObsType('sk-cell', .true., indx)
+    call this%obs%StoreObsType('sk-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6820,17 +6820,17 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for total-compaction observation type.
-    call this%obs%StoreObsType('interbed-compaction', .true., indx)
+    call this%obs%StoreObsType('interbed-compaction', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for inelastic-compaction observation type.
-    call this%obs%StoreObsType('inelastic-compaction', .true., indx)
+    call this%obs%StoreObsType('inelastic-compaction', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for inelastic-compaction observation type.
-    call this%obs%StoreObsType('elastic-compaction', .true., indx)
+    call this%obs%StoreObsType('elastic-compaction', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6840,22 +6840,22 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for inelastic-compaction-cell observation type.
-    call this%obs%StoreObsType('inelastic-compaction-cell', .true., indx)
+    call this%obs%StoreObsType('inelastic-compaction-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for elastic-compaction-cell observation type.
-    call this%obs%StoreObsType('elastic-compaction-cell', .true., indx)
+    call this%obs%StoreObsType('elastic-compaction-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for compaction-cell observation type.
-    call this%obs%StoreObsType('compaction-cell', .true., indx)
+    call this%obs%StoreObsType('compaction-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for interbed thickness observation type.
-    call this%obs%StoreObsType('thickness', .true., indx)
+    call this%obs%StoreObsType('thickness', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6870,7 +6870,7 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for interbed theta observation type.
-    call this%obs%StoreObsType('theta', .true., indx)
+    call this%obs%StoreObsType('theta', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6880,7 +6880,7 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for theta-cell observation type.
-    call this%obs%StoreObsType('theta-cell', .true., indx)
+    call this%obs%StoreObsType('theta-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -7355,20 +7355,20 @@ contains
     if (obsrv%ObsTypeId == 'CSUB' .or. &
         obsrv%ObsTypeId == 'INELASTIC-CSUB' .or. &
         obsrv%ObsTypeId == 'ELASTIC-CSUB' .or. &
-        obsrv%ObsTypeId == 'SK' .or. &
-        obsrv%ObsTypeId == 'SKE' .or. &
-        obsrv%ObsTypeId == 'THETA' .or. &
-        obsrv%ObsTypeId == 'THICKNESS' .or. &
-        obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
-        obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
-        obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
-        obsrv%ObsTypeId == 'DELAY-HEAD' .or. &
-        obsrv%ObsTypeId == 'DELAY-GSTRESS' .or. &
-        obsrv%ObsTypeId == 'DELAY-ESTRESS' .or. &
-        obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or. &
-        obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
-        obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
-        obsrv%ObsTypeId == 'DELAY-THETA' .or. &
+        ! obsrv%ObsTypeId == 'SK' .or. &
+        ! obsrv%ObsTypeId == 'SKE' .or. &
+        ! obsrv%ObsTypeId == 'THETA' .or. &
+        ! obsrv%ObsTypeId == 'THICKNESS' .or. &
+        ! obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
+        ! obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
+        ! obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-HEAD' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-GSTRESS' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-ESTRESS' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
+        ! obsrv%ObsTypeId == 'DELAY-THETA' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
       call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
@@ -7388,16 +7388,20 @@ contains
           obsrv%ObsTypeId == 'DELAY-THETA') then
         call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
-          obsrv%FeatureName = bndname
-          ! -- reset nn1
-          nn1 = nn2
+          write (errmsg, '(3a)') &
+            "BOUNDNAME cannot be specified for CSUB package '", &
+            trim(obsrv%ObsTypeId), "' observation type."
+          call store_error(errmsg)
+          ! obsrv%FeatureName = bndname
+          ! ! -- reset nn1
+          ! nn1 = nn2
         else
           obsrv%NodeNumber2 = nn2
         end if
       end if
     end if
     !
-    ! -- store reach number (NodeNumber)
+    ! -- store observation location (NodeNumber)
     obsrv%NodeNumber = nn1
   end subroutine csub_process_obsID
 
