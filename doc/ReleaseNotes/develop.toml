@@ -102,7 +102,7 @@ type = "bugfix"
 tags = ["prt"]
 
 [[notes]]
-text = "The PRT model could hang upon attemping to terminate a particle due to absence of a (sub)cell exit face. This occurred because a flag signaling particle advance was not set properly. This has been corrected."
+text = "The PRT model could hang upon attempting to terminate a particle due to absence of a (sub)cell exit face. This occurred because a flag signaling particle advance was not set properly. This has been corrected."
 type = "bugfix"
 tags = ["prt"]
 
