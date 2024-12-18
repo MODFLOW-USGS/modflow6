@@ -71,38 +71,43 @@ PUB_URLS = [
 ]
 
 
-def download_benchmarks(
-    output_path: PathLike,
+def fetch_benchmarks(
+    out_path: str | PathLike,
     verbose: bool = False,
     repo_owner: str = "MODFLOW-USGS",
 ) -> Optional[Path]:
-    """Try to download MF6 benchmarks from GitHub Actions."""
+    """Try to download the most recent MF6 benchmarks from the GitHub Actions API."""
 
-    output_path = Path(output_path).expanduser().absolute()
-    name = "run-time-comparison"  # todo make configurable
-    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
-    artifacts = list_artifacts(repo, name=name, verbose=verbose)
-    artifacts = sorted(
-        artifacts,
-        key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
-        reverse=True,
+    def _created_at(artifact) -> datetime:
+        return datetime.strptime(artifact["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+
+    def _on_develop(artifact) -> bool:
+        return artifact["workflow_run"]["head_branch"] == "develop"
+
+    out_path = Path(out_path).expanduser().absolute()
+    file_name = "run-time-comparison"  # todo make configurable
+    repository = f"{repo_owner}/modflow6"  # todo make configurable via pytest cli args
+    artifacts = filter(
+        _on_develop,
+        sorted(
+            list_artifacts(repository, name=file_name, verbose=verbose),
+            key=_created_at,
+            reverse=True,
+        ),
     )
-    artifacts = [
-        a
-        for a in artifacts
-        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
-    ]
     most_recent = next(iter(artifacts), None)
-    print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
-        print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
-        print(f"Downloaded benchmarks to {output_path}")
-        path = output_path / f"{name}.md"
+        print(f"Found benchmarks (artifact {most_recent['id']})")
+        print(f"Fetching benchmarks (artifact {most_recent['id']})")
+        download_artifact(
+            repository, id=most_recent["id"], path=out_path, verbose=verbose
+        )
+        print(f"Benchmarks are in {out_path}")
+        path = out_path / f"{file_name}.md"
         assert path.is_file()
         return path
     else:
-        print("No benchmarks found")
+        warn("No benchmarks found")
         return None
 
 
@@ -114,8 +119,8 @@ def github_user() -> Optional[str]:
 @flaky
 @no_parallel
 @requires_github
-def test_download_benchmarks(tmp_path, github_user):
-    path = download_benchmarks(
+def test_fetch_benchmarks(tmp_path, github_user):
+    path = fetch_benchmarks(
         tmp_path,
         verbose=True,
         repo_owner=github_user if github_user else "MODFLOW-USGS",
@@ -124,28 +129,28 @@ def test_download_benchmarks(tmp_path, github_user):
         assert path.name == "run-time-comparison.md"
 
 
-def build_benchmark_tex(
-    output_path: PathLike,
+def build_bench_tex(
+    out_path: PathLike,
     force: bool = False,
     repo_owner: str = "MODFLOW-USGS",
 ):
     """Build LaTeX files for MF6 performance benchmarks to go into the release notes."""
 
     BENCHMARKS_PATH.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
+    comparison_path = BENCHMARKS_PATH / "run-time-comparison.md"
 
     # download benchmark artifacts if any exist on GitHub
-    if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(BENCHMARKS_PATH, repo_owner=repo_owner)
+    if not comparison_path.is_file():
+        comparison_path = fetch_benchmarks(BENCHMARKS_PATH, repo_owner=repo_owner)
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
-    if force or not benchmarks_path.is_file():
+    if force or not comparison_path.is_file():
         run_benchmarks(
             build_path=PROJ_ROOT_PATH / "builddir",
             current_bin_path=PROJ_ROOT_PATH / "bin",
             previous_bin_path=PROJ_ROOT_PATH / "bin" / "rebuilt",
             examples_path=EXAMPLES_REPO_PATH / "examples",
-            output_path=output_path,
+            output_path=out_path,
         )
 
     # convert markdown benchmark results to LaTeX
@@ -153,24 +158,25 @@ def build_benchmark_tex(
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
-            sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True
+            sys.executable, "mk_runtimecomp.py", comparison_path, verbose=True
         )
         assert not ret, out + err
         assert tex_path.is_file()
 
-    if (DISTRIBUTION_PATH / f"{benchmarks_path.stem}.md").is_file():
-        assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
+    # make sure the conversion was successful
+    if (DISTRIBUTION_PATH / f"{comparison_path.stem}.md").is_file():
+        assert (RELEASE_NOTES_PATH / f"{comparison_path.stem}.tex").is_file()
 
 
 @flaky
 @no_parallel
 @requires_github
-def test_build_benchmark_tex(tmp_path):
+def test_build_bench_tex(tmp_path):
     benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
     tex_path = DISTRIBUTION_PATH / f"{benchmarks_path.stem}.tex"
 
     try:
-        build_benchmark_tex(tmp_path)
+        build_bench_tex(tmp_path)
         assert benchmarks_path.is_file()
     finally:
         tex_path.unlink(missing_ok=True)
@@ -200,14 +206,36 @@ def build_deprecations_tex(force: bool = False):
             out, err, ret = run_py_script("mk_deprecations.py", md_path, verbose=True)
             assert not ret, out + err
 
-    # check deprecations files exist
     assert md_path.is_file()
+    assert tex_path.is_file()
+
+
+def build_notes_tex(force: bool = False):
+    """Build LaTeX files for the release notes."""
+
+    build_deprecations_tex(force=force)
+
+    toml_path = RELEASE_NOTES_PATH / "develop.toml"
+    tex_path = RELEASE_NOTES_PATH / "develop.tex"
+    if tex_path.is_file() and not force:
+        print(f"{tex_path} already exists.")
+    else:
+        tex_path.unlink(missing_ok=True)
+        with set_dir(RELEASE_NOTES_PATH):
+            out, err, ret = run_py_script("mk_releasenotes.py", toml_path, verbose=True)
+            assert not ret, out + err
+
     assert tex_path.is_file()
 
 
 @no_parallel
 def test_build_deprecations_tex():
     build_deprecations_tex(force=True)
+
+
+@no_parallel
+def test_build_notes_tex():
+    build_notes_tex(force=True)
 
 
 def build_mf6io_tex(models: Optional[list[str]] = None, force: bool = False):
@@ -255,7 +283,7 @@ def test_build_mf6io_tex():
     build_mf6io_tex(force=True)
 
 
-def build_usage_example_tex(
+def build_usage_tex(
     workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike
 ):
     """
@@ -392,13 +420,38 @@ def test_build_pdfs_from_tex(tmp_path):
     ]
 
     build_pdfs(tex_paths, tmp_path)
-    for p in tex_paths[:-1] + bbl_paths:
-        assert p.is_file()
+
+    expected_paths = tex_paths[:-1] + bbl_paths
+    assert all(p.is_file() for p in expected_paths)
+
+
+def fetch_example_docs(
+    out_path: PathLike, force: bool = False, repo_owner: str = "MODFLOW-USGS"
+):
+    pdf_name = "mf6examples.pdf"
+    if force or not (out_path / pdf_name).is_file():
+        latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
+        assets = latest["assets"]
+        asset = next(iter([a for a in assets if a["name"] == pdf_name]), None)
+        download_and_unzip(asset["browser_download_url"], out_path, verbose=True)
+
+
+def fetch_usgs_pubs(out_path: PathLike, force: bool = False):
+    for url in PUB_URLS:
+        print(f"Downloading publication: {url}")
+        try:
+            download_and_unzip(url, path=out_path, delete_zip=False)
+            assert (out_path / url.rpartition("/")[2]).is_file()
+        except HTTPError as e:
+            if "404" in str(e):
+                warn(f"Publication not found: {url}")
+            else:
+                raise
 
 
 def build_documentation(
     bin_path: PathLike,
-    output_path: PathLike,
+    out_path: PathLike,
     force: bool = False,
     full: bool = False,
     models: Optional[list[str]] = None,
@@ -409,72 +462,46 @@ def build_documentation(
     print(f"Building {'full' if full else 'minimal'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
-    output_path = Path(output_path).expanduser().absolute()
+    out_path = Path(out_path).expanduser().absolute()
+    pdf_path = out_path / "mf6io.pdf"
 
-    if (output_path / "mf6io.pdf").is_file() and not force:
-        print(f"{output_path / 'mf6io.pdf'} already exists")
+    if not force and pdf_path.is_file():
+        print(f"{pdf_path} already exists, nothing to do")
         return
 
-    # make sure output directory exists
-    output_path.mkdir(parents=True, exist_ok=True)
+    out_path.mkdir(parents=True, exist_ok=True)
 
-    # build LaTex input/output docs from DFN files
-    build_mf6io_tex(force=force, models=models)
-
-    # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
-        build_usage_example_tex(
+        build_mf6io_tex(force=force, models=models)
+        build_usage_tex(
             bin_path=bin_path,
             workspace_path=Path(temp),
             example_model_path=PROJ_ROOT_PATH / ".mf6minsim",
         )
+        build_notes_tex(force=force)
 
-    # build deprecations table for insertion into LaTex release notes
-    build_deprecations_tex(force=force)
+        if full:
+            build_bench_tex(out_path=out_path, force=force, repo_owner=repo_owner)
+            fetch_example_docs(out_path=out_path, force=force, repo_owner=repo_owner)
+            fetch_usgs_pubs(out_path=out_path, force=force)
+            tex_paths = TEX_PATHS["full"]
+        else:
+            tex_paths = TEX_PATHS["minimal"]
 
-    if full:
-        # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(output_path=output_path, force=force, repo_owner=repo_owner)
-
-        # download example docs
-        pdf_name = "mf6examples.pdf"
-        if force or not (output_path / pdf_name).is_file():
-            latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
-            assets = latest["assets"]
-            asset = next(iter([a for a in assets if a["name"] == pdf_name]), None)
-            download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
-
-        # download publications
-        for url in PUB_URLS:
-            print(f"Downloading publication: {url}")
-            try:
-                download_and_unzip(url, path=output_path, delete_zip=False)
-                assert (output_path / url.rpartition("/")[2]).is_file()
-            except HTTPError as e:
-                if "404" in str(e):
-                    warn(f"Publication not found: {url}")
-                else:
-                    raise
-
-        # convert LaTex to PDF
-        build_pdfs(tex_paths=TEX_PATHS["full"], output_path=output_path, force=force)
-    else:
-        # just convert LaTeX to PDF
-        build_pdfs(tex_paths=TEX_PATHS["minimal"], output_path=output_path, force=force)
+        build_pdfs(tex_paths=tex_paths, output_path=out_path, force=force)
 
     # enforce os line endings on all text files
     windows_line_endings = True
-    convert_line_endings(output_path, windows_line_endings)
+    convert_line_endings(out_path, windows_line_endings)
 
     # make sure we have expected PDFs
-    assert (output_path / "mf6io.pdf").is_file()
+    assert pdf_path.is_file()
     if full:
-        assert (output_path / "mf6io.pdf").is_file()
-        assert (output_path / "ReleaseNotes.pdf").is_file()
-        assert (output_path / "zonebudget.pdf").is_file()
-        assert (output_path / "converter_mf5to6.pdf").is_file()
-        assert (output_path / "mf6suptechinfo.pdf").is_file()
-        assert (output_path / "mf6examples.pdf").is_file()
+        assert (out_path / "ReleaseNotes.pdf").is_file()
+        assert (out_path / "zonebudget.pdf").is_file()
+        assert (out_path / "converter_mf5to6.pdf").is_file()
+        assert (out_path / "mf6suptechinfo.pdf").is_file()
+        assert (out_path / "mf6examples.pdf").is_file()
 
 
 @no_parallel
@@ -549,7 +576,7 @@ Additional LaTeX files may be included in the distribution by specifying --tex-p
     models = args.model if args.model else DEFAULT_MODELS
     build_documentation(
         bin_path=bin_path,
-        output_path=output_path,
+        out_path=output_path,
         force=args.force,
         full=args.full,
         models=models,
