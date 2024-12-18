@@ -72,7 +72,7 @@ PUB_URLS = [
 
 
 def fetch_benchmarks(
-    out_path: str | PathLike,
+    out_path: PathLike,
     verbose: bool = False,
     repo_owner: str = "MODFLOW-USGS",
 ) -> Optional[Path]:

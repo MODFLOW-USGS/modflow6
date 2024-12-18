@@ -1,7 +1,12 @@
 \item \currentmodflowversion
 
+([ for section_name, section in notes|groupby("type") ])
+
+\underline{(( section_name ))}
 \begin{itemize}
-([ for note in notes ])
+([ for note in section ])
 \item (( note.text ))
 ([ endfor ])
 \end{itemize}
+
+([ endfor ])

@@ -28,6 +28,8 @@ if __name__ == "__main__":
         lstrip_blocks=True,
         line_statement_prefix="_",
         keep_trailing_newline=True,
+        # since latex uses curly brackets,
+        # replace block/var start/end tags
         block_start_string="([",
         block_end_string="])",
         variable_start_string="((",

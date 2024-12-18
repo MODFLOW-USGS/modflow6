@@ -14,7 +14,7 @@ type = "feature"
 tags = ["gwf"]
 
 [[notes]]
-text = "A new adaptive time stepping (ATS) capability was added to the Advection (ADV) Package of the Groundwater Transport (GWT) Model.  A new input option, called ``ATS_PERCEL'', specifies the fractional cell distance that a particle of water can travel within one time step.  When ``ATS_PERCEL'' is specified by the user, and the ATS utility is activated in the TDIS Package, the ADV Package will calculate the largest time step that will meet this fractional cell distance constraint, and will submit this time step to the ATS utility.  This option may improve time stepping for solute transport models and for variable-density flow and transport models by allowing step lengths to be calculated as a function of the flow system rather than being specified as input by the user."
+text = "A new adaptive time stepping (ATS) capability was added to the Advection (ADV) Package of the Groundwater Transport (GWT) Model.  A new input option, called ``ATS\\_PERCEL'', specifies the fractional cell distance that a particle of water can travel within one time step.  When ``ATS\\_PERCEL'' is specified by the user, and the ATS utility is activated in the TDIS Package, the ADV Package will calculate the largest time step that will meet this fractional cell distance constraint, and will submit this time step to the ATS utility.  This option may improve time stepping for solute transport models and for variable-density flow and transport models by allowing step lengths to be calculated as a function of the flow system rather than being specified as input by the user."
 type = "feature"
 tags = ["gwt"]
 
@@ -33,12 +33,12 @@ text = "For ASCII input files erroneously containing a mix of line endings, MODF
 type = "bugfix"
 
 [[notes]]
-text = "A refactor of the energy storage and transfer (EST) package associated with the GWE model type results in different input requirements that breaks backward compatibility with what was required in version 6.5.0.  The ``PACKAGEDATA'' block was removed from the EST package input.  In its place, the heat capacity of water, the specified density of water, and the latent heat of vaporization are instead given default values that can be overridden by specifying alternative values in the ``OPTIONS'' block.  Additionally, the following variable names in the EST package input have been updated as follows: ``rhow'' changed to ``DENSITY_WATER''; ``rhos'' changed to ``DENSITY_SOLID''; ``cpw'' changed to ``HEAT_CAPACITY_WATER''; and ``cps'' changed to ``HEAT_CAPACITY_SOLID''."
+text = "A refactor of the energy storage and transfer (EST) package associated with the GWE model type results in different input requirements that breaks backward compatibility with what was required in version 6.5.0.  The ``PACKAGEDATA'' block was removed from the EST package input.  In its place, the heat capacity of water, the specified density of water, and the latent heat of vaporization are instead given default values that can be overridden by specifying alternative values in the ``OPTIONS'' block.  Additionally, the following variable names in the EST package input have been updated as follows: ``rhow'' changed to ``DENSITY\\_WATER''; ``rhos'' changed to ``DENSITY\\_SOLID''; ``cpw'' changed to ``HEAT\\_CAPACITY\\_WATER''; and ``cps'' changed to ``HEAT\\_CAPACITY\\_SOLID''."
 type = "change"
 tags = ["gwe"]
 
 [[notes]]
-text = "Error checking was added to the GWE model's EST package to ensure that the inputs ``HEAT_CAPACITY_WATER'' and ``DENSITY_WATER'' are not 0.0.  Values of 0.0 for either parameter result in a divide by zero error."
+text = "Error checking was added to the GWE model's EST package to ensure that the inputs ``HEAT\\_CAPACITY\\_WATER'' and ``DENSITY\\_WATER'' are not 0.0.  Values of 0.0 for either parameter result in a divide by zero error."
 type = "bugfix"
 tags = ["gwe"]
 
@@ -78,7 +78,7 @@ type = "bugfix"
 tags = ["gwf"]
 
 [[notes]]
-text = "When the ``SQUARE_GWET'' option was invoked in the UZF options block, evapotranspiration from the water table (GWET) was calculated incorrectly.  Instead of acting as a sink, the calculated evapotranspiration flux was added as a source of water.  The applied fix ensures that groundwater evapotranspiration is removed from the water table and as a result the GWET values are accumulated as outflows in the budget table."
+text = "When the ``SQUARE\\_GWET'' option was invoked in the UZF options block, evapotranspiration from the water table (GWET) was calculated incorrectly.  Instead of acting as a sink, the calculated evapotranspiration flux was added as a source of water.  The applied fix ensures that groundwater evapotranspiration is removed from the water table and as a result the GWET values are accumulated as outflows in the budget table."
 type = "bugfix"
 tags = ["gwf"]
 
@@ -97,7 +97,7 @@ type = "bugfix"
 tags = ["gwf", "gwe"]
 
 [[notes]]
-text = "With the ``LOCAL_Z'' option enabled, the PRT model's PRP package attempted to check that a particle release point's z coordinate fell within the grid's vertical extent before converting the coordinate from local (normalized on the unit interval) to a global (model) coordinate. This bug was fixed by converting coordinates before conducting checks."
+text = "With the ``LOCAL\\_Z'' option enabled, the PRT model's PRP package attempted to check that a particle release point's z coordinate fell within the grid's vertical extent before converting the coordinate from local (normalized on the unit interval) to a global (model) coordinate. This bug was fixed by converting coordinates before conducting checks."
 type = "bugfix"
 tags = ["prt"]
 
@@ -112,7 +112,7 @@ type = "bugfix"
 tags = ["prt"]
 
 [[notes]]
-text = "Previously the PRT model's default behavior was to track particles until termination, beyond the specified simulation end time if necessary, as with MODPATH 7 stop time option 2 (extend). Under extended tracking, a particle entrained in a cyclic flow pattern, as can occur in variable-density flow, might cycle indefinitely and never terminate. The PRT model's default behavior has been changed to the equivalent of MP7 stop time option 1 (final), terminating any active particles at the specified simulation end time. If a new particle release point (PRP) package keyword option ``EXTEND_TRACKING'' is provided, tracking is extended until particle termination."
+text = "Previously the PRT model's default behavior was to track particles until termination, beyond the specified simulation end time if necessary, as with MODPATH 7 stop time option 2 (extend). Under extended tracking, a particle entrained in a cyclic flow pattern, as can occur in variable-density flow, might cycle indefinitely and never terminate. The PRT model's default behavior has been changed to the equivalent of MP7 stop time option 1 (final), terminating any active particles at the specified simulation end time. If a new particle release point (PRP) package keyword option ``EXTEND\\_TRACKING'' is provided, tracking is extended until particle termination."
 type = "change"
 tags = ["prt", "breaking"]
 
@@ -127,12 +127,12 @@ type = "bugfix"
 tags = ["prt"]
 
 [[notes]]
-text = "The PRT model's particle release point (PRP) package previously accepted release time input via options-block ``RELEASE_TIMES'' and ``RELEASE_TIMES_FILE'' parameters. These have been replaced with an optional ``RELEASETIMES'' block accepting a single column of real-valued input. If the block is provided, an ``NRELEASETIMES'' value must be provided in the ``DIMENSIONS'' block."
+text = "The PRT model's particle release point (PRP) package previously accepted release time input via options-block ``RELEASE\\_TIMES'' and ``RELEASE\\_TIMES\\_FILE'' parameters. These have been replaced with an optional ``RELEASETIMES'' block accepting a single column of real-valued input. If the block is provided, an ``NRELEASETIMES'' value must be provided in the ``DIMENSIONS'' block."
 type = "change"
 tags = ["prt", "breaking"]
 
 [[notes]]
-text = "The PRT model's output control (OC) package previously accepted tracking time input via options-block ``TRACK_TIMES'' and ``TRACK_TIMES_FILE'' parameters. These have been replaced with an optional ``TRACKTIMES'' block accepting a single column of real-valued input. The block is only considered if the ``TRACK_USERTIME'' option is enabled. If the block is provided, a ``DIMENSIONS'' block containing an ``NTRACKTIMES'' value must precede it."
+text = "The PRT model's output control (OC) package previously accepted tracking time input via options-block ``TRACK\\_TIMES'' and ``TRACK\\_TIMES\\_FILE'' parameters. These have been replaced with an optional ``TRACKTIMES'' block accepting a single column of real-valued input. The block is only considered if the ``TRACK\\_USERTIME'' option is enabled. If the block is provided, a ``DIMENSIONS'' block containing an ``NTRACKTIMES'' value must precede it."
 type = "change"
 tags = ["prt", "breaking"]
 
@@ -142,7 +142,7 @@ type = "bugfix"
 tags = ["prt"]
 
 [[notes]]
-text = "A new option ``RELEASE_TIME_FREQUENCY'' was added to the PRT model's particle release point (PRP) package. This option configures release times on a regular interval for the duration of the simulation, with the first release at the simulation start time. The PRP package's release schedule is the union of times configured via ``RELEASE_TIME_FREQUENCY'', the ``RELEASETIMES'' block, and period block release settings, up to the tolerance mentioned in the previous item. If none of these are provided, a single release time is configured at the beginning of the first stress period's first time step. (A related bug has also been fixed which erroneously activated this default when user-specified release times were configured.)"
+text = "A new option ``RELEASE\\_TIME\\_FREQUENCY'' was added to the PRT model's particle release point (PRP) package. This option configures release times on a regular interval for the duration of the simulation, with the first release at the simulation start time. The PRP package's release schedule is the union of times configured via ``RELEASE\\_TIME\\_FREQUENCY'', the ``RELEASETIMES'' block, and period block release settings, up to the tolerance mentioned in the previous item. If none of these are provided, a single release time is configured at the beginning of the first stress period's first time step. (A related bug has also been fixed which erroneously activated this default when user-specified release times were configured.)"
 type = "feature"
 tags = ["prt"]
 
@@ -167,7 +167,7 @@ type = "bugfix"
 tags = ["prt"]
 
 [[notes]]
-text = "The PRT model now allows more control over vertical particle motion in dry conditions. In addition to the existing ``DRAPE'' option, which controls release-time behavior, the PRP package now provides a ``DRY_TRACKING_METHOD'' option which configures how dry particles (particles in dry cells, or above the water table in partially saturated cells) behave at tracking time. This option is relevant only when the Newton formulation is used, in which case dry cells remain active; otherwise, dry cells are inactive and particles will terminate. See the MF6IO document for a detailed explanation of ``DRY_TRACKING_METHOD''."
+text = "The PRT model now allows more control over vertical particle motion in dry conditions. In addition to the existing ``DRAPE'' option, which controls release-time behavior, the PRP package now provides a ``DRY\\_TRACKING\\_METHOD'' option which configures how dry particles (particles in dry cells, or above the water table in partially saturated cells) behave at tracking time. This option is relevant only when the Newton formulation is used, in which case dry cells remain active; otherwise, dry cells are inactive and particles will terminate. See the MF6IO document for a detailed explanation of ``DRY\\_TRACKING\\_METHOD''."
 type = "feature"
 tags = ["prt"]
 
