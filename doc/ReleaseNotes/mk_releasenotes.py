@@ -1,10 +1,9 @@
 # This script converts the release notes TOML file
 # to a latex file to include in the release notes.
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 from warnings import warn
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -20,8 +19,8 @@ if __name__ == "__main__":
         warn(f"Release notes TOML file not found: {fpath}")
         sys.exit(0)
 
-    from jinja2 import Environment, FileSystemLoader
     import tomlkit
+    from jinja2 import Environment, FileSystemLoader
 
     loader = FileSystemLoader(fnametex.parent)
     env = Environment(
