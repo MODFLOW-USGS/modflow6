@@ -7341,10 +7341,18 @@ contains
     character(len=LINELENGTH) :: string
     character(len=LENBOUNDNAME) :: bndname
     logical(LGP) :: flag_string
+    logical(LGP) :: flag_idcellno
+    logical(LGP) :: flag_error
     !
     ! -- initialize variables
     string = obsrv%IDstring
     flag_string = .TRUE.
+    flag_idcellno = .FALSE.
+    flag_error = .FALSE.
+    if (obsrv%ObsTypeId(1:5) == "DELAY" .AND. &
+        obsrv%ObsTypeId(1:10) /= "DELAY-FLOW") then
+      flag_idcellno = .TRUE.
+    end if
     !
     ! -- Extract reach number from string and store it.
     !    If 1st item is not an integer(I4B), it should be a
@@ -7372,7 +7380,7 @@ contains
         obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
         obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
       call extract_idnum_or_bndname(string, icol, istart, istop, nn1, bndname)
-    ! read cellid
+      ! read cellid
     else
       nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
                                   iout, string, flag_string)
@@ -7382,6 +7390,9 @@ contains
         obsrv%ObsTypeId == 'SKE' .or. &
         obsrv%ObsTypeId == 'THETA' .or. &
         obsrv%ObsTypeId == 'THICKNESS' .or. &
+        obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
+        obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
+        obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
         obsrv%ObsTypeId == 'DELAY-HEAD' .or. &
         obsrv%ObsTypeId == 'DELAY-GSTRESS' .or. &
         obsrv%ObsTypeId == 'DELAY-ESTRESS' .or. &
@@ -7389,50 +7400,42 @@ contains
         obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
         obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
         obsrv%ObsTypeId == 'DELAY-THETA') then
-        if (nn1 == NAMEDBOUNDFLAG) then
-          write (errmsg, '(5a)') &
-            "BOUNDNAME ('", trim(adjustl(bndname)), &
-            "') not allowed for CSUB observation type '", &
-            trim(adjustl(obsrv%ObsTypeId)), "'."
-          call store_error(errmsg)
-        end if
-    ! boundnames are allowed for these observation types
+      if (nn1 == NAMEDBOUNDFLAG) then
+        write (errmsg, '(5a)') &
+          "BOUNDNAME ('", trim(adjustl(bndname)), &
+          "') not allowed for CSUB observation type '", &
+          trim(adjustl(obsrv%ObsTypeId)), "'."
+        call store_error(errmsg)
+        flag_error = .TRUE.
+      end if
+      ! boundnames are allowed for these observation types
     else if (obsrv%ObsTypeId == 'CSUB' .or. &
              obsrv%ObsTypeId == 'INELASTIC-CSUB' .or. &
              obsrv%ObsTypeId == 'ELASTIC-CSUB' .or. &
-            !  obsrv%ObsTypeId == 'THICKNESS' .or. &
-             obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
-             obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
-             obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
+            !  obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
+            !  obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
+            !  obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
              obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
              obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
       if (nn1 == NAMEDBOUNDFLAG) then
         obsrv%FeatureName = bndname
-      else
-        if (obsrv%ObsTypeId == 'DELAY-HEAD' .or. &
-            obsrv%ObsTypeId == 'DELAY-GSTRESS' .or. &
-            obsrv%ObsTypeId == 'DELAY-ESTRESS' .or. &
-            obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or. &
-            obsrv%ObsTypeId == 'DELAY-COMPACTION' .or. &
-            obsrv%ObsTypeId == 'DELAY-THICKNESS' .or. &
-            obsrv%ObsTypeId == 'DELAY-THETA') then
-          call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
-          if (nn2 == NAMEDBOUNDFLAG) then
-            write (errmsg, '(5a)') &
-              "BOUNDNAME ('", trim(adjustl(bndname)), &
-              "')  not allowed for CSUB observation type '", &
-              trim(adjustl(obsrv%ObsTypeId)), "' idcellno."
-            call store_error(errmsg)
-            ! obsrv%FeatureName = bndname
-            ! ! -- reset nn1
-            ! nn1 = nn2
-          else
-            obsrv%NodeNumber2 = nn2
-          end if
+      end if
+    end if
+    ! read idcellno for delay observations
+    if (flag_idcellno .EQV. .TRUE. .AND. flag_error .EQV. .FALSE.) then
+      if (nn1 /= NAMEDBOUNDFLAG) then
+        call extract_idnum_or_bndname(string, icol, istart, istop, nn2, bndname)
+        if (nn2 == NAMEDBOUNDFLAG) then
+          write (errmsg, '(5a)') &
+            "BOUNDNAME ('", trim(adjustl(bndname)), &
+            "')  not allowed for CSUB observation type '", &
+            trim(adjustl(obsrv%ObsTypeId)), "' idcellno."
+          call store_error(errmsg)
+        else
+          obsrv%NodeNumber2 = nn2
         end if
       end if
     end if
-
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1

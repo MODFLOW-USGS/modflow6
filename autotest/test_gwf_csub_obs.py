@@ -1,7 +1,4 @@
-import os
-
 import flopy
-import numpy as np
 import pytest
 from framework import TestFramework
 
@@ -9,8 +6,32 @@ obs_names = [
     "delay-flowtop", "delay-flowtop",
     "delay-flowbot", "delay-flowbot",
     "delay-head", "delay-head",
+    "delay-gstress", "delay-gstress", 
+    "delay-estress", "delay-estress", 
+    "delay-preconstress", "delay-preconstress", 
+    "delay-compaction", "delay-compaction",
+    "delay-thickness", "delay-thickness",
+    "delay-theta", "delay-theta",
+    "csub", "csub",
+    "inelastic-csub", "inelastic-csub", 
+    "elastic-csub", "elastic-csub",
+    "interbed-compaction", "interbed-compaction",
+    "inelastic-compaction", "inelastic-compaction",
+    "elastic-compaction", "elastic-compaction",
     ]
 boundname = [
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
     False, True,
     False, True,
     False, True,
@@ -18,6 +39,18 @@ boundname = [
 test_fail = [
     False, False,
     False, False,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, True,
+    False, False,
+    False, False,
+    False, False,
+    False, True,
+    False, True,
     False, True,
     ]
 cases = [f"csub_obs{idx + 1:02d}" for idx, _ in enumerate(obs_names)]
