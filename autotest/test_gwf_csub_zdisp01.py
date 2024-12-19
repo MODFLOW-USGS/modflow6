@@ -283,13 +283,13 @@ def build_models(idx, test):
         packagedata=sub6,
     )
     orecarray = {}
-    tag = f"{3:02d}_{wrp[0] + 1:02d}_{wcp[0] + 1:02d}"
     oloc = (2, wrp[0], wcp[0])
+    ibloc = (449,)
     orecarray["csub_obs.csv"] = [
-        ("tcomp3", "interbed-compaction", tag),
+        ("tcomp3", "interbed-compaction", ibloc),
         ("sk-tcomp3", "coarse-compaction", oloc),
-        ("ibi-tcomp3", "inelastic-compaction", tag),
-        ("ibe-tcomp3", "elastic-compaction", tag),
+        ("ibi-tcomp3", "inelastic-compaction", ibloc),
+        ("ibe-tcomp3", "elastic-compaction", ibloc),
     ]
     csub_obs_package = csub.obs.initialize(
         filename=opth, digits=10, print_input=True, continuous=orecarray
