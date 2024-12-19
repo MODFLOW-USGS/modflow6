@@ -1,6 +1,6 @@
 module MethodCellTernaryModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use MethodModule
   use MethodSubcellPoolModule
@@ -9,7 +9,8 @@ module MethodCellTernaryModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
   use GeomUtilModule, only: area
-  use ConstantsModule, only: DZERO, DONE, DTWO
+  use ConstantsModule, only: DZERO, DONE, DTWO, DSIX
+  use GeomUtilModule, only: point_in_polygon
   implicit none
 
   private
@@ -86,6 +87,7 @@ contains
     type is (SubcellTriType)
       call this%load_subcell(particle, subcell)
     end select
+
     call method_subcell_tern%init( &
       fmi=this%fmi, &
       cell=this%cell, &
@@ -137,6 +139,7 @@ contains
       ! Subcell top (cell top)
       inface = this%nverts + 3
     end select
+
     if (inface .eq. -1) then
       particle%iboundary(2) = 0
     else if (inface .eq. 0) then
@@ -356,6 +359,8 @@ contains
     real(DP), allocatable, dimension(:) :: vm0y
     real(DP), allocatable, dimension(:) :: vm1x
     real(DP), allocatable, dimension(:) :: vm1y
+    ! real(DP), allocatable, dimension(:, :) :: poly
+    integer(I4B) :: nvert
 
     select type (cell => this%cell)
     type is (CellPolyType)
@@ -393,14 +398,30 @@ contains
       unextx = -wk2 / le
       unexty = wk1 / le
 
-      ! Cell area
-      areacell = area(this%xvert, this%yvert)
-
       ! Cell centroid (in general, this is NOT the average of the vertex coordinates)
-      sixa = areacell * 6.d0
+      areacell = area(this%xvert, this%yvert)
+      sixa = areacell * DSIX
       wk1 = -(this%xvert * this%yvertnext - this%xvertnext * this%yvert)
-      this%xctr = sum((this%xvert + this%xvertnext) * wk1) / sixa
-      this%yctr = sum((this%yvert + this%yvertnext) * wk1) / sixa
+      nvert = size(this%xvert)
+      if (nvert == 3) then
+        this%xctr = sum(this%xvert) / 3.0_DP
+        this%yctr = sum(this%yvert) / 3.0_DP
+      else
+        this%xctr = sum((this%xvert + this%xvertnext) * wk1) / sixa
+        this%yctr = sum((this%yvert + this%yvertnext) * wk1) / sixa
+      end if
+
+      ! TODO: do we need to check if center is in polygon?
+      ! only if using the centroid method which misbehaves
+      !
+      ! allocate(poly(2, nvert))
+      ! poly(1,:) = this%xvert
+      ! poly(2,:) = this%yvert
+      ! if (.not. point_in_polygon(this%xctr, this%yctr, poly)) then
+      !   print *, "error -- centroid not in cell ", this%cell%defn%icell, this%xctr, this%yctr
+      !   call pstop(1)
+      ! end if
+      ! deallocate(poly)
 
       ! Subcell areas
       do i = 1, this%nverts

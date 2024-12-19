@@ -11,6 +11,7 @@ module MethodSubcellTernaryModule
   use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -30,9 +31,9 @@ contains
 
   !> @brief Create a new ternary subcell tracking method.
   subroutine create_method_subcell_ternary(method)
-    ! -- dummy
+    ! dummy
     type(MethodSubcellTernaryType), pointer :: method
-    ! -- local
+    ! local
     type(SubcellTriType), pointer :: subcell
 
     allocate (method)
@@ -218,7 +219,7 @@ contains
       ! Exit through lateral subcell face
       exitFace = itrifaceexit
       dtexit = dtexitxy
-    else if (dtexitz < dtexitxy) then
+    else if (dtexitz < dtexitxy .and. dtexitz >= 0.0_DP) then
       ! Exit through top or bottom
       if (itopbotexit == -1) then
         exitFace = 4
@@ -226,6 +227,11 @@ contains
         exitFace = 5
       end if
       dtexit = dtexitz
+    else
+      particle%istatus = 9
+      particle%advancing = .false.
+      call this%save(particle, reason=3)
+      return
     end if
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
@@ -257,8 +263,8 @@ contains
     ! (local, unscaled) and other properties. The particle may at this
     ! point lie on a boundary of the subcell or may still be within it.
     if (texit .gt. tmax) then
-      ! -- The computed exit time is greater than the maximum time, so set
-      ! -- final time for particle trajectory equal to maximum time.
+      ! The computed exit time is greater than the maximum time, so set
+      ! final time for particle trajectory equal to maximum time.
       t = tmax
       dt = t - t0
       exitFace = 0
@@ -266,8 +272,8 @@ contains
       particle%advancing = .false.
       reason = 2 ! timestep end
     else
-      ! -- The computed exit time is less than or equal to the maximum time,
-      ! -- so set final time for particle trajectory equal to exit time.
+      ! The computed exit time is less than or equal to the maximum time,
+      ! so set final time for particle trajectory equal to exit time.
       t = texit
       dt = dtexit
       reason = 1 ! (sub)cell transition
@@ -280,6 +286,7 @@ contains
     particle%z = z
     particle%ttrack = t
     particle%iboundary(3) = exitFace
+
     call this%save(particle, reason=reason)
   end subroutine track_subcell
 
@@ -417,7 +424,7 @@ contains
     end if
 
     ! Compute travel time to exit face. Return with status = 0
-    dt = log(vr) / dvdx
+    dt = log(abs(vr)) / dvdx
     status = 0
   end subroutine calculate_dt
 
@@ -481,13 +488,13 @@ contains
     else
       ! otherwise calculate z.
       if (izstatus .eq. 2) then
-        ! -- vz uniformly zero
+        ! vz uniformly zero
         z = zi
       else if (izstatus .eq. 1) then
-        ! -- vz uniform, nonzero
+        ! vz uniform, nonzero
         z = zi + vzi * dt
       else
-        ! -- vz nonuniform
+        ! vz nonuniform
         z = zbot + (vzi * dexp(az * dt) - vzbot) / az
       end if
     end if
