@@ -351,7 +351,7 @@ def get_model(idx, ws):
         ("w2l1", "interbed-compaction", (130,)),
         ("w2l2", "interbed-compaction", (340,)),
         ("w2l3", "interbed-compaction", (550,)),
-        ("w2l4", "interbed-compaction",(760,)),
+        ("w2l4", "interbed-compaction", (760,)),
         ("s1l1", "coarse-compaction", (0, 8, 9)),
         ("s1l2", "coarse-compaction", (1, 8, 9)),
         ("s1l3", "coarse-compaction", (2, 8, 9)),
