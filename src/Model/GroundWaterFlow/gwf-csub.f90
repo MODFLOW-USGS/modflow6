@@ -7412,9 +7412,9 @@ contains
     else if (obsrv%ObsTypeId == 'CSUB' .or. &
              obsrv%ObsTypeId == 'INELASTIC-CSUB' .or. &
              obsrv%ObsTypeId == 'ELASTIC-CSUB' .or. &
-            !  obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
-            !  obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
-            !  obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
+             !  obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or. &
+             !  obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or. &
+             !  obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or. &
              obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or. &
              obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
       if (nn1 == NAMEDBOUNDFLAG) then
