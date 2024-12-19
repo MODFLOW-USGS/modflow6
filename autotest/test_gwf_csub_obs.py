@@ -2,6 +2,7 @@ import flopy
 import pytest
 from framework import TestFramework
 
+# fmt: off
 obs_names = [
     "delay-flowtop", "delay-flowtop",
     "delay-flowbot", "delay-flowbot",
@@ -19,6 +20,7 @@ obs_names = [
     "inelastic-compaction", "inelastic-compaction",
     "elastic-compaction", "elastic-compaction",
     ]
+# fmt: off
 boundname = [
     False, True,
     False, True,
@@ -36,6 +38,7 @@ boundname = [
     False, True,
     False, True,
     ]
+# fmt: off
 test_fail = [
     False, False,
     False, False,
