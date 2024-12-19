@@ -911,17 +911,19 @@ contains
         ! -- Update PRP index
         iprp = iprp + 1
 
-        ! -- Initialize PRP-specific track files, if enabled
-        if (packobj%itrkout > 0) then
-          call this%trackctl%init_track_file( &
-            packobj%itrkout, &
-            iprp=iprp)
-        end if
-        if (packobj%itrkcsv > 0) then
-          call this%trackctl%init_track_file( &
-            packobj%itrkcsv, &
-            csv=.true., &
-            iprp=iprp)
+        ! -- Initialize PRP-specific track files
+        if (kper == 1 .and. kstp == 1) then
+          if (packobj%itrkout > 0) then
+            call this%trackctl%init_track_file( &
+              packobj%itrkout, &
+              iprp=iprp)
+          end if
+          if (packobj%itrkcsv > 0) then
+            call this%trackctl%init_track_file( &
+              packobj%itrkcsv, &
+              csv=.true., &
+              iprp=iprp)
+          end if
         end if
 
         ! -- Loop over particles in package
@@ -957,7 +959,7 @@ contains
           ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
 
-          ! Reset previous cell, exit face, and zone numbers
+          ! Reset previous cell and zone numbers
           particle%icp = 0
           particle%izp = 0
 
