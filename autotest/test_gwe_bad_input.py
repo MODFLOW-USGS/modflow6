@@ -480,7 +480,7 @@ def check_output(idx, test):
         print(msg1)
 
 
-# - No need to change any code below
+@pytest.mark.developmode
 @pytest.mark.parametrize(
     "idx, name",
     list(enumerate(cases)),
